@@ -77,6 +77,18 @@ class Tensor:
         out._backward = _back
         return out
 
+    def flatten(self) -> Tensor:
+        """展平为一维（复刻 ``torch.Tensor.flatten``）。"""
+        out = Tensor(self.data.flatten(), self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g.reshape(self.data.shape)
+
+        out._backward = _back
+        return out
+
     def _ensure_grad(self):
         if self.grad is None:
             self.grad = np.zeros_like(self.data)
