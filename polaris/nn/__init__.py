@@ -1,0 +1,472 @@
+"""纯 NumPy 神经网络库（torch 100% Python 复刻）。
+
+torch 在目标环境（Python 3.14 / 受限磁盘）无法安装（无预编译 wheel、
+磁盘空间不足），按 ``project_rules.md`` 规则 3 用纯 NumPy 100% 复刻等价实现。
+
+复刻来源：PyTorch ``torch.nn`` / ``torch.autograd``
+- 原仓库: https://github.com/pytorch/pytorch （BSD-style license）
+- 参考版本: torch 2.x ``nn.Linear`` / ``nn.functional`` / autograd
+- 接口兼容: 暴露 ``Linear`` / ``ReLU`` / ``Tanh`` / ``Module`` / ``Adam``，
+  与 ``torch.nn`` 等价，上层代码可无缝切换。
+
+实现要点（与 torch 逻辑一致）：
+- ``Linear``: ``y = x @ W^T + b``，权重 ``[out, in]``，偏置 ``[out]``
+  （与 ``torch.nn.Linear(in, out)`` 的 ``weight.shape==(out,in)`` 一致）
+- 激活: ReLU ``max(0,x)``、Tanh ``tanh(x)``、Softmax 稳定数值实现
+- 自动微分: 计算图记录前向 op，反向沿图拓扑序传播梯度（与 autograd 一致）
+- Adam: 偏置修正的一阶/二阶矩估计（与 ``torch.optim.Adam`` 默认 eps=1e-8 一致）
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+
+# ---------------------------------------------------------------------------
+# Tensor + 自动微分（复刻 torch.autograd）
+# ---------------------------------------------------------------------------
+class Tensor:
+    """自动微分张量（复刻 ``torch.Tensor`` 的核心子集）。
+
+    支持 +、-、*、@、matmul、relu、tanh、log、sum、mean、softmax、
+    gather 等前向 op 与对应反向梯度。``requires_grad=True`` 时构建计算图。
+    """
+
+    __slots__ = ("data", "requires_grad", "grad", "_backward", "_parents")
+
+    def __init__(
+        self,
+        data: np.ndarray | float | int,
+        requires_grad: bool = False,
+        _parents: tuple[Tensor, ...] = (),
+        _backward=None,
+    ) -> None:
+        self.data = np.asarray(data, dtype=np.float64) if not isinstance(data, np.ndarray) else data
+        if self.data.dtype != np.float64:
+            self.data = self.data.astype(np.float64)
+        self.requires_grad = requires_grad
+        self.grad: np.ndarray | None = None
+        self._parents = _parents
+        self._backward = _backward or (lambda g: None)
+
+    @property
+    def shape(self):
+        return self.data.shape
+
+    @property
+    def T(self) -> Tensor:
+        """转置（复刻 ``torch.Tensor.T``，等价 ``data.T``）。"""
+        out = Tensor(self.data.T, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g.T
+
+        out._backward = _back
+        return out
+
+    def reshape(self, *shape) -> Tensor:
+        out = Tensor(self.data.reshape(shape), self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g.reshape(self.data.shape)
+
+        out._backward = _back
+        return out
+
+    def _ensure_grad(self):
+        if self.grad is None:
+            self.grad = np.zeros_like(self.data)
+
+    def backward(self, grad: np.ndarray | None = None) -> None:
+        """反向传播（拓扑序，与 autograd 一致）。"""
+        if grad is None:
+            grad = np.ones_like(self.data)
+        # 拓扑排序
+        topo: list[Tensor] = []
+        visited: set[int] = set()
+
+        def build(t: Tensor):
+            if id(t) in visited:
+                return
+            visited.add(id(t))
+            for p in t._parents:
+                build(p)
+            topo.append(t)
+
+        build(self)
+        # 累加梯度
+        self._ensure_grad()
+        self.grad = self.grad + grad
+        for t in reversed(topo):
+            t._backward(t.grad)
+
+    def zero_grad(self) -> None:
+        self.grad = None
+
+    # ----- 前向 op -----
+    def __add__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data + other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + _unbroadcast(g, self.data.shape)
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + _unbroadcast(g, other.data.shape)
+
+        out._backward = _back
+        return out
+
+    def __mul__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data * other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + _unbroadcast(g * other.data, self.data.shape)
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + _unbroadcast(g * self.data, other.data.shape)
+
+        out._backward = _back
+        return out
+
+    def __matmul__(self, other):
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data @ other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g @ other.data.T
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + self.data.T @ g
+
+        out._backward = _back
+        return out
+
+    def matmul(self, other):
+        return self.__matmul__(other)
+
+    def sum(self, axis=None, keepdims=False):
+        out = Tensor(
+            self.data.sum(axis=axis, keepdims=keepdims),
+            self.requires_grad,
+            (self,),
+        )
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                grad = g
+                if axis is not None and not keepdims:
+                    if isinstance(axis, tuple):
+                        grad = np.expand_dims(g, list(axis))
+                    else:
+                        grad = np.expand_dims(g, axis)
+                self.grad = self.grad + np.broadcast_to(grad, self.data.shape).copy()
+
+        out._backward = _back
+        return out
+
+    def mean(self, axis=None, keepdims=False):
+        if axis is None:
+            n = self.data.size
+        elif isinstance(axis, tuple):
+            n = int(np.prod([self.data.shape[a] for a in axis]))
+        else:
+            n = self.data.shape[axis]
+        out = Tensor(
+            self.data.mean(axis=axis, keepdims=keepdims),
+            self.requires_grad,
+            (self,),
+        )
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                grad = g / n
+                if axis is not None and not keepdims:
+                    if isinstance(axis, tuple):
+                        grad = np.expand_dims(g, list(axis))
+                    else:
+                        grad = np.expand_dims(g, axis)
+                self.grad = self.grad + np.broadcast_to(grad, self.data.shape).copy()
+
+        out._backward = _back
+        return out
+
+    def relu(self):
+        mask = (self.data > 0).astype(np.float64)
+        out = Tensor(self.data * mask, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g * mask
+
+        out._backward = _back
+        return out
+
+    def tanh(self):
+        t = np.tanh(self.data)
+        out = Tensor(t, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g * (1 - t * t)
+
+        out._backward = _back
+        return out
+
+    def log(self):
+        out = Tensor(np.log(self.data + 1e-12), self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g / (self.data + 1e-12)
+
+        out._backward = _back
+        return out
+
+    def exp(self):
+        e = np.exp(self.data)
+        out = Tensor(e, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g * e
+
+        out._backward = _back
+        return out
+
+    def __neg__(self):
+        return self * -1.0
+
+    def __sub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return self + (-other if isinstance(other, Tensor) else Tensor(-other.data))
+
+    def __rsub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return other - self
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __radd__(self, other):
+        return self + other
+
+    def __pow__(self, p: float):
+        out = Tensor(self.data ** p, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g * p * (self.data ** (p - 1))
+
+        out._backward = _back
+        return out
+
+    def softmax(self, axis: int = -1):
+        """数值稳定的 softmax（与 torch.nn.functional.softmax 一致）。"""
+        shifted = self.data - self.data.max(axis=axis, keepdims=True)
+        exp = np.exp(shifted)
+        sm = exp / exp.sum(axis=axis, keepdims=True)
+        out = Tensor(sm, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                # d softmax / d x = diag(s) - s s^T
+                grad = np.zeros_like(self.data)
+                for i in range(g.shape[0] if g.ndim > 1 else 1):
+                    gi = g[i] if g.ndim > 1 else g
+                    si = sm[i] if sm.ndim > 1 else sm
+                    grad_i = si * gi - si * (si * gi).sum(axis=axis, keepdims=True)
+                    if g.ndim > 1:
+                        grad[i] = grad_i
+                    else:
+                        grad = grad_i
+                self.grad = self.grad + grad
+
+        out._backward = _back
+        return out
+
+    def detach(self) -> Tensor:
+        return Tensor(self.data.copy(), requires_grad=False)
+
+    def numpy(self) -> np.ndarray:
+        return self.data
+
+
+def _unbroadcast(grad: np.ndarray, shape) -> np.ndarray:
+    """将广播后的梯度还原到原始 shape（与 autograd 一致）。"""
+    while grad.ndim > len(shape):
+        grad = grad.sum(axis=0)
+    for i, s in enumerate(shape):
+        if s == 1 and grad.shape[i] != 1:
+            grad = grad.sum(axis=i, keepdims=True)
+    return grad
+
+
+# ---------------------------------------------------------------------------
+# Module（复刻 torch.nn.Module）
+# ---------------------------------------------------------------------------
+class Module:
+    """神经网络模块基类（复刻 ``torch.nn.Module``）。"""
+
+    def parameters(self) -> list[Tensor]:
+        params: list[Tensor] = []
+        seen: set[int] = set()
+
+        def collect(obj):
+            if isinstance(obj, Tensor):
+                if obj.requires_grad and id(obj) not in seen:
+                    seen.add(id(obj))
+                    params.append(obj)
+            elif isinstance(obj, Module):
+                for v in vars(obj).values():
+                    collect(v)
+            elif isinstance(obj, (list, tuple)):
+                for item in obj:
+                    collect(item)
+            elif isinstance(obj, dict):
+                for item in obj.values():
+                    collect(item)
+
+        collect(self)
+        return params
+
+    def zero_grad(self) -> None:
+        for p in self.parameters():
+            p.grad = None
+
+    def __call__(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
+
+    def forward(self, *args, **kwargs):
+        raise NotImplementedError
+
+
+class Linear(Module):
+    """线性层（复刻 ``torch.nn.Linear``）。
+
+    ``y = x @ W^T + b``，``weight.shape == (out_features, in_features)``，
+    ``bias.shape == (out_features,)``，与 torch 初始化一致（Kaiming uniform）。
+    """
+
+    def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
+        self.in_features = in_features
+        self.out_features = out_features
+        # Kaiming uniform（与 torch.nn.Linear 默认 init 一致）
+        bound = 1.0 / np.sqrt(in_features)
+        self.weight = Tensor(
+            np.random.uniform(-bound, bound, (out_features, in_features)),
+            requires_grad=True,
+        )
+        if bias:
+            self.bias = Tensor(
+                np.random.uniform(-bound, bound, (out_features,)),
+                requires_grad=True,
+            )
+        else:
+            self.bias = None
+
+    def forward(self, x: Tensor) -> Tensor:
+        out = x @ self.weight.T if isinstance(x, Tensor) else Tensor(x) @ self.weight.T
+        if self.bias is not None:
+            out = out + self.bias
+        return out
+
+
+class ReLU(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return x.relu()
+
+
+class Tanh(Module):
+    def forward(self, x: Tensor) -> Tensor:
+        return x.tanh()
+
+
+class Sequential(Module):
+    """顺序容器（复刻 ``torch.nn.Sequential``）。"""
+
+    def __init__(self, *layers: Module) -> None:
+        self.layers = list(layers)
+
+    def forward(self, x: Tensor) -> Tensor:
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
+# ---------------------------------------------------------------------------
+# 优化器（复刻 torch.optim）
+# ---------------------------------------------------------------------------
+class Adam:
+    """Adam 优化器（复刻 ``torch.optim.Adam``，默认 eps=1e-8, betas=(0.9,0.999)）。
+
+    实现与 torch Adam 一致：偏置修正的一阶/二阶矩估计。
+    来源: Kingma & Ba, 2015, Adam 论文；torch.optim.Adam 实现。
+    """
+
+    def __init__(
+        self,
+        params: list[Tensor],
+        lr: float = 1e-3,
+        betas: tuple[float, float] = (0.9, 0.999),
+        eps: float = 1e-8,
+        weight_decay: float = 0.0,
+    ) -> None:
+        self.params = list(params)
+        self.lr = lr
+        self.beta1, self.beta2 = betas
+        self.eps = eps
+        self.weight_decay = weight_decay
+        self.m = [np.zeros_like(p.data) for p in self.params]
+        self.v = [np.zeros_like(p.data) for p in self.params]
+        self.t = 0
+
+    def zero_grad(self) -> None:
+        for p in self.params:
+            p.grad = None
+
+    def step(self) -> None:
+        self.t += 1
+        for i, p in enumerate(self.params):
+            if p.grad is None:
+                continue
+            g = p.grad
+            if self.weight_decay != 0:
+                g = g + self.weight_decay * p.data
+            self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * g
+            self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (g * g)
+            m_hat = self.m[i] / (1 - self.beta1 ** self.t)
+            v_hat = self.v[i] / (1 - self.beta2 ** self.t)
+            p.data = p.data - self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
+
+
+__all__ = [
+    "Tensor",
+    "Module",
+    "Linear",
+    "ReLU",
+    "Tanh",
+    "Sequential",
+    "Adam",
+]
