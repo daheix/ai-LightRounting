@@ -106,7 +106,7 @@ class DeviceCatalog:
             self._factories[key] = factory
         self._platforms.add(platform)
 
-    def register_all_builtin(self) -> "DeviceCatalog":
+    def register_all_builtin(self) -> DeviceCatalog:
         """注册全部内置平台器件（SOI/SiN/InP/LNOI）。"""
         from polaris.pdk.inp import INP_DEVICES
         from polaris.pdk.lnoi import LNOI_DEVICES
