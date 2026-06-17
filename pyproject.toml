@@ -65,6 +65,12 @@ ignore_missing_imports = true
 module = "pytest.*"
 follow_imports = "skip"
 
+# matplotlib 源码使用 3.10+ match 语法，与 python_version=3.9 冲突；
+# 跳过对其源码体的解析（仅用于开发工具链兼容，不影响 polaris 自身类型检查）
+[[tool.mypy.overrides]]
+module = "matplotlib.*"
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
