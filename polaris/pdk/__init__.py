@@ -4,8 +4,17 @@
 所有器件参数须附带 source 字段以溯源至公开文献。
 """
 
+from polaris.pdk.catalog import DeviceCatalog, default_catalog
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.source import Source
 
-__all__ = ["BoundingBox", "Device", "Direction", "Port", "Source"]
+__all__ = [
+    "BoundingBox",
+    "Device",
+    "DeviceCatalog",
+    "Direction",
+    "Port",
+    "Source",
+    "default_catalog",
+]
