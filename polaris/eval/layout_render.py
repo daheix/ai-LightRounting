@@ -89,7 +89,7 @@ def render_layout(
         # 端口标记
         if show_ports:
             ports = pl.port_positions()
-            for pname, (px, py) in ports.items():
+            for _, (px, py) in ports.items():
                 ax.plot(px, py, "r.", markersize=4)
 
     # 波导路径
@@ -180,7 +180,7 @@ def export_gds(
     }
 
     # 器件矩形
-    for inst_id, pl in placements.items():
+    for pl in placements.values():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
         x0 = _um_to_dbu(xmin, dbu)
         y0 = _um_to_dbu(ymin, dbu)
@@ -190,7 +190,7 @@ def export_gds(
         box = db.Box(x0, y0, x1, y1)
         top.shapes(layer).insert(box)
         # 端口标记（小矩形）
-        for pname, (px, py) in pl.port_positions().items():
+        for _, (px, py) in pl.port_positions().items():
             ps = _um_to_dbu(0.5, dbu)
             pbox = db.Box(
                 _um_to_dbu(px, dbu) - ps,
@@ -202,7 +202,6 @@ def export_gds(
 
     # 波导路径（多边形带宽度）
     if paths:
-        wg_width_dbu = _um_to_dbu(0.5, dbu)  # 默认 500nm 宽
         for wp in paths.values():
             if len(wp.points) < 2:
                 continue
@@ -252,7 +251,7 @@ def export_oasis(
         "detector": layer_detector,
     }
 
-    for inst_id, pl in placements.items():
+    for pl in placements.values():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
         box = db.Box(
             _um_to_dbu(xmin, dbu), _um_to_dbu(ymin, dbu),
