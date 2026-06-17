@@ -100,7 +100,9 @@ class RoutingEnv(gym.Env):
                 low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
             ),
             "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
-            "step": spaces.Box(low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32),
+            "step": spaces.Box(
+                low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
+            ),
         })
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
