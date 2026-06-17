@@ -10,35 +10,47 @@
 - [ ] Task 2: 定义器件数据结构与基类
   - [ ] SubTask 2.1: 实现 `Device` 数据类（device_id, platform, category, name, geometry, params, ports, constraints, source）
   - [ ] SubTask 2.2: 实现 `Port` 数据类（name, x, y, direction, waveguide_type, width）
-  - [ ] SubTask 2.3: 实现器件变换工具（平移、旋转、包围盒计算）
+  - [ ] SubTask 2.3: 实现 `Source` 数据类（authors, year, title, url）用于文献溯源
+  - [ ] SubTask 2.4: 实现器件变换工具（平移、旋转、包围盒计算）
 
-- [ ] Task 3: 硅光 SOI 平台器件库（真实参数）
-  - [ ] SubTask 3.1: 条形/肋形波导模型（宽 450-500nm，高 220nm，损耗区间）
-  - [ ] SubTask 3.2: 弯曲波导（最小半径 5μm，单位损耗）
-  - [ ] SubTask 3.3: 定向耦合器 DC（间隙 100-300nm，耦合长度）
-  - [ ] SubTask 3.4: MMI 1x2/2x2（尺寸、插损）
-  - [ ] SubTask 3.5: MZI、微环谐振器（半径、Q 值）
-  - [ ] SubTask 3.6: 光栅耦合器、端面耦合器、Y 分支、Crossing、Taper
-  - [ ] SubTask 3.7: 热光调制器、PN 结调制器、Ge 探测器
-  - [ ] SubTask 3.8: 为每个器件标注文献来源字段
+- [ ] Task 3: 硅光 SOI 平台器件库（真实参数 + 来源网址）
+  - [ ] SubTask 3.1: 条形/肋形波导（厚 220nm，宽 450-500nm，损耗 1-3 dB/cm）来源 latitudeda.com / iccsz.com
+  - [ ] SubTask 3.2: 弯曲波导（最小半径 2-6μm）来源 cloud.tencent.com.cn/developer/article/2634252
+  - [ ] SubTask 3.3: 定向耦合器 DC（间隙 100-300nm）来源 latitudeda.com
+  - [ ] SubTask 3.4: MMI（插损 <0.5dB，imbalance <5%）来源 iccsz.com
+  - [ ] SubTask 3.5: MZI、微环谐振器 来源 latitudeda.com
+  - [ ] SubTask 3.6: 光栅耦合器（1D Si 1.9dB/27nm，2D Si 2.4dB/17nm，传统 3dB）来源 cloud.tencent.com/developer/article/2650050 + iccsz.com
+  - [ ] SubTask 3.7: 端面耦合器（~2dB，优化 0.2-1dB）、Y 分支（<0.3dB）、Crossing（0.3dB/-30dB）来源 iccsz.com
+  - [ ] SubTask 3.8: 热光移相器（Pπ ~20mW）、MZM（20GHz/5dB/VπL 2V·cm）、MRM（52pm/V, 74GHz）来源 iccsz.com + cloud.tencent.com/developer/article/2650050
+  - [ ] SubTask 3.9: Ge 探测器（30GHz/0.7A/W/<100nA）来源 iccsz.com
+  - [ ] SubTask 3.10: 三星平台器件（Si 1.2dB/cm, SiN 0.4dB/cm, Si rib 0.7dB/cm, DRF）来源 cloud.tencent.com/developer/article/2650050
+  - [ ] SubTask 3.11: 为每个器件标注 source 字段（作者/年份 + URL）
 
-- [ ] Task 4: 氮化硅 SiN 平台器件库
-  - [ ] SubTask 4.1: 条形波导（宽 700-1500nm，损耗 0.05-0.5 dB/cm）
-  - [ ] SubTask 4.2: 弯曲（最小半径 50-100μm）、微环（Q>1e6）
-  - [ ] SubTask 4.3: MMI、耦合器、Y 分支
+- [ ] Task 4: 氮化硅 SiN 平台器件库（真实参数 + 来源网址）
+  - [ ] SubTask 4.1: IMEC LPCVD 波导（<0.1 dB/cm，最低 2 dB/m，405-2500nm）来源 imec-int.com
+  - [ ] SubTask 4.2: LioniX TriPleX 双条带（<0.1 dB/cm，最低 0.1 dB/m，光纤耦合 <0.5dB/facet）来源 lionix-international.com
+  - [ ] SubTask 4.3: Damascene SiN 8寸（0.157 dB/cm @1550nm）来源 doi.org/10.3390/app13063660
+  - [ ] SubTask 4.4: 超低损耗数据（UCSB 1.2dB/m, EPFL <1dB/m, Twente 0.4/0.095dB/cm, Cornell Q 37M/67M）来源 patsnap.com
+  - [ ] SubTask 4.5: 材料参数（Eg~5.1eV, n~2, 热光系数 0.2e-4/K）来源 c.m.163.com + cloud.tencent.com.cn
 
-- [ ] Task 5: InP 平台器件库
-  - [ ] SubTask 5.1: 有源波导、DFB/DBR 激光器、SOA
-  - [ ] SubTask 5.2: EAM 调制器、PIN 探测器、SSC、MMI
+- [ ] Task 5: InP 平台器件库（真实参数 + 来源网址）
+  - [ ] SubTask 5.1: Fraunhofer HHI InP Foundry（EAM 45GHz, PD 0.8A/W, SOA 4dB/100μm, DFB/DBR >3mW）来源 doi.org/10.3390/app9081588
+  - [ ] SubTask 5.2: UCSB SGDBR 激光器（1521-1565nm, SMSR >45dB, MZM）来源 doi.org/10.1109/JSTQE.2018.2866565
+  - [ ] SubTask 5.3: SemiNex 高功率 DFB（200-250mW）/SOA（>1W）来源 aptechnologies.co.uk
+  - [ ] SubTask 5.4: Coherent BH DFB（1311nm, 400mW@55°C, 线宽 <200kHz）来源 ep.cntronics.com
+  - [ ] SubTask 5.5: IMOS DFB on InP membrane（250μm, 15GHz, 25Gbit/s）来源 photonics-benelux.org
 
-- [ ] Task 6: LNOI 薄膜铌酸锂平台器件库
-  - [ ] SubTask 6.1: 干法刻蚀波导（宽 1-2μm，损耗 0.1-1 dB/cm）
-  - [ ] SubTask 6.2: 电光调制器（VπL）、SSC、Y 分支、MMI
+- [ ] Task 6: LNOI 薄膜铌酸锂平台器件库（真实参数 + 来源网址）
+  - [ ] SubTask 6.1: 量产 LNOI 波导（<0.4 dB/cm）+ 调制器（>110GHz, Vπ<3V）来源 doi.org/10.37188/lam.2025.047
+  - [ ] SubTask 6.2: 高约束 MZM（VπL 1.2 V·cm, >40GHz）来源 doi.org/10.1364/OL.481827
+  - [ ] SubTask 6.3: 行波电极调制器（VπL 1.77 V·cm, 0.022 dB/cm, >100GHz）来源 mdpi.com/2304-6732/12/7/648
+  - [ ] SubTask 6.4: 综述参数（VπL<2, 耦合 <0.5dB/facet, >100GHz）来源 doi.org/10.37188/CO.2021-0115
+  - [ ] SubTask 6.5: TFLN 综述 + Nature 2018 来源 doi.org/10.1364/AOP.411024 + doi.org/10.1038/s41586-018-0551-y
 
 - [ ] Task 7: 器件清单注册表与检索 API
   - [ ] SubTask 7.1: 实现 `DeviceCatalog` 注册表，按平台/类别检索
   - [ ] SubTask 7.2: 实现序列化（JSON/YAML）与加载
-  - [ ] SubTask 7.3: 实现参数溯源校验（source 字段非空校验）
+  - [ ] SubTask 7.3: 实现参数溯源校验（source.url 字段非空校验）
 
 ## 阶段二：布局引擎（Floorplan）
 
@@ -49,19 +61,19 @@
 - [ ] Task 9: 布局环境（Gymnasium 接口）
   - [ ] SubTask 9.1: 实现网格化画布、放置动作空间
   - [ ] SubTask 9.2: 实现状态观测（占用栅格、端口位置、拥塞图）
-  - [ ] SubTask 9.3: 实现奖励函数（面积、线长、拥塞、重叠惩罚）
+  - [ ] SubTask 9.3: 实现奖励函数（面积、HPWL 线长、拥塞、重叠惩罚）参考 NeurIPS 2025 Basso et al.
 
 - [ ] Task 10: GNN 状态编码器
-  - [ ] SubTask 10.1: 实现器件-连接图 GNN 编码（PyTorch）
+  - [ ] SubTask 10.1: 实现器件-连接图 GNN 编码（PyTorch，参考 R-GCN）
   - [ ] SubTask 10.2: 融合栅格空间特征
 
 ## 阶段三：布线引擎（Routing）
 
 - [ ] Task 11: 波导约束布线器
   - [ ] SubTask 11.1: 实现网格布线（A*/Lee 算法 baseline）
-  - [ ] SubTask 11.2: 实现弯曲半径约束（最小半径检查、S 弯生成）
-  - [ ] SubTask 11.3: 实现波导间距约束、交叉最小化
-  - [ ] SubTask 11.4: 实现等长路径约束（MZI 臂、差分对）
+  - [ ] SubTask 11.2: 实现弯曲半径约束（SOI 2-6μm / SiN 50-100μm 检查、S 弯生成）
+  - [ ] SubTask 11.3: 实现波导间距约束（SOI 1μm / SiN 2μm）、交叉最小化（crossing 0.3dB/-30dB）
+  - [ ] SubTask 11.4: 实现等长路径约束（MZI 臂、差分对长度差 < 阈值）
 
 - [ ] Task 12: 布线环境（Gymnasium 接口）
   - [ ] SubTask 12.1: 实现逐连接布线动作空间
@@ -97,9 +109,9 @@
 ## 阶段六：测试与验证
 
 - [ ] Task 18: 单元测试与集成测试
-  - [ ] SubTask 18.1: 器件库参数溯源校验测试（无假数据）
-  - [ ] SubTask 18.2: 布局/布线约束合规测试
-  - [ ] SubTask 18.3: 训练收敛性冒烟测试
+  - [ ] SubTask 18.1: 器件库参数溯源校验测试（source.url 非空，无假数据）
+  - [ ] SubTask 18.2: 布局/布线约束合规测试（弯曲半径、间距、等长）
+  - [ ] SubTask 18.3: 训练收敛性冒烟测试（小规模网表）
 
 # Task Dependencies
 - Task 2 依赖 Task 1
