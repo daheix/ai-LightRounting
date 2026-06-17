@@ -110,7 +110,7 @@ def train_floorplan(
         obs, _ = env.reset()
         ep_reward = 0.0
         steps = 0
-        for step in range(config.rollout_steps):
+        for _ in range(config.rollout_steps):
             obs_vec = _obs_to_vector(obs)
             # 适配维度（不同网表器件数不同，pad/truncate）
             if obs_vec.shape[0] < obs_dim:
@@ -219,7 +219,7 @@ def train_routing(
         obs, _ = env.reset()
         ep_reward = 0.0
         steps = 0
-        for step in range(config.rollout_steps):
+        for _ in range(config.rollout_steps):
             obs_vec = _obs_to_vector(obs)
             if obs_vec.shape[0] < obs_dim:
                 obs_vec = np.pad(obs_vec, (0, obs_dim - obs_vec.shape[0]))
