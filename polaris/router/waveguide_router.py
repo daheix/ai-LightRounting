@@ -156,7 +156,6 @@ def s_bend(
     用三次贝塞尔曲线连接两点，控制点保证平滑过渡。
     """
     dx = x1 - x0
-    dy = y1 - y0
     # 控制点：水平偏移
     cp1 = (x0 + dx * 0.5, y0)
     cp2 = (x0 + dx * 0.5, y1)
@@ -164,8 +163,9 @@ def s_bend(
     for i in range(n_points + 1):
         t = i / n_points
         # 三次贝塞尔
-        x = (1 - t) ** 3 * x0 + 3 * (1 - t) ** 2 * t * cp1[0] + 3 * (1 - t) * t ** 2 * cp2[0] + t ** 3 * x1
-        y = (1 - t) ** 3 * y0 + 3 * (1 - t) ** 2 * t * cp1[1] + 3 * (1 - t) * t ** 2 * cp2[1] + t ** 3 * y1
+        mt = 1 - t
+        x = mt ** 3 * x0 + 3 * mt ** 2 * t * cp1[0] + 3 * mt * t ** 2 * cp2[0] + t ** 3 * x1
+        y = mt ** 3 * y0 + 3 * mt ** 2 * t * cp1[1] + 3 * mt * t ** 2 * cp2[1] + t ** 3 * y1
         pts.append((x, y))
     return pts
 
@@ -188,7 +188,7 @@ def euler_bend(
     ds = L / n_points
     x, y = 0.0, 0.0
     theta = 0.0
-    for i in range(n_points + 1):
+    for _ in range(n_points + 1):
         # 曲率 k = s / (R * L) 线性增长
         k = (s / L) / radius_um if L > 0 else 0.0
         theta += k * ds
