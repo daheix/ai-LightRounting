@@ -21,6 +21,13 @@
 - 轻量化开源插件：**PhIRoute（波策）**
 - 内部 AI 训练工程代号：**OptiLearn / WaveGNN Studio**
 
+## 强制开发规则
+本 spec 的实现须严格遵守 [.trae/rules/project_rules.md](file:///workspace/.trae/rules/project_rules.md)，要点：
+- 每个小任务动手前必须检索期刊/论文/白皮书/高校论坛，记录来源 URL，禁止假数据
+- 实现过程中每 5 分钟向远端 `main` 分支提交一次代码（Conventional Commits，按文件名精确 add）
+- 提交前必须通过本地 lint/typecheck
+- 完整产品流程不得跳过：检索→设计→实现→测试→验证→文档溯源
+
 ---
 
 ## ADDED Requirements
