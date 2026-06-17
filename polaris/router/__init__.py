@@ -3,3 +3,7 @@
 负责波导约束布线（A*/Lee 基线）、弯曲半径/间距/等长约束检查
 以及布线环境（Gymnasium 接口）。
 """
+
+from polaris.router.router import Route, WaveguideRouter
+
+__all__ = ["Route", "WaveguideRouter"]
