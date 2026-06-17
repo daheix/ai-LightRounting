@@ -2,12 +2,12 @@
 
 ## 阶段一：光器件模型资料库（PDK Lite）
 
-- [ ] Task 1: 搭建 Python 项目骨架与包结构
+- [x] Task 1: 搭建 Python 项目骨架与包结构
   - [ ] SubTask 1.1: 创建 `polaris/` 包目录及子模块（`pdk/`, `engine/`, `router/`, `trainer/`, `eval/`）
   - [ ] SubTask 1.2: 创建 `pyproject.toml`、依赖清单（numpy, scipy, networkx, torch, gymnasium, gdspy/klayout, matplotlib）
   - [ ] SubTask 1.3: 创建 `tests/` 目录与 pytest 配置
 
-- [ ] Task 2: 定义器件数据结构与基类
+- [x] Task 2: 定义器件数据结构与基类
   - [ ] SubTask 2.1: 实现 `Device` 数据类（device_id, platform, category, name, geometry, params, ports, constraints, source）
   - [ ] SubTask 2.2: 实现 `Port` 数据类（name, x, y, direction, waveguide_type, width）
   - [ ] SubTask 2.3: 实现 `Source` 数据类（authors, year, title, url）用于文献溯源
