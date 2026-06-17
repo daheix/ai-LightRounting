@@ -1,0 +1,160 @@
+"""端到端集成测试（Task 18）。
+
+验证完整流水线：网表 → 布局 → 布线 → 渲染 → GDS 导出 → DRC，
+以及训练循环、数据集合成、CLI 调用。
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+
+import numpy as np
+import pytest
+
+from polaris.engine.floorplan_env import FloorplanEnv
+from polaris.engine.netlist import load_netlist
+from polaris.eval.layout_render import export_gds, run_drc
+from polaris.pipeline import cmd_run
+from polaris.router.routing_env import RoutingEnv
+from polaris.trainer.dataset import DatasetConfig, generate_dataset
+from polaris.trainer.train_loop import TrainConfig, train_floorplan
+
+
+YAML_NETLIST = """
+name: integration_test
+instances:
+  wg1: {component: strip_waveguide, platform: SOI}
+  mmi1: {component: mmi_1x2, platform: SOI}
+  wg2: {component: strip_waveguide, platform: SOI}
+  pd1: {component: ge_photodetector, platform: SOI}
+connections:
+  - [wg1, out, mmi1, in]
+  - [mmi1, out0, wg2, in]
+  - [wg2, out, pd1, in]
+"""
+
+
+def test_full_pipeline_e2e(tmp_path):
+    """端到端：网表 → 布局 → 布线 → GDS → DRC。"""
+    net, devices, _ = load_netlist(YAML_NETLIST)
+    # 布局
+    fp = FloorplanEnv(net, devices, canvas_w=400, canvas_h=400, grid_size=10)
+    fp.reset()
+    for _ in range(len(devices)):
+        fp.step([5, 5, 0])
+    assert len(fp.state.placements) == len(devices)
+    # 布线
+    r_env = RoutingEnv(net, fp.state.placements, canvas_w=400, canvas_h=400, grid_size=5)
+    r_env.reset()
+    for _ in range(len(net.connections)):
+        r_env.step(np.zeros(3, dtype=np.float32))
+    assert len(r_env.state.paths) == len(net.connections)
+    # GDS 导出
+    gds_path = export_gds(fp.state.placements, r_env.state.paths, str(tmp_path / "out.gds"))
+    assert os.path.exists(gds_path)
+    # DRC
+    report = run_drc(fp.state.placements, r_env.state.paths)
+    assert isinstance(report.total_violations, int)
+
+
+def test_dataset_generation():
+    cfg = DatasetConfig(num_netlists=5, min_devices=3, max_devices=6)
+    ds = generate_dataset(cfg)
+    assert len(ds) == 5
+    for nl in ds:
+        assert "instances" in nl
+        assert "connections" in nl
+        assert len(nl["instances"]) >= 3
+
+
+def test_training_loop_short(tmp_path):
+    """短训练循环应能运行完成并保存检查点。"""
+    cfg = TrainConfig(
+        num_episodes=2,
+        rollout_steps=16,
+        canvas_w=300,
+        canvas_h=300,
+        grid_size=10,
+        hidden_dim=16,
+        checkpoint_dir=str(tmp_path / "ckpt"),
+    )
+    cfg.dataset.num_netlists = 2
+    cfg.dataset.min_devices = 3
+    cfg.dataset.max_devices = 4
+    agent, logs = train_floorplan(cfg, verbose=False)
+    assert len(logs) == 2
+    assert (tmp_path / "ckpt" / "floorplan_final.json").exists()
+    # 日志文件
+    assert (tmp_path / "ckpt" / "floorplan_log.json").exists()
+
+
+def test_pipeline_cli_run(tmp_path):
+    """CLI run 命令应能完成端到端流程。"""
+    netlist_path = tmp_path / "net.yaml"
+    netlist_path.write_text(YAML_NETLIST, encoding="utf-8")
+    out_dir = tmp_path / "out"
+    ret = cmd_run(
+        type("Args", (), {
+            "netlist": str(netlist_path),
+            "output": str(out_dir),
+            "checkpoint": None,
+            "canvas_w": 400.0,
+            "canvas_h": 400.0,
+            "grid_size": 10.0,
+            "hidden_dim": 64,
+        })()
+    )
+    assert (out_dir / "layout.gds").exists()
+    assert (out_dir / "layout.oas").exists()
+    assert (out_dir / "layout.png").exists()
+    assert (out_dir / "report.json").exists()
+    report = json.loads((out_dir / "report.json").read_text())
+    assert report["num_devices"] == 4
+    assert report["num_connections"] == 3
+
+
+def test_pipeline_cli_catalog(capsys):
+    """CLI catalog 命令应列出器件。"""
+    from polaris.pipeline import cmd_catalog
+
+    ret = cmd_catalog(type("Args", (), {"platform": "SOI"})())
+    assert ret == 0
+    captured = capsys.readouterr()
+    assert "SOI" in captured.out
+    assert "strip_waveguide" in captured.out
+
+
+def test_pipeline_cli_train(tmp_path):
+    """CLI train 命令应能启动训练。"""
+    from polaris.pipeline import cmd_train
+
+    ret = cmd_train(type("Args", (), {
+        "episodes": 2,
+        "rollout_steps": 16,
+        "num_netlists": 2,
+        "min_devices": 3,
+        "max_devices": 4,
+        "canvas_w": 300.0,
+        "canvas_h": 300.0,
+        "grid_size": 10.0,
+        "hidden_dim": 16,
+        "output": str(tmp_path / "ckpt"),
+    })())
+    assert ret == 0
+    assert (tmp_path / "ckpt" / "floorplan_final.json").exists()
+
+
+def test_all_platforms_have_devices():
+    """所有平台都应有器件且带来源。"""
+    from polaris.pdk.catalog import build_default_catalog
+
+    cat = build_default_catalog()
+    for plat in ["SOI", "SiN", "InP", "LNOI"]:
+        devs = cat.list_devices(platform=plat)
+        assert len(devs) > 0, f"{plat} 平台无器件"
+        for d in devs:
+            assert d.source is not None
+            assert d.source.url, f"{d.device_id} 缺少 source.url"
