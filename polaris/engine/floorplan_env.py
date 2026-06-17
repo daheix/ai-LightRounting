@@ -160,9 +160,15 @@ class FloorplanEnv(gym.Env):
 
         self.action_space = spaces.MultiDiscrete([self.grid_w, self.grid_h, 4])
         self.observation_space = spaces.Dict({
-            "occupancy": spaces.Box(low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32),
-            "port_positions": spaces.Box(low=-1, high=1e6, shape=(len(self.instance_ids), 4), dtype=np.float32),
-            "step": spaces.Box(low=0, high=len(self.instance_ids), shape=(1,), dtype=np.float32),
+            "occupancy": spaces.Box(
+                low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
+            ),
+            "port_positions": spaces.Box(
+                low=-1, high=1e6, shape=(len(self.instance_ids), 4), dtype=np.float32
+            ),
+            "step": spaces.Box(
+                low=0, high=len(self.instance_ids), shape=(1,), dtype=np.float32
+            ),
         })
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
