@@ -1,0 +1,56 @@
+{
+  "source": "GDSFactory",
+  "name": "aar_wonky_connector",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/aar_wonky_connector.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": [],
+  "routes": {
+    "optical": {
+      "routing_strategy": "route_bundle_all_angle",
+      "settings": {
+        "end_connector": "wonky",
+        "end_cross_section": {
+          "cross_section": "strip",
+          "settings": {
+            "width": 2.0
+          }
+        }
+      },
+      "links": {
+        "mmi_short,o1": "mmi_long,o1"
+      }
+    }
+  },
+  "placements": {
+    "mmi_short": {
+      "rotation": 180
+    },
+    "mmi_long": {
+      "port": "o1",
+      "rotation": 70,
+      "x": "mmi_short,o1",
+      "y": "mmi_short,o1",
+      "dx": 20,
+      "dy": 20
+    }
+  }
+}

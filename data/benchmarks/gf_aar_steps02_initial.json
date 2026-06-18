@@ -1,0 +1,57 @@
+{
+  "source": "GDSFactory",
+  "name": "aar_steps02_initial",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/aar_steps02_initial.pic.yml",
+  "n_instances": 3,
+  "n_connections": 0,
+  "n_routes": 0,
+  "has_placements": true,
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    },
+    "obstacle1": {
+      "component": "rectangle",
+      "settings": {
+        "layer": "M1",
+        "size": [
+          30,
+          30
+        ]
+      }
+    }
+  },
+  "connections": [],
+  "routes": {},
+  "placements": {
+    "mmi_short": {
+      "rotation": 180
+    },
+    "mmi_long": {
+      "port": "o1",
+      "rotation": 20,
+      "x": "mmi_short,o1",
+      "y": "mmi_short,o1",
+      "dx": 120,
+      "dy": 80
+    },
+    "obstacle1": {
+      "port": "ce",
+      "x": "mmi_long,o1",
+      "y": "mmi_long,o1",
+      "dx": -20,
+      "dy": -10
+    }
+  }
+}

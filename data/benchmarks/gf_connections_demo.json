@@ -1,0 +1,40 @@
+{
+  "source": "GDSFactory",
+  "name": "connections_demo",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/connections_demo.pic.yml",
+  "n_instances": 3,
+  "n_connections": 2,
+  "n_routes": 0,
+  "has_placements": true,
+  "instances": {
+    "b": {
+      "component": "bend_circular"
+    },
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": {
+    "b,o1": "mmi_short,o2",
+    "mmi_long,o1": "b,o2"
+  },
+  "routes": {},
+  "placements": {
+    "mmi_short": {
+      "port": "o1",
+      "x": 10,
+      "y": 20
+    }
+  }
+}

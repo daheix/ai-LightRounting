@@ -1,0 +1,48 @@
+{
+  "source": "GDSFactory",
+  "name": "aar_error_overconstrained",
+  "file": "gdsfactory/gdsfactory/samples/all_angle_routing/aar_error_overconstrained.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "wg_d1": {
+      "component": "straight"
+    },
+    "wg_d2": {
+      "component": "straight"
+    }
+  },
+  "connections": [],
+  "routes": {
+    "bad_news": {
+      "routing_strategy": "route_bundle_all_angle",
+      "settings": {
+        "steps": [
+          {
+            "dx": 1000,
+            "dy": -1000
+          }
+        ]
+      },
+      "links": {
+        "wg_d1,o2": "wg_d2,o1"
+      }
+    }
+  },
+  "placements": {
+    "wg_d1": {
+      "port": "o2",
+      "x": 0,
+      "y": -600
+    },
+    "wg_d2": {
+      "port": "o1",
+      "x": "wg_d1,o2",
+      "y": "wg_d1,o2",
+      "dx": 1000,
+      "dy": -1000
+    }
+  }
+}

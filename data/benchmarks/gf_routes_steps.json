@@ -1,0 +1,71 @@
+{
+  "source": "GDSFactory",
+  "name": "routes_steps",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/routes_steps.pic.yml",
+  "n_instances": 3,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "t": {
+      "component": "pad_array",
+      "settings": {
+        "port_orientation": 270,
+        "columns": 3
+      }
+    },
+    "b": {
+      "component": "pad_array",
+      "settings": {
+        "port_orientation": 90,
+        "columns": 3
+      }
+    },
+    "obstacle": {
+      "component": "rectangle",
+      "settings": {
+        "size": [
+          200,
+          200
+        ],
+        "layer": "M3"
+      }
+    }
+  },
+  "connections": [],
+  "routes": {
+    "route1": {
+      "routing_strategy": "route_bundle",
+      "settings": {
+        "cross_section": "metal_routing",
+        "bend": "wire_corner",
+        "steps": [
+          {
+            "dy": 100,
+            "dx": -100
+          },
+          {
+            "dx": 200
+          },
+          {
+            "dy": 100
+          }
+        ]
+      },
+      "links": {
+        "b,e11": "t,e11",
+        "b,e12": "t,e12"
+      }
+    }
+  },
+  "placements": {
+    "t": {
+      "x": -250,
+      "y": 500
+    },
+    "obstacle": {
+      "x": -179,
+      "y": 200
+    }
+  }
+}

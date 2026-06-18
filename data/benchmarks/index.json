@@ -1,0 +1,283 @@
+{
+  "stats": {
+    "lidar": 9,
+    "picbench": 24,
+    "gdsfactory": 38,
+    "total": 71
+  },
+  "lidar_benchmarks": [
+    {
+      "name": "clements_16x16",
+      "n_devices": 168,
+      "n_nets": 287
+    },
+    {
+      "name": "clements_8x8",
+      "n_devices": 52,
+      "n_nets": 79
+    },
+    {
+      "name": "mrr_weight_bank_16x16",
+      "n_devices": 319,
+      "n_nets": 318
+    },
+    {
+      "name": "mrr_weight_bank_4x4",
+      "n_devices": 31,
+      "n_nets": 30
+    },
+    {
+      "name": "mrr_weight_bank_8x8",
+      "n_devices": 95,
+      "n_nets": 94
+    },
+    {
+      "name": "multiportmmi_16x16",
+      "n_devices": 162,
+      "n_nets": 223
+    },
+    {
+      "name": "multiportmmi_32x32",
+      "n_devices": 318,
+      "n_nets": 447
+    },
+    {
+      "name": "multiportmmi_8x8",
+      "n_devices": 82,
+      "n_nets": 111
+    },
+    {
+      "name": "toy_example",
+      "n_devices": 6,
+      "n_nets": 2
+    }
+  ],
+  "picbench_benchmarks": [
+    {
+      "name": "64-QAM modulator"
+    },
+    {
+      "name": "8-QAM modulator"
+    },
+    {
+      "name": "Benes_4x4"
+    },
+    {
+      "name": "Benes_8x8"
+    },
+    {
+      "name": "Clements_4x4"
+    },
+    {
+      "name": "Clements_8x8"
+    },
+    {
+      "name": "Crossbar_4x4"
+    },
+    {
+      "name": "Crossbar_8x8"
+    },
+    {
+      "name": "Direct modulator"
+    },
+    {
+      "name": "MZI_ps"
+    },
+    {
+      "name": "MZM"
+    },
+    {
+      "name": "NLS"
+    },
+    {
+      "name": "OS_2x2"
+    },
+    {
+      "name": "Optical hybrid"
+    },
+    {
+      "name": "QPSK modulator"
+    },
+    {
+      "name": "Reck_4x4"
+    },
+    {
+      "name": "Reck_8x8"
+    },
+    {
+      "name": "Spanke_4x4"
+    },
+    {
+      "name": "Spanke_8x8"
+    },
+    {
+      "name": "Spanke–Benes_4x4"
+    },
+    {
+      "name": "Spanke–Benes_8x8"
+    },
+    {
+      "name": "U-matrix_block"
+    },
+    {
+      "name": "WDM_demux"
+    },
+    {
+      "name": "WDM_mux"
+    }
+  ],
+  "gdsfactory_circuits": [
+    {
+      "name": "demo_backwards_compatibility",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_around_the_back",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_around_the_back2",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_around_the_back3",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_indirect",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_simple",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_steps01",
+      "n_instances": 3
+    },
+    {
+      "name": "aar_steps02_final",
+      "n_instances": 3
+    },
+    {
+      "name": "aar_steps02_initial",
+      "n_instances": 3
+    },
+    {
+      "name": "aar_steps03",
+      "n_instances": 3
+    },
+    {
+      "name": "aar_wonky_connector",
+      "n_instances": 2
+    },
+    {
+      "name": "connections_demo",
+      "n_instances": 3
+    },
+    {
+      "name": "mirror_demo",
+      "n_instances": 1
+    },
+    {
+      "name": "mmis",
+      "n_instances": 2
+    },
+    {
+      "name": "new_factories",
+      "n_instances": 2
+    },
+    {
+      "name": "pads",
+      "n_instances": 4
+    },
+    {
+      "name": "pads_path_length_match",
+      "n_instances": 4
+    },
+    {
+      "name": "pads_steps",
+      "n_instances": 4
+    },
+    {
+      "name": "ports_demo",
+      "n_instances": 1
+    },
+    {
+      "name": "relative_port_placing",
+      "n_instances": 2
+    },
+    {
+      "name": "routes",
+      "n_instances": 2
+    },
+    {
+      "name": "routes_custom",
+      "n_instances": 2
+    },
+    {
+      "name": "routes_mmi",
+      "n_instances": 2
+    },
+    {
+      "name": "routes_path_length_match",
+      "n_instances": 2
+    },
+    {
+      "name": "routes_steps",
+      "n_instances": 3
+    },
+    {
+      "name": "routes_waypoints",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_basic_01",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_error_intermediate_180",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_error_overconstrained",
+      "n_instances": 2
+    },
+    {
+      "name": "aar_gone_wrong",
+      "n_instances": 12
+    },
+    {
+      "name": "aar_implicit_final_angle",
+      "n_instances": 6
+    },
+    {
+      "name": "aar_start_end_customizations",
+      "n_instances": 12
+    },
+    {
+      "name": "aar_step_definitions",
+      "n_instances": 6
+    },
+    {
+      "name": "aar_tricky_connections",
+      "n_instances": 18
+    },
+    {
+      "name": "mask",
+      "n_instances": 2
+    },
+    {
+      "name": "mzi_lattice_filter",
+      "n_instances": 4
+    },
+    {
+      "name": "pads",
+      "n_instances": 4
+    },
+    {
+      "name": "rectangles",
+      "n_instances": 2
+    }
+  ]
+}

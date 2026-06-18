@@ -1,0 +1,34 @@
+{
+  "source": "GDSFactory",
+  "name": "demo_backwards_compatibility",
+  "file": "gdsfactory/docs/notebooks/demo_backwards_compatibility.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "mmit": {
+      "component": "mmi2x2"
+    },
+    "mmib": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5
+      }
+    }
+  },
+  "connections": [],
+  "routes": {
+    "route1": {
+      "links": {
+        "mmib,o2": "mmit,o2"
+      }
+    }
+  },
+  "placements": {
+    "mmit": {
+      "x": 100,
+      "y": 100
+    }
+  }
+}

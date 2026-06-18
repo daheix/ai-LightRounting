@@ -1,0 +1,25 @@
+{
+  "source": "GDSFactory",
+  "name": "new_factories",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/new_factories.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 0,
+  "has_placements": true,
+  "instances": {
+    "bot": {
+      "component": "pad_new"
+    },
+    "top": {
+      "component": "pad_new"
+    }
+  },
+  "connections": [],
+  "routes": {},
+  "placements": {
+    "top": {
+      "x": 0,
+      "y": 200
+    }
+  }
+}

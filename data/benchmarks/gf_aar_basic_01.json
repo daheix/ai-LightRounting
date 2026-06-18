@@ -1,0 +1,50 @@
+{
+  "source": "GDSFactory",
+  "name": "aar_basic_01",
+  "file": "gdsfactory/gdsfactory/samples/all_angle_routing/aar_basic_01.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": [],
+  "routes": {
+    "optical": {
+      "routing_strategy": "route_bundle_all_angle",
+      "settings": {
+        "steps": [
+          {
+            "ds": 50,
+            "exit_angle": 90
+          }
+        ]
+      },
+      "links": {
+        "mmi_short,o2": "mmi_long,o3",
+        "mmi_short,o3": "mmi_long,o2"
+      }
+    }
+  },
+  "placements": {
+    "mmi_long": {
+      "rotation": 190,
+      "x": 100,
+      "y": 100
+    }
+  }
+}
