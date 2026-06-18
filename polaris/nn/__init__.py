@@ -603,3 +603,26 @@ __all__ = [
     "Adam",
     "AdamConfig",
 ]
+
+
+# 子模块延迟导入（避免循环依赖，保持 __init__.py SLOC 限制）
+def __getattr__(name: str):
+    """延迟导入 nn 子模块（conv/attention）。"""
+    if name in (
+        "Conv2d",
+        "MaxPool2d",
+        "Dropout",
+        "Embedding",
+    ):
+        from polaris.nn import conv
+
+        return getattr(conv, name)
+    if name in (
+        "ScaledDotProductAttention",
+        "MultiHeadAttention",
+        "TransformerBlock",
+    ):
+        from polaris.nn import attention
+
+        return getattr(attention, name)
+    raise AttributeError(f"module 'polaris.nn' has no attribute {name!r}")

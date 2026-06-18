@@ -20,6 +20,7 @@ from polaris.pdk.soi.sources import (
     _SOI_CONSTRAINTS,
     _SRC_AIM,
     _SRC_ICCSZ,
+    _SRC_SOLDANO_JLT1995,
 )
 
 
@@ -291,5 +292,120 @@ def make_mzi() -> Device:
             "wavelength_nm": 1550,
         },
         source=_SRC_AIM,
+        constraints=_SOI_CONSTRAINTS,
+    )
+
+
+# ===========================================================================
+# 5. MMI 1x4 mmi_1x4
+# ===========================================================================
+def _make_mmi_1x4_ports(length: float, out_gap: float) -> list[Port]:
+    """创建 MMI 1x4 的 5 个端口（1 输入 4 输出）。"""
+    ports = [
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5)
+    ]
+    offsets = [1.5 * out_gap, 0.5 * out_gap, -0.5 * out_gap, -1.5 * out_gap]
+    for i, offset in enumerate(offsets):
+        ports.append(
+            Port(
+                name=f"out{i + 1}",
+                x=length,
+                y=offset,
+                direction=Direction.EAST,
+                waveguide_type="strip",
+                width=0.5,
+            )
+        )
+    return ports
+
+
+def make_mmi_1x4() -> Device:
+    """MMI 1x4（多模干涉耦合器，1 输入 4 输出）。
+
+    插损 < 0.5 dB，均匀性 < 0.5 dB，基于自成像原理实现 1x4 功率分束。
+    来源: Soldano et al., JLT 1995。
+    """
+    length = 20.0  # MMI 区长度
+    width = 6.0  # MMI 区宽度
+    out_gap = 1.0  # 输出端口间距
+    ports = _make_mmi_1x4_ports(length, out_gap)
+    return Device(
+        device_id="soi_mmi_1x4",
+        platform="SOI",
+        category="passive",
+        name="mmi_1x4",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
+        params={
+            "insertion_loss_db": 0.4,  # 插损 < 0.5 dB
+            "uniformity_db": 0.4,  # 均匀性 < 0.5 dB
+            "mmi_length_um": 20.0,
+            "mmi_width_um": 6.0,
+            "num_outputs": 4,
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_SOLDANO_JLT1995,
+        constraints=_SOI_CONSTRAINTS,
+    )
+
+
+# ===========================================================================
+# 6. MMI 4x4 mmi_4x4
+# ===========================================================================
+def _make_mmi_4x4_ports(length: float, gap: float) -> list[Port]:
+    """创建 MMI 4x4 的 8 个端口（4 输入 4 输出）。"""
+    ports: list[Port] = []
+    offsets = [1.5 * gap, 0.5 * gap, -0.5 * gap, -1.5 * gap]
+    for i, offset in enumerate(offsets):
+        ports.append(
+            Port(
+                name=f"in{i + 1}",
+                x=0.0,
+                y=offset,
+                direction=Direction.WEST,
+                waveguide_type="strip",
+                width=0.5,
+            )
+        )
+        ports.append(
+            Port(
+                name=f"out{i + 1}",
+                x=length,
+                y=offset,
+                direction=Direction.EAST,
+                waveguide_type="strip",
+                width=0.5,
+            )
+        )
+    return ports
+
+
+def make_mmi_4x4() -> Device:
+    """MMI 4x4（多模干涉耦合器，4 输入 4 输出）。
+
+    插损 < 1.0 dB，基于自成像原理实现 4x4 功率分束/合束。
+    来源: Soldano et al., JLT 1995。
+    """
+    length = 25.0  # MMI 区长度
+    width = 6.0  # MMI 区宽度
+    gap = 1.0  # 端口间距
+    ports = _make_mmi_4x4_ports(length, gap)
+    return Device(
+        device_id="soi_mmi_4x4",
+        platform="SOI",
+        category="passive",
+        name="mmi_4x4",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
+        params={
+            "insertion_loss_db": 0.8,  # 插损 < 1.0 dB
+            "uniformity_db": 0.6,
+            "mmi_length_um": 25.0,
+            "mmi_width_um": 6.0,
+            "num_inputs": 4,
+            "num_outputs": 4,
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_SOLDANO_JLT1995,
         constraints=_SOI_CONSTRAINTS,
     )

@@ -20,6 +20,15 @@ from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.source import Source
 
+# SOI strip 波导端口辅助函数（降低器件函数 SLOC）
+_DEFAULT_W = 0.5
+
+
+def _port(name: str, x: float, y: float, d: Direction, w: float = _DEFAULT_W) -> Port:
+    """创建 SOI strip 波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="strip", width=w)
+
+
 # ---------------------------------------------------------------------------
 # 公共来源对象（避免重复构造；frozen=True 可安全共享）
 # ---------------------------------------------------------------------------
@@ -52,14 +61,10 @@ def make_mzm_modulator() -> Device:
     arm_gap = 2.0
     length = arm_length + 40.0  # 含输入/输出 MMI
     ports = [
-        Port(name="in1", x=0.0, y=arm_gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="in2", x=0.0, y=-arm_gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out1", x=length, y=arm_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out2", x=length, y=-arm_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
+        _port("in1", 0.0, arm_gap / 2, Direction.WEST),
+        _port("in2", 0.0, -arm_gap / 2, Direction.WEST),
+        _port("out1", length, arm_gap / 2, Direction.EAST),
+        _port("out2", length, -arm_gap / 2, Direction.EAST),
     ]
     return Device(
         device_id="soi_mzm_modulator",
@@ -67,8 +72,7 @@ def make_mzm_modulator() -> Device:
         category="active",
         name="mzm_modulator",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25,
-                         xmax=length, ymax=arm_gap / 2 + 0.25),
+        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25, xmax=length, ymax=arm_gap / 2 + 0.25),
         params={
             "bandwidth_3db_ghz": 20.0,  # 带宽 ~20GHz
             "insertion_loss_db": 5.0,  # 插损 ~5dB
@@ -98,10 +102,8 @@ def make_mrm_modulator() -> Device:
     gap = 0.2  # 环-总线耦合间隙
     width = 0.5
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="through", x=2 * radius, y=0.0, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
+        _port("in", 0.0, 0.0, Direction.WEST, width),
+        _port("through", 2 * radius, 0.0, Direction.EAST, width),
     ]
     return Device(
         device_id="soi_mrm_modulator",
@@ -109,8 +111,9 @@ def make_mrm_modulator() -> Device:
         category="active",
         name="mrm_modulator",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
-                         xmax=2 * radius, ymax=radius + gap + width + width / 2),
+        bbox=BoundingBox(
+            xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=radius + gap + width + width / 2
+        ),
         params={
             "efficiency_pm_v": 52.0,  # 垂直 PN 结效率 52 pm/V
             "bandwidth_3db_ghz": 74.0,  # 横向 PN 结 3-dB 带宽 74GHz
@@ -139,10 +142,7 @@ def make_ge_photodetector() -> Device:
     """
     length = 30.0  # 探测区长度
     width = 0.5
-    ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-    ]
+    ports = [_port("in", 0.0, 0.0, Direction.WEST, width)]
     return Device(
         device_id="soi_ge_photodetector",
         platform="SOI",
@@ -177,30 +177,27 @@ def make_double_ring_filter() -> Device:
     radius = 10.0  # 环半径
     gap = 0.2  # 耦合间隙
     width = 0.5
-    ring_spacing = 2 * (radius + gap + width)  # 两环间距
+    ring_span = 2 * (radius + gap + width)  # 两环间距 & drop/add 端口 y 坐标
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="through", x=ring_spacing, y=0.0, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
-        Port(name="drop", x=ring_spacing, y=2 * (radius + gap + width),
-             direction=Direction.EAST, waveguide_type="strip", width=width),
-        Port(name="add", x=0.0, y=2 * (radius + gap + width),
-             direction=Direction.WEST, waveguide_type="strip", width=width),
+        _port("in", 0.0, 0.0, Direction.WEST, width),
+        _port("through", ring_span, 0.0, Direction.EAST, width),
+        _port("drop", ring_span, ring_span, Direction.EAST, width),
+        _port("add", 0.0, ring_span, Direction.WEST, width),
     ]
-    params = {
-        "drop_insertion_loss_db": 1.0, "bandwidth_1db_ghz": 105.0,
-        "radius_um": 10.0, "gap_nm": 200, "wavelength_nm": 1310,
-    }
     return Device(
         device_id="soi_double_ring_filter",
         platform="SOI",
         category="passive",
         name="double_ring_filter",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
-                         xmax=ring_spacing, ymax=2 * (radius + gap + width) + width / 2),
-        params=params,
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=ring_span, ymax=ring_span + width / 2),
+        params={
+            "drop_insertion_loss_db": 1.0,
+            "bandwidth_1db_ghz": 105.0,
+            "radius_um": 10.0,
+            "gap_nm": 200,
+            "wavelength_nm": 1310,
+        },
         source=_SRC_SAMSUNG,
         constraints={
             "min_bend_radius_um": 2.0,

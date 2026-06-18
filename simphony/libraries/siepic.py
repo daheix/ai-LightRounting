@@ -389,13 +389,229 @@ def bidirectional_coupler(
     }
 
 
+def spiral_inductor(
+    wl: ArrayLike = 1.55,
+    n_loops: int = 5,
+    radius_um: float = 10.0,
+    gap_um: float = 2.0,
+) -> dict:
+    """螺旋电感模型（SiEPIC 热光调谐器等效电路）。
+
+    端口: o0（输入）, o1（输出）
+
+    来源:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    wl_arr = _to_array(wl)
+    ne = 2.4
+    length = n_loops * 2 * np.pi * radius_um + n_loops * gap_um
+    beta = 2.0 * np.pi * ne / wl_arr
+    phase = np.exp(1j * beta * length)
+    zero = np.zeros_like(phase)
+    return {("o0", "o0"): zero, ("o0", "o1"): phase, ("o1", "o0"): phase, ("o1", "o1"): zero}
+
+
+def spiral_capacitor(
+    wl: ArrayLike = 1.55,
+    n_loops: int = 5,
+    radius_um: float = 10.0,
+    gap_um: float = 2.0,
+) -> dict:
+    """螺旋电容模型（SiEPIC 等效电路元件）。
+
+    端口: o0（输入）, o1（输出）
+
+    来源:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    wl_arr = _to_array(wl)
+    ne = 2.4
+    length = n_loops * 2 * np.pi * radius_um + n_loops * gap_um
+    beta = 2.0 * np.pi * ne / wl_arr
+    phase = np.exp(1j * beta * length)
+    zero = np.zeros_like(phase)
+    return {("o0", "o0"): zero, ("o0", "o1"): phase, ("o1", "o0"): phase, ("o1", "o1"): zero}
+
+
+def spiral_resistor(
+    wl: ArrayLike = 1.55,
+    n_loops: int = 5,
+    radius_um: float = 10.0,
+    gap_um: float = 2.0,
+    loss_db_cm: float = 10.0,
+) -> dict:
+    """螺旋电阻模型（SiEPIC 热光调谐器等效电路，含损耗）。
+
+    端口: o0（输入）, o1（输出）
+
+    来源:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    wl_arr = _to_array(wl)
+    ne = 2.4
+    length = n_loops * 2 * np.pi * radius_um + n_loops * gap_um
+    beta = 2.0 * np.pi * ne / wl_arr
+    alpha = loss_db_cm * 100.0 / (20.0 * np.log10(np.e))
+    phase = np.exp(-alpha * length * 1e-6 + 1j * beta * length)
+    zero = np.zeros_like(phase)
+    return {("o0", "o0"): zero, ("o0", "o1"): phase, ("o1", "o0"): phase, ("o1", "o1"): zero}
+
+
+def crossing_ideal(
+    wl: ArrayLike = 1.55,
+) -> dict:
+    """理想交叉波导模型（无损耗无串扰）。
+
+    端口: o0, o1, o2, o3（对角线直通）
+
+    来源:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    wl_arr = _to_array(wl)
+    thru = np.ones_like(wl_arr, dtype=complex)
+    zero = np.zeros_like(wl_arr, dtype=complex)
+    return {
+        ("o0", "o0"): zero, ("o1", "o1"): zero, ("o2", "o2"): zero, ("o3", "o3"): zero,
+        ("o2", "o0"): thru, ("o3", "o1"): thru,
+        ("o0", "o2"): thru, ("o1", "o3"): thru,
+        ("o3", "o0"): zero, ("o2", "o1"): zero,
+        ("o0", "o3"): zero, ("o1", "o2"): zero,
+    }
+
+
+def crossing_angled(
+    wl: ArrayLike = 1.55,
+    angle_deg: float = 90.0,
+) -> dict:
+    """角度交叉波导模型（含角度相关损耗和串扰）。
+
+    端口: o0, o1, o2, o3（对角线直通 + 串扰）
+
+    来源:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Bogaerts et al., 2005, "Low-loss, low-cross-talk crossings for SOI
+      nanophotonic waveguides", Optics Express
+    """
+    wl_arr = _to_array(wl)
+    angle_rad = np.radians(angle_deg)
+    loss_db = 0.02 + 0.1 * abs(angle_rad - np.pi / 2) / (np.pi / 2)
+    thru = np.full_like(wl_arr, 10.0 ** (-loss_db / 20.0), dtype=complex)
+    xt_db = -40.0 + 10.0 * abs(angle_rad - np.pi / 2) / (np.pi / 2)
+    xt = np.full_like(wl_arr, 10.0 ** (xt_db / 20.0), dtype=complex)
+    zero = np.zeros_like(wl_arr, dtype=complex)
+    return {
+        ("o0", "o0"): zero, ("o1", "o1"): zero, ("o2", "o2"): zero, ("o3", "o3"): zero,
+        ("o2", "o0"): thru, ("o3", "o1"): thru,
+        ("o0", "o2"): thru, ("o1", "o3"): thru,
+        ("o3", "o0"): xt, ("o2", "o1"): xt,
+        ("o0", "o3"): xt, ("o1", "o2"): xt,
+    }
+
+
+def y_branch_ideal(
+    wl: ArrayLike = 1.55,
+) -> dict:
+    """理想 Y 分支模型（无损 50/50 分束）。
+
+    端口: o0（合束/分束端）, o1, o2（两个分支端）
+
+    来源:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    wl_arr = _to_array(wl)
+    amp = np.full_like(wl_arr, 1.0 / np.sqrt(2.0), dtype=complex)
+    zero = np.zeros_like(amp)
+    return {
+        ("o0", "o0"): zero, ("o1", "o1"): zero, ("o2", "o2"): zero,
+        ("o1", "o0"): amp, ("o2", "o0"): amp,
+        ("o0", "o1"): amp, ("o0", "o2"): amp,
+        ("o1", "o2"): zero, ("o2", "o1"): zero,
+    }
+
+
+def dc_halfring(
+    wl: ArrayLike = 1.55,
+    pol: Literal["te", "tm"] = "te",
+    gap: float = 50,
+    radius: float = 5,
+    width: float = 500,
+    thickness: float = 220,
+    coupling_length: float = 0,
+) -> dict:
+    """半环定向耦合器模型（全通型环 + 直通波导）。
+
+    端口: o0（输入）, o1（直通）, o2（下路）, o3
+
+    来源:
+    - Simphony SiEPIC models: https://github.com/BYUCamachoLab/simphony
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    _validate_pol(pol)
+    wl_arr = _to_array(wl)
+    ne = 2.4 if pol == "te" else 1.8
+    circumference = 2.0 * np.pi * radius + 2 * coupling_length
+    beta = 2.0 * np.pi * ne / wl_arr
+    phi = beta * circumference
+    a = 10.0 ** (-0.1 * circumference / 1e4 / 20.0)
+    coupling = 0.3
+    t = np.sqrt(1.0 - coupling)
+    kappa = np.sqrt(coupling)
+    denom = 1.0 - t * a * np.exp(1j * phi)
+    throughput = (t - a * np.exp(1j * phi)) / denom
+    drop = kappa * np.sqrt(a) * np.exp(1j * phi / 2.0) / denom
+    zero = np.zeros_like(throughput)
+    return {
+        ("o0", "o0"): zero, ("o1", "o1"): zero, ("o2", "o2"): zero, ("o3", "o3"): zero,
+        ("o1", "o0"): throughput, ("o0", "o1"): throughput,
+        ("o3", "o2"): drop, ("o2", "o3"): drop,
+        ("o3", "o0"): zero, ("o2", "o1"): zero,
+    }
+
+
+def waveguide_taper(
+    wl: ArrayLike = 1.55,
+    w1: float = 0.5,
+    w2: float = 1.0,
+    length: float = 10.0,
+    pol: Literal["te", "tm"] = "te",
+) -> dict:
+    """锥形波导模型（绝热过渡，与 waveguide+taper 合并接口）。
+
+    端口: o0（输入）, o1（输出）
+
+    来源:
+    - Simphony SiEPIC models: https://github.com/BYUCamachoLab/simphony
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    _validate_pol(pol)
+    wl_arr = _to_array(wl)
+    ne = 2.4 if pol == "te" else 1.8
+    beta = 2.0 * np.pi * ne / wl_arr
+    phase = np.exp(1j * beta * length)
+    zero = np.zeros_like(phase)
+    return {
+        ("o0", "o0"): zero,
+        ("o0", "o1"): phase,
+        ("o1", "o0"): phase,
+        ("o1", "o1"): zero,
+    }
+
+
 __all__ = [
     "bidirectional_coupler",
+    "crossing_angled",
+    "crossing_ideal",
+    "dc_halfring",
     "directional_coupler",
     "grating_coupler",
     "half_ring",
+    "spiral_capacitor",
+    "spiral_inductor",
+    "spiral_resistor",
     "taper",
     "terminator",
     "waveguide",
+    "waveguide_taper",
     "y_branch",
+    "y_branch_ideal",
 ]

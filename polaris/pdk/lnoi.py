@@ -34,6 +34,16 @@ _LNOI_MIN_SPACING_UM = 2.5  # LNOI 波导间距典型 2-3μm
 _LNOI_WAVEGUIDE_WIDTH_UM = 1.5  # TFLN 条形波导典型宽度 1-2μm
 
 
+def _port(name: str, x: float, y: float, d: Direction, w: float = _LNOI_WAVEGUIDE_WIDTH_UM) -> Port:
+    """创建 LNOI 条形波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="lnoi_strip", width=w)
+
+
+def _rf_port(name: str, x: float, y: float, d: Direction, w: float = 3.0) -> Port:
+    """创建 RF 共面波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="rf_coplanar", width=w)
+
+
 # ---------------------------------------------------------------------------
 # 1. LNOI 波导
 # ---------------------------------------------------------------------------
@@ -46,10 +56,8 @@ def make_lnoi_waveguide() -> Device:
     length_um = 10.0  # 单位波导段长度（μm）
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
+        _port("in", 0.0, 0.0, Direction.WEST),
+        _port("out", length_um, 0.0, Direction.EAST),
     ]
     bbox = BoundingBox(xmin=0.0, ymin=-width_um / 2, xmax=length_um, ymax=width_um / 2)
     return Device(
@@ -82,31 +90,37 @@ def make_lnoi_waveguide() -> Device:
 # 2. LNOI 电光调制器（量产平台）
 # ---------------------------------------------------------------------------
 def _make_lnoi_modulator_device(
-    device_id: str, name: str, length_um: float, params: dict, source: Source,
+    device_id: str,
+    name: str,
+    length_um: float,
+    params: dict,
+    source: Source,
 ) -> Device:
     """构建 LNOI 调制器 Device（共用 in/out/rf_in/rf_out 端口与包围盒）。"""
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
     rf_offset_y = 3.0
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="rf_in", x=0.0, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-        Port(name="rf_out", x=length_um, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
+        _port("in", 0.0, 0.0, Direction.WEST),
+        _port("out", length_um, 0.0, Direction.EAST),
+        _rf_port("rf_in", 0.0, -rf_offset_y, Direction.SOUTH),
+        _rf_port("rf_out", length_um, -rf_offset_y, Direction.SOUTH),
     ]
-    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                      ymax=width_um / 2)
+    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um, ymax=width_um / 2)
     constraints = {
         "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
         "min_spacing_um": _LNOI_MIN_SPACING_UM,
         "electrode_gap_um": 3.0,
     }
     return Device(
-        device_id=device_id, platform="LNOI", category="active", name=name,
-        ports=ports, bbox=bbox, params=params, source=source, constraints=constraints,
+        device_id=device_id,
+        platform="LNOI",
+        category="active",
+        name=name,
+        ports=ports,
+        bbox=bbox,
+        params=params,
+        source=source,
+        constraints=constraints,
     )
 
 
@@ -118,14 +132,20 @@ def make_lnoi_eo_modulator() -> Device:
     """
     length_um = 1000.0  # 调制区长度 ~1mm（典型 MZM 臂长）
     return _make_lnoi_modulator_device(
-        device_id="lnoi_eo_modulator", name="lnoi_eo_modulator", length_um=length_um,
+        device_id="lnoi_eo_modulator",
+        name="lnoi_eo_modulator",
+        length_um=length_um,
         params={
-            "bandwidth_ghz": ">110 GHz", "vpi_v": "<3 V", "yield": "50%",
-            "wafer_size": "4 inch", "modulator_length_um": f"{length_um} μm",
+            "bandwidth_ghz": ">110 GHz",
+            "vpi_v": "<3 V",
+            "yield": "50%",
+            "wafer_size": "4 inch",
+            "modulator_length_um": f"{length_um} μm",
         },
         source=Source(
             title="LNOI platform: wafer-scale lithium niobate photonic integrated circuits",
-            authors="Liu et al.", year=2025,
+            authors="Liu et al.",
+            year=2025,
             url="https://doi.org/10.37188/lam.2025.047",
         ),
     )
@@ -142,15 +162,19 @@ def make_lnoi_mzm_high_confined() -> Device:
     """
     length_um = 2000.0  # 高约束 MZM 调制臂长 ~2mm
     return _make_lnoi_modulator_device(
-        device_id="lnoi_mzm_high_confined", name="lnoi_mzm_high_confined",
+        device_id="lnoi_mzm_high_confined",
+        name="lnoi_mzm_high_confined",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "1.2 V·cm", "excess_loss_db": "~2.4 dB",
-            "bandwidth_ghz": ">40 GHz", "modulator_length_um": f"{length_um} μm",
+            "vpi_l_v_cm": "1.2 V·cm",
+            "excess_loss_db": "~2.4 dB",
+            "bandwidth_ghz": ">40 GHz",
+            "modulator_length_um": f"{length_um} μm",
         },
         source=Source(
             title="High-confinement LNOI Mach-Zehnder modulator",
-            authors="Chen et al.", year=2023,
+            authors="Chen et al.",
+            year=2023,
             url="https://doi.org/10.1364/OL.481827",
         ),
     )
@@ -167,16 +191,20 @@ def make_lnoi_mzm_traveling_wave() -> Device:
     """
     length_um = 3000.0  # 行波电极 MZM 臂长 ~3mm
     return _make_lnoi_modulator_device(
-        device_id="lnoi_mzm_traveling_wave", name="lnoi_mzm_traveling_wave",
+        device_id="lnoi_mzm_traveling_wave",
+        name="lnoi_mzm_traveling_wave",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "1.77 V·cm", "optical_loss_db_cm": "0.022 dB/cm",
-            "bandwidth_ghz": ">100 GHz", "electrode_type": "traveling_wave_coplanar",
+            "vpi_l_v_cm": "1.77 V·cm",
+            "optical_loss_db_cm": "0.022 dB/cm",
+            "bandwidth_ghz": ">100 GHz",
+            "electrode_type": "traveling_wave_coplanar",
             "modulator_length_um": f"{length_um} μm",
         },
         source=Source(
             title="U-T double-layer traveling-wave electrode LNOI modulator",
-            authors="MDPI Photonics", year=2023,
+            authors="MDPI Photonics",
+            year=2023,
             url="https://www.mdpi.com/2304-6732/12/7/648",
         ),
     )
@@ -193,16 +221,20 @@ def make_lnoi_modulator_review() -> Device:
     """
     length_um = 1500.0  # 综述典型 MZM 臂长 ~1.5mm
     return _make_lnoi_modulator_device(
-        device_id="lnoi_modulator_review", name="lnoi_modulator_review",
+        device_id="lnoi_modulator_review",
+        name="lnoi_modulator_review",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "<2 V·cm", "coupling_loss_db_facet": "<0.5 dB/facet",
-            "coupler_type": "double_taper", "bandwidth_ghz": ">100 GHz",
+            "vpi_l_v_cm": "<2 V·cm",
+            "coupling_loss_db_facet": "<0.5 dB/facet",
+            "coupler_type": "double_taper",
+            "bandwidth_ghz": ">100 GHz",
             "modulator_length_um": f"{length_um} μm",
         },
         source=Source(
             title="LNOI 调制器综述（薄膜铌酸锂电光调制器研究进展）",
-            authors="刘海锋等", year=2022,
+            authors="刘海锋等",
+            year=2022,
             url="https://doi.org/10.37188/CO.2021-0115",
         ),
     )
@@ -220,13 +252,10 @@ def make_lnoi_photonics_review() -> Device:
     length_um = 10.0  # 参考波导段
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
+        _port("in", 0.0, 0.0, Direction.WEST),
+        _port("out", length_um, 0.0, Direction.EAST),
     ]
-    bbox = BoundingBox(xmin=0.0, ymin=-width_um / 2, xmax=length_um,
-                       ymax=width_um / 2)
+    bbox = BoundingBox(xmin=0.0, ymin=-width_um / 2, xmax=length_um, ymax=width_um / 2)
     return Device(
         device_id="lnoi_photonics_review",
         platform="LNOI",
@@ -264,17 +293,53 @@ def make_lnoi_cmos_modulator() -> Device:
     """
     length_um = 2000.0  # CMOS 兼容 MZM 臂长 ~2mm
     return _make_lnoi_modulator_device(
-        device_id="lnoi_cmos_modulator", name="lnoi_cmos_modulator",
+        device_id="lnoi_cmos_modulator",
+        name="lnoi_cmos_modulator",
         length_um=length_um,
         params={
-            "drive_voltage_v": "CMOS compatible (<1 V)", "bandwidth_ghz": ">100 GHz",
-            "vpi_v": "<1 V", "milestone": "first CMOS-compatible voltage LN modulator",
+            "drive_voltage_v": "CMOS compatible (<1 V)",
+            "bandwidth_ghz": ">100 GHz",
+            "vpi_v": "<1 V",
+            "milestone": "first CMOS-compatible voltage LN modulator",
             "modulator_length_um": f"{length_um} μm",
         },
         source=Source(
             title="Integrated LN EO modulators operating at CMOS-compatible voltages",
-            authors="Wang et al.", year=2018,
+            authors="Wang et al.",
+            year=2018,
             url="https://doi.org/10.1038/s41586-018-0551-y",
+        ),
+    )
+
+
+# ---------------------------------------------------------------------------
+# 8. LNOI TFLN 调制器（Wang et al., Optica 2018）
+# ---------------------------------------------------------------------------
+def make_lnoi_tfln_modulator() -> Device:
+    """LNOI 薄膜铌酸锂调制器（Vπ·L ≈ 1.5 V·cm，带宽 > 100 GHz）。
+
+    来源: Wang et al., Optica 2018, 5(11):1393-1397，
+    首次实现亚伏特驱动电压的 TFLN 调制器，Vπ·L ≈ 1.5 V·cm。
+    """
+    length_um = 2000.0  # TFLN 调制器臂长 ~2mm
+    return _make_lnoi_modulator_device(
+        device_id="lnoi_tfln_modulator",
+        name="lnoi_tfln_modulator",
+        length_um=length_um,
+        params={
+            "vpi_l_v_cm": "1.5 V·cm",
+            "bandwidth_ghz": ">100 GHz",
+            "modulator_type": "TFLN MZM",
+            "modulator_length_um": f"{length_um} μm",
+        },
+        source=Source(
+            title=(
+                "Integrated lithium niobate electro-optic modulators"
+                " operating at CMOS-compatible voltages"
+            ),
+            authors="Wang et al.",
+            year=2018,
+            url="https://doi.org/10.1364/OPTICA.5.001393",
         ),
     )
 
@@ -290,4 +355,5 @@ LNOI_DEVICES: dict[str, Callable[[], Device]] = {
     "lnoi_modulator_review": make_lnoi_modulator_review,
     "lnoi_photonics_review": make_lnoi_photonics_review,
     "lnoi_cmos_modulator": make_lnoi_cmos_modulator,
+    "lnoi_tfln_modulator": make_lnoi_tfln_modulator,
 }

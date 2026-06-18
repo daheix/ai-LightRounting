@@ -50,7 +50,9 @@ from collections.abc import Callable
 from polaris.pdk.device import Device
 from polaris.pdk.inp.active import (
     make_eam_modulator,
+    make_inp_eam_mason,
     make_inp_photodetector,
+    make_inp_soa_koren,
     make_soa,
     make_soa_high_power,
 )
@@ -80,6 +82,8 @@ INP_DEVICES: dict[str, Callable[[], Device]] = {
     "soa_high_power": make_soa_high_power,
     "dfb_laser_coherent": make_dfb_laser_coherent,
     "imos_dfb_laser": make_imos_dfb_laser,
+    "inp_soa_koren": make_inp_soa_koren,
+    "inp_eam_mason": make_inp_eam_mason,
 }
 
 __all__ = [
@@ -90,8 +94,10 @@ __all__ = [
     "make_dfb_laser_oband",
     "make_eam_modulator",
     "make_imos_dfb_laser",
+    "make_inp_eam_mason",
     "make_inp_mzm",
     "make_inp_photodetector",
+    "make_inp_soa_koren",
     "make_inp_waveguide",
     "make_sgdbr_laser",
     "make_soa",

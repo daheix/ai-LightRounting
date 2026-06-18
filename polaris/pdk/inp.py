@@ -108,9 +108,20 @@ _MIN_BEND_RADIUS = 250.0
 _MIN_SPACING = 2.0
 
 
+def _port(name: str, x: float, y: float, d: Direction, w: float = _WG_WIDTH) -> Port:
+    """创建 InP 有源波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type=_WG_TYPE, width=w)
+
+
+def _eport(name: str, x: float, y: float, d: Direction, w: float = 50.0) -> Port:
+    """创建电气端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="electrical", width=w)
+
+
 # ---------------------------------------------------------------------------
 # 器件工厂函数
 # ---------------------------------------------------------------------------
+
 
 def make_inp_waveguide() -> Device:
     """InP 有源波导（宽 1.5-2.5μm，SSC 模场 10×7μm）。
@@ -129,12 +140,7 @@ def make_inp_waveguide() -> Device:
         platform="InP",
         category="passive",
         name="inp_waveguide",
-        ports=[
-            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-        ],
+        ports=[_port("in", 0.0, 0.0, Direction.WEST), _port("out", length, 0.0, Direction.EAST)],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w),
         params={
             "width_um": _WG_WIDTH,
@@ -168,12 +174,9 @@ def make_eam_modulator() -> Device:
         category="active",
         name="eam_modulator",
         ports=[
-            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="rf", x=length / 2.0, y=half_w, direction=Direction.NORTH,
-                 waveguide_type="electrical", width=50.0),
+            _port("in", 0.0, 0.0, Direction.WEST),
+            _port("out", length, 0.0, Direction.EAST),
+            _eport("rf", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -208,10 +211,8 @@ def make_inp_photodetector() -> Device:
         category="detector",
         name="inp_photodetector",
         ports=[
-            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("in", 0.0, 0.0, Direction.WEST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -246,12 +247,9 @@ def make_soa() -> Device:
         category="active",
         name="soa",
         ports=[
-            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("in", 0.0, 0.0, Direction.WEST),
+            _port("out", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -285,17 +283,12 @@ def make_inp_mzm() -> Device:
         category="active",
         name="inp_mzm",
         ports=[
-            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="rf1", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
-            Port(name="rf2", x=length / 2.0, y=-half_w,
-                 direction=Direction.SOUTH, waveguide_type="electrical", width=50.0),
+            _port("in", 0.0, 0.0, Direction.WEST),
+            _port("out", length, 0.0, Direction.EAST),
+            _eport("rf1", length / 2.0, half_w, Direction.NORTH),
+            _eport("rf2", length / 2.0, -half_w, Direction.SOUTH),
         ],
-        bbox=BoundingBox(xmin=0.0, ymin=-half_w - 50.0, xmax=length,
-                         ymax=half_w + 50.0),
+        bbox=BoundingBox(xmin=0.0, ymin=-half_w - 50.0, xmax=length, ymax=half_w + 50.0),
         params={
             "length_mm": 1.0,
             "length_um": length,
@@ -327,12 +320,9 @@ def make_soa_high_power() -> Device:
         category="active",
         name="soa_high_power",
         ports=[
-            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("in", 0.0, 0.0, Direction.WEST),
+            _port("out", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={

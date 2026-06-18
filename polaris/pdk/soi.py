@@ -85,6 +85,16 @@ _SOI_CONSTRAINTS = {
 }
 
 
+def _port(name: str, x: float, y: float, d: Direction, w: float = 0.5) -> Port:
+    """创建 SOI strip 波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="strip", width=w)
+
+
+def _rib_port(name: str, x: float, y: float, d: Direction, w: float = 0.5) -> Port:
+    """创建 SOI rib 波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="rib", width=w)
+
+
 # ===========================================================================
 # 1. 条形波导 strip_waveguide
 # ===========================================================================
@@ -96,12 +106,7 @@ def make_strip_waveguide() -> Device:
     """
     length = 10.0  # 默认 10μm 直波导
     width = 0.5  # 500nm 单模
-    ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
-    ]
+    ports = [_port("in", 0.0, 0.0, Direction.WEST), _port("out", length, 0.0, Direction.EAST)]
     return Device(
         device_id="soi_strip_waveguide",
         platform="SOI",
@@ -133,10 +138,8 @@ def make_rib_waveguide() -> Device:
     length = 10.0
     width = 0.5
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="rib", width=width),
-        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-             waveguide_type="rib", width=width),
+        _rib_port("in", 0.0, 0.0, Direction.WEST),
+        _rib_port("out", length, 0.0, Direction.EAST),
     ]
     return Device(
         device_id="soi_rib_waveguide",
@@ -168,13 +171,10 @@ def make_bend() -> Device:
     来源：台积电 ISSCC 2026 硅光子学平台解析。
     """
     radius = 5.0  # 默认半径 5μm（区间 2-6μm）
-    width = 0.5
     # 90° 弯曲：圆心 (R, 0)，弧从 (0,0) 切向 +x 到 (R,R) 切向 +y
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="out", x=radius, y=radius, direction=Direction.NORTH,
-             waveguide_type="strip", width=width),
+        _port("in", 0.0, 0.0, Direction.WEST),
+        _port("out", radius, radius, Direction.NORTH),
     ]
     return Device(
         device_id="soi_bend",
@@ -212,14 +212,10 @@ def make_directional_coupler() -> Device:
     width = 0.5
     gap = 0.5  # 端口间距（波导间物理间距，μm）
     ports = [
-        Port(name="in1", x=0.0, y=gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="in2", x=0.0, y=-gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="out1", x=length, y=gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
-        Port(name="out2", x=length, y=-gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
+        _port("in1", 0.0, gap / 2, Direction.WEST),
+        _port("in2", 0.0, -gap / 2, Direction.WEST),
+        _port("out1", length, gap / 2, Direction.EAST),
+        _port("out2", length, -gap / 2, Direction.EAST),
     ]
     return Device(
         device_id="soi_directional_coupler",
@@ -227,8 +223,9 @@ def make_directional_coupler() -> Device:
         category="passive",
         name="directional_coupler",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-gap / 2 - width / 2,
-                         xmax=length, ymax=gap / 2 + width / 2),
+        bbox=BoundingBox(
+            xmin=0.0, ymin=-gap / 2 - width / 2, xmax=length, ymax=gap / 2 + width / 2
+        ),
         params={
             "gap_nm": 200,  # 耦合间隙 100-300nm
             "coupling_length_um": 10.0,  # 耦合长度 5-20μm
@@ -253,11 +250,7 @@ def make_grating_coupler_1d() -> Device:
     """
     width = 12.0  # 光栅区宽度
     length = 20.0  # 光栅区长度
-    ports = [
-        # 波导端口（水平出射）
-        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-    ]
+    ports = [_port("wg", 0.0, 0.0, Direction.WEST)]
     return Device(
         device_id="soi_grating_coupler_1d",
         platform="SOI",
@@ -290,18 +283,14 @@ def make_grating_coupler_2d() -> Device:
     来源：三星 300mm 硅光平台 OFC 2026。
     """
     size = 15.0  # 2D 光栅方形边长
-    ports = [
-        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-    ]
+    ports = [_port("wg", 0.0, 0.0, Direction.WEST)]
     return Device(
         device_id="soi_grating_coupler_2d",
         platform="SOI",
         category="passive",
         name="grating_coupler_2d",
         ports=ports,
-        bbox=BoundingBox(xmin=-size / 2, ymin=-size / 2,
-                         xmax=size / 2, ymax=size / 2),
+        bbox=BoundingBox(xmin=-size / 2, ymin=-size / 2, xmax=size / 2, ymax=size / 2),
         params={
             "coupling_loss_db": 2.4,  # 耦合损耗 2.4dB
             "bandwidth_1db_nm": 17,  # 1-dB 带宽 17nm
@@ -330,11 +319,9 @@ def make_edge_coupler() -> Device:
     width = 0.5
     ports = [
         # 芯片端面侧（光纤耦合，宽端口）
-        Port(name="fiber", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=3.0),
+        _port("fiber", 0.0, 0.0, Direction.WEST, 3.0),
         # 波导侧（窄端口）
-        Port(name="wg", x=length, y=0.0, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
+        _port("wg", length, 0.0, Direction.EAST, width),
     ]
     return Device(
         device_id="soi_edge_coupler",

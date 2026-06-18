@@ -18,7 +18,10 @@ from polaris.pdk.soi.sources import (
     _SOI_CONSTRAINTS,
     _SRC_AIM,
     _SRC_ICCSZ,
+    _SRC_KRAUSS_NP2008,
+    _SRC_PIGGOTT_NP2017,
     _SRC_SAMSUNG,
+    _SRC_SOREF_JSTQE1998,
     _SRC_TSMC,
 )
 
@@ -394,4 +397,148 @@ def make_crossing() -> Device:
         },
         source=_SRC_ICCSZ,
         constraints=_SOI_CONSTRAINTS,
+    )
+
+
+# ===========================================================================
+# 9. 阵列波导光栅 awg
+# ===========================================================================
+def _make_awg_ports(n_channels: int, channel_gap: float, length: float) -> list[Port]:
+    """创建 AWG 的输入/输出端口（n_channels 个输入 + n_channels 个输出）。"""
+    ports: list[Port] = []
+    half = n_channels / 2.0
+    for i in range(n_channels):
+        offset = (half - 0.5 - i) * channel_gap
+        ports.append(
+            Port(
+                name=f"in{i + 1}",
+                x=0.0,
+                y=offset,
+                direction=Direction.WEST,
+                waveguide_type="strip",
+                width=0.5,
+            )
+        )
+        ports.append(
+            Port(
+                name=f"out{i + 1}",
+                x=length,
+                y=offset,
+                direction=Direction.EAST,
+                waveguide_type="strip",
+                width=0.5,
+            )
+        )
+    return ports
+
+
+def make_awg() -> Device:
+    """阵列波导光栅（arrayed waveguide grating, AWG）。
+
+    8 通道，通道间距 100 GHz（~0.8 nm），插损 < 3 dB。
+    来源: Soref et al., IEEE JSTQE 1998。
+    """
+    length = 500.0  # AWG 总长度
+    width = 50.0  # AWG 总宽度
+    n_channels = 8
+    channel_gap = 2.0  # 输出波导间距
+    ports = _make_awg_ports(n_channels, channel_gap, length)
+    return Device(
+        device_id="soi_awg",
+        platform="SOI",
+        category="passive",
+        name="awg",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
+        params={
+            "num_channels": n_channels,  # 8 通道
+            "channel_spacing_ghz": 100.0,  # 通道间距 100 GHz
+            "channel_spacing_nm": 0.8,  # 通道间距 ~0.8 nm
+            "insertion_loss_db": 2.5,  # 插损 < 3 dB
+            "crosstalk_db": -25.0,  # 串扰
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_SOREF_JSTQE1998,
+        constraints=_SOI_CONSTRAINTS,
+    )
+
+
+# ===========================================================================
+# 10. 光子晶体波导 photonic_crystal_waveguide
+# ===========================================================================
+def make_photonic_crystal_waveguide() -> Device:
+    """光子晶体波导（photonic crystal waveguide, PhCW）。
+
+    慢光因子 ≈ 10-30，损耗 ≈ 5 dB/cm，利用光子带隙实现慢光效应。
+    来源: Krauss et al., Nature Photonics 2008。
+    """
+    length = 20.0  # 光子晶体波导长度
+    width = 0.5
+    ports = [
+        Port(
+            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
+        ),
+        Port(
+            name="out",
+            x=length,
+            y=0.0,
+            direction=Direction.EAST,
+            waveguide_type="strip",
+            width=width,
+        ),
+    ]
+    return Device(
+        device_id="soi_photonic_crystal_waveguide",
+        platform="SOI",
+        category="passive",
+        name="photonic_crystal_waveguide",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-2.0, xmax=length, ymax=2.0),
+        params={
+            "slow_light_factor": 20.0,  # 慢光因子 ≈ 10-30，取中值
+            "loss_db_cm": 5.0,  # 损耗 ≈ 5 dB/cm
+            "lattice_type": "triangular",
+            "waveguide_type": "W1 line defect",
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_KRAUSS_NP2008,
+        constraints={
+            "min_spacing_um": 2.0,
+            "wavelength_nm": 1550,
+        },
+    )
+
+
+# ===========================================================================
+# 11. 超表面耦合器 metasurface_coupler
+# ===========================================================================
+def make_metasurface_coupler() -> Device:
+    """超表面耦合器（metasurface coupler / inverse-designed coupler）。
+
+    耦合效率 > 80%（插损 < 1 dB），带宽 > 200 nm，基于逆向设计实现高效耦合。
+    来源: Piggott et al., Nature Photonics 2017。
+    """
+    size = 10.0  # 超表面区尺寸
+    ports = [
+        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5),
+    ]
+    return Device(
+        device_id="soi_metasurface_coupler",
+        platform="SOI",
+        category="passive",
+        name="metasurface_coupler",
+        ports=ports,
+        bbox=BoundingBox(xmin=-size / 2, ymin=-size / 2, xmax=size / 2, ymax=size / 2),
+        params={
+            "coupling_efficiency_percent": 80.0,  # 耦合效率 > 80%
+            "insertion_loss_db": 0.97,  # 插损 < 1 dB（对应 >80% 效率）
+            "bandwidth_nm": 200.0,  # 带宽 > 200 nm
+            "design_method": "inverse_design",
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_PIGGOTT_NP2017,
+        constraints={
+            "min_spacing_um": 1.0,
+            "wavelength_nm": 1550,
+        },
     )

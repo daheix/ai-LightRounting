@@ -9,7 +9,14 @@ from __future__ import annotations
 
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
-from polaris.pdk.soi.sources import _SRC_ICCSZ, _SRC_SAMSUNG
+from polaris.pdk.soi.sources import (
+    _SRC_ASSEFA_NATURE2010,
+    _SRC_DENSMORE_OE2011,
+    _SRC_ICCSZ,
+    _SRC_REED_NP2010,
+    _SRC_SAMSUNG,
+    _SRC_TIMURDOGAN_JSTQE2014,
+)
 
 
 # ===========================================================================
@@ -215,6 +222,154 @@ def make_ge_photodetector() -> Device:
             "wavelength_nm": 1550,
         },
         source=_SRC_ICCSZ,
+        constraints={
+            "min_spacing_um": 1.0,
+            "wavelength_nm": 1550,
+        },
+    )
+
+
+# ===========================================================================
+# 5. 行波电极 MZI 调制器 traveling_wave_mzm
+# ===========================================================================
+def make_traveling_wave_mzm() -> Device:
+    """行波电极马赫-曾德尔调制器（traveling-wave MZM）。
+
+    Vπ·L ≈ 2.0 V·cm，带宽 > 40 GHz，采用行波电极实现高速调制。
+    来源: Reed et al., "Silicon optical modulators", Nature Photonics 2010。
+    """
+    arm_length = 2000.0  # 行波电极调制臂长度 2mm
+    arm_gap = 2.0
+    length = arm_length + 40.0  # 含输入/输出 MMI
+    ports = _make_mzm_ports(arm_gap, length)
+    return Device(
+        device_id="soi_traveling_wave_mzm",
+        platform="SOI",
+        category="active",
+        name="traveling_wave_mzm",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25, xmax=length, ymax=arm_gap / 2 + 0.25),
+        params={
+            "vpi_l_v_cm": 2.0,  # Vπ·L ≈ 2.0 V·cm
+            "bandwidth_3db_ghz": 40.0,  # 带宽 > 40 GHz
+            "electrode_type": "traveling_wave",
+            "arm_length_um": 2000.0,
+            "modulation_mechanism": "PN junction carrier dispersion",
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_REED_NP2010,
+        constraints={
+            "min_spacing_um": 1.0,
+            "wavelength_nm": 1550,
+        },
+    )
+
+
+# ===========================================================================
+# 6. 热调谐微环调制器 thermo_tuned_ring_modulator
+# ===========================================================================
+def make_thermo_tuned_ring_modulator() -> Device:
+    """热调谐微环调制器（thermally tuned ring modulator）。
+
+    FSR ≈ 10 nm，热调谐效率 ≈ 0.8 mW/nm，通过微加热器实现波长调谐。
+    来源: Timurdogan et al., JSTQE 2014。
+    """
+    radius = 8.0  # 微环半径
+    gap = 0.2  # 环-总线耦合间隙
+    width = 0.5
+    ports = _make_mrm_ports(radius, width)
+    return Device(
+        device_id="soi_thermo_tuned_ring_modulator",
+        platform="SOI",
+        category="active",
+        name="thermo_tuned_ring_modulator",
+        ports=ports,
+        bbox=BoundingBox(
+            xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=radius + gap + width + width / 2
+        ),
+        params={
+            "fsr_nm": 10.0,  # 自由光谱范围 ≈ 10 nm
+            "thermal_tuning_efficiency_mw_nm": 0.8,  # 热调谐效率 ≈ 0.8 mW/nm
+            "radius_um": 8.0,
+            "tuning_mechanism": "thermal",
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_TIMURDOGAN_JSTQE2014,
+        constraints={
+            "min_bend_radius_um": 2.0,
+            "min_spacing_um": 1.0,
+            "wavelength_nm": 1550,
+        },
+    )
+
+
+# ===========================================================================
+# 7. 热光开关 thermo_optic_switch
+# ===========================================================================
+def make_thermo_optic_switch() -> Device:
+    """热光开关（thermo-optic switch, TOS）。
+
+    功耗 ≈ 30 mW，开关时间 ≈ 10 μs，基于 MZI 结构与热光效应实现光路切换。
+    来源: Densmore et al., Optics Express 2011。
+    """
+    arm_length = 200.0  # MZI 干涉臂长度
+    arm_gap = 2.0
+    length = arm_length + 20.0  # 含输入/输出 MMI
+    ports = _make_mzm_ports(arm_gap, length)
+    return Device(
+        device_id="soi_thermo_optic_switch",
+        platform="SOI",
+        category="active",
+        name="thermo_optic_switch",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25, xmax=length, ymax=arm_gap / 2 + 0.25),
+        params={
+            "power_mw": 30.0,  # 功耗 ≈ 30 mW
+            "switching_time_us": 10.0,  # 开关时间 ≈ 10 μs
+            "switching_mechanism": "thermo_optic",
+            "arm_length_um": 200.0,
+            "extinction_ratio_db": 20.0,  # 消光比
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_DENSMORE_OE2011,
+        constraints={
+            "min_spacing_um": 1.0,
+            "wavelength_nm": 1550,
+        },
+    )
+
+
+# ===========================================================================
+# 8. 雪崩光电探测器 avalanche_photodetector
+# ===========================================================================
+def make_avalanche_photodetector() -> Device:
+    """雪崩光电探测器（avalanche photodetector, APD）。
+
+    增益 > 10，带宽 > 10 GHz，基于 Ge/Si 雪崩倍增效应实现高灵敏度探测。
+    来源: Assefa et al., Nature 2010。
+    """
+    length = 30.0  # 探测区长度
+    width = 0.5
+    ports = [
+        Port(
+            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
+        ),
+    ]
+    return Device(
+        device_id="soi_avalanche_photodetector",
+        platform="SOI",
+        category="detector",
+        name="avalanche_photodetector",
+        ports=ports,
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
+        params={
+            "gain": 10.0,  # 增益 > 10
+            "bandwidth_3db_ghz": 10.0,  # 带宽 > 10 GHz
+            "detector_type": "Ge/Si APD",
+            "detector_length_um": 30.0,
+            "wavelength_nm": 1550,
+        },
+        source=_SRC_ASSEFA_NATURE2010,
         constraints={
             "min_spacing_um": 1.0,
             "wavelength_nm": 1550,

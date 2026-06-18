@@ -40,10 +40,15 @@ _SRC_ICCSZ = Source(
 
 # SOI 平台通用设计约束（弯曲半径 2-6μm，波导间距 ≥1μm，见 spec.md）
 _SOI_CONSTRAINTS = {
-    "min_bend_radius_um": 5.0,  # 高折射率差平台最小弯曲半径 2-6μm，取保守值
-    "min_spacing_um": 1.0,  # SOI 波导最小间距 1μm
-    "wavelength_nm": 1550,  # 默认 C 波段
+    "min_bend_radius_um": 5.0,
+    "min_spacing_um": 1.0,
+    "wavelength_nm": 1550,
 }
+
+
+def _port(name: str, x: float, y: float, d: Direction, w: float = 0.5) -> Port:
+    """创建端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="strip", width=w)
 
 
 # ===========================================================================
@@ -59,12 +64,9 @@ def make_mmi_1x2() -> Device:
     width = 3.0  # MMI 区宽度
     out_gap = 1.0  # 两输出端口间距
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out1", x=length, y=out_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out2", x=length, y=-out_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
+        _port("in", 0.0, 0.0, Direction.WEST),
+        _port("out1", length, out_gap / 2, Direction.EAST),
+        _port("out2", length, -out_gap / 2, Direction.EAST),
     ]
     return Device(
         device_id="soi_mmi_1x2",
@@ -98,14 +100,10 @@ def make_mmi_2x2() -> Device:
     width = 3.0
     in_gap = 1.0
     ports = [
-        Port(name="in1", x=0.0, y=in_gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="in2", x=0.0, y=-in_gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out1", x=length, y=in_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out2", x=length, y=-in_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
+        _port("in1", 0.0, in_gap / 2, Direction.WEST),
+        _port("in2", 0.0, -in_gap / 2, Direction.WEST),
+        _port("out1", length, in_gap / 2, Direction.EAST),
+        _port("out2", length, -in_gap / 2, Direction.EAST),
     ]
     return Device(
         device_id="soi_mmi_2x2",
@@ -139,14 +137,10 @@ def make_mzi() -> Device:
     arm_gap = 2.0  # 两臂间距
     length = arm_length + 20.0  # 含输入/输出 MMI 长度
     ports = [
-        Port(name="in1", x=0.0, y=arm_gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="in2", x=0.0, y=-arm_gap / 2, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out1", x=length, y=arm_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out2", x=length, y=-arm_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
+        _port("in1", 0.0, arm_gap / 2, Direction.WEST),
+        _port("in2", 0.0, -arm_gap / 2, Direction.WEST),
+        _port("out1", length, arm_gap / 2, Direction.EAST),
+        _port("out2", length, -arm_gap / 2, Direction.EAST),
     ]
     return Device(
         device_id="soi_mzi",
@@ -154,8 +148,7 @@ def make_mzi() -> Device:
         category="passive",
         name="mzi",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25,
-                         xmax=length, ymax=arm_gap / 2 + 0.25),
+        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25, xmax=length, ymax=arm_gap / 2 + 0.25),
         params={
             "arm_length_um": 100.0,  # 干涉臂长度
             "arm_length_diff_um": 0.0,  # 臂长差（控相位）
@@ -183,25 +176,20 @@ def make_ring_resonator() -> Device:
     width = 0.5
     # 总线波导沿 x 轴，环圆心在 (radius, radius+gap+width)
     bus_y = 0.0
+    ring_top = 2 * (radius + gap + width)
     ports = [
-        Port(name="in", x=0.0, y=bus_y, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="through", x=2 * radius, y=bus_y, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
-        Port(name="drop", x=2 * radius, y=2 * (radius + gap + width),
-             direction=Direction.EAST, waveguide_type="strip", width=width),
-        Port(name="add", x=0.0, y=2 * (radius + gap + width),
-             direction=Direction.WEST, waveguide_type="strip", width=width),
+        _port("in", 0.0, bus_y, Direction.WEST, width),
+        _port("through", 2 * radius, bus_y, Direction.EAST, width),
+        _port("drop", 2 * radius, ring_top, Direction.EAST, width),
+        _port("add", 0.0, ring_top, Direction.WEST, width),
     ]
-    ring_top = 2 * (radius + gap + width) + width / 2
     return Device(
         device_id="soi_ring_resonator",
         platform="SOI",
         category="passive",
         name="ring_resonator",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
-                         xmax=2 * radius, ymax=ring_top),
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=ring_top + width / 2),
         params={
             "radius_um": 10.0,  # 半径 5-20μm
             "gap_nm": 200,  # 耦合间隙
@@ -227,12 +215,9 @@ def make_y_branch() -> Device:
     length = 20.0
     out_gap = 1.0
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out1", x=length, y=out_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out2", x=length, y=-out_gap / 2, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
+        _port("in", 0.0, 0.0, Direction.WEST),
+        _port("out1", length, out_gap / 2, Direction.EAST),
+        _port("out2", length, -out_gap / 2, Direction.EAST),
     ]
     return Device(
         device_id="soi_y_branch",
@@ -240,8 +225,7 @@ def make_y_branch() -> Device:
         category="passive",
         name="y_branch",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-out_gap / 2 - 0.25,
-                         xmax=length, ymax=out_gap / 2 + 0.25),
+        bbox=BoundingBox(xmin=0.0, ymin=-out_gap / 2 - 0.25, xmax=length, ymax=out_gap / 2 + 0.25),
         params={
             "insertion_loss_db": 0.3,  # 插损 <0.3dB
             "imbalance_db": 0.1,
@@ -265,14 +249,10 @@ def make_crossing() -> Device:
     size = 5.0  # 交叉区尺寸
     width = 0.5
     ports = [
-        Port(name="in1", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=width),
-        Port(name="out1", x=size, y=0.0, direction=Direction.EAST,
-             waveguide_type="strip", width=width),
-        Port(name="in2", x=size / 2, y=0.0, direction=Direction.SOUTH,
-             waveguide_type="strip", width=width),
-        Port(name="out2", x=size / 2, y=size, direction=Direction.NORTH,
-             waveguide_type="strip", width=width),
+        _port("in1", 0.0, 0.0, Direction.WEST, width),
+        _port("out1", size, 0.0, Direction.EAST, width),
+        _port("in2", size / 2, 0.0, Direction.SOUTH, width),
+        _port("out2", size / 2, size, Direction.NORTH, width),
     ]
     return Device(
         device_id="soi_crossing",
@@ -304,10 +284,8 @@ def make_thermo_optic_phase_shifter() -> Device:
     length = 100.0  # 加热器长度
     width = 0.5
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="rib", width=width),
-        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-             waveguide_type="rib", width=width),
+        _port("in", 0.0, 0.0, Direction.WEST, width),
+        _port("out", length, 0.0, Direction.EAST, width),
     ]
     return Device(
         device_id="soi_thermo_optic_phase_shifter",

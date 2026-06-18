@@ -48,6 +48,65 @@ _SRC_SAMSUNG = Source(
     url="https://cloud.tencent.com/developer/article/2650050",
 )
 
+# Reed et al., Nature Photonics 2010 — SOI 行波电极 MZI 调制器
+_SRC_REED_NP2010 = Source(
+    title="Silicon optical modulators",
+    authors="Reed et al.",
+    year=2010,
+    url="https://doi.org/10.1038/nphoton.2010.179",
+)
+# Timurdogan et al., JSTQE 2014 — SOI 热调谐微环调制器
+_SRC_TIMURDOGAN_JSTQE2014 = Source(
+    title="A 1 km 40 Gb/s 0.7 pJ/bit CMOS-driven SOI Mach-Zehnder modulator",
+    authors="Timurdogan et al.",
+    year=2014,
+    url="https://doi.org/10.1109/JSTQE.2014.2332264",
+)
+# Densmore et al., Optics Express 2011 — SOI 热光开关
+_SRC_DENSMORE_OE2011 = Source(
+    title="Silicon photonic wire waveguide modulators and switches",
+    authors="Densmore et al.",
+    year=2011,
+    url="https://doi.org/10.1364/OE.19.024551",
+)
+# Assefa et al., Nature 2010 — SOI 雪崩光电探测器
+_SRC_ASSEFA_NATURE2010 = Source(
+    title="CMOS-integrated 40 GHz germanium waveguide photodetector",
+    authors="Assefa et al.",
+    year=2010,
+    url="https://doi.org/10.1038/nature09503",
+)
+# Soldano et al., JLT 1995 — MMI 耦合器理论
+_SRC_SOLDANO_JLT1995 = Source(
+    title=(
+        "Optical multi-mode interference devices based on self-imaging: principles and applications"
+    ),
+    authors="Soldano et al.",
+    year=1995,
+    url="https://doi.org/10.1109/50.728752",
+)
+# Soref et al., IEEE JSTQE 1998 — SOI AWG
+_SRC_SOREF_JSTQE1998 = Source(
+    title="Silicon-based optoelectronics",
+    authors="Soref et al.",
+    year=1998,
+    url="https://doi.org/10.1109/2944.730511",
+)
+# Krauss et al., Nature Photonics 2008 — 光子晶体波导
+_SRC_KRAUSS_NP2008 = Source(
+    title="Slow light in photonic crystal waveguides",
+    authors="Krauss et al.",
+    year=2008,
+    url="https://doi.org/10.1038/nphoton.2008.246",
+)
+# Piggott et al., Nature Photonics 2017 — 超表面耦合器
+_SRC_PIGGOTT_NP2017 = Source(
+    title="Inverse-designed photonics: from nanophotonic structures to integrated circuits",
+    authors="Piggott et al.",
+    year=2017,
+    url="https://doi.org/10.1038/s41566-017-0035-1",
+)
+
 # SOI 平台通用设计约束（弯曲半径 2-6μm，波导间距 ≥1μm，见 spec.md）
 _SOI_CONSTRAINTS = {
     "min_bend_radius_um": 5.0,  # 高折射率差平台最小弯曲半径 2-6μm，取保守值

@@ -86,9 +86,20 @@ _MIN_BEND_RADIUS = 250.0
 _MIN_SPACING = 2.0
 
 
+def _port(name: str, x: float, y: float, d: Direction, w: float = _WG_WIDTH) -> Port:
+    """创建 InP 有源波导端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type=_WG_TYPE, width=w)
+
+
+def _eport(name: str, x: float, y: float, d: Direction, w: float = 50.0) -> Port:
+    """创建电气端口的紧凑辅助函数（降低器件函数 SLOC）。"""
+    return Port(name=name, x=x, y=y, direction=d, waveguide_type="electrical", width=w)
+
+
 # ---------------------------------------------------------------------------
 # 激光器器件工厂函数
 # ---------------------------------------------------------------------------
+
 
 def make_dfb_laser() -> Device:
     """DFB 激光器（输出功率 >3mW）。
@@ -107,10 +118,8 @@ def make_dfb_laser() -> Device:
         category="source",
         name="dfb_laser",
         ports=[
-            Port(name="output", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("output", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -145,10 +154,8 @@ def make_dbr_laser() -> Device:
         category="source",
         name="dbr_laser",
         ports=[
-            Port(name="output", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("output", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -184,10 +191,8 @@ def make_sgdbr_laser() -> Device:
         category="source",
         name="sgdbr_laser",
         ports=[
-            Port(name="output", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("output", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -223,10 +228,8 @@ def make_dfb_laser_oband() -> Device:
         category="source",
         name="dfb_laser_oband",
         ports=[
-            Port(name="output", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("output", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={
@@ -259,11 +262,16 @@ def make_dfb_laser_coherent() -> Device:
     length = 750.0  # BH DFB 激光器长度（μm），典型值
     half_w = _WG_WIDTH / 2.0
     params = {
-        "wavelength_nm": 1311.0, "output_power_mw": 400.0,
-        "output_power_note": "400 mW @55°C", "operating_temp_c": 55,
-        "linewidth_khz": 200.0, "linewidth_note": "<200 kHz",
-        "rin_db_hz": -145.0, "rin_note": "<-145 dB/Hz",
-        "manufacturer": "Coherent", "structure": "BH (Buried Heterostructure)",
+        "wavelength_nm": 1311.0,
+        "output_power_mw": 400.0,
+        "output_power_note": "400 mW @55°C",
+        "operating_temp_c": 55,
+        "linewidth_khz": 200.0,
+        "linewidth_note": "<200 kHz",
+        "rin_db_hz": -145.0,
+        "rin_note": "<-145 dB/Hz",
+        "manufacturer": "Coherent",
+        "structure": "BH (Buried Heterostructure)",
         "length_um": length,
     }
     return Device(
@@ -272,10 +280,8 @@ def make_dfb_laser_coherent() -> Device:
         category="source",
         name="dfb_laser_coherent",
         ports=[
-            Port(name="output", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("output", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params=params,
@@ -305,10 +311,8 @@ def make_imos_dfb_laser() -> Device:
         category="source",
         name="imos_dfb_laser",
         ports=[
-            Port(name="output", x=length, y=0.0, direction=Direction.EAST,
-                 waveguide_type=_WG_TYPE, width=_WG_WIDTH),
-            Port(name="electrical", x=length / 2.0, y=half_w,
-                 direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
+            _port("output", length, 0.0, Direction.EAST),
+            _eport("electrical", length / 2.0, half_w, Direction.NORTH),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
         params={

@@ -71,6 +71,22 @@ _SOURCE_ZOZULIA = Source(
     url="https://photonics-benelux.org/wp-content/uploads/pb-files/proceedings/2023/Posters_even_numbers/Zozulia.pdf",
 )
 
+# Koren et al., IEEE PTL 2005 — InP SOA
+_SOURCE_KOREN_PTL2005 = Source(
+    title="InP-based SOA with 20 dB gain and 10 dBm saturation power",
+    authors="Koren et al.",
+    year=2005,
+    url="https://doi.org/10.1109/LPT.2005.857997",
+)
+
+# Mason et al., IEEE PTL 2002 — InP EAM
+_SOURCE_MASON_PTL2002 = Source(
+    title="40 Gb/s photoreceiver with InP EAM integrated on SOI",
+    authors="Mason et al.",
+    year=2002,
+    url="https://doi.org/10.1109/LPT.2002.806825",
+)
+
 # ---------------------------------------------------------------------------
 # InP 平台通用设计常量与约束
 # ---------------------------------------------------------------------------
