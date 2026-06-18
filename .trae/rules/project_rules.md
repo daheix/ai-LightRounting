@@ -621,6 +621,65 @@ Bug: <简述>
 注: 发现 <模块> 存在 <Bug 描述>，因 <原因> 暂未修复，已记录 Issue #XXX
 ```
 
+## 规则 14：开发完成即检门禁纪律（强制）
+
+代码开发完成后，**必须立即**执行代码质量门禁检查，且必须达到 **0 警告 0 错误**方可提交。
+
+### 14.1 强制要求
+
+1. **开发完成即检**：任何代码开发任务（含新功能、Bug 修复、重构、配置变更）完成后，
+   必须立即运行质量门禁，禁止"先提交后补检"
+2. **0 警告 0 错误硬性标准**：门禁结果必须为 0 警告 0 错误，任一警告或错误均禁止提交
+3. **全量检查**：必须对 `polaris/` 目录执行全量检查，不得仅检查改动文件
+4. **整改优先**：发现警告/错误后必须立即整改，禁止跳过、注释、降级或推迟
+
+### 14.2 检查命令（开发完成后必须执行）
+
+```bash
+# 1. 质量门禁（必须 0 警告 0 错误）
+python scripts/code_quality_gate.py
+
+# 2. Ruff lint（必须 All checks passed）
+ruff check polaris/ tests/
+
+# 3. Ruff 格式检查（必须 already formatted）
+ruff format --check polaris/ tests/
+
+# 4. 测试冒烟（必须全部通过）
+python -m pytest tests/ -q --tb=short --continue-on-collection-errors
+```
+
+### 14.3 门禁未通过的处理流程
+
+当门禁检查发现警告或错误时，必须执行以下流程：
+
+1. **停止提交**：立即停止 `git commit`/`git push` 操作
+2. **分析原因**：逐条分析每个警告/错误的根因
+3. **立即整改**：按规则 4.2 的重构流程整改，不得推迟
+4. **重新检查**：整改后重新运行全部检查命令，确认 0 警告 0 错误
+5. **记录整改**：在 commit message 中注明整改内容
+
+### 14.4 禁止行为
+
+- **禁止跳过门禁**：不得以"临时提交"、"紧急修复"为由跳过门禁检查
+- **禁止 `--no-verify`**：不得使用 `git commit --no-verify` 绕过 pre-commit hook
+- **禁止降级标准**：不得修改门禁脚本放宽阈值来"通过"检查
+- **禁止选择性检查**：不得仅检查改动文件而忽略全量检查
+- **禁止带病提交**：不得在门禁未通过的情况下提交代码
+
+### 14.5 例外情况
+
+仅以下情况允许例外（但必须在 commit message 中明确标注并事后补检）：
+- 紧急生产故障修复（hotfix），需在 30 分钟内补检
+- 文档/注释-only 变更（不涉及代码逻辑），需在下次代码提交时补检
+
+即使例外情况，也必须满足 ruff check 和 pytest 通过。
+
+来源：
+- 规则 4 质量门禁脚本: `scripts/code_quality_gate.py`
+- 规则 4.5 Pre-commit Hook: `scripts/pre-commit`
+- Google Python Style Guide: https://google.github.io/styleguide/pyguide
+
 ## 参考来源汇总
 
 | 标准 | 来源 URL |
