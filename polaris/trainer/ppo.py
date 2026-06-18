@@ -37,7 +37,13 @@ from polaris.nn import Adam, Linear, Module, ReLU, Sequential, Tensor
 
 @dataclass
 class PPOConfig:
-    """PPO 超参数（与 Stable-Baselines3 默认值对齐）。"""
+    """PPO 超参数（与 Stable-Baselines3 默认值对齐 + 2025 增强技巧）。
+
+    增强来源:
+    - Basso et al., NeurIPS 2025, routing-aware floorplanning RL
+      https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
+    - SB3 PPO 实现: https://stable-baselines3.readthedocs.io/
+    """
 
     lr: float = 3e-4
     gamma: float = 0.99  # 折扣因子
@@ -48,6 +54,15 @@ class PPOConfig:
     max_grad_norm: float = 0.5  # 梯度裁剪
     n_epochs: int = 4  # 每次 rollout 的更新轮数
     batch_size: int = 64  # 小批量大小
+    # 2025 增强：价值函数 clip（防止价值估计异常导致策略崩溃）
+    # 来源: SB3 PPO clip_vf 实现
+    clip_vf: float = 10.0  # 价值损失 clip 上限
+    # 2025 增强：学习率调度（cosine annealing + warmup）
+    # 来源: Loshchilov & Hutter, 2017, SGDR
+    #       https://arxiv.org/abs/1608.03983
+    lr_schedule: str = "constant"  # constant / cosine / linear
+    lr_warmup_steps: int = 0  # warmup 步数
+    total_steps: int = 1000  # 总训练步数（用于 cosine 调度）
 
 
 class ActorCritic(Module):
@@ -225,9 +240,17 @@ def compute_gae(
 
 
 class PPOAgent:
-    """PPO 智能体（actor-critic + clip + GAE）。
+    """PPO 智能体（actor-critic + clip + GAE + 2025 增强技巧）。
 
-    复刻 Stable-Baselines3 ``PPO`` 的核心训练循环。
+    复刻 Stable-Baselines3 ``PPO`` 的核心训练循环，并集成:
+    - 学习率调度（cosine annealing + warmup）
+    - 价值函数 clip
+    - orthogonal 初始化（通过 polaris.nn.Linear 默认）
+
+    来源:
+    - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+    - SB3 PPO: https://stable-baselines3.readthedocs.io/
+    - Loshchilov & Hutter, 2017, SGDR https://arxiv.org/abs/1608.03983
     """
 
     def __init__(
@@ -247,10 +270,31 @@ class PPOAgent:
         self.optimizer = Adam(params, lr=self.config.lr)
         self.buffer = RolloutBuffer()
         self.metrics: list[dict] = []
+        self.current_step = 0  # 用于学习率调度
 
     def get_action(self, obs: np.ndarray):
         """采样动作。"""
         return self.ac.get_action(obs)
+
+    def _get_lr(self) -> float:
+        """计算当前学习率（支持 constant/cosine/linear 调度）。
+
+        来源: Loshchilov & Hutter, 2017, SGDR
+              https://arxiv.org/abs/1608.03983
+        """
+        cfg = self.config
+        if cfg.lr_schedule == "constant":
+            return cfg.lr
+        step = self.current_step
+        if step < cfg.lr_warmup_steps:
+            # linear warmup
+            return cfg.lr * (step + 1) / max(1, cfg.lr_warmup_steps)
+        progress = (step - cfg.lr_warmup_steps) / max(1, cfg.total_steps - cfg.lr_warmup_steps)
+        progress = min(1.0, max(0.0, progress))
+        if cfg.lr_schedule == "cosine":
+            return cfg.lr * 0.5 * (1.0 + np.cos(np.pi * progress))
+        # linear decay
+        return cfg.lr * (1.0 - progress)
 
     def store(self, transition: Transition) -> None:
         """将单步转移数据存入缓冲区。"""
@@ -298,17 +342,24 @@ class PPOAgent:
         clip_hi = 1 + self.config.clip_eps
         surr2 = np.clip(ratio, clip_lo, clip_hi) * mb.advantages
         policy_loss = -np.minimum(surr1, surr2).mean()
-        # 价值损失
+        # 价值损失（2025 增强：clip 防止异常）
+        # 来源: SB3 PPO clip_vf
         value_pred = value.data.flatten()
-        value_loss = ((mb.returns - value_pred) ** 2).mean()
+        value_diff = mb.returns - value_pred
+        if self.config.clip_vf > 0:
+            value_diff = np.clip(value_diff, -self.config.clip_vf, self.config.clip_vf)
+        value_loss = (value_diff**2).mean()
         # 熵（高斯）
         ent = 0.5 * mean.data.shape[-1] * (1 + math.log(2 * math.pi))
         entropy = np.array(ent + np.log(std).sum())
         # 总损失（构造可微图）：策略目标 + 价值损失
         weighted = Tensor(mb.advantages) * new_lp
         policy_obj = weighted.mean()
-        v_diff = Tensor(mb.returns) - value.flatten()
-        value_obj = (v_diff * v_diff).mean()
+        v_diff_t = Tensor(mb.returns) - value.flatten()
+        if self.config.clip_vf > 0:
+            v_diff_t_data = np.clip(v_diff_t.data, -self.config.clip_vf, self.config.clip_vf)
+            v_diff_t = Tensor(v_diff_t_data)
+        value_obj = (v_diff_t * v_diff_t).mean()
         total = -policy_obj + self.config.vf_coef * value_obj
         total.backward()
         self._clip_grads()
@@ -323,6 +374,10 @@ class PPOAgent:
     def update(self, last_value: float = 0.0) -> dict:
         """PPO 更新（多 epoch 小批量）。"""
         self.compute_advantages(last_value)
+        # 2025 增强：学习率调度
+        # 来源: Loshchilov & Hutter, 2017, SGDR
+        self.current_step += 1
+        self.optimizer.lr = self._get_lr()
         n = len(self.buffer)
         if n == 0:
             return {"loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "entropy": 0.0}

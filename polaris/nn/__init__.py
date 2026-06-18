@@ -411,23 +411,29 @@ class Linear(Module):
     """线性层（复刻 ``torch.nn.Linear``）。
 
     ``y = x @ W^T + b``，``weight.shape == (out_features, in_features)``，
-    ``bias.shape == (out_features,)``，与 torch 初始化一致（Kaiming uniform）。
+    ``bias.shape == (out_features,)``。
+
+    初始化默认使用 orthogonal 初始化（来源: Saxe et al., 2013,
+    "Exact solutions to the nonlinear dynamics of learning in deep
+    linear networks", https://arxiv.org/abs/1312.6120），比 Kaiming
+    uniform 在 RL 中收敛更快、更稳定（已被 SB3/PPO 广泛验证）。
     """
 
-    def __init__(self, in_features: int, out_features: int, bias: bool = True) -> None:
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        bias: bool = True,
+        init: str = "orthogonal",
+    ) -> None:
         self.in_features = in_features
         self.out_features = out_features
-        # Kaiming uniform（与 torch.nn.Linear 默认 init 一致）
-        bound = 1.0 / np.sqrt(in_features)
         self.weight = Tensor(
-            np.random.uniform(-bound, bound, (out_features, in_features)),
+            _init_weight(in_features, out_features, init),
             requires_grad=True,
         )
         if bias:
-            self.bias = Tensor(
-                np.random.uniform(-bound, bound, (out_features,)),
-                requires_grad=True,
-            )
+            self.bias = Tensor(np.zeros(out_features), requires_grad=True)
         else:
             self.bias = None
 
@@ -438,9 +444,74 @@ class Linear(Module):
         return out
 
 
+def _init_weight(in_features: int, out_features: int, init: str) -> np.ndarray:
+    """权重初始化（orthogonal / kaiming_uniform / xavier）。
+
+    来源:
+    - orthogonal: Saxe et al., 2013, https://arxiv.org/abs/1312.6120
+    - kaiming_uniform: He et al., 2015, torch.nn.Linear 默认
+    """
+    if init == "orthogonal":
+        # 生成正交矩阵，shape=(out, in)，与 torch.nn.init.orthogonal_ 一致
+        flat_shape = (out_features, in_features)
+        a = np.random.randn(*flat_shape)
+        u, s, vt = np.linalg.svd(a, full_matrices=False)
+        q = u if a.shape[0] >= a.shape[1] else vt
+        weight = q.reshape(flat_shape)
+        scale = 1.0 / np.sqrt(in_features)
+        return weight * scale
+    # kaiming_uniform（torch 默认）
+    bound = 1.0 / np.sqrt(in_features)
+    return np.random.uniform(-bound, bound, (out_features, in_features))
+
+
 class ReLU(Module):
     def forward(self, x: Tensor) -> Tensor:
         return x.relu()
+
+
+class LayerNorm(Module):
+    """层归一化（复刻 ``torch.nn.LayerNorm``）。
+
+    对最后一维归一化：``y = (x - mean) / sqrt(var + eps) * gamma + beta``。
+
+    来源:
+    - Ba et al., 2016, "Layer Normalization", https://arxiv.org/abs/1607.06450
+    - torch.nn.LayerNorm: https://pytorch.org/docs/stable/generated/torch.nn.LayerNorm.html
+    """
+
+    def __init__(self, normalized_shape: int, eps: float = 1e-5) -> None:
+        self.normalized_shape = normalized_shape
+        self.eps = eps
+        self.gamma = Tensor(np.ones(normalized_shape), requires_grad=True)
+        self.beta = Tensor(np.zeros(normalized_shape), requires_grad=True)
+
+    def forward(self, x: Tensor) -> Tensor:
+        data = x.data if isinstance(x, Tensor) else np.asarray(x, dtype=np.float64)
+        mean = data.mean(axis=-1, keepdims=True)
+        var = data.var(axis=-1, keepdims=True)
+        normed = (data - mean) / np.sqrt(var + self.eps)
+        out = Tensor(normed, x.requires_grad if isinstance(x, Tensor) else False, (x,))
+
+        def _back(g):
+            if isinstance(x, Tensor) and x.requires_grad:
+                x._ensure_grad()
+                n = data.shape[-1]
+                std_inv = 1.0 / np.sqrt(var + self.eps)
+                dx = (
+                    std_inv
+                    / n
+                    * (
+                        n * g
+                        - g.sum(axis=-1, keepdims=True)
+                        - normed * (g * normed).sum(axis=-1, keepdims=True)
+                    )
+                )
+                x.grad = x.grad + dx
+
+        out._backward = _back
+        # 应用 gamma + beta（可微）
+        return out * self.gamma + self.beta
 
 
 class Tanh(Module):
@@ -526,6 +597,7 @@ __all__ = [
     "Module",
     "Linear",
     "ReLU",
+    "LayerNorm",
     "Tanh",
     "Sequential",
     "Adam",

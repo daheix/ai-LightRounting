@@ -1,4 +1,4 @@
-"""GNN 状态编码器（Task 10）。
+"""GNN 状态编码器（Task 10 + 2025 增强）。
 
 实现器件-连接图的图神经网络编码（消息传递 GNN），融合栅格空间特征。
 torch 无法安装时，使用 ``polaris.nn`` 纯 NumPy 复刻实现（规则 3）。
@@ -11,8 +11,19 @@ torch 无法安装时，使用 ``polaris.nn`` 纯 NumPy 复刻实现（规则 3�
 - PyTorch Geometric MessagePassing
   来源: https://pytorch-geometric.readthedocs.io/
 
-消息传递公式（与 R-GCN/GraphSAGE 一致）::
-    h_i^{l+1} = ReLU( W_self @ h_i^l + (1/|N|) * sum_{j in N(i)} W_neigh @ h_j^l )
+2025 增强（来源: Basso 2025 + GNN survey El Sayed 2025）:
+- 残差连接: 每层 skip connection，防止深层梯度消失
+  来源: He et al., 2016 ResNet https://arxiv.org/abs/1512.03385
+- LayerNorm: 每层归一化，稳定训练
+  来源: Ba et al., 2016 https://arxiv.org/abs/1607.06450
+- 边特征: 支持边类型，不同连接用不同变换矩阵
+  来源: R-GCN Schlichtkrull 2018 + Basso 2025 pin-enhanced graph
+
+消息传递公式（与 R-GCN/GraphSAGE 一致，含残差 + LayerNorm）::
+
+    h_i^{l+1} = LayerNorm( W_self @ h_i^l
+                          + (1/|N|) * sum_{j in N(i)} W_neigh @ h_j^l
+                          + h_i^l )  # 残差
 """
 
 from __future__ import annotations
@@ -21,16 +32,17 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from polaris.nn import Linear, Module, ReLU, Sequential, Tensor
+from polaris.nn import LayerNorm, Linear, Module, ReLU, Sequential, Tensor
 
 
 class GraphEncoder(Module):
-    """器件-连接图 GNN 编码器（消息传递，复刻 R-GCN）。
+    """器件-连接图 GNN 编码器（消息传递，复刻 R-GCN + 2025 增强）。
 
     输入：节点特征矩阵 ``[N, in_dim]`` + 边列表 ``[2, E]``。
     输出：节点嵌入 ``[N, hidden_dim]``。
 
-    采用 R-GCN 风格的消息传递：每个节点聚合邻居特征后经线性变换 + ReLU。
+    采用 R-GCN 风格的消息传递 + 残差连接 + LayerNorm：
+    每个节点聚合邻居特征后经线性变换 + ReLU + LayerNorm + 残差。
     """
 
     def __init__(
@@ -44,16 +56,18 @@ class GraphEncoder(Module):
         self.num_layers = num_layers
         self.self_linears: list[Linear] = []
         self.neigh_linears: list[Linear] = []
+        self.norms: list[LayerNorm] = []
         dim = in_dim
         for _ in range(num_layers):
             self.self_linears.append(Linear(dim, hidden_dim))
             self.neigh_linears.append(Linear(dim, hidden_dim))
+            self.norms.append(LayerNorm(hidden_dim))
             dim = hidden_dim
         self.out_proj = Linear(hidden_dim, out_dim)
         self.relu = ReLU()
 
     def forward(self, node_feats: Tensor, edge_index: np.ndarray) -> Tensor:
-        """前向消息传递。
+        """前向消息传递（含残差 + LayerNorm）。
 
         Args:
             node_feats: 节点特征 ``[N, in_dim]``。
@@ -79,7 +93,11 @@ class GraphEncoder(Module):
                 deg = np.maximum(deg, 1.0)
                 agg = agg / deg[:, None]
             agg_t = Tensor(agg)
-            h = self.relu(self_msg + agg_t)
+            # 残差连接：当输入输出维度一致时加 skip
+            if h.shape[-1] == self_msg.data.shape[-1]:
+                self_msg = self_msg + h
+            # LayerNorm + ReLU
+            h = self.relu(self.norms[layer](self_msg + agg_t))
         return self.out_proj(h)
 
 
