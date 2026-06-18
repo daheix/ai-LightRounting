@@ -1,0 +1,29 @@
+{
+  "source": "GDSFactory",
+  "name": "routes_path_length_match.pic",
+  "file": "docs/notebooks/yaml_pics/routes_path_length_match.pic.yml",
+  "instances": {
+    "t": {
+      "component": "pad_array",
+      "settings": {
+        "orientation": 270,
+        "columns": 3
+      }
+    },
+    "b": {
+      "component": "pad_array",
+      "settings": {
+        "orientation": 90,
+        "columns": 3
+      }
+    }
+  },
+  "connections": {},
+  "ports": {},
+  "placements": {
+    "t": {
+      "x": 100,
+      "y": 1000
+    }
+  }
+}

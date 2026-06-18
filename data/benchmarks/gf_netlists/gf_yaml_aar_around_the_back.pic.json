@@ -1,0 +1,39 @@
+{
+  "source": "GDSFactory",
+  "name": "aar_around_the_back.pic",
+  "file": "docs/notebooks/yaml_pics/aar_around_the_back.pic.yml",
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": {},
+  "ports": {
+    "o1": "mmi_short,o2",
+    "o2": "mmi_short,o3"
+  },
+  "placements": {
+    "mmi_short": {
+      "rotation": 180
+    },
+    "mmi_long": {
+      "port": "o1",
+      "rotation": -140,
+      "x": "mmi_short,o1",
+      "y": "mmi_short,o1",
+      "dx": 50,
+      "dy": 20
+    }
+  }
+}

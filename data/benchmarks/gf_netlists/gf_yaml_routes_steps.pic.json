@@ -1,0 +1,43 @@
+{
+  "source": "GDSFactory",
+  "name": "routes_steps.pic",
+  "file": "docs/notebooks/yaml_pics/routes_steps.pic.yml",
+  "instances": {
+    "t": {
+      "component": "pad_array",
+      "settings": {
+        "port_orientation": 270,
+        "columns": 3
+      }
+    },
+    "b": {
+      "component": "pad_array",
+      "settings": {
+        "port_orientation": 90,
+        "columns": 3
+      }
+    },
+    "obstacle": {
+      "component": "rectangle",
+      "settings": {
+        "size": [
+          200,
+          200
+        ],
+        "layer": "M3"
+      }
+    }
+  },
+  "connections": {},
+  "ports": {},
+  "placements": {
+    "t": {
+      "x": -250,
+      "y": 500
+    },
+    "obstacle": {
+      "x": -179,
+      "y": 200
+    }
+  }
+}

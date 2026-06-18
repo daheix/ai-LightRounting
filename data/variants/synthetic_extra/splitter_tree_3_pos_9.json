@@ -1,0 +1,173 @@
+{
+  "source": "synthetic",
+  "base_name": "splitter_tree_3",
+  "variant_type": "position",
+  "variant_id": 9,
+  "layout": {
+    "gc_in": {
+      "x": 21.356906006434087,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "mmi_0": {
+      "x": 7.810672492503855,
+      "y": 2.346381556224035,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_1": {
+      "x": 0.0,
+      "y": 22.073338645149605,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_2": {
+      "x": 11.538463043703885,
+      "y": 18.95655984166885,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_3": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_4": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_5": {
+      "x": 8.54749256485313,
+      "y": 16.089839609270562,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_6": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "gc_out_3_l": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_3_r": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_4_l": {
+      "x": 8.121070608517186,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_4_r": {
+      "x": 3.024273436128393,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_5_l": {
+      "x": 24.1835418731473,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_5_r": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_6_l": {
+      "x": 11.56104271131234,
+      "y": 20.6313711057752,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_6_r": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    }
+  },
+  "circuit": {
+    "name": "splitter_tree_3",
+    "devices": [
+      {
+        "name": "gc_in",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "mmi_0",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_1",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_2",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_3",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_4",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_5",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_6",
+        "type": "mmi"
+      },
+      {
+        "name": "gc_out_3_l",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_3_r",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_4_l",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_4_r",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_5_l",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_5_r",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_6_l",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_6_r",
+        "type": "grating_coupler"
+      }
+    ]
+  }
+}

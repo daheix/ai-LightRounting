@@ -1,0 +1,94 @@
+{
+  "circuit_name": "ring_filter",
+  "variation": 18,
+  "devices": [
+    {
+      "name": "gc_in",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {},
+      "placement": {
+        "x": 1302.9254497417307,
+        "y": 1279.7110114055895,
+        "w": 20.0,
+        "h": 20.0
+      }
+    },
+    {
+      "name": "ring1",
+      "type": "ring",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 10.0
+      },
+      "placement": {
+        "x": 1289.9609623359277,
+        "y": 1355.263237154112,
+        "w": 60.0,
+        "h": 60.0
+      }
+    },
+    {
+      "name": "gc_out",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {},
+      "placement": {
+        "x": 783.5458712922829,
+        "y": 875.6856507601957,
+        "w": 20.0,
+        "h": 20.0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "gc_in",
+      "o1",
+      "ring1",
+      "o1"
+    ],
+    [
+      "ring1",
+      "o2",
+      "gc_out",
+      "o1"
+    ]
+  ],
+  "canvas_w": 2000,
+  "canvas_h": 2000,
+  "canvas_size": 2
+}

@@ -1,0 +1,207 @@
+{
+  "name": "splitter_tree_2",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "gc_in",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "mmi_0",
+      "type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "mmi_1",
+      "type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "mmi_2",
+      "type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "gc_out_1_l",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "gc_out_1_r",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "gc_out_2_l",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "gc_out_2_r",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    }
+  ],
+  "connections": [
+    [
+      "gc_in",
+      "o1",
+      "mmi_0",
+      "o1"
+    ],
+    [
+      "mmi_0",
+      "o2",
+      "mmi_1",
+      "o1"
+    ],
+    [
+      "mmi_0",
+      "o3",
+      "mmi_2",
+      "o1"
+    ],
+    [
+      "mmi_1",
+      "o2",
+      "gc_out_1_l",
+      "o1"
+    ],
+    [
+      "mmi_1",
+      "o3",
+      "gc_out_1_r",
+      "o1"
+    ],
+    [
+      "mmi_2",
+      "o2",
+      "gc_out_2_l",
+      "o1"
+    ],
+    [
+      "mmi_2",
+      "o3",
+      "gc_out_2_r",
+      "o1"
+    ]
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "source": "synthetic",
+  "base_name": "switch_2",
+  "variant_type": "position",
+  "variant_id": 3,
+  "layout": {
+    "gc_in": {
+      "x": 0.0,
+      "y": 20.557527404516037,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "mzi_0": {
+      "x": 3.6704042840463593,
+      "y": 0.0,
+      "w": 200.0,
+      "h": 50.0
+    },
+    "mzi_1": {
+      "x": 16.891882209756723,
+      "y": 13.43973737399918,
+      "w": 200.0,
+      "h": 50.0
+    },
+    "gc_out": {
+      "x": 0.0,
+      "y": 15.07482956460165,
+      "w": 20.0,
+      "h": 20.0
+    }
+  },
+  "circuit": {
+    "name": "switch_2",
+    "devices": [
+      {
+        "name": "gc_in",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "mzi_0",
+        "type": "mzi"
+      },
+      {
+        "name": "mzi_1",
+        "type": "mzi"
+      },
+      {
+        "name": "gc_out",
+        "type": "grating_coupler"
+      }
+    ]
+  }
+}

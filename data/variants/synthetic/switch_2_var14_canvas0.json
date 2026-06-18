@@ -1,0 +1,129 @@
+{
+  "circuit_name": "switch_2",
+  "variation": 14,
+  "devices": [
+    {
+      "name": "gc_in",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {},
+      "placement": {
+        "x": 112.8844470945595,
+        "y": 260.5294776992212,
+        "w": 20.0,
+        "h": 20.0
+      }
+    },
+    {
+      "name": "mzi_0",
+      "type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0
+      },
+      "placement": {
+        "x": 218.9701159525397,
+        "y": 343.45758948685534,
+        "w": 200.0,
+        "h": 50.0
+      }
+    },
+    {
+      "name": "mzi_1",
+      "type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0
+      },
+      "placement": {
+        "x": 96.98540509612543,
+        "y": 322.95906712103397,
+        "w": 200.0,
+        "h": 50.0
+      }
+    },
+    {
+      "name": "gc_out",
+      "type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {},
+      "placement": {
+        "x": 339.5123307324255,
+        "y": 272.6269345808818,
+        "w": 20.0,
+        "h": 20.0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "gc_in",
+      "o1",
+      "mzi_0",
+      "o1"
+    ],
+    [
+      "mzi_0",
+      "o2",
+      "mzi_1",
+      "o1"
+    ],
+    [
+      "mzi_1",
+      "o2",
+      "gc_out",
+      "o1"
+    ]
+  ],
+  "canvas_w": 500,
+  "canvas_h": 500,
+  "canvas_size": 0
+}

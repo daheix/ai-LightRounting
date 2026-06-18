@@ -1,0 +1,28 @@
+{
+  "source": "GDSFactory",
+  "name": "ports_demo.pic",
+  "file": "docs/notebooks/yaml_pics/ports_demo.pic.yml",
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": {},
+  "ports": {
+    "o3": "mmi_long,o3",
+    "o2": "mmi_long,o2",
+    "o1": "mmi_long,o1"
+  },
+  "placements": {
+    "mmi_long": {
+      "port": "o1",
+      "x": 20,
+      "y": 10,
+      "mirror": true
+    }
+  }
+}

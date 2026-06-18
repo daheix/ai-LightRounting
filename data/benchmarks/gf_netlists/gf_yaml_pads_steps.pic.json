@@ -1,0 +1,39 @@
+{
+  "source": "GDSFactory",
+  "name": "pads_steps.pic",
+  "file": "docs/notebooks/yaml_pics/pads_steps.pic.yml",
+  "instances": {
+    "bl": {
+      "component": "pad"
+    },
+    "tl": {
+      "component": "pad"
+    },
+    "br": {
+      "component": "pad"
+    },
+    "tr": {
+      "component": "pad"
+    }
+  },
+  "connections": {},
+  "ports": {},
+  "placements": {
+    "tl": {
+      "x": -200,
+      "y": 500
+    },
+    "br": {
+      "x": 400,
+      "y": 400
+    },
+    "tr": {
+      "x": 400,
+      "y": 600
+    },
+    "bl": {
+      "x": -200,
+      "y": 0
+    }
+  }
+}

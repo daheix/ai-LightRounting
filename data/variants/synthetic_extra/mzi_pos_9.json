@@ -1,0 +1,73 @@
+{
+  "source": "synthetic",
+  "base_name": "mzi",
+  "variant_type": "position",
+  "variant_id": 9,
+  "layout": {
+    "gc_in": {
+      "x": 8.952597582334342,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "yb1": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "ht1": {
+      "x": 18.945446844220967,
+      "y": 0.0,
+      "w": 100.0,
+      "h": 10.0
+    },
+    "wg_ref": {
+      "x": 0.9348062378200055,
+      "y": 1.8768188752844033,
+      "w": 100.0,
+      "h": 0.5
+    },
+    "yb2": {
+      "x": 0.0,
+      "y": 7.796585847605556,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out": {
+      "x": 20.791159678695678,
+      "y": 13.806648491201855,
+      "w": 20.0,
+      "h": 20.0
+    }
+  },
+  "circuit": {
+    "name": "mzi",
+    "devices": [
+      {
+        "name": "gc_in",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "yb1",
+        "type": "y_branch"
+      },
+      {
+        "name": "ht1",
+        "type": "heater"
+      },
+      {
+        "name": "wg_ref",
+        "type": "waveguide"
+      },
+      {
+        "name": "yb2",
+        "type": "y_branch"
+      },
+      {
+        "name": "gc_out",
+        "type": "grating_coupler"
+      }
+    ]
+  }
+}

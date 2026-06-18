@@ -1,0 +1,21 @@
+{
+  "source": "GDSFactory",
+  "name": "routes_mmi.pic",
+  "file": "docs/notebooks/yaml_pics/routes_mmi.pic.yml",
+  "instances": {
+    "mmi_bottom": {
+      "component": "mmi2x2"
+    },
+    "mmi_top": {
+      "component": "mmi2x2"
+    }
+  },
+  "connections": {},
+  "ports": {},
+  "placements": {
+    "mmi_top": {
+      "x": 100,
+      "y": 100
+    }
+  }
+}

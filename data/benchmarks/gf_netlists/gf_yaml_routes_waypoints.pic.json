@@ -1,0 +1,29 @@
+{
+  "source": "GDSFactory",
+  "name": "routes_waypoints.pic",
+  "file": "docs/notebooks/yaml_pics/routes_waypoints.pic.yml",
+  "instances": {
+    "t": {
+      "component": "pad_array",
+      "settings": {
+        "port_orientation": 270,
+        "columns": 3
+      }
+    },
+    "b": {
+      "component": "pad_array",
+      "settings": {
+        "port_orientation": 90,
+        "columns": 3
+      }
+    }
+  },
+  "connections": {},
+  "ports": {},
+  "placements": {
+    "t": {
+      "x": -250,
+      "y": 600
+    }
+  }
+}

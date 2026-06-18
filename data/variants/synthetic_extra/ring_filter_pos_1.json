@@ -1,0 +1,43 @@
+{
+  "source": "synthetic",
+  "base_name": "ring_filter",
+  "variant_type": "position",
+  "variant_id": 1,
+  "layout": {
+    "gc_in": {
+      "x": 1.8101020016963467,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "ring1": {
+      "x": 17.60433094646843,
+      "y": 0.0,
+      "w": 60.0,
+      "h": 60.0
+    },
+    "gc_out": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    }
+  },
+  "circuit": {
+    "name": "ring_filter",
+    "devices": [
+      {
+        "name": "gc_in",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "ring1",
+        "type": "ring"
+      },
+      {
+        "name": "gc_out",
+        "type": "grating_coupler"
+      }
+    ]
+  }
+}

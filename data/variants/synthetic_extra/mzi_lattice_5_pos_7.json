@@ -1,0 +1,133 @@
+{
+  "source": "synthetic",
+  "base_name": "mzi_lattice_5",
+  "variant_type": "position",
+  "variant_id": 7,
+  "layout": {
+    "gc_in": {
+      "x": 0.0,
+      "y": 11.528016402705056,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "dc_0": {
+      "x": 13.847722123646953,
+      "y": 0.0,
+      "w": 40.0,
+      "h": 20.0
+    },
+    "wg_0": {
+      "x": 16.638852219367656,
+      "y": 3.897208670955777,
+      "w": 100.0,
+      "h": 0.5
+    },
+    "dc_1": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 40.0,
+      "h": 20.0
+    },
+    "wg_1": {
+      "x": 0.0,
+      "y": 0.06287765687665825,
+      "w": 100.0,
+      "h": 0.5
+    },
+    "dc_2": {
+      "x": 0.0,
+      "y": 6.739137696460123,
+      "w": 40.0,
+      "h": 20.0
+    },
+    "wg_2": {
+      "x": 19.913412553738354,
+      "y": 14.526301473825164,
+      "w": 100.0,
+      "h": 0.5
+    },
+    "dc_3": {
+      "x": 5.4578892776188646,
+      "y": 0.0,
+      "w": 40.0,
+      "h": 20.0
+    },
+    "wg_3": {
+      "x": 9.789108702772793,
+      "y": 0.0,
+      "w": 100.0,
+      "h": 0.5
+    },
+    "dc_4": {
+      "x": 0.0,
+      "y": 18.082353644356687,
+      "w": 40.0,
+      "h": 20.0
+    },
+    "wg_4": {
+      "x": 0.0,
+      "y": 8.447364664003608,
+      "w": 100.0,
+      "h": 0.5
+    },
+    "gc_out": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    }
+  },
+  "circuit": {
+    "name": "mzi_lattice_5",
+    "devices": [
+      {
+        "name": "gc_in",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "dc_0",
+        "type": "directional_coupler"
+      },
+      {
+        "name": "wg_0",
+        "type": "waveguide"
+      },
+      {
+        "name": "dc_1",
+        "type": "directional_coupler"
+      },
+      {
+        "name": "wg_1",
+        "type": "waveguide"
+      },
+      {
+        "name": "dc_2",
+        "type": "directional_coupler"
+      },
+      {
+        "name": "wg_2",
+        "type": "waveguide"
+      },
+      {
+        "name": "dc_3",
+        "type": "directional_coupler"
+      },
+      {
+        "name": "wg_3",
+        "type": "waveguide"
+      },
+      {
+        "name": "dc_4",
+        "type": "directional_coupler"
+      },
+      {
+        "name": "wg_4",
+        "type": "waveguide"
+      },
+      {
+        "name": "gc_out",
+        "type": "grating_coupler"
+      }
+    ]
+  }
+}

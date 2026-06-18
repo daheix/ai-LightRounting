@@ -1,0 +1,93 @@
+{
+  "source": "synthetic",
+  "base_name": "splitter_tree_2",
+  "variant_type": "position",
+  "variant_id": 9,
+  "layout": {
+    "gc_in": {
+      "x": 0.0,
+      "y": 19.671678010443344,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "mmi_0": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_1": {
+      "x": 0.31507434071573215,
+      "y": 0.0,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "mmi_2": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 30.0,
+      "h": 20.0
+    },
+    "gc_out_1_l": {
+      "x": 21.91312443485385,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_1_r": {
+      "x": 0.0,
+      "y": 0.0,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_2_l": {
+      "x": 24.763250682900022,
+      "y": 19.54043508215259,
+      "w": 20.0,
+      "h": 20.0
+    },
+    "gc_out_2_r": {
+      "x": 0.0,
+      "y": 3.231224503713854,
+      "w": 20.0,
+      "h": 20.0
+    }
+  },
+  "circuit": {
+    "name": "splitter_tree_2",
+    "devices": [
+      {
+        "name": "gc_in",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "mmi_0",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_1",
+        "type": "mmi"
+      },
+      {
+        "name": "mmi_2",
+        "type": "mmi"
+      },
+      {
+        "name": "gc_out_1_l",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_1_r",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_2_l",
+        "type": "grating_coupler"
+      },
+      {
+        "name": "gc_out_2_r",
+        "type": "grating_coupler"
+      }
+    ]
+  }
+}
