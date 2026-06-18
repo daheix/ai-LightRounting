@@ -149,6 +149,19 @@ class GridRouter:
             cur_state = came_from.get(cur_state)
         return list(reversed(path))
 
+    def _save_endpoints(self, start, goal):
+        """保存起点/终点障碍标记并临时清除（器件端口可能在 bbox 内）。"""
+        orig_start = self.obstacle[start[1], start[0]]
+        orig_goal = self.obstacle[goal[1], goal[0]]
+        self.obstacle[start[1], start[0]] = 0
+        self.obstacle[goal[1], goal[0]] = 0
+        return orig_start, orig_goal
+
+    def _restore_endpoints(self, start, goal, orig_start, orig_goal):
+        """恢复起点/终点的原始障碍标记。"""
+        self.obstacle[start[1], start[0]] = orig_start
+        self.obstacle[goal[1], goal[0]] = orig_goal
+
     def route(
         self,
         start: tuple[int, int],
@@ -161,22 +174,18 @@ class GridRouter:
         后才允许转弯来近似（min_bend_steps）。
         """
         blocked = blocked or set()
-        if self.obstacle[start[1], start[0]] or self.obstacle[goal[1], goal[0]]:
-            return None
-        # open set: (f, g, x, y, last_dir, straight_steps)
-        # last_dir: -1=none, 0=E, 1=W, 2=N, 3=S
-        start_state = (start[0], start[1], -1, 0)  # x, y, last_dir, straight_steps
+        orig_start, orig_goal = self._save_endpoints(start, goal)
+        start_state = (start[0], start[1], -1, 0)
         open_h: list[tuple[float, int, int, int, int, int]] = []
-        h0 = self._heuristic(start, goal)
-        heapq.heappush(open_h, (h0, 0, start[0], start[1], -1, 0))
+        heapq.heappush(open_h, (self._heuristic(start, goal), 0, start[0], start[1], -1, 0))
         g_score: dict[tuple[int, int, int, int], int] = {start_state: 0}
         came_from: dict[tuple[int, int, int, int], tuple[int, int, int, int] | None] = {
             start_state: None
         }
-
         while open_h:
             _f, g, x, y, last_dir, straight = heapq.heappop(open_h)
             if (x, y) == goal:
+                self._restore_endpoints(start, goal, orig_start, orig_goal)
                 return self._reconstruct_path(came_from, (x, y), (last_dir, straight))
             for nx, ny, d, new_straight in self._get_neighbors(
                 (x, y), (last_dir, straight), blocked
@@ -188,6 +197,7 @@ class GridRouter:
                     came_from[new_state] = (x, y, last_dir, straight)
                     nf = ng + self._heuristic((nx, ny), goal)
                     heapq.heappush(open_h, (nf, ng, nx, ny, d, new_straight))
+        self._restore_endpoints(start, goal, orig_start, orig_goal)
         return None
 
 
