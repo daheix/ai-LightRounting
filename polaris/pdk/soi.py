@@ -78,17 +78,10 @@ def make_strip_waveguide() -> Device:
     length = 10.0  # 默认 10μm 直波导
     width = 0.5  # 500nm 单模
     ports = [
-        Port(
-            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
-        Port(
-            name="out",
-            x=length,
-            y=0.0,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_strip_waveguide",
@@ -121,10 +114,10 @@ def make_rib_waveguide() -> Device:
     length = 10.0
     width = 0.5
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="rib", width=width),
-        Port(
-            name="out", x=length, y=0.0, direction=Direction.EAST, waveguide_type="rib", width=width
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="rib", width=width),
+        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
+             waveguide_type="rib", width=width),
     ]
     return Device(
         device_id="soi_rib_waveguide",
@@ -159,17 +152,10 @@ def make_bend() -> Device:
     width = 0.5
     # 90° 弯曲：圆心 (R, 0)，弧从 (0,0) 切向 +x 到 (R,R) 切向 +y
     ports = [
-        Port(
-            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
-        Port(
-            name="out",
-            x=radius,
-            y=radius,
-            direction=Direction.NORTH,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="out", x=radius, y=radius, direction=Direction.NORTH,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_bend",
@@ -207,38 +193,14 @@ def make_directional_coupler() -> Device:
     width = 0.5
     gap = 0.5  # 端口间距（波导间物理间距，μm）
     ports = [
-        Port(
-            name="in1",
-            x=0.0,
-            y=gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="in2",
-            x=0.0,
-            y=-gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="out1",
-            x=length,
-            y=gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="out2",
-            x=length,
-            y=-gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in1", x=0.0, y=gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="in2", x=0.0, y=-gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="out1", x=length, y=gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
+        Port(name="out2", x=length, y=-gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_directional_coupler",
@@ -246,9 +208,8 @@ def make_directional_coupler() -> Device:
         category="passive",
         name="directional_coupler",
         ports=ports,
-        bbox=BoundingBox(
-            xmin=0.0, ymin=-gap / 2 - width / 2, xmax=length, ymax=gap / 2 + width / 2
-        ),
+        bbox=BoundingBox(xmin=0.0, ymin=-gap / 2 - width / 2,
+                         xmax=length, ymax=gap / 2 + width / 2),
         params={
             "gap_nm": 200,  # 耦合间隙 100-300nm
             "coupling_length_um": 10.0,  # 耦合长度 5-20μm
@@ -275,23 +236,12 @@ def make_mmi_1x2() -> Device:
     width = 3.0  # MMI 区宽度
     out_gap = 1.0  # 两输出端口间距
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5),
-        Port(
-            name="out1",
-            x=length,
-            y=out_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out2",
-            x=length,
-            y=-out_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out1", x=length, y=out_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out2", x=length, y=-out_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_mmi_1x2",
@@ -325,38 +275,14 @@ def make_mmi_2x2() -> Device:
     width = 3.0
     in_gap = 1.0
     ports = [
-        Port(
-            name="in1",
-            x=0.0,
-            y=in_gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="in2",
-            x=0.0,
-            y=-in_gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out1",
-            x=length,
-            y=in_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out2",
-            x=length,
-            y=-in_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
+        Port(name="in1", x=0.0, y=in_gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="in2", x=0.0, y=-in_gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out1", x=length, y=in_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out2", x=length, y=-in_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_mmi_2x2",
@@ -390,38 +316,14 @@ def make_mzi() -> Device:
     arm_gap = 2.0  # 两臂间距
     length = arm_length + 20.0  # 含输入/输出 MMI 长度
     ports = [
-        Port(
-            name="in1",
-            x=0.0,
-            y=arm_gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="in2",
-            x=0.0,
-            y=-arm_gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out1",
-            x=length,
-            y=arm_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out2",
-            x=length,
-            y=-arm_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
+        Port(name="in1", x=0.0, y=arm_gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="in2", x=0.0, y=-arm_gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out1", x=length, y=arm_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out2", x=length, y=-arm_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_mzi",
@@ -429,7 +331,8 @@ def make_mzi() -> Device:
         category="passive",
         name="mzi",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25, xmax=length, ymax=arm_gap / 2 + 0.25),
+        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25,
+                         xmax=length, ymax=arm_gap / 2 + 0.25),
         params={
             "arm_length_um": 100.0,  # 干涉臂长度
             "arm_length_diff_um": 0.0,  # 臂长差（控相位）
@@ -458,33 +361,14 @@ def make_ring_resonator() -> Device:
     # 总线波导沿 x 轴，环圆心在 (radius, radius+gap+width)
     bus_y = 0.0
     ports = [
-        Port(
-            name="in", x=0.0, y=bus_y, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
-        Port(
-            name="through",
-            x=2 * radius,
-            y=bus_y,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="drop",
-            x=2 * radius,
-            y=2 * (radius + gap + width),
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="add",
-            x=0.0,
-            y=2 * (radius + gap + width),
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in", x=0.0, y=bus_y, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="through", x=2 * radius, y=bus_y, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
+        Port(name="drop", x=2 * radius, y=2 * (radius + gap + width),
+             direction=Direction.EAST, waveguide_type="strip", width=width),
+        Port(name="add", x=0.0, y=2 * (radius + gap + width),
+             direction=Direction.WEST, waveguide_type="strip", width=width),
     ]
     ring_top = 2 * (radius + gap + width) + width / 2
     return Device(
@@ -493,7 +377,8 @@ def make_ring_resonator() -> Device:
         category="passive",
         name="ring_resonator",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=ring_top),
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
+                         xmax=2 * radius, ymax=ring_top),
         params={
             "radius_um": 10.0,  # 半径 5-20μm
             "gap_nm": 200,  # 耦合间隙
@@ -520,7 +405,8 @@ def make_grating_coupler_1d() -> Device:
     length = 20.0  # 光栅区长度
     ports = [
         # 波导端口（水平出射）
-        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5),
+        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_grating_coupler_1d",
@@ -555,7 +441,8 @@ def make_grating_coupler_2d() -> Device:
     """
     size = 15.0  # 2D 光栅方形边长
     ports = [
-        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5),
+        Port(name="wg", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_grating_coupler_2d",
@@ -563,7 +450,8 @@ def make_grating_coupler_2d() -> Device:
         category="passive",
         name="grating_coupler_2d",
         ports=ports,
-        bbox=BoundingBox(xmin=-size / 2, ymin=-size / 2, xmax=size / 2, ymax=size / 2),
+        bbox=BoundingBox(xmin=-size / 2, ymin=-size / 2,
+                         xmax=size / 2, ymax=size / 2),
         params={
             "coupling_loss_db": 2.4,  # 耦合损耗 2.4dB
             "bandwidth_1db_nm": 17,  # 1-dB 带宽 17nm
@@ -592,18 +480,11 @@ def make_edge_coupler() -> Device:
     width = 0.5
     ports = [
         # 芯片端面侧（光纤耦合，宽端口）
-        Port(
-            name="fiber", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=3.0
-        ),
+        Port(name="fiber", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=3.0),
         # 波导侧（窄端口）
-        Port(
-            name="wg",
-            x=length,
-            y=0.0,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="wg", x=length, y=0.0, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_edge_coupler",
@@ -639,23 +520,12 @@ def make_y_branch() -> Device:
     length = 20.0
     out_gap = 1.0
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5),
-        Port(
-            name="out1",
-            x=length,
-            y=out_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out2",
-            x=length,
-            y=-out_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out1", x=length, y=out_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out2", x=length, y=-out_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_y_branch",
@@ -663,7 +533,8 @@ def make_y_branch() -> Device:
         category="passive",
         name="y_branch",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-out_gap / 2 - 0.25, xmax=length, ymax=out_gap / 2 + 0.25),
+        bbox=BoundingBox(xmin=0.0, ymin=-out_gap / 2 - 0.25,
+                         xmax=length, ymax=out_gap / 2 + 0.25),
         params={
             "insertion_loss_db": 0.3,  # 插损 <0.3dB
             "imbalance_db": 0.1,
@@ -687,33 +558,14 @@ def make_crossing() -> Device:
     size = 5.0  # 交叉区尺寸
     width = 0.5
     ports = [
-        Port(
-            name="in1", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
-        Port(
-            name="out1",
-            x=size,
-            y=0.0,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="in2",
-            x=size / 2,
-            y=0.0,
-            direction=Direction.SOUTH,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="out2",
-            x=size / 2,
-            y=size,
-            direction=Direction.NORTH,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in1", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="out1", x=size, y=0.0, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
+        Port(name="in2", x=size / 2, y=0.0, direction=Direction.SOUTH,
+             waveguide_type="strip", width=width),
+        Port(name="out2", x=size / 2, y=size, direction=Direction.NORTH,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_crossing",
@@ -745,10 +597,10 @@ def make_thermo_optic_phase_shifter() -> Device:
     length = 100.0  # 加热器长度
     width = 0.5
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="rib", width=width),
-        Port(
-            name="out", x=length, y=0.0, direction=Direction.EAST, waveguide_type="rib", width=width
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="rib", width=width),
+        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
+             waveguide_type="rib", width=width),
     ]
     return Device(
         device_id="soi_thermo_optic_phase_shifter",
@@ -785,38 +637,14 @@ def make_mzm_modulator() -> Device:
     arm_gap = 2.0
     length = arm_length + 40.0  # 含输入/输出 MMI
     ports = [
-        Port(
-            name="in1",
-            x=0.0,
-            y=arm_gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="in2",
-            x=0.0,
-            y=-arm_gap / 2,
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out1",
-            x=length,
-            y=arm_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
-        Port(
-            name="out2",
-            x=length,
-            y=-arm_gap / 2,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=0.5,
-        ),
+        Port(name="in1", x=0.0, y=arm_gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="in2", x=0.0, y=-arm_gap / 2, direction=Direction.WEST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out1", x=length, y=arm_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
+        Port(name="out2", x=length, y=-arm_gap / 2, direction=Direction.EAST,
+             waveguide_type="strip", width=0.5),
     ]
     return Device(
         device_id="soi_mzm_modulator",
@@ -824,7 +652,8 @@ def make_mzm_modulator() -> Device:
         category="active",
         name="mzm_modulator",
         ports=ports,
-        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25, xmax=length, ymax=arm_gap / 2 + 0.25),
+        bbox=BoundingBox(xmin=0.0, ymin=-arm_gap / 2 - 0.25,
+                         xmax=length, ymax=arm_gap / 2 + 0.25),
         params={
             "bandwidth_3db_ghz": 20.0,  # 带宽 ~20GHz
             "insertion_loss_db": 5.0,  # 插损 ~5dB
@@ -854,17 +683,10 @@ def make_mrm_modulator() -> Device:
     gap = 0.2  # 环-总线耦合间隙
     width = 0.5
     ports = [
-        Port(
-            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
-        Port(
-            name="through",
-            x=2 * radius,
-            y=0.0,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="through", x=2 * radius, y=0.0, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_mrm_modulator",
@@ -872,9 +694,8 @@ def make_mrm_modulator() -> Device:
         category="active",
         name="mrm_modulator",
         ports=ports,
-        bbox=BoundingBox(
-            xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=radius + gap + width + width / 2
-        ),
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
+                         xmax=2 * radius, ymax=radius + gap + width + width / 2),
         params={
             "efficiency_pm_v": 52.0,  # 垂直 PN 结效率 52 pm/V
             "bandwidth_3db_ghz": 74.0,  # 横向 PN 结 3-dB 带宽 74GHz
@@ -904,9 +725,8 @@ def make_ge_photodetector() -> Device:
     length = 30.0  # 探测区长度
     width = 0.5
     ports = [
-        Port(
-            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
     ]
     return Device(
         device_id="soi_ge_photodetector",
@@ -944,40 +764,18 @@ def make_double_ring_filter() -> Device:
     width = 0.5
     ring_spacing = 2 * (radius + gap + width)  # 两环间距
     ports = [
-        Port(
-            name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
-        ),
-        Port(
-            name="through",
-            x=ring_spacing,
-            y=0.0,
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="drop",
-            x=ring_spacing,
-            y=2 * (radius + gap + width),
-            direction=Direction.EAST,
-            waveguide_type="strip",
-            width=width,
-        ),
-        Port(
-            name="add",
-            x=0.0,
-            y=2 * (radius + gap + width),
-            direction=Direction.WEST,
-            waveguide_type="strip",
-            width=width,
-        ),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+             waveguide_type="strip", width=width),
+        Port(name="through", x=ring_spacing, y=0.0, direction=Direction.EAST,
+             waveguide_type="strip", width=width),
+        Port(name="drop", x=ring_spacing, y=2 * (radius + gap + width),
+             direction=Direction.EAST, waveguide_type="strip", width=width),
+        Port(name="add", x=0.0, y=2 * (radius + gap + width),
+             direction=Direction.WEST, waveguide_type="strip", width=width),
     ]
     params = {
-        "drop_insertion_loss_db": 1.0,
-        "bandwidth_1db_ghz": 105.0,  # <1dB,105GHz
-        "radius_um": 10.0,
-        "gap_nm": 200,
-        "wavelength_nm": 1310,  # O 波段
+        "drop_insertion_loss_db": 1.0, "bandwidth_1db_ghz": 105.0,
+        "radius_um": 10.0, "gap_nm": 200, "wavelength_nm": 1310,
     }
     return Device(
         device_id="soi_double_ring_filter",
@@ -985,12 +783,8 @@ def make_double_ring_filter() -> Device:
         category="passive",
         name="double_ring_filter",
         ports=ports,
-        bbox=BoundingBox(
-            xmin=0.0,
-            ymin=-width / 2,
-            xmax=ring_spacing,
-            ymax=2 * (radius + gap + width) + width / 2,
-        ),
+        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
+                         xmax=ring_spacing, ymax=2 * (radius + gap + width) + width / 2),
         params=params,
         source=_SRC_SAMSUNG,
         constraints={
