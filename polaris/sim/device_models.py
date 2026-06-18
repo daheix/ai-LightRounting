@@ -25,8 +25,7 @@ import numpy as np
 
 from polaris.pdk.catalog import DeviceCatalog, build_default_catalog
 from polaris.pdk.device import Device
-from polaris.sim.smodels import (
-    SDict,
+from polaris.sim.models import (
     crossing_s,
     directional_coupler_s,
     grating_coupler_s,
@@ -38,6 +37,8 @@ from polaris.sim.smodels import (
     waveguide_s,
     y_branch_s,
 )
+from polaris.sim.simulator import CircuitSimulator
+from polaris.sim.types import SDict
 
 
 def _parse_float(val, default=0.0):
@@ -47,6 +48,7 @@ def _parse_float(val, default=0.0):
     if isinstance(val, str):
         # 提取字符串中的数字（如 "<0.4 dB/cm" → 0.4）
         import re
+
         m = re.search(r"[\d.]+", val)
         if m:
             return float(m.group())
@@ -71,12 +73,19 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
     wl_arr = np.asarray(wl, dtype=float)
 
     # --- 波导类 ---
-    if "waveguide" in name or name in ("strip_waveguide", "rib_waveguide",
-                                        "waveguide_lpcvd", "waveguide_damascene",
-                                        "waveguide_ull", "waveguide_epfl",
-                                        "waveguide_trench", "triplex_double_stripe",
-                                        "waveguide_high_q", "waveguide_low_loss",
-                                        "waveguide_ull_record"):
+    if "waveguide" in name or name in (
+        "strip_waveguide",
+        "rib_waveguide",
+        "waveguide_lpcvd",
+        "waveguide_damascene",
+        "waveguide_ull",
+        "waveguide_epfl",
+        "waveguide_trench",
+        "triplex_double_stripe",
+        "waveguide_high_q",
+        "waveguide_low_loss",
+        "waveguide_ull_record",
+    ):
         neff = _parse_float(params.get("neff", 2.4), 2.4)
         loss_db_cm = _parse_float(params.get("loss_db_cm", 0.0), 0.0)
         # SiN 用 dB/m 的转换
@@ -103,9 +112,7 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
         coupling = float(params.get("coupling", 0.5))
         gap = float(params.get("gap_um", 0.2))
         length = float(params.get("coupling_length_um", 10.0))
-        return directional_coupler_s(
-            wl=wl_arr, coupling=coupling, length=length, gap=gap
-        )
+        return directional_coupler_s(wl=wl_arr, coupling=coupling, length=length, gap=gap)
 
     # --- 环谐振器 ---
     if "ring" in name and "resonator" in name:
@@ -114,8 +121,11 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
         coupling = float(params.get("coupling", 0.01))
         loss_db_cm = float(params.get("loss_db_cm", 2.0))
         return ring_resonator_s(
-            wl=wl_arr, radius=radius, neff=neff,
-            coupling=coupling, loss_db_cm=loss_db_cm,
+            wl=wl_arr,
+            radius=radius,
+            neff=neff,
+            coupling=coupling,
+            loss_db_cm=loss_db_cm,
         )
 
     # --- 半环（SiEPIC half_ring） ---
@@ -124,7 +134,10 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
         neff = float(params.get("neff", 2.4))
         coupling = float(params.get("coupling", 0.01))
         return ring_resonator_s(
-            wl=wl_arr, radius=radius, neff=neff, coupling=coupling,
+            wl=wl_arr,
+            radius=radius,
+            neff=neff,
+            coupling=coupling,
         )
 
     # --- MMI 1x2 ---
@@ -146,10 +159,12 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
     if "grating_coupler" in name:
         peak_wl = float(params.get("center_wavelength", 1.55))
         bw = float(params.get("bandwidth_3db", 0.04))
-        il = float(params.get("peak_coupling_loss_db",
-                              params.get("coupling_loss_db", 1.9)))
+        il = float(params.get("peak_coupling_loss_db", params.get("coupling_loss_db", 1.9)))
         return grating_coupler_s(
-            wl=wl_arr, peak_wl=peak_wl, bandwidth_3db=bw, insertion_loss_db=il,
+            wl=wl_arr,
+            peak_wl=peak_wl,
+            bandwidth_3db=bw,
+            insertion_loss_db=il,
         )
 
     # --- 端面耦合器 ---
@@ -157,7 +172,10 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
         il = float(params.get("coupling_loss_db", 0.5))
         # 端面耦合器近似平坦响应
         return grating_coupler_s(
-            wl=wl_arr, peak_wl=1.55, bandwidth_3db=0.1, insertion_loss_db=il,
+            wl=wl_arr,
+            peak_wl=1.55,
+            bandwidth_3db=0.1,
+            insertion_loss_db=il,
         )
 
     # --- 交叉 ---
@@ -170,14 +188,18 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
         phase = float(params.get("phase_rad", 0.0))
         il = float(params.get("insertion_loss_db", 0.0))
         return phase_shifter_s(
-            wl=wl_arr, phase_rad=phase, insertion_loss_db=il,
+            wl=wl_arr,
+            phase_rad=phase,
+            insertion_loss_db=il,
         )
 
     # --- 调制器（MZM/MRM）→ 移相器 + 损耗 ---
     if "modulator" in name or "mzm" in name or "mrm" in name:
         il = float(params.get("insertion_loss_db", 3.0))
         return phase_shifter_s(
-            wl=wl_arr, phase_rad=0.0, insertion_loss_db=il,
+            wl=wl_arr,
+            phase_rad=0.0,
+            insertion_loss_db=il,
         )
 
     # --- 探测器 ---
@@ -196,8 +218,10 @@ def device_to_smodel(device: Device, wl: float | np.ndarray = 1.55) -> SDict:
         gain_db = float(params.get("gain_db", 15.0))
         # SOA 简化为负损耗波导
         return waveguide_s(
-            wl=wl_arr, length=float(params.get("length", 500.0)),
-            neff=3.2, loss_db_cm=-gain_db / float(params.get("length", 500.0)) * 1e4,
+            wl=wl_arr,
+            length=float(params.get("length", 500.0)),
+            neff=3.2,
+            loss_db_cm=-gain_db / float(params.get("length", 500.0)) * 1e4,
         )
 
     # --- 材料参数器件（无 S 参数） ---
@@ -222,10 +246,13 @@ def catalog_smodels(catalog: DeviceCatalog | None = None) -> dict[str, callable]
 
     models: dict[str, callable] = {}
     for device in catalog:
+
         def make_model(dev):
             def model(wl=1.55, **kwargs):
                 return device_to_smodel(dev, wl)
+
             return model
+
         models[device.device_id] = make_model(device)
     return models
 
@@ -266,8 +293,6 @@ def simulate_circuit_from_netlist(
     Returns:
         (波长数组, 电路级 S 参数字典)
     """
-    from polaris.sim.smodels import CircuitSimulator
-
     if wavelengths is None:
         wavelengths = np.linspace(1.5, 1.6, 500)
 
@@ -277,10 +302,13 @@ def simulate_circuit_from_netlist(
     # 构建模型库
     sim = CircuitSimulator()
     for device in catalog:
+
         def make_model(dev):
             def model(wl=1.55, **kwargs):
                 return device_to_smodel(dev, wl)
+
             return model
+
         sim.register_model(device.device_id, make_model(device))
 
     # 转换网表为 SAX 格式

@@ -5,12 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from polaris.pdk.catalog import build_default_catalog
-from polaris.sim.device_models import (
-    catalog_smodels,
-    device_to_smodel,
-    simulate_device,
-)
-from polaris.sim.smodels import (
+from polaris.sim import (
     CircuitSimulator,
     cascade_circuit,
     default_models,
@@ -23,6 +18,11 @@ from polaris.sim.smodels import (
     save_touchstone,
     waveguide_s,
     y_branch_s,
+)
+from polaris.sim.device_models import (
+    catalog_smodels,
+    device_to_smodel,
+    simulate_device,
 )
 
 
@@ -185,9 +185,7 @@ class TestCascade:
         s_ref = waveguide_s(wl=wl, length=100.0, neff=2.4)
         # 级联后的传输应与参考一致
         if ("out", "in") in merged:
-            np.testing.assert_almost_equal(
-                merged[("out", "in")], s_ref[("out", "in")], decimal=4
-            )
+            np.testing.assert_almost_equal(merged[("out", "in")], s_ref[("out", "in")], decimal=4)
 
 
 # ---------------------------------------------------------------------------
@@ -291,16 +289,19 @@ class TestSimphonyIntegration:
     def test_simphony_import(self):
         """Simphony 应能导入（规则 2 直接集成）。"""
         import simphony
+
         assert simphony.__version__ is not None
 
     def test_sax_import(self):
         """SAX 应能导入（规则 2 直接集成）。"""
         import sax
+
         assert sax is not None
 
     def test_siepic_models_available(self):
         """SiEPIC 模型库应可用。"""
         from simphony.libraries import siepic
+
         models = [x for x in dir(siepic) if not x.startswith("_")]
         assert "waveguide" in models
         assert "y_branch" in models
@@ -310,6 +311,7 @@ class TestSimphonyIntegration:
         """Simphony Y 分支模型应返回 S 参数字典。"""
         import numpy as np
         from simphony.libraries import siepic
+
         s = siepic.y_branch(wl=np.array([1.55]))
         assert isinstance(s, dict)
         assert len(s) > 0
