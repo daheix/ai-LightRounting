@@ -186,20 +186,23 @@ class RoutingEnv(gym.Env):
             ):
                 continue
             obstacles.append(pl.bbox_abs())
-        # 布线
-        wp = route_connection(
-            start=(start[0] + dx, start[1] + dy),
-            end=end,
-            platform=platform,
-            grid_size=self.state.grid_size,
-            canvas_w=self.state.canvas_w,
-            canvas_h=self.state.canvas_h,
-            obstacles=obstacles,
-        )
-        self.state.paths[self._conn_idx] = wp
-        self.state.update_congestion(wp)
-        # 奖励
-        reward = self._reward(wp)
+        # 布线（捕获A*失败，给大惩罚）
+        try:
+            wp = route_connection(
+                start=(start[0] + dx, start[1] + dy),
+                end=end,
+                platform=platform,
+                grid_size=self.state.grid_size,
+                canvas_w=self.state.canvas_w,
+                canvas_h=self.state.canvas_h,
+                obstacles=obstacles,
+            )
+            self.state.paths[self._conn_idx] = wp
+            self.state.update_congestion(wp)
+            reward = self._reward(wp)
+        except Exception:
+            # A*找不到路径或越界等异常 → 大惩罚，跳过此连接
+            reward = -1000.0
         self._conn_idx += 1
         terminated = self._conn_idx >= len(self.connections)
         return self._obs(), reward, terminated, False, {"step": self._conn_idx}
