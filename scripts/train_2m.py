@@ -100,7 +100,11 @@ def git_commit(prog: dict) -> None:
 
 
 def run_placement_batch(batch_episodes: int, batch_seed: int) -> dict:
-    """运行一批布局训练，每批用不同seed生成不同网表。"""
+    """运行一批布局训练。
+
+    网表用固定seed=42生成（保证obs_dim一致，续训不崩溃），
+    但每episode内环境reset随机化（器件初始位置不同）。
+    """
     from polaris.trainer.dataset import DatasetConfig
     from polaris.trainer.ppo import PPOConfig
     from polaris.trainer.train_loop import (
@@ -115,12 +119,12 @@ def run_placement_batch(batch_episodes: int, batch_seed: int) -> dict:
         n_epochs=4, batch_size=32,
         lr_schedule="cosine", total_steps=EPISODES_PER_ROUND,
     )
-    # 每批用不同seed → 不同网表 → 训练数据多样化
+    # 固定seed=42保证obs_dim一致，环境reset内部随机化
     dataset_cfg = DatasetConfig(
         num_netlists=50,
         min_devices=3,
         max_devices=12,
-        seed=batch_seed,
+        seed=42,
     )
     train_cfg = TrainConfig(
         ppo=ppo_cfg, num_episodes=batch_episodes,
@@ -131,7 +135,7 @@ def run_placement_batch(batch_episodes: int, batch_seed: int) -> dict:
         checkpoint_dir=str(SAVE_DIR),
         checkpoint_every=CKPT_EVERY, log_every=LOG_EVERY,
         lr_schedule="cosine",
-        seed=batch_seed,
+        seed=42,
     )
 
     # 断点续训
@@ -144,7 +148,8 @@ def run_placement_batch(batch_episodes: int, batch_seed: int) -> dict:
             obs_dim, action_dim = dims
             agent = load_agent(str(ckpt_path), obs_dim, action_dim, HIDDEN_DIM)
             del tmp_agent
-        except Exception:
+        except Exception as e:
+            print(f"  续训失败，重新开始: {e}", flush=True)
             agent = None
 
     agent, logs = train_floorplan(train_cfg, agent=agent, verbose=False)
@@ -167,7 +172,7 @@ def run_placement_batch(batch_episodes: int, batch_seed: int) -> dict:
 
 
 def run_routing_batch(batch_episodes: int, batch_seed: int) -> dict:
-    """运行一批布线训练。"""
+    """运行一批布线训练。固定seed保证维度一致。"""
     from polaris.trainer.dataset import DatasetConfig
     from polaris.trainer.ppo import PPOConfig
     from polaris.trainer.train_loop import TrainConfig, train_routing
@@ -180,7 +185,7 @@ def run_routing_batch(batch_episodes: int, batch_seed: int) -> dict:
     )
     dataset_cfg = DatasetConfig(
         num_netlists=50, min_devices=3, max_devices=12,
-        seed=batch_seed,
+        seed=42,
     )
     train_cfg = TrainConfig(
         ppo=ppo_cfg, num_episodes=batch_episodes,
@@ -191,7 +196,7 @@ def run_routing_batch(batch_episodes: int, batch_seed: int) -> dict:
         checkpoint_dir=str(SAVE_DIR),
         checkpoint_every=CKPT_EVERY, log_every=LOG_EVERY,
         lr_schedule="cosine",
-        seed=batch_seed,
+        seed=42,
     )
 
     agent, logs = train_routing(train_cfg, verbose=False)
