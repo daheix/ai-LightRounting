@@ -5,13 +5,11 @@ from __future__ import annotations
 import pytest
 
 from polaris.engine.netlist import (
-    Netlist,
     build_graph,
     instantiate_devices,
     load_netlist,
     parse_netlist,
 )
-
 
 YAML_NETLIST = """
 name: test

@@ -8,11 +8,8 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
 
 import numpy as np
-import pytest
 
 from polaris.engine.floorplan_env import FloorplanEnv
 from polaris.engine.netlist import load_netlist
@@ -21,7 +18,6 @@ from polaris.pipeline import cmd_run
 from polaris.router.routing_env import RoutingEnv
 from polaris.trainer.dataset import DatasetConfig, generate_dataset
 from polaris.trainer.train_loop import TrainConfig, train_floorplan
-
 
 YAML_NETLIST = """
 name: integration_test
@@ -96,7 +92,7 @@ def test_pipeline_cli_run(tmp_path):
     netlist_path = tmp_path / "net.yaml"
     netlist_path.write_text(YAML_NETLIST, encoding="utf-8")
     out_dir = tmp_path / "out"
-    ret = cmd_run(
+    cmd_run(
         type("Args", (), {
             "netlist": str(netlist_path),
             "output": str(out_dir),

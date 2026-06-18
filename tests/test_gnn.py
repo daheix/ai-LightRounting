@@ -13,7 +13,6 @@ from polaris.engine.gnn import (
 from polaris.engine.netlist import load_netlist
 from polaris.nn import Tensor
 
-
 YAML_NETLIST = """
 instances:
   wg1: {component: strip_waveguide, platform: SOI}

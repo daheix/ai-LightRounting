@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-import os
-
 import numpy as np
 
 from polaris.trainer.ppo import PPOAgent, PPOConfig, compute_gae

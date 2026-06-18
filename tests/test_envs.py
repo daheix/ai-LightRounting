@@ -15,7 +15,6 @@ from polaris.engine.floorplan_env import (
 from polaris.engine.netlist import load_netlist
 from polaris.router.routing_env import RoutingEnv
 
-
 YAML_NETLIST = """
 instances:
   wg1: {component: strip_waveguide, platform: SOI}

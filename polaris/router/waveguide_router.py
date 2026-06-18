@@ -189,12 +189,13 @@ def euler_bend(
     x, y = 0.0, 0.0
     theta = 0.0
     for _ in range(n_points + 1):
+        # 先记录当前点（保证起点为 (0, 0)），再积分前进一步
+        pts.append((x, y))
         # 曲率 k = s / (R * L) 线性增长
         k = (s / L) / radius_um if L > 0 else 0.0
         theta += k * ds
         x += ds * math.cos(theta)
         y += ds * math.sin(theta)
-        pts.append((x, y))
         s += ds
     return pts
 
