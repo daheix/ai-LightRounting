@@ -513,6 +513,15 @@ def make_dfb_laser_coherent() -> Device:
     """
     length = 750.0  # BH DFB 激光器长度（μm），典型值
     half_w = _WG_WIDTH / 2.0
+    params = {
+        "wavelength_nm": 1311.0, "output_power_mw": 400.0,
+        "output_power_note": "400 mW @55°C", "operating_temp_c": 55,
+        "linewidth_khz": 200.0, "linewidth_note": "<200 kHz",
+        "rin_db_hz": -145.0, "rin_note": "<-145 dB/Hz",
+        "manufacturer": "Coherent",
+        "structure": "BH (Buried Heterostructure)",
+        "length_um": length,
+    }
     return Device(
         device_id="dfb_laser_coherent",
         platform="InP",
@@ -525,19 +534,7 @@ def make_dfb_laser_coherent() -> Device:
                  direction=Direction.NORTH, waveguide_type="electrical", width=50.0),
         ],
         bbox=BoundingBox(xmin=0.0, ymin=-half_w, xmax=length, ymax=half_w + 50.0),
-        params={
-            "wavelength_nm": 1311.0,
-            "output_power_mw": 400.0,
-            "output_power_note": "400 mW @55°C",
-            "operating_temp_c": 55,
-            "linewidth_khz": 200.0,
-            "linewidth_note": "<200 kHz",
-            "rin_db_hz": -145.0,
-            "rin_note": "<-145 dB/Hz",
-            "manufacturer": "Coherent",
-            "structure": "BH (Buried Heterostructure)",
-            "length_um": length,
-        },
+        params=params,
         source=_SOURCE_COHERENT,
         constraints={
             "min_spacing_um": _MIN_SPACING,

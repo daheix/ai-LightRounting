@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from polaris.trainer.ppo import PPOAgent, PPOConfig, compute_gae
+from polaris.trainer.ppo import PPOAgent, PPOConfig, Transition, compute_gae
 
 
 def test_ppo_agent_creation():
@@ -41,7 +41,7 @@ def test_ppo_update_runs():
     obs = np.random.randn(4)
     for _ in range(32):
         a, lp, v = agent.get_action(obs)
-        agent.store(obs, a, -1.0, lp, v, False)
+        agent.store(Transition(obs, a, -1.0, lp, v, False))
     metrics = agent.update(last_value=0.0)
     assert "policy_loss" in metrics
     assert "value_loss" in metrics
@@ -53,7 +53,7 @@ def test_ppo_save_load(tmp_path):
     obs = np.random.randn(4)
     for _ in range(16):
         a, lp, v = agent.get_action(obs)
-        agent.store(obs, a, -1.0, lp, v, False)
+        agent.store(Transition(obs, a, -1.0, lp, v, False))
     agent.update(last_value=0.0)
     ckpt = tmp_path / "ppo.json"
     agent.save(ckpt)
@@ -76,6 +76,6 @@ def test_ppo_checkpoint_resume(tmp_path):
     obs = np.random.randn(4)
     for _ in range(16):
         a, lp, v = agent2.get_action(obs)
-        agent2.store(obs, a, -1.0, lp, v, False)
+        agent2.store(Transition(obs, a, -1.0, lp, v, False))
     m = agent2.update(last_value=0.0)
     assert "policy_loss" in m

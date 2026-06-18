@@ -11,6 +11,7 @@ from polaris.engine.floorplan_env import FloorplanEnv
 from polaris.engine.netlist import load_netlist
 from polaris.eval.layout_render import (
     DRCReport,
+    RenderOptions,
     export_gds,
     export_oasis,
     render_congestion_heatmap,
@@ -44,7 +45,8 @@ def layout_setup():
 
 def test_render_layout(layout_setup, tmp_path):
     placements, paths, cong = layout_setup
-    r = render_layout(placements, paths, cong, save_path=str(tmp_path / "layout.png"))
+    opts = RenderOptions(save_path=str(tmp_path / "layout.png"))
+    r = render_layout(placements, paths, cong, options=opts)
     assert r.fig is not None
     assert (tmp_path / "layout.png").exists()
 

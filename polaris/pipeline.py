@@ -21,6 +21,7 @@ import numpy as np
 from polaris.engine.floorplan_env import FloorplanEnv
 from polaris.engine.netlist import load_netlist
 from polaris.eval.layout_render import (
+    RenderOptions,
     export_gds,
     export_oasis,
     render_layout,
@@ -129,8 +130,10 @@ def cmd_run(args):
     print("[4/5] 渲染与导出...")
     render_layout(
         placements, paths, congestion,
-        title=f"PoLaRIS - {net.name}",
-        save_path=str(out / "layout.png"),
+        options=RenderOptions(
+            title=f"PoLaRIS - {net.name}",
+            save_path=str(out / "layout.png"),
+        ),
     )
     gds_path = export_gds(placements, paths, str(out / "layout.gds"))
     oasis_path = export_oasis(placements, paths, str(out / "layout.oas"))

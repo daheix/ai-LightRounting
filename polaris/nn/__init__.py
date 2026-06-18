@@ -19,13 +19,122 @@ torch 在目标环境（Python 3.14 / 受限磁盘）无法安装（无预编译
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from typing import cast
+
 import numpy as np
 
 
 # ---------------------------------------------------------------------------
 # Tensor + 自动微分（复刻 torch.autograd）
 # ---------------------------------------------------------------------------
-class Tensor:
+class TensorArithmeticMixin:
+    """Tensor 算术运算混入（复刻 ``torch.Tensor`` 算术 op 子集）。
+
+    将算术运算符重载从 ``Tensor`` 拆分至此混入，以降低 ``Tensor``
+    的方法数（规则 4.1 类方法数上限）。
+
+    注意: 本混入不定义 ``__init__``，依赖子类 ``Tensor`` 在 ``__init__``
+    中设置 ``data``、``requires_grad`` 等属性并提供 ``_ensure_grad`` 方法。
+    Python MRO 保证这些方法在 ``Tensor`` 实例上调用时可正确访问实例属性。
+
+    来源:
+    - PyTorch torch.Tensor: https://github.com/pytorch/pytorch （BSD-style license）
+    """
+
+    __slots__ = ()
+
+    # 类型声明：由子类 Tensor.__init__ 实际赋值（mixin 不持有这些属性，
+    # 仅为静态类型检查器提供接口契约）
+    data: np.ndarray
+    requires_grad: bool
+    grad: np.ndarray | None
+
+    def _ensure_grad(self) -> None:
+        """由子类 ``Tensor`` 提供实际实现。"""
+        raise NotImplementedError
+
+    def __add__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data + other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + _unbroadcast(g, self.data.shape)
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + _unbroadcast(g, other.data.shape)
+
+        out._backward = _back
+        return out
+
+    def __mul__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data * other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + _unbroadcast(g * other.data, self.data.shape)
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + _unbroadcast(g * self.data, other.data.shape)
+
+        out._backward = _back
+        return out
+
+    def __matmul__(self, other):
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data @ other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g @ other.data.T
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + self.data.T @ g
+
+        out._backward = _back
+        return out
+
+    def matmul(self, other):
+        return self.__matmul__(other)
+
+    def __neg__(self):
+        return self * -1.0
+
+    def __sub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return self + (-other if isinstance(other, Tensor) else Tensor(-other.data))
+
+    def __rsub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return other - self
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __radd__(self, other):
+        return self + other
+
+    def __pow__(self, p: float):
+        # self 运行时为 Tensor 实例，cast 以满足 _parents 类型契约
+        out = Tensor(self.data**p, self.requires_grad, (cast(Tensor, self),))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g * p * (self.data ** (p - 1))
+
+        out._backward = _back
+        return out
+
+
+class Tensor(TensorArithmeticMixin):
     """自动微分张量（复刻 ``torch.Tensor`` 的核心子集）。
 
     支持 +、-、*、@、matmul、relu、tanh、log、sum、mean、softmax、
@@ -118,57 +227,6 @@ class Tensor:
 
     def zero_grad(self) -> None:
         self.grad = None
-
-    # ----- 前向 op -----
-    def __add__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        rg = self.requires_grad or other.requires_grad
-        out = Tensor(self.data + other.data, rg, (self, other))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + _unbroadcast(g, self.data.shape)
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + _unbroadcast(g, other.data.shape)
-
-        out._backward = _back
-        return out
-
-    def __mul__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        rg = self.requires_grad or other.requires_grad
-        out = Tensor(self.data * other.data, rg, (self, other))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + _unbroadcast(g * other.data, self.data.shape)
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + _unbroadcast(g * self.data, other.data.shape)
-
-        out._backward = _back
-        return out
-
-    def __matmul__(self, other):
-        rg = self.requires_grad or other.requires_grad
-        out = Tensor(self.data @ other.data, rg, (self, other))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + g @ other.data.T
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + self.data.T @ g
-
-        out._backward = _back
-        return out
-
-    def matmul(self, other):
-        return self.__matmul__(other)
 
     def sum(self, axis=None, keepdims=False):
         out = Tensor(
@@ -265,34 +323,6 @@ class Tensor:
         out._backward = _back
         return out
 
-    def __neg__(self):
-        return self * -1.0
-
-    def __sub__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        return self + (-other if isinstance(other, Tensor) else Tensor(-other.data))
-
-    def __rsub__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        return other - self
-
-    def __rmul__(self, other):
-        return self * other
-
-    def __radd__(self, other):
-        return self + other
-
-    def __pow__(self, p: float):
-        out = Tensor(self.data ** p, self.requires_grad, (self,))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + g * p * (self.data ** (p - 1))
-
-        out._backward = _back
-        return out
-
     def softmax(self, axis: int = -1):
         """数值稳定的 softmax（与 torch.nn.functional.softmax 一致）。"""
         shifted = self.data - self.data.max(axis=axis, keepdims=True)
@@ -350,13 +380,16 @@ class Module:
                 if obj.requires_grad and id(obj) not in seen:
                     seen.add(id(obj))
                     params.append(obj)
-            elif isinstance(obj, Module):
+                return
+            if isinstance(obj, Module):
                 for v in vars(obj).values():
                     collect(v)
-            elif isinstance(obj, (list, tuple)):
+                return
+            if isinstance(obj, (list, tuple)):
                 for item in obj:
                     collect(item)
-            elif isinstance(obj, dict):
+                return
+            if isinstance(obj, dict):
                 for item in obj.values():
                     collect(item)
 
@@ -430,6 +463,21 @@ class Sequential(Module):
 # ---------------------------------------------------------------------------
 # 优化器（复刻 torch.optim）
 # ---------------------------------------------------------------------------
+@dataclass
+class AdamConfig:
+    """Adam 优化器超参数配置（复刻 ``torch.optim.Adam`` 默认值）。
+
+    将 betas/eps/weight_decay 聚合为单一配置对象，以降低
+    ``Adam.__init__`` 的参数个数（规则 4.1 函数参数上限）。
+
+    来源: Kingma & Ba, 2015, Adam 论文；torch.optim.Adam 默认实现。
+    """
+
+    betas: tuple[float, float] = (0.9, 0.999)
+    eps: float = 1e-8
+    weight_decay: float = 0.0
+
+
 class Adam:
     """Adam 优化器（复刻 ``torch.optim.Adam``，默认 eps=1e-8, betas=(0.9,0.999)）。
 
@@ -441,15 +489,14 @@ class Adam:
         self,
         params: list[Tensor],
         lr: float = 1e-3,
-        betas: tuple[float, float] = (0.9, 0.999),
-        eps: float = 1e-8,
-        weight_decay: float = 0.0,
+        config: AdamConfig | None = None,
     ) -> None:
+        cfg = config or AdamConfig()
         self.params = list(params)
         self.lr = lr
-        self.beta1, self.beta2 = betas
-        self.eps = eps
-        self.weight_decay = weight_decay
+        self.beta1, self.beta2 = cfg.betas
+        self.eps = cfg.eps
+        self.weight_decay = cfg.weight_decay
         self.m = [np.zeros_like(p.data) for p in self.params]
         self.v = [np.zeros_like(p.data) for p in self.params]
         self.t = 0
@@ -468,17 +515,19 @@ class Adam:
                 g = g + self.weight_decay * p.data
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * g
             self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (g * g)
-            m_hat = self.m[i] / (1 - self.beta1 ** self.t)
-            v_hat = self.v[i] / (1 - self.beta2 ** self.t)
+            m_hat = self.m[i] / (1 - self.beta1**self.t)
+            v_hat = self.v[i] / (1 - self.beta2**self.t)
             p.data = p.data - self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
 
 
 __all__ = [
     "Tensor",
+    "TensorArithmeticMixin",
     "Module",
     "Linear",
     "ReLU",
     "Tanh",
     "Sequential",
     "Adam",
+    "AdamConfig",
 ]

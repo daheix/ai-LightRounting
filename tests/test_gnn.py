@@ -5,6 +5,7 @@ from __future__ import annotations
 import numpy as np
 
 from polaris.engine.gnn import (
+    EncoderConfig,
     GraphEncoder,
     StateEncoder,
     build_node_features,
@@ -33,7 +34,11 @@ def test_graph_encoder_output_shape():
 
 
 def test_state_encoder_output_shape():
-    se = StateEncoder(node_feat_dim=6, grid_size=20, hidden_dim=32, out_dim=64)
+    se = StateEncoder(
+        node_feat_dim=6,
+        grid_size=20,
+        config=EncoderConfig(hidden_dim=32, out_dim=64),
+    )
     node_feats = Tensor(np.random.randn(3, 6))
     edges = np.array([[0, 1, 1, 2], [1, 0, 2, 1]])
     grid = Tensor(np.random.rand(20, 20))

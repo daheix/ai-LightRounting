@@ -28,6 +28,7 @@ import numpy as np
 from polaris.pdk.catalog import DeviceCatalog, build_default_catalog
 from polaris.pdk.device import Device
 from polaris.sim.models import (
+    RingParams,
     crossing_s,
     directional_coupler_s,
     grating_coupler_s,
@@ -149,16 +150,12 @@ def _matches_ring_resonator(name: str) -> bool:
 def _ring_resonator_smodel(params: dict, wl_arr: np.ndarray) -> SDict:
     """环谐振器 S 参数模型。"""
     radius = float(params.get("radius_um", 10.0))
-    neff = float(params.get("neff", 2.4))
-    coupling = float(params.get("coupling", 0.01))
-    loss_db_cm = float(params.get("loss_db_cm", 2.0))
-    return ring_resonator_s(
-        wl=wl_arr,
-        radius=radius,
-        neff=neff,
-        coupling=coupling,
-        loss_db_cm=loss_db_cm,
+    ring_params = RingParams(
+        neff=float(params.get("neff", 2.4)),
+        coupling=float(params.get("coupling", 0.01)),
+        loss_db_cm=float(params.get("loss_db_cm", 2.0)),
     )
+    return ring_resonator_s(wl=wl_arr, radius=radius, params=ring_params)
 
 
 # --- 半环（SiEPIC half_ring） ---
@@ -170,14 +167,11 @@ def _matches_half_ring(name: str) -> bool:
 def _half_ring_smodel(params: dict, wl_arr: np.ndarray) -> SDict:
     """半环 S 参数模型（无损耗项的环谐振器近似）。"""
     radius = float(params.get("radius_um", 10.0))
-    neff = float(params.get("neff", 2.4))
-    coupling = float(params.get("coupling", 0.01))
-    return ring_resonator_s(
-        wl=wl_arr,
-        radius=radius,
-        neff=neff,
-        coupling=coupling,
+    ring_params = RingParams(
+        neff=float(params.get("neff", 2.4)),
+        coupling=float(params.get("coupling", 0.01)),
     )
+    return ring_resonator_s(wl=wl_arr, radius=radius, params=ring_params)
 
 
 # --- MMI 1x2 ---
@@ -445,6 +439,42 @@ def simulate_device(
     return wavelengths, s
 
 
+def _netlist_to_sax_format(
+    netlist_dict: dict,
+) -> tuple[dict, list[tuple[str, str]], dict]:
+    """将网表字典转换为 SAX 格式 (instances, connections, ports)。
+
+    来源:
+    - SAX 网表格式: https://flaport.github.io/sax/
+
+    Args:
+        netlist_dict: 网表字典 {devices, connections, ...}。
+
+    Returns:
+        (instances, connections, ports) 元组，分别对应 SAX 网表的
+        实例映射、连接列表与外部端口。
+    """
+    instances = {}
+    for inst in netlist_dict.get("devices", []):
+        instances[inst["instance_id"]] = inst["device_id"]
+
+    connections: list[tuple[str, str]] = []
+    for conn in netlist_dict.get("connections", []):
+        src = f"{conn['source_instance']}.{conn['source_port']}"
+        dst = f"{conn['target_instance']}.{conn['target_port']}"
+        connections.append((src, dst))
+
+    # 外部端口（第一个器件的 in 和最后一个器件的 out）
+    ports: dict[str, str] = {}
+    if instances:
+        first_inst = list(instances.keys())[0]
+        last_inst = list(instances.keys())[-1]
+        ports["in"] = f"{first_inst}.in"
+        ports["out"] = f"{last_inst}.out"
+
+    return instances, connections, ports
+
+
 def simulate_circuit_from_netlist(
     netlist_dict: dict,
     catalog: DeviceCatalog | None = None,
@@ -481,24 +511,7 @@ def simulate_circuit_from_netlist(
         sim.register_model(device.device_id, make_model(device))
 
     # 转换网表为 SAX 格式
-    instances = {}
-    for inst in netlist_dict.get("devices", []):
-        instances[inst["instance_id"]] = inst["device_id"]
-
-    connections = []
-    for conn in netlist_dict.get("connections", []):
-        src = f"{conn['source_instance']}.{conn['source_port']}"
-        dst = f"{conn['target_instance']}.{conn['target_port']}"
-        connections.append((src, dst))
-
-    # 外部端口（第一个器件的 in 和最后一个器件的 out）
-    ports = {}
-    if instances:
-        first_inst = list(instances.keys())[0]
-        last_inst = list(instances.keys())[-1]
-        ports["in"] = f"{first_inst}.in"
-        ports["out"] = f"{last_inst}.out"
-
+    instances, connections, ports = _netlist_to_sax_format(netlist_dict)
     sax_netlist = {
         "instances": instances,
         "connections": connections,

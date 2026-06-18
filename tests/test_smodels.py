@@ -7,6 +7,8 @@ import numpy as np
 from polaris.pdk.catalog import build_default_catalog
 from polaris.sim import (
     CircuitSimulator,
+    RingParams,
+    WavelengthRange,
     cascade_circuit,
     default_models,
     directional_coupler_s,
@@ -92,7 +94,11 @@ class TestRingResonatorS:
         # 用极大半径确保足够的环内损耗产生临界耦合
         # R=500μm, 周长=3142μm=0.314cm, 5dB/cm → 1.57dB 衰减
         wl = np.linspace(1.55, 1.60, 50000)
-        s = ring_resonator_s(wl=wl, radius=500.0, neff=2.4, coupling=0.5, loss_db_cm=5.0)
+        s = ring_resonator_s(
+            wl=wl,
+            radius=500.0,
+            params=RingParams(neff=2.4, coupling=0.5, loss_db_cm=5.0),
+        )
         T = np.abs(s[("through", "in")]) ** 2
         # 传输谱应有最小值（谐振点）
         assert T.min() < 0.5
@@ -221,7 +227,7 @@ class TestCircuitSimulator:
             "connections": {},
             "ports": {"in": "wg.in", "out": "wg.out"},
         }
-        wl, s = sim.sweep_wavelength(netlist, 1.5, 1.6, 100)
+        wl, s = sim.sweep_wavelength(netlist, WavelengthRange(1.5, 1.6, 100))
         assert len(wl) == 100
         assert len(s) > 0
 

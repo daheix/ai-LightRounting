@@ -24,6 +24,7 @@
 
 from polaris.sim.cascade import cascade_circuit
 from polaris.sim.models import (
+    RingParams,
     crossing_s,
     directional_coupler_s,
     grating_coupler_s,
@@ -37,6 +38,7 @@ from polaris.sim.models import (
 )
 from polaris.sim.simulator import (
     CircuitSimulator,
+    WavelengthRange,
     default_models,
     simphony_models,
 )
@@ -47,6 +49,9 @@ __all__ = [
     # 类型
     "SDict",
     "ModelFunc",
+    # 参数集合（规则 4：降低函数参数个数）
+    "RingParams",
+    "WavelengthRange",
     # 基础器件 S 参数模型
     "waveguide_s",
     "y_branch_s",

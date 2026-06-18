@@ -34,6 +34,22 @@ from polaris.sim.types import ModelFunc, SDict
 
 
 @dataclass
+class WavelengthRange:
+    """波长扫描范围参数集合（降低 sweep_wavelength 参数个数，规则 4）。
+
+    将 wl_start/wl_end/n_points 聚合为单一 dataclass，
+    使 sweep_wavelength 的参数个数从 6 降至 4。
+
+    来源:
+    - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
+    """
+
+    wl_start: float = 1.5
+    wl_end: float = 1.6
+    n_points: int = 1000
+
+
+@dataclass
 class CircuitSimulator:
     """电路级频率域仿真器。
 
@@ -89,24 +105,23 @@ class CircuitSimulator:
     def sweep_wavelength(
         self,
         netlist: dict,
-        wl_start: float = 1.5,
-        wl_end: float = 1.6,
-        n_points: int = 1000,
+        wl_range: WavelengthRange | None = None,
         **model_kwargs,
     ) -> tuple[np.ndarray, SDict]:
         """波长扫描仿真。
 
         Args:
             netlist: 网表。
-            wl_start: 起始波长（μm）。
-            wl_end: 结束波长（μm）。
-            n_points: 采样点数。
+            wl_range: 波长扫描范围（起始、结束、点数），
+                为 None 时使用默认 WavelengthRange()（1.5-1.6μm 1000点）。
             **model_kwargs: 器件模型参数。
 
         Returns:
             (波长数组, S 参数字典)
         """
-        wavelengths = np.linspace(wl_start, wl_end, n_points)
+        if wl_range is None:
+            wl_range = WavelengthRange()
+        wavelengths = np.linspace(wl_range.wl_start, wl_range.wl_end, wl_range.n_points)
         s = self.simulate(netlist, wavelengths, **model_kwargs)
         return wavelengths, s
 

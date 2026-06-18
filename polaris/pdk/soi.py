@@ -773,6 +773,10 @@ def make_double_ring_filter() -> Device:
         Port(name="add", x=0.0, y=2 * (radius + gap + width),
              direction=Direction.WEST, waveguide_type="strip", width=width),
     ]
+    params = {
+        "drop_insertion_loss_db": 1.0, "bandwidth_1db_ghz": 105.0,  # <1dB,105GHz
+        "radius_um": 10.0, "gap_nm": 200, "wavelength_nm": 1310,  # O 波段
+    }
     return Device(
         device_id="soi_double_ring_filter",
         platform="SOI",
@@ -781,13 +785,7 @@ def make_double_ring_filter() -> Device:
         ports=ports,
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
                          xmax=ring_spacing, ymax=2 * (radius + gap + width) + width / 2),
-        params={
-            "drop_insertion_loss_db": 1.0,  # drop 插损 <1.0dB
-            "bandwidth_1db_ghz": 105.0,  # 1-dB 带宽 105GHz
-            "radius_um": 10.0,
-            "gap_nm": 200,
-            "wavelength_nm": 1310,  # O 波段
-        },
+        params=params,
         source=_SRC_SAMSUNG,
         constraints={
             "min_bend_radius_um": 2.0,

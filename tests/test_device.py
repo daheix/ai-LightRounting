@@ -17,10 +17,10 @@ def _make_device() -> Device:
     端口 in 朝 WEST（左端），out 朝 EAST（右端），便于验证旋转后朝向变换。
     """
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="strip", width=0.5),
-        Port(name="out", x=10.0, y=0.0, direction=Direction.EAST,
-             waveguide_type="strip", width=0.5),
+        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=0.5),
+        Port(
+            name="out", x=10.0, y=0.0, direction=Direction.EAST, waveguide_type="strip", width=0.5
+        ),
     ]
     bbox = BoundingBox(xmin=0.0, ymin=-0.25, xmax=10.0, ymax=0.25)
     return Device(
@@ -44,8 +44,8 @@ def _make_device() -> Device:
 # ---------------------------------------------------------------------------
 # 创建与字段访问
 # ---------------------------------------------------------------------------
-def test_device_creation_and_field_access() -> None:
-    """Device 应正确创建并暴露所有字段。"""
+def test_device_creation_basic_fields() -> None:
+    """Device 应正确创建并暴露基础标识字段与端口列表。"""
     dev = _make_device()
     assert dev.device_id == "wg1"
     assert dev.platform == "SOI"
@@ -54,6 +54,11 @@ def test_device_creation_and_field_access() -> None:
     assert len(dev.ports) == 2
     assert dev.ports[0].name == "in"
     assert dev.ports[1].name == "out"
+
+
+def test_device_creation_bbox_and_params() -> None:
+    """Device 应正确创建并暴露包围盒、参数、约束与溯源信息。"""
+    dev = _make_device()
     assert dev.bbox.xmin == pytest.approx(0.0)
     assert dev.bbox.xmax == pytest.approx(10.0)
     assert dev.params["length_um"] == pytest.approx(10.0)
@@ -65,8 +70,12 @@ def test_device_creation_and_field_access() -> None:
 def test_device_source_defaults_to_none() -> None:
     """未提供 source 时应默认为 None。"""
     dev = Device(
-        device_id="d", platform="SOI", category="passive", name="x",
-        ports=[], bbox=BoundingBox(0.0, 0.0, 1.0, 1.0),
+        device_id="d",
+        platform="SOI",
+        category="passive",
+        name="x",
+        ports=[],
+        bbox=BoundingBox(0.0, 0.0, 1.0, 1.0),
     )
     assert dev.source is None
     assert dev.params == {}
@@ -76,16 +85,19 @@ def test_device_source_defaults_to_none() -> None:
 # ---------------------------------------------------------------------------
 # translate 平移
 # ---------------------------------------------------------------------------
-def test_translate_updates_ports_and_bbox() -> None:
-    """translate 应同步更新端口坐标与包围盒，且不修改原实例。"""
+def test_translate_preserves_original() -> None:
+    """translate 不应修改原实例的端口坐标与包围盒。"""
     dev = _make_device()
-    moved = dev.translate(2.0, 3.0)
-
+    dev.translate(2.0, 3.0)
     # 原实例不变
     assert dev.ports[0].x == pytest.approx(0.0)
     assert dev.ports[1].x == pytest.approx(10.0)
     assert dev.bbox.xmin == pytest.approx(0.0)
 
+
+def test_translate_updates_ports() -> None:
+    """translate 应同步更新端口坐标，且朝向不变。"""
+    moved = _make_device().translate(2.0, 3.0)
     # 平移后端口坐标
     assert moved.ports[0].x == pytest.approx(2.0)
     assert moved.ports[0].y == pytest.approx(3.0)
@@ -95,6 +107,10 @@ def test_translate_updates_ports_and_bbox() -> None:
     assert moved.ports[0].direction == Direction.WEST
     assert moved.ports[1].direction == Direction.EAST
 
+
+def test_translate_updates_bbox() -> None:
+    """translate 应同步平移包围盒。"""
+    moved = _make_device().translate(2.0, 3.0)
     # 包围盒同步平移
     assert moved.bbox.xmin == pytest.approx(2.0)
     assert moved.bbox.ymin == pytest.approx(2.75)
@@ -113,8 +129,8 @@ def test_translate_returns_new_instance() -> None:
 # ---------------------------------------------------------------------------
 # rotate 旋转
 # ---------------------------------------------------------------------------
-def test_rotate_90_updates_ports_direction_and_bbox() -> None:
-    """逆时针 90 度：端口坐标、朝向、包围盒均正确变换。"""
+def test_rotate_90_ports() -> None:
+    """逆时针 90 度：端口坐标与朝向正确变换，且原实例不变。"""
     dev = _make_device()
     rot = dev.rotate(90)
 
@@ -131,6 +147,10 @@ def test_rotate_90_updates_ports_direction_and_bbox() -> None:
     assert rot.ports[1].y == pytest.approx(10.0)
     assert rot.ports[1].direction == Direction.NORTH
 
+
+def test_rotate_90_bbox() -> None:
+    """逆时针 90 度：包围盒由宽10高0.5变为宽0.5高10。"""
+    rot = _make_device().rotate(90)
     # 包围盒：原 (0,-0.25,10,0.25) 宽10高0.5 -> 宽0.5高10
     assert rot.bbox.xmin == pytest.approx(-0.25)
     assert rot.bbox.ymin == pytest.approx(0.0)
@@ -138,11 +158,9 @@ def test_rotate_90_updates_ports_direction_and_bbox() -> None:
     assert rot.bbox.ymax == pytest.approx(10.0)
 
 
-def test_rotate_180_updates_ports_direction_and_bbox() -> None:
-    """逆时针 180 度：端口坐标取反、朝向反向、包围盒平移到对侧。"""
-    dev = _make_device()
-    rot = dev.rotate(180)
-
+def test_rotate_180_ports() -> None:
+    """逆时针 180 度：端口坐标取反、朝向反向。"""
+    rot = _make_device().rotate(180)
     # in (0,0) -> (0,0)，WEST -> EAST
     assert rot.ports[0].x == pytest.approx(0.0)
     assert rot.ports[0].y == pytest.approx(0.0)
@@ -152,6 +170,10 @@ def test_rotate_180_updates_ports_direction_and_bbox() -> None:
     assert rot.ports[1].y == pytest.approx(0.0)
     assert rot.ports[1].direction == Direction.WEST
 
+
+def test_rotate_180_bbox() -> None:
+    """逆时针 180 度：包围盒尺寸不变（保形），平移到对侧。"""
+    rot = _make_device().rotate(180)
     # 包围盒尺寸不变（180 度保形）
     assert rot.bbox.xmin == pytest.approx(-10.0)
     assert rot.bbox.ymin == pytest.approx(-0.25)
@@ -159,11 +181,9 @@ def test_rotate_180_updates_ports_direction_and_bbox() -> None:
     assert rot.bbox.ymax == pytest.approx(0.25)
 
 
-def test_rotate_270_updates_ports_direction_and_bbox() -> None:
-    """逆时针 270 度（=顺时针 90 度）：端口坐标、朝向、包围盒正确。"""
-    dev = _make_device()
-    rot = dev.rotate(270)
-
+def test_rotate_270_ports() -> None:
+    """逆时针 270 度（=顺时针 90 度）：端口坐标与朝向正确变换。"""
+    rot = _make_device().rotate(270)
     # in (0,0) -> (0,0)，WEST -> NORTH
     assert rot.ports[0].x == pytest.approx(0.0)
     assert rot.ports[0].y == pytest.approx(0.0)
@@ -173,6 +193,10 @@ def test_rotate_270_updates_ports_direction_and_bbox() -> None:
     assert rot.ports[1].y == pytest.approx(-10.0)
     assert rot.ports[1].direction == Direction.SOUTH
 
+
+def test_rotate_270_bbox() -> None:
+    """逆时针 270 度：包围盒由宽10高0.5变为宽0.5高10。"""
+    rot = _make_device().rotate(270)
     # 包围盒：宽0.5高10
     assert rot.bbox.xmin == pytest.approx(-0.25)
     assert rot.bbox.ymin == pytest.approx(-10.0)

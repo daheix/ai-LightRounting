@@ -11,9 +11,28 @@ SiPANN 安装失败（ResolutionImpossible），按 project_rules.md 规则 3
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from polaris.sim.types import SDict
+
+
+@dataclass
+class RingParams:
+    """环谐振器参数集合（降低 ring_resonator_s 参数个数，规则 4）。
+
+    将 neff/ng/coupling/loss_db_cm 等环参数聚合为单一 dataclass，
+    使 ring_resonator_s 的参数个数从 6 降至 3。
+
+    来源:
+    - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
+    """
+
+    neff: float = 2.4
+    ng: float = 4.0
+    coupling: float = 0.01
+    loss_db_cm: float = 0.0
 
 
 def waveguide_s(
@@ -130,38 +149,41 @@ def directional_coupler_s(
 def ring_resonator_s(
     wl: float | np.ndarray = 1.55,
     radius: float = 10.0,
-    neff: float = 2.4,
-    ng: float = 4.0,
-    coupling: float = 0.01,
-    loss_db_cm: float = 0.0,
+    params: RingParams | None = None,
 ) -> SDict:
     """环谐振器 S 参数模型（全通型 single bus）。
 
-    环谐振器的洛伦兹谐振峰由环周长和耦合系数决定。
-    传输函数: T = (t - a*e^{i*phi}) / (1 - t*a*e^{i*phi})
-    其中 t=直通振幅, a=环内损耗, phi=环周相位
-
-    注意：全通型环在无损（a=1）时传输始终为 1（仅相位变化），
-    谐振陷波仅在环内有损耗时出现。
-
-    端口: in, through（直通端）, drop（下路端，全通型无 drop）
+    传输函数 T = (t - a*e^{i*phi}) / (1 - t*a*e^{i*phi})，
+    t=直通振幅, a=环内损耗, phi=环周相位。无损时传输恒为 1，
+    谐振陷波仅在环内有损耗时出现。端口: in/through/drop（全通型无 drop）。
 
     来源:
     - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
     - Lorentzian 谐振模型: 标准光子学教材
+
+    Args:
+        wl: 波长（μm）或波长数组。
+        radius: 环半径（μm）。
+        params: 环参数集合（neff/ng/coupling/loss_db_cm），None 时用默认。
+
+    Returns:
+        S 参数字典 {(port_out, port_in): np.ndarray}。
     """
+    if params is None:
+        params = RingParams()
     wl = np.asarray(wl, dtype=float)
     # 环周长
     circumference = 2.0 * np.pi * radius
     # 环内传播相位
-    beta = 2.0 * np.pi * neff / wl
+    beta = 2.0 * np.pi * params.neff / wl
     phi = beta * circumference
     # 环内损耗（振幅）— 默认给一个小损耗以显示谐振
+    loss_db_cm = params.loss_db_cm
     if loss_db_cm <= 0:
         loss_db_cm = 0.1  # 默认 0.1 dB/cm 以显示谐振陷波
     a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
     # 直通振幅（自耦合系数）
-    t = np.sqrt(1.0 - coupling)
+    t = np.sqrt(1.0 - params.coupling)
     # 传输函数（全通型）
     numerator = t - a * np.exp(1j * phi)
     denominator = 1.0 - t * a * np.exp(1j * phi)

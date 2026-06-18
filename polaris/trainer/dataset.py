@@ -181,6 +181,53 @@ class DatasetSample:
     baseline_metrics: dict = field(default_factory=dict)
 
 
+def _setup_floorplan_env(net, devices, canvas_w, canvas_h, grid_size):
+    """创建布局环境并随机放置所有器件（baseline 不学习，仅随机放置）。
+
+    Args:
+        net: 解析后的网表对象。
+        devices: 器件字典。
+        canvas_w: 画布宽（μm）。
+        canvas_h: 画布高（μm）。
+        grid_size: 网格大小（μm）。
+
+    Returns:
+        完成随机放置的 ``FloorplanEnv`` 实例。
+    """
+    from polaris.engine.floorplan_env import FloorplanEnv
+
+    fp_env = FloorplanEnv(
+        net,
+        devices,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+        grid_size=grid_size,
+    )
+    fp_env.reset()
+    for _ in range(len(devices)):
+        fp_env.step(fp_env.action_space.sample())
+    return fp_env
+
+
+def _run_routing_rollout(rt_env, n_connections):
+    """执行经典 A* 布线 rollout，返回累计奖励。
+
+    Args:
+        rt_env: 已 reset 的 ``RoutingEnv`` 实例。
+        n_connections: 待布线连接数。
+
+    Returns:
+        rollout 累计奖励。
+    """
+    total_reward = 0.0
+    for _ in range(n_connections):
+        obs, reward, terminated, _, _ = rt_env.step(np.zeros(3, dtype=np.float32))
+        total_reward += reward
+        if terminated:
+            break
+    return total_reward
+
+
 class BaselineSolver:
     """经典布线器 baseline 解生成器（SubTask 14.2）。
 
@@ -215,33 +262,22 @@ class BaselineSolver:
         Returns:
             含 baseline 奖励与指标的 ``DatasetSample``。
         """
-        from polaris.engine.floorplan_env import FloorplanEnv
         from polaris.engine.netlist import load_netlist
         from polaris.router.routing_env import RoutingEnv
 
         net, devices, _ = load_netlist(netlist_dict)
         # 随机布局（baseline 不学习，仅随机放置）
-        fp_env = FloorplanEnv(
-            net, devices,
-            canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size,
-        )
-        fp_env.reset()
-        for _ in range(len(devices)):
-            fp_env.step(fp_env.action_space.sample())
-
+        fp_env = _setup_floorplan_env(net, devices, canvas_w, canvas_h, grid_size)
         # 经典 A* 布线
         rt_env = RoutingEnv(
-            net, fp_env.state.placements,
-            canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size,
+            net,
+            fp_env.state.placements,
+            canvas_w=canvas_w,
+            canvas_h=canvas_h,
+            grid_size=grid_size,
         )
-        obs, _ = rt_env.reset()
-        total_reward = 0.0
-        for _ in range(len(net.connections)):
-            obs, reward, terminated, _, _ = rt_env.step(np.zeros(3, dtype=np.float32))
-            total_reward += reward
-            if terminated:
-                break
-
+        rt_env.reset()
+        total_reward = _run_routing_rollout(rt_env, len(net.connections))
         metrics = rt_env.total_metrics()
         return DatasetSample(
             netlist=netlist_dict,

@@ -136,10 +136,74 @@ def _device_from_dict(data: dict[str, Any]) -> Device:
 
 
 # ---------------------------------------------------------------------------
+# 序列化混入（将 to_dict/to_json/to_yaml/from_json 分离为独立 Mixin，
+# 降低 DeviceCatalog 的方法数，满足规则 4.1 类方法数上限）
+# ---------------------------------------------------------------------------
+
+
+class CatalogSerializerMixin:
+    """DeviceCatalog 序列化混入（JSON/YAML 导入导出）。
+
+    将序列化能力分离为独立混入，降低 ``DeviceCatalog`` 的方法数（规则 4.1）。
+    依赖宿主类提供 ``_devices`` 字典与 ``register`` 方法。
+
+    设计参考 gdsfactory PDK 的序列化与重建模式
+    （来源: https://gdsfactory.github.io/gdsfactory/）。
+    """
+
+    def to_dict(self) -> dict[str, Any]:
+        """序列化为字典（含 device_id, platform, category, name, params, source 等）。
+
+        Returns:
+            形如 ``{"devices": [device_dict, ...]}`` 的字典，每个 device_dict
+            包含完整字段，可被 JSON/YAML 序列化。
+        """
+        return {"devices": [_device_to_dict(d) for d in self._devices.values()]}
+
+    def to_json(self, path: str) -> None:
+        """导出为 JSON 文件。
+
+        Args:
+            path: 输出 JSON 文件路径。
+        """
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
+
+    def to_yaml(self, path: str) -> None:
+        """导出为 YAML 文件。
+
+        Args:
+            path: 输出 YAML 文件路径。
+        """
+        with open(path, "w", encoding="utf-8") as f:
+            yaml.safe_dump(self.to_dict(), f, allow_unicode=True, sort_keys=False)
+
+    @classmethod
+    def from_json(cls, path: str) -> DeviceCatalog:
+        """从 JSON 文件加载（重建 Device 对象）。
+
+        反序列化时重建 ``Device``/``Port``/``Source``/``BoundingBox`` 对象，
+        恢复 ``Direction`` 枚举。
+
+        Args:
+            path: JSON 文件路径。
+
+        Returns:
+            重建后的 ``DeviceCatalog`` 实例。
+        """
+        catalog = cls()
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        for device_data in data.get("devices", []):
+            catalog.register(_device_from_dict(device_data))
+        return catalog
+
+
+# ---------------------------------------------------------------------------
 # DeviceCatalog 注册表
 # ---------------------------------------------------------------------------
 
-class DeviceCatalog:
+class DeviceCatalog(CatalogSerializerMixin):
     """光器件清单注册表，支持按平台/类别检索与序列化。
 
     以 ``device_id`` 为键存储 ``Device`` 对象，提供按平台（SOI/SiN/InP/LNOI）、
@@ -322,55 +386,6 @@ class DeviceCatalog:
     def __len__(self) -> int:
         """注册表中器件数量。"""
         return len(self._devices)
-
-    # -- 序列化 --
-
-    def to_dict(self) -> dict[str, Any]:
-        """序列化为字典（含 device_id, platform, category, name, params, source 等）。
-
-        Returns:
-            形如 ``{"devices": [device_dict, ...]}`` 的字典，每个 device_dict
-            包含完整字段，可被 JSON/YAML 序列化。
-        """
-        return {"devices": [_device_to_dict(d) for d in self._devices.values()]}
-
-    def to_json(self, path: str) -> None:
-        """导出为 JSON 文件。
-
-        Args:
-            path: 输出 JSON 文件路径。
-        """
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self.to_dict(), f, ensure_ascii=False, indent=2)
-
-    def to_yaml(self, path: str) -> None:
-        """导出为 YAML 文件。
-
-        Args:
-            path: 输出 YAML 文件路径。
-        """
-        with open(path, "w", encoding="utf-8") as f:
-            yaml.safe_dump(self.to_dict(), f, allow_unicode=True, sort_keys=False)
-
-    @classmethod
-    def from_json(cls, path: str) -> DeviceCatalog:
-        """从 JSON 文件加载（重建 Device 对象）。
-
-        反序列化时重建 ``Device``/``Port``/``Source``/``BoundingBox`` 对象，
-        恢复 ``Direction`` 枚举。
-
-        Args:
-            path: JSON 文件路径。
-
-        Returns:
-            重建后的 ``DeviceCatalog`` 实例。
-        """
-        catalog = cls()
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
-        for device_data in data.get("devices", []):
-            catalog.register(_device_from_dict(device_data))
-        return catalog
 
     # -- 来源溯源校验 --
 

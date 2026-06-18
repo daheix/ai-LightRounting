@@ -97,6 +97,39 @@ def _build_sdict(s_matrix: np.ndarray, n_ports: int) -> SDict:
     return sdict
 
 
+def _parse_s_matrix(
+    s_data: list[list[float]],
+    n_ports: int,
+    s_format: str,
+) -> np.ndarray:
+    """解析 S 参数数据为复数矩阵。
+
+    遍历每个频率点的实部/虚部数据，按格式转换为复数 S 参数矩阵。
+
+    来源:
+    - Touchstone 文件规范: https://en.wikipedia.org/wiki/Touchstone_file
+
+    Args:
+        s_data: 每个频率点的 S 参数实部/虚部数据列表。
+        n_ports: 端口数。
+        s_format: S 参数格式（ri/ma/db）。
+
+    Returns:
+        S 参数矩阵，形状 (n_freq, n_ports, n_ports)。
+    """
+    n_freq = len(s_data)
+    s_matrix = np.zeros((n_freq, n_ports, n_ports), dtype=complex)
+    for i, svals in enumerate(s_data):
+        idx = 0
+        for j in range(n_ports):
+            for k in range(n_ports):
+                re = svals[idx]
+                im = svals[idx + 1]
+                idx += 2
+                s_matrix[i, j, k] = _convert_s_value(re, im, s_format)
+    return s_matrix
+
+
 def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
     """加载 Touchstone S 参数文件（.s2p/.s3p/.snp 格式）。
 
@@ -142,15 +175,7 @@ def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
     freqs_arr = freqs_arr * unit_mult.get(freq_unit, 1e9)
 
     # 解析 S 参数
-    s_matrix = np.zeros((len(freqs_arr), n_ports, n_ports), dtype=complex)
-    for i, svals in enumerate(s_data):
-        idx = 0
-        for j in range(n_ports):
-            for k in range(n_ports):
-                re = svals[idx]
-                im = svals[idx + 1]
-                idx += 2
-                s_matrix[i, j, k] = _convert_s_value(re, im, s_format)
+    s_matrix = _parse_s_matrix(s_data, n_ports, s_format)
 
     # 转换为 SDict 格式
     return freqs_arr, _build_sdict(s_matrix, n_ports)

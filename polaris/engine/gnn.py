@@ -17,6 +17,8 @@ torch 无法安装时，使用 ``polaris.nn`` 纯 NumPy 复刻实现（规则 3�
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from polaris.nn import Linear, Module, ReLU, Sequential, Tensor
@@ -81,6 +83,24 @@ class GraphEncoder(Module):
         return self.out_proj(h)
 
 
+@dataclass
+class EncoderConfig:
+    """状态编码器超参配置（规则 4：参数分组降低函数参数数）。
+
+    将 ``hidden_dim``/``out_dim``/``num_gnn_layers`` 聚合为单一配置对象，
+    使 ``StateEncoder.__init__`` 参数数低于警告阈值。
+
+    Attributes:
+        hidden_dim: GNN 隐藏维度与栅格投影维度。
+        out_dim: 融合层输出维度（全局状态向量维度）。
+        num_gnn_layers: GNN 消息传递层数。
+    """
+
+    hidden_dim: int = 64
+    out_dim: int = 128
+    num_gnn_layers: int = 2
+
+
 class StateEncoder(Module):
     """状态编码器：融合图特征（GNN）与栅格空间特征。
 
@@ -94,25 +114,24 @@ class StateEncoder(Module):
         self,
         node_feat_dim: int,
         grid_size: int,
-        hidden_dim: int = 64,
-        out_dim: int = 128,
-        num_gnn_layers: int = 2,
+        config: EncoderConfig | None = None,
     ) -> None:
         super().__init__()
+        cfg = config or EncoderConfig()
         self.gnn = GraphEncoder(
             in_dim=node_feat_dim,
-            hidden_dim=hidden_dim,
-            out_dim=hidden_dim,
-            num_layers=num_gnn_layers,
+            hidden_dim=cfg.hidden_dim,
+            out_dim=cfg.hidden_dim,
+            num_layers=cfg.num_gnn_layers,
         )
         # 栅格特征展平后投影
         self.grid_proj = Sequential(
-            Linear(grid_size, hidden_dim),
+            Linear(grid_size, cfg.hidden_dim),
             ReLU(),
         )
         # 融合：图嵌入均值 + 栅格嵌入
         self.fuse = Sequential(
-            Linear(hidden_dim * 2, out_dim),
+            Linear(cfg.hidden_dim * 2, cfg.out_dim),
             ReLU(),
         )
 
@@ -180,6 +199,7 @@ def edges_from_graph(graph, instance_ids: list[str]) -> np.ndarray:
 __all__ = [
     "GraphEncoder",
     "StateEncoder",
+    "EncoderConfig",
     "build_node_features",
     "edges_from_graph",
 ]

@@ -81,15 +81,19 @@ def make_lnoi_waveguide() -> Device:
 # ---------------------------------------------------------------------------
 # 2. LNOI 电光调制器（量产平台）
 # ---------------------------------------------------------------------------
-def make_lnoi_eo_modulator() -> Device:
-    """LNOI 电光调制器（主动器件，量产平台参数）。
+def _make_lnoi_modulator_device(
+    device_id: str,
+    name: str,
+    length_um: float,
+    params: dict,
+    source: Source,
+    extra_constraints: dict | None = None,
+) -> Device:
+    """构建 LNOI 调制器 Device（共用 in/out/rf_in/rf_out 端口与包围盒）。
 
-    带宽 >110GHz，Vπ <3V，良率 50%，4 英寸晶圆级量产验证。
-    来源: Liu et al., Light: Advanced Manufacturing 2025, 6, 47
+    所有 LNOI 调制器共享端口结构与包围盒，仅 id/name/length/params/source 不同。
     """
-    length_um = 1000.0  # 调制区长度 ~1mm（典型 MZM 臂长）
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
-    # RF 电极在波导两侧，电极间距 ~3μm
     rf_offset_y = 3.0
     ports = [
         Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
@@ -102,14 +106,30 @@ def make_lnoi_eo_modulator() -> Device:
              waveguide_type="rf_coplanar", width=3.0),
     ]
     bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                       ymax=width_um / 2)
+                      ymax=width_um / 2)
+    constraints = {
+        "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
+        "min_spacing_um": _LNOI_MIN_SPACING_UM,
+        "electrode_gap_um": 3.0,
+        **(extra_constraints or {}),
+    }
     return Device(
+        device_id=device_id, platform="LNOI", category="active", name=name,
+        ports=ports, bbox=bbox, params=params, source=source, constraints=constraints,
+    )
+
+
+def make_lnoi_eo_modulator() -> Device:
+    """LNOI 电光调制器（主动器件，量产平台参数）。
+
+    带宽 >110GHz，Vπ <3V，良率 50%，4 英寸晶圆级量产验证。
+    来源: Liu et al., Light: Advanced Manufacturing 2025, 6, 47
+    """
+    length_um = 1000.0  # 调制区长度 ~1mm（典型 MZM 臂长）
+    return _make_lnoi_modulator_device(
         device_id="lnoi_eo_modulator",
-        platform="LNOI",
-        category="active",
         name="lnoi_eo_modulator",
-        ports=ports,
-        bbox=bbox,
+        length_um=length_um,
         params={
             "bandwidth_ghz": ">110 GHz",
             "vpi_v": "<3 V",
@@ -123,11 +143,6 @@ def make_lnoi_eo_modulator() -> Device:
             year=2025,
             url="https://doi.org/10.37188/lam.2025.047",
         ),
-        constraints={
-            "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
-            "min_spacing_um": _LNOI_MIN_SPACING_UM,
-            "electrode_gap_um": 3.0,
-        },
     )
 
 
@@ -141,27 +156,10 @@ def make_lnoi_mzm_high_confined() -> Device:
     来源: Chen et al., Optics Letters 2023, 48(7):1602-1605
     """
     length_um = 2000.0  # 高约束 MZM 调制臂长 ~2mm
-    width_um = _LNOI_WAVEGUIDE_WIDTH_UM
-    rf_offset_y = 3.0
-    ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="rf_in", x=0.0, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-        Port(name="rf_out", x=length_um, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-    ]
-    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                       ymax=width_um / 2)
-    return Device(
+    return _make_lnoi_modulator_device(
         device_id="lnoi_mzm_high_confined",
-        platform="LNOI",
-        category="active",
         name="lnoi_mzm_high_confined",
-        ports=ports,
-        bbox=bbox,
+        length_um=length_um,
         params={
             "vpi_l_v_cm": "1.2 V·cm",
             "excess_loss_db": "~2.4 dB",
@@ -174,11 +172,6 @@ def make_lnoi_mzm_high_confined() -> Device:
             year=2023,
             url="https://doi.org/10.1364/OL.481827",
         ),
-        constraints={
-            "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
-            "min_spacing_um": _LNOI_MIN_SPACING_UM,
-            "electrode_gap_um": 3.0,
-        },
     )
 
 
@@ -192,27 +185,10 @@ def make_lnoi_mzm_traveling_wave() -> Device:
     来源: MDPI Photonics 2023, 12(7):648
     """
     length_um = 3000.0  # 行波电极 MZM 臂长 ~3mm
-    width_um = _LNOI_WAVEGUIDE_WIDTH_UM
-    rf_offset_y = 3.0
-    ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="rf_in", x=0.0, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-        Port(name="rf_out", x=length_um, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-    ]
-    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                       ymax=width_um / 2)
-    return Device(
+    return _make_lnoi_modulator_device(
         device_id="lnoi_mzm_traveling_wave",
-        platform="LNOI",
-        category="active",
         name="lnoi_mzm_traveling_wave",
-        ports=ports,
-        bbox=bbox,
+        length_um=length_um,
         params={
             "vpi_l_v_cm": "1.77 V·cm",
             "optical_loss_db_cm": "0.022 dB/cm",
@@ -226,11 +202,6 @@ def make_lnoi_mzm_traveling_wave() -> Device:
             year=2023,
             url="https://www.mdpi.com/2304-6732/12/7/648",
         ),
-        constraints={
-            "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
-            "min_spacing_um": _LNOI_MIN_SPACING_UM,
-            "electrode_gap_um": 3.0,
-        },
     )
 
 
@@ -244,27 +215,10 @@ def make_lnoi_modulator_review() -> Device:
     来源: 刘海锋等，中国光学 2022, 15(1):1-13
     """
     length_um = 1500.0  # 综述典型 MZM 臂长 ~1.5mm
-    width_um = _LNOI_WAVEGUIDE_WIDTH_UM
-    rf_offset_y = 3.0
-    ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="rf_in", x=0.0, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-        Port(name="rf_out", x=length_um, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-    ]
-    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                       ymax=width_um / 2)
-    return Device(
+    return _make_lnoi_modulator_device(
         device_id="lnoi_modulator_review",
-        platform="LNOI",
-        category="active",
         name="lnoi_modulator_review",
-        ports=ports,
-        bbox=bbox,
+        length_um=length_um,
         params={
             "vpi_l_v_cm": "<2 V·cm",
             "coupling_loss_db_facet": "<0.5 dB/facet",
@@ -278,11 +232,6 @@ def make_lnoi_modulator_review() -> Device:
             year=2022,
             url="https://doi.org/10.37188/CO.2021-0115",
         ),
-        constraints={
-            "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
-            "min_spacing_um": _LNOI_MIN_SPACING_UM,
-            "electrode_gap_um": 3.0,
-        },
     )
 
 
@@ -341,27 +290,10 @@ def make_lnoi_cmos_modulator() -> Device:
     来源: Wang et al., Nature 2018, 562:101-104
     """
     length_um = 2000.0  # CMOS 兼容 MZM 臂长 ~2mm
-    width_um = _LNOI_WAVEGUIDE_WIDTH_UM
-    rf_offset_y = 3.0
-    ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="rf_in", x=0.0, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-        Port(name="rf_out", x=length_um, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-    ]
-    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                       ymax=width_um / 2)
-    return Device(
+    return _make_lnoi_modulator_device(
         device_id="lnoi_cmos_modulator",
-        platform="LNOI",
-        category="active",
         name="lnoi_cmos_modulator",
-        ports=ports,
-        bbox=bbox,
+        length_um=length_um,
         params={
             "drive_voltage_v": "CMOS compatible (<1 V)",
             "bandwidth_ghz": ">100 GHz",
@@ -375,11 +307,6 @@ def make_lnoi_cmos_modulator() -> Device:
             year=2018,
             url="https://doi.org/10.1038/s41586-018-0551-y",
         ),
-        constraints={
-            "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
-            "min_spacing_um": _LNOI_MIN_SPACING_UM,
-            "electrode_gap_um": 3.0,
-        },
     )
 
 

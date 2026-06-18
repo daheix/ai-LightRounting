@@ -20,6 +20,14 @@ import numpy as np
 from polaris.engine.floorplan_env import Placement
 from polaris.router.waveguide_router import WaveguidePath
 
+# 器件类别 → 渲染颜色
+_CATEGORY_COLORS = {
+    "passive": "#4C72B0",
+    "active": "#DD8452",
+    "source": "#55A868",
+    "detector": "#C44E52",
+}
+
 
 @dataclass
 class LayoutRender:
@@ -29,54 +37,44 @@ class LayoutRender:
     ax: object
 
 
-def render_layout(
-    placements: dict[str, Placement],
-    paths: dict[int, WaveguidePath] | None = None,
-    congestion: np.ndarray | None = None,
-    title: str = "PoLaRIS Layout",
-    show_ports: bool = True,
-    save_path: str | None = None,
-) -> LayoutRender:
-    """渲染版图（matplotlib）。
+@dataclass
+class RenderOptions:
+    """渲染选项（将 render_layout 的可选参数打包，降低函数参数个数）。
 
-    Args:
-        placements: 器件放置结果。
-        paths: 波导路径（conn_idx -> WaveguidePath）。
-        congestion: 拥塞热力图（可选叠加）。
+    Attributes:
         title: 图标题。
         show_ports: 是否标记端口位置。
         save_path: 保存路径（None 则不保存）。
-
-    Returns:
-        ``LayoutRender``（含 fig/ax）。
     """
+
+    title: str = "PoLaRIS Layout"
+    show_ports: bool = True
+    save_path: str | None = None
+
+
+def _draw_congestion(ax, congestion: np.ndarray) -> None:
+    """在 ax 上绘制拥塞热力图背景。"""
     import matplotlib.pyplot as plt
+
+    im = ax.imshow(
+        congestion,
+        origin="lower",
+        extent=[0, congestion.shape[1], 0, congestion.shape[0]],
+        alpha=0.3,
+        cmap="YlOrRd",
+    )
+    plt.colorbar(im, ax=ax, label="Congestion")
+
+
+def _draw_devices(ax, placements: dict[str, Placement], show_ports: bool) -> None:
+    """在 ax 上绘制器件矩形与端口标记。"""
     from matplotlib.patches import Rectangle
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
-    # 拥塞热力图背景
-    if congestion is not None:
-        im = ax.imshow(
-            congestion,
-            origin="lower",
-            extent=[0, congestion.shape[1], 0, congestion.shape[0]],
-            alpha=0.3,
-            cmap="YlOrRd",
-        )
-        plt.colorbar(im, ax=ax, label="Congestion")
-
-    # 器件矩形
-    cat_colors = {
-        "passive": "#4C72B0",
-        "active": "#DD8452",
-        "source": "#55A868",
-        "detector": "#C44E52",
-    }
     for inst_id, pl in placements.items():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
         w = xmax - xmin
         h = ymax - ymin
-        color = cat_colors.get(pl.device.category, "#888888")
+        color = _CATEGORY_COLORS.get(pl.device.category, "#888888")
         rect = Rectangle(
             (xmin, ymin), w, h,
             linewidth=1, edgecolor="black", facecolor=color, alpha=0.7,
@@ -86,28 +84,54 @@ def render_layout(
             xmin + w / 2, ymin + h / 2, inst_id,
             ha="center", va="center", fontsize=7, rotation=45,
         )
-        # 端口标记
         if show_ports:
-            ports = pl.port_positions()
-            for _, (px, py) in ports.items():
+            for _, (px, py) in pl.port_positions().items():
                 ax.plot(px, py, "r.", markersize=4)
 
-    # 波导路径
-    if paths:
-        for wp in paths.values():
-            if len(wp.points) >= 2:
-                xs = [p[0] for p in wp.points]
-                ys = [p[1] for p in wp.points]
-                ax.plot(xs, ys, "g-", linewidth=1.5, alpha=0.8)
 
+def _draw_paths(ax, paths: dict[int, WaveguidePath]) -> None:
+    """在 ax 上绘制波导路径折线。"""
+    for wp in paths.values():
+        if len(wp.points) >= 2:
+            xs = [p[0] for p in wp.points]
+            ys = [p[1] for p in wp.points]
+            ax.plot(xs, ys, "g-", linewidth=1.5, alpha=0.8)
+
+
+def render_layout(
+    placements: dict[str, Placement],
+    paths: dict[int, WaveguidePath] | None = None,
+    congestion: np.ndarray | None = None,
+    options: RenderOptions | None = None,
+) -> LayoutRender:
+    """渲染版图（matplotlib）。
+
+    Args:
+        placements: 器件放置结果。
+        paths: 波导路径（conn_idx -> WaveguidePath）。
+        congestion: 拥塞热力图（可选叠加）。
+        options: 渲染选项（标题/端口标记/保存路径），默认使用 ``RenderOptions()``。
+
+    Returns:
+        ``LayoutRender``（含 fig/ax）。
+    """
+    import matplotlib.pyplot as plt
+
+    opts = options or RenderOptions()
+    fig, ax = plt.subplots(1, 1, figsize=(10, 10))
+    if congestion is not None:
+        _draw_congestion(ax, congestion)
+    _draw_devices(ax, placements, opts.show_ports)
+    if paths:
+        _draw_paths(ax, paths)
     ax.set_aspect("equal")
     ax.set_xlabel("X (μm)")
     ax.set_ylabel("Y (μm)")
-    ax.set_title(title)
+    ax.set_title(opts.title)
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
-    if save_path:
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    if opts.save_path:
+        fig.savefig(opts.save_path, dpi=150, bbox_inches="tight")
     return LayoutRender(fig=fig, ax=ax)
 
 
@@ -139,6 +163,67 @@ def _um_to_dbu(um: float, dbu: float = 0.001) -> int:
     return int(round(um / dbu))
 
 
+def _create_klayout_layout(dbu: float = 0.001):
+    """创建 klayout Layout 并定义工艺层，返回 (layout, top, layer_map)。"""
+    import klayout.db as db
+
+    ly = db.Layout()
+    ly.dbu = dbu
+    top = ly.create_cell("TOP")
+    layer_map = {
+        "passive": ly.layer(1, 0),
+        "active": ly.layer(2, 0),
+        "source": ly.layer(3, 0),
+        "detector": ly.layer(4, 0),
+        "waveguide": ly.layer(5, 0),
+        "port": ly.layer(10, 0),
+    }
+    return ly, top, layer_map
+
+
+def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> None:
+    """将器件矩形画到对应工艺层，可选添加端口标记。"""
+    import klayout.db as db
+
+    for pl in placements.values():
+        xmin, ymin, xmax, ymax = pl.bbox_abs()
+        layer = layer_map.get(pl.device.category, layer_map["passive"])
+        box = db.Box(
+            _um_to_dbu(xmin, dbu), _um_to_dbu(ymin, dbu),
+            _um_to_dbu(xmax, dbu), _um_to_dbu(ymax, dbu),
+        )
+        top.shapes(layer).insert(box)
+        if add_ports:
+            _place_port_markers(top, pl, layer_map["port"], dbu)
+
+
+def _place_port_markers(top, pl, layer_port, dbu) -> None:
+    """在端口位置画小矩形标记。"""
+    import klayout.db as db
+
+    ps = _um_to_dbu(0.5, dbu)
+    for _, (px, py) in pl.port_positions().items():
+        pbox = db.Box(
+            _um_to_dbu(px, dbu) - ps, _um_to_dbu(py, dbu) - ps,
+            _um_to_dbu(px, dbu) + ps, _um_to_dbu(py, dbu) + ps,
+        )
+        top.shapes(layer_port).insert(pbox)
+
+
+def _place_waveguide_paths(top, paths, layer_waveguide) -> None:
+    """将波导路径画到布线层。"""
+    import klayout.db as db
+
+    if not paths:
+        return
+    for wp in paths.values():
+        if len(wp.points) < 2:
+            continue
+        pts = [db.DPoint(p[0], p[1]) for p in wp.points]
+        path = db.DPath(pts, 0.5)  # 0.5μm 宽
+        top.shapes(layer_waveguide).insert(path)
+
+
 def export_gds(
     placements: dict[str, Placement],
     paths: dict[int, WaveguidePath] | None = None,
@@ -147,7 +232,7 @@ def export_gds(
 ) -> str:
     """导出 GDSII 文件（通过 klayout.db）。
 
-    将器件矩形画到对应工艺层，波导画到布线层。
+    将器件矩形画到对应工艺层，波导画到布线层，端口画到端口层。
 
     Args:
         placements: 器件放置结果。
@@ -158,60 +243,9 @@ def export_gds(
     Returns:
         输出文件路径。
     """
-    import klayout.db as db
-
-    ly = db.Layout()
-    ly.dbu = dbu
-    top = ly.create_cell("TOP")
-
-    # 层定义（按平台/类别）
-    layer_passive = ly.layer(1, 0)  # GDS layer 1 datatype 0
-    layer_active = ly.layer(2, 0)
-    layer_source = ly.layer(3, 0)
-    layer_detector = ly.layer(4, 0)
-    layer_waveguide = ly.layer(5, 0)
-    layer_port = ly.layer(10, 0)
-
-    cat_layers = {
-        "passive": layer_passive,
-        "active": layer_active,
-        "source": layer_source,
-        "detector": layer_detector,
-    }
-
-    # 器件矩形
-    for pl in placements.values():
-        xmin, ymin, xmax, ymax = pl.bbox_abs()
-        x0 = _um_to_dbu(xmin, dbu)
-        y0 = _um_to_dbu(ymin, dbu)
-        x1 = _um_to_dbu(xmax, dbu)
-        y1 = _um_to_dbu(ymax, dbu)
-        layer = cat_layers.get(pl.device.category, layer_passive)
-        box = db.Box(x0, y0, x1, y1)
-        top.shapes(layer).insert(box)
-        # 端口标记（小矩形）
-        for _, (px, py) in pl.port_positions().items():
-            ps = _um_to_dbu(0.5, dbu)
-            pbox = db.Box(
-                _um_to_dbu(px, dbu) - ps,
-                _um_to_dbu(py, dbu) - ps,
-                _um_to_dbu(px, dbu) + ps,
-                _um_to_dbu(py, dbu) + ps,
-            )
-            top.shapes(layer_port).insert(pbox)
-
-    # 波导路径（多边形带宽度）
-    if paths:
-        for wp in paths.values():
-            if len(wp.points) < 2:
-                continue
-            pts = [
-                db.DPoint(p[0], p[1]) for p in wp.points
-            ]
-            path = db.DPath(pts, 0.5)  # 0.5μm 宽
-            top.shapes(layer_waveguide).insert(path)
-
-    # 写入 GDS
+    ly, top, layers = _create_klayout_layout(dbu)
+    _place_device_boxes(top, placements, layers, dbu, add_ports=True)
+    _place_waveguide_paths(top, paths, layers["waveguide"])
     ly.write(output_path)
     return output_path
 
@@ -233,42 +267,9 @@ def export_oasis(
     Returns:
         输出文件路径。
     """
-    import klayout.db as db
-
-    ly = db.Layout()
-    ly.dbu = dbu
-    top = ly.create_cell("TOP")
-
-    layer_passive = ly.layer(1, 0)
-    layer_active = ly.layer(2, 0)
-    layer_source = ly.layer(3, 0)
-    layer_detector = ly.layer(4, 0)
-    layer_waveguide = ly.layer(5, 0)
-    cat_layers = {
-        "passive": layer_passive,
-        "active": layer_active,
-        "source": layer_source,
-        "detector": layer_detector,
-    }
-
-    for pl in placements.values():
-        xmin, ymin, xmax, ymax = pl.bbox_abs()
-        box = db.Box(
-            _um_to_dbu(xmin, dbu), _um_to_dbu(ymin, dbu),
-            _um_to_dbu(xmax, dbu), _um_to_dbu(ymax, dbu),
-        )
-        layer = cat_layers.get(pl.device.category, layer_passive)
-        top.shapes(layer).insert(box)
-
-    if paths:
-        for wp in paths.values():
-            if len(wp.points) < 2:
-                continue
-            pts = [db.DPoint(p[0], p[1]) for p in wp.points]
-            path = db.DPath(pts, 0.5)
-            top.shapes(layer_waveguide).insert(path)
-
-    # OASIS 写入
+    ly, top, layers = _create_klayout_layout(dbu)
+    _place_device_boxes(top, placements, layers, dbu, add_ports=False)
+    _place_waveguide_paths(top, paths, layers["waveguide"])
     ly.write(output_path)
     return output_path
 
@@ -302,6 +303,52 @@ class DRCReport:
         return self.total_violations == 0
 
 
+def _check_device_overlaps(pls: list, min_spacing_um: float) -> tuple[int, int, list[str]]:
+    """检查器件间重叠与间距违规，返回 (重叠数, 间距违规数, 详情列表)。"""
+    from shapely.geometry import box as shapely_box
+
+    overlaps = 0
+    spacings = 0
+    details: list[str] = []
+    for i in range(len(pls)):
+        a = pls[i].bbox_abs()
+        sa = shapely_box(a[0], a[1], a[2], a[3])
+        for j in range(i + 1, len(pls)):
+            b = pls[j].bbox_abs()
+            sb = shapely_box(b[0], b[1], b[2], b[3])
+            if sa.intersects(sb):
+                overlaps += 1
+                details.append(f"重叠: {pls[i].instance_id} & {pls[j].instance_id}")
+            elif sa.distance(sb) < min_spacing_um:
+                spacings += 1
+                details.append(
+                    f"间距不足: {pls[i].instance_id} & {pls[j].instance_id} "
+                    f"距离 {sa.distance(sb):.3f}μm < {min_spacing_um}μm"
+                )
+    return overlaps, spacings, details
+
+
+def _check_bend_radius(paths: dict, min_bend_radius_um: float) -> tuple[int, list[str]]:
+    """检查波导路径弯曲半径违规，返回 (违规数, 详情列表)。"""
+    violations = 0
+    details: list[str] = []
+    for conn_idx, wp in paths.items():
+        for i in range(1, len(wp.points) - 1):
+            dx1 = wp.points[i][0] - wp.points[i - 1][0]
+            dy1 = wp.points[i][1] - wp.points[i - 1][1]
+            dx2 = wp.points[i + 1][0] - wp.points[i][0]
+            dy2 = wp.points[i + 1][1] - wp.points[i][1]
+            if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
+                seg1_len = (dx1 ** 2 + dy1 ** 2) ** 0.5
+                if seg1_len < min_bend_radius_um:
+                    violations += 1
+                    details.append(
+                        f"弯曲半径不足: 连接 {conn_idx} 在 {wp.points[i]} "
+                        f"段长 {seg1_len:.3f}μm < {min_bend_radius_um}μm"
+                    )
+    return violations, details
+
+
 def run_drc(
     placements: dict[str, Placement],
     paths: dict[int, WaveguidePath] | None = None,
@@ -315,43 +362,14 @@ def run_drc(
 
     工具来源: shapely https://shapely.readthedocs.io/
     """
-    from shapely.geometry import box as shapely_box
-
     report = DRCReport()
-    # 器件重叠检查
     pls = list(placements.values())
-    for i in range(len(pls)):
-        a = pls[i].bbox_abs()
-        sa = shapely_box(a[0], a[1], a[2], a[3])
-        for j in range(i + 1, len(pls)):
-            b = pls[j].bbox_abs()
-            sb = shapely_box(b[0], b[1], b[2], b[3])
-            if sa.intersects(sb):
-                report.overlap_violations += 1
-                report.details.append(
-                    f"重叠: {pls[i].instance_id} & {pls[j].instance_id}"
-                )
-            elif sa.distance(sb) < min_spacing_um:
-                report.spacing_violations += 1
-                report.details.append(
-                    f"间距不足: {pls[i].instance_id} & {pls[j].instance_id} "
-                    f"距离 {sa.distance(sb):.3f}μm < {min_spacing_um}μm"
-                )
-    # 弯曲半径检查（简化：检测直角转弯）
+    overlaps, spacings, overlap_details = _check_device_overlaps(pls, min_spacing_um)
+    report.overlap_violations = overlaps
+    report.spacing_violations = spacings
+    report.details.extend(overlap_details)
     if paths:
-        for conn_idx, wp in paths.items():
-            for i in range(1, len(wp.points) - 1):
-                dx1 = wp.points[i][0] - wp.points[i - 1][0]
-                dy1 = wp.points[i][1] - wp.points[i - 1][1]
-                dx2 = wp.points[i + 1][0] - wp.points[i][0]
-                dy2 = wp.points[i + 1][1] - wp.points[i][1]
-                if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
-                    # 转弯，检查是否满足弯曲半径（简化：标记为需检查）
-                    seg1_len = (dx1 ** 2 + dy1 ** 2) ** 0.5
-                    if seg1_len < min_bend_radius_um:
-                        report.min_bend_radius_violations += 1
-                        report.details.append(
-                            f"弯曲半径不足: 连接 {conn_idx} 在 {wp.points[i]} "
-                            f"段长 {seg1_len:.3f}μm < {min_bend_radius_um}μm"
-                        )
+        bend_violations, bend_details = _check_bend_radius(paths, min_bend_radius_um)
+        report.min_bend_radius_violations = bend_violations
+        report.details.extend(bend_details)
     return report
