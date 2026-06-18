@@ -136,21 +136,21 @@ def test_pipeline_cli_catalog(capsys):
 
 
 def test_pipeline_cli_train(tmp_path):
-    """TrainingPipeline 应能启动训练。"""
-    from polaris.pipeline.training import TrainingPipeline, TrainingConfig
+    """RLTrainingPipeline 应能启动训练。"""
+    from polaris.pipeline.training import RLTrainingPipeline, RLTrainingConfig
 
-    cfg = TrainingConfig(
+    cfg = RLTrainingConfig(
         num_episodes=2,
-        pipeline_config=PipelineConfig(
-            max_sim_iterations=1,
-            output_dir=str(tmp_path / "out"),
-        ),
+        rollout_steps=8,
+        hidden_dim=16,
         save_dir=str(tmp_path / "ckpt"),
+        log_every=1,
+        checkpoint_every=1,
     )
-    pipeline = TrainingPipeline(cfg)
+    pipeline = RLTrainingPipeline(cfg)
     result = pipeline.train()
-    assert result.episodes_completed == 2
-    assert (tmp_path / "ckpt" / "training_result.json").exists()
+    assert result.placement_episodes >= 1
+    assert (tmp_path / "ckpt" / "rl_training_summary.json").exists()
 
 
 def test_all_platforms_have_devices():

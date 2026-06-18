@@ -182,7 +182,7 @@ class RLTrainingPipeline:
         )
         agent, logs = train_floorplan(train_cfg, verbose=True)
 
-        best_reward = max((l.get("ep_reward", -1e9) for l in logs), default=-1e9)
+        best_reward = max((log.get("ep_reward", -1e9) for log in logs), default=-1e9)
         final_log = logs[-1] if logs else {}
         return {
             "episodes": len(logs),
@@ -224,7 +224,7 @@ class RLTrainingPipeline:
         )
         agent, logs = train_routing(train_cfg, verbose=True)
 
-        best_reward = max((l.get("ep_reward", -1e9) for l in logs), default=-1e9)
+        best_reward = max((log.get("ep_reward", -1e9) for log in logs), default=-1e9)
         return {
             "episodes": len(logs),
             "best_reward": best_reward,
