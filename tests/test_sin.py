@@ -114,8 +114,8 @@ def test_material_devices_have_no_ports() -> None:
         assert dev.category == "material"
 
 
-def test_key_parameters_match_literature() -> None:
-    """关键电光参数须与公开文献报告值一致（禁止假数据）。"""
+def test_sin_imec_waveguide_params_match_literature() -> None:
+    """IMEC LPCVD/PECVD SiN 波导参数须与文献报告值一致（禁止假数据）。"""
     # IMEC LPCVD: <0.1 dB/cm，最低 2 dB/m，405-2500nm
     lpcvd = SIN_DEVICES["sin_waveguide_lpcvd"]()
     assert lpcvd.params["loss_db_cm"] == pytest.approx(0.1)
@@ -126,18 +126,31 @@ def test_key_parameters_match_literature() -> None:
     pecvd = SIN_DEVICES["sin_waveguide_pecvd"]()
     assert pecvd.params["loss_db_cm"] == pytest.approx(2.0)
 
+
+def test_sin_double_stripe_params_match_literature() -> None:
+    """TriPleX/Twente 双条带波导与环参数须与文献报告值一致。"""
     # TriPleX: <0.1 dB/cm，最低 0.1 dB/m，光纤耦合 <0.5dB/facet
     triplex = SIN_DEVICES["triplex_double_stripe"]()
     assert triplex.params["loss_db_cm"] == pytest.approx(0.1)
     assert triplex.params["loss_min_db_m"] == pytest.approx(0.1)
     assert triplex.params["fiber_coupling_loss_db"] == pytest.approx(0.5)
 
+    # Twente 双条带环: 0.095 dB/cm
+    ring_ds = SIN_DEVICES["sin_ring_double_stripe"]()
+    assert ring_ds.params["loss_db_cm"] == pytest.approx(0.095)
+
+
+def test_sin_damascene_waveguide_params_match_literature() -> None:
+    """Damascene 工艺 SiN 波导参数须与文献报告值一致。"""
     # Damascene: 0.157 dB/cm @1550nm，0.06 dB/cm @1580nm，400nm 厚
     dam = SIN_DEVICES["sin_waveguide_damascene"]()
     assert dam.params["loss_db_cm_1550nm"] == pytest.approx(0.157)
     assert dam.params["loss_db_cm_1580nm"] == pytest.approx(0.06)
     assert dam.params["core_thickness_nm"] == 400
 
+
+def test_sin_ull_epfl_waveguide_params_match_literature() -> None:
+    """UCSB ULL 与 EPFL 超低损耗波导参数须与文献报告值一致。"""
     # UCSB ULL: 1.2 dB/m @1590nm
     ull = SIN_DEVICES["sin_waveguide_ull"]()
     assert ull.params["loss_db_m"] == pytest.approx(1.2)
@@ -147,29 +160,37 @@ def test_key_parameters_match_literature() -> None:
     assert epfl.params["loss_db_m"] == pytest.approx(1.0)
     assert epfl.params["ring_q_factor"] >= 1.0e7
 
+
+def test_sin_trench_visible_waveguide_params_match_literature() -> None:
+    """Twente 沟槽与 Myongji 可见光波导参数须与文献报告值一致。"""
     # Twente 沟槽: 0.4 dB/cm，厚核 900nm
     trench = SIN_DEVICES["sin_waveguide_trench"]()
     assert trench.params["loss_db_cm"] == pytest.approx(0.4)
     assert trench.params["core_thickness_nm"] == 900
 
-    # Twente 双条带环: 0.095 dB/cm
-    ring_ds = SIN_DEVICES["sin_ring_double_stripe"]()
-    assert ring_ds.params["loss_db_cm"] == pytest.approx(0.095)
-
     # Myongji 可见光: 0.1 dB/cm
     vis = SIN_DEVICES["sin_waveguide_visible"]()
     assert vis.params["loss_db_cm"] == pytest.approx(0.1)
 
+
+def test_sin_ring_resonator_params_match_literature() -> None:
+    """Cornell 高 Q 微环谐振器参数须与文献报告值一致。"""
     # Cornell 高 Q: Q 37M（2.5μm）/ 67M（10μm）
     hq = SIN_DEVICES["sin_ring_high_q"]()
     assert hq.params["q_factor_2p5um"] == pytest.approx(3.7e7)
     assert hq.params["q_factor_10um"] == pytest.approx(6.7e7)
 
+
+def test_sin_grating_coupler_params_match_literature() -> None:
+    """三星光栅耦合器参数须与文献报告值一致。"""
     # 三星光栅: 2.1dB，57nm
     gc = SIN_DEVICES["sin_grating_coupler_1d"]()
     assert gc.params["coupling_loss_db"] == pytest.approx(2.1)
     assert gc.params["bandwidth_1db_nm"] == 57
 
+
+def test_sin_material_params_match_literature() -> None:
+    """SiN 材料本征参数须与文献报告值一致。"""
     # SiN 材料: Eg~5.1eV，n~2，损耗 0.045 dB/m，热膨胀 2.35e-6
     mat = SIN_DEVICES["sin_material"]()
     assert mat.params["bandgap_ev"] == pytest.approx(5.1)
@@ -177,10 +198,16 @@ def test_key_parameters_match_literature() -> None:
     assert mat.params["loss_db_m"] == pytest.approx(0.045)
     assert mat.params["thermal_expansion_per_k"] == pytest.approx(2.35e-6)
 
+
+def test_sin_thermo_optic_params_match_literature() -> None:
+    """SiN 热光系数须与文献报告值一致。"""
     # 热光系数: 0.2×10⁻⁴ /K = 2.0e-5
     to = SIN_DEVICES["sin_thermo_optic"]()
     assert to.params["thermo_optic_coefficient_per_k"] == pytest.approx(2.0e-5)
 
+
+def test_sin_tsmc_waveguide_params_match_literature() -> None:
+    """台积电 SiN 波导参数须与文献报告值一致。"""
     # 台积电波导: <0.23 dB/cm
     tsmc = SIN_DEVICES["sin_waveguide_tsmc"]()
     assert tsmc.params["loss_db_cm"] == pytest.approx(0.23)

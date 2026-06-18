@@ -94,6 +94,167 @@ def _infer_obs_dim(env) -> int:
     return _obs_to_vector(obs).shape[0]
 
 
+def _pad_obs(obs_vec: np.ndarray, obs_dim: int) -> np.ndarray:
+    """将观测向量 pad/truncate 到固定维度（适配不同网表器件数）。"""
+    if obs_vec.shape[0] < obs_dim:
+        return np.pad(obs_vec, (0, obs_dim - obs_vec.shape[0]))
+    if obs_vec.shape[0] > obs_dim:
+        return obs_vec[:obs_dim]
+    return obs_vec
+
+
+def _apply_lr_scale(agent: PPOAgent, lr_scale: float, base_lr: float) -> None:
+    """根据缩放因子调整优化器学习率（线性衰减等）。"""
+    if lr_scale < 1.0 and hasattr(agent, "optimizer"):
+        agent.optimizer.lr = base_lr * lr_scale
+
+
+def _discretize_floorplan_action(
+    action: np.ndarray, env: FloorplanEnv, action_dim: int
+) -> np.ndarray:
+    """将连续动作离散化到 MultiDiscrete 网格动作 (gx, gy, rot)。"""
+    n_gw = env.grid_w
+    n_gh = env.grid_h
+    gx = int(np.clip(action[0], 0, 1) * (n_gw - 1)) if action_dim >= 1 else 0
+    gy = int(np.clip(action[1] if action_dim > 1 else 0, 0, 1) * (n_gh - 1))
+    rot = int(np.clip(action[2] if action_dim > 2 else 0, 0, 1) * 3)
+    return np.array([gx, gy, rot])
+
+
+def _collect_floorplan_rollout(
+    agent: PPOAgent,
+    env: FloorplanEnv,
+    obs,
+    obs_dim: int,
+    action_dim: int,
+    rollout_steps: int,
+) -> tuple[float, int]:
+    """采集布局 rollout，将连续动作离散化后与环境交互，返回 (ep_reward, steps)。"""
+    ep_reward = 0.0
+    steps = 0
+    for _ in range(rollout_steps):
+        obs_vec = _pad_obs(_obs_to_vector(obs), obs_dim)
+        action, logprob, value = agent.get_action(obs_vec)
+        disc_action = _discretize_floorplan_action(action, env, action_dim)
+        obs, reward, terminated, _, _ = env.step(disc_action)
+        ep_reward += reward
+        steps += 1
+        agent.store(obs_vec, action, reward, logprob, value, terminated)
+        if terminated:
+            break
+    return ep_reward, steps
+
+
+def _collect_routing_rollout(
+    agent: PPOAgent,
+    env,
+    obs,
+    obs_dim: int,
+    rollout_steps: int,
+) -> tuple[float, int]:
+    """采集布线 rollout，直接使用连续动作与环境交互，返回 (ep_reward, steps)。"""
+    ep_reward = 0.0
+    steps = 0
+    for _ in range(rollout_steps):
+        obs_vec = _pad_obs(_obs_to_vector(obs), obs_dim)
+        action, logprob, value = agent.get_action(obs_vec)
+        obs, reward, terminated, _, _ = env.step(action)
+        ep_reward += reward
+        steps += 1
+        agent.store(obs_vec, action, reward, logprob, value, terminated)
+        if terminated:
+            break
+    return ep_reward, steps
+
+
+def _log_floorplan_progress(log: dict, log_every: int, verbose: bool) -> None:
+    """打印布局训练的轮次进度日志。"""
+    if verbose and (log["episode"] % log_every == 0):
+        print(
+            f"ep {log['episode']:3d} | reward {log['ep_reward']:8.3f} | "
+            f"policy {log['policy_loss']:.4f} | "
+            f"value {log['value_loss']:.4f} | "
+            f"lr_scale {log['lr_scale']:.3f}"
+        )
+
+
+def _log_routing_progress(log: dict, log_every: int, verbose: bool) -> None:
+    """打印布线训练的轮次进度日志。"""
+    if verbose and (log["episode"] % log_every == 0):
+        print(
+            f"ep {log['episode']:3d} | reward {log['ep_reward']:8.3f} | "
+            f"loss_db {log.get('total_loss_db', 0):.3f} | "
+            f"len {log.get('total_length_um', 0):.1f}"
+        )
+
+
+def _check_early_stopping(
+    ep_reward: float,
+    best_reward: float,
+    no_improve: int,
+    patience: int,
+    verbose: bool,
+) -> tuple[float, int, bool]:
+    """检查早停条件。
+
+    Args:
+        ep_reward: 当前轮奖励。
+        best_reward: 历史最佳奖励。
+        no_improve: 连续无改善轮数。
+        patience: 早停耐心值（0=禁用）。
+        verbose: 是否打印早停信息。
+
+    Returns:
+        (更新后的 best_reward, 更新后的 no_improve, 是否应停止训练)。
+    """
+    if ep_reward > best_reward:
+        return ep_reward, 0, False
+    new_no_improve = no_improve + 1
+    if patience > 0 and new_no_improve >= patience:
+        if verbose:
+            print(f"早停：连续 {new_no_improve} 轮无改善，停止训练")
+        return best_reward, new_no_improve, True
+    return best_reward, new_no_improve, False
+
+
+def _save_checkpoint(
+    agent: PPOAgent,
+    ckpt_dir: Path,
+    prefix: str,
+    ep: int,
+    checkpoint_every: int,
+) -> None:
+    """按周期保存训练检查点。"""
+    if (ep + 1) % checkpoint_every == 0:
+        agent.save(ckpt_dir / f"{prefix}_ep{ep + 1}.json")
+
+
+def _build_routing_env(net, devices, config: TrainConfig):
+    """构建布线环境（先随机布局再创建 RoutingEnv）。
+
+    来源: 先布局再布线的两阶段流程，参考 DREAMPlace 联合优化思路。
+    """
+    from polaris.router.routing_env import RoutingEnv
+
+    fp = FloorplanEnv(
+        net,
+        devices,
+        canvas_w=config.canvas_w,
+        canvas_h=config.canvas_h,
+        grid_size=config.grid_size,
+    )
+    fp.reset()
+    for _ in range(len(devices)):
+        fp.step(fp.action_space.sample())
+    return RoutingEnv(
+        net,
+        fp.state.placements,
+        canvas_w=config.canvas_w,
+        canvas_h=config.canvas_h,
+        grid_size=config.grid_size,
+    )
+
+
 def train_floorplan(
     config: TrainConfig | None = None,
     agent: PPOAgent | None = None,
@@ -118,8 +279,10 @@ def train_floorplan(
     # 用第一个网表推断 obs/action 维度
     net0, devices0, _ = load_netlist(netlists[0])
     env0 = FloorplanEnv(
-        net0, devices0,
-        canvas_w=config.canvas_w, canvas_h=config.canvas_h,
+        net0,
+        devices0,
+        canvas_w=config.canvas_w,
+        canvas_h=config.canvas_h,
         grid_size=config.grid_size,
     )
     obs_dim = _infer_obs_dim(env0)
@@ -142,39 +305,20 @@ def train_floorplan(
     for ep in range(config.num_episodes):
         # 学习率调度（线性衰减）
         lr_scale = _lr_scale(ep, config.num_episodes, config.lr_schedule)
-        if lr_scale < 1.0 and hasattr(agent, "optimizer"):
-            agent.optimizer.lr = config.ppo.lr * lr_scale
+        _apply_lr_scale(agent, lr_scale, config.ppo.lr)
         nl = netlists[ep % len(netlists)]
         net, devices, _ = load_netlist(nl)
         env = FloorplanEnv(
-            net, devices,
-            canvas_w=config.canvas_w, canvas_h=config.canvas_h,
+            net,
+            devices,
+            canvas_w=config.canvas_w,
+            canvas_h=config.canvas_h,
             grid_size=config.grid_size,
         )
         obs, _ = env.reset()
-        ep_reward = 0.0
-        steps = 0
-        for _ in range(config.rollout_steps):
-            obs_vec = _obs_to_vector(obs)
-            # 适配维度（不同网表器件数不同，pad/truncate）
-            if obs_vec.shape[0] < obs_dim:
-                obs_vec = np.pad(obs_vec, (0, obs_dim - obs_vec.shape[0]))
-            elif obs_vec.shape[0] > obs_dim:
-                obs_vec = obs_vec[:obs_dim]
-            action, logprob, value = agent.get_action(obs_vec)
-            # 将连续动作离散化到 MultiDiscrete
-            n_gw = env.grid_w
-            n_gh = env.grid_h
-            gx = int(np.clip(action[0], 0, 1) * (n_gw - 1)) if action_dim >= 1 else 0
-            gy = int(np.clip(action[1] if action_dim > 1 else 0, 0, 1) * (n_gh - 1))
-            rot = int(np.clip(action[2] if action_dim > 2 else 0, 0, 1) * 3)
-            disc_action = np.array([gx, gy, rot])
-            obs, reward, terminated, _, _ = env.step(disc_action)
-            ep_reward += reward
-            steps += 1
-            agent.store(obs_vec, action, reward, logprob, value, terminated)
-            if terminated:
-                break
+        ep_reward, steps = _collect_floorplan_rollout(
+            agent, env, obs, obs_dim, action_dim, config.rollout_steps
+        )
         # PPO 更新
         metrics = agent.update(last_value=0.0)
         log = {
@@ -186,26 +330,15 @@ def train_floorplan(
             **metrics,
         }
         logs.append(log)
-        if verbose and (ep % config.log_every == 0):
-            print(
-                f"ep {ep:3d} | reward {ep_reward:8.3f} | "
-                f"policy {metrics['policy_loss']:.4f} | "
-                f"value {metrics['value_loss']:.4f} | "
-                f"lr_scale {lr_scale:.3f}"
-            )
+        _log_floorplan_progress(log, config.log_every, verbose)
         # 早停检测
-        if ep_reward > best_reward:
-            best_reward = ep_reward
-            no_improve = 0
-        else:
-            no_improve += 1
-        if config.early_stop_patience > 0 and no_improve >= config.early_stop_patience:
-            if verbose:
-                print(f"早停：连续 {no_improve} 轮无改善，停止训练")
+        best_reward, no_improve, should_stop = _check_early_stopping(
+            ep_reward, best_reward, no_improve, config.early_stop_patience, verbose
+        )
+        if should_stop:
             break
         # checkpoint
-        if (ep + 1) % config.checkpoint_every == 0:
-            agent.save(ckpt_dir / f"floorplan_ep{ep + 1}.json")
+        _save_checkpoint(agent, ckpt_dir, "floorplan", ep, config.checkpoint_every)
 
     agent.save(ckpt_dir / "floorplan_final.json")
     # 保存日志
@@ -220,27 +353,14 @@ def train_routing(
     verbose: bool = True,
 ) -> tuple[PPOAgent, list[dict]]:
     """训练布线 PPO 智能体（先布局再布线）。"""
-    from polaris.router.routing_env import RoutingEnv
-
     config = config or TrainConfig()
     np.random.seed(config.seed)
     netlists = generate_dataset(config.dataset)
     logs: list[dict] = []
 
+    # 用第一个网表推断 obs 维度（先随机布局再建布线环境）
     net0, devices0, _ = load_netlist(netlists[0])
-    fp0 = FloorplanEnv(
-        net0, devices0,
-        canvas_w=config.canvas_w, canvas_h=config.canvas_h,
-        grid_size=config.grid_size,
-    )
-    fp0.reset()
-    for _ in range(len(devices0)):
-        fp0.step(fp0.action_space.sample())
-    env0 = RoutingEnv(
-        net0, fp0.state.placements,
-        canvas_w=config.canvas_w, canvas_h=config.canvas_h,
-        grid_size=config.grid_size,
-    )
+    env0 = _build_routing_env(net0, devices0, config)
     obs_dim = _infer_obs_dim(env0)
     action_dim = 3  # (dx, dy, detour)
 
@@ -258,36 +378,9 @@ def train_routing(
     for ep in range(config.num_episodes):
         nl = netlists[ep % len(netlists)]
         net, devices, _ = load_netlist(nl)
-        # 先布局（随机放置）
-        fp = FloorplanEnv(
-            net, devices,
-            canvas_w=config.canvas_w, canvas_h=config.canvas_h,
-            grid_size=config.grid_size,
-        )
-        fp.reset()
-        for _ in range(len(devices)):
-            fp.step(fp.action_space.sample())
-        env = RoutingEnv(
-            net, fp.state.placements,
-            canvas_w=config.canvas_w, canvas_h=config.canvas_h,
-            grid_size=config.grid_size,
-        )
+        env = _build_routing_env(net, devices, config)
         obs, _ = env.reset()
-        ep_reward = 0.0
-        steps = 0
-        for _ in range(config.rollout_steps):
-            obs_vec = _obs_to_vector(obs)
-            if obs_vec.shape[0] < obs_dim:
-                obs_vec = np.pad(obs_vec, (0, obs_dim - obs_vec.shape[0]))
-            elif obs_vec.shape[0] > obs_dim:
-                obs_vec = obs_vec[:obs_dim]
-            action, logprob, value = agent.get_action(obs_vec)
-            obs, reward, terminated, _, _ = env.step(action)
-            ep_reward += reward
-            steps += 1
-            agent.store(obs_vec, action, reward, logprob, value, terminated)
-            if terminated:
-                break
+        ep_reward, steps = _collect_routing_rollout(agent, env, obs, obs_dim, config.rollout_steps)
         metrics = agent.update(last_value=0.0)
         log = {
             "episode": ep,
@@ -298,14 +391,8 @@ def train_routing(
             **env.total_metrics(),
         }
         logs.append(log)
-        if verbose and (ep % config.log_every == 0):
-            print(
-                f"ep {ep:3d} | reward {ep_reward:8.3f} | "
-                f"loss_db {log.get('total_loss_db', 0):.3f} | "
-                f"len {log.get('total_length_um', 0):.1f}"
-            )
-        if (ep + 1) % config.checkpoint_every == 0:
-            agent.save(ckpt_dir / f"routing_ep{ep + 1}.json")
+        _log_routing_progress(log, config.log_every, verbose)
+        _save_checkpoint(agent, ckpt_dir, "routing", ep, config.checkpoint_every)
 
     agent.save(ckpt_dir / "routing_final.json")
     log_path = ckpt_dir / "routing_log.json"

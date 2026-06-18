@@ -139,9 +139,7 @@ class StateEncoder(Module):
         grid_flat = grid_feat.mean(axis=0)  # [grid_w]
         grid_emb = self.grid_proj(grid_flat)  # [hidden]
         # 融合（用 data 拼接计算，避免 autograd 拼接复杂性）
-        fused_input = Tensor(
-            np.concatenate([graph_emb.data, grid_emb.data])
-        )
+        fused_input = Tensor(np.concatenate([graph_emb.data, grid_emb.data]))
         out = self.fuse(fused_input)
         return out
 

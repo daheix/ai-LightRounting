@@ -70,14 +70,17 @@ class Netlist:
         return [i.instance_id for i in self.instances]
 
 
-def parse_netlist(data: str | Path | dict) -> Netlist:
-    """解析网表（YAML/JSON 字符串、文件路径或字典）。
+def _load_raw(data: str | Path | dict) -> dict:
+    """加载原始网表数据为字典（支持 dict / 文件路径 / YAML-JSON 字符串）。
 
     Args:
         data: YAML/JSON 字符串、文件路径或已解析的字典。
 
     Returns:
-        解析后的 ``Netlist``。
+        解析后的字典。
+
+    Raises:
+        ValueError: 当解析结果不是映射（dict）结构时。
     """
     if isinstance(data, dict):
         raw = data
@@ -87,54 +90,121 @@ def parse_netlist(data: str | Path | dict) -> Netlist:
         raw = yaml.safe_load(text)
     if not isinstance(raw, dict):
         raise ValueError("网表须为映射（dict）结构")
+    return raw
 
+
+def _parse_instance(inst_id: str, info: str | dict) -> NetlistInstance:
+    """解析单个器件实例（支持字符串简写或字典详写）。
+
+    Args:
+        inst_id: 实例标识。
+        info: 器件信息（字符串视为 component 名，或含 component/platform/settings 的字典）。
+
+    Returns:
+        ``NetlistInstance``。
+    """
+    if isinstance(info, str):
+        component, platform = info, None
+        settings: dict = {}
+    else:
+        component = info.get("component") or info.get("name")
+        platform = info.get("platform")
+        settings = info.get("settings") or {}
+    return NetlistInstance(
+        instance_id=inst_id,
+        component=component,
+        platform=platform,
+        settings=settings,
+    )
+
+
+def _parse_list_connection(
+    conn: list | tuple,
+) -> tuple[str, str, str, str, dict]:
+    """解析列表/元组格式连接 ``[src, sport, dst, dport, constraints?]``。
+
+    Args:
+        conn: 长度 >= 4 的连接列表。
+
+    Returns:
+        ``(src, sport, dst, dport, extra)`` 五元组。
+
+    Raises:
+        ValueError: 当连接元素不足 4 个时。
+    """
+    if len(conn) >= 4:
+        src, sport, dst, dport = conn[:4]
+        extra = conn[4] if len(conn) > 4 and isinstance(conn[4], dict) else {}
+    else:
+        raise ValueError(f"连接格式错误（需 4 元素）: {conn}")
+    return src, sport, dst, dport, extra
+
+
+def _parse_dict_connection(conn: dict) -> tuple[str, str, str, str, dict]:
+    """解析字典格式连接（支持 src/source、dst/destination/target 等别名）。
+
+    Args:
+        conn: 含连接字段的字典。
+
+    Returns:
+        ``(src, sport, dst, dport, extra)`` 五元组。
+    """
+    src = conn.get("src") or conn.get("source")
+    sport = conn.get("src_port") or conn.get("source_port")
+    dst = conn.get("dst") or conn.get("destination") or conn.get("target")
+    dport = conn.get("dst_port") or conn.get("destination_port") or conn.get("target_port")
+    extra = conn.get("constraints") or {}
+    return src, sport, dst, dport, extra
+
+
+def _parse_connection(conn) -> NetlistConnection:
+    """解析单条连接（支持列表/元组或字典格式）。
+
+    Args:
+        conn: 连接定义（列表/元组或字典）。
+
+    Returns:
+        ``NetlistConnection``。
+
+    Raises:
+        ValueError: 当连接格式不支持或字段缺失时。
+    """
+    if isinstance(conn, (list, tuple)):
+        src, sport, dst, dport, extra = _parse_list_connection(conn)
+    elif isinstance(conn, dict):
+        src, sport, dst, dport, extra = _parse_dict_connection(conn)
+    else:
+        raise ValueError(f"连接格式不支持: {conn}")
+    if not all([src, sport, dst, dport]):
+        raise ValueError(f"连接字段缺失: {conn}")
+    return NetlistConnection(
+        src_instance=str(src),
+        src_port=str(sport),
+        dst_instance=str(dst),
+        dst_port=str(dport),
+        constraints=extra or {},
+    )
+
+
+def parse_netlist(data: str | Path | dict) -> Netlist:
+    """解析网表（YAML/JSON 字符串、文件路径或字典）。
+
+    Args:
+        data: YAML/JSON 字符串、文件路径或已解析的字典。
+
+    Returns:
+        解析后的 ``Netlist``。
+    """
+    raw = _load_raw(data)
     net = Netlist(name=raw.get("name", "untitled"))
 
     # 解析器件实例
     for inst_id, info in (raw.get("instances") or {}).items():
-        if isinstance(info, str):
-            component, platform = info, None
-            settings: dict = {}
-        else:
-            component = info.get("component") or info.get("name")
-            platform = info.get("platform")
-            settings = info.get("settings") or {}
-        net.instances.append(
-            NetlistInstance(
-                instance_id=inst_id,
-                component=component,
-                platform=platform,
-                settings=settings,
-            )
-        )
+        net.instances.append(_parse_instance(inst_id, info))
 
     # 解析连接（支持 [src, sport, dst, dport] 或 {src, src_port, dst, dst_port}）
-    for conn in (raw.get("connections") or []):
-        if isinstance(conn, (list, tuple)):
-            if len(conn) >= 4:
-                src, sport, dst, dport = conn[:4]
-                extra = conn[4] if len(conn) > 4 and isinstance(conn[4], dict) else {}
-            else:
-                raise ValueError(f"连接格式错误（需 4 元素）: {conn}")
-        elif isinstance(conn, dict):
-            src = conn.get("src") or conn.get("source")
-            sport = conn.get("src_port") or conn.get("source_port")
-            dst = conn.get("dst") or conn.get("destination") or conn.get("target")
-            dport = conn.get("dst_port") or conn.get("destination_port") or conn.get("target_port")
-            extra = conn.get("constraints") or {}
-        else:
-            raise ValueError(f"连接格式不支持: {conn}")
-        if not all([src, sport, dst, dport]):
-            raise ValueError(f"连接字段缺失: {conn}")
-        net.connections.append(
-            NetlistConnection(
-                src_instance=str(src),
-                src_port=str(sport),
-                dst_instance=str(dst),
-                dst_port=str(dport),
-                constraints=extra or {},
-            )
-        )
+    for conn in raw.get("connections") or []:
+        net.connections.append(_parse_connection(conn))
 
     return net
 

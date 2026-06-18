@@ -122,6 +122,26 @@ def count_overlaps(state: FloorplanState) -> int:
     return count
 
 
+@dataclass
+class FloorplanEnvConfig:
+    """布局环境配置（画布尺寸 + 奖励权重）。
+
+    将 ``FloorplanEnv.__init__`` 的画布与奖励参数打包为单一配置对象，
+    降低构造函数参数个数（规则 4.1：参数上限 7）。
+
+    向后兼容：``FloorplanEnv(net, devices, config=None, **kwargs)`` 中未提供
+    config 时，旧式关键字参数（canvas_w/canvas_h/grid_size/overlap_penalty
+    等）会自动转发到本 dataclass 构造。
+    """
+
+    canvas_w: float = 1000.0
+    canvas_h: float = 1000.0
+    grid_size: float = 10.0
+    overlap_penalty: float = 100.0
+    hpwl_weight: float = 0.001
+    area_reward: float = 1.0
+
+
 class FloorplanEnv(gym.Env):
     """布局环境（Gymnasium 接口）。
 
@@ -136,40 +156,41 @@ class FloorplanEnv(gym.Env):
         self,
         net: Netlist,
         devices: dict[str, Device],
-        canvas_w: float = 1000.0,
-        canvas_h: float = 1000.0,
-        grid_size: float = 10.0,
-        overlap_penalty: float = 100.0,
-        hpwl_weight: float = 0.001,
-        area_reward: float = 1.0,
+        config: FloorplanEnvConfig | None = None,
+        **kwargs: float,
     ) -> None:
         super().__init__()
+        # 向后兼容：未提供 config 时，从旧式关键字参数构建配置
+        if config is None:
+            config = FloorplanEnvConfig(**kwargs)
         self.net = net
         self.devices = devices
         self.instance_ids = list(devices.keys())
-        self.overlap_penalty = overlap_penalty
-        self.hpwl_weight = hpwl_weight
-        self.area_reward = area_reward
+        self.overlap_penalty = config.overlap_penalty
+        self.hpwl_weight = config.hpwl_weight
+        self.area_reward = config.area_reward
 
         self.state = FloorplanState(
-            canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size
+            canvas_w=config.canvas_w, canvas_h=config.canvas_h, grid_size=config.grid_size
         )
         self.grid_w = self.state.grid_w
         self.grid_h = self.state.grid_h
         self._step_idx = 0
 
         self.action_space = spaces.MultiDiscrete([self.grid_w, self.grid_h, 4])
-        self.observation_space = spaces.Dict({
-            "occupancy": spaces.Box(
-                low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
-            ),
-            "port_positions": spaces.Box(
-                low=-1, high=1e6, shape=(len(self.instance_ids), 4), dtype=np.float32
-            ),
-            "step": spaces.Box(
-                low=0, high=len(self.instance_ids), shape=(1,), dtype=np.float32
-            ),
-        })
+        self.observation_space = spaces.Dict(
+            {
+                "occupancy": spaces.Box(
+                    low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
+                ),
+                "port_positions": spaces.Box(
+                    low=-1, high=1e6, shape=(len(self.instance_ids), 4), dtype=np.float32
+                ),
+                "step": spaces.Box(
+                    low=0, high=len(self.instance_ids), shape=(1,), dtype=np.float32
+                ),
+            }
+        )
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
@@ -246,11 +267,7 @@ class FloorplanEnv(gym.Env):
         wire = hpwl(self.net, self.state)
         # 重叠
         overlaps = count_overlaps(self.state)
-        reward = (
-            self.area_reward * util
-            - self.hpwl_weight * wire
-            - self.overlap_penalty * overlaps
-        )
+        reward = self.area_reward * util - self.hpwl_weight * wire - self.overlap_penalty * overlaps
         return float(reward)
 
     def render(self):

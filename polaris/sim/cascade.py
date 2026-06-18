@@ -30,6 +30,90 @@ except ImportError:
     _HAS_SAX = False
 
 
+def _collect_ports(sdict: SDict) -> set[str]:
+    """从 S 参数字典收集所有端口名。
+
+    Args:
+        sdict: S 参数字典，键为 (port_out, port_in) 元组。
+
+    Returns:
+        该字典中出现的所有端口名集合。
+    """
+    ports: set[str] = set()
+    for p_out, p_in in sdict:
+        ports.add(p_out)
+        ports.add(p_in)
+    return ports
+
+
+def _get_s_value(sdict: SDict, p_out: str, p_in: str, n_freq: int) -> np.ndarray:
+    """获取 S 参数，不存在则返回零数组。
+
+    Args:
+        sdict: S 参数字典。
+        p_out: 输出端口名。
+        p_in: 输入端口名。
+        n_freq: 频率维度长度（用于构造零数组）。
+
+    Returns:
+        对应端口的复数 S 参数数组，不存在时返回零数组。
+    """
+    if (p_out, p_in) in sdict:
+        return np.asarray(sdict[(p_out, p_in)], dtype=complex)
+    return np.zeros(n_freq, dtype=complex)
+
+
+def _compute_cross_term(
+    s1: SDict,
+    s2: SDict,
+    p_i: str,
+    p_j: str,
+    remaining_1: set[str],
+    connected: list[tuple[str, str]],
+    n_freq: int,
+) -> np.ndarray:
+    """计算通过连接端口的间接传输交叉项。
+
+    来源:
+    - SAX 子网络增长: https://flaport.github.io/sax/
+    - 光子电路 S 参数级联理论: 标准微波网络理论
+
+    Args:
+        s1: 子网络1的 S 参数。
+        s2: 子网络2的 S 参数。
+        p_i: 当前剩余端口 i。
+        p_j: 当前剩余端口 j。
+        remaining_1: 子网络1的剩余端口集合。
+        connected: 连接端口对列表 [(c1, c2), ...]。
+        n_freq: 频率维度长度。
+
+    Returns:
+        交叉项 S_iA * S_Bj / (1 - S_AB * S_BA) 的累加结果。
+    """
+    i_in_1 = p_i in remaining_1
+    j_in_1 = p_j in remaining_1
+    s_cross = np.zeros(n_freq, dtype=complex)
+    for c1, c2 in connected:
+        # S_iA (从 i 到连接端口 c1)
+        if i_in_1:
+            s_iA = _get_s_value(s1, p_i, c1, n_freq)
+        else:
+            s_iA = _get_s_value(s2, p_i, c2, n_freq)
+        # S_Bj (从连接端口到 j)
+        if j_in_1:
+            s_Bj = _get_s_value(s1, c1, p_j, n_freq)
+        else:
+            s_Bj = _get_s_value(s2, c2, p_j, n_freq)
+        # S_AB 和 S_BA（连接端口间的反射）
+        s_AB = _get_s_value(s1, c1, c1, n_freq)  # 简化：假设连接端口反射
+        s_BA = _get_s_value(s2, c2, c2, n_freq)
+        # 分母 1 - S_AB * S_BA
+        denom = 1.0 - s_AB * s_BA
+        denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
+        s_cross += s_iA * s_Bj / denom
+    return s_cross
+
+
 def _connect_ports(s1: SDict, s2: SDict, connections: list[tuple[str, str]]) -> SDict:
     """连接两个 S 参数子网络的指定端口对（纯 numpy 实现）。
 
@@ -46,14 +130,8 @@ def _connect_ports(s1: SDict, s2: SDict, connections: list[tuple[str, str]]) -> 
         连接后剩余端口的 S 参数字典。
     """
     # 合并两个子网络的所有端口
-    all_ports_1 = set()
-    for p_out, p_in in s1:
-        all_ports_1.add(p_out)
-        all_ports_1.add(p_in)
-    all_ports_2 = set()
-    for p_out, p_in in s2:
-        all_ports_2.add(p_out)
-        all_ports_2.add(p_in)
+    all_ports_1 = _collect_ports(s1)
+    all_ports_2 = _collect_ports(s2)
 
     # 连接的端口
     connected_1 = {c[0] for c in connections}
@@ -74,47 +152,98 @@ def _connect_ports(s1: SDict, s2: SDict, connections: list[tuple[str, str]]) -> 
     first_val = next(iter(s1.values()))
     n_freq = len(first_val) if hasattr(first_val, "__len__") else 1
 
-    # 构建 S 参数查找函数
-    def get_s(sdict: SDict, p_out: str, p_in: str) -> np.ndarray:
-        """获取 S 参数，不存在则返回 0。"""
-        if (p_out, p_in) in sdict:
-            return np.asarray(sdict[(p_out, p_in)], dtype=complex)
-        return np.zeros(n_freq, dtype=complex)
-
     # 子网络增长公式
     result: SDict = {}
     for p_i in remaining:
         for p_j in remaining:
             # S_ij = S_ij_direct + sum over connected pairs
             if p_i in remaining_1 and p_j in remaining_1:
-                s_direct = get_s(s1, p_i, p_j)
+                s_direct = _get_s_value(s1, p_i, p_j, n_freq)
             elif p_i in remaining_2 and p_j in remaining_2:
-                s_direct = get_s(s2, p_i, p_j)
+                s_direct = _get_s_value(s2, p_i, p_j, n_freq)
             else:
                 s_direct = np.zeros(n_freq, dtype=complex)
             # 交叉项：通过连接端口的间接传输
-            s_cross = np.zeros(n_freq, dtype=complex)
-            for c1, c2 in connected:
-                # S_iA (从 i 到连接端口 c1)
-                if p_i in remaining_1:
-                    s_iA = get_s(s1, p_i, c1)
-                else:
-                    s_iA = get_s(s2, p_i, c2)
-                # S_Bj (从连接端口到 j)
-                if p_j in remaining_1:
-                    s_Bj = get_s(s1, c1, p_j)
-                else:
-                    s_Bj = get_s(s2, c2, p_j)
-                # S_AB 和 S_BA（连接端口间的反射）
-                s_AB = get_s(s1, c1, c1)  # 简化：假设连接端口反射
-                s_BA = get_s(s2, c2, c2)
-                # 分母 1 - S_AB * S_BA
-                denom = 1.0 - s_AB * s_BA
-                denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
-                s_cross += s_iA * s_Bj / denom
+            s_cross = _compute_cross_term(s1, s2, p_i, p_j, remaining_1, connected, n_freq)
             result[(p_i, p_j)] = s_direct + s_cross
 
     return result
+
+
+def _merge_subnetworks(
+    subnetworks: dict[str, SDict],
+    connections: list[tuple[str, str]],
+    conn: tuple[str, str],
+) -> list[tuple[str, str]]:
+    """合并连接 conn 涉及的两个子网络，返回更新后的连接列表。
+
+    在 subnetworks 字典上原地修改（删除旧子网络、添加合并后的子网络）。
+
+    来源:
+    - SAX 子网络增长: https://flaport.github.io/sax/
+
+    Args:
+        subnetworks: 子网络字典（原地修改）。
+        connections: 当前连接列表。
+        conn: 当前要处理的连接 (inst1.port, inst2.port)。
+
+    Returns:
+        更新后的连接列表（实例名已替换为合并后的新名）。
+    """
+    inst1_name, port1 = conn[0].split(".")
+    inst2_name, port2 = conn[1].split(".")
+
+    if inst1_name not in subnetworks or inst2_name not in subnetworks:
+        return connections
+
+    s1 = subnetworks[inst1_name]
+    s2 = subnetworks[inst2_name]
+
+    # 连接 port1 和 port2
+    merged = _connect_ports(s1, s2, [(port1, port2)])
+
+    # 合并后的子网络
+    new_name = f"{inst1_name}+{inst2_name}"
+    subnetworks[new_name] = merged
+    del subnetworks[inst1_name]
+    del subnetworks[inst2_name]
+
+    # 更新剩余连接中的实例名
+    new_connections = []
+    for c in connections:
+        c0 = c[0].replace(inst1_name, new_name).replace(inst2_name, new_name)
+        c1 = c[1].replace(inst1_name, new_name).replace(inst2_name, new_name)
+        if c0.split(".")[0] != c1.split(".")[0]:  # 跳过已合并的
+            new_connections.append((c0, c1))
+    return new_connections
+
+
+def _rename_ports(final_s: SDict, ports: dict[str, str]) -> SDict:
+    """将最终子网络的端口重命名为外部端口名。
+
+    来源:
+    - SAX circuit 端口映射: https://flaport.github.io/sax/
+
+    Args:
+        final_s: 最终子网络的 S 参数字典。
+        ports: 外部端口映射 {external_name: instance.port}。
+
+    Returns:
+        重命名后的 S 参数字典；若无法重命名则返回原字典。
+    """
+    # 构建 内部端口 → 外部端口名列表 的映射
+    int_to_exts: dict[str, list[str]] = {}
+    for ext_name, int_ref in ports.items():
+        _, port = int_ref.split(".")
+        int_to_exts.setdefault(port, []).append(ext_name)
+
+    renamed: SDict = {}
+    for (p_out, p_in), val in final_s.items():
+        if p_out in int_to_exts and p_in in int_to_exts:
+            for ext_out in int_to_exts[p_out]:
+                for ext_in in int_to_exts[p_in]:
+                    renamed[(ext_out, ext_in)] = val
+    return renamed if renamed else final_s
 
 
 def cascade_circuit(
@@ -151,32 +280,7 @@ def cascade_circuit(
 
     # 逐步合并连接的子网络
     for conn in connections:
-        inst1_name, port1 = conn[0].split(".")
-        inst2_name, port2 = conn[1].split(".")
-
-        if inst1_name not in subnetworks or inst2_name not in subnetworks:
-            continue
-
-        s1 = subnetworks[inst1_name]
-        s2 = subnetworks[inst2_name]
-
-        # 连接 port1 和 port2
-        merged = _connect_ports(s1, s2, [(port1, port2)])
-
-        # 合并后的子网络
-        new_name = f"{inst1_name}+{inst2_name}"
-        subnetworks[new_name] = merged
-        del subnetworks[inst1_name]
-        del subnetworks[inst2_name]
-
-        # 更新剩余连接中的实例名
-        new_connections = []
-        for c in connections:
-            c0 = c[0].replace(inst1_name, new_name).replace(inst2_name, new_name)
-            c1 = c[1].replace(inst1_name, new_name).replace(inst2_name, new_name)
-            if c0.split(".")[0] != c1.split(".")[0]:  # 跳过已合并的
-                new_connections.append((c0, c1))
-        connections = new_connections
+        connections = _merge_subnetworks(subnetworks, connections, conn)
 
     # 提取外部端口
     if not subnetworks:
@@ -184,18 +288,7 @@ def cascade_circuit(
     final_s = next(iter(subnetworks.values()))
 
     if ports:
-        # 重命名端口
-        renamed: SDict = {}
-        for ext_name, int_ref in ports.items():
-            inst, port = int_ref.split(".")
-            # 在最终子网络中查找该端口
-            for (p_out, p_in), val in final_s.items():
-                if p_out == port:
-                    for ext_in, int_in in ports.items():
-                        _, port_in = int_in.split(".")
-                        if p_in == port_in:
-                            renamed[(ext_name, ext_in)] = val
-        return renamed if renamed else final_s
+        return _rename_ports(final_s, ports)
 
     return final_s
 

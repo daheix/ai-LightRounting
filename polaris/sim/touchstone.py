@@ -21,6 +21,82 @@ import numpy as np
 from polaris.sim.types import SDict
 
 
+def _parse_option_line(line: str, freq_unit: str, s_format: str) -> tuple[str, str]:
+    """解析 Touchstone 选项行，返回更新后的 (频率单位, S 参数格式)。
+
+    选项行格式: # frequency_unit S parameter_format R impedance
+
+    来源:
+    - Touchstone 文件规范: https://en.wikipedia.org/wiki/Touchstone_file
+
+    Args:
+        line: 选项行文本（以 # 开头）。
+        freq_unit: 当前频率单位（保留未指定时沿用）。
+        s_format: 当前 S 参数格式（保留未指定时沿用）。
+
+    Returns:
+        更新后的 (freq_unit, s_format) 元组。
+    """
+    parts = line[1:].strip().lower().split()
+    for p in parts:
+        if p in ("hz", "khz", "mhz", "ghz"):
+            freq_unit = p
+        elif p in ("ri", "ma", "db"):
+            s_format = p
+    return freq_unit, s_format
+
+
+def _convert_s_value(re: float, im: float, s_format: str) -> complex:
+    """根据格式将 S 参数实部/虚部转换为复数值。
+
+    支持的格式：
+    - ri: 实部-虚部直角坐标
+    - ma: 幅度-角度（度）
+    - db: 分贝-角度（度）
+
+    来源:
+    - Touchstone 文件规范: https://en.wikipedia.org/wiki/Touchstone_file
+
+    Args:
+        re: 实部（或幅度/分贝值）。
+        im: 虚部（或角度，单位度）。
+        s_format: S 参数格式（ri/ma/db）。
+
+    Returns:
+        转换后的复数 S 参数值。
+    """
+    if s_format == "ri":
+        return complex(re, im)
+    if s_format == "ma":
+        return re * np.exp(1j * np.radians(im))
+    if s_format == "db":
+        return 10.0 ** (re / 20.0) * np.exp(1j * np.radians(im))
+    return complex(re, im)
+
+
+def _build_sdict(s_matrix: np.ndarray, n_ports: int) -> SDict:
+    """将 S 参数矩阵转换为 SDict 格式。
+
+    端口名按 port_1, port_2, ... 编号。
+
+    来源:
+    - SAX 类型系统: https://flaport.github.io/sax/
+
+    Args:
+        s_matrix: S 参数矩阵，形状 (n_freq, n_ports, n_ports)。
+        n_ports: 端口数。
+
+    Returns:
+        S 参数字典，键为 (port_out, port_in) 元组。
+    """
+    port_names = [f"port_{i + 1}" for i in range(n_ports)]
+    sdict: SDict = {}
+    for j in range(n_ports):
+        for k in range(n_ports):
+            sdict[(port_names[j], port_names[k])] = s_matrix[:, j, k]
+    return sdict
+
+
 def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
     """加载 Touchstone S 参数文件（.s2p/.s3p/.snp 格式）。
 
@@ -49,12 +125,7 @@ def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
                 continue
             if line.startswith("#"):
                 # 选项行: # frequency_unit S parameter_format R impedance
-                parts = line[1:].strip().lower().split()
-                for p in parts:
-                    if p in ("hz", "khz", "mhz", "ghz"):
-                        freq_unit = p
-                    elif p in ("ri", "ma", "db"):
-                        s_format = p
+                freq_unit, s_format = _parse_option_line(line, freq_unit, s_format)
                 continue
             # 数据行
             parts = line.split()
@@ -79,21 +150,10 @@ def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
                 re = svals[idx]
                 im = svals[idx + 1]
                 idx += 2
-                if s_format == "ri":
-                    s_matrix[i, j, k] = complex(re, im)
-                elif s_format == "ma":
-                    s_matrix[i, j, k] = re * np.exp(1j * np.radians(im))
-                elif s_format == "db":
-                    s_matrix[i, j, k] = 10.0 ** (re / 20.0) * np.exp(1j * np.radians(im))
+                s_matrix[i, j, k] = _convert_s_value(re, im, s_format)
 
     # 转换为 SDict 格式
-    port_names = [f"port_{i + 1}" for i in range(n_ports)]
-    sdict: SDict = {}
-    for j in range(n_ports):
-        for k in range(n_ports):
-            sdict[(port_names[j], port_names[k])] = s_matrix[:, j, k]
-
-    return freqs_arr, sdict
+    return freqs_arr, _build_sdict(s_matrix, n_ports)
 
 
 def save_touchstone(

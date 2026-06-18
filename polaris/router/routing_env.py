@@ -54,6 +54,27 @@ class RoutingState:
             self.congestion[gj, gi] += 1.0
 
 
+@dataclass
+class RoutingEnvConfig:
+    """布线环境配置（画布尺寸 + 奖励权重）。
+
+    将 ``RoutingEnv.__init__`` 的画布与奖励参数打包为单一配置对象，
+    降低构造函数参数个数（规则 4.1：参数上限 7）。
+
+    向后兼容：``RoutingEnv(config=None, **kwargs)`` 中未提供 config 时，
+    旧式关键字参数（canvas_w/canvas_h/grid_size/loss_weight 等）会自动
+    转发到本 dataclass 构造。
+    """
+
+    canvas_w: float = 1000.0
+    canvas_h: float = 1000.0
+    grid_size: float = 5.0
+    loss_weight: float = 1.0
+    length_weight: float = 0.001
+    congestion_weight: float = 0.1
+    drc_penalty: float = 50.0
+
+
 class RoutingEnv(gym.Env):
     """布线环境（Gymnasium 接口）。
 
@@ -69,25 +90,23 @@ class RoutingEnv(gym.Env):
         self,
         net: Netlist,
         placements: dict[str, Placement],
-        canvas_w: float = 1000.0,
-        canvas_h: float = 1000.0,
-        grid_size: float = 5.0,
-        loss_weight: float = 1.0,
-        length_weight: float = 0.001,
-        congestion_weight: float = 0.1,
-        drc_penalty: float = 50.0,
+        config: RoutingEnvConfig | None = None,
+        **kwargs: float,
     ) -> None:
         super().__init__()
+        # 向后兼容：未提供 config 时，从旧式关键字参数构建配置
+        if config is None:
+            config = RoutingEnvConfig(**kwargs)
         self.net = net
         self.placements = placements
         self.connections = net.connections
-        self.loss_weight = loss_weight
-        self.length_weight = length_weight
-        self.congestion_weight = congestion_weight
-        self.drc_penalty = drc_penalty
+        self.loss_weight = config.loss_weight
+        self.length_weight = config.length_weight
+        self.congestion_weight = config.congestion_weight
+        self.drc_penalty = config.drc_penalty
 
         self.state = RoutingState(
-            canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size
+            canvas_w=config.canvas_w, canvas_h=config.canvas_h, grid_size=config.grid_size
         )
         self.grid_w = self.state.grid_w
         self.grid_h = self.state.grid_h
@@ -95,15 +114,17 @@ class RoutingEnv(gym.Env):
 
         # 动作：路径偏移 (dx, dy, detour) ∈ [-1,1]^3
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
-        self.observation_space = spaces.Dict({
-            "congestion": spaces.Box(
-                low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
-            ),
-            "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
-            "step": spaces.Box(
-                low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
-            ),
-        })
+        self.observation_space = spaces.Dict(
+            {
+                "congestion": spaces.Box(
+                    low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
+                ),
+                "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
+                "step": spaces.Box(
+                    low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
+                ),
+            }
+        )
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
@@ -159,8 +180,10 @@ class RoutingEnv(gym.Env):
         # 障碍：已放置器件（除起终点器件）
         obstacles = []
         for inst_id, pl in self.placements.items():
-            if inst_id in (self.connections[self._conn_idx].src_instance,
-                           self.connections[self._conn_idx].dst_instance):
+            if inst_id in (
+                self.connections[self._conn_idx].src_instance,
+                self.connections[self._conn_idx].dst_instance,
+            ):
                 continue
             obstacles.append(pl.bbox_abs())
         # 布线
@@ -199,12 +222,7 @@ class RoutingEnv(gym.Env):
                 if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
                     drc_violations += 1
         drc_pen = self.drc_penalty * drc_violations * 0.01
-        reward = -(
-            self.loss_weight * loss
-            + self.length_weight * length
-            + congestion_pen
-            + drc_pen
-        )
+        reward = -(self.loss_weight * loss + self.length_weight * length + congestion_pen + drc_pen)
         return float(reward)
 
     def congestion_heatmap(self) -> np.ndarray:
