@@ -8,13 +8,16 @@
   来源: https://gdsfactory.github.io/gdsfactory/
 - Basso et al., NeurIPS 2025 模拟 IC floorplanning 数据集
   来源: https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
+- LiDAR (ISPD 2025) 光子电路自动布线数据集
+  来源: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 """
 
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
+import numpy as np
 import yaml
 
 from polaris.pdk.catalog import build_default_catalog
@@ -158,3 +161,121 @@ def load_dataset(path: str) -> list[dict]:
     """加载数据集。"""
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)["netlists"]
+
+
+# ---------------------------------------------------------------------------
+# SubTask 14.2: BaselineSolver — 用经典布线器生成 baseline 解，标注奖励
+# ---------------------------------------------------------------------------
+@dataclass
+class DatasetSample:
+    """单个训练样本（网表 + baseline 解 + 奖励标注）。
+
+    Attributes:
+        netlist: 网表字典（YAML 可序列化）。
+        baseline_reward: 经典布线器求解的奖励（用作 RL 基线对比）。
+        baseline_metrics: baseline 解的指标（总线长/损耗/拥塞等）。
+    """
+
+    netlist: dict
+    baseline_reward: float = 0.0
+    baseline_metrics: dict = field(default_factory=dict)
+
+
+class BaselineSolver:
+    """经典布线器 baseline 解生成器（SubTask 14.2）。
+
+    用 RoutingEnv（内含 A* GridRouter）对网表执行布局+布线，计算奖励作为 RL 基线。
+    RL 智能体的奖励可与 baseline 对比，评估学习效果。
+
+    方法参考:
+    - LiDAR (ISPD 2025) 经典 A* 光波导布线作为 baseline
+      https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+    - Basso et al., NeurIPS 2025 baseline 解用于奖励对比
+      https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def solve(
+        self,
+        netlist_dict: dict,
+        canvas_w: float = 1000.0,
+        canvas_h: float = 1000.0,
+        grid_size: float = 10.0,
+    ) -> DatasetSample:
+        """对单个网表生成 baseline 解并标注奖励。
+
+        Args:
+            netlist_dict: 网表字典（YAML 可序列化）。
+            canvas_w: 画布宽（μm）。
+            canvas_h: 画布高（μm）。
+            grid_size: 网格大小（μm）。
+
+        Returns:
+            含 baseline 奖励与指标的 ``DatasetSample``。
+        """
+        from polaris.engine.floorplan_env import FloorplanEnv
+        from polaris.engine.netlist import load_netlist
+        from polaris.router.routing_env import RoutingEnv
+
+        net, devices, _ = load_netlist(netlist_dict)
+        # 随机布局（baseline 不学习，仅随机放置）
+        fp_env = FloorplanEnv(
+            net, devices,
+            canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size,
+        )
+        fp_env.reset()
+        for _ in range(len(devices)):
+            fp_env.step(fp_env.action_space.sample())
+
+        # 经典 A* 布线
+        rt_env = RoutingEnv(
+            net, fp_env.state.placements,
+            canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size,
+        )
+        obs, _ = rt_env.reset()
+        total_reward = 0.0
+        for _ in range(len(net.connections)):
+            obs, reward, terminated, _, _ = rt_env.step(np.zeros(3, dtype=np.float32))
+            total_reward += reward
+            if terminated:
+                break
+
+        metrics = rt_env.total_metrics()
+        return DatasetSample(
+            netlist=netlist_dict,
+            baseline_reward=total_reward,
+            baseline_metrics=metrics,
+        )
+
+
+def generate_training_dataset(
+    config: DatasetConfig | None = None,
+    canvas_w: float = 1000.0,
+    canvas_h: float = 1000.0,
+    grid_size: float = 10.0,
+) -> list[DatasetSample]:
+    """生成完整训练数据集（含 baseline 解与奖励标注）。
+
+    对每个生成的网表用 BaselineSolver 求解并标注奖励，
+    供 PPO 训练时对比评估。
+
+    Args:
+        config: 数据集配置。
+        canvas_w: 画布宽（μm）。
+        canvas_h: 画布高（μm）。
+        grid_size: 网格大小（μm）。
+
+    Returns:
+        ``DatasetSample`` 列表。
+    """
+    config = config or DatasetConfig()
+    netlists = generate_dataset(config)
+    solver = BaselineSolver()
+    samples: list[DatasetSample] = []
+    for nl in netlists:
+        np.random.seed(config.seed)  # 可复现
+        sample = solver.solve(nl, canvas_w, canvas_h, grid_size)
+        samples.append(sample)
+    return samples

@@ -3,11 +3,20 @@
 实现网格布线（A*/Lee 基线）+ 弯曲半径约束 + 波导间距约束 + 交叉最小化
 + 等长路径约束（MZI 臂、差分对）+ S 弯/弯曲路径生成。
 
-方法参考：
-- Cheng et al., NeurIPS 2022 一次性生成式布线模型
-  来源: https://openreview.net/pdf?id=uNYqDfPEDD8
-- A*/Lee 算法：经典网格布线（Hart, Nilsson & Raphael 1968）
-- S 弯/欧拉曲线：光波导标准方法（贝塞尔/欧拉曲线）
+方法参考（方案检索，见项目规则 1.1）：
+- A* 搜索算法（经典网格寻路，Hart, Nilsson & Raphael 1968）
+  https://en.wikipedia.org/wiki/A*_search_algorithm
+- Cheng et al., NeurIPS 2022 一次性生成式布线模型（SJTU+华为）
+  https://openreview.net/pdf?id=uNYqDfPEDD8
+- LiDAR (ISPD 2025) 曲线感知 A* 光波导详细布线（grid-based curvy-aware A*）
+  https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+- LiDAR 2.0 分层曲线波导布线（Manhattan/非 Manhattan 状态、弯曲半径约束）
+  https://arxiv.org/html/2505.17239v2
+- 欧拉弯曲（clothoid）平滑过渡，曲率线性变化降低弯曲损耗
+  来源: Fujisawa et al., Opt. Express 25, 9150 (2017)
+  https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
+- Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件制造鲁棒性
+  https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
 - 弯曲半径约束：SOI 2-6μm / SiN 50-100μm（见 spec.md）
 """
 
@@ -179,6 +188,14 @@ def euler_bend(
 
     欧拉弯曲（clothoid）曲率从 0 线性增加到 1/R，过渡平滑，
     是低损耗波导弯曲的标准选择。
+
+    来源:
+    - Fujisawa et al., Opt. Express 25, 9150 (2017) 首次将 clothoid 曲线
+      用于硅波导 90° 弯曲，损耗显著低于圆弧弯曲
+      https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
+    - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件
+      制造鲁棒性（RAMZI 交错滤波器）
+      https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
     """
     angle = math.radians(angle_deg)
     # 欧拉螺旋参数

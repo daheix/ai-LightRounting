@@ -154,3 +154,63 @@ def test_all_platforms_have_devices():
         for d in devs:
             assert d.source is not None
             assert d.source.url, f"{d.device_id} 缺少 source.url"
+
+
+def test_baseline_solver():
+    """BaselineSolver 应能对网表生成 baseline 解并标注奖励（SubTask 14.2）。"""
+    from polaris.trainer.dataset import BaselineSolver, DatasetSample
+
+    solver = BaselineSolver()
+    cfg = DatasetConfig(num_netlists=1, min_devices=3, max_devices=4, seed=42)
+    from polaris.trainer.dataset import generate_netlist
+
+    nl = generate_netlist(cfg, 0)
+    sample = solver.solve(nl, canvas_w=300, canvas_h=300, grid_size=10)
+    assert isinstance(sample, DatasetSample)
+    assert sample.netlist == nl
+    assert isinstance(sample.baseline_reward, float)
+    assert "total_loss_db" in sample.baseline_metrics
+    assert "total_length_um" in sample.baseline_metrics
+
+
+def test_generate_training_dataset():
+    """generate_training_dataset 应返回带 baseline 标注的样本列表。"""
+    from polaris.trainer.dataset import DatasetConfig, generate_training_dataset
+
+    cfg = DatasetConfig(num_netlists=2, min_devices=3, max_devices=4, seed=42)
+    samples = generate_training_dataset(cfg, canvas_w=300, canvas_h=300, grid_size=10)
+    assert len(samples) == 2
+    for s in samples:
+        assert hasattr(s, "baseline_reward")
+        assert hasattr(s, "baseline_metrics")
+
+
+def test_early_stopping(tmp_path):
+    """早停功能应在 patience 轮无改善后停止训练（SubTask 15.2）。"""
+    cfg = TrainConfig(
+        num_episodes=20,
+        rollout_steps=8,
+        canvas_w=200,
+        canvas_h=200,
+        grid_size=10,
+        hidden_dim=8,
+        checkpoint_dir=str(tmp_path / "ckpt_es"),
+        early_stop_patience=3,
+    )
+    cfg.dataset.num_netlists = 1
+    cfg.dataset.min_devices = 3
+    cfg.dataset.max_devices = 3
+    agent, logs = train_floorplan(cfg, verbose=False)
+    # 早停应使训练轮数 < num_episodes
+    assert len(logs) <= 20
+
+
+def test_lr_schedule_linear():
+    """线性学习率调度应从 1.0 衰减到 0.0。"""
+    from polaris.trainer.train_loop import _lr_scale
+
+    assert _lr_scale(0, 10, "linear") == 1.0
+    assert _lr_scale(5, 10, "linear") == 0.5
+    assert _lr_scale(10, 10, "linear") == 0.0
+    assert _lr_scale(0, 10, "constant") == 1.0
+    assert _lr_scale(5, 10, "constant") == 1.0

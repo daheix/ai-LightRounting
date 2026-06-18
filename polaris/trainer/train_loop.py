@@ -26,7 +26,24 @@ from polaris.trainer.ppo import PPOAgent, PPOConfig
 
 @dataclass
 class TrainConfig:
-    """训练配置。"""
+    """训练配置。
+
+    Attributes:
+        ppo: PPO 超参数。
+        dataset: 数据集配置。
+        num_episodes: 训练轮数。
+        rollout_steps: 每轮采样步数。
+        canvas_w: 画布宽（μm）。
+        canvas_h: 画布高（μm）。
+        grid_size: 网格大小（μm）。
+        hidden_dim: 隐藏层维度。
+        checkpoint_dir: 检查点目录。
+        checkpoint_every: 每多少轮保存检查点。
+        log_every: 每多少轮打印日志。
+        seed: 随机种子。
+        early_stop_patience: 早停耐心值（连续多少轮无改善则停止，0=禁用）。
+        lr_schedule: 学习率调度（"constant"=恒定，"linear"=线性衰减）。
+    """
 
     ppo: PPOConfig = field(default_factory=PPOConfig)
     dataset: DatasetConfig = field(default_factory=DatasetConfig)
@@ -40,6 +57,26 @@ class TrainConfig:
     checkpoint_every: int = 10
     log_every: int = 1
     seed: int = 42
+    early_stop_patience: int = 0  # 0=禁用早停
+    lr_schedule: str = "constant"  # "constant" 或 "linear"
+
+
+def _lr_scale(ep: int, total: int, schedule: str) -> float:
+    """计算当前轮的学习率缩放因子。
+
+    Args:
+        ep: 当前轮次（0-based）。
+        total: 总轮数。
+        schedule: "constant" 返回 1.0；"linear" 从 1.0 线性衰减到 0。
+
+    Returns:
+        学习率缩放因子（0.0~1.0）。
+    """
+    if schedule == "linear":
+        if total <= 0:
+            return 1.0
+        return max(0.0, 1.0 - ep / total)
+    return 1.0
 
 
 def _obs_to_vector(obs: dict) -> np.ndarray:
@@ -99,7 +136,14 @@ def train_floorplan(
     ckpt_dir = Path(config.checkpoint_dir)
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
+    best_reward = -float("inf")
+    no_improve = 0  # 早停计数器
+
     for ep in range(config.num_episodes):
+        # 学习率调度（线性衰减）
+        lr_scale = _lr_scale(ep, config.num_episodes, config.lr_schedule)
+        if lr_scale < 1.0 and hasattr(agent, "optimizer"):
+            agent.optimizer.lr = config.ppo.lr * lr_scale
         nl = netlists[ep % len(netlists)]
         net, devices, _ = load_netlist(nl)
         env = FloorplanEnv(
@@ -138,6 +182,7 @@ def train_floorplan(
             "netlist": nl["name"],
             "ep_reward": ep_reward,
             "steps": steps,
+            "lr_scale": lr_scale,
             **metrics,
         }
         logs.append(log)
@@ -145,8 +190,19 @@ def train_floorplan(
             print(
                 f"ep {ep:3d} | reward {ep_reward:8.3f} | "
                 f"policy {metrics['policy_loss']:.4f} | "
-                f"value {metrics['value_loss']:.4f}"
+                f"value {metrics['value_loss']:.4f} | "
+                f"lr_scale {lr_scale:.3f}"
             )
+        # 早停检测
+        if ep_reward > best_reward:
+            best_reward = ep_reward
+            no_improve = 0
+        else:
+            no_improve += 1
+        if config.early_stop_patience > 0 and no_improve >= config.early_stop_patience:
+            if verbose:
+                print(f"早停：连续 {no_improve} 轮无改善，停止训练")
+            break
         # checkpoint
         if (ep + 1) % config.checkpoint_every == 0:
             agent.save(ckpt_dir / f"floorplan_ep{ep + 1}.json")
