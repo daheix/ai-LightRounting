@@ -178,7 +178,9 @@ class GridRouter:
             _f, g, x, y, last_dir, straight = heapq.heappop(open_h)
             if (x, y) == goal:
                 return self._reconstruct_path(came_from, (x, y), (last_dir, straight))
-            for nx, ny, d, new_straight in self._get_neighbors((x, y), (last_dir, straight), blocked):
+            for nx, ny, d, new_straight in self._get_neighbors(
+                (x, y), (last_dir, straight), blocked
+            ):
                 new_state = (nx, ny, d, new_straight)
                 ng = g + 1
                 if ng < g_score.get(new_state, 1 << 30):
@@ -439,9 +441,7 @@ class RouteConnectionConfig:
 _PLATFORM_LOSS_DB_CM = {"SOI": 2.0, "SiN": 0.1, "LNOI": 0.4}
 
 
-def _build_router_for_platform(
-    config: RouteConnectionConfig, platform: str
-) -> GridRouter:
+def _build_router_for_platform(config: RouteConnectionConfig, platform: str) -> GridRouter:
     """根据配置与平台约束构建 GridRouter 并添加障碍。"""
     cons = get_platform_constraints(platform)
     grid_w = int(config.canvas_w / config.grid_size)
@@ -468,9 +468,7 @@ def _grid_path_to_points(
 ) -> list[tuple[float, float]]:
     """将网格路径转换为画布坐标点，起终点对齐到精确坐标。"""
     if grid_path is None:
-        raise RuntimeError(
-            f"A* 布线失败：无法找到从 {start} 到 {end} 的可行路径"
-        )
+        raise RuntimeError(f"A* 布线失败：无法找到从 {start} 到 {end} 的可行路径")
     pts = [(g[0] * config.grid_size, g[1] * config.grid_size) for g in grid_path]
     if pts:
         pts[0] = start

@@ -74,9 +74,7 @@ def test_device_source_url_starts_with_http(name: str) -> None:
     """每个 Device 的 source.url 须以 http 开头。"""
     dev = SOI_DEVICES[name]()
     assert dev.source is not None, f"{name} source 字段为 None"
-    assert dev.source.url.startswith("http"), (
-        f"{name} source.url 不以 http 开头: {dev.source.url}"
-    )
+    assert dev.source.url.startswith("http"), f"{name} source.url 不以 http 开头: {dev.source.url}"
 
 
 @pytest.mark.parametrize("name", _EXPECTED_DEVICE_NAMES)
@@ -120,10 +118,20 @@ def test_detector_category() -> None:
 def test_passive_devices_category() -> None:
     """被动器件应为 passive 类别。"""
     passive_names = [
-        "strip_waveguide", "rib_waveguide", "bend", "directional_coupler",
-        "mmi_1x2", "mmi_2x2", "mzi", "ring_resonator",
-        "grating_coupler_1d", "grating_coupler_2d", "edge_coupler",
-        "y_branch", "crossing", "double_ring_filter",
+        "strip_waveguide",
+        "rib_waveguide",
+        "bend",
+        "directional_coupler",
+        "mmi_1x2",
+        "mmi_2x2",
+        "mzi",
+        "ring_resonator",
+        "grating_coupler_1d",
+        "grating_coupler_2d",
+        "edge_coupler",
+        "y_branch",
+        "crossing",
+        "double_ring_filter",
     ]
     for name in passive_names:
         dev = SOI_DEVICES[name]()

@@ -31,6 +31,7 @@ from polaris.pdk.source import Source
 # 序列化辅助函数（Device/Port/Source/BoundingBox ↔ dict）
 # ---------------------------------------------------------------------------
 
+
 def _port_to_dict(port: Port) -> dict[str, Any]:
     """将 Port 序列化为可 JSON/YAML 序列化的字典。"""
     return {
@@ -203,6 +204,7 @@ class CatalogSerializerMixin:
 # DeviceCatalog 注册表
 # ---------------------------------------------------------------------------
 
+
 class DeviceCatalog(CatalogSerializerMixin):
     """光器件清单注册表，支持按平台/类别检索与序列化。
 
@@ -251,9 +253,7 @@ class DeviceCatalog(CatalogSerializerMixin):
             device = factory()
             self.register(device)
 
-    def register_platform(
-        self, platform: str, factories: dict[str, Callable[[], Device]]
-    ) -> None:
+    def register_platform(self, platform: str, factories: dict[str, Callable[[], Device]]) -> None:
         """从平台器件工厂字典批量注册（``register_all_from_platform`` 的别名）。
 
         保留以兼容既有调用方。
@@ -297,9 +297,7 @@ class DeviceCatalog(CatalogSerializerMixin):
             try:
                 return self._by_name[key]
             except KeyError:
-                raise KeyError(
-                    f"器件 '{device_id}' (平台 {platform}) 不在清单中"
-                ) from None
+                raise KeyError(f"器件 '{device_id}' (平台 {platform}) 不在清单中") from None
         try:
             return self._devices[device_id]
         except KeyError:
@@ -341,9 +339,7 @@ class DeviceCatalog(CatalogSerializerMixin):
         """按平台/类别组合检索（``search`` 的别名，兼容既有调用方）。"""
         return self.search(platform=platform, category=category)
 
-    def search(
-        self, platform: str | None = None, category: str | None = None
-    ) -> list[Device]:
+    def search(self, platform: str | None = None, category: str | None = None) -> list[Device]:
         """组合检索（平台+类别）。
 
         任一参数为 None 时表示该维度不过滤；两者均提供时取交集。
@@ -411,6 +407,7 @@ class DeviceCatalog(CatalogSerializerMixin):
 # ---------------------------------------------------------------------------
 # 默认目录加载函数
 # ---------------------------------------------------------------------------
+
 
 def default_catalog() -> DeviceCatalog:
     """创建并加载包含四大平台所有器件的默认目录。

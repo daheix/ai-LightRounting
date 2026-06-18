@@ -72,21 +72,15 @@ def test_device_ports_not_empty(device_name: str) -> None:
 def test_device_bbox_valid(device_name: str) -> None:
     """每个 Device 的 bbox 须合法（xmin<xmax, ymin<ymax）。"""
     dev = INP_DEVICES[device_name]()
-    assert dev.bbox.xmax > dev.bbox.xmin, (
-        f"{device_name} 的 bbox xmax<=xmin: {dev.bbox}"
-    )
-    assert dev.bbox.ymax > dev.bbox.ymin, (
-        f"{device_name} 的 bbox ymax<=ymin: {dev.bbox}"
-    )
+    assert dev.bbox.xmax > dev.bbox.xmin, f"{device_name} 的 bbox xmax<=xmin: {dev.bbox}"
+    assert dev.bbox.ymax > dev.bbox.ymin, f"{device_name} 的 bbox ymax<=ymin: {dev.bbox}"
 
 
 @pytest.mark.parametrize("device_name", _ALL_DEVICE_NAMES)
 def test_device_constraints_present(device_name: str) -> None:
     """每个 Device 的 constraints 须包含最小间距约束。"""
     dev = INP_DEVICES[device_name]()
-    assert "min_spacing_um" in dev.constraints, (
-        f"{device_name} 的 constraints 缺少 min_spacing_um"
-    )
+    assert "min_spacing_um" in dev.constraints, f"{device_name} 的 constraints 缺少 min_spacing_um"
     assert dev.constraints["min_spacing_um"] > 0
 
 
@@ -94,11 +88,16 @@ def test_device_constraints_present(device_name: str) -> None:
 # 特定器件端口校验
 # ---------------------------------------------------------------------------
 
+
 def test_lasers_have_output_port() -> None:
     """激光器类器件须有 output 端口。"""
     laser_names = [
-        "dfb_laser", "dbr_laser", "sgdbr_laser",
-        "dfb_laser_oband", "dfb_laser_coherent", "imos_dfb_laser",
+        "dfb_laser",
+        "dbr_laser",
+        "sgdbr_laser",
+        "dfb_laser_oband",
+        "dfb_laser_coherent",
+        "imos_dfb_laser",
     ]
     for name in laser_names:
         dev = INP_DEVICES[name]()
@@ -134,6 +133,7 @@ def test_waveguide_has_in_and_out_ports() -> None:
 # ---------------------------------------------------------------------------
 # 特定器件参数校验（真实文献参数核对）
 # ---------------------------------------------------------------------------
+
 
 def test_inp_waveguide_params() -> None:
     """InP 有源波导参数须符合文献（宽 1.5-2.5μm，SSC 模场 10×7μm）。"""
@@ -213,6 +213,7 @@ def test_imos_dfb_laser_params() -> None:
 # ---------------------------------------------------------------------------
 # 器件变换不变性校验（translate/rotate 后 source 不变）
 # ---------------------------------------------------------------------------
+
 
 def test_translate_preserves_source() -> None:
     """translate 后 source 字段应保持不变（溯源数据不可篡改）。"""

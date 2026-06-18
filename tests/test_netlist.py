@@ -109,9 +109,7 @@ def test_parse_dict_connection_format():
             "wg1": {"component": "strip_waveguide", "platform": "SOI"},
             "wg2": {"component": "strip_waveguide", "platform": "SOI"},
         },
-        "connections": [
-            {"src": "wg1", "src_port": "out", "dst": "wg2", "dst_port": "in"}
-        ],
+        "connections": [{"src": "wg1", "src_port": "out", "dst": "wg2", "dst_port": "in"}],
     }
     net = parse_netlist(data)
     assert len(net.connections) == 1

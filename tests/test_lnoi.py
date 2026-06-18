@@ -84,16 +84,10 @@ def test_params_non_empty(factory) -> None:
 def test_constraints_contain_bend_radius_and_spacing(factory) -> None:
     """约束须含最小弯曲半径（50-100μm）与最小间距。"""
     dev = factory()
-    assert "min_bend_radius_um" in dev.constraints, (
-        f"{dev.device_id} 缺少 min_bend_radius_um 约束"
-    )
+    assert "min_bend_radius_um" in dev.constraints, f"{dev.device_id} 缺少 min_bend_radius_um 约束"
     bend = dev.constraints["min_bend_radius_um"]
-    assert 50.0 <= bend <= 100.0, (
-        f"{dev.device_id} 弯曲半径 {bend} 不在 50-100μm 区间"
-    )
-    assert "min_spacing_um" in dev.constraints, (
-        f"{dev.device_id} 缺少 min_spacing_um 约束"
-    )
+    assert 50.0 <= bend <= 100.0, f"{dev.device_id} 弯曲半径 {bend} 不在 50-100μm 区间"
+    assert "min_spacing_um" in dev.constraints, f"{dev.device_id} 缺少 min_spacing_um 约束"
     assert dev.constraints["min_spacing_um"] > 0
 
 

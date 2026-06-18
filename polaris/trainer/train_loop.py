@@ -255,6 +255,36 @@ def _build_routing_env(net, devices, config: TrainConfig):
     )
 
 
+def _init_floorplan_training(
+    config: TrainConfig,
+    agent: PPOAgent | None,
+) -> tuple[PPOAgent, list, tuple[int, int], Path]:
+    """初始化布局训练：生成数据集、推断维度、创建智能体与检查点目录。"""
+    np.random.seed(config.seed)
+    netlists = generate_dataset(config.dataset)
+    net0, devices0, _ = load_netlist(netlists[0])
+    env0 = FloorplanEnv(
+        net0,
+        devices0,
+        canvas_w=config.canvas_w,
+        canvas_h=config.canvas_h,
+        grid_size=config.grid_size,
+    )
+    obs_dim = _infer_obs_dim(env0)
+    action_dim = int(np.prod(env0.action_space.shape))
+    dims = (obs_dim, action_dim)
+    if agent is None:
+        agent = PPOAgent(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            config=config.ppo,
+            hidden_dim=config.hidden_dim,
+        )
+    ckpt_dir = Path(config.checkpoint_dir)
+    ckpt_dir.mkdir(parents=True, exist_ok=True)
+    return agent, netlists, dims, ckpt_dir
+
+
 def _run_floorplan_episode(
     agent: PPOAgent,
     config: TrainConfig,
@@ -268,14 +298,14 @@ def _run_floorplan_episode(
     nl = netlists[ep % len(netlists)]
     net, devices, _ = load_netlist(nl)
     env = FloorplanEnv(
-        net, devices,
-        canvas_w=config.canvas_w, canvas_h=config.canvas_h,
+        net,
+        devices,
+        canvas_w=config.canvas_w,
+        canvas_h=config.canvas_h,
         grid_size=config.grid_size,
     )
     obs, _ = env.reset()
-    ep_reward, steps = _collect_floorplan_rollout(
-        agent, env, obs, dims, config.rollout_steps
-    )
+    ep_reward, steps = _collect_floorplan_rollout(agent, env, obs, dims, config.rollout_steps)
     metrics = agent.update(last_value=0.0)
     log = {
         "episode": ep,
@@ -300,9 +330,7 @@ def _run_routing_episode(
     net, devices, _ = load_netlist(nl)
     env = _build_routing_env(net, devices, config)
     obs, _ = env.reset()
-    ep_reward, steps = _collect_routing_rollout(
-        agent, env, obs, obs_dim, config.rollout_steps
-    )
+    ep_reward, steps = _collect_routing_rollout(agent, env, obs, obs_dim, config.rollout_steps)
     metrics = agent.update(last_value=0.0)
     return {
         "episode": ep,
@@ -330,29 +358,8 @@ def train_floorplan(
         (训练后的 agent, 训练日志列表)。
     """
     config = config or TrainConfig()
-    np.random.seed(config.seed)
-    netlists = generate_dataset(config.dataset)
+    agent, netlists, dims, ckpt_dir = _init_floorplan_training(config, agent)
     logs: list[dict] = []
-
-    # 用第一个网表推断 obs/action 维度
-    net0, devices0, _ = load_netlist(netlists[0])
-    env0 = FloorplanEnv(
-        net0, devices0,
-        canvas_w=config.canvas_w, canvas_h=config.canvas_h,
-        grid_size=config.grid_size,
-    )
-    obs_dim = _infer_obs_dim(env0)
-    action_dim = int(np.prod(env0.action_space.shape))
-    dims = (obs_dim, action_dim)
-
-    if agent is None:
-        agent = PPOAgent(
-            obs_dim=obs_dim, action_dim=action_dim,
-            config=config.ppo, hidden_dim=config.hidden_dim,
-        )
-
-    ckpt_dir = Path(config.checkpoint_dir)
-    ckpt_dir.mkdir(parents=True, exist_ok=True)
     best_reward = -float("inf")
     no_improve = 0
 
@@ -391,8 +398,10 @@ def train_routing(
 
     if agent is None:
         agent = PPOAgent(
-            obs_dim=obs_dim, action_dim=action_dim,
-            config=config.ppo, hidden_dim=config.hidden_dim,
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            config=config.ppo,
+            hidden_dim=config.hidden_dim,
         )
 
     ckpt_dir = Path(config.checkpoint_dir)

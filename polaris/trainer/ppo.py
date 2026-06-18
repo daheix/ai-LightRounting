@@ -71,9 +71,7 @@ class ActorCritic(Module):
             ReLU(),
         )
         self.action_mean = Linear(hidden_dim, action_dim)
-        self.action_log_std = Tensor(
-            np.zeros(action_dim), requires_grad=True
-        )
+        self.action_log_std = Tensor(np.zeros(action_dim), requires_grad=True)
         self.value_head = Linear(hidden_dim, 1)
 
     def forward(self, obs: np.ndarray | Tensor):
@@ -91,7 +89,7 @@ class ActorCritic(Module):
         # 高斯采样
         action = mean.data + std * np.random.randn(*mean.data.shape)
         # logprob = -0.5 * sum(((a-mean)/std)^2) - 0.5*dim*log(2pi) - sum(log std)
-        var = std ** 2
+        var = std**2
         logprob = (
             -0.5 * ((action - mean.data) ** 2 / var).sum(axis=-1)
             - 0.5 * mean.data.shape[-1] * math.log(2 * math.pi)
@@ -106,7 +104,7 @@ class ActorCritic(Module):
         """重新评估给定动作的 logprob + value + entropy（用于 PPO 更新）。"""
         mean, value = self.forward(obs)
         std = np.exp(self.action_log_std.data)
-        var = std ** 2
+        var = std**2
         # logprob（直接用 data 计算）
         lp_data = (
             -0.5 * ((actions - mean.data) ** 2 / var).sum(axis=-1)
@@ -165,6 +163,25 @@ class Transition:
     logprob: float
     value: float
     done: bool
+
+
+@dataclass
+class Minibatch:
+    """PPO 小批量数据（将 _process_minibatch 的参数打包，降低函数参数个数）。
+
+    Attributes:
+        obs: 观测数组。
+        actions: 动作数组。
+        old_logprobs: 旧对数概率数组。
+        advantages: 优势数组。
+        returns: 回报数组。
+    """
+
+    obs: np.ndarray
+    actions: np.ndarray
+    old_logprobs: np.ndarray
+    advantages: np.ndarray
+    returns: np.ndarray
 
 
 def compute_gae(
@@ -266,38 +283,31 @@ class PPOAgent:
                 if norm > self.config.max_grad_norm and norm > 1e-8:
                     p.grad = p.grad * (self.config.max_grad_norm / norm)
 
-    def _process_minibatch(
-        self,
-        mb_obs: np.ndarray,
-        mb_actions: np.ndarray,
-        mb_old_lp: np.ndarray,
-        mb_adv: np.ndarray,
-        mb_ret: np.ndarray,
-    ) -> dict:
+    def _process_minibatch(self, mb: Minibatch) -> dict:
         """处理单个小批量：前向 → 损失 → 反向 → 优化器步进，返回指标。"""
         self.optimizer.zero_grad()
-        mean, value = self.ac.forward(mb_obs)
+        mean, value = self.ac.forward(mb.obs)
         std = np.exp(self.ac.action_log_std.data)
         # 新 logprob（可微路径）
-        diff = Tensor(mb_actions) - mean
+        diff = Tensor(mb.actions) - mean
         new_lp = -0.5 * (diff * diff).sum(axis=-1)
-        ratio = np.exp(new_lp.data - mb_old_lp)
+        ratio = np.exp(new_lp.data - mb.old_logprobs)
         # 策略损失（clip）
-        surr1 = ratio * mb_adv
+        surr1 = ratio * mb.advantages
         clip_lo = 1 - self.config.clip_eps
         clip_hi = 1 + self.config.clip_eps
-        surr2 = np.clip(ratio, clip_lo, clip_hi) * mb_adv
+        surr2 = np.clip(ratio, clip_lo, clip_hi) * mb.advantages
         policy_loss = -np.minimum(surr1, surr2).mean()
         # 价值损失
         value_pred = value.data.flatten()
-        value_loss = ((mb_ret - value_pred) ** 2).mean()
+        value_loss = ((mb.returns - value_pred) ** 2).mean()
         # 熵（高斯）
         ent = 0.5 * mean.data.shape[-1] * (1 + math.log(2 * math.pi))
         entropy = np.array(ent + np.log(std).sum())
         # 总损失（构造可微图）：策略目标 + 价值损失
-        weighted = Tensor(mb_adv) * new_lp
+        weighted = Tensor(mb.advantages) * new_lp
         policy_obj = weighted.mean()
-        v_diff = Tensor(mb_ret) - value.flatten()
+        v_diff = Tensor(mb.returns) - value.flatten()
         value_obj = (v_diff * v_diff).mean()
         total = -policy_obj + self.config.vf_coef * value_obj
         total.backward()
@@ -331,11 +341,15 @@ class PPOAgent:
         for _ in range(self.config.n_epochs):
             np.random.shuffle(indices)
             for start in range(0, n, batch_size):
-                idx = indices[start:start + batch_size]
-                mb_metrics = self._process_minibatch(
-                    obs[idx], actions[idx], old_logprobs[idx],
-                    advantages[idx], returns[idx],
+                idx = indices[start : start + batch_size]
+                mb = Minibatch(
+                    obs=obs[idx],
+                    actions=actions[idx],
+                    old_logprobs=old_logprobs[idx],
+                    advantages=advantages[idx],
+                    returns=returns[idx],
                 )
+                mb_metrics = self._process_minibatch(mb)
                 for k in metrics_sum:
                     metrics_sum[k] += mb_metrics[k]
                 n_updates += 1

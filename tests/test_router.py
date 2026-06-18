@@ -22,7 +22,12 @@ from polaris.router.waveguide_router import (
 
 
 def test_grid_router_basic_path():
-    router = GridRouter(50, 50, grid_size=1.0, constraints=RouterConstraints(min_bend_radius_um=5.0))
+    router = GridRouter(
+        50,
+        50,
+        grid_size=1.0,
+        constraints=RouterConstraints(min_bend_radius_um=5.0),
+    )
     path = router.route((0, 0), (40, 40))
     assert path is not None
     assert path[0] == (0, 0)
@@ -30,7 +35,12 @@ def test_grid_router_basic_path():
 
 
 def test_grid_router_obstacle_avoidance():
-    router = GridRouter(50, 50, grid_size=1.0, constraints=RouterConstraints(min_bend_radius_um=5.0))
+    router = GridRouter(
+        50,
+        50,
+        grid_size=1.0,
+        constraints=RouterConstraints(min_bend_radius_um=5.0),
+    )
     router.add_obstacle(20, 20, 5, 5)
     path = router.route((0, 0), (40, 40))
     assert path is not None
@@ -129,8 +139,12 @@ def test_get_platform_constraints():
 
 def test_route_connection_basic():
     wp = route_connection(
-        (0, 0), (100, 100), platform="SOI",
-        grid_size=2.0, canvas_w=500, canvas_h=500,
+        (0, 0),
+        (100, 100),
+        platform="SOI",
+        grid_size=2.0,
+        canvas_w=500,
+        canvas_h=500,
     )
     assert isinstance(wp, WaveguidePath)
     assert wp.length_um > 0
@@ -140,8 +154,12 @@ def test_route_connection_basic():
 
 def test_route_connection_with_obstacles():
     wp = route_connection(
-        (0, 0), (100, 100), platform="SOI",
-        grid_size=2.0, canvas_w=500, canvas_h=500,
+        (0, 0),
+        (100, 100),
+        platform="SOI",
+        grid_size=2.0,
+        canvas_w=500,
+        canvas_h=500,
         obstacles=[(40, 40, 60, 60)],
     )
     assert wp.length_um > 0
@@ -149,8 +167,12 @@ def test_route_connection_with_obstacles():
 
 def test_route_connection_equal_length():
     wp = route_connection(
-        (0, 0), (50, 0), platform="SOI",
-        grid_size=2.0, canvas_w=500, canvas_h=500,
+        (0, 0),
+        (50, 0),
+        platform="SOI",
+        grid_size=2.0,
+        canvas_w=500,
+        canvas_h=500,
         target_length_um=200.0,
     )
     assert wp.length_um >= 200.0

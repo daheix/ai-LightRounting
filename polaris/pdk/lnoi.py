@@ -46,10 +46,22 @@ def make_lnoi_waveguide() -> Device:
     length_um = 10.0  # 单位波导段长度（μm）
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
+        Port(
+            name="in",
+            x=0.0,
+            y=0.0,
+            direction=Direction.WEST,
+            waveguide_type="lnoi_strip",
+            width=width_um,
+        ),
+        Port(
+            name="out",
+            x=length_um,
+            y=0.0,
+            direction=Direction.EAST,
+            waveguide_type="lnoi_strip",
+            width=width_um,
+        ),
     ]
     bbox = BoundingBox(xmin=0.0, ymin=-width_um / 2, xmax=length_um, ymax=width_um / 2)
     return Device(
@@ -87,7 +99,6 @@ def _make_lnoi_modulator_device(
     length_um: float,
     params: dict,
     source: Source,
-    extra_constraints: dict | None = None,
 ) -> Device:
     """构建 LNOI 调制器 Device（共用 in/out/rf_in/rf_out 端口与包围盒）。
 
@@ -96,26 +107,55 @@ def _make_lnoi_modulator_device(
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
     rf_offset_y = 3.0
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="rf_in", x=0.0, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
-        Port(name="rf_out", x=length_um, y=-rf_offset_y, direction=Direction.SOUTH,
-             waveguide_type="rf_coplanar", width=3.0),
+        Port(
+            name="in",
+            x=0.0,
+            y=0.0,
+            direction=Direction.WEST,
+            waveguide_type="lnoi_strip",
+            width=width_um,
+        ),
+        Port(
+            name="out",
+            x=length_um,
+            y=0.0,
+            direction=Direction.EAST,
+            waveguide_type="lnoi_strip",
+            width=width_um,
+        ),
+        Port(
+            name="rf_in",
+            x=0.0,
+            y=-rf_offset_y,
+            direction=Direction.SOUTH,
+            waveguide_type="rf_coplanar",
+            width=3.0,
+        ),
+        Port(
+            name="rf_out",
+            x=length_um,
+            y=-rf_offset_y,
+            direction=Direction.SOUTH,
+            waveguide_type="rf_coplanar",
+            width=3.0,
+        ),
     ]
-    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um,
-                      ymax=width_um / 2)
+    bbox = BoundingBox(xmin=0.0, ymin=-rf_offset_y - 1.5, xmax=length_um, ymax=width_um / 2)
     constraints = {
         "min_bend_radius_um": _LNOI_MIN_BEND_RADIUS_UM,
         "min_spacing_um": _LNOI_MIN_SPACING_UM,
         "electrode_gap_um": 3.0,
-        **(extra_constraints or {}),
     }
     return Device(
-        device_id=device_id, platform="LNOI", category="active", name=name,
-        ports=ports, bbox=bbox, params=params, source=source, constraints=constraints,
+        device_id=device_id,
+        platform="LNOI",
+        category="active",
+        name=name,
+        ports=ports,
+        bbox=bbox,
+        params=params,
+        source=source,
+        constraints=constraints,
     )
 
 
@@ -247,13 +287,24 @@ def make_lnoi_photonics_review() -> Device:
     length_um = 10.0  # 参考波导段
     width_um = _LNOI_WAVEGUIDE_WIDTH_UM
     ports = [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type="lnoi_strip", width=width_um),
-        Port(name="out", x=length_um, y=0.0, direction=Direction.EAST,
-             waveguide_type="lnoi_strip", width=width_um),
+        Port(
+            name="in",
+            x=0.0,
+            y=0.0,
+            direction=Direction.WEST,
+            waveguide_type="lnoi_strip",
+            width=width_um,
+        ),
+        Port(
+            name="out",
+            x=length_um,
+            y=0.0,
+            direction=Direction.EAST,
+            waveguide_type="lnoi_strip",
+            width=width_um,
+        ),
     ]
-    bbox = BoundingBox(xmin=0.0, ymin=-width_um / 2, xmax=length_um,
-                       ymax=width_um / 2)
+    bbox = BoundingBox(xmin=0.0, ymin=-width_um / 2, xmax=length_um, ymax=width_um / 2)
     return Device(
         device_id="lnoi_photonics_review",
         platform="LNOI",

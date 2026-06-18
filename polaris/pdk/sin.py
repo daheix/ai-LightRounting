@@ -39,9 +39,7 @@ _SIN_CONSTRAINTS: dict = {
 }
 
 
-def _straight_waveguide_ports(
-    length: float, width: float, waveguide_type: str
-) -> list[Port]:
+def _straight_waveguide_ports(length: float, width: float, waveguide_type: str) -> list[Port]:
     """构造直波导两端端口（in 朝 WEST，out 朝 EAST）。
 
     Args:
@@ -53,10 +51,22 @@ def _straight_waveguide_ports(
         端口列表，坐标相对器件原点。
     """
     return [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type=waveguide_type, width=width),
-        Port(name="out", x=length, y=0.0, direction=Direction.EAST,
-             waveguide_type=waveguide_type, width=width),
+        Port(
+            name="in",
+            x=0.0,
+            y=0.0,
+            direction=Direction.WEST,
+            waveguide_type=waveguide_type,
+            width=width,
+        ),
+        Port(
+            name="out",
+            x=length,
+            y=0.0,
+            direction=Direction.EAST,
+            waveguide_type=waveguide_type,
+            width=width,
+        ),
     ]
 
 
@@ -74,10 +84,22 @@ def _ring_ports(radius: float, width: float, waveguide_type: str) -> list[Port]:
         端口列表，坐标相对器件原点。
     """
     return [
-        Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
-             waveguide_type=waveguide_type, width=width),
-        Port(name="through", x=2.0 * radius, y=0.0, direction=Direction.EAST,
-             waveguide_type=waveguide_type, width=width),
+        Port(
+            name="in",
+            x=0.0,
+            y=0.0,
+            direction=Direction.WEST,
+            waveguide_type=waveguide_type,
+            width=width,
+        ),
+        Port(
+            name="through",
+            x=2.0 * radius,
+            y=0.0,
+            direction=Direction.EAST,
+            waveguide_type=waveguide_type,
+            width=width,
+        ),
     ]
 
 
@@ -106,8 +128,8 @@ def make_sin_waveguide_lpcvd() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_strip_lpcvd"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm": 0.1,            # 典型值 <0.1 dB/cm
-            "loss_min_db_m": 2.0,         # 最低 2 dB/m（0.2 dB/cm）
+            "loss_db_cm": 0.1,  # 典型值 <0.1 dB/cm
+            "loss_min_db_m": 2.0,  # 最低 2 dB/m（0.2 dB/cm）
             "wavelength_range_nm": "405-2500",
             "deposition": "LPCVD",
             "core_width_um": width,
@@ -143,7 +165,7 @@ def make_sin_waveguide_pecvd() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_strip_pecvd"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm": 2.0,            # <2 dB/cm
+            "loss_db_cm": 2.0,  # <2 dB/cm
             "wavelength_range_nm": "405-2500",
             "deposition": "PECVD",
             "core_width_um": width,
@@ -179,8 +201,8 @@ def make_triplex_double_stripe() -> Device:
         ports=_straight_waveguide_ports(length, width, "triplex_double_stripe"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm": 0.1,            # <0.1 dB/cm
-            "loss_min_db_m": 0.1,         # 最低 0.1 dB/m
+            "loss_db_cm": 0.1,  # <0.1 dB/cm
+            "loss_min_db_m": 0.1,  # 最低 0.1 dB/m
             "wavelength_range_nm": "405-2350",
             "fiber_coupling_loss_db": 0.5,  # <0.5 dB/facet
             "core_width_um": width,
@@ -203,8 +225,7 @@ def make_sin_waveguide_damascene() -> Device:
     length = 100.0
     width = 1.5
     src = Source(
-        title="Process Development of Low-Loss LPCVD Silicon Nitride "
-              "Waveguides on 8-Inch Wafer",
+        title="Process Development of Low-Loss LPCVD Silicon Nitride Waveguides on 8-Inch Wafer",
         authors="Li, Z.; Fan, Z.; Zhou, J.; Cong, Q.; Zeng, X.; Zhang, Y.; Jia, L.",
         year=2023,
         url="https://doi.org/10.3390/app13063660",
@@ -217,9 +238,9 @@ def make_sin_waveguide_damascene() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_damascene"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm_1550nm": 0.157,   # 0.157 dB/cm @1550nm
-            "loss_db_cm_1580nm": 0.06,    # 0.06 dB/cm @1580nm
-            "core_thickness_nm": 400,     # 400nm 厚
+            "loss_db_cm_1550nm": 0.157,  # 0.157 dB/cm @1550nm
+            "loss_db_cm_1580nm": 0.06,  # 0.06 dB/cm @1580nm
+            "core_thickness_nm": 400,  # 400nm 厚
             "wafer_size_inch": 8,
             "deposition": "LPCVD",
             "core_width_um": width,
@@ -243,11 +264,11 @@ def make_sin_waveguide_ull() -> Device:
     width = 2.0
     src = Source(
         title="Reducing Waveguide Propagation Loss in SiN Photonic Integrated "
-              "Circuits for Optical Gyroscopes",
+        "Circuits for Optical Gyroscopes",
         authors="PatSnap Eureka",
         year=2026,
         url="https://www.patsnap.com/resources/blog/rd-blog/"
-            "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
+        "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
     )
     return Device(
         device_id="sin_waveguide_ull",
@@ -257,7 +278,7 @@ def make_sin_waveguide_ull() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_ull"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_m": 1.2,             # 1.2 dB/m @1590nm
+            "loss_db_m": 1.2,  # 1.2 dB/m @1590nm
             "wavelength_nm": 1590,
             "institution": "UCSB",
             "core_width_um": width,
@@ -281,11 +302,11 @@ def make_sin_waveguide_epfl() -> Device:
     width = 2.0
     src = Source(
         title="Reducing Waveguide Propagation Loss in SiN Photonic Integrated "
-              "Circuits for Optical Gyroscopes",
+        "Circuits for Optical Gyroscopes",
         authors="PatSnap Eureka",
         year=2026,
         url="https://www.patsnap.com/resources/blog/rd-blog/"
-            "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
+        "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
     )
     return Device(
         device_id="sin_waveguide_epfl",
@@ -295,8 +316,8 @@ def make_sin_waveguide_epfl() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_epfl"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_m": 1.0,             # <1 dB/m
-            "ring_q_factor": 1.0e7,       # Q>10⁷（晶圆级）
+            "loss_db_m": 1.0,  # <1 dB/m
+            "ring_q_factor": 1.0e7,  # Q>10⁷（晶圆级）
             "process": "Damascene reflow + CMP",
             "institution": "EPFL",
             "core_width_um": width,
@@ -320,11 +341,11 @@ def make_sin_waveguide_trench() -> Device:
     width = 2.0
     src = Source(
         title="Reducing Waveguide Propagation Loss in SiN Photonic Integrated "
-              "Circuits for Optical Gyroscopes",
+        "Circuits for Optical Gyroscopes",
         authors="PatSnap Eureka",
         year=2026,
         url="https://www.patsnap.com/resources/blog/rd-blog/"
-            "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
+        "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
     )
     return Device(
         device_id="sin_waveguide_trench",
@@ -334,9 +355,9 @@ def make_sin_waveguide_trench() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_trench"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm": 0.4,            # 0.4 dB/cm @1550nm
+            "loss_db_cm": 0.4,  # 0.4 dB/cm @1550nm
             "wavelength_nm": 1550,
-            "core_thickness_nm": 900,     # 厚核 900nm
+            "core_thickness_nm": 900,  # 厚核 900nm
             "process": "trench-fill",
             "institution": "Twente",
             "core_width_um": width,
@@ -360,11 +381,11 @@ def make_sin_ring_double_stripe() -> Device:
     width = 1.2
     src = Source(
         title="Reducing Waveguide Propagation Loss in SiN Photonic Integrated "
-              "Circuits for Optical Gyroscopes",
+        "Circuits for Optical Gyroscopes",
         authors="PatSnap Eureka",
         year=2026,
         url="https://www.patsnap.com/resources/blog/rd-blog/"
-            "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
+        "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
     )
     return Device(
         device_id="sin_ring_double_stripe",
@@ -372,10 +393,11 @@ def make_sin_ring_double_stripe() -> Device:
         category="passive",
         name="sin_ring_resonator",
         ports=_ring_ports(radius, width, "triplex_double_stripe"),
-        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
-                         xmax=2.0 * radius, ymax=2.0 * radius + width / 2),
+        bbox=BoundingBox(
+            xmin=0.0, ymin=-width / 2, xmax=2.0 * radius, ymax=2.0 * radius + width / 2
+        ),
         params={
-            "loss_db_cm": 0.095,          # 0.095 dB/cm
+            "loss_db_cm": 0.095,  # 0.095 dB/cm
             "radius_um": radius,
             "core_width_um": width,
             "institution": "Twente",
@@ -398,11 +420,11 @@ def make_sin_waveguide_visible() -> Device:
     width = 0.8
     src = Source(
         title="Reducing Waveguide Propagation Loss in SiN Photonic Integrated "
-              "Circuits for Optical Gyroscopes",
+        "Circuits for Optical Gyroscopes",
         authors="PatSnap Eureka",
         year=2026,
         url="https://www.patsnap.com/resources/blog/rd-blog/"
-            "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
+        "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
     )
     return Device(
         device_id="sin_waveguide_visible",
@@ -412,7 +434,7 @@ def make_sin_waveguide_visible() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_visible"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm": 0.1,            # 0.1 dB/cm
+            "loss_db_cm": 0.1,  # 0.1 dB/cm
             "band": "visible",
             "institution": "Myongji",
             "core_width_um": width,
@@ -436,11 +458,11 @@ def make_sin_ring_high_q() -> Device:
     width = 2.5  # 2.5μm 宽对应 Q=37M
     src = Source(
         title="Reducing Waveguide Propagation Loss in SiN Photonic Integrated "
-              "Circuits for Optical Gyroscopes",
+        "Circuits for Optical Gyroscopes",
         authors="PatSnap Eureka",
         year=2026,
         url="https://www.patsnap.com/resources/blog/rd-blog/"
-            "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
+        "si%E2%82%83n%E2%82%84-waveguide-loss-reduction-patsnap-eureka/",
     )
     return Device(
         device_id="sin_ring_high_q",
@@ -448,11 +470,12 @@ def make_sin_ring_high_q() -> Device:
         category="passive",
         name="sin_ring_resonator_high_q",
         ports=_ring_ports(radius, width, "sin_high_q"),
-        bbox=BoundingBox(xmin=0.0, ymin=-width / 2,
-                         xmax=2.0 * radius, ymax=2.0 * radius + width / 2),
+        bbox=BoundingBox(
+            xmin=0.0, ymin=-width / 2, xmax=2.0 * radius, ymax=2.0 * radius + width / 2
+        ),
         params={
-            "q_factor_2p5um": 3.7e7,      # Q 37M（2.5μm 宽）
-            "q_factor_10um": 6.7e7,       # Q 67M（10μm 宽）
+            "q_factor_2p5um": 3.7e7,  # Q 37M（2.5μm 宽）
+            "q_factor_10um": 6.7e7,  # Q 67M（10μm 宽）
             "radius_um": radius,
             "core_width_um": width,
             "institution": "Cornell",
@@ -479,10 +502,22 @@ def make_sin_grating_coupler_1d() -> Device:
     )
     # 光栅耦合器：光纤端口朝上（NORTH），波导输出朝东（EAST）
     ports = [
-        Port(name="fiber", x=10.0, y=10.0, direction=Direction.NORTH,
-             waveguide_type="fiber", width=10.0),
-        Port(name="out", x=20.0, y=10.0, direction=Direction.EAST,
-             waveguide_type="sin_strip", width=1.0),
+        Port(
+            name="fiber",
+            x=10.0,
+            y=10.0,
+            direction=Direction.NORTH,
+            waveguide_type="fiber",
+            width=10.0,
+        ),
+        Port(
+            name="out",
+            x=20.0,
+            y=10.0,
+            direction=Direction.EAST,
+            waveguide_type="sin_strip",
+            width=1.0,
+        ),
     ]
     return Device(
         device_id="sin_grating_coupler_1d",
@@ -492,8 +527,8 @@ def make_sin_grating_coupler_1d() -> Device:
         ports=ports,
         bbox=BoundingBox(xmin=0.0, ymin=0.0, xmax=20.0, ymax=20.0),
         params={
-            "coupling_loss_db": 2.1,      # 峰值耦合损耗 2.1dB
-            "bandwidth_1db_nm": 57,       # 1-dB 带宽 57nm
+            "coupling_loss_db": 2.1,  # 峰值耦合损耗 2.1dB
+            "bandwidth_1db_nm": 57,  # 1-dB 带宽 57nm
             "type": "1D",
             "foundry": "Samsung",
         },
@@ -526,9 +561,9 @@ def make_sin_material() -> Device:
         ports=[],  # 材料本征参数无端口
         bbox=BoundingBox(xmin=0.0, ymin=0.0, xmax=1.0, ymax=1.0),
         params={
-            "bandgap_ev": 5.1,            # Eg~5.1eV
+            "bandgap_ev": 5.1,  # Eg~5.1eV
             "refractive_index_1550nm": 2.0,  # n~2 @1550nm
-            "loss_db_m": 0.045,           # 0.045±0.04 dB/m
+            "loss_db_m": 0.045,  # 0.045±0.04 dB/m
             "loss_db_m_uncertainty": 0.04,
             "thermal_expansion_per_k": 2.35e-6,  # 2.35×10⁻⁶/°C
         },
@@ -594,7 +629,7 @@ def make_sin_waveguide_tsmc() -> Device:
         ports=_straight_waveguide_ports(length, width, "sin_tsmc"),
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "loss_db_cm": 0.23,           # <0.23 dB/cm
+            "loss_db_cm": 0.23,  # <0.23 dB/cm
             "foundry": "TSMC",
             "core_width_um": width,
             "length_um": length,

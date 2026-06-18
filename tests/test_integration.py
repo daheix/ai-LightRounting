@@ -93,15 +93,19 @@ def test_pipeline_cli_run(tmp_path):
     netlist_path.write_text(YAML_NETLIST, encoding="utf-8")
     out_dir = tmp_path / "out"
     cmd_run(
-        type("Args", (), {
-            "netlist": str(netlist_path),
-            "output": str(out_dir),
-            "checkpoint": None,
-            "canvas_w": 400.0,
-            "canvas_h": 400.0,
-            "grid_size": 10.0,
-            "hidden_dim": 64,
-        })()
+        type(
+            "Args",
+            (),
+            {
+                "netlist": str(netlist_path),
+                "output": str(out_dir),
+                "checkpoint": None,
+                "canvas_w": 400.0,
+                "canvas_h": 400.0,
+                "grid_size": 10.0,
+                "hidden_dim": 64,
+            },
+        )()
     )
     assert (out_dir / "layout.gds").exists()
     assert (out_dir / "layout.oas").exists()
@@ -127,18 +131,24 @@ def test_pipeline_cli_train(tmp_path):
     """CLI train 命令应能启动训练。"""
     from polaris.pipeline import cmd_train
 
-    ret = cmd_train(type("Args", (), {
-        "episodes": 2,
-        "rollout_steps": 16,
-        "num_netlists": 2,
-        "min_devices": 3,
-        "max_devices": 4,
-        "canvas_w": 300.0,
-        "canvas_h": 300.0,
-        "grid_size": 10.0,
-        "hidden_dim": 16,
-        "output": str(tmp_path / "ckpt"),
-    })())
+    ret = cmd_train(
+        type(
+            "Args",
+            (),
+            {
+                "episodes": 2,
+                "rollout_steps": 16,
+                "num_netlists": 2,
+                "min_devices": 3,
+                "max_devices": 4,
+                "canvas_w": 300.0,
+                "canvas_h": 300.0,
+                "grid_size": 10.0,
+                "hidden_dim": 16,
+                "output": str(tmp_path / "ckpt"),
+            },
+        )()
+    )
     assert ret == 0
     assert (tmp_path / "ckpt" / "floorplan_final.json").exists()
 

@@ -76,13 +76,23 @@ def _draw_devices(ax, placements: dict[str, Placement], show_ports: bool) -> Non
         h = ymax - ymin
         color = _CATEGORY_COLORS.get(pl.device.category, "#888888")
         rect = Rectangle(
-            (xmin, ymin), w, h,
-            linewidth=1, edgecolor="black", facecolor=color, alpha=0.7,
+            (xmin, ymin),
+            w,
+            h,
+            linewidth=1,
+            edgecolor="black",
+            facecolor=color,
+            alpha=0.7,
         )
         ax.add_patch(rect)
         ax.text(
-            xmin + w / 2, ymin + h / 2, inst_id,
-            ha="center", va="center", fontsize=7, rotation=45,
+            xmin + w / 2,
+            ymin + h / 2,
+            inst_id,
+            ha="center",
+            va="center",
+            fontsize=7,
+            rotation=45,
         )
         if show_ports:
             for _, (px, py) in pl.port_positions().items():
@@ -189,8 +199,10 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
         xmin, ymin, xmax, ymax = pl.bbox_abs()
         layer = layer_map.get(pl.device.category, layer_map["passive"])
         box = db.Box(
-            _um_to_dbu(xmin, dbu), _um_to_dbu(ymin, dbu),
-            _um_to_dbu(xmax, dbu), _um_to_dbu(ymax, dbu),
+            _um_to_dbu(xmin, dbu),
+            _um_to_dbu(ymin, dbu),
+            _um_to_dbu(xmax, dbu),
+            _um_to_dbu(ymax, dbu),
         )
         top.shapes(layer).insert(box)
         if add_ports:
@@ -204,8 +216,10 @@ def _place_port_markers(top, pl, layer_port, dbu) -> None:
     ps = _um_to_dbu(0.5, dbu)
     for _, (px, py) in pl.port_positions().items():
         pbox = db.Box(
-            _um_to_dbu(px, dbu) - ps, _um_to_dbu(py, dbu) - ps,
-            _um_to_dbu(px, dbu) + ps, _um_to_dbu(py, dbu) + ps,
+            _um_to_dbu(px, dbu) - ps,
+            _um_to_dbu(py, dbu) - ps,
+            _um_to_dbu(px, dbu) + ps,
+            _um_to_dbu(py, dbu) + ps,
         )
         top.shapes(layer_port).insert(pbox)
 
@@ -292,11 +306,7 @@ class DRCReport:
 
     @property
     def total_violations(self) -> int:
-        return (
-            self.overlap_violations
-            + self.spacing_violations
-            + self.min_bend_radius_violations
-        )
+        return self.overlap_violations + self.spacing_violations + self.min_bend_radius_violations
 
     @property
     def passed(self) -> bool:
@@ -339,7 +349,7 @@ def _check_bend_radius(paths: dict, min_bend_radius_um: float) -> tuple[int, lis
             dx2 = wp.points[i + 1][0] - wp.points[i][0]
             dy2 = wp.points[i + 1][1] - wp.points[i][1]
             if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
-                seg1_len = (dx1 ** 2 + dy1 ** 2) ** 0.5
+                seg1_len = (dx1**2 + dy1**2) ** 0.5
                 if seg1_len < min_bend_radius_um:
                     violations += 1
                     details.append(

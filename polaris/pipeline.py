@@ -93,8 +93,11 @@ def _place_random(env: FloorplanEnv, n_devices: int) -> None:
 def _place(net, devices, canvas: CanvasConfig, agent=None):
     """布局阶段（用 agent 或随机贪心）。"""
     env = FloorplanEnv(
-        net, devices,
-        canvas_w=canvas.canvas_w, canvas_h=canvas.canvas_h, grid_size=canvas.grid_size,
+        net,
+        devices,
+        canvas_w=canvas.canvas_w,
+        canvas_h=canvas.canvas_h,
+        grid_size=canvas.grid_size,
     )
     env.reset()
     if agent is not None:
@@ -107,8 +110,11 @@ def _place(net, devices, canvas: CanvasConfig, agent=None):
 def _route(net, placements, canvas: CanvasConfig):
     """布线阶段。"""
     env = RoutingEnv(
-        net, placements,
-        canvas_w=canvas.canvas_w, canvas_h=canvas.canvas_h, grid_size=canvas.grid_size,
+        net,
+        placements,
+        canvas_w=canvas.canvas_w,
+        canvas_h=canvas.canvas_h,
+        grid_size=canvas.grid_size,
     )
     env.reset()
     for _ in range(len(net.connections)):
@@ -121,7 +127,9 @@ def _route(net, placements, canvas: CanvasConfig):
 def _render_export_drc(placements, paths, congestion, net_name: str, out: Path):
     """渲染版图、导出 GDS/OASIS、运行 DRC，返回 DRC 报告。"""
     render_layout(
-        placements, paths, congestion,
+        placements,
+        paths,
+        congestion,
         options=RenderOptions(
             title=f"PoLaRIS - {net_name}",
             save_path=str(out / "layout.png"),
@@ -172,7 +180,10 @@ def cmd_run(args):
         from polaris.trainer.train_loop import load_agent
 
         env0 = FloorplanEnv(
-            net, devices, canvas_w=args.canvas_w, canvas_h=args.canvas_h,
+            net,
+            devices,
+            canvas_w=args.canvas_w,
+            canvas_h=args.canvas_h,
             grid_size=args.grid_size,
         )
         from polaris.trainer.train_loop import _obs_to_vector
@@ -182,9 +193,7 @@ def cmd_run(args):
         agent = load_agent(args.checkpoint, obs_dim, action_dim, args.hidden_dim)
         print(f"      加载检查点: {args.checkpoint}")
 
-    canvas = CanvasConfig(
-        canvas_w=args.canvas_w, canvas_h=args.canvas_h, grid_size=args.grid_size
-    )
+    canvas = CanvasConfig(canvas_w=args.canvas_w, canvas_h=args.canvas_h, grid_size=args.grid_size)
 
     print("[2/5] 布局...")
     placements = _place(net, devices, canvas, agent)

@@ -34,7 +34,8 @@ def test_compute_gae_simple():
 def test_ppo_update_runs():
     np.random.seed(0)
     agent = PPOAgent(
-        obs_dim=4, action_dim=2,
+        obs_dim=4,
+        action_dim=2,
         config=PPOConfig(lr=1e-3, n_epochs=2, batch_size=16),
         hidden_dim=32,
     )
