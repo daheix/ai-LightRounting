@@ -34,6 +34,41 @@ from polaris.sim.types import ModelFunc, SDict
 
 
 @dataclass
+class WavelengthSweepConfig:
+    """波长扫描配置（规则 4.1：参数打包降低函数参数个数）。
+
+    将 sweep_wavelength 的起始/结束波长与采样点数打包为单一对象，
+    支持位置参数与 config 关键字两种向后兼容调用方式。
+
+    来源:
+    - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
+    - SAX 仿真器: https://flaport.github.io/sax/
+    """
+
+    wl_start: float = 1.5
+    wl_end: float = 1.6
+    n_points: int = 1000
+
+
+def _resolve_sweep_config(args: tuple, model_kwargs: dict) -> WavelengthSweepConfig:
+    """从位置参数或关键字参数解析波长扫描配置。
+
+    向后兼容：
+    - 位置参数 (wl_start, wl_end, n_points)
+    - 关键字 config=WavelengthSweepConfig(...)
+    - 默认配置
+    """
+    if len(args) == 3:
+        return WavelengthSweepConfig(args[0], args[1], args[2])
+    if len(args) == 1 and isinstance(args[0], WavelengthSweepConfig):
+        return args[0]
+    config = model_kwargs.pop("config", None)
+    if config is not None:
+        return config
+    return WavelengthSweepConfig()
+
+
+@dataclass
 class CircuitSimulator:
     """电路级频率域仿真器。
 
@@ -89,24 +124,26 @@ class CircuitSimulator:
     def sweep_wavelength(
         self,
         netlist: dict,
-        wl_start: float = 1.5,
-        wl_end: float = 1.6,
-        n_points: int = 1000,
+        *args,
         **model_kwargs,
     ) -> tuple[np.ndarray, SDict]:
         """波长扫描仿真。
 
+        向后兼容调用方式：
+        - sweep_wavelength(netlist, wl_start, wl_end, n_points)  # 位置参数
+        - sweep_wavelength(netlist, config=WavelengthSweepConfig(...))  # 配置对象
+        - sweep_wavelength(netlist)  # 默认 1.5-1.6μm 1000点
+
         Args:
             netlist: 网表。
-            wl_start: 起始波长（μm）。
-            wl_end: 结束波长（μm）。
-            n_points: 采样点数。
-            **model_kwargs: 器件模型参数。
+            *args: 位置参数 (wl_start, wl_end, n_points) 或单个 WavelengthSweepConfig。
+            **model_kwargs: 器件模型参数（含可选 config 关键字）。
 
         Returns:
             (波长数组, S 参数字典)
         """
-        wavelengths = np.linspace(wl_start, wl_end, n_points)
+        config = _resolve_sweep_config(args, model_kwargs)
+        wavelengths = np.linspace(config.wl_start, config.wl_end, config.n_points)
         s = self.simulate(netlist, wavelengths, **model_kwargs)
         return wavelengths, s
 

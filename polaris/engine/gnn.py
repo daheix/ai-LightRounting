@@ -17,9 +17,26 @@ torch 无法安装时，使用 ``polaris.nn`` 纯 NumPy 复刻实现（规则 3�
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from polaris.nn import Linear, Module, ReLU, Sequential, Tensor
+
+
+@dataclass
+class StateEncoderConfig:
+    """StateEncoder 超参数配置。
+
+    Attributes:
+        hidden_dim: 隐藏层维度。
+        out_dim: 输出状态向量维度。
+        num_gnn_layers: GNN 消息传递层数。
+    """
+
+    hidden_dim: int = 64
+    out_dim: int = 128
+    num_gnn_layers: int = 2
 
 
 class GraphEncoder(Module):
@@ -94,27 +111,30 @@ class StateEncoder(Module):
         self,
         node_feat_dim: int,
         grid_size: int,
-        hidden_dim: int = 64,
-        out_dim: int = 128,
-        num_gnn_layers: int = 2,
+        config: StateEncoderConfig | None = None,
+        **kwargs,
     ) -> None:
+        """初始化状态编码器。
+
+        Args:
+            node_feat_dim: 节点特征维度。
+            grid_size: 栅格特征维度（grid_w）。
+            config: 超参数配置；未提供时按 ``kwargs`` 构建默认配置。
+            **kwargs: 向后兼容的旧关键字参数
+                （``hidden_dim``/``out_dim``/``num_gnn_layers``）。
+        """
         super().__init__()
+        cfg = config or StateEncoderConfig(**kwargs)
         self.gnn = GraphEncoder(
             in_dim=node_feat_dim,
-            hidden_dim=hidden_dim,
-            out_dim=hidden_dim,
-            num_layers=num_gnn_layers,
+            hidden_dim=cfg.hidden_dim,
+            out_dim=cfg.hidden_dim,
+            num_layers=cfg.num_gnn_layers,
         )
         # 栅格特征展平后投影
-        self.grid_proj = Sequential(
-            Linear(grid_size, hidden_dim),
-            ReLU(),
-        )
+        self.grid_proj = Sequential(Linear(grid_size, cfg.hidden_dim), ReLU())
         # 融合：图嵌入均值 + 栅格嵌入
-        self.fuse = Sequential(
-            Linear(hidden_dim * 2, out_dim),
-            ReLU(),
-        )
+        self.fuse = Sequential(Linear(cfg.hidden_dim * 2, cfg.out_dim), ReLU())
 
     def forward(
         self,
@@ -180,6 +200,7 @@ def edges_from_graph(graph, instance_ids: list[str]) -> np.ndarray:
 __all__ = [
     "GraphEncoder",
     "StateEncoder",
+    "StateEncoderConfig",
     "build_node_features",
     "edges_from_graph",
 ]

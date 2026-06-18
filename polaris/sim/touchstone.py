@@ -97,23 +97,22 @@ def _build_sdict(s_matrix: np.ndarray, n_ports: int) -> SDict:
     return sdict
 
 
-def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
-    """加载 Touchstone S 参数文件（.s2p/.s3p/.snp 格式）。
+def _read_touchstone_lines(
+    filepath: Path,
+) -> tuple[list[float], list[list[float]], int, str, str]:
+    """读取 Touchstone 文件，返回原始频率、S 数据与格式信息。
 
     来源:
     - Touchstone 文件规范: https://en.wikipedia.org/wiki/Touchstone_file
-    - scikit-rf Touchstone 加载: https://scikit-rf.readthedocs.io/
 
     Args:
         filepath: Touchstone 文件路径。
 
     Returns:
-        (频率数组, S 参数字典)，频率单位 Hz，S 参数为复数数组。
+        (频率列表, S 数据列表, 端口数, 频率单位, S 参数格式)。
     """
-    filepath = Path(filepath)
     freqs: list[float] = []
     s_data: list[list[float]] = []
-
     n_ports = 0
     freq_unit = "ghz"  # 默认 GHz
     s_format = "ri"  # 默认实部-虚部格式
@@ -129,19 +128,35 @@ def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
                 continue
             # 数据行
             parts = line.split()
-            freq = float(parts[0])
-            freqs.append(freq)
+            freqs.append(float(parts[0]))
             s_vals = [float(x) for x in parts[1:]]
             s_data.append(s_vals)
             if n_ports == 0:
                 n_ports = int(math.isqrt(len(s_vals) // 2))
 
-    freqs_arr = np.array(freqs)
-    # 频率单位转换到 Hz
-    unit_mult = {"hz": 1.0, "khz": 1e3, "mhz": 1e6, "ghz": 1e9}
-    freqs_arr = freqs_arr * unit_mult.get(freq_unit, 1e9)
+    return freqs, s_data, n_ports, freq_unit, s_format
 
-    # 解析 S 参数
+
+def _build_s_matrix(
+    freqs_arr: np.ndarray,
+    s_data: list[list[float]],
+    n_ports: int,
+    s_format: str,
+) -> np.ndarray:
+    """从原始 S 数据构建 S 参数矩阵。
+
+    来源:
+    - Touchstone 文件规范: https://en.wikipedia.org/wiki/Touchstone_file
+
+    Args:
+        freqs_arr: 频率数组（已转换单位）。
+        s_data: 每行原始 S 参数实部/虚部列表。
+        n_ports: 端口数。
+        s_format: S 参数格式（ri/ma/db）。
+
+    Returns:
+        S 参数矩阵，形状 (n_freq, n_ports, n_ports)。
+    """
     s_matrix = np.zeros((len(freqs_arr), n_ports, n_ports), dtype=complex)
     for i, svals in enumerate(s_data):
         idx = 0
@@ -151,6 +166,33 @@ def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
                 im = svals[idx + 1]
                 idx += 2
                 s_matrix[i, j, k] = _convert_s_value(re, im, s_format)
+    return s_matrix
+
+
+def load_touchstone(filepath: str | Path) -> tuple[np.ndarray, SDict]:
+    """加载 Touchstone S 参数文件（.s2p/.s3p/.snp 格式）。
+
+    来源:
+    - Touchstone 文件规范: https://en.wikipedia.org/wiki/Touchstone_file
+    - scikit-rf Touchstone 加载: https://scikit-rf.readthedocs.io/
+
+    Args:
+        filepath: Touchstone 文件路径。
+
+    Returns:
+        (频率数组, S 参数字典)，频率单位 Hz，S 参数为复数数组。
+    """
+    filepath = Path(filepath)
+    # 读取文件（提取为辅助函数降低函数行数与圈复杂度，规则 4.1/4.3）
+    freqs, s_data, n_ports, freq_unit, s_format = _read_touchstone_lines(filepath)
+
+    freqs_arr = np.array(freqs)
+    # 频率单位转换到 Hz
+    unit_mult = {"hz": 1.0, "khz": 1e3, "mhz": 1e6, "ghz": 1e9}
+    freqs_arr = freqs_arr * unit_mult.get(freq_unit, 1e9)
+
+    # 解析 S 参数（提取为辅助函数降低函数行数与圈复杂度，规则 4.1/4.3）
+    s_matrix = _build_s_matrix(freqs_arr, s_data, n_ports, s_format)
 
     # 转换为 SDict 格式
     return freqs_arr, _build_sdict(s_matrix, n_ports)

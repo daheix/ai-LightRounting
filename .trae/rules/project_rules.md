@@ -145,7 +145,7 @@
 | 指标 | 警告阈值 | 硬性上限（触发重构） | 依据 |
 |------|----------|----------------------|------|
 | 单文件大小 | 80 KB | **120 KB** | 工业实践：大文件降低可读性与可维护性 |
-| 单文件有效代码行数 | 800 行 | **2000 行** | PEP 8/Google Style：目标 300-500 行/文件 |
+| 单文件有效代码行数 | 500 行 | **800 行** | PEP 8/Google Style：目标 300-500 行/文件 |
 | 单函数有效代码行数 | 40 行 | **80 行** | Google Python Style Guide：超过 40 行应考虑拆分 |
 | 单函数圈复杂度 (McCabe) | 10 | **15** | McCabe 1976 / NIST ISO 25010：V(G)≤10 为可维护 |
 | 单函数参数个数 | 5 | **7** | Google Style：参数过多降低可读性 |
@@ -154,6 +154,10 @@
 
 **硬性上限含义**：超过即触发 CI 门禁失败，必须重构拆分后方可合并。
 **警告阈值含义**：CI 输出警告，建议但不阻断。
+
+**测试文件豁免**：`tests/` 目录下的文件和 `test_*.py` 文件默认**不受质量门禁管控**
+（测试代码以可读性和覆盖率为优先，函数/复杂度限制放宽）。如需检查测试文件，
+使用 `--include-tests` 参数。测试文件仍须通过 ruff lint 和 pytest。
 
 来源：
 - Google Python Style Guide 函数长度: https://zh-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules.html#id17
@@ -204,10 +208,16 @@
 python scripts/code_quality_gate.py
 
 # 仅检查特定目录
-python scripts/code_quality_gate.py polaris/ tests/
+python scripts/code_quality_gate.py polaris/
 
 # 输出 JSON 报告
 python scripts/code_quality_gate.py --json > quality_report.json
+
+# 增量模式：仅检查 git 暂存区文件（pre-commit hook 使用）
+python scripts/code_quality_gate.py --staged
+
+# 包含测试文件检查（默认排除）
+python scripts/code_quality_gate.py --include-tests
 ```
 
 检查项：
@@ -217,6 +227,26 @@ python scripts/code_quality_gate.py --json > quality_report.json
 4. 函数参数个数
 5. 类方法数
 6. 嵌套深度
+
+### 4.5 Pre-commit Hook 自动门禁（强制）
+
+**每次 `git commit` 时自动执行质量门禁，不通过则禁止提交。**
+
+安装方法（项目初始化时执行一次）：
+```bash
+cp scripts/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+Hook 执行的检查（仅检查本次暂存的文件，增量检查）：
+1. **质量门禁**：`python scripts/code_quality_gate.py --staged`（规则 4）
+2. **Ruff lint**：`ruff check <staged_files>`
+3. **Ruff format**：`ruff format --check <staged_files>`
+4. **Pytest 冒烟测试**：`pytest tests/ -q -x --tb=short`
+
+任一检查失败即阻止提交（exit 1）。
+
+临时跳过（仅紧急情况，不推荐）：`git commit --no-verify`
 
 ## 规则 5：Python 编码风格规范（强制）
 
@@ -543,6 +573,53 @@ logger.error("DRC 检查失败: %s 共 %d 处违规", rule_name, n_violations)
 - [ ] 公开 API 有文档字符串
 - [ ] 复杂逻辑有注释说明
 - [ ] 测试覆盖率达标
+
+## 规则 13：发现 Bug 必须修复纪律（强制）
+
+在执行任何任务的过程中，如果发现了新的 Bug（无论是代码缺陷、逻辑错误、边界条件遗漏，
+还是测试暴露的问题），**必须一同解决，禁止带 Bug 提交代码**。
+
+### 13.1 强制要求
+
+1. **发现即记录**：发现 Bug 时，立即在代码注释或任务文档中记录：
+   - Bug 描述：什么情况下触发，预期行为 vs 实际行为
+   - 根因分析：为什么会产生这个 Bug
+   - 修复方案：如何修复，修复了哪些文件
+2. **必须修复**：在当前任务提交前必须修复该 Bug，不得留到"以后处理"
+3. **必须测试**：修复后必须编写或补充对应的测试用例，验证修复有效
+4. **提交备注**：在 commit message 中注明修复了哪些 Bug
+
+### 13.2 Bug 记录格式
+
+在 commit message 或代码注释中记录 Bug 修复：
+
+```
+fix: 修复 <模块> 中 <Bug 描述>
+
+Bug: <简述>
+根因: <原因分析>
+修复: <修复方案>
+测试: <新增/修改的测试>
+```
+
+### 13.3 禁止行为
+
+- **禁止忽略**：发现 Bug 后不得继续提交而不修复
+- **禁止注释掉**：不得用注释掉代码的方式"绕过"Bug
+- **禁止 TODO 推迟**：不得用 `# TODO: 修复这个 Bug` 推迟到未来
+- **禁止降低标准**：不得为了通过测试而放宽断言容差来"掩盖"Bug
+
+### 13.4 例外情况
+
+仅以下情况允许先提交后修复（但必须在 commit message 中明确标注）：
+- Bug 修复需要大量重构，超出当前任务范围 → 创建独立 Issue 跟踪
+- Bug 涉及外部依赖升级，无法在当前环境修复 → 记录并创建 Issue
+- Bug 为已有遗留问题，与当前任务无关 → 记录但不阻断当前提交
+
+即使例外情况，也必须在 commit message 中写明：
+```
+注: 发现 <模块> 存在 <Bug 描述>，因 <原因> 暂未修复，已记录 Issue #XXX
+```
 
 ## 参考来源汇总
 

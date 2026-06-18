@@ -46,6 +46,22 @@ class WaveguidePath:
         self.points.append((x, y))
 
 
+@dataclass
+class GridRouterConfig:
+    """网格布线器配置（规则 4.1：参数打包降低函数参数个数）。
+
+    将 GridRouter 的栅格尺寸、弯曲半径、波导间距打包为单一对象，
+    通过 **kwargs 支持旧式关键字参数向后兼容。
+
+    来源:
+    - 弯曲半径约束：SOI 2-6μm / SiN 50-100μm（见 spec.md）
+    """
+
+    grid_size: float = 1.0
+    min_bend_radius_um: float = 5.0
+    min_spacing_um: float = 1.0
+
+
 # ---------------------------------------------------------------------------
 # SubTask 11.1: A*/Lee 网格布线基线
 # ---------------------------------------------------------------------------
@@ -60,17 +76,19 @@ class GridRouter:
         self,
         grid_w: int,
         grid_h: int,
-        grid_size: float = 1.0,
-        min_bend_radius_um: float = 5.0,
-        min_spacing_um: float = 1.0,
+        config: GridRouterConfig | None = None,
+        **kwargs,
     ) -> None:
+        # 向后兼容：未提供 config 时，从旧式关键字参数构建配置
+        if config is None:
+            config = GridRouterConfig(**kwargs)
         self.grid_w = grid_w
         self.grid_h = grid_h
-        self.grid_size = grid_size
-        self.min_bend_radius_um = min_bend_radius_um
+        self.grid_size = config.grid_size
+        self.min_bend_radius_um = config.min_bend_radius_um
         # 弯曲半径对应的网格步数（至少 2 步才能转弯）
-        self.min_bend_steps = max(2, int(round(min_bend_radius_um / grid_size)))
-        self.min_spacing_um = min_spacing_um
+        self.min_bend_steps = max(2, int(round(config.min_bend_radius_um / config.grid_size)))
+        self.min_spacing_um = config.min_spacing_um
         # 障碍栅格：0=可走，>0=障碍/占用
         self.obstacle: np.ndarray = np.zeros((grid_h, grid_w), dtype=np.int32)
 
@@ -95,17 +113,19 @@ class GridRouter:
 
     def _get_neighbors(
         self,
-        x: int,
-        y: int,
-        last_dir: int,
-        straight: int,
+        state: tuple[int, int, int, int],
         blocked: set[tuple[int, int]],
     ) -> list[tuple[int, int, int, int]]:
         """计算当前节点的有效邻居（满足边界/障碍/弯曲半径约束）。
 
         返回 ``[(nx, ny, d, new_straight), ...]``，其中 d 为方向编码
         （0=E, 1=W, 2=N, 3=S），new_straight 为该方向上的连续直行步数。
+
+        Args:
+            state: 当前搜索状态 (x, y, last_dir, straight)。
+            blocked: 已占用栅格集合。
         """
+        x, y, last_dir, straight = state
         moves = [(1, 0, 0), (-1, 0, 1), (0, 1, 2), (0, -1, 3)]
         neighbors: list[tuple[int, int, int, int]] = []
         for dx, dy, d in moves:
@@ -125,14 +145,15 @@ class GridRouter:
     def _reconstruct_path(
         self,
         came_from: dict[tuple[int, int, int, int], tuple[int, int, int, int] | None],
-        x: int,
-        y: int,
-        last_dir: int,
-        straight: int,
+        state: tuple[int, int, int, int],
     ) -> list[tuple[int, int]]:
-        """从 came_from 回溯重建路径。"""
+        """从 came_from 回溯重建路径。
+
+        Args:
+            came_from: 状态前驱映射。
+            state: 终点搜索状态 (x, y, last_dir, straight)。
+        """
         path: list[tuple[int, int]] = []
-        state: tuple[int, int, int, int] | None = (x, y, last_dir, straight)
         while state is not None:
             path.append((state[0], state[1]))
             state = came_from.get(state)
@@ -166,13 +187,14 @@ class GridRouter:
         while open_h:
             _f, g, x, y, last_dir, straight = heapq.heappop(open_h)
             if (x, y) == goal:
-                return self._reconstruct_path(came_from, x, y, last_dir, straight)
-            for nx, ny, d, new_straight in self._get_neighbors(x, y, last_dir, straight, blocked):
+                return self._reconstruct_path(came_from, (x, y, last_dir, straight))
+            cur_state = (x, y, last_dir, straight)
+            for nx, ny, d, new_straight in self._get_neighbors(cur_state, blocked):
                 new_state = (nx, ny, d, new_straight)
                 ng = g + 1
                 if ng < g_score.get(new_state, 1 << 30):
                     g_score[new_state] = ng
-                    came_from[new_state] = (x, y, last_dir, straight)
+                    came_from[new_state] = cur_state
                     nf = ng + self._heuristic((nx, ny), goal)
                     heapq.heappush(open_h, (nf, ng, nx, ny, d, new_straight))
         return None
@@ -428,6 +450,62 @@ class RouteConnectionConfig:
 _PLATFORM_LOSS_DB_CM = {"SOI": 2.0, "SiN": 0.1, "LNOI": 0.4}
 
 
+def _build_router(
+    config: RouteConnectionConfig,
+    cons: dict,
+) -> GridRouter:
+    """根据配置与平台约束构建并配置网格布线器。
+
+    Args:
+        config: 布线配置（栅格/画布/障碍）。
+        cons: 平台约束（弯曲半径/间距）。
+
+    Returns:
+        已添加障碍的 GridRouter。
+    """
+    grid_w = int(config.canvas_w / config.grid_size)
+    grid_h = int(config.canvas_h / config.grid_size)
+    router = GridRouter(
+        grid_w=grid_w,
+        grid_h=grid_h,
+        config=GridRouterConfig(
+            grid_size=config.grid_size,
+            min_bend_radius_um=cons["min_bend_radius_um"],
+            min_spacing_um=cons["min_spacing_um"],
+        ),
+    )
+    for box in config.obstacles or []:
+        router.add_obstacle_box(*box)
+    return router
+
+
+def _grid_path_to_points(
+    grid_path: list[tuple[int, int]] | None,
+    start: tuple[float, float],
+    end: tuple[float, float],
+    grid_size: float,
+) -> list[tuple[float, float]]:
+    """将网格路径转换为画布坐标点，处理回退与端点对齐。
+
+    Args:
+        grid_path: 网格坐标路径（None 表示无路径，回退直线）。
+        start: 起点画布坐标。
+        end: 终点画布坐标。
+        grid_size: 栅格尺寸（μm）。
+
+    Returns:
+        画布坐标折线点列表。
+    """
+    if grid_path is None:
+        return [start, end]
+    pts = [(g[0] * grid_size, g[1] * grid_size) for g in grid_path]
+    # 起终点对齐到精确坐标
+    if pts:
+        pts[0] = start
+        pts[-1] = end
+    return pts
+
+
 def route_connection(
     start: tuple[float, float],
     end: tuple[float, float],
@@ -452,33 +530,16 @@ def route_connection(
     if config is None:
         config = RouteConnectionConfig(**kwargs)
     cons = get_platform_constraints(platform)
-    grid_w = int(config.canvas_w / config.grid_size)
-    grid_h = int(config.canvas_h / config.grid_size)
-    router = GridRouter(
-        grid_w=grid_w,
-        grid_h=grid_h,
-        grid_size=config.grid_size,
-        min_bend_radius_um=cons["min_bend_radius_um"],
-        min_spacing_um=cons["min_spacing_um"],
-    )
-    for box in config.obstacles or []:
-        router.add_obstacle_box(*box)
+    # 构建布线器（提取为辅助函数降低函数行数，规则 4.1）
+    router = _build_router(config, cons)
     sg = (int(start[0] / config.grid_size), int(start[1] / config.grid_size))
     eg = (int(end[0] / config.grid_size), int(end[1] / config.grid_size))
     grid_path = router.route(sg, eg)
-    if grid_path is None:
-        # 回退：直线连接
-        pts = [start, end]
-    else:
-        pts = [(g[0] * config.grid_size, g[1] * config.grid_size) for g in grid_path]
-        # 起终点对齐到精确坐标
-        if pts:
-            pts[0] = start
-            pts[-1] = end
+    # 网格路径 → 画布坐标（提取为辅助函数降低函数行数，规则 4.1）
+    pts = _grid_path_to_points(grid_path, start, end, config.grid_size)
     # 等长约束
     if config.target_length_um is not None:
         pts = equalize_length(pts, config.target_length_um, detour_step=cons["min_bend_radius_um"])
     loss_db_cm = _PLATFORM_LOSS_DB_CM.get(platform, 2.0)
     loss = path_loss(pts, loss_db_cm=loss_db_cm)
-    wp = WaveguidePath(points=pts, length_um=path_length(pts), loss_db=loss)
-    return wp
+    return WaveguidePath(points=pts, length_um=path_length(pts), loss_db=loss)

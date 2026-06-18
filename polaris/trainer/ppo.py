@@ -50,6 +50,31 @@ class PPOConfig:
     batch_size: int = 64  # 小批量大小
 
 
+@dataclass
+class GAEConfig:
+    """GAE 优势估计超参数。
+
+    Attributes:
+        gamma: 折扣因子。
+        gae_lambda: GAE lambda（偏差-方差权衡）。
+    """
+
+    gamma: float = 0.99
+    gae_lambda: float = 0.95
+
+
+@dataclass
+class Transition:
+    """单步转移数据（obs/action/reward/logprob/value/done）。"""
+
+    obs: np.ndarray
+    action: np.ndarray
+    reward: float
+    logprob: float
+    value: float
+    done: bool
+
+
 class ActorCritic(Module):
     """Actor-Critic 网络（共享编码器 + 策略头 + 价值头）。
 
@@ -71,9 +96,7 @@ class ActorCritic(Module):
             ReLU(),
         )
         self.action_mean = Linear(hidden_dim, action_dim)
-        self.action_log_std = Tensor(
-            np.zeros(action_dim), requires_grad=True
-        )
+        self.action_log_std = Tensor(np.zeros(action_dim), requires_grad=True)
         self.value_head = Linear(hidden_dim, 1)
 
     def forward(self, obs: np.ndarray | Tensor):
@@ -91,7 +114,7 @@ class ActorCritic(Module):
         # 高斯采样
         action = mean.data + std * np.random.randn(*mean.data.shape)
         # logprob = -0.5 * sum(((a-mean)/std)^2) - 0.5*dim*log(2pi) - sum(log std)
-        var = std ** 2
+        var = std**2
         logprob = (
             -0.5 * ((action - mean.data) ** 2 / var).sum(axis=-1)
             - 0.5 * mean.data.shape[-1] * math.log(2 * math.pi)
@@ -106,7 +129,7 @@ class ActorCritic(Module):
         """重新评估给定动作的 logprob + value + entropy（用于 PPO 更新）。"""
         mean, value = self.forward(obs)
         std = np.exp(self.action_log_std.data)
-        var = std ** 2
+        var = std**2
         # logprob（直接用 data 计算）
         lp_data = (
             -0.5 * ((actions - mean.data) ** 2 / var).sum(axis=-1)
@@ -150,29 +173,46 @@ def compute_gae(
     rewards: list[float],
     values: list[float],
     dones: list[bool],
-    last_value: float,
-    gamma: float = 0.99,
-    gae_lambda: float = 0.95,
+    last_value: float = 0.0,
+    config: GAEConfig | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """计算 GAE 优势与回报（与 SB3/CleanRL 一致）。
 
+    Args:
+        rewards: 每步奖励序列。
+        values: 每步价值估计序列。
+        dones: 每步终止标志序列。
+        last_value: 最后一步的 bootstrap 价值。
+        config: GAE 超参数（未提供时使用默认 gamma=0.99, gae_lambda=0.95）。
+
     来源: Schulman et al., 2015, GAE https://arxiv.org/abs/1506.02438
     """
+    cfg = config or GAEConfig()
+    gamma = cfg.gamma
+    gae_lambda = cfg.gae_lambda
     n = len(rewards)
     advantages = np.zeros(n, dtype=np.float64)
     last_gae = 0.0
     for t in reversed(range(n)):
         if t == n - 1:
             next_value = last_value
-            next_non_terminal = 0.0 if dones[t] else 1.0
         else:
             next_value = values[t + 1]
-            next_non_terminal = 0.0 if dones[t] else 1.0
+        next_non_terminal = 0.0 if dones[t] else 1.0
         delta = rewards[t] + gamma * next_value * next_non_terminal - values[t]
         last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
         advantages[t] = last_gae
     returns = advantages + np.array(values, dtype=np.float64)
     return advantages, returns
+
+
+def _clip_grads(params, max_norm: float) -> None:
+    """梯度裁剪（与 SB3 ``max_grad_norm`` 一致）。"""
+    for p in params:
+        if p.grad is not None:
+            norm = np.linalg.norm(p.grad)
+            if norm > max_norm and norm > 1e-8:
+                p.grad = p.grad * (max_norm / norm)
 
 
 class PPOAgent:
@@ -203,13 +243,23 @@ class PPOAgent:
         """采样动作。"""
         return self.ac.get_action(obs)
 
-    def store(self, obs, action, reward, logprob, value, done) -> None:
-        self.buffer.obs.append(obs)
-        self.buffer.actions.append(action)
-        self.buffer.rewards.append(reward)
-        self.buffer.logprobs.append(logprob)
-        self.buffer.values.append(value)
-        self.buffer.dones.append(done)
+    def store(self, *args) -> None:
+        """存储单步转移到缓冲区。
+
+        Args:
+            *args: 单个 ``Transition`` 对象，或按顺序的
+                ``(obs, action, reward, logprob, value, done)`` 六个参数。
+        """
+        if len(args) == 1 and isinstance(args[0], Transition):
+            t = args[0]
+        else:
+            t = Transition(*args)
+        self.buffer.obs.append(t.obs)
+        self.buffer.actions.append(t.action)
+        self.buffer.rewards.append(t.reward)
+        self.buffer.logprobs.append(t.logprob)
+        self.buffer.values.append(t.value)
+        self.buffer.dones.append(t.done)
 
     def compute_advantages(self, last_value: float) -> None:
         adv, ret = compute_gae(
@@ -217,14 +267,58 @@ class PPOAgent:
             self.buffer.values,
             self.buffer.dones,
             last_value,
-            self.config.gamma,
-            self.config.gae_lambda,
+            config=GAEConfig(self.config.gamma, self.config.gae_lambda),
         )
         self.buffer.advantages = adv
         self.buffer.returns = ret
         # 标准化优势（与 SB3 一致）
         if adv.std() > 1e-8:
             self.buffer.advantages = (adv - adv.mean()) / (adv.std() + 1e-8)
+
+    def _ppo_minibatch_step(self, minibatch: tuple) -> dict:
+        """单个小批量的 PPO 更新，返回指标字典。
+
+        Args:
+            minibatch: ``(obs, actions, old_logprobs, advantages, returns)`` 五元组。
+
+        Returns:
+            含 loss/policy_loss/value_loss/entropy 的指标字典。
+        """
+        mb_obs, mb_actions, mb_old_lp, mb_adv, mb_ret = minibatch
+        self.optimizer.zero_grad()
+        mean, value = self.ac.forward(mb_obs)
+        std = np.exp(self.ac.action_log_std.data)
+        # 新 logprob（可微路径）
+        diff = Tensor(mb_actions) - mean
+        new_lp = -0.5 * (diff * diff).sum(axis=-1)
+        ratio = np.exp(new_lp.data - mb_old_lp)
+        # 策略损失（clip）
+        surr1 = ratio * mb_adv
+        clip_lo = 1 - self.config.clip_eps
+        clip_hi = 1 + self.config.clip_eps
+        surr2 = np.clip(ratio, clip_lo, clip_hi) * mb_adv
+        policy_loss = -np.minimum(surr1, surr2).mean()
+        # 价值损失
+        value_pred = value.data.flatten()
+        value_loss = ((mb_ret - value_pred) ** 2).mean()
+        # 熵（高斯）
+        ent = 0.5 * mean.data.shape[-1] * (1 + math.log(2 * math.pi))
+        entropy = np.array(ent + np.log(std).sum())
+        # 总损失（构造可微图）：策略目标 + 价值损失
+        weighted = Tensor(mb_adv) * new_lp
+        policy_obj = weighted.mean()
+        v_diff = Tensor(mb_ret) - value.flatten()
+        value_obj = (v_diff * v_diff).mean()
+        total = -policy_obj + self.config.vf_coef * value_obj
+        total.backward()
+        _clip_grads(self.optimizer.params, self.config.max_grad_norm)
+        self.optimizer.step()
+        return {
+            "loss": float(total.data),
+            "policy_loss": float(policy_loss),
+            "value_loss": float(value_loss),
+            "entropy": float(entropy.mean()),
+        }
 
     def update(self, last_value: float = 0.0) -> dict:
         """PPO 更新（多 epoch 小批量）。"""
@@ -243,55 +337,20 @@ class PPOAgent:
         batch_size = min(self.config.batch_size, n)
         metrics_sum = {"loss": 0.0, "policy_loss": 0.0, "value_loss": 0.0, "entropy": 0.0}
         n_updates = 0
-
         for _ in range(self.config.n_epochs):
             np.random.shuffle(indices)
             for start in range(0, n, batch_size):
-                idx = indices[start:start + batch_size]
-                mb_obs = obs[idx]
-                mb_actions = actions[idx]
-                mb_old_lp = old_logprobs[idx]
-                mb_adv = advantages[idx]
-                mb_ret = returns[idx]
-
-                self.optimizer.zero_grad()
-                mean, value = self.ac.forward(mb_obs)
-                std = np.exp(self.ac.action_log_std.data)
-                # 新 logprob（可微路径）
-                diff = Tensor(mb_actions) - mean
-                new_lp = -0.5 * (diff * diff).sum(axis=-1)
-                ratio = np.exp(new_lp.data - mb_old_lp)
-                # 策略损失（clip）
-                surr1 = ratio * mb_adv
-                clip_lo = 1 - self.config.clip_eps
-                clip_hi = 1 + self.config.clip_eps
-                surr2 = np.clip(ratio, clip_lo, clip_hi) * mb_adv
-                policy_loss = -np.minimum(surr1, surr2).mean()
-                # 价值损失
-                value_pred = value.data.flatten()
-                value_loss = ((mb_ret - value_pred) ** 2).mean()
-                # 熵（高斯）
-                ent = 0.5 * mean.data.shape[-1] * (1 + math.log(2 * math.pi))
-                entropy = np.array(ent + np.log(std).sum())
-                # 总损失（构造可微图）：策略目标 + 价值损失
-                weighted = Tensor(mb_adv) * new_lp
-                policy_obj = weighted.mean()
-                v_diff = Tensor(mb_ret) - value.flatten()
-                value_obj = (v_diff * v_diff).mean()
-                total = -policy_obj + self.config.vf_coef * value_obj
-                total.backward()
-                # 梯度裁剪
-                for p in self.optimizer.params:
-                    if p.grad is not None:
-                        norm = np.linalg.norm(p.grad)
-                        if norm > self.config.max_grad_norm and norm > 1e-8:
-                            p.grad = p.grad * (self.config.max_grad_norm / norm)
-                self.optimizer.step()
-
-                metrics_sum["loss"] += float(total.data)
-                metrics_sum["policy_loss"] += float(policy_loss)
-                metrics_sum["value_loss"] += float(value_loss)
-                metrics_sum["entropy"] += float(entropy.mean())
+                idx = indices[start : start + batch_size]
+                minibatch = (
+                    obs[idx],
+                    actions[idx],
+                    old_logprobs[idx],
+                    advantages[idx],
+                    returns[idx],
+                )
+                m = self._ppo_minibatch_step(minibatch)
+                for k in metrics_sum:
+                    metrics_sum[k] += m[k]
                 n_updates += 1
 
         for k in metrics_sum:

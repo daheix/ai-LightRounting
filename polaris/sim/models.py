@@ -11,6 +11,8 @@ SiPANN 安装失败（ResolutionImpossible），按 project_rules.md 规则 3
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from polaris.sim.types import SDict
@@ -127,50 +129,99 @@ def directional_coupler_s(
     }
 
 
-def ring_resonator_s(
-    wl: float | np.ndarray = 1.55,
-    radius: float = 10.0,
-    neff: float = 2.4,
-    ng: float = 4.0,
-    coupling: float = 0.01,
-    loss_db_cm: float = 0.0,
-) -> SDict:
-    """环谐振器 S 参数模型（全通型 single bus）。
+@dataclass
+class RingParams:
+    """环谐振器耦合与损耗参数（规则 4.1：参数打包降低函数参数个数）。
 
-    环谐振器的洛伦兹谐振峰由环周长和耦合系数决定。
-    传输函数: T = (t - a*e^{i*phi}) / (1 - t*a*e^{i*phi})
-    其中 t=直通振幅, a=环内损耗, phi=环周相位
+    将 ring_resonator_s 的耦合系数与环内损耗打包为单一对象，
+    通过 from_kwargs 支持旧式关键字参数（coupling=..., loss_db_cm=...）向后兼容。
 
-    注意：全通型环在无损（a=1）时传输始终为 1（仅相位变化），
-    谐振陷波仅在环内有损耗时出现。
+    来源:
+    - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
+    """
 
-    端口: in, through（直通端）, drop（下路端，全通型无 drop）
+    coupling: float = 0.01
+    loss_db_cm: float = 0.0
+
+    @classmethod
+    def from_kwargs(cls, kwargs: dict) -> RingParams:
+        """从关键字参数字典构建（向后兼容旧式调用）。"""
+        return cls(
+            coupling=kwargs.pop("coupling", 0.01),
+            loss_db_cm=kwargs.pop("loss_db_cm", 0.0),
+        )
+
+
+def _ring_transmission(
+    wl: np.ndarray,
+    radius: float,
+    neff: float,
+    coupling: float,
+    loss_db_cm: float,
+) -> np.ndarray:
+    """计算全通型环谐振器传输函数 T。
+
+    T = (t - a*e^{i*phi}) / (1 - t*a*e^{i*phi})
+    其中 t=直通振幅, a=环内损耗, phi=环周相位。
 
     来源:
     - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
     - Lorentzian 谐振模型: 标准光子学教材
     """
-    wl = np.asarray(wl, dtype=float)
-    # 环周长
     circumference = 2.0 * np.pi * radius
     # 环内传播相位
-    beta = 2.0 * np.pi * neff / wl
-    phi = beta * circumference
+    phi = 2.0 * np.pi * neff / wl * circumference
     # 环内损耗（振幅）— 默认给一个小损耗以显示谐振
     if loss_db_cm <= 0:
         loss_db_cm = 0.1  # 默认 0.1 dB/cm 以显示谐振陷波
     a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
     # 直通振幅（自耦合系数）
     t = np.sqrt(1.0 - coupling)
-    # 传输函数（全通型）
     numerator = t - a * np.exp(1j * phi)
     denominator = 1.0 - t * a * np.exp(1j * phi)
-    T = numerator / denominator
+    return numerator / denominator
+
+
+def ring_resonator_s(
+    wl: float | np.ndarray = 1.55,
+    radius: float = 10.0,
+    neff: float = 2.4,
+    *,
+    params: RingParams | None = None,
+    **kwargs,
+) -> SDict:
+    """环谐振器 S 参数模型（全通型 single bus）。
+
+    全通型环在无损（a=1）时传输始终为 1（仅相位变化），
+    谐振陷波仅在环内有损耗时出现。端口: in, through。
+
+    向后兼容：未提供 params 时，旧式关键字参数 coupling/loss_db_cm
+    会自动转发到 RingParams 构造。
+
+    来源:
+    - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
+
+    Args:
+        wl: 波长（μm）或波长数组。
+        radius: 环半径（μm）。
+        neff: 有效折射率。
+        params: 耦合与损耗参数（RingParams），未提供时从 kwargs 构建。
+        **kwargs: 旧式关键字参数（coupling, loss_db_cm），向后兼容。
+
+    Returns:
+        S 参数字典。
+    """
+    if params is None:
+        params = RingParams.from_kwargs(kwargs)
+    wl_arr = np.asarray(wl, dtype=float)
+    # 传输函数（提取为辅助函数降低函数行数，规则 4.1）
+    T = _ring_transmission(wl_arr, radius, neff, params.coupling, params.loss_db_cm)
+    zero = np.zeros_like(wl_arr, dtype=complex)
     return {
-        ("in", "in"): np.zeros_like(wl, dtype=complex),
+        ("in", "in"): zero,
         ("through", "in"): T,
         ("in", "through"): T,
-        ("through", "through"): np.zeros_like(wl, dtype=complex),
+        ("through", "through"): zero,
     }
 
 

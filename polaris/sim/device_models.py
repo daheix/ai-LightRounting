@@ -445,6 +445,64 @@ def simulate_device(
     return wavelengths, s
 
 
+def _build_simulator_with_catalog(catalog: DeviceCatalog) -> CircuitSimulator:
+    """构建仿真器并注册目录中所有器件的 S 参数模型。
+
+    Args:
+        catalog: 器件目录。
+
+    Returns:
+        已注册全部器件模型的 CircuitSimulator。
+    """
+    sim = CircuitSimulator()
+    for device in catalog:
+
+        def make_model(dev):
+            def model(wl=1.55, **kwargs):
+                return device_to_smodel(dev, wl)
+
+            return model
+
+        sim.register_model(device.device_id, make_model(device))
+    return sim
+
+
+def _netlist_to_sax_format(netlist_dict: dict) -> dict:
+    """将 PoLaRIS 网表转换为 SAX 级联格式。
+
+    外部端口取第一个器件的 in 与最后一个器件的 out。
+
+    Args:
+        netlist_dict: 网表字典 {devices, connections, ...}。
+
+    Returns:
+        SAX 格式网表 {instances, connections, ports}。
+    """
+    instances: dict[str, str] = {}
+    for inst in netlist_dict.get("devices", []):
+        instances[inst["instance_id"]] = inst["device_id"]
+
+    connections: list[tuple[str, str]] = []
+    for conn in netlist_dict.get("connections", []):
+        src = f"{conn['source_instance']}.{conn['source_port']}"
+        dst = f"{conn['target_instance']}.{conn['target_port']}"
+        connections.append((src, dst))
+
+    # 外部端口（第一个器件的 in 和最后一个器件的 out）
+    ports: dict[str, str] = {}
+    if instances:
+        first_inst = list(instances.keys())[0]
+        last_inst = list(instances.keys())[-1]
+        ports["in"] = f"{first_inst}.in"
+        ports["out"] = f"{last_inst}.out"
+
+    return {
+        "instances": instances,
+        "connections": connections,
+        "ports": ports,
+    }
+
+
 def simulate_circuit_from_netlist(
     netlist_dict: dict,
     catalog: DeviceCatalog | None = None,
@@ -468,42 +526,11 @@ def simulate_circuit_from_netlist(
     if catalog is None:
         catalog = build_default_catalog()
 
-    # 构建模型库
-    sim = CircuitSimulator()
-    for device in catalog:
+    # 构建模型库（提取为辅助函数降低函数行数，规则 4.1）
+    sim = _build_simulator_with_catalog(catalog)
 
-        def make_model(dev):
-            def model(wl=1.55, **kwargs):
-                return device_to_smodel(dev, wl)
-
-            return model
-
-        sim.register_model(device.device_id, make_model(device))
-
-    # 转换网表为 SAX 格式
-    instances = {}
-    for inst in netlist_dict.get("devices", []):
-        instances[inst["instance_id"]] = inst["device_id"]
-
-    connections = []
-    for conn in netlist_dict.get("connections", []):
-        src = f"{conn['source_instance']}.{conn['source_port']}"
-        dst = f"{conn['target_instance']}.{conn['target_port']}"
-        connections.append((src, dst))
-
-    # 外部端口（第一个器件的 in 和最后一个器件的 out）
-    ports = {}
-    if instances:
-        first_inst = list(instances.keys())[0]
-        last_inst = list(instances.keys())[-1]
-        ports["in"] = f"{first_inst}.in"
-        ports["out"] = f"{last_inst}.out"
-
-    sax_netlist = {
-        "instances": instances,
-        "connections": connections,
-        "ports": ports,
-    }
+    # 转换网表为 SAX 格式（提取为辅助函数降低函数行数，规则 4.1）
+    sax_netlist = _netlist_to_sax_format(netlist_dict)
 
     s = sim.simulate(sax_netlist, wavelengths)
     return wavelengths, s

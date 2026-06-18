@@ -23,9 +23,104 @@ import numpy as np
 
 
 # ---------------------------------------------------------------------------
+# Tensor 运算符重载 Mixin（从 Tensor 拆分以控制类方法数，规则 4.2/5.3）
+# ---------------------------------------------------------------------------
+class _TensorOpsMixin:
+    """Tensor 算术运算符重载 Mixin（复刻 ``torch.Tensor`` 运算符）。
+
+    将 ``+``、``-``、``*``、``@``、``**`` 及反射运算符集中至此 Mixin，
+    使 ``Tensor`` 主体聚焦于前向 op 与自动微分，符合单一职责原则（规则 5.3）。
+    ``__slots__ = ()`` 保证不引入 ``__dict__``，维持 ``Tensor`` 的 slots 语义。
+
+    复刻来源：PyTorch ``torch.Tensor`` 运算符重载
+    - 原仓库: https://github.com/pytorch/pytorch （BSD-style license）
+    """
+
+    __slots__ = ()
+
+    def __add__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data + other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + _unbroadcast(g, self.data.shape)
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + _unbroadcast(g, other.data.shape)
+
+        out._backward = _back
+        return out
+
+    def __mul__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data * other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + _unbroadcast(g * other.data, self.data.shape)
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + _unbroadcast(g * self.data, other.data.shape)
+
+        out._backward = _back
+        return out
+
+    def __matmul__(self, other):
+        rg = self.requires_grad or other.requires_grad
+        out = Tensor(self.data @ other.data, rg, (self, other))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g @ other.data.T
+            if other.requires_grad:
+                other._ensure_grad()
+                other.grad = other.grad + self.data.T @ g
+
+        out._backward = _back
+        return out
+
+    def matmul(self, other):
+        return self.__matmul__(other)
+
+    def __neg__(self):
+        return self * -1.0
+
+    def __sub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return self + (-other if isinstance(other, Tensor) else Tensor(-other.data))
+
+    def __rsub__(self, other):
+        other = other if isinstance(other, Tensor) else Tensor(other)
+        return other - self
+
+    def __rmul__(self, other):
+        return self * other
+
+    def __radd__(self, other):
+        return self + other
+
+    def __pow__(self, p: float):
+        out = Tensor(self.data**p, self.requires_grad, (self,))
+
+        def _back(g):
+            if self.requires_grad:
+                self._ensure_grad()
+                self.grad = self.grad + g * p * (self.data ** (p - 1))
+
+        out._backward = _back
+        return out
+
+
+# ---------------------------------------------------------------------------
 # Tensor + 自动微分（复刻 torch.autograd）
 # ---------------------------------------------------------------------------
-class Tensor:
+class Tensor(_TensorOpsMixin):
     """自动微分张量（复刻 ``torch.Tensor`` 的核心子集）。
 
     支持 +、-、*、@、matmul、relu、tanh、log、sum、mean、softmax、
@@ -120,56 +215,6 @@ class Tensor:
         self.grad = None
 
     # ----- 前向 op -----
-    def __add__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        rg = self.requires_grad or other.requires_grad
-        out = Tensor(self.data + other.data, rg, (self, other))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + _unbroadcast(g, self.data.shape)
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + _unbroadcast(g, other.data.shape)
-
-        out._backward = _back
-        return out
-
-    def __mul__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        rg = self.requires_grad or other.requires_grad
-        out = Tensor(self.data * other.data, rg, (self, other))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + _unbroadcast(g * other.data, self.data.shape)
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + _unbroadcast(g * self.data, other.data.shape)
-
-        out._backward = _back
-        return out
-
-    def __matmul__(self, other):
-        rg = self.requires_grad or other.requires_grad
-        out = Tensor(self.data @ other.data, rg, (self, other))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + g @ other.data.T
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + self.data.T @ g
-
-        out._backward = _back
-        return out
-
-    def matmul(self, other):
-        return self.__matmul__(other)
-
     def sum(self, axis=None, keepdims=False):
         out = Tensor(
             self.data.sum(axis=axis, keepdims=keepdims),
@@ -265,34 +310,6 @@ class Tensor:
         out._backward = _back
         return out
 
-    def __neg__(self):
-        return self * -1.0
-
-    def __sub__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        return self + (-other if isinstance(other, Tensor) else Tensor(-other.data))
-
-    def __rsub__(self, other):
-        other = other if isinstance(other, Tensor) else Tensor(other)
-        return other - self
-
-    def __rmul__(self, other):
-        return self * other
-
-    def __radd__(self, other):
-        return self + other
-
-    def __pow__(self, p: float):
-        out = Tensor(self.data ** p, self.requires_grad, (self,))
-
-        def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + g * p * (self.data ** (p - 1))
-
-        out._backward = _back
-        return out
-
     def softmax(self, axis: int = -1):
         """数值稳定的 softmax（与 torch.nn.functional.softmax 一致）。"""
         shifted = self.data - self.data.max(axis=axis, keepdims=True)
@@ -346,17 +363,21 @@ class Module:
         seen: set[int] = set()
 
         def collect(obj):
+            # 卫语句扁平化（规则 4.3），避免 elif 链叠加嵌套深度
             if isinstance(obj, Tensor):
                 if obj.requires_grad and id(obj) not in seen:
                     seen.add(id(obj))
                     params.append(obj)
-            elif isinstance(obj, Module):
+                return
+            if isinstance(obj, Module):
                 for v in vars(obj).values():
                     collect(v)
-            elif isinstance(obj, (list, tuple)):
+                return
+            if isinstance(obj, (list, tuple)):
                 for item in obj:
                     collect(item)
-            elif isinstance(obj, dict):
+                return
+            if isinstance(obj, dict):
                 for item in obj.values():
                     collect(item)
 
@@ -435,6 +456,13 @@ class Adam:
 
     实现与 torch Adam 一致：偏置修正的一阶/二阶矩估计。
     来源: Kingma & Ba, 2015, Adam 论文；torch.optim.Adam 实现。
+
+    Args:
+        params: 待优化参数列表。
+        lr: 学习率（默认 1e-3）。
+        betas: 一阶/二阶矩衰减系数（默认 (0.9, 0.999)）。
+        **kwargs: 额外超参，支持 ``eps``（默认 1e-8）与 ``weight_decay``
+            （默认 0.0），与 ``torch.optim.Adam`` 一致。
     """
 
     def __init__(
@@ -442,14 +470,13 @@ class Adam:
         params: list[Tensor],
         lr: float = 1e-3,
         betas: tuple[float, float] = (0.9, 0.999),
-        eps: float = 1e-8,
-        weight_decay: float = 0.0,
+        **kwargs: float,
     ) -> None:
         self.params = list(params)
         self.lr = lr
         self.beta1, self.beta2 = betas
-        self.eps = eps
-        self.weight_decay = weight_decay
+        self.eps = kwargs.get("eps", 1e-8)
+        self.weight_decay = kwargs.get("weight_decay", 0.0)
         self.m = [np.zeros_like(p.data) for p in self.params]
         self.v = [np.zeros_like(p.data) for p in self.params]
         self.t = 0
@@ -468,8 +495,8 @@ class Adam:
                 g = g + self.weight_decay * p.data
             self.m[i] = self.beta1 * self.m[i] + (1 - self.beta1) * g
             self.v[i] = self.beta2 * self.v[i] + (1 - self.beta2) * (g * g)
-            m_hat = self.m[i] / (1 - self.beta1 ** self.t)
-            v_hat = self.v[i] / (1 - self.beta2 ** self.t)
+            m_hat = self.m[i] / (1 - self.beta1**self.t)
+            v_hat = self.v[i] / (1 - self.beta2**self.t)
             p.data = p.data - self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
 
 
