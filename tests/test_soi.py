@@ -13,7 +13,7 @@ import pytest
 from polaris.pdk import Device
 from polaris.pdk.soi import SOI_DEVICES
 
-# 所有器件工厂函数名（与 SOI_DEVICES 键一致，共 18 个）
+# 所有器件工厂函数名（与 SOI_DEVICES 键一致，共 27 个）
 _EXPECTED_DEVICE_NAMES = [
     "strip_waveguide",
     "rib_waveguide",
@@ -33,13 +33,22 @@ _EXPECTED_DEVICE_NAMES = [
     "mrm_modulator",
     "ge_photodetector",
     "double_ring_filter",
+    "traveling_wave_mzm",
+    "thermo_tuned_ring_modulator",
+    "thermo_optic_switch",
+    "avalanche_photodetector",
+    "mmi_1x4",
+    "mmi_4x4",
+    "awg",
+    "photonic_crystal_waveguide",
+    "metasurface_coupler",
 ]
 
 
 def test_soi_devices_registry_complete() -> None:
-    """SOI_DEVICES 应包含全部 18 个器件工厂函数。"""
+    """SOI_DEVICES 应包含全部 27 个器件工厂函数。"""
     assert set(SOI_DEVICES.keys()) == set(_EXPECTED_DEVICE_NAMES)
-    assert len(SOI_DEVICES) == 18
+    assert len(SOI_DEVICES) == 27
 
 
 @pytest.mark.parametrize("name", _EXPECTED_DEVICE_NAMES)
@@ -132,6 +141,11 @@ def test_passive_devices_category() -> None:
         "y_branch",
         "crossing",
         "double_ring_filter",
+        "mmi_1x4",
+        "mmi_4x4",
+        "awg",
+        "photonic_crystal_waveguide",
+        "metasurface_coupler",
     ]
     for name in passive_names:
         dev = SOI_DEVICES[name]()

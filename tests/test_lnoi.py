@@ -20,6 +20,7 @@ from polaris.pdk.lnoi import (
     make_lnoi_mzm_high_confined,
     make_lnoi_mzm_traveling_wave,
     make_lnoi_photonics_review,
+    make_lnoi_tfln_modulator,
     make_lnoi_waveguide,
 )
 
@@ -32,6 +33,7 @@ _ALL_FACTORIES = [
     make_lnoi_modulator_review,
     make_lnoi_photonics_review,
     make_lnoi_cmos_modulator,
+    make_lnoi_tfln_modulator,
 ]
 
 
@@ -110,6 +112,7 @@ def test_waveguide_has_in_out_ports() -> None:
         make_lnoi_mzm_traveling_wave,
         make_lnoi_modulator_review,
         make_lnoi_cmos_modulator,
+        make_lnoi_tfln_modulator,
     ],
     ids=lambda f: f.__name__,
 )
@@ -182,8 +185,8 @@ def test_cmos_modulator_source() -> None:
 # LNOI_DEVICES 汇总字典校验
 # ---------------------------------------------------------------------------
 def test_lnoi_devices_dict_complete() -> None:
-    """LNOI_DEVICES 须汇总全部 7 个器件工厂函数。"""
-    assert len(LNOI_DEVICES) == 7
+    """LNOI_DEVICES 须汇总全部 8 个器件工厂函数。"""
+    assert len(LNOI_DEVICES) == 8
     expected_keys = {
         "lnoi_waveguide",
         "lnoi_eo_modulator",
@@ -192,6 +195,7 @@ def test_lnoi_devices_dict_complete() -> None:
         "lnoi_modulator_review",
         "lnoi_photonics_review",
         "lnoi_cmos_modulator",
+        "lnoi_tfln_modulator",
     }
     assert set(LNOI_DEVICES.keys()) == expected_keys
 
