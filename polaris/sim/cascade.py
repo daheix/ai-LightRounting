@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from polaris.sim.types import SDict
@@ -28,6 +30,21 @@ try:
 except ImportError:
     _sax = None
     _HAS_SAX = False
+
+
+@dataclass
+class CascadeContext:
+    """级联计算上下文（将 _compute_cross_term 的参数打包，降低函数参数个数）。
+
+    Attributes:
+        remaining_1: 子网络1的剩余端口集合。
+        connected: 连接端口对列表 [(c1, c2), ...]。
+        n_freq: 频率维度长度。
+    """
+
+    remaining_1: set[str]
+    connected: list[tuple[str, str]]
+    n_freq: int
 
 
 def _collect_ports(sdict: SDict) -> set[str]:
@@ -63,14 +80,37 @@ def _get_s_value(sdict: SDict, p_out: str, p_in: str, n_freq: int) -> np.ndarray
     return np.zeros(n_freq, dtype=complex)
 
 
+def _compute_single_cross_term(
+    s1: SDict,
+    s2: SDict,
+    p_i: str,
+    p_j: str,
+    c1: str,
+    c2: str,
+    i_in_1: bool,
+    j_in_1: bool,
+    n_freq: int,
+) -> np.ndarray:
+    """计算单个连接对的交叉项 S_iA * S_Bj / (1 - S_AB * S_BA)。
+
+    来源:
+    - SAX 子网络增长: https://flaport.github.io/sax/
+    """
+    s_iA = _get_s_value(s1, p_i, c1, n_freq) if i_in_1 else _get_s_value(s2, p_i, c2, n_freq)
+    s_Bj = _get_s_value(s1, c1, p_j, n_freq) if j_in_1 else _get_s_value(s2, c2, p_j, n_freq)
+    s_AB = _get_s_value(s1, c1, c1, n_freq)
+    s_BA = _get_s_value(s2, c2, c2, n_freq)
+    denom = 1.0 - s_AB * s_BA
+    denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
+    return s_iA * s_Bj / denom
+
+
 def _compute_cross_term(
     s1: SDict,
     s2: SDict,
     p_i: str,
     p_j: str,
-    remaining_1: set[str],
-    connected: list[tuple[str, str]],
-    n_freq: int,
+    ctx: CascadeContext,
 ) -> np.ndarray:
     """计算通过连接端口的间接传输交叉项。
 
@@ -83,35 +123,36 @@ def _compute_cross_term(
         s2: 子网络2的 S 参数。
         p_i: 当前剩余端口 i。
         p_j: 当前剩余端口 j。
-        remaining_1: 子网络1的剩余端口集合。
-        connected: 连接端口对列表 [(c1, c2), ...]。
-        n_freq: 频率维度长度。
+        ctx: 级联上下文（剩余端口/连接对/频率维度）。
 
     Returns:
         交叉项 S_iA * S_Bj / (1 - S_AB * S_BA) 的累加结果。
     """
-    i_in_1 = p_i in remaining_1
-    j_in_1 = p_j in remaining_1
-    s_cross = np.zeros(n_freq, dtype=complex)
-    for c1, c2 in connected:
-        # S_iA (从 i 到连接端口 c1)
-        if i_in_1:
-            s_iA = _get_s_value(s1, p_i, c1, n_freq)
-        else:
-            s_iA = _get_s_value(s2, p_i, c2, n_freq)
-        # S_Bj (从连接端口到 j)
-        if j_in_1:
-            s_Bj = _get_s_value(s1, c1, p_j, n_freq)
-        else:
-            s_Bj = _get_s_value(s2, c2, p_j, n_freq)
-        # S_AB 和 S_BA（连接端口间的反射）
-        s_AB = _get_s_value(s1, c1, c1, n_freq)  # 简化：假设连接端口反射
-        s_BA = _get_s_value(s2, c2, c2, n_freq)
-        # 分母 1 - S_AB * S_BA
-        denom = 1.0 - s_AB * s_BA
-        denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
-        s_cross += s_iA * s_Bj / denom
+    i_in_1 = p_i in ctx.remaining_1
+    j_in_1 = p_j in ctx.remaining_1
+    s_cross = np.zeros(ctx.n_freq, dtype=complex)
+    for c1, c2 in ctx.connected:
+        s_cross += _compute_single_cross_term(
+            s1, s2, p_i, p_j, c1, c2, i_in_1, j_in_1, ctx.n_freq
+        )
     return s_cross
+
+
+def _get_direct_s(
+    s1: SDict,
+    s2: SDict,
+    p_i: str,
+    p_j: str,
+    remaining_1: set[str],
+    remaining_2: set[str],
+    n_freq: int,
+) -> np.ndarray:
+    """获取直接传输 S 参数（用卫语句降低圈复杂度）。"""
+    if p_i in remaining_1 and p_j in remaining_1:
+        return _get_s_value(s1, p_i, p_j, n_freq)
+    if p_i in remaining_2 and p_j in remaining_2:
+        return _get_s_value(s2, p_i, p_j, n_freq)
+    return np.zeros(n_freq, dtype=complex)
 
 
 def _connect_ports(s1: SDict, s2: SDict, connections: list[tuple[str, str]]) -> SDict:
@@ -152,19 +193,12 @@ def _connect_ports(s1: SDict, s2: SDict, connections: list[tuple[str, str]]) -> 
     first_val = next(iter(s1.values()))
     n_freq = len(first_val) if hasattr(first_val, "__len__") else 1
 
-    # 子网络增长公式
+    ctx = CascadeContext(remaining_1=remaining_1, connected=connected, n_freq=n_freq)
     result: SDict = {}
     for p_i in remaining:
         for p_j in remaining:
-            # S_ij = S_ij_direct + sum over connected pairs
-            if p_i in remaining_1 and p_j in remaining_1:
-                s_direct = _get_s_value(s1, p_i, p_j, n_freq)
-            elif p_i in remaining_2 and p_j in remaining_2:
-                s_direct = _get_s_value(s2, p_i, p_j, n_freq)
-            else:
-                s_direct = np.zeros(n_freq, dtype=complex)
-            # 交叉项：通过连接端口的间接传输
-            s_cross = _compute_cross_term(s1, s2, p_i, p_j, remaining_1, connected, n_freq)
+            s_direct = _get_direct_s(s1, s2, p_i, p_j, remaining_1, remaining_2, n_freq)
+            s_cross = _compute_cross_term(s1, s2, p_i, p_j, ctx)
             result[(p_i, p_j)] = s_direct + s_cross
 
     return result

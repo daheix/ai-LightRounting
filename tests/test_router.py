@@ -6,6 +6,7 @@ import pytest
 
 from polaris.router.waveguide_router import (
     GridRouter,
+    RouterConstraints,
     WaveguidePath,
     arc_bend,
     check_min_spacing,
@@ -21,7 +22,7 @@ from polaris.router.waveguide_router import (
 
 
 def test_grid_router_basic_path():
-    router = GridRouter(50, 50, grid_size=1.0, min_bend_radius_um=5.0)
+    router = GridRouter(50, 50, grid_size=1.0, constraints=RouterConstraints(min_bend_radius_um=5.0))
     path = router.route((0, 0), (40, 40))
     assert path is not None
     assert path[0] == (0, 0)
@@ -29,7 +30,7 @@ def test_grid_router_basic_path():
 
 
 def test_grid_router_obstacle_avoidance():
-    router = GridRouter(50, 50, grid_size=1.0, min_bend_radius_um=5.0)
+    router = GridRouter(50, 50, grid_size=1.0, constraints=RouterConstraints(min_bend_radius_um=5.0))
     router.add_obstacle(20, 20, 5, 5)
     path = router.route((0, 0), (40, 40))
     assert path is not None
