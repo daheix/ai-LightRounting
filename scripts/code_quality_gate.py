@@ -9,7 +9,7 @@
 5. 类方法数
 6. 嵌套深度
 
-任一硬性上限超标即返回非零退出码（CI 门禁失败）。
+**0 警告 0 错误**才允许提交。任一违规（含警告）即返回非零退出码。
 
 来源:
 - Google Python Style Guide 函数长度: https://zh-google-styleguide.readthedocs.io/en/latest/google-python-styleguide/python_style_rules.html#id17
@@ -17,10 +17,10 @@
 - PEP 8 风格指南: https://peps.python.org/pep-0008/
 
 用法:
-    python scripts/code_quality_gate.py                 # 检查 polaris/ + tests/
+    python scripts/code_quality_gate.py                 # 检查 polaris/
     python scripts/code_quality_gate.py polaris/         # 检查指定目录
     python scripts/code_quality_gate.py --json           # 输出 JSON 报告
-    python scripts/code_quality_gate.py --warnings       # 显示警告但不失败
+    python scripts/code_quality_gate.py --staged         # 仅检查 git 暂存文件
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ import argparse
 import ast
 import json
 import os
+import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -39,21 +40,33 @@ from pathlib import Path
 
 # 硬性上限（超过即门禁失败）
 HARD_MAX_FILE_SIZE_KB = 120
-HARD_MAX_FILE_SLOC = 2000
+HARD_MAX_FILE_SLOC = 800
 HARD_MAX_FUNC_SLOC = 80
 HARD_MAX_FUNC_COMPLEXITY = 15
 HARD_MAX_FUNC_ARGS = 7
 HARD_MAX_CLASS_METHODS = 30
 HARD_MAX_NESTING = 5
 
-# 警告阈值（超过即输出警告，但不阻断）
+# 警告阈值（超过即输出警告，同样阻断提交）
 WARN_FILE_SIZE_KB = 80
-WARN_FILE_SLOC = 800
+WARN_FILE_SLOC = 500
 WARN_FUNC_SLOC = 40
 WARN_FUNC_COMPLEXITY = 10
 WARN_FUNC_ARGS = 5
 WARN_CLASS_METHODS = 20
 WARN_NESTING = 4
+
+# 跳过的目录名
+_SKIP_DIRS = (
+    "__pycache__",
+    ".git",
+    "venv",
+    ".venv",
+    "node_modules",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".pytest_cache",
+)
 
 
 # =============================================================================
@@ -96,6 +109,42 @@ class GateReport:
 
 
 # =============================================================================
+# 违规生成辅助函数
+# =============================================================================
+
+
+@dataclass
+class MetricCheck:
+    """单次指标检查的上下文。"""
+
+    violations: list[Violation]
+    filepath: str
+    line: int
+    name: str
+
+    def check(self, metric: str, value: float) -> None:
+        """检查指标值是否超阈值，超阈值则添加违规记录。"""
+        limits = {
+            "file_size_kb": (WARN_FILE_SIZE_KB, HARD_MAX_FILE_SIZE_KB),
+            "file_sloc": (WARN_FILE_SLOC, HARD_MAX_FILE_SLOC),
+            "func_sloc": (WARN_FUNC_SLOC, HARD_MAX_FUNC_SLOC),
+            "cyclomatic_complexity": (WARN_FUNC_COMPLEXITY, HARD_MAX_FUNC_COMPLEXITY),
+            "func_args": (WARN_FUNC_ARGS, HARD_MAX_FUNC_ARGS),
+            "class_methods": (WARN_CLASS_METHODS, HARD_MAX_CLASS_METHODS),
+            "nesting_depth": (WARN_NESTING, HARD_MAX_NESTING),
+        }
+        warn_limit, hard_limit = limits.get(metric, (0, 0))
+        if value > hard_limit:
+            self.violations.append(
+                Violation(self.filepath, self.line, self.name, metric, value, hard_limit, "error")
+            )
+        elif value > warn_limit:
+            self.violations.append(
+                Violation(self.filepath, self.line, self.name, metric, value, warn_limit, "warning")
+            )
+
+
+# =============================================================================
 # AST 分析器
 # =============================================================================
 
@@ -125,12 +174,10 @@ class CodeAnalyzer(ast.NodeVisitor):
         self.filepath = filepath
         self.source_lines = source_lines
         self.violations: list[Violation] = []
-        self.class_methods: dict[str, int] = {}
 
     def analyze(self, tree: ast.AST) -> list[Violation]:
         """分析 AST 树，返回违规列表。"""
         self.violations = []
-        self.class_methods = {}
         self.visit(tree)
         return self.violations
 
@@ -141,9 +188,7 @@ class CodeAnalyzer(ast.NodeVisitor):
         sloc = 0
         for i in range(start_line - 1, min(end_line, len(self.source_lines))):
             line = self.source_lines[i].strip()
-            if not line:
-                continue
-            if line.startswith("#"):
+            if not line or line.startswith("#"):
                 continue
             sloc += 1
         return sloc
@@ -158,10 +203,8 @@ class CodeAnalyzer(ast.NodeVisitor):
             if isinstance(child, self.DECISION_NODES):
                 complexity += 1
             elif isinstance(child, ast.BoolOp):
-                # and/or 每个额外操作数增加一条路径
                 complexity += len(child.values) - 1
             elif isinstance(child, ast.IfExp):
-                # 三元表达式 x if cond else y
                 complexity += 1
         return complexity
 
@@ -169,14 +212,10 @@ class CodeAnalyzer(ast.NodeVisitor):
         """计算最大嵌套深度。"""
         max_depth = depth
         for child in ast.iter_child_nodes(node):
-            if isinstance(child, (ast.If, ast.For, ast.While, ast.With, ast.Try)):
-                child_depth = self._calc_max_nesting(child, depth + 1)
-                if child_depth > max_depth:
-                    max_depth = child_depth
-            else:
-                child_depth = self._calc_max_nesting(child, depth)
-                if child_depth > max_depth:
-                    max_depth = child_depth
+            is_nested = isinstance(child, (ast.If, ast.For, ast.While, ast.With, ast.Try))
+            child_depth = self._calc_max_nesting(child, depth + (1 if is_nested else 0))
+            if child_depth > max_depth:
+                max_depth = child_depth
         return max_depth
 
     def _check_function(
@@ -185,120 +224,22 @@ class CodeAnalyzer(ast.NodeVisitor):
         class_name: str | None = None,
     ) -> None:
         """检查单个函数/方法的各项指标。"""
-        func_name = node.name
-        full_name = f"{class_name}.{func_name}" if class_name else func_name
+        full_name = f"{class_name}.{node.name}" if class_name else node.name
+        mc = MetricCheck(self.violations, self.filepath, node.lineno, full_name)
 
         # 1. 有效代码行数
-        sloc = self._count_sloc(node)
-        if sloc > HARD_MAX_FUNC_SLOC:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="func_sloc",
-                    value=sloc,
-                    limit=HARD_MAX_FUNC_SLOC,
-                    severity="error",
-                )
-            )
-        elif sloc > WARN_FUNC_SLOC:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="func_sloc",
-                    value=sloc,
-                    limit=WARN_FUNC_SLOC,
-                    severity="warning",
-                )
-            )
-
+        mc.check("func_sloc", self._count_sloc(node))
         # 2. 圈复杂度
-        complexity = self._calc_complexity(node)
-        if complexity > HARD_MAX_FUNC_COMPLEXITY:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="cyclomatic_complexity",
-                    value=complexity,
-                    limit=HARD_MAX_FUNC_COMPLEXITY,
-                    severity="error",
-                )
-            )
-        elif complexity > WARN_FUNC_COMPLEXITY:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="cyclomatic_complexity",
-                    value=complexity,
-                    limit=WARN_FUNC_COMPLEXITY,
-                    severity="warning",
-                )
-            )
-
+        mc.check("cyclomatic_complexity", self._calc_complexity(node))
         # 3. 参数个数
         n_args = len(node.args.args) + len(node.args.kwonlyargs)
         if node.args.vararg:
             n_args += 1
         if node.args.kwarg:
             n_args += 1
-        if n_args > HARD_MAX_FUNC_ARGS:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="func_args",
-                    value=n_args,
-                    limit=HARD_MAX_FUNC_ARGS,
-                    severity="error",
-                )
-            )
-        elif n_args > WARN_FUNC_ARGS:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="func_args",
-                    value=n_args,
-                    limit=WARN_FUNC_ARGS,
-                    severity="warning",
-                )
-            )
-
+        mc.check("func_args", n_args)
         # 4. 嵌套深度
-        max_nesting = self._calc_max_nesting(node)
-        if max_nesting > HARD_MAX_NESTING:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="nesting_depth",
-                    value=max_nesting,
-                    limit=HARD_MAX_NESTING,
-                    severity="error",
-                )
-            )
-        elif max_nesting > WARN_NESTING:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=full_name,
-                    metric="nesting_depth",
-                    value=max_nesting,
-                    limit=WARN_NESTING,
-                    severity="warning",
-                )
-            )
+        mc.check("nesting_depth", self._calc_max_nesting(node))
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """访问函数定义。"""
@@ -313,37 +254,11 @@ class CodeAnalyzer(ast.NodeVisitor):
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """访问类定义，检查方法数。"""
         methods = [n for n in node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
-        n_methods = len(methods)
-        if n_methods > HARD_MAX_CLASS_METHODS:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=node.name,
-                    metric="class_methods",
-                    value=n_methods,
-                    limit=HARD_MAX_CLASS_METHODS,
-                    severity="error",
-                )
-            )
-        elif n_methods > WARN_CLASS_METHODS:
-            self.violations.append(
-                Violation(
-                    file=self.filepath,
-                    line=node.lineno,
-                    name=node.name,
-                    metric="class_methods",
-                    value=n_methods,
-                    limit=WARN_CLASS_METHODS,
-                    severity="warning",
-                )
-            )
-
-        # 检查每个方法
+        MetricCheck(self.violations, self.filepath, node.lineno, node.name).check(
+            "class_methods", len(methods)
+        )
         for method in methods:
             self._check_function(method, class_name=node.name)
-
-        # 继续访问类体内的其他节点（不重复访问方法）
         for child in node.body:
             if not isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 self.visit(child)
@@ -359,178 +274,147 @@ def count_sloc(source: str) -> int:
     sloc = 0
     for line in source.splitlines():
         stripped = line.strip()
-        if not stripped:
-            continue
-        if stripped.startswith("#"):
+        if not stripped or stripped.startswith("#"):
             continue
         sloc += 1
     return sloc
 
 
+def _check_file_size(report: FileReport, filepath: Path) -> None:
+    """检查文件大小和有效代码行数。"""
+    report.size_kb = filepath.stat().st_size / 1024.0
+    mc = MetricCheck(report.violations, str(filepath), 0, filepath.name)
+    mc.check("file_size_kb", report.size_kb)
+    report.sloc = count_sloc(filepath.read_text(encoding="utf-8"))
+    mc.check("file_sloc", report.sloc)
+
+
 def check_file(filepath: Path) -> FileReport:
     """检查单个 Python 文件。"""
-    report = FileReport(
-        path=str(filepath),
-        size_kb=0,
-        sloc=0,
-        violations=[],
-    )
+    report = FileReport(path=str(filepath), size_kb=0, sloc=0, violations=[])
 
     try:
         source = filepath.read_text(encoding="utf-8")
     except Exception:
-        report.violations.append(
-            Violation(
-                file=str(filepath),
-                line=0,
-                name="<file>",
-                metric="read_error",
-                value=0,
-                limit=0,
-                severity="error",
-            )
-        )
+        report.violations.append(Violation(str(filepath), 0, "<file>", "read_error", 0, 0, "error"))
         return report
 
-    # 文件大小
-    file_size = filepath.stat().st_size
-    report.size_kb = file_size / 1024.0
-    if report.size_kb > HARD_MAX_FILE_SIZE_KB:
-        report.violations.append(
-            Violation(
-                file=str(filepath),
-                line=0,
-                name=filepath.name,
-                metric="file_size_kb",
-                value=round(report.size_kb, 1),
-                limit=HARD_MAX_FILE_SIZE_KB,
-                severity="error",
-            )
-        )
-    elif report.size_kb > WARN_FILE_SIZE_KB:
-        report.violations.append(
-            Violation(
-                file=str(filepath),
-                line=0,
-                name=filepath.name,
-                metric="file_size_kb",
-                value=round(report.size_kb, 1),
-                limit=WARN_FILE_SIZE_KB,
-                severity="warning",
-            )
-        )
+    _check_file_size(report, filepath)
 
-    # 有效代码行数
-    report.sloc = count_sloc(source)
-    if report.sloc > HARD_MAX_FILE_SLOC:
-        report.violations.append(
-            Violation(
-                file=str(filepath),
-                line=0,
-                name=filepath.name,
-                metric="file_sloc",
-                value=report.sloc,
-                limit=HARD_MAX_FILE_SLOC,
-                severity="error",
-            )
-        )
-    elif report.sloc > WARN_FILE_SLOC:
-        report.violations.append(
-            Violation(
-                file=str(filepath),
-                line=0,
-                name=filepath.name,
-                metric="file_sloc",
-                value=report.sloc,
-                limit=WARN_FILE_SLOC,
-                severity="warning",
-            )
-        )
-
-    # AST 分析
     try:
         tree = ast.parse(source, filename=str(filepath))
     except SyntaxError as e:
         report.violations.append(
-            Violation(
-                file=str(filepath),
-                line=e.lineno or 0,
-                name="<syntax>",
-                metric="syntax_error",
-                value=0,
-                limit=0,
-                severity="error",
-            )
+            Violation(str(filepath), e.lineno or 0, "<syntax>", "syntax_error", 0, 0, "error")
         )
         return report
 
-    source_lines = source.splitlines()
-    analyzer = CodeAnalyzer(str(filepath), source_lines)
+    analyzer = CodeAnalyzer(str(filepath), source.splitlines())
     analyzer.analyze(tree)
     report.violations.extend(analyzer.violations)
-
     return report
 
 
-def find_python_files(paths: list[str]) -> list[Path]:
-    """查找指定路径下的所有 Python 文件。"""
+def _is_test_file(path: Path) -> bool:
+    """判断是否为测试文件（tests/ 目录下或 test_*.py 文件）。"""
+    if "tests" in path.parts:
+        return True
+    return path.name.startswith("test_") or path.name.startswith("conftest")
+
+
+def _should_skip_dir(root: str) -> bool:
+    """判断目录是否应跳过。"""
+    return any(skip in root for skip in _SKIP_DIRS)
+
+
+def _collect_py_files_from_dir(path: Path, exclude_tests: bool, files: list[Path]) -> None:
+    """从目录收集 Python 文件。"""
+    for root, _dirs, filenames in os.walk(path):
+        if _should_skip_dir(root):
+            continue
+        if exclude_tests and "tests" in Path(root).parts:
+            continue
+        for filename in filenames:
+            if not filename.endswith(".py"):
+                continue
+            filepath = Path(root) / filename
+            if exclude_tests and _is_test_file(filepath):
+                continue
+            files.append(filepath)
+
+
+def find_python_files(paths: list[str], exclude_tests: bool = False) -> list[Path]:
+    """查找指定路径下的所有 Python 文件。
+
+    Args:
+        paths: 要搜索的路径列表。
+        exclude_tests: 是否排除测试文件（tests/ 目录和 test_*.py 文件）。
+    """
     files: list[Path] = []
     for path_str in paths:
         path = Path(path_str)
         if path.is_file() and path.suffix == ".py":
-            files.append(path)
+            if not (exclude_tests and _is_test_file(path)):
+                files.append(path)
         elif path.is_dir():
-            for root, _dirs, filenames in os.walk(path):
-                # 跳过 __pycache__、.git、venv 等
-                if any(
-                    skip in root
-                    for skip in (
-                        "__pycache__",
-                        ".git",
-                        "venv",
-                        ".venv",
-                        "node_modules",
-                        ".mypy_cache",
-                        ".ruff_cache",
-                        ".pytest_cache",
-                    )
-                ):
-                    continue
-                for filename in filenames:
-                    if filename.endswith(".py"):
-                        files.append(Path(root) / filename)
+            _collect_py_files_from_dir(path, exclude_tests, files)
     return sorted(set(files))
+
+
+def get_staged_python_files() -> list[Path]:
+    """获取 git 暂存区中的 Python 文件列表（增量检查）。
+
+    通过 `git diff --cached --name-only --diff-filter=ACM` 获取
+    已暂存（staged）的新增/修改文件。
+    """
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACM"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return []
+
+    files: list[Path] = []
+    for line in result.stdout.strip().splitlines():
+        path = Path(line)
+        if path.suffix == ".py" and path.exists():
+            files.append(path)
+    return sorted(files)
 
 
 # =============================================================================
 # 报告输出
 # =============================================================================
 
+_METRIC_NAMES = {
+    "file_size_kb": "文件大小",
+    "file_sloc": "文件有效行数",
+    "func_sloc": "函数有效行数",
+    "cyclomatic_complexity": "圈复杂度",
+    "func_args": "参数个数",
+    "class_methods": "类方法数",
+    "nesting_depth": "嵌套深度",
+    "syntax_error": "语法错误",
+    "read_error": "读取错误",
+}
+
 
 def format_violation(v: Violation) -> str:
     """格式化单条违规为可读字符串。"""
     severity_icon = "ERROR" if v.severity == "error" else "WARN "
-    metric_names = {
-        "file_size_kb": "文件大小",
-        "file_sloc": "文件有效行数",
-        "func_sloc": "函数有效行数",
-        "cyclomatic_complexity": "圈复杂度",
-        "func_args": "参数个数",
-        "class_methods": "类方法数",
-        "nesting_depth": "嵌套深度",
-        "syntax_error": "语法错误",
-        "read_error": "读取错误",
-    }
-    metric_name = metric_names.get(v.metric, v.metric)
+    metric_name = _METRIC_NAMES.get(v.metric, v.metric)
     return (
         f"  [{severity_icon}] {v.file}:{v.line} {v.name} | {metric_name}={v.value} (上限={v.limit})"
     )
 
 
-def print_report(report: GateReport, show_warnings: bool) -> int:
-    """打印报告，返回错误数。"""
+def print_report(report: GateReport) -> int:
+    """打印报告，返回违规总数（错误+警告）。"""
     print("=" * 70)
-    print("PoLaRIS 代码质量门禁报告 (规则 4)")
+    print("PoLaRIS 代码质量门禁报告 (规则 4) — 0 警告 0 错误才通过")
     print("=" * 70)
     print(f"检查文件数: {report.files_checked}")
     print(f"总违规数:   {report.total_violations}")
@@ -541,26 +425,21 @@ def print_report(report: GateReport, show_warnings: bool) -> int:
     for file_report in report.file_reports:
         if not file_report.violations:
             continue
-        errors = [v for v in file_report.violations if v.severity == "error"]
-        if not show_warnings and not errors:
-            continue
         print(f"\n📄 {file_report.path}")
         print(f"   大小: {file_report.size_kb:.1f} KB | 有效行数: {file_report.sloc}")
         for v in file_report.violations:
-            if v.severity == "error" or show_warnings:
-                print(format_violation(v))
+            print(format_violation(v))
 
     print("\n" + "=" * 70)
-    if report.errors > 0:
-        print(f"门禁失败: {report.errors} 个硬性违规需重构修复")
+    total = report.errors + report.warnings
+    if total > 0:
+        print(f"门禁失败: {report.errors} 个错误 + {report.warnings} 个警告")
         print("请按规则 4.2 流程重构拆分超标的文件/函数")
     else:
-        print("门禁通过: 无硬性违规")
-        if report.warnings > 0:
-            print(f"  (有 {report.warnings} 个警告，建议优化)")
+        print("门禁通过: 0 警告 0 错误")
     print("=" * 70)
 
-    return report.errors
+    return total
 
 
 def print_json_report(report: GateReport) -> None:
@@ -588,34 +467,9 @@ def print_json_report(report: GateReport) -> None:
 # =============================================================================
 
 
-def main() -> int:
-    """主入口，返回退出码（0=通过，1=有硬性违规）。"""
-    parser = argparse.ArgumentParser(description="PoLaRIS 代码质量门禁（规则 4 强制执行）")
-    parser.add_argument(
-        "paths",
-        nargs="*",
-        default=["polaris/", "tests/"],
-        help="要检查的目录或文件（默认 polaris/ tests/）",
-    )
-    parser.add_argument(
-        "--json",
-        action="store_true",
-        help="输出 JSON 格式报告",
-    )
-    parser.add_argument(
-        "--warnings",
-        action="store_true",
-        help="显示警告详情",
-    )
-    args = parser.parse_args()
-
-    files = find_python_files(args.paths)
-    if not files:
-        print("未找到 Python 文件")
-        return 0
-
+def _build_report(files: list[Path]) -> GateReport:
+    """构建门禁报告。"""
     report = GateReport(files_checked=len(files), total_violations=0, errors=0, warnings=0)
-
     for filepath in files:
         file_report = check_file(filepath)
         report.file_reports.append(file_report)
@@ -625,13 +479,45 @@ def main() -> int:
                 report.errors += 1
             else:
                 report.warnings += 1
+    return report
+
+
+def main() -> int:
+    """主入口，返回退出码（0=通过，1=有违规）。"""
+    parser = argparse.ArgumentParser(description="PoLaRIS 代码质量门禁（规则 4 强制执行）")
+    parser.add_argument(
+        "paths", nargs="*", default=["polaris/"], help="要检查的目录或文件（默认 polaris/）"
+    )
+    parser.add_argument("--json", action="store_true", help="输出 JSON 格式报告")
+    parser.add_argument("--staged", action="store_true", help="增量模式：仅检查 git 暂存区文件")
+    parser.add_argument(
+        "--exclude-tests", action="store_true", default=True, help="排除测试文件，默认开启"
+    )
+    parser.add_argument("--include-tests", action="store_true", help="包含测试文件（覆盖默认排除）")
+    args = parser.parse_args()
+
+    if args.staged:
+        files = get_staged_python_files()
+        if not files:
+            print("暂存区无 Python 文件，跳过质量门禁")
+            return 0
+        print(f"增量检查模式：检查 {len(files)} 个暂存文件")
+    else:
+        exclude_tests = args.exclude_tests and not args.include_tests
+        files = find_python_files(args.paths, exclude_tests=exclude_tests)
+
+    if not files:
+        print("未找到 Python 文件")
+        return 0
+
+    report = _build_report(files)
 
     if args.json:
         print_json_report(report)
-        return 1 if report.errors > 0 else 0
+        return 1 if (report.errors + report.warnings) > 0 else 0
 
-    n_errors = print_report(report, show_warnings=args.warnings)
-    return 1 if n_errors > 0 else 0
+    total = print_report(report)
+    return 1 if total > 0 else 0
 
 
 if __name__ == "__main__":
