@@ -21,12 +21,9 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
-
-from polaris.data.variant_generator import validate_with_simulation
 from polaris.trainer.ppo import PPOConfig
 from polaris.trainer.train_loop import TrainConfig, train_floorplan, train_routing
 

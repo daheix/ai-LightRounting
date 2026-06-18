@@ -187,15 +187,21 @@ class RoutingEnv(gym.Env):
                 continue
             obstacles.append(pl.bbox_abs())
         # 布线
-        wp = route_connection(
-            start=(start[0] + dx, start[1] + dy),
-            end=end,
-            platform=platform,
-            grid_size=self.state.grid_size,
-            canvas_w=self.state.canvas_w,
-            canvas_h=self.state.canvas_h,
-            obstacles=obstacles,
-        )
+        try:
+            wp = route_connection(
+                start=(start[0] + dx, start[1] + dy),
+                end=end,
+                platform=platform,
+                grid_size=self.state.grid_size,
+                canvas_w=self.state.canvas_w,
+                canvas_h=self.state.canvas_h,
+                obstacles=obstacles,
+            )
+        except (RuntimeError, IndexError, ValueError):
+            # 布线失败：给大惩罚，跳过此连接
+            self._conn_idx += 1
+            terminated = self._conn_idx >= len(self.connections)
+            return self._obs(), -100.0, terminated, False, {"step": self._conn_idx}
         self.state.paths[self._conn_idx] = wp
         self.state.update_congestion(wp)
         # 奖励

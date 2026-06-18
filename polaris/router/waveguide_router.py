@@ -151,16 +151,26 @@ class GridRouter:
 
     def _save_endpoints(self, start, goal):
         """保存起点/终点障碍标记并临时清除（器件端口可能在 bbox 内）。"""
-        orig_start = self.obstacle[start[1], start[0]]
-        orig_goal = self.obstacle[goal[1], goal[0]]
-        self.obstacle[start[1], start[0]] = 0
-        self.obstacle[goal[1], goal[0]] = 0
+        h, w = self.obstacle.shape
+        s0 = min(max(start[0], 0), w - 1)
+        s1 = min(max(start[1], 0), h - 1)
+        g0 = min(max(goal[0], 0), w - 1)
+        g1 = min(max(goal[1], 0), h - 1)
+        orig_start = self.obstacle[s1, s0]
+        orig_goal = self.obstacle[g1, g0]
+        self.obstacle[s1, s0] = 0
+        self.obstacle[g1, g0] = 0
         return orig_start, orig_goal
 
     def _restore_endpoints(self, start, goal, orig_start, orig_goal):
         """恢复起点/终点的原始障碍标记。"""
-        self.obstacle[start[1], start[0]] = orig_start
-        self.obstacle[goal[1], goal[0]] = orig_goal
+        h, w = self.obstacle.shape
+        s0 = min(max(start[0], 0), w - 1)
+        s1 = min(max(start[1], 0), h - 1)
+        g0 = min(max(goal[0], 0), w - 1)
+        g1 = min(max(goal[1], 0), h - 1)
+        self.obstacle[s1, s0] = orig_start
+        self.obstacle[g1, g0] = orig_goal
 
     def route(
         self,
