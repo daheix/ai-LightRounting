@@ -108,9 +108,13 @@ def generate_position_variants(
         for dev_name, pos in base_layout.items():
             jx = rng.uniform(-config.position_jitter_um, config.position_jitter_um)
             jy = rng.uniform(-config.position_jitter_um, config.position_jitter_um)
-            nx = max(0.0, min(canvas_w - pos.get("w", 10.0), pos.get("x", 0.0) + jx))
-            ny = max(0.0, min(canvas_h - pos.get("h", 10.0), pos.get("y", 0.0) + jy))
-            variant[dev_name] = {"x": nx, "y": ny, "w": pos.get("w", 10.0), "h": pos.get("h", 10.0)}
+            px = float(pos.get("x", 0.0))
+            py = float(pos.get("y", 0.0))
+            pw = float(pos.get("w", 10.0))
+            ph = float(pos.get("h", 10.0))
+            nx = max(0.0, min(canvas_w - pw, px + jx))
+            ny = max(0.0, min(canvas_h - ph, py + jy))
+            variant[dev_name] = {"x": nx, "y": ny, "w": pw, "h": ph}
         variants.append(variant)
 
     return variants
@@ -298,6 +302,30 @@ def validate_with_simulation(circuit: CircuitSpec) -> tuple[bool, float]:
         return False, 999.0
 
 
+def _is_valid_placements(placements: dict) -> bool:
+    """检查 placements 是否为 {name: {x, y, w, h}} 格式。
+
+    LiDAR PIC IR 的 placements 是嵌套字典（如
+    {"gc1": {"component": "...", "settings": {...}}}），
+    不符合 {name: {x, y, w, h}} 格式，应跳过。
+
+    Args:
+        placements: placements 字典。
+
+    Returns:
+        是否为有效的 {name: {x, y, w, h}} 格式。
+    """
+    if not placements:
+        return False
+    for val in placements.values():
+        if not isinstance(val, dict):
+            return False
+        x_val = val.get("x")
+        if not isinstance(x_val, (int, float)):
+            return False
+    return True
+
+
 def _save_position_variants(
     base: dict, base_dir: Path, cfg: VariantConfig,
 ) -> tuple[int, int]:
@@ -312,7 +340,8 @@ def _save_position_variants(
         (变体数, 有效数)。
     """
     placements = base.get("placements", {})
-    if not placements:
+    # 检查 placements 格式是否为 {name: {x, y, w, h}}
+    if not placements or not _is_valid_placements(placements):
         return 0, 0
     canvas_w = base.get("canvas_w", 1000.0)
     canvas_h = base.get("canvas_h", 1000.0)
