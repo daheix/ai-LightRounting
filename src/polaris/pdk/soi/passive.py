@@ -21,8 +21,8 @@ from polaris.pdk.soi.sources import (
     _SRC_KRAUSS_NP2008,
     _SRC_PIGGOTT_NP2017,
     _SRC_SAMSUNG,
+    _SRC_SIEPIC_EBEAM,
     _SRC_SOREF_JSTQE1998,
-    _SRC_TSMC,
 )
 
 
@@ -111,11 +111,12 @@ def _make_crossing_ports(size: float, width: float) -> list[Port]:
 def make_strip_waveguide() -> Device:
     """条形波导（strip waveguide，全刻蚀）。
 
-    厚 220nm，宽 450-500nm（单模 TE0），传播损耗 1-3 dB/cm。
-    来源：AIM Photonics 教程 + 硅光工艺平台比较（iccsz.com）。
+    厚 220nm，宽 500nm（单模 TE0），传播损耗 2-3 dB/cm。
+    参数对齐 SiEPIC EBeam PDK（220nm SOI, 500nm strip, TE0）。
+    来源：SiEPIC EBeam PDK + AIM Photonics 教程 + 硅光工艺平台比较（iccsz.com）。
     """
     length = 10.0  # 默认 10μm 直波导
-    width = 0.5  # 500nm 单模
+    width = 0.5  # 500nm 单模（SiEPIC 默认 width=500nm）
     ports = [
         Port(
             name="in", x=0.0, y=0.0, direction=Direction.WEST, waveguide_type="strip", width=width
@@ -137,13 +138,14 @@ def make_strip_waveguide() -> Device:
         ports=ports,
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "thickness_nm": 220,  # SOI 顶层硅厚 220nm
-            "width_nm": 500,  # 单模条形波导宽 450-500nm
-            "loss_db_cm": 2.0,  # 传播损耗 1-3 dB/cm
+            "thickness_nm": 220,  # SOI 顶层硅厚 220nm（SiEPIC 标准）
+            "width_nm": 500,  # 单模条形波导宽 500nm（SiEPIC 默认）
+            "loss_db_cm": 3.0,  # 传播损耗 2-3 dB/cm（SiEPIC e-beam 工艺典型值）
             "wavelength_nm": 1550,
             "mode": "TE0",
+            "pdk_reference": "SiEPIC_EBeam_PDK",
         },
-        source=_SRC_AIM,
+        source=_SRC_SIEPIC_EBEAM,
         constraints=_SOI_CONSTRAINTS,
     )
 
@@ -189,12 +191,13 @@ def make_rib_waveguide() -> Device:
 # 3. 弯曲波导 bend
 # ===========================================================================
 def make_bend() -> Device:
-    """弯曲波导（90° 圆弧 bend）。
+    """弯曲波导（90° 弯曲，支持 euler/circular 两种类型）。
 
     最小弯曲半径 2-6μm（高折射率差 SOI 平台），损耗 0.01-0.1 dB/90°。
-    来源：台积电 ISSCC 2026 硅光子学平台解析。
+    SiEPIC EBeam PDK 默认使用 euler 弯曲（clothoid, p=0.5）以降低弯曲损耗。
+    来源：SiEPIC EBeam PDK + 台积电 ISSCC 2026 硅光子学平台解析。
     """
-    radius = 5.0  # 默认半径 5μm（区间 2-6μm）
+    radius = 5.0  # 默认半径 5μm（SiEPIC half_ring 默认 radius=5μm）
     width = 0.5
     ports = _make_bend_ports(radius, width)
     return Device(
@@ -207,11 +210,14 @@ def make_bend() -> Device:
         params={
             "radius_um": radius,  # 弯曲半径 2-6μm
             "angle_deg": 90,  # 90° 弧
+            "bend_type": "euler",  # SiEPIC 默认 euler 弯曲（clothoid）
+            "euler_p": 0.5,  # euler 参数 p=0.5（曲率从 0 线性增加到 1/R 的中点）
             "loss_db_90": 0.05,  # 损耗 0.01-0.1 dB/90°
             "width_nm": 500,
             "wavelength_nm": 1550,
+            "pdk_reference": "SiEPIC_EBeam_PDK",
         },
-        source=_SRC_TSMC,
+        source=_SRC_SIEPIC_EBEAM,
         constraints={
             "min_bend_radius_um": 2.0,  # 高折射率差平台最小弯曲半径
             "min_spacing_um": 1.0,
@@ -226,8 +232,9 @@ def make_bend() -> Device:
 def make_grating_coupler_1d() -> Device:
     """一维硅光栅耦合器（1D Si grating coupler）。
 
-    峰值耦合损耗 1.9dB，1-dB 带宽 27nm，O 波段 TE 偏振。
-    来源：三星 300mm 硅光平台 OFC 2026。
+    SiEPIC EBeam PDK 标准 GC：TE 偏振，1550nm，耦合损耗 3-5 dB。
+    三星 300mm 平台：峰值耦合损耗 1.9dB，1-dB 带宽 27nm，O 波段 TE。
+    来源：SiEPIC EBeam PDK + 三星 300mm 硅光平台 OFC 2026。
     """
     width = 12.0  # 光栅区宽度
     length = 20.0  # 光栅区长度
@@ -243,16 +250,19 @@ def make_grating_coupler_1d() -> Device:
         ports=ports,
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
-            "peak_coupling_loss_db": 1.9,  # 峰值耦合损耗 1.9dB
+            "peak_coupling_loss_db": 1.9,  # 三星峰值耦合损耗 1.9dB
+            "siepic_typical_loss_db": 4.1,  # SiEPIC EBeam GC 典型损耗 3-5 dB
             "bandwidth_1db_nm": 27,  # 1-dB 带宽 27nm
-            "wavelength_nm": 1310,  # O 波段
+            "wavelength_nm": 1550,  # SiEPIC 默认 C 波段
             "polarization": "TE",
             "grating_type": "1D Si",
+            "fiber_angle_deg": -25,  # SiEPIC TE GC 光纤倾角 -25°
+            "pdk_reference": "SiEPIC_EBeam_PDK",
         },
-        source=_SRC_SAMSUNG,
+        source=_SRC_SIEPIC_EBEAM,
         constraints={
             "min_spacing_um": 1.0,
-            "wavelength_nm": 1310,
+            "wavelength_nm": 1550,
         },
     )
 

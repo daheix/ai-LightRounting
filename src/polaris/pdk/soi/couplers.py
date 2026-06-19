@@ -20,6 +20,7 @@ from polaris.pdk.soi.sources import (
     _SOI_CONSTRAINTS,
     _SRC_AIM,
     _SRC_ICCSZ,
+    _SRC_SIEPIC_EBEAM,
     _SRC_SOLDANO_JLT1995,
 )
 
@@ -170,10 +171,11 @@ def _make_mzi_ports(arm_gap: float, length: float) -> list[Port]:
 def make_directional_coupler() -> Device:
     """定向耦合器（directional coupler, DC）。
 
+    SiEPIC EBeam PDK 标准 DC：gap=200nm, coupling_length=10μm, TE 1550nm。
     间隙 100-300nm，耦合长度 5-20μm，实现 3dB 功率分束。
-    来源：AIM Photonics 教程。
+    来源：SiEPIC EBeam PDK + AIM Photonics 教程。
     """
-    length = 10.0  # 耦合长度 5-20μm
+    length = 10.0  # 耦合长度 5-20μm（SiEPIC 默认 10μm）
     width = 0.5
     gap = 0.5  # 端口间距（波导间物理间距，μm）
     ports = _make_directional_coupler_ports(length, width, gap)
@@ -187,14 +189,15 @@ def make_directional_coupler() -> Device:
             xmin=0.0, ymin=-gap / 2 - width / 2, xmax=length, ymax=gap / 2 + width / 2
         ),
         params={
-            "gap_nm": 200,  # 耦合间隙 100-300nm
-            "coupling_length_um": 10.0,  # 耦合长度 5-20μm
+            "gap_nm": 200,  # SiEPIC 默认耦合间隙 200nm
+            "coupling_length_um": 10.0,  # SiEPIC 默认耦合长度 10μm
             "width_nm": 500,
             "coupling_ratio": 0.5,  # 3dB 耦合
             "loss_db": 0.2,
             "wavelength_nm": 1550,
+            "pdk_reference": "SiEPIC_EBeam_PDK",
         },
-        source=_SRC_AIM,
+        source=_SRC_SIEPIC_EBEAM,
         constraints=_SOI_CONSTRAINTS,
     )
 

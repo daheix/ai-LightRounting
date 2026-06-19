@@ -502,8 +502,11 @@ class RouteConnectionConfig:
     target_length_um: float | None = None
 
 
-# 平台传播损耗（dB/cm），来自 spec.md 真实参数
-_PLATFORM_LOSS_DB_CM = {"SOI": 2.0, "SiN": 0.1, "LNOI": 0.4}
+# 平台传播损耗（dB/cm），来自 SiEPIC EBeam PDK + spec.md 真实参数
+# SOI: 3 dB/cm（SiEPIC e-beam 工艺典型值，iccsz.com 报告 2-3 dB/cm）
+# SiN: 0.1 dB/cm（SiN 超低损耗平台）
+# LNOI: 0.4 dB/cm（LNOI 薄膜铌酸锂）
+_PLATFORM_LOSS_DB_CM = {"SOI": 3.0, "SiN": 0.1, "LNOI": 0.4}
 
 
 def _build_router_for_platform(config: RouteConnectionConfig, platform: str) -> GridRouter:

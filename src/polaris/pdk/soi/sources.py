@@ -106,6 +106,25 @@ _SRC_PIGGOTT_NP2017 = Source(
     year=2017,
     url="https://doi.org/10.1038/s41566-017-0035-1",
 )
+# SiEPIC EBeam PDK（UBC 开源光子 PDK，220nm SOI e-beam 工艺）
+# 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK (MIT License)
+# 工艺: 220nm SOI, 100keV e-beam lithography, min feature 70nm
+# 器件: waveguide(500nm strip)/DC(gap=200nm)/half_ring(gap=50nm,radius=5μm)/GC(TE,1550nm)
+_SRC_SIEPIC_EBEAM = Source(
+    title="SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
+    authors="SiEPIC / University of British Columbia (UBC)",
+    year=2024,
+    url="https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+)
+# SiEPIC openEBL 工艺说明（Applied Nanotools 220nm SOI e-beam）
+# Layer 1=Si, Layer 10=Text, Layer 99=Floorplan
+# 来源: https://siepic.ca/openEBL/
+_SRC_SIEPIC_OPENEBL = Source(
+    title="SiEPIC openEBL — Open E-Beam Lithography Fabrication Service",
+    authors="SiEPICfab / Applied Nanotools",
+    year=2024,
+    url="https://siepic.ca/openEBL/",
+)
 
 # SOI 平台通用设计约束（弯曲半径 2-6μm，波导间距 ≥1μm，见 spec.md）
 _SOI_CONSTRAINTS = {

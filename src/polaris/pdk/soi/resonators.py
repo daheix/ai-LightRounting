@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
-from polaris.pdk.soi.sources import _SOI_CONSTRAINTS, _SRC_AIM, _SRC_SAMSUNG
+from polaris.pdk.soi.sources import _SOI_CONSTRAINTS, _SRC_SAMSUNG, _SRC_SIEPIC_EBEAM
 
 
 # ===========================================================================
@@ -101,11 +101,12 @@ def _make_double_ring_ports(
 def make_ring_resonator() -> Device:
     """微环谐振器（add-drop ring resonator）。
 
+    SiEPIC EBeam PDK half_ring 默认参数：radius=5μm, gap=50nm, width=500nm。
     半径 5-20μm，与总线波导耦合构成谐振滤波/调制单元。
-    来源：AIM Photonics 教程。
+    来源：SiEPIC EBeam PDK half_ring 模型 + AIM Photonics 教程。
     """
-    radius = 10.0  # 半径 5-20μm
-    gap = 0.2  # 环-总线耦合间隙 200nm
+    radius = 5.0  # SiEPIC half_ring 默认半径 5μm
+    gap = 0.05  # SiEPIC half_ring 默认耦合间隙 50nm
     width = 0.5
     ports = _make_ring_resonator_ports(radius, gap, width)
     ring_top = 2 * (radius + gap + width) + width / 2
@@ -117,14 +118,15 @@ def make_ring_resonator() -> Device:
         ports=ports,
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=ring_top),
         params={
-            "radius_um": 10.0,  # 半径 5-20μm
-            "gap_nm": 200,  # 耦合间隙
+            "radius_um": 5.0,  # SiEPIC 默认半径 5μm
+            "gap_nm": 50,  # SiEPIC half_ring 默认耦合间隙 50nm
             "q_factor": 10000,  # 品质因数
             "fsr_nm": 10.0,  # 自由光谱范围
-            "loss_db_cm": 2.0,
+            "loss_db_cm": 3.0,  # SiEPIC e-beam 波导损耗
             "wavelength_nm": 1550,
+            "pdk_reference": "SiEPIC_EBeam_PDK",
         },
-        source=_SRC_AIM,
+        source=_SRC_SIEPIC_EBEAM,
         constraints=_SOI_CONSTRAINTS,
     )
 
