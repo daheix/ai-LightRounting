@@ -55,7 +55,7 @@ class TrainConfig:
     canvas_w: float = 1000.0
     canvas_h: float = 1000.0
     grid_size: float = 10.0
-    hidden_dim: int = 64
+    hidden_dim: int = 128  # 隐藏层维度（第二波收敛修复：64→128，增大价值网络容量）
     checkpoint_dir: str = "checkpoints"
     checkpoint_every: int = 10
     log_every: int = 1
