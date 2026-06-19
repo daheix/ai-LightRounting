@@ -17,8 +17,8 @@
 - PEP 8 风格指南: https://peps.python.org/pep-0008/
 
 用法:
-    python scripts/code_quality_gate.py                 # 检查 polaris/
-    python scripts/code_quality_gate.py polaris/         # 检查指定目录
+    python scripts/code_quality_gate.py                 # 检查 src/polaris/
+    python scripts/code_quality_gate.py src/polaris/     # 检查指定目录
     python scripts/code_quality_gate.py --json           # 输出 JSON 报告
     python scripts/code_quality_gate.py --staged         # 仅检查 git 暂存文件
 """
@@ -486,7 +486,7 @@ def main() -> int:
     """主入口，返回退出码（0=通过，1=有违规）。"""
     parser = argparse.ArgumentParser(description="PoLaRIS 代码质量门禁（规则 4 强制执行）")
     parser.add_argument(
-        "paths", nargs="*", default=["polaris/"], help="要检查的目录或文件（默认 polaris/）"
+        "paths", nargs="*", default=["src/polaris/"], help="要检查的目录或文件（默认 src/polaris/）"
     )
     parser.add_argument("--json", action="store_true", help="输出 JSON 格式报告")
     parser.add_argument("--staged", action="store_true", help="增量模式：仅检查 git 暂存区文件")

@@ -44,7 +44,8 @@ dev = [
 Repository = "https://github.com/daheix/ai-LightRounting"
 
 [tool.setuptools.packages.find]
-include = ["polaris*"]
+where = ["src", "3dtool"]
+include = ["polaris*", "pycopy*"]
 exclude = ["tests*"]
 
 [tool.ruff]
@@ -67,4 +68,5 @@ follow_imports = "skip"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src", "3dtool"]
 addopts = "-ra"
