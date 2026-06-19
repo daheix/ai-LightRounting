@@ -36,111 +36,370 @@
   6. 文档与来源溯源更新
 - 任何阶段不得省略来源标注与测试验证。
 
-## 规则 2：开源工具最大化集成（强制）
+## 规则 2：项目目录结构规范（强制）
 
-能直接集成的开源工具全部集成进来，不好集成的用 Python 100% 复刻一个可用的。
+按商业版本工具管理标准，项目采用 `src layout` + 三方工具统一管理 + 发布制品分离的目录结构。
+**所有文件必须放在规定位置，禁止乱放。**
 
-### 2.1 必须直接集成的开源工具（pip 安装即用）
+### 2.1 顶层目录结构
 
-| 工具 | 用途 | 来源 |
-|------|------|------|
-| **gdsfactory** | 版图生成、PDK、自动布线、GDS/OASIS 导出 | https://gdsfactory.github.io/gdsfactory/ |
-| **klayout** (klayout python) | DRC 规则检查、LVS、版图查看 | https://www.klayout.de/ |
-| **networkx** | 器件连接图建模、最短路径、图算法 | https://networkx.org/ |
-| **numpy / scipy** | 数值计算、优化求解 | https://numpy.org/ |
-| **torch** | GNN/PPO 神经网络、强化学习 | https://pytorch.org/ |
-| **gymnasium** | 布局/布线 RL 环境（observation/action/reward） | https://gymnasium.farama.org/ |
-| **matplotlib** | 版图渲染、拥塞热力图 | https://matplotlib.org/ |
-| **shapely** | 几何运算（多边形、缓冲区、相交检测） | https://shapely.readthedocs.io/ |
-| **pyyaml** | 网表/配置序列化 | https://pyyaml.org/ |
+```
+/workspace/
+├── 3dtool/              # 三方工具统一管理（规则 3/4）
+├── src/                 # 所有自研代码（src layout，规则 5）
+├── publish/             # 产品发布制品（规则 6）
+├── tests/               # 测试代码（规则 7）
+├── scripts/             # 工具脚本（质量门禁/训练/数据提取）
+├── data/                # 数据（基准电路/变体数据集）
+├── checkpoints/         # 训练检查点
+├── docs/                # 项目文档（设计文档/优化日志）
+├── .trae/rules/         # 项目规则（本文件）
+├── pyproject.toml       # 项目配置（构建/lint/pytest）
+├── 操作记录.md           # 操作记录（规则 16）
+└── README.md            # 项目概述
+```
 
-### 2.2 可选集成（按需引入）
+### 2.2 目录职责与放置规则
 
-| 工具 | 用途 | 来源 |
-|------|------|------|
-| **gdstk** | 高性能 GDS 文件读写（替代 gdspy） | https://heitzmann.github.io/gdstk/ |
-| **MEEP** | FDTD 电磁仿真（器件参数验证） | https://meep.readthedocs.io/ |
-| **Simphony** | 光子电路 S 参数仿真 | https://simphonyphotonics.readthedocs.io/ |
-| **SAX** | 光子电路频率域仿真 | https://flaport.github.io/sax/ |
-| **SiPANN** | 硅光器件模型（耦合器、环谐振器） | https://sipann.readthedocs.io/ |
-| **femwell** | FEM 模式求解器 | https://helgegehring.github.io/femwell/ |
-| **meow** | 模式求解器 | https://github.com/flaport/meow |
-| **lygadgets** | KLayout Python 工具链 | https://github.com/atait/lygadgets |
-| **SiEPIC-EBeam-PDK** | 开源硅光 PDK（UBC/SiEPIC） | https://github.com/gdsfactory/ubc |
-| **cspdk** | Cornerstone 开源 PDK | https://github.com/gdsfactory/cspdk |
-| **vtt PDK** | VTT 开源 SiN PDK | https://github.com/gdsfactory/vtt |
+| 目录 | 职责 | 放置规则 | 禁止 |
+|------|------|----------|------|
+| `3dtool/` | 三方工具说明文档 + 自研复刻品 | 按规则 3/4 分类存放 | ❌ 禁止放自研业务代码 |
+| `src/polaris/` | 所有自研 Python 包代码 | 按 `data/engine/eval/nn/pdk/pipeline/router/sim/trainer` 分模块 | ❌ 禁止放测试/脚本/数据 |
+| `publish/` | 发布给第三方的制品 | `wheels/`（构建包）+ `docs/`（用户文档）+ `examples/`（示例） | ❌ 禁止放源码 |
+| `tests/` | 所有测试代码 | `test_<module>.py` 命名 | ❌ 禁止放业务代码 |
+| `scripts/` | 工具脚本 | 质量门禁/训练脚本/数据提取 | ❌ 禁止放可被 import 的业务模块 |
+| `data/` | 数据文件 | `benchmarks/`（基准）+ `variants/`（变体） | ❌ 禁止放代码 |
+| `checkpoints/` | 训练检查点 | 按 `rl_<config>/` 分目录 | ❌ 禁止提交到 git（.gitignore） |
+| `docs/` | 项目文档 | 设计文档/优化日志/训练日志 | ❌ 禁止放代码 |
 
-### 2.3 需 Python 100% 复刻的工具（无法直接集成时）
+### 2.3 src/polaris/ 内部模块划分
 
-以下能力若无合适开源库或集成成本过高，须用纯 Python 100% 复刻一个可用版本：
+```
+src/polaris/
+├── data/       # 数据加载与电路规格（CircuitSpec/DeviceSpec/data_loader）
+├── engine/     # 布局引擎（FloorplanEnv/GNN/CNN/Netlist/Routability）
+├── eval/       # 评估与渲染（layout_render）
+├── nn/         # 纯 NumPy 神经网络库（复刻 torch，对应 3dtool/pycopy/pyCopyTorch）
+├── pdk/        # 光子器件库（SOI/SiN/InP/LNOI 四平台）
+├── pipeline/   # 端到端流水线（IntegratedPipeline/Training）
+├── router/     # 布线引擎（WaveguideRouter/RoutingEnv/multilayer/opto_electrical）
+├── sim/        # 仿真系统（S参数/级联/约束检查/SimLoop/校准）
+└── trainer/    # 训练器（PPO/GNN_PPO/dataset/reward_shaping/train_loop）
+```
 
-| 能力 | 复刻方案 | 参考 |
-|------|----------|------|
-| 波导约束布线器 | A*/Lee 算法 + 弯曲半径/间距/等长约束 | NeurIPS 2022 Cheng et al. https://openreview.net/pdf?id=uNYqDfPEDD8 |
-| 光子器件 PDK Lite | dataclass + 真实文献参数（spec.md 已列来源） | 本项目 spec.md |
-| GNN 状态编码器 | PyTorch message-passing GNN | R-GCN, Basso et al. NeurIPS 2025 |
-| PPO 强化学习 | actor-critic + clip + GAE | Stable-Baselines3 / CleanRL 参考 |
-| 拥塞热力图 | numpy 栅格化 + matplotlib | — |
-| 网表解析器 | YAML/JSON → networkx 图 | — |
-| HPWL 线长估计 | 半周长线长公式 | 经典 EDA 方法 |
-| S 弯/弯曲路径生成 | 贝塞尔/欧拉曲线 | 光波导标准方法 |
+### 2.4 文件放置强制规则
 
-### 2.4 集成原则
+1. **新代码必须放 `src/polaris/<module>/`**：禁止在项目根目录创建 Python 包
+2. **新三方工具说明必须放 `3dtool/<category>/`**：禁止在 src/ 或根目录放工具说明
+3. **新复刻品必须放 `3dtool/pycopy/pyCopy<Xxx>/`**：加 `pyCopy` 前缀，禁止放 src/
+4. **新测试必须放 `tests/test_<module>.py`**：禁止在 src/ 下放测试
+5. **新脚本必须放 `scripts/`**：禁止在 src/ 或根目录放脚本
+6. **新数据必须放 `data/`**：禁止在 src/ 或根目录放数据文件
+7. **新文档必须放 `docs/` 或 `publish/docs/`**：禁止在 src/ 下放文档
+
+来源:
+- Python src layout: https://packaging.python.org/en/latest/discussions/src-layout/
+- PEP 8 模块结构: https://peps.python.org/pep-0008/#module-level-dunder-names
+
+## 规则 3：三方工具统一管理规范（强制）
+
+所有第三方工具统一存放在 `3dtool/` 目录，按类别分目录管理。每个工具必须有独立的说明文档。
+
+### 3.1 3dtool/ 目录结构
+
+```
+3dtool/
+├── README.md              # 三方工具总览
+├── layout/                # 版图类工具
+├── simulation/            # 仿真类工具
+├── ml/                    # 机器学习类工具
+├── numeric/               # 数值计算类工具
+├── viz/                   # 可视化类工具
+├── serialization/         # 序列化类工具
+└── pycopy/                # 自研复刻工具（规则 4）
+```
+
+### 3.2 三方工具清单与安装状态（实际核查 2026-06-19）
+
+#### layout/ — 版图类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| gdsfactory | ❌ 未装 | — | 版图生成/PDK/GDS导出 | `pip install gdsfactory` | src/polaris/pdk/ 参考 |
+| klayout | ✅ 已装 | 0.30.9 | DRC/LVS/版图查看 | `pip install klayout` | src/polaris/eval/layout_render.py |
+| gdstk | ❌ 未装 | — | 高性能 GDS 读写 | `pip install gdstk` | 可选（gdsfactory 依赖） |
+
+#### simulation/ — 仿真类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| meep | ❌ 未装 | — | FDTD 电磁仿真 | `pip install meep` | 可选（器件级仿真） |
+| simphony | ✅ 已装 | 0.6.0 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
+| sax | ❌ 未装 | — | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有复刻兜底） |
+| SiPANN | ❌ 未装 | — | 硅光器件模型 | `pip install SiPANN` | src/polaris/sim/models.py（已复刻） |
+| femwell | ❌ 未装 | — | FEM 模式求解器 | `pip install femwell` | 可选 |
+| meow | ❌ 未装 | — | 模式求解器 | `pip install meow` | 可选 |
+
+#### ml/ — 机器学习类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| torch | ✅ 已装 | 2.12.1 | GNN/PPO 神经网络 | `pip install torch` | src/polaris/trainer/ppo_torch.py |
+| gymnasium | ✅ 已装 | 1.3.0 | RL 环境 | `pip install gymnasium` | src/polaris/engine/floorplan_env.py |
+| networkx | ✅ 已装 | 3.6.1 | 图算法 | `pip install networkx` | src/polaris/engine/netlist.py |
+
+#### numeric/ — 数值计算类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| numpy | ✅ 已装 | 2.4.6 | 数值计算 | `pip install numpy` | 全项目核心 |
+| scipy | ✅ 已装 | 1.17.1 | 优化求解 | `pip install scipy` | 优化求解 |
+| shapely | ✅ 已装 | 2.1.2 | 几何运算 | `pip install shapely` | 可选（constraint_checker 用纯 Python） |
+
+#### viz/ — 可视化类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| matplotlib | ✅ 已装 | 3.11.0 | 版图渲染 | `pip install matplotlib` | src/polaris/eval/layout_render.py |
+
+#### serialization/ — 序列化类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| pyyaml | ✅ 已装 | 6.0.3 | 网表/配置序列化 | `pip install pyyaml` | src/polaris/engine/netlist.py 等 |
+
+### 3.3 工具使用原则
+
 1. **优先直接集成**：能用 pip 安装的开源库，直接集成，不重复造轮子
-2. **复刻须 100% 可用**：不好集成的，用纯 Python 复刻一个完整可用的版本，不留半成品
-3. **来源须标注**：每个集成的工具或复刻的算法，记录来源 URL
-4. **依赖最小化**：核心功能（PDK + 布局 + 布线 + 训练）的依赖须精简，仿真类工具（MEEP/Simphony）作为可选依赖
+2. **复刻须 100% 可用**：不好集成的，用纯 Python 复刻完整可用版本（规则 4）
+3. **来源须标注**：每个集成的工具记录来源 URL（规则 15）
+4. **依赖最小化**：核心功能依赖精简，仿真类工具作为可选依赖
 5. **不依赖商业工具**：禁止依赖 Lumerical/IPKISS/Tidy3D 等商业软件作为核心功能
+6. **说明文档同步**：工具安装状态变更后，必须同步更新 `3dtool/<category>/README.md`
 
-### 2.5 参考来源
-- GDSFactory 论文 (CLEO 2026): https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
-- Awesome Photonics: https://github.com/joamatab/awesome_photonics
-- Simphony 文档: https://simphonyphotonics.readthedocs.io/en/stable/
-- Prefab: Python for photonics: https://docs.prefabphotonics.com/python-for-photonics/
+### 3.4 工具说明文档规范
 
-## 规则 3：难安装开源工具的 100% Python 复刻纪律（强制）
+每个三方工具在 `3dtool/<category>/README.md` 中必须包含：
+- 工具名称与用途
+- 安装状态（✅ 已装 / ❌ 未装）与版本
+- 来源 URL
+- 安装命令
+- 项目中的使用位置（src/polaris/ 具体文件）
+- 是否有复刻品兜底（如有，指向 `3dtool/pycopy/pyCopy<Xxx>/`）
 
-对于开源但安装困难（编译依赖重、平台不兼容、无 wheel、需系统级依赖等）的工具，
-**必须**用纯 Python 100% 复刻一个可用版本，并满足以下要求：
+## 规则 4：自研复刻工具规范（强制）
 
-### 3.1 复刻触发条件
+对于开源但安装困难的工具，按规则用纯 Python 100% 复刻，复刻品统一存放在 `3dtool/pycopy/`，
+加 `pyCopy` 前缀表示是替代品。
+
+### 4.1 复刻触发条件
+
 满足以下任一条件即触发 100% 复刻：
-- 该工具为开源（MIT/BSD/Apache/GPL 等开源协议）但无对应平台的预编译 wheel
+- 该工具为开源但无对应平台的预编译 wheel
 - 安装需复杂系统级依赖（如 C++/Fortran 编译链、MPI、CUDA toolkit 非标准路径）
 - 在目标运行环境（Linux 沙箱/CI）中 `pip install` 失败或不可用
 - 集成成本（编译/配置/调试）高于自行复刻等价实现
+- 依赖链过重（如 sax 依赖 jax/jaxlib/optax 等 200+ MB，但项目只用其子网络增长算法）
 
-### 3.2 复刻质量要求（100% 一致）
-- **逻辑一致**：复刻实现的代码逻辑须与原开源工具 100% 一致，包括算法步骤、
-  边界条件、数值处理顺序，不得简化核心算法
-- **行为对比验证**：须编写对比测试，对同一输入分别调用原工具（若可临时安装）
-  与复刻实现，断言输出一致（浮点数允许 1e-9 容差）；若原工具无法安装，
-  须用原仓库的官方测试用例/文档示例作为基准验证复刻正确性
+### 4.2 复刻品目录结构
+
+```
+3dtool/pycopy/
+├── __init__.py                    # pycopy 包入口
+├── README.md                      # 复刻品清单与设计原则
+├── pyCopyTorch/__init__.py        # 复刻 torch（重导出 src/polaris/nn）
+├── pyCopySAX/__init__.py          # 复刻 sax（重导出 src/polaris/sim/cascade）
+├── pyCopySiPANN/__init__.py       # 复刻 SiPANN（重导出 src/polaris/sim/models）
+├── pyCopyKLayout/__init__.py      # 复刻 klayout DRC（重导出 src/polaris/sim/constraint_checker）
+├── pyCopyMEEP/__init__.py         # 预留（未实现）
+├── pyCopyFemwell/__init__.py      # 预留（未实现）
+└── pyCopyMeow/__init__.py         # 预留（未实现）
+```
+
+### 4.3 复刻品清单（实际状态 2026-06-19）
+
+| 复刻包 | 原工具 | 协议 | 复刻位置（src/） | 状态 | 复刻内容 |
+|--------|--------|------|-----------------|------|----------|
+| pyCopyTorch | torch | BSD-3-Clause | src/polaris/nn/ | ✅ 完整 | Tensor/autograd/Linear/LayerNorm/ReLU/Sequential/Adam/Conv2d/MaxPool2d |
+| pyCopySAX | sax | Apache-2.0 | src/polaris/sim/cascade.py | ✅ 完整 | 子网络增长算法（cascade_circuit） |
+| pyCopySiPANN | SiPANN | MIT | src/polaris/sim/models.py | ✅ 完整 | 10 个 S 参数模型（waveguide/y_branch/DC/ring/MMI/GC/crossing/terminator/phase_shifter） |
+| pyCopyKLayout | klayout DRC | GPL-2.0 | src/polaris/sim/constraint_checker.py | ✅ 完整 | 8 种违规检查（bend_radius/spacing/loss/crossings/overlap/min_width/coupling_gap） |
+| pyCopyMEEP | meep FDTD | GPL-2.0+ | — | ⏳ 预留 | 未实现（项目未使用 FDTD） |
+| pyCopyFemwell | femwell | MIT | — | ⏳ 预留 | 未实现（项目未使用 FEM） |
+| pyCopyMeow | meow | GPL-3.0 | — | ⏳ 预留 | 未实现（项目未使用模式求解） |
+
+### 4.4 复刻质量要求（100% 一致）
+
+- **逻辑一致**：复刻实现的代码逻辑须与原开源工具 100% 一致，包括算法步骤、边界条件、数值处理顺序
+- **行为对比验证**：须编写对比测试，对同一输入断言输出一致（浮点数允许 1e-9 容差）；
+  若原工具无法安装，须用原仓库的官方测试用例/文档示例作为基准验证
 - **来源标注**：复刻代码须在文件头注明原仓库 URL、协议、commit/版本号
-- **接口兼容**：复刻模块须暴露与原工具等价的公开 API（函数名/参数名/返回值），
-  使上层代码可无缝切换
+- **接口兼容**：复刻模块须暴露与原工具等价的公开 API（函数名/参数名/返回值）
 - **不留半成品**：复刻须覆盖项目实际使用的全部功能子集，禁止只复刻入口而留空实现
 
-### 3.3 复刻范围（按需）
-以下能力若对应开源工具安装困难，按本规则 100% 复刻：
-| 能力 | 原工具 | 复刻要点 |
-|------|--------|----------|
-| GDS 读写 | gdstk/gdspy（C++ 扩展难装时） | 纯 Python GDSII 流式写入（record-based） |
-| DRC 检查 | klayout（Ruby/原生绑定难装时） | shapely 几何规则检查复刻 |
-| 模式求解 | meow/femwell（FEM 依赖重） | 有效折射率法解析求解 |
-| S 参数仿真 | SAX/Simphony（依赖链长） | 传输矩阵 + S 参数级联 |
+### 4.5 复刻品入口重导出规范
 
-### 3.4 验证与回归
-- 每个复刻模块须附带对比测试（`tests/test_replica_*.py`）
+`3dtool/pycopy/pyCopy<Xxx>/__init__.py` 必须重导出 src/polaris/ 对应模块的公开 API：
+
+```python
+"""pyCopyTorch — torch 纯 NumPy 100% 复刻（规则 4）。
+
+原工具: PyTorch https://pytorch.org/ (BSD-3-Clause)
+复刻位置: src/polaris/nn/
+"""
+
+from polaris.nn import Tensor, Linear, Adam  # noqa: F401
+
+__all__ = ["Tensor", "Linear", "Adam"]
+```
+
+上层代码可通过两种方式访问复刻 API：
+```python
+# 方式 1：通过复刻包名（推荐，明确表示使用复刻品）
+from pycopy.pyCopyTorch import Tensor
+
+# 方式 2：通过 polaris 包（等价）
+from polaris.nn import Tensor
+```
+
+### 4.6 验证与回归
+
+- 每个复刻模块须附带对比测试（`tests/test_replica_*.py` 或对应模块测试）
 - CI 中优先尝试 `pip install` 原工具；安装失败时自动跳过对比测试但保留复刻自测
 - 复刻实现须通过 `ruff` + `mypy` 检查
 
-## 规则 4：工业标准代码质量门禁（强制）
+## 规则 5：工具环境安装与使用规范（强制）
+
+**工具的安装和使用是项目正常运行的基础，必须严格遵循本规范。**
+
+### 5.1 环境安装顺序
+
+新环境部署时，按以下顺序安装工具：
+
+```bash
+# 1. 核心依赖（必装，pip 安装即用）
+pip install numpy scipy networkx torch gymnasium matplotlib pyyaml
+
+# 2. 版图与仿真依赖（按需安装）
+pip install klayout simphony           # 已验证可装
+pip install gdsfactory gdstk            # 版图生成（可选）
+pip install SiPANN                      # 硅光器件模型（可选，已有复刻）
+
+# 3. 重型仿真依赖（谨慎安装，依赖链大）
+# pip install sax                       # 200-400 MB（jax/jaxlib/optax），已有复刻兜底
+# pip install meep                      # FDTD，需 MPI 依赖
+# pip install femwell meow              # 模式求解器，FEM 依赖重
+
+# 4. 开发依赖
+pip install pytest ruff mypy
+
+# 5. 安装本项目（开发模式）
+pip install -e .
+```
+
+### 5.2 工具安装决策矩阵
+
+| 工具 | 是否安装 | 决策依据 |
+|------|---------|----------|
+| numpy/scipy/networkx/matplotlib/pyyaml | ✅ 必装 | 核心依赖，pip 即用 |
+| torch | ✅ 必装 | GNN/PPO 训练核心（也有 pyCopyTorch 复刻兜底） |
+| gymnasium | ✅ 必装 | RL 环境核心 |
+| klayout | ✅ 必装 | GDS 导出 + DRC，已验证可装 |
+| simphony | ✅ 建议装 | S 参数仿真，已验证可装 |
+| gdsfactory | ⚠️ 按需 | 版图生成，依赖链中等 |
+| gdstk | ⚠️ 按需 | GDS 高性能读写，gdsfactory 依赖 |
+| SiPANN | ⚠️ 按需 | 已有 pyCopySiPANN 完整复刻 |
+| sax | ❌ 不装 | 依赖链 200-400 MB（jax/jaxlib/optax），已有 pyCopySAX 复刻兜底 |
+| meep | ❌ 不装 | FDTD 重型依赖，项目未使用器件级 FDTD |
+| femwell/meow | ❌ 不装 | FEM 模式求解器，项目未使用 |
+| lygadgets | ❌ 不装 | KLayout 已直接安装，无需 lygadgets 工具链 |
+
+### 5.3 工具使用规范
+
+1. **可选依赖必须 try/except**：代码中 import 可选工具时必须用 try/except 包裹，缺失时回退到复刻品
+   ```python
+   try:
+       import sax as _sax
+       _HAS_SAX = True
+   except ImportError:
+       _sax = None
+       _HAS_SAX = False
+   ```
+2. **复刻品优先级**：原工具可用时优先用原工具，不可用时回退到 `3dtool/pycopy/pyCopy<Xxx>`
+3. **禁止硬依赖**：核心功能（PDK/布局/布线/训练）不得硬依赖可选工具
+4. **import 位置**：可选工具的 import 必须在函数内部或模块顶部 try/except，禁止裸 import
+5. **测试兼容**：测试中用 `pytest.importorskip("sax")` 跳过缺失可选依赖的测试
+
+### 5.4 环境验证命令
+
+部署完成后，运行以下命令验证环境：
+
+```bash
+# 1. 验证核心依赖
+python -c "import numpy, scipy, networkx, torch, gymnasium, matplotlib, yaml; print('core OK')"
+
+# 2. 验证可选依赖
+python -c "import klayout; print('klayout OK')"
+python -c "import simphony; print('simphony OK')"
+
+# 3. 验证复刻品
+python -c "from pycopy.pyCopyTorch import Tensor; print('pyCopyTorch OK')"
+python -c "from pycopy.pyCopySAX import cascade_circuit; print('pyCopySAX OK')"
+
+# 4. 验证项目包
+python -c "import polaris; print('polaris OK')"
+
+# 5. 运行测试
+python -m pytest tests/ -q --tb=short
+```
+
+### 5.5 工具状态同步
+
+- 每次安装/卸载工具后，必须同步更新 `3dtool/<category>/README.md` 的安装状态
+- 每次新增复刻品后，必须同步更新 `3dtool/pycopy/README.md` 和本规则 4.3 表格
+- 环境变更须在 `操作记录.md` 中记录
+
+## 规则 6：发布制品管理规范（强制）
+
+`publish/` 目录存放产品发布给第三方用的制品，与源码分离。
+
+### 6.1 publish/ 目录结构
+
+```
+publish/
+├── README.md          # 发布说明
+├── wheels/            # 构建 wheel 包
+├── docs/              # 发布文档（用户手册/API 参考/安装指南）
+└── examples/          # 使用示例代码
+```
+
+### 6.2 发布流程
+
+```bash
+# 1. 构建 wheel
+python -m build --wheel --outdir publish/wheels/
+
+# 2. 生成文档（TODO: 配置 sphinx/mkdocs）
+
+# 3. 打包示例
+cp -r examples/* publish/examples/
+```
+
+### 6.3 版本管理
+
+遵循 SemVer 语义化版本：`MAJOR.MINOR.PATCH`
+- MAJOR: 不兼容的 API 修改
+- MINOR: 向下兼容的功能新增
+- PATCH: 向下兼容的 Bug 修复
+
+当前版本: 0.1.0 (Pre-Alpha)
+
+## 规则 7：工业标准代码质量门禁（强制）
 
 按照工业标准完成代码编写和管理，所有代码必须通过质量门禁检查方可提交。
 门禁脚本位于 `scripts/code_quality_gate.py`，CI 与本地提交前必须运行通过。
 
-### 4.1 文件规模硬性限制（触发即必须重构）
+### 7.1 文件规模硬性限制（触发即必须重构）
 
 | 指标 | 警告阈值 | 硬性上限（触发重构） | 依据 |
 |------|----------|----------------------|------|
@@ -166,7 +425,7 @@
 - NIST ISO/IEC 25010 可维护性: https://iso25000.com/index.php/en/iso-25000-standards/iso-25010
 - 文件行数最佳实践: https://alchemiststudios.ai/articles/python-linting-sop.html
 
-### 4.2 重构触发后的操作流程
+### 7.2 重构触发后的操作流程
 
 当文件/函数超过硬性上限时，必须执行以下流程：
 
@@ -177,7 +436,7 @@
 5. **更新测试**：拆分后更新对应测试，确保覆盖率不下降
 6. **通过门禁**：重新运行 `python scripts/code_quality_gate.py` 确认通过
 
-### 4.3 圈复杂度 (Cyclomatic Complexity) 标准
+### 7.3 圈复杂度 (Cyclomatic Complexity) 标准
 
 圈复杂度衡量函数内线性独立路径数，反映测试难度与缺陷风险。
 
@@ -199,16 +458,16 @@
 - Sourcegraph 复杂度指南: https://sourcegraph.com/blog/cyclomatic-complexity-what-it-is-and-how-to-reduce-it
 - Radon 工具文档: https://radon.readthedocs.io/
 
-### 4.4 质量门禁脚本（`scripts/code_quality_gate.py`）
+### 7.4 质量门禁脚本（`scripts/code_quality_gate.py`）
 
 门禁脚本自动检查以下指标，任一硬性上限超标即返回非零退出码：
 
 ```bash
-# 运行质量门禁（CI 与提交前必做）
+# 运行质量门禁（CI 与提交前必做，默认检查 src/polaris/）
 python scripts/code_quality_gate.py
 
 # 仅检查特定目录
-python scripts/code_quality_gate.py polaris/
+python scripts/code_quality_gate.py src/polaris/
 
 # 输出 JSON 报告
 python scripts/code_quality_gate.py --json > quality_report.json
@@ -228,7 +487,7 @@ python scripts/code_quality_gate.py --include-tests
 5. 类方法数
 6. 嵌套深度
 
-### 4.5 Pre-commit Hook 自动门禁（强制）
+### 7.5 Pre-commit Hook 自动门禁（强制）
 
 **每次 `git commit` 时自动执行质量门禁，不通过则禁止提交。**
 
@@ -239,7 +498,7 @@ chmod +x .git/hooks/pre-commit
 ```
 
 Hook 执行的检查（仅检查本次暂存的文件，增量检查）：
-1. **质量门禁**：`python scripts/code_quality_gate.py --staged`（规则 4）
+1. **质量门禁**：`python scripts/code_quality_gate.py --staged`（规则 7）
 2. **Ruff lint**：`ruff check <staged_files>`
 3. **Ruff format**：`ruff format --check <staged_files>`
 4. **Pytest 冒烟测试**：`pytest tests/ -q -x --tb=short`
@@ -248,15 +507,15 @@ Hook 执行的检查（仅检查本次暂存的文件，增量检查）：
 
 临时跳过（仅紧急情况，不推荐）：`git commit --no-verify`
 
-## 规则 5：Python 编码风格规范（强制）
+## 规则 8：Python 编码风格规范（强制）
 
-### 5.1 基础风格标准
+### 8.1 基础风格标准
 
 遵循 **PEP 8** + **Google Python Style Guide**，以 ruff 为强制执行工具。
 
 | 规范项 | 标准 | 来源 |
 |--------|------|------|
-| 行宽 | 88 字符（ruff 默认） | PEP 8 / ruff |
+| 行宽 | 100 字符（pyproject.toml 配置） | PEP 8 / ruff |
 | 缩进 | 4 个空格，禁止 Tab | PEP 8 |
 | 编码 | UTF-8 | PEP 8 |
 | 引号 | 双引号 `"` | ruff format 默认 |
@@ -269,35 +528,26 @@ Hook 执行的检查（仅检查本次暂存的文件，增量检查）：
 - Google Python Style Guide: https://google.github.io/styleguide/pyguide
 - PEP 257 文档字符串: https://peps.python.org/pep-0257/
 
-### 5.2 强制工具链
+### 8.2 强制工具链
 
 ```toml
 # pyproject.toml 配置（已在项目中）
 [tool.ruff]
-line-length = 88
-target-version = "py310"
+line-length = 100
+target-version = "py39"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "C90"]  # C90 = mccabe 复杂度
-
-[tool.ruff.lint.mccabe]
-max-complexity = 15  # 圈复杂度硬性上限
-
-[tool.ruff.lint.pylint]
-max-args = 7          # 函数参数上限
-max-branches = 15     # 分支数上限
-max-returns = 6       # return 语句上限
-max-statements = 50   # 语句数上限
+select = ["E", "F", "W", "I", "UP", "B"]
 ```
 
 提交前必须通过：
 ```bash
-ruff check polaris/ tests/          # lint 检查
-ruff format --check polaris/ tests/ # 格式检查
-mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
+ruff check src/ tests/ 3dtool/          # lint 检查
+ruff format --check src/ tests/ 3dtool/ # 格式检查
+mypy src/polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 ```
 
-### 5.3 代码组织原则
+### 8.3 代码组织原则
 
 1. **单一职责**：每个模块/类/函数只做一件事
 2. **DRY (Don't Repeat Yourself)**：重复代码提取为公共函数
@@ -306,7 +556,7 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 5. **组合优于继承**：优先用组合而非深层继承链
 6. **显式优于隐式**：避免魔法行为，让代码意图清晰
 
-### 5.4 类型注解要求
+### 8.4 类型注解要求
 
 - 所有公开 API 函数必须有类型注解（参数 + 返回值）
 - 内部函数鼓励添加类型注解
@@ -315,9 +565,9 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 
 来源：PEP 484 类型注解 https://peps.python.org/pep-0484/
 
-## 规则 6：Git 工作流与团队协作规范（强制）
+## 规则 9：Git 工作流与团队协作规范（强制）
 
-### 6.1 分支策略
+### 9.1 分支策略
 
 采用 **GitHub Flow**（简化版，适合持续部署）：
 
@@ -337,7 +587,7 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 - GitHub Flow: https://docs.github.com/en/get-started/quickstart/github-flow
 - Git Best Practices: https://devtoolhub.com/git-best-practices-branching-approvals/
 
-### 6.2 提交规范（Conventional Commits）
+### 9.2 提交规范（Conventional Commits）
 
 提交消息格式：`<type>: <简述>`
 
@@ -359,7 +609,7 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 
 来源：Conventional Commits https://www.conventionalcommits.org/
 
-### 6.3 代码审查 (Code Review)
+### 9.3 代码审查 (Code Review)
 
 - 所有 PR 必须至少 1 人审查通过方可合并
 - PR 描述须包含：变更摘要、变更内容、关联 Issue
@@ -367,7 +617,7 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 - 审查关注点：正确性、可读性、性能、安全性、测试覆盖
 - 禁止自我批准合并自己的 PR
 
-### 6.4 .gitignore 规范
+### 9.4 .gitignore 规范
 
 必须忽略的文件类型：
 - `__pycache__/`、`*.pyc`、`*.pyo`
@@ -376,27 +626,29 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 - `dist/`、`build/`、`*.egg-info/`（构建产物）
 - `.pytest_cache/`、`.mypy_cache/`、`.ruff_cache/`
 - `*.gds`、`*.oas`（大型版图文件，按需用 LFS）
+- `checkpoints/`（训练检查点，体积大）
 
-## 规则 7：测试规范（强制）
+## 规则 10：测试规范（强制）
 
-### 7.1 测试覆盖率标准
+### 10.1 测试覆盖率标准
 
 | 指标 | 标准 | 说明 |
 |------|------|------|
-| 行覆盖率 | ≥ 80% | 核心模块（pdk/router/trainer）≥ 90% |
+| 行覆盖率 | ≥ 80% | 核心模块（pdk/router/trainer/sim）≥ 90% |
 | 分支覆盖率 | ≥ 70% | 关键分支必须覆盖 |
 | 测试通过率 | 100% | 禁止提交失败测试 |
 
-### 7.2 测试分层
+### 10.2 测试分层
 
 | 层级 | 范围 | 命名规范 | 工具 |
 |------|------|----------|------|
 | 单元测试 | 单个函数/类 | `test_<module>.py::Test<Class>::test_<behavior>` | pytest |
 | 集成测试 | 模块间交互 | `test_integration.py::test_<flow>` | pytest |
-| 约束合规测试 | 工艺规则验证 | `test_<constraint>.py` | pytest + shapely |
+| 端到端测试 | 完整流水线 | `test_sim_loop.py::Test<Flow>::test_<flow>` | pytest |
+| 约束合规测试 | 工艺规则验证 | `test_<constraint>.py` | pytest |
 | 回归测试 | 复刻模块对比 | `test_replica_<tool>.py` | pytest |
 
-### 7.3 测试编写规范
+### 10.3 测试编写规范
 
 - 每个公开函数至少有 1 个测试
 - 测试函数名描述行为：`test_waveguide_phase`（非 `test_wg_1`）
@@ -404,12 +656,13 @@ mypy polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 - 使用 `pytest.fixture` 共享测试数据
 - 浮点比较用 `np.testing.assert_almost_equal`，指定 `decimal` 容差
 - 禁止依赖测试执行顺序，每个测试独立
+- 可选依赖测试用 `pytest.importorskip("sax")` 跳过
 
 来源：pytest 最佳实践 https://docs.pytest.org/en/stable/explanation/goodpractices.html
 
-## 规则 8：文档规范（强制）
+## 规则 11：文档规范（强制）
 
-### 8.1 文档字符串 (Docstring)
+### 11.1 文档字符串 (Docstring)
 
 所有公开模块、类、函数必须有文档字符串，遵循 Google 风格：
 
@@ -433,7 +686,7 @@ def function_name(param1: int, param2: str) -> bool:
 
 来源：PEP 257 https://peps.python.org/pep-0257/
 
-### 8.2 来源标注规范
+### 11.2 来源标注规范
 
 所有集成的工具、复刻的算法、引用的参数必须标注来源：
 
@@ -446,16 +699,20 @@ def function_name(param1: int, param2: str) -> bool:
 """
 ```
 
-### 8.3 文档维护
+### 11.3 文档维护
 
-- README.md：项目概述、安装、快速开始
-- 架构文档：模块划分、数据流、接口设计
-- 变更日志 (CHANGELOG.md)：记录版本变更
+- `README.md`：项目概述、安装、快速开始
+- `3dtool/README.md`：三方工具总览（规则 3）
+- `3dtool/<category>/README.md`：分类工具说明（规则 3.4）
+- `3dtool/pycopy/README.md`：复刻品清单（规则 4）
+- `publish/README.md`：发布说明（规则 6）
+- `docs/`：架构文档、设计文档、优化日志
+- `操作记录.md`：每次会话的操作记录（规则 16）
 - 每个规则变更须同步更新本文件
 
-## 规则 9：CI/CD 与自动化（强制）
+## 规则 12：CI/CD 与自动化（强制）
 
-### 9.1 CI 流水线检查项
+### 12.1 CI 流水线检查项
 
 每次 PR / push 到 main 必须通过：
 
@@ -464,21 +721,21 @@ def function_name(param1: int, param2: str) -> bool:
 jobs:
   quality-gate:
     steps:
-      - run: python scripts/code_quality_gate.py  # 质量门禁
-      - run: ruff check polaris/ tests/            # lint
-      - run: ruff format --check polaris/ tests/   # 格式
-      - run: mypy polaris/ --ignore-missing-imports  # 类型检查
+      - run: python scripts/code_quality_gate.py        # 质量门禁
+      - run: ruff check src/ tests/ 3dtool/              # lint
+      - run: ruff format --check src/ tests/ 3dtool/     # 格式
+      - run: mypy src/polaris/ --ignore-missing-imports  # 类型检查
   test:
     steps:
-      - run: python -m pytest tests/ -q --tb=short  # 全量测试
+      - run: python -m pytest tests/ -q --tb=short       # 全量测试
 ```
 
-### 9.2 提交前检查清单
+### 12.2 提交前检查清单
 
 提交代码前必须逐项确认：
 
-- [ ] `ruff check` 通过（0 错误）
-- [ ] `ruff format --check` 通过
+- [ ] `ruff check src/ tests/ 3dtool/` 通过（0 错误）
+- [ ] `ruff format --check src/ tests/ 3dtool/` 通过
 - [ ] `python scripts/code_quality_gate.py` 通过（0 硬性违规）
 - [ ] `pytest tests/ -q` 通过（0 失败）
 - [ ] 新增功能有对应测试
@@ -486,30 +743,32 @@ jobs:
 - [ ] 集成的工具/算法标注了来源 URL
 - [ ] 提交消息符合 Conventional Commits
 - [ ] 无密钥/凭据提交
+- [ ] 文件放置符合规则 2（src/3dtool/publish/tests/scripts/data）
 
-## 规则 10：依赖管理规范（强制）
+## 规则 13：依赖管理规范（强制）
 
-### 10.1 依赖分类
+### 13.1 依赖分类
 
 | 类别 | 文件 | 说明 |
 |------|------|------|
 | 核心依赖 | `pyproject.toml [project.dependencies]` | PDK/布局/布线/训练必需 |
-| 可选依赖 | `pyproject.toml [project.optional-dependencies]` | 仿真类工具（MEEP/Simphony） |
+| 可选依赖 | `pyproject.toml [project.optional-dependencies]` | 仿真类工具（simphony/sax/SiPANN） |
 | 开发依赖 | `pyproject.toml [project.optional-dependencies.dev]` | ruff/pytest/mypy 等 |
 
-### 10.2 依赖原则
+### 13.2 依赖原则
 
 1. **最小化**：核心功能依赖精简，不引入非必要大型库
 2. **版本锁定**：`pyproject.toml` 中指定最低版本，`requirements.txt` 锁定精确版本
 3. **禁止商业依赖**：不依赖 Lumerical/IPKISS/Tidy3D 等商业软件
 4. **安全审计**：定期运行 `pip-audit` 检查已知漏洞
 5. **许可兼容**：所有依赖须与项目许可证兼容（MIT/Apache/BSD）
+6. **复刻兜底**：可选依赖缺失时必须有 pyCopy 复刻品兜底（规则 4）
 
 来源：pip-audit https://pypi.org/project/pip-audit/
 
-## 规则 11：错误处理与日志规范（强制）
+## 规则 14：错误处理与日志规范（强制）
 
-### 11.1 异常处理原则
+### 14.1 异常处理原则
 
 - **不吞异常**：禁止空 `except:` 或 `except Exception: pass`
 - **精确捕获**：捕获具体异常类型，而非基类 `Exception`
@@ -534,7 +793,7 @@ except:
 
 来源：Google Python Style Guide 异常处理 https://google.github.io/styleguide/pyguide#s2.4-exceptions
 
-### 11.2 日志规范
+### 14.2 日志规范
 
 - 使用 `logging` 模块，禁止 `print()` 用于生产代码
 - 日志级别：DEBUG（调试）→ INFO（关键流程）→ WARNING（异常但可处理）→ ERROR（错误）→ CRITICAL（系统级故障）
@@ -550,9 +809,9 @@ logger.warning("波导间距 %.2f μm 低于推荐值 %.2f μm", spacing, min_sp
 logger.error("DRC 检查失败: %s 共 %d 处违规", rule_name, n_violations)
 ```
 
-## 规则 12：性能与可维护性规范（推荐）
+## 规则 15：性能与可维护性规范（推荐）
 
-### 12.1 性能基准
+### 15.1 性能基准
 
 | 操作 | 目标耗时 | 说明 |
 |------|----------|------|
@@ -562,7 +821,7 @@ logger.error("DRC 检查失败: %s 共 %d 处违规", rule_name, n_violations)
 | PPO 训练单步 | < 100ms | 单环境步 |
 | GDS 导出（100 器件） | < 500ms | 含 DRC |
 
-### 12.2 可维护性检查清单
+### 15.2 可维护性检查清单
 
 - [ ] 无重复代码（DRY）
 - [ ] 无死代码（未使用的函数/变量/导入）
@@ -574,12 +833,12 @@ logger.error("DRC 检查失败: %s 共 %d 处违规", rule_name, n_violations)
 - [ ] 复杂逻辑有注释说明
 - [ ] 测试覆盖率达标
 
-## 规则 13：发现 Bug 必须修复纪律（强制）
+## 规则 16：发现 Bug 必须修复纪律（强制）
 
 在执行任何任务的过程中，如果发现了新的 Bug（无论是代码缺陷、逻辑错误、边界条件遗漏，
 还是测试暴露的问题），**必须一同解决，禁止带 Bug 提交代码**。
 
-### 13.1 强制要求
+### 16.1 强制要求
 
 1. **发现即记录**：发现 Bug 时，立即在代码注释或任务文档中记录：
    - Bug 描述：什么情况下触发，预期行为 vs 实际行为
@@ -589,7 +848,7 @@ logger.error("DRC 检查失败: %s 共 %d 处违规", rule_name, n_violations)
 3. **必须测试**：修复后必须编写或补充对应的测试用例，验证修复有效
 4. **提交备注**：在 commit message 中注明修复了哪些 Bug
 
-### 13.2 Bug 记录格式
+### 16.2 Bug 记录格式
 
 在 commit message 或代码注释中记录 Bug 修复：
 
@@ -602,14 +861,14 @@ Bug: <简述>
 测试: <新增/修改的测试>
 ```
 
-### 13.3 禁止行为
+### 16.3 禁止行为
 
 - **禁止忽略**：发现 Bug 后不得继续提交而不修复
 - **禁止注释掉**：不得用注释掉代码的方式"绕过"Bug
 - **禁止 TODO 推迟**：不得用 `# TODO: 修复这个 Bug` 推迟到未来
 - **禁止降低标准**：不得为了通过测试而放宽断言容差来"掩盖"Bug
 
-### 13.4 例外情况
+### 16.4 例外情况
 
 仅以下情况允许先提交后修复（但必须在 commit message 中明确标注）：
 - Bug 修复需要大量重构，超出当前任务范围 → 创建独立 Issue 跟踪
@@ -621,45 +880,45 @@ Bug: <简述>
 注: 发现 <模块> 存在 <Bug 描述>，因 <原因> 暂未修复，已记录 Issue #XXX
 ```
 
-## 规则 14：开发完成即检门禁纪律（强制）
+## 规则 17：开发完成即检门禁纪律（强制）
 
 代码开发完成后，**必须立即**执行代码质量门禁检查，且必须达到 **0 警告 0 错误**方可提交。
 
-### 14.1 强制要求
+### 17.1 强制要求
 
 1. **开发完成即检**：任何代码开发任务（含新功能、Bug 修复、重构、配置变更）完成后，
    必须立即运行质量门禁，禁止"先提交后补检"
 2. **0 警告 0 错误硬性标准**：门禁结果必须为 0 警告 0 错误，任一警告或错误均禁止提交
-3. **全量检查**：必须对 `polaris/` 目录执行全量检查，不得仅检查改动文件
+3. **全量检查**：必须对 `src/polaris/` 目录执行全量检查，不得仅检查改动文件
 4. **整改优先**：发现警告/错误后必须立即整改，禁止跳过、注释、降级或推迟
 
-### 14.2 检查命令（开发完成后必须执行）
+### 17.2 检查命令（开发完成后必须执行）
 
 ```bash
 # 1. 质量门禁（必须 0 警告 0 错误）
 python scripts/code_quality_gate.py
 
 # 2. Ruff lint（必须 All checks passed）
-ruff check polaris/ tests/
+ruff check src/ tests/ 3dtool/
 
 # 3. Ruff 格式检查（必须 already formatted）
-ruff format --check polaris/ tests/
+ruff format --check src/ tests/ 3dtool/
 
 # 4. 测试冒烟（必须全部通过）
 python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 ```
 
-### 14.3 门禁未通过的处理流程
+### 17.3 门禁未通过的处理流程
 
 当门禁检查发现警告或错误时，必须执行以下流程：
 
 1. **停止提交**：立即停止 `git commit`/`git push` 操作
 2. **分析原因**：逐条分析每个警告/错误的根因
-3. **立即整改**：按规则 4.2 的重构流程整改，不得推迟
+3. **立即整改**：按规则 7.2 的重构流程整改，不得推迟
 4. **重新检查**：整改后重新运行全部检查命令，确认 0 警告 0 错误
 5. **记录整改**：在 commit message 中注明整改内容
 
-### 14.4 禁止行为
+### 17.4 禁止行为
 
 - **禁止跳过门禁**：不得以"临时提交"、"紧急修复"为由跳过门禁检查
 - **禁止 `--no-verify`**：不得使用 `git commit --no-verify` 绕过 pre-commit hook
@@ -667,7 +926,7 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 - **禁止选择性检查**：不得仅检查改动文件而忽略全量检查
 - **禁止带病提交**：不得在门禁未通过的情况下提交代码
 
-### 14.5 例外情况
+### 17.5 例外情况
 
 仅以下情况允许例外（但必须在 commit message 中明确标注并事后补检）：
 - 紧急生产故障修复（hotfix），需在 30 分钟内补检
@@ -676,15 +935,15 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 即使例外情况，也必须满足 ruff check 和 pytest 通过。
 
 来源：
-- 规则 4 质量门禁脚本: `scripts/code_quality_gate.py`
-- 规则 4.5 Pre-commit Hook: `scripts/pre-commit`
+- 规则 7 质量门禁脚本: `scripts/code_quality_gate.py`
+- 规则 7.5 Pre-commit Hook: `scripts/pre-commit`
 - Google Python Style Guide: https://google.github.io/styleguide/pyguide
 
-## 规则 15：学术诚信与引用规范（强制）
+## 规则 18：学术诚信与引用规范（强制）
 
 本项目为科研型工程，所有算法、参数、数据、方案必须遵守学术诚信。
 
-### 15.1 强制要求
+### 18.1 强制要求
 
 1. **禁止抄袭**：禁止复制他人代码而不标注来源；禁止将他人算法据为己有
 2. **来源标注**：所有引用的算法、参数、模型、数据集必须在代码注释或文档中标注：
@@ -692,12 +951,12 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
    - 论文/仓库标题
    - 发表年份
    - URL 或 DOI
-3. **复刻须声明**：按规则 3 复刻的开源工具，须在文件头声明原仓库、协议、版本
+3. **复刻须声明**：按规则 4 复刻的开源工具，须在文件头声明原仓库、协议、版本
 4. **参数须溯源**：所有物理参数（折射率、损耗、弯曲半径等）须标注来源文献或 PDK
 5. **禁止假数据**：禁止编造未经文献或实验验证的参数与实验结果
 6. **引用须准确**：引用的论文须实际阅读并理解，禁止仅凭标题臆断内容
 
-### 15.2 引用格式
+### 18.2 引用格式
 
 代码中引用算法或参数时，使用以下格式：
 
@@ -711,14 +970,14 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 """
 ```
 
-### 15.3 禁止行为
+### 18.3 禁止行为
 
 - **禁止洗稿**：不得通过变量重命名、格式调整等方式掩盖抄袭
 - **禁止选择性引用**：不得只引用支持自己结论的部分而忽略矛盾证据
 - **禁止自引堆砌**：不得为提高引用数而过度自引
 - **禁止数据造假**：不得伪造实验结果、性能数据、对比基准
 
-### 15.4 检索记录要求
+### 18.4 检索记录要求
 
 每次方案检索（规则 1.1）须在对应模块或 PR 描述中记录：
 - 检索关键词
@@ -731,11 +990,11 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 - IEEE Code of Ethics: https://www.ieee.org/about/corporate/governance/p7-8.html
 - 学术诚信指南: https://www.integrity.org/academic-integrity
 
-## 规则 16：操作记录维护纪律（强制）
+## 规则 19：操作记录维护纪律（强制）
 
 每次会话/任务执行都必须在 `操作记录.md` 中记录所有修改与聊天总结，保证可追溯。
 
-### 16.1 强制要求
+### 19.1 强制要求
 
 1. **每次会话必记录**：每次与用户的交互会话结束后，必须在 `操作记录.md` 追加一条记录
 2. **每项修改必记录**：代码修改、文件新增/删除、配置变更、依赖安装、Bug 修复、重构等每一项操作都要记录
@@ -743,7 +1002,7 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 4. **时间戳必记录**：每条记录须包含日期时间（YYYY-MM-DD HH:MM 格式）
 5. **提交关联**：每条记录须关联对应的 git commit hash（若有提交）
 
-### 16.2 记录格式
+### 19.2 记录格式
 
 `操作记录.md` 每条记录使用以下格式：
 
@@ -774,7 +1033,7 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 - 分支: <branch>
 ```
 
-### 16.3 记录内容要求
+### 19.3 记录内容要求
 
 每条记录必须包含：
 - **用户诉求**：用户本次会话的核心目标（原话摘要）
@@ -783,18 +1042,20 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 - **验证结果**：质量门禁、测试、Ruff 的结果
 - **Git 提交**：commit hash 和分支名（若有提交）
 
-### 16.4 禁止行为
+### 19.4 禁止行为
 
 - **禁止跳过记录**：不得以"临时修改"、"小改动"为由跳过操作记录
 - **禁止事后补记**：应在会话结束前即时记录，不得堆积多天后补
 - **禁止模糊记录**：不得使用"修改了若干文件"等模糊描述，须精确到文件路径
 - **禁止遗漏失败**：测试失败、门禁失败也必须记录，不得只记成功
 
-### 16.5 文件位置
+### 19.5 文件位置
 
 - 操作记录文件固定路径：`操作记录.md`（项目根目录）
 - 规则文件路径：`.trae/rules/project_rules.md`（本文件）
 - 优化日志路径：`docs/optimization_log.md`（技术优化专项记录）
+- 三方工具总览：`3dtool/README.md`（规则 3）
+- 复刻品清单：`3dtool/pycopy/README.md`（规则 4）
 
 来源：
 - Git 提交最佳实践: https://www.conventionalcommits.org/
@@ -805,6 +1066,7 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 
 | 标准 | 来源 URL |
 |------|----------|
+| Python src layout | https://packaging.python.org/en/latest/discussions/src-layout/ |
 | PEP 8 风格指南 | https://peps.python.org/pep-0008/ |
 | PEP 257 文档字符串 | https://peps.python.org/pep-0257/ |
 | PEP 484 类型注解 | https://peps.python.org/pep-0484/ |
@@ -820,3 +1082,12 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 | Git 分支最佳实践 | https://devtoolhub.com/git-best-practices-branching-approvals/ |
 | Python Linting SOP | https://alchemiststudios.ai/articles/python-linting-sop.html |
 | Sourcegraph 复杂度指南 | https://sourcegraph.com/blog/cyclomatic-complexity-what-it-is-and-how-to-reduce-it |
+| PyTorch | https://pytorch.org/ |
+| KLayout | https://www.klayout.de/ |
+| GDSFactory | https://gdsfactory.github.io/gdsfactory/ |
+| SAX | https://flaport.github.io/sax/ |
+| Simphony | https://simphonyphotonics.readthedocs.io/ |
+| SiPANN | https://sipann.readthedocs.io/ |
+| MEEP | https://meep.readthedocs.io/ |
+| Gymnasium | https://gymnasium.farama.org/ |
+| NetworkX | https://networkx.org/ |
