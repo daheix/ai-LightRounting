@@ -244,6 +244,34 @@ def _create_klayout_layout(dbu: float = 0.001):
     return ly, top, layer_map
 
 
+def _place_devrec_text(top, pl, layer_devrec, cx: float, cy: float) -> None:
+    """在 DEVREC 层添加 SiEPIC 标准 Text 标签（真实版图验证）。
+
+    真实 SiEPIC 格式（RingResonator.gds 验证）：
+    - Lumerical_INTERCONNECT_library=Design kits/ebeam_v1.2
+    - Lumerical_INTERCONNECT_component=<器件名>
+    - Spice_param:<参数列表>（冒号，参数值带 'u' 后缀表示 μm）
+
+    来源: SiEPIC EBeam PDK Examples
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    db = _db
+    lib_text = db.DText(
+        "Lumerical_INTERCONNECT_library=Design kits/ebeam_v1.2",
+        db.DTrans(cx, cy - 1.0),
+    )
+    top.shapes(layer_devrec).insert(lib_text)
+    comp_text = db.DText(
+        f"Lumerical_INTERCONNECT_component={pl.device.name}",
+        db.DTrans(cx, cy),
+    )
+    top.shapes(layer_devrec).insert(comp_text)
+    if pl.device.params:
+        params_str = " ".join(f"{k}={v}u" for k, v in pl.device.params.items())
+        spice_text = db.DText(f"Spice_param:{params_str}", db.DTrans(cx, cy + 1.0))
+        top.shapes(layer_devrec).insert(spice_text)
+
+
 def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> None:
     """将器件矩形画到对应工艺层，可选添加端口标记。
 
@@ -251,11 +279,11 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
     - passive/active → WG (1,0)
     - source → SOURCE (110,0)
     - detector → GE (5,0)
-    同时在 DEVREC (68,0) 层画器件包围盒 + Component/Spice_param Text 标签
-    （SiEPIC Tools 标准，netlist 提取与连接性验证）。
+    同时在 DEVREC (68,0) 层画器件包围盒 + SiEPIC 标准 Text 标签
+    （Lumerical_INTERCONNECT_component + Spice_param，netlist 提取与连接性验证）。
 
-    来源: SiEPIC-Tools Wiki - Layout - Devices
-    https://github.com/SiEPIC/SiEPIC-Tools/wiki
+    来源: SiEPIC EBeam PDK Examples
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     db = _db
 
@@ -273,17 +301,13 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
         top.shapes(layer).insert(box)
         # DEVREC 层：器件识别层（SiEPIC 标准，netlist 提取/连接性验证）
         top.shapes(layer_map["DEVREC"]).insert(box)
-        # SiEPIC DEVREC Text 标签：Component=xxx（器件名）+ Spice_param=xxx（参数）
+        # DEVREC Text 标签（SiEPIC 真实格式）
         cx = (xmin + xmax) / 2
         cy = (ymin + ymax) / 2
-        comp_text = db.DText(f"Component={pl.device.name}", db.DTrans(cx, cy))
-        top.shapes(layer_map["TEXT"]).insert(comp_text)
-        if pl.device.params:
-            params_str = " ".join(f"{k}={v}" for k, v in pl.device.params.items())
-            spice_text = db.DText(f"Spice_param={params_str}", db.DTrans(cx, cy - 1.0))
-            top.shapes(layer_map["TEXT"]).insert(spice_text)
+        _place_devrec_text(top, pl, layer_map["DEVREC"], cx, cy)
         if add_ports:
-            _place_port_markers(top, pl, layer_map["PORT"], layer_map["TEXT"], dbu)
+            # 端口 Path + pin名 Text 都在 PIN layer (69,0)（真实 SiEPIC 格式）
+            _place_port_markers(top, pl, layer_map["PIN"], layer_map["PIN"], dbu)
 
 
 def _place_port_markers(top, pl, layer_port, layer_text, dbu) -> None:

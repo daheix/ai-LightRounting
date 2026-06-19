@@ -84,6 +84,9 @@ POLARIS_GDS_LAYER_MAP: dict[str, GDSLayer] = {
     # === Virtual 层（netlist/验证/可视化，不流片） ===
     "PORT": GDSLayer(1, 10, "PORT", "PinRec 光学端口（必须，netlist 提取）", fabricated=False),
     "PORTE": GDSLayer(1, 11, "PORTE", "PinRecM 电气端口", fabricated=False),
+    # SiEPIC 真实版图验证（RingResonator.gds）：pin Path + pin名 Text 均在 (69,0)
+    # 来源: SiEPIC EBeam PDK Examples, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    "PIN": GDSLayer(69, 0, "PIN", "SiEPIC pin 标记层（Path+Text，netlist 提取）", fabricated=False),
     "WAVEGUIDE_PATH": GDSLayer(
         1, 99, "WAVEGUIDE_PATH", "波导引导形状（长度计算）", fabricated=False
     ),

@@ -122,13 +122,13 @@ def test_gds_can_be_reloaded(klayout_db, tmp_path) -> None:
 
 
 def test_gds_layer_mapping(klayout_db, tmp_path) -> None:
-    """器件类别应映射到真实 foundry GDS layer（止血7）。
+    """器件类别应映射到真实 foundry GDS layer（止血7 + 真实 SiEPIC 验证）。
 
     - passive/active → WG (1,0)
     - source → SOURCE (110,0)
     - detector → GE (5,0)
     - 所有器件包围盒同时画到 DEVREC (68,0)
-    - 端口画到 PORT (1,10)
+    - 端口画到 PIN (69,0)（真实 SiEPIC 格式，RingResonator.gds 验证）
     """
     placements = {
         "p1": _make_placement("p1", "passive", 0.0, 0.0),
@@ -141,13 +141,13 @@ def test_gds_layer_mapping(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
-    # 真实 foundry layer 映射（止血7，借鉴 SiEPIC/ubcpdk/gdsfactory）
+    # 真实 foundry layer 映射（止血7 + SiEPIC EBeam PDK 真实版图验证）
     expected = {
         "WG (passive/active)": (1, 0),
         "SOURCE": (110, 0),
         "GE (detector)": (5, 0),
         "DEVREC": (68, 0),
-        "PORT": (1, 10),
+        "PIN": (69, 0),
     }
     for label, (g, d) in expected.items():
         idx = ly.find_layer(klayout_db.LayerInfo(g, d))
@@ -262,10 +262,11 @@ def test_boxes_distance_pure_python() -> None:
 # https://github.com/SiEPIC/SiEPIC-Tools/wiki
 # ---------------------------------------------------------------------------
 def test_gds_pinrec_uses_path_not_box(klayout_db, tmp_path) -> None:
-    """SiEPIC 要求 PinRec 层用 Path 形状（非 Box）表示端口方向。
+    """SiEPIC 要求 pin 标记层用 Path 形状（非 Box）表示端口方向。
 
-    来源: SiEPIC-Tools Wiki - OPTICAL PINS - Pin Recognition layer - PinRec
-    "A Path shape (only) identifying the pin..."
+    真实版图验证（RingResonator.gds）：pin Path 在 layer (69,0)，
+    不是 PoLaRIS 早期的 (1,10)。来源: SiEPIC EBeam PDK Examples
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
     gds_path = export_gds(placements, None, str(tmp_path / "pinrec.gds"))
@@ -273,25 +274,26 @@ def test_gds_pinrec_uses_path_not_box(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
-    # PORT 层 (1,10) = PinRec
-    idx = ly.find_layer(klayout_db.LayerInfo(1, 10))
-    assert idx is not None, "PinRec layer 1/10 未在 GDS 中找到"
+    # PIN 层 (69,0) = SiEPIC 真实 pin 标记层
+    idx = ly.find_layer(klayout_db.LayerInfo(69, 0))
+    assert idx is not None, "PIN layer 69/0 未在 GDS 中找到"
     shapes = tc.shapes(idx)
-    assert shapes.size() > 0, "PinRec layer 上应有至少 1 个 shape"
-    # 验证所有 shape 都是 Path 类型（非 Box）
+    assert shapes.size() > 0, "PIN layer 上应有至少 1 个 shape"
+    # 验证存在 Path 类型 shape（端口方向标记）
     has_path = False
     for shape in shapes.each():
-        assert shape.is_path(), f"PinRec shape 应为 Path 类型（SiEPIC 要求），实际为 {shape.type()}"
-        has_path = True
-    assert has_path, "PinRec layer 上应至少有 1 个 Path shape"
+        if shape.is_path():
+            has_path = True
+            break
+    assert has_path, "PIN layer 上应至少有 1 个 Path shape（SiEPIC 端口方向标记）"
 
 
 def test_gds_has_pin_name_text(klayout_db, tmp_path) -> None:
-    """SiEPIC 要求 PinRec Path 中点有 pin 名称 Text 标签。
+    """SiEPIC 要求 pin 名称 Text 标签与 Path 在同一 layer (69,0)。
 
-    来源: SiEPIC-Tools Wiki - OPTICAL PINS - Pin Recognition layer - PinRec
-    "A Text shape, with the name of the pin. It must be located exactly
-    in the mid-point of the Path shape."
+    真实版图验证（RingResonator.gds 的 ebeam_dc_halfring_straight）：
+    pin1/pin2/pin3/pin4 Text 与 Path 都在 (69,0)。
+    来源: SiEPIC EBeam PDK Examples
     """
     placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
     gds_path = export_gds(placements, None, str(tmp_path / "pintext.gds"))
@@ -299,24 +301,25 @@ def test_gds_has_pin_name_text(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
-    # TEXT 层 (10,0)
-    idx = ly.find_layer(klayout_db.LayerInfo(10, 0))
-    assert idx is not None, "TEXT layer 10/0 未在 GDS 中找到"
-    # 收集所有 Text 字符串
+    # PIN 层 (69,0) 应同时含 Path 和 pin 名 Text
+    idx = ly.find_layer(klayout_db.LayerInfo(69, 0))
+    assert idx is not None, "PIN layer 69/0 未在 GDS 中找到"
     text_strings: list[str] = []
     for shape in tc.shapes(idx).each():
         if shape.is_text():
             text_strings.append(shape.text.string)
     # 应包含 pin 名称 "in" 和 "out"（_make_device 创建的端口名）
-    assert "in" in text_strings, f"TEXT layer 应包含 pin 名称 'in'，实际文本: {text_strings}"
-    assert "out" in text_strings, f"TEXT layer 应包含 pin 名称 'out'，实际文本: {text_strings}"
+    assert "in" in text_strings, f"PIN layer 应包含 pin 名称 'in'，实际文本: {text_strings}"
+    assert "out" in text_strings, f"PIN layer 应包含 pin 名称 'out'，实际文本: {text_strings}"
 
 
 def test_gds_has_devrec_component_text(klayout_db, tmp_path) -> None:
-    """SiEPIC 要求 DEVREC 层有 Component=xxx Text 标签（器件识别）。
+    """SiEPIC 真实版图 DEVREC 层含 Lumerical_INTERCONNECT_component=xxx Text。
 
-    来源: SiEPIC-Tools Wiki - Device Recognition layer – DevRec
-    "A Text shape, providing a component name: Component=xxx"
+    真实版图验证（RingResonator.gds）：
+    - Lumerical_INTERCONNECT_library=Design kits/ebeam_v1.2
+    - Lumerical_INTERCONNECT_component=<器件名>
+    均在 DEVREC (68,0) 层。来源: SiEPIC EBeam PDK Examples
     """
     placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
     gds_path = export_gds(placements, None, str(tmp_path / "devrec.gds"))
@@ -324,24 +327,28 @@ def test_gds_has_devrec_component_text(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
-    # TEXT 层 (10,0)
-    idx = ly.find_layer(klayout_db.LayerInfo(10, 0))
-    assert idx is not None
+    # DEVREC 层 (68,0)
+    idx = ly.find_layer(klayout_db.LayerInfo(68, 0))
+    assert idx is not None, "DEVREC layer 68/0 未在 GDS 中找到"
     text_strings: list[str] = []
     for shape in tc.shapes(idx).each():
         if shape.is_text():
             text_strings.append(shape.text.string)
-    # 应包含 "Component=test_passive"（_make_device 的 name=test_passive）
-    expected = "Component=test_passive"
-    assert expected in text_strings, f"TEXT layer 应包含 '{expected}'，实际文本: {text_strings}"
+    # 应包含 "Lumerical_INTERCONNECT_component=test_passive"
+    expected = "Lumerical_INTERCONNECT_component=test_passive"
+    assert expected in text_strings, f"DEVREC layer 应包含 '{expected}'，实际文本: {text_strings}"
+    # 也应包含 library 标签
+    assert any("Lumerical_INTERCONNECT_library" in t for t in text_strings), (
+        f"DEVREC layer 应含 library 标签，实际: {text_strings}"
+    )
 
 
 def test_gds_has_devrec_spice_param_text(klayout_db, tmp_path) -> None:
-    """SiEPIC 要求 DEVREC 层有 Spice_param=xxx Text 标签（器件参数）。
+    """SiEPIC 真实版图 DEVREC 层含 Spice_param:xxx Text（冒号非等号）。
 
-    来源: SiEPIC-Tools Wiki - Device Recognition layer – DevRec
-    "Parameterized Cells (PCell) parameters - Spice format:
-    A Text shape, such as Spice_param=wg_width=0.5e-6 gap=2e-6"
+    真实版图验证（RingResonator.gds 的 ebeam_dc_halfring_straight）：
+    "Spice_param:wg_width=0.500u gap=0.100u radius=5.000u Lc=0.000u"
+    参数值带 'u' 后缀（表示 μm）。来源: SiEPIC EBeam PDK Examples
     """
     # 构造带参数的器件
     dev = Device(
@@ -368,14 +375,17 @@ def test_gds_has_devrec_spice_param_text(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
-    idx = ly.find_layer(klayout_db.LayerInfo(10, 0))
+    # DEVREC 层 (68,0)
+    idx = ly.find_layer(klayout_db.LayerInfo(68, 0))
     text_strings: list[str] = []
     for shape in tc.shapes(idx).each():
         if shape.is_text():
             text_strings.append(shape.text.string)
-    # 应包含 "Spice_param=wg_width=5e-07 length=1e-05"
-    spice_texts = [t for t in text_strings if t.startswith("Spice_param=")]
-    assert len(spice_texts) >= 1, f"TEXT layer 应包含 Spice_param=xxx，实际文本: {text_strings}"
+    # 真实 SiEPIC 格式是 "Spice_param:" （冒号），不是 "Spice_param="（等号）
+    spice_texts = [t for t in text_strings if t.startswith("Spice_param:")]
+    assert len(spice_texts) >= 1, (
+        f"DEVREC layer 应含 Spice_param:xxx（冒号），实际文本: {text_strings}"
+    )
     # 验证参数内容
     assert "wg_width=" in spice_texts[0], f"Spice_param 应含 wg_width，实际: {spice_texts[0]}"
     assert "length=" in spice_texts[0], f"Spice_param 应含 length，实际: {spice_texts[0]}"
