@@ -45,7 +45,8 @@
 
 ```
 /workspace/
-├── 3dtool/              # 三方工具统一管理（规则 3/4）
+├── 3dtool/              # 三方工具统一管理（规则 3/4/5）
+│   └── wheels/              # 离线 wheel 包（沙箱重启一键恢复，规则 5.1.1）
 ├── src/                 # 所有自研代码（src layout，规则 5）
 ├── publish/             # 产品发布制品（规则 6）
 ├── tests/               # 测试代码（规则 7）
@@ -55,7 +56,7 @@
 ├── docs/                # 项目文档（设计文档/优化日志）
 ├── .trae/rules/         # 项目规则（本文件）
 ├── pyproject.toml       # 项目配置（构建/lint/pytest）
-├── 操作记录.md           # 操作记录（规则 16）
+├── 操作记录.md           # 操作记录（规则 19）
 └── README.md            # 项目概述
 ```
 
@@ -110,6 +111,11 @@ src/polaris/
 ```
 3dtool/
 ├── README.md              # 三方工具总览
+├── wheels/                # 离线 wheel 包（沙箱重启一键恢复，规则 5.1.1）
+│   ├── install.sh             # 一键离线安装脚本（核心入口）
+│   ├── MANIFEST.txt           # wheel 清单与 SHA256 校验和
+│   ├── *.whl                  # 小 wheel（<24MB，直接存放）
+│   └── parts/                 # 大 wheel 分卷片段（≤20MB，绕过 GitHub 24MB 限制）
 ├── layout/                # 版图类工具
 ├── simulation/            # 仿真类工具
 ├── ml/                    # 机器学习类工具
@@ -134,8 +140,8 @@ src/polaris/
 | 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
 |------|---------|------|------|----------|-------------|
 | meep | ❌ 未装 | — | FDTD 电磁仿真 | `pip install meep` | 可选（器件级仿真） |
-| simphony | ✅ 已装 | 0.6.0 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
-| sax | ❌ 未装 | — | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有复刻兜底） |
+| simphony | ✅ 已装 | 0.7.3 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
+| sax | ✅ 已装 | 0.14.7 | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有复刻兜底） |
 | SiPANN | ❌ 未装 | — | 硅光器件模型 | `pip install SiPANN` | src/polaris/sim/models.py（已复刻） |
 | femwell | ❌ 未装 | — | FEM 模式求解器 | `pip install femwell` | 可选 |
 | meow | ❌ 未装 | — | 模式求解器 | `pip install meow` | 可选 |
@@ -144,7 +150,7 @@ src/polaris/
 
 | 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
 |------|---------|------|------|----------|-------------|
-| torch | ✅ 已装 | 2.12.1 | GNN/PPO 神经网络 | `pip install torch` | src/polaris/trainer/ppo_torch.py |
+| torch | ✅ 已装 | 2.12.1+cpu | GNN/PPO 神经网络 | `pip install torch` | src/polaris/trainer/ppo_torch.py |
 | gymnasium | ✅ 已装 | 1.3.0 | RL 环境 | `pip install gymnasium` | src/polaris/engine/floorplan_env.py |
 | networkx | ✅ 已装 | 3.6.1 | 图算法 | `pip install networkx` | src/polaris/engine/netlist.py |
 
@@ -154,7 +160,7 @@ src/polaris/
 |------|---------|------|------|----------|-------------|
 | numpy | ✅ 已装 | 2.4.6 | 数值计算 | `pip install numpy` | 全项目核心 |
 | scipy | ✅ 已装 | 1.17.1 | 优化求解 | `pip install scipy` | 优化求解 |
-| shapely | ✅ 已装 | 2.1.2 | 几何运算 | `pip install shapely` | 可选（constraint_checker 用纯 Python） |
+| shapely | ❌ 未装 | — | 几何运算 | `pip install shapely` | 可选（constraint_checker 用纯 Python） |
 
 #### viz/ — 可视化类工具
 
@@ -167,6 +173,19 @@ src/polaris/
 | 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
 |------|---------|------|------|----------|-------------|
 | pyyaml | ✅ 已装 | 6.0.3 | 网表/配置序列化 | `pip install pyyaml` | src/polaris/engine/netlist.py 等 |
+
+#### dev/ — 开发类工具
+
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| pytest | ✅ 已装 | 9.1.0 | 测试框架 | `pip install pytest` | tests/ |
+| ruff | ✅ 已装 | 0.15.18 | Lint + Format | `pip install ruff` | 全项目 |
+| mypy | ✅ 已装 | 2.1.0 | 类型检查 | `pip install mypy` | src/polaris/ |
+| wheel | ✅ 已装 | 0.47.0 | wheel 构建 | `pip install wheel` | 打包 |
+| setuptools | ✅ 已装 | 81.0.0 | 构建工具 | `pip install setuptools` | 打包 |
+
+**注**：所有工具均已在 `3dtool/wheels/` 离线打包，沙箱重启后执行
+`bash 3dtool/wheels/install.sh --all` 一键恢复（70 秒，规则 5.1.1）。
 
 ### 3.3 工具使用原则
 
@@ -274,7 +293,62 @@ from polaris.nn import Tensor
 
 ### 5.1 环境安装顺序
 
-新环境部署时，按以下顺序安装工具：
+**沙箱/新环境首选离线安装**（规则 5.1.1），仅当离线 wheel 包不存在或不兼容时
+才使用联网 pip 安装。
+
+#### 5.1.1 离线一键安装（沙箱/新环境必用，强制）
+
+**沙箱环境随时重启，pip 安装的工具会全部丢失。** 重新联网下载需 4+ 小时，
+项目已将全部依赖打包为离线 wheel，重启后执行一条命令 70 秒恢复：
+
+```bash
+# 沙箱重启后必做：一键离线安装全部依赖（首选方案）
+bash 3dtool/wheels/install.sh --all
+
+# 仅检查环境（不安装）
+bash 3dtool/wheels/install.sh --check
+
+# 仅安装核心依赖
+bash 3dtool/wheels/install.sh --core
+
+# 仅安装开发依赖
+bash 3dtool/wheels/install.sh --dev
+```
+
+**离线 wheel 包结构**（详见 `3dtool/wheels/README.md`）：
+- `3dtool/wheels/*.whl`：小 wheel（<24MB，83 个，直接存放）
+- `3dtool/wheels/parts/*.part_*`：大 wheel 分卷片段（≤20MB，18 个）
+  - torch 184MB → 9 个分片
+  - jaxlib 82MB → 5 个分片
+  - scipy 34MB → 2 个分片
+  - klayout 27MB → 2 个分片
+- `install.sh` 自动合并分卷 + gunzip 还原 + pip install --no-index
+
+**为什么分卷**：GitHub 限制单文件 ≤24MB，大 wheel 经 gzip 压缩 + split 分卷后
+每个片段 ≤20MB，可正常提交。install.sh 安装时自动还原。
+
+**torch CPU 版本**：打包的是 `torch 2.12.1+cpu`（184MB），非 GPU 版（532MB + 2GB CUDA）。
+沙箱通常无 GPU，CPU 版功能完整仅速度较慢。如需 GPU 版本，在有 GPU 的环境执行
+`pip install torch`（自动安装 GPU 版本）。
+
+**平台限制**：当前 wheel 仅适用 Linux x86_64 + Python 3.14。其他平台需重新生成：
+```bash
+pip download --dest 3dtool/wheels/ numpy scipy networkx torch gymnasium matplotlib pyyaml
+pip download --dest 3dtool/wheels/ klayout simphony sax
+pip download --dest 3dtool/wheels/ pytest ruff mypy wheel setuptools
+# 大 wheel 需分卷压缩（>24MB 的文件）
+for f in 3dtool/wheels/*.whl; do
+  size=$(stat -c%s "$f")
+  if [ "$size" -gt 25165824 ]; then
+    gzip -c "$f" | split -b 20M - "3dtool/wheels/parts/${f##*/}.gz.part_"
+    rm "$f"
+  fi
+done
+```
+
+#### 5.1.2 联网 pip 安装（备用方案，离线包不可用时）
+
+仅当离线 wheel 包不存在、不兼容当前平台、或需安装新工具时使用：
 
 ```bash
 # 1. 核心依赖（必装，pip 安装即用）
@@ -297,60 +371,25 @@ pip install pytest ruff mypy
 pip install -e .
 ```
 
-### 5.1.1 离线一键安装（沙箱/新环境必用，强制）
-
-**沙箱环境随时重启，pip 安装的工具会全部丢失。** 重新联网下载需 4+ 小时，
-项目已将全部依赖打包为离线 wheel，重启后执行一条命令 70 秒恢复：
-
-```bash
-# 沙箱重启后必做：一键离线安装全部依赖
-bash 3dtool/wheels/install.sh --all
-
-# 仅检查环境（不安装）
-bash 3dtool/wheels/install.sh --check
-
-# 仅安装核心依赖
-bash 3dtool/wheels/install.sh --core
-```
-
-**离线 wheel 包结构**（详见 `3dtool/wheels/README.md`）：
-- `3dtool/wheels/*.whl`：小 wheel（<24MB，83 个，直接存放）
-- `3dtool/wheels/parts/*.part_*`：大 wheel 分卷片段（≤20MB，18 个）
-  - torch 184MB → 9 个分片
-  - jaxlib 82MB → 5 个分片
-  - scipy 34MB → 2 个分片
-  - klayout 27MB → 2 个分片
-- `install.sh` 自动合并分卷 + gunzip 还原 + pip install --no-index
-
-**为什么分卷**：GitHub 限制单文件 ≤24MB，大 wheel 经 gzip 压缩 + split 分卷后
-每个片段 ≤20MB，可正常提交。install.sh 安装时自动还原。
-
-**torch CPU 版本**：打包的是 `torch 2.12.1+cpu`（184MB），非 GPU 版（532MB + 2GB CUDA）。
-沙箱通常无 GPU，CPU 版功能完整仅速度较慢。
-
-**平台限制**：当前 wheel 仅适用 Linux x86_64 + Python 3.14。其他平台需重新生成：
-```bash
-pip download --dest 3dtool/wheels/ numpy scipy networkx torch gymnasium matplotlib pyyaml
-pip download --dest 3dtool/wheels/ klayout simphony sax
-pip download --dest 3dtool/wheels/ pytest ruff mypy wheel setuptools
-```
+**重要**：联网安装新工具后，必须同步更新离线 wheel 包（规则 5.5.3）。
 
 ### 5.2 工具安装决策矩阵
 
 | 工具 | 是否安装 | 决策依据 |
 |------|---------|----------|
 | numpy/scipy/networkx/matplotlib/pyyaml | ✅ 必装 | 核心依赖，pip 即用 |
-| torch | ✅ 必装 | GNN/PPO 训练核心（也有 pyCopyTorch 复刻兜底） |
+| torch | ✅ 必装 | GNN/PPO 训练核心（CPU 版 2.12.1+cpu，也有 pyCopyTorch 复刻兜底） |
 | gymnasium | ✅ 必装 | RL 环境核心 |
 | klayout | ✅ 必装 | GDS 导出 + DRC，已验证可装 |
 | simphony | ✅ 建议装 | S 参数仿真，已验证可装 |
+| sax | ✅ 已装 | 已离线打包（含 jax/jaxlib/optax 依赖链），也有 pyCopySAX 复刻兜底 |
 | gdsfactory | ⚠️ 按需 | 版图生成，依赖链中等 |
 | gdstk | ⚠️ 按需 | GDS 高性能读写，gdsfactory 依赖 |
 | SiPANN | ⚠️ 按需 | 已有 pyCopySiPANN 完整复刻 |
-| sax | ❌ 不装 | 依赖链 200-400 MB（jax/jaxlib/optax），已有 pyCopySAX 复刻兜底 |
 | meep | ❌ 不装 | FDTD 重型依赖，项目未使用器件级 FDTD |
 | femwell/meow | ❌ 不装 | FEM 模式求解器，项目未使用 |
 | lygadgets | ❌ 不装 | KLayout 已直接安装，无需 lygadgets 工具链 |
+| shapely | ❌ 不装 | constraint_checker 用纯 Python 实现，无需 shapely |
 
 ### 5.3 工具使用规范
 
@@ -373,21 +412,25 @@ pip download --dest 3dtool/wheels/ pytest ruff mypy wheel setuptools
 部署完成后，运行以下命令验证环境：
 
 ```bash
-# 1. 验证核心依赖
+# 1. 一键环境检查（推荐，自动检查全部依赖）
+bash 3dtool/wheels/install.sh --check
+
+# 2. 验证核心依赖
 python -c "import numpy, scipy, networkx, torch, gymnasium, matplotlib, yaml; print('core OK')"
 
-# 2. 验证可选依赖
+# 3. 验证可选依赖
 python -c "import klayout; print('klayout OK')"
 python -c "import simphony; print('simphony OK')"
+python -c "import sax; print('sax OK')"
 
-# 3. 验证复刻品
+# 4. 验证复刻品
 python -c "from pycopy.pyCopyTorch import Tensor; print('pyCopyTorch OK')"
 python -c "from pycopy.pyCopySAX import cascade_circuit; print('pyCopySAX OK')"
 
-# 4. 验证项目包
+# 5. 验证项目包
 python -c "import polaris; print('polaris OK')"
 
-# 5. 运行测试
+# 6. 运行测试
 python -m pytest tests/ -q --tb=short
 ```
 
@@ -396,6 +439,22 @@ python -m pytest tests/ -q --tb=short
 - 每次安装/卸载工具后，必须同步更新 `3dtool/<category>/README.md` 的安装状态
 - 每次新增复刻品后，必须同步更新 `3dtool/pycopy/README.md` 和本规则 4.3 表格
 - 环境变更须在 `操作记录.md` 中记录
+
+### 5.5.1 离线 wheel 包同步（强制）
+
+**每次新增/升级/删除依赖后，必须同步更新离线 wheel 包**，保证沙箱重启后能完整恢复：
+
+1. **新增依赖**：`pip download --dest 3dtool/wheels/ <new_package>`
+2. **升级依赖**：删除旧 wheel → `pip download --dest 3dtool/wheels/ <package>` 下载新版本
+3. **删除依赖**：`rm 3dtool/wheels/<package>-*.whl`
+4. **大 wheel 分卷**：>24MB 的 wheel 必须分卷压缩到 `parts/`（规则 5.1.1）
+5. **更新清单**：重新生成 `3dtool/wheels/MANIFEST.txt`（含 SHA256 校验和）
+6. **验证安装**：执行 `bash 3dtool/wheels/install.sh --check` 确认完整
+
+**禁止行为**：
+- ❌ 禁止提交 >24MB 的 wheel 文件到 git（GitHub 会拒绝）
+- ❌ 禁止删除 `parts/` 分卷片段而不删除对应的小 wheel（会导致安装失败）
+- ❌ 禁止修改 `install.sh` 的分卷还原逻辑（会导致大 wheel 无法还原）
 
 ## 规则 6：发布制品管理规范（强制）
 
@@ -406,10 +465,14 @@ python -m pytest tests/ -q --tb=short
 ```
 publish/
 ├── README.md          # 发布说明
-├── wheels/            # 构建 wheel 包
+├── wheels/            # 构建 wheel 包（polaris 项目自身的发布包，非依赖）
 ├── docs/              # 发布文档（用户手册/API 参考/安装指南）
-└── examples/          # 使用示例代码
+└── examples/          # 使用示例代码（4 个示例脚本）
 ```
+
+**注意区分**：
+- `3dtool/wheels/`：存放**第三方依赖**的离线 wheel 包（numpy/torch 等），用于沙箱重启恢复
+- `publish/wheels/`：存放**本项目** polaris 的构建 wheel 包，用于发布给第三方安装
 
 ### 6.2 发布流程
 
@@ -665,6 +728,11 @@ mypy src/polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 - `.pytest_cache/`、`.mypy_cache/`、`.ruff_cache/`
 - `*.gds`、`*.oas`（大型版图文件，按需用 LFS）
 - `checkpoints/`（训练检查点，体积大）
+- `3dtool/wheels/.tmp_restore/`（离线安装临时还原目录，install.sh 运行时生成）
+- `.idea/`、`.vscode/`、`*.swp`、`*.swo`（IDE 文件）
+
+**注意**：`3dtool/wheels/*.whl` 和 `3dtool/wheels/parts/*.part_*` **必须提交到 git**，
+这是沙箱重启后恢复环境的核心依赖，禁止忽略。
 
 ## 规则 10：测试规范（强制）
 
@@ -741,11 +809,14 @@ def function_name(param1: int, param2: str) -> bool:
 
 - `README.md`：项目概述、安装、快速开始
 - `3dtool/README.md`：三方工具总览（规则 3）
+- `3dtool/wheels/README.md`：离线 wheel 包说明与使用方法（规则 5.1.1）
+- `3dtool/wheels/MANIFEST.txt`：wheel 清单与 SHA256 校验和
 - `3dtool/<category>/README.md`：分类工具说明（规则 3.4）
 - `3dtool/pycopy/README.md`：复刻品清单（规则 4）
 - `publish/README.md`：发布说明（规则 6）
+- `publish/examples/README.md`：示例清单与运行方式
 - `docs/`：架构文档、设计文档、优化日志
-- `操作记录.md`：每次会话的操作记录（规则 16）
+- `操作记录.md`：每次会话的操作记录（规则 19）
 - 每个规则变更须同步更新本文件
 
 ## 规则 12：CI/CD 与自动化（强制）
@@ -792,17 +863,39 @@ jobs:
 | 核心依赖 | `pyproject.toml [project.dependencies]` | PDK/布局/布线/训练必需 |
 | 可选依赖 | `pyproject.toml [project.optional-dependencies]` | 仿真类工具（simphony/sax/SiPANN） |
 | 开发依赖 | `pyproject.toml [project.optional-dependencies.dev]` | ruff/pytest/mypy 等 |
+| 离线 wheel | `3dtool/wheels/` | 沙箱重启一键恢复（规则 5.1.1） |
 
 ### 13.2 依赖原则
 
 1. **最小化**：核心功能依赖精简，不引入非必要大型库
-2. **版本锁定**：`pyproject.toml` 中指定最低版本，`requirements.txt` 锁定精确版本
+2. **版本锁定**：`pyproject.toml` 中指定最低版本，`3dtool/wheels/` 锁定精确版本
 3. **禁止商业依赖**：不依赖 Lumerical/IPKISS/Tidy3D 等商业软件
 4. **安全审计**：定期运行 `pip-audit` 检查已知漏洞
 5. **许可兼容**：所有依赖须与项目许可证兼容（MIT/Apache/BSD）
 6. **复刻兜底**：可选依赖缺失时必须有 pyCopy 复刻品兜底（规则 4）
+7. **离线包同步**：新增/升级/删除依赖后必须同步更新 `3dtool/wheels/`（规则 5.5.1）
 
-来源：pip-audit https://pypi.org/project/pip-audit/
+### 13.3 离线 wheel 包管理
+
+**沙箱环境随时重启，所有 pip 安装的工具会丢失。** 项目将全部依赖打包为离线
+wheel 包存放在 `3dtool/wheels/`，重启后执行 `bash 3dtool/wheels/install.sh --all`
+即可在 70 秒内恢复（vs 联网下载 4 小时）。
+
+**wheel 包组成**（详见 `3dtool/wheels/README.md`）：
+- 核心依赖：numpy/scipy/networkx/torch(CPU)/gymnasium/matplotlib/pyyaml
+- 可选依赖：klayout/simphony/sax（含 jax/jaxlib/optax 完整依赖链）
+- 开发依赖：pytest/ruff/mypy/wheel/setuptools
+- 大 wheel 分卷：>24MB 的 wheel 经 gzip+split 分卷为 ≤20MB 片段（绕过 GitHub 限制）
+
+**torch CPU 版本说明**：打包的是 `torch 2.12.1+cpu`（184MB），非 GPU 版
+（532MB + 2GB CUDA 依赖）。沙箱通常无 GPU，CPU 版功能完整仅速度较慢。
+如需 GPU 版本，在有 GPU 的环境执行 `pip install torch`。
+
+来源：
+- pip-audit https://pypi.org/project/pip-audit/
+- pip 离线安装 https://pip.pypa.io/en/stable/topics/repeatable-installs/
+- split 分卷 https://www.gnu.org/software/coreutils/manual/html_node/split-invocation.html
+- torch CPU 版本 https://download.pytorch.org/whl/cpu
 
 ## 规则 14：错误处理与日志规范（强制）
 
@@ -1120,6 +1213,10 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 | Git 分支最佳实践 | https://devtoolhub.com/git-best-practices-branching-approvals/ |
 | Python Linting SOP | https://alchemiststudios.ai/articles/python-linting-sop.html |
 | Sourcegraph 复杂度指南 | https://sourcegraph.com/blog/cyclomatic-complexity-what-it-is-and-how-to-reduce-it |
+| pip 离线安装 | https://pip.pypa.io/en/stable/topics/repeatable-installs/ |
+| split 分卷工具 | https://www.gnu.org/software/coreutils/manual/html_node/split-invocation.html |
+| torch CPU 版本 | https://download.pytorch.org/whl/cpu |
+| pip-audit 安全审计 | https://pypi.org/project/pip-audit/ |
 | PyTorch | https://pytorch.org/ |
 | KLayout | https://www.klayout.de/ |
 | GDSFactory | https://gdsfactory.github.io/gdsfactory/ |
