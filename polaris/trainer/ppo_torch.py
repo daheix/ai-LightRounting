@@ -143,6 +143,246 @@ class ActorCritic(nn.Module):
         return logprob, value.squeeze(-1), entropy
 
 
+class ActorCriticDiscrete(nn.Module):
+    """离散动作空间的 Actor-Critic 网络（用于 MultiDiscrete 环境）。
+
+    将 MultiDiscrete 动作展平为单个 Categorical 分布。
+    例如 MultiDiscrete([10,10,4]) → 400 个离散动作。
+
+    来源:
+    - SB3 MultiInputPolicy: https://stable-baselines3.readthedocs.io/
+    - CleanRL discrete PPO: https://github.com/vwxyzjn/cleanrl
+    """
+
+    def __init__(self, obs_dim: int, n_actions: int, hidden_dim: int = 128):
+        super().__init__()
+        self.shared = nn.Sequential(
+            nn.Linear(obs_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+        )
+        self.action_logits = nn.Linear(hidden_dim, n_actions)
+        self.value_head = nn.Linear(hidden_dim, 1)
+        self.n_actions = n_actions
+        self._init_weights()
+
+    def _init_weights(self) -> None:
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
+                nn.init.constant_(module.bias, 0.0)
+        nn.init.orthogonal_(self.action_logits.weight, gain=0.01)
+        nn.init.constant_(self.action_logits.bias, 0.0)
+
+    def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        feats = self.shared(obs)
+        logits = self.action_logits(feats)
+        value = self.value_head(feats)
+        return logits, value
+
+    def get_action(self, obs_np: np.ndarray) -> tuple[int, float, float]:
+        obs_t = torch.as_tensor(obs_np, dtype=torch.float32).unsqueeze(0)
+        with torch.no_grad():
+            logits, value = self.forward(obs_t)
+            dist = torch.distributions.Categorical(logits=logits)
+            action = dist.sample()
+            logprob = dist.log_prob(action)
+        return int(action.item()), float(logprob.item()), float(value.item())
+
+    def evaluate(
+        self, obs: torch.Tensor, actions: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        logits, value = self.forward(obs)
+        dist = torch.distributions.Categorical(logits=logits)
+        logprob = dist.log_prob(actions.squeeze(-1))
+        entropy = dist.entropy()
+        return logprob, value.squeeze(-1), entropy
+
+
+class PPOAgentDiscrete:
+    """离散动作空间的 PPO 智能体。
+
+    接口与 PPOAgent 兼容，但使用 Categorical 分布代替 Gaussian。
+    适用于 MultiDiscrete/Discrete 动作空间。
+
+    来源:
+    - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+    - Schulman et al., 2015, GAE https://arxiv.org/abs/1506.02438
+    - SB3 PPO: https://stable-baselines3.readthedocs.io/
+    """
+
+    def __init__(
+        self,
+        obs_dim: int,
+        n_actions: int,
+        config: PPOConfig | None = None,
+        hidden_dim: int = 128,
+    ):
+        self.config = config or PPOConfig()
+        self.network = ActorCriticDiscrete(obs_dim, n_actions, hidden_dim)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=self.config.lr)
+        self.buffer = RolloutBuffer()
+        self._total_steps = 0
+        self.n_actions = n_actions
+
+    def get_action(self, obs: np.ndarray) -> tuple[int, float, float]:
+        return self.network.get_action(obs)
+
+    def store(self, transition: Transition) -> None:
+        self.buffer.obs.append(transition.obs)
+        self.buffer.actions.append(np.array([transition.action]))
+        self.buffer.rewards.append(transition.reward)
+        self.buffer.logprobs.append(transition.logprob)
+        self.buffer.values.append(transition.value)
+        self.buffer.dones.append(transition.done)
+
+    def update(self, last_value: float = 0.0) -> dict:
+        if len(self.buffer) == 0:
+            return {"loss": 0, "policy_loss": 0, "value_loss": 0, "entropy": 0}
+
+        b_obs = torch.as_tensor(
+            np.array(self.buffer.obs), dtype=torch.float32
+        )
+        b_actions = torch.as_tensor(
+            np.array(self.buffer.actions), dtype=torch.long
+        )
+        b_logprobs = torch.as_tensor(
+            np.array(self.buffer.logprobs), dtype=torch.float32
+        )
+        b_values = torch.as_tensor(
+            np.array(self.buffer.values), dtype=torch.float32
+        )
+        b_dones = torch.as_tensor(
+            np.array(self.buffer.dones), dtype=torch.float32
+        )
+        b_rewards = torch.as_tensor(
+            np.array(self.buffer.rewards), dtype=torch.float32
+        )
+
+        advantages, returns = compute_gae(
+            b_rewards.numpy().tolist(),
+            b_values.numpy().tolist(),
+            b_dones.numpy().tolist(),
+            last_value,
+            self.config,
+        )
+        b_advantages = torch.as_tensor(advantages, dtype=torch.float32)
+        b_returns = torch.as_tensor(returns, dtype=torch.float32)
+
+        # 归一化优势
+        if b_advantages.numel() > 1:
+            b_advantages = (b_advantages - b_advantages.mean()) / (
+                b_advantages.std() + 1e-8
+            )
+
+        total_loss_val = 0.0
+        total_ploss = 0.0
+        total_vloss = 0.0
+        total_ent = 0.0
+        n_updates = 0
+
+        for _ in range(self.config.n_epochs):
+            indices = np.arange(len(self.buffer))
+            np.random.shuffle(indices)
+            mb_size = self.config.batch_size
+
+            for start in range(0, len(self.buffer), mb_size):
+                end = start + mb_size
+                mb_idx = indices[start:end]
+
+                new_logprob, new_value, entropy = self.network.evaluate(
+                    b_obs[mb_idx], b_actions[mb_idx]
+                )
+
+                # PPO clip
+                logratio = new_logprob - b_logprobs[mb_idx]
+                ratio = torch.exp(logratio)
+                surr1 = ratio * b_advantages[mb_idx]
+                surr2 = (
+                    torch.clamp(
+                        ratio,
+                        1 - self.config.clip_eps,
+                        1 + self.config.clip_eps,
+                    )
+                    * b_advantages[mb_idx]
+                )
+                policy_loss = -torch.min(surr1, surr2).mean()
+
+                # Value loss
+                if self.config.clip_vf > 0:
+                    v_clipped = b_values[mb_idx] + torch.clamp(
+                        new_value - b_values[mb_idx],
+                        -self.config.clip_vf,
+                        self.config.clip_vf,
+                    )
+                    v_loss1 = (new_value - b_returns[mb_idx]).pow(2)
+                    v_loss2 = (v_clipped - b_returns[mb_idx]).pow(2)
+                    value_loss = 0.5 * torch.max(v_loss1, v_loss2).mean()
+                else:
+                    value_loss = 0.5 * (
+                        (new_value - b_returns[mb_idx]).pow(2).mean()
+                    )
+
+                entropy_loss = -self.config.ent_coef * entropy.mean()
+                loss = policy_loss + self.config.vf_coef * value_loss + entropy_loss
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                nn.utils.clip_grad_norm_(
+                    self.network.parameters(), self.config.max_grad_norm
+                )
+                self.optimizer.step()
+
+                total_loss_val += float(loss.item())
+                total_ploss += float(policy_loss.item())
+                total_vloss += float(value_loss.item())
+                total_ent += float(entropy.mean().item())
+                n_updates += 1
+
+        self._total_steps += len(self.buffer)
+        self.buffer.clear()
+
+        # 学习率调度（cosine/linear/constant）
+        if self.config.lr_schedule == "cosine" and self.config.total_steps > 0:
+            progress = min(1.0, self._total_steps / self.config.total_steps)
+            new_lr = self.config.lr * 0.5 * (1 + np.cos(np.pi * progress))
+            for pg in self.optimizer.param_groups:
+                pg["lr"] = max(new_lr, 1e-6)
+        elif self.config.lr_schedule == "linear" and self.config.total_steps > 0:
+            progress = min(1.0, self._total_steps / self.config.total_steps)
+            new_lr = self.config.lr * (1 - progress)
+            for pg in self.optimizer.param_groups:
+                pg["lr"] = max(new_lr, 1e-6)
+
+        return {
+            "loss": total_loss_val / max(1, n_updates),
+            "policy_loss": total_ploss / max(1, n_updates),
+            "value_loss": total_vloss / max(1, n_updates),
+            "entropy": total_ent / max(1, n_updates),
+        }
+
+    def save(self, path: str) -> None:
+        torch.save(
+            {
+                "network": self.network.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "total_steps": self._total_steps,
+                "n_actions": self.n_actions,
+            },
+            path,
+        )
+
+    @classmethod
+    def load(cls, path: str, obs_dim: int, n_actions: int, config: PPOConfig, hidden_dim: int = 128) -> "PPOAgentDiscrete":
+        agent = cls(obs_dim, n_actions, config, hidden_dim)
+        data = torch.load(path, weights_only=False)
+        agent.network.load_state_dict(data["network"])
+        agent.optimizer.load_state_dict(data["optimizer"])
+        agent._total_steps = data.get("total_steps", 0)
+        return agent
+
+
 @dataclass
 class RolloutBuffer:
     """PPO rollout 缓冲区。"""
