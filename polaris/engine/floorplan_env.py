@@ -176,6 +176,7 @@ class FloorplanEnv(gym.Env):
         self.grid_w = self.state.grid_w
         self.grid_h = self.state.grid_h
         self._step_idx = 0
+        self._last_reward = 0.0  # 上一步的累计奖励（用于计算增量奖励）
 
         self.action_space = spaces.MultiDiscrete([self.grid_w, self.grid_h, 4])
         self.observation_space = spaces.Dict(
@@ -200,6 +201,7 @@ class FloorplanEnv(gym.Env):
             grid_size=self.state.grid_size,
         )
         self._step_idx = 0
+        self._last_reward = 0.0  # 上一步的累计奖励（用于计算增量奖励）
         return self._obs(), {"step": 0}
 
     def _obs(self) -> dict:
@@ -248,7 +250,10 @@ class FloorplanEnv(gym.Env):
         )
         self._step_idx += 1
         terminated = self._step_idx >= len(self.instance_ids)
-        reward = self._reward()
+        # 增量奖励：当前累计 - 上次累计（让PPO学到每步的边际贡献）
+        cumulative = self._reward()
+        reward = cumulative - self._last_reward
+        self._last_reward = cumulative
         return self._obs(), reward, terminated, False, {"step": self._step_idx}
 
     def _reward(self) -> float:

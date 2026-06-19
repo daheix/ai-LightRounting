@@ -47,7 +47,7 @@ except ImportError:
 
 # ── 配置 ──────────────────────────────────────────────
 EPISODES_PER_ROUND = 2_000_000  # 每轮2M
-BATCH_SIZE = 200
+BATCH_SIZE = 500  # 增大批次（原200太小，PPO数据不足）
 SAVE_DIR = Path("checkpoints/rl_2m")
 PROGRESS_FILE = SAVE_DIR / "progress.json"
 COMMIT_INTERVAL = 300  # 5分钟
@@ -55,10 +55,10 @@ CKPT_EVERY = 1000  # 每1000 episode保存checkpoint
 
 HIDDEN_DIM = 128  # torch 可高效处理 128 隐藏层
 LR = 3e-4
-ROLLOUT_STEPS = 16
-CANVAS_W = 500.0
-CANVAS_H = 500.0
-GRID_SIZE = 10.0
+ROLLOUT_STEPS = 32  # 增大rollout步数（原16太少，器件放不完就截断了）
+CANVAS_W = 200.0  # 缩小画布（原500太大，器件太稀疏）
+CANVAS_H = 200.0
+GRID_SIZE = 20.0  # 10x10网格（200/20=10），obs_dim降到113
 
 PPO_CONFIG = _PPOConfig(
     lr=LR,
@@ -68,8 +68,8 @@ PPO_CONFIG = _PPOConfig(
     ent_coef=0.05,  # 增大熵系数（原0.01太小，探索不足）
     vf_coef=0.5,
     max_grad_norm=0.5,
-    n_epochs=2,  # 减少更新轮数加速（原4→2，纯NumPy下4轮太慢）
-    batch_size=64,
+    n_epochs=4,  # 恢复4轮更新（torch版足够快）
+    batch_size=128,  # 增大小批量（原64太小）
     clip_vf=0,  # 禁用 value clip（原 clip_vf=10 导致 value_loss=100）
     lr_schedule="cosine",
     total_steps=EPISODES_PER_ROUND,
