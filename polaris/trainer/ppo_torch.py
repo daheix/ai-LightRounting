@@ -95,18 +95,14 @@ class ActorCritic(nn.Module):
         nn.init.orthogonal_(self.action_mean.weight, gain=0.01)
         nn.init.constant_(self.action_mean.bias, 0.0)
 
-    def forward(
-        self, obs: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """前向传播，返回 (action_mean, value)。"""
         feats = self.shared(obs)
         mean = self.action_mean(feats)
         value = self.value_head(feats)
         return mean, value
 
-    def get_action(
-        self, obs_np: np.ndarray
-    ) -> tuple[np.ndarray, float, float]:
+    def get_action(self, obs_np: np.ndarray) -> tuple[np.ndarray, float, float]:
         """采样动作 + 返回 logprob + value（用于 rollout）。
 
         Args:
@@ -291,9 +287,7 @@ class PPOAgent:
         if step < cfg.lr_warmup_steps:
             # linear warmup
             return cfg.lr * (step + 1) / max(1, cfg.lr_warmup_steps)
-        progress = (step - cfg.lr_warmup_steps) / max(
-            1, cfg.total_steps - cfg.lr_warmup_steps
-        )
+        progress = (step - cfg.lr_warmup_steps) / max(1, cfg.total_steps - cfg.lr_warmup_steps)
         progress = min(1.0, max(0.0, progress))
         if cfg.lr_schedule == "cosine":
             return cfg.lr * 0.5 * (1.0 + math.cos(math.pi * progress))
@@ -355,18 +349,9 @@ class PPOAgent:
         # 价值损失（2025 增强：clip 防止异常）
         # 来源: SB3 PPO clip_vf
         if self.config.clip_vf > 0:
-            value_pred_clipped = old_logprobs + torch.clamp(
-                value_pred - old_logprobs,
-                -self.config.clip_vf,
-                self.config.clip_vf,
-            )
-            # 这里 old_logprobs 占位不正确，需要用旧 value
-            # 实际 clip_vf 应基于旧 value 预测，但为兼容 NumPy 版
-            # （NumPy 版也是直接 clip value_diff），保持一致
+            # 直接 clip value_diff（与 NumPy 版一致）
             value_diff = returns - value_pred
-            value_diff = torch.clamp(
-                value_diff, -self.config.clip_vf, self.config.clip_vf
-            )
+            value_diff = torch.clamp(value_diff, -self.config.clip_vf, self.config.clip_vf)
             value_loss = (value_diff**2).mean()
         else:
             value_loss = ((returns - value_pred) ** 2).mean()
@@ -378,9 +363,7 @@ class PPOAgent:
         loss = policy_loss + self.config.vf_coef * value_loss - self.config.ent_coef * entropy_mean
 
         loss.backward()
-        nn.utils.clip_grad_norm_(
-            self.ac.parameters(), self.config.max_grad_norm
-        )
+        nn.utils.clip_grad_norm_(self.ac.parameters(), self.config.max_grad_norm)
         self.optimizer.step()
 
         return {
