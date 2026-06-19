@@ -37,7 +37,11 @@ from polaris.trainer.train_loop import (
 try:
     from polaris.trainer.ppo_torch import (
         PPOAgentDiscrete as _PPOAgent,
+    )
+    from polaris.trainer.ppo_torch import (
         PPOConfig as _PPOConfig,
+    )
+    from polaris.trainer.ppo_torch import (
         Transition,
     )
 
@@ -209,9 +213,7 @@ def _try_load_agent(ckpt_path: Path, obs_dim: int, n_actions: int) -> _PPOAgent 
         return None
 
 
-def _try_load_routing_agent(
-    ckpt_path: Path, obs_dim: int, action_dim: int
-):
+def _try_load_routing_agent(ckpt_path: Path, obs_dim: int, action_dim: int):
     """尝试从 checkpoint 加载布线 agent（连续 PPO）。
 
     Bug 修复: 原代码根本未尝试加载 routing_ckpt，每次重启都从零开始。
@@ -245,14 +247,18 @@ def _infer_dims() -> tuple[int, int, int, list]:
     obs_dim = _infer_obs_dim(env0)
     n_actions = _flatten_multidiscrete(env0.action_space)
     print(f"  布局: obs_dim={obs_dim}, n_actions={n_actions}", flush=True)
-    print(f"  [专家奖励] ExpertRewardShaper 已启用 (ICLR'26)", flush=True)
+    print("  [专家奖励] ExpertRewardShaper 已启用 (ICLR'26)", flush=True)
 
     fp = FloorplanEnv(net0, devices0, config=PLACE_ENV_CONFIG)
     fp.reset()
     for _ in range(len(devices0)):
         fp.step(fp.action_space.sample())
     rt_env = RoutingEnv(
-        net0, fp.state.placements, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE,
+        net0,
+        fp.state.placements,
+        canvas_w=CANVAS_W,
+        canvas_h=CANVAS_H,
+        grid_size=GRID_SIZE,
     )
     obs_dim_route = _infer_obs_dim(rt_env)
 
@@ -330,7 +336,11 @@ def run_routing_batch(
         for _ in range(len(devices)):
             fp.step(fp.action_space.sample())
         rt_env = RoutingEnv(
-            net, fp.state.placements, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE,
+            net,
+            fp.state.placements,
+            canvas_w=CANVAS_W,
+            canvas_h=CANVAS_H,
+            grid_size=GRID_SIZE,
         )
         obs, _ = rt_env.reset()
         ep_reward = 0.0
@@ -383,7 +393,10 @@ def main() -> None:
     placement_agent = _try_load_agent(placement_ckpt, obs_dim, n_actions)
     if placement_agent is None:
         placement_agent = _PPOAgent(
-            obs_dim=obs_dim, n_actions=n_actions, config=PPO_CONFIG, hidden_dim=HIDDEN_DIM,
+            obs_dim=obs_dim,
+            n_actions=n_actions,
+            config=PPO_CONFIG,
+            hidden_dim=HIDDEN_DIM,
         )
         print("  [新建] placement_agent (离散PPO)", flush=True)
 
@@ -395,7 +408,10 @@ def main() -> None:
     routing_agent = _try_load_routing_agent(routing_ckpt, obs_dim_route, route_action_dim)
     if routing_agent is None:
         routing_agent = _PPOAgentCont(
-            obs_dim=obs_dim_route, action_dim=route_action_dim, config=PPO_CONFIG, hidden_dim=HIDDEN_DIM,
+            obs_dim=obs_dim_route,
+            action_dim=route_action_dim,
+            config=PPO_CONFIG,
+            hidden_dim=HIDDEN_DIM,
         )
         print("  [新建] routing_agent (连续PPO)", flush=True)
 
@@ -433,7 +449,11 @@ def main() -> None:
 
             for r in place_result["rewards"][-10:]:
                 prog["recent_rewards"].append(
-                    {"ep": prog["total_episodes_done"], "phase": "placement", "reward": round(r, 4)},
+                    {
+                        "ep": prog["total_episodes_done"],
+                        "phase": "placement",
+                        "reward": round(r, 4),
+                    },
                 )
 
             print(
@@ -456,7 +476,11 @@ def main() -> None:
 
                 for r in route_result["rewards"][-10:]:
                     prog["recent_rewards"].append(
-                        {"ep": prog["total_episodes_done"], "phase": "routing", "reward": round(r, 4)},
+                        {
+                            "ep": prog["total_episodes_done"],
+                            "phase": "routing",
+                            "reward": round(r, 4),
+                        },
                     )
 
                 print(

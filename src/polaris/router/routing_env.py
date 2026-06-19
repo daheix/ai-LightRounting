@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass, field
 
@@ -24,6 +25,8 @@ from polaris.router.waveguide_router import (
     get_platform_constraints,
     route_connection,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -74,6 +77,22 @@ class RoutingEnvConfig:
     length_weight: float = 0.001
     congestion_weight: float = 0.1
     drc_penalty: float = 10.0
+
+
+@dataclass
+class _RouteParams:
+    """单连接布线参数打包（降低 ``_try_route`` 参数个数，规则 7.1）。
+
+    将 ``step()`` 收集的 6 个布线参数（起止坐标、平台、偏移、障碍）打包为
+    单一对象传给 ``_try_route``，使函数参数个数从 7 降到 2（self + params）。
+    """
+
+    start: tuple[float, float]
+    end: tuple[float, float]
+    platform: str
+    dx: float
+    dy: float
+    obstacles: list
 
 
 class RoutingEnv(gym.Env):
@@ -183,14 +202,10 @@ class RoutingEnv(gym.Env):
         action = np.asarray(action, dtype=np.float32)
         start, end, platform = self._current_ports()
         cons = get_platform_constraints(platform)
-        # 动作微调：
-        # - action[0], action[1]: 起点偏移（在端口附近微调布线起点）
-        # - action[2]: detour 因子，控制路径是否绕行拥塞区域
         dx = float(action[0]) * cons["min_bend_radius_um"]
         dy = float(action[1]) * cons["min_bend_radius_um"]
-        detour = float(action[2])  # [-1, 1]，>0 倾向绕行，<0 倾向直行
+        detour = float(action[2])
         obstacles = self._collect_obstacles()
-        # detour > 0 时，添加虚拟障碍鼓励绕行（避开直线最短路径附近的拥塞）
         if detour > 0.1:
             _add_detour_obstacles(
                 obstacles,
@@ -199,26 +214,38 @@ class RoutingEnv(gym.Env):
                 detour_factor=detour,
                 grid_size=self.state.grid_size,
             )
-        # 布线（捕获A*失败，给大惩罚）
-        try:
-            wp = route_connection(
-                start=(start[0] + dx, start[1] + dy),
-                end=end,
-                platform=platform,
-                grid_size=self.state.grid_size,
-                canvas_w=self.state.canvas_w,
-                canvas_h=self.state.canvas_h,
-                obstacles=obstacles,
-            )
-            self.state.paths[self._conn_idx] = wp
-            self.state.update_congestion(wp)
-            reward = self._reward(wp)
-        except Exception:
-            # A*找不到路径或越界等异常 → 大惩罚，跳过此连接
-            reward = -1000.0
+        reward = self._try_route(
+            _RouteParams(start=start, end=end, platform=platform, dx=dx, dy=dy, obstacles=obstacles)
+        )
         self._conn_idx += 1
         terminated = self._conn_idx >= len(self.connections)
         return self._obs(), reward, terminated, False, {"step": self._conn_idx}
+
+    def _try_route(self, params: _RouteParams) -> float:
+        """执行单连接布线，返回 reward。失败时返回适度惩罚。"""
+        try:
+            wp = route_connection(
+                start=(params.start[0] + params.dx, params.start[1] + params.dy),
+                end=params.end,
+                platform=params.platform,
+                grid_size=self.state.grid_size,
+                canvas_w=self.state.canvas_w,
+                canvas_h=self.state.canvas_h,
+                obstacles=params.obstacles,
+            )
+            self.state.paths[self._conn_idx] = wp
+            self.state.update_congestion(wp)
+            return self._reward(wp)
+        except (ValueError, IndexError, RuntimeError) as exc:
+            # A*找不到路径或越界等异常 → 适度惩罚（非 -1000 灾难值）
+            logger.warning(
+                "连接 %d 布线失败: %s (start=%s, end=%s)",
+                self._conn_idx,
+                exc,
+                params.start,
+                params.end,
+            )
+            return -(self.loss_weight * 10.0 + self.drc_penalty * 0.1)
 
     def _collect_obstacles(self) -> list:
         """收集当前连接的布线障碍（已放置器件，排除起终点器件）。"""

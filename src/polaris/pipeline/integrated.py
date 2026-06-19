@@ -39,6 +39,8 @@ class PipelineConfig:
         loss_target_db: 目标插入损耗（dB）。
         min_bend_radius_um: 最小弯曲半径（μm）。
         output_dir: 输出目录。
+        placement_checkpoint: RL 布局 agent 检查点路径（None 则随机贪心）。
+        use_real_simulator: 是否使用真实 S 参数仿真器（False 则查表）。
     """
 
     canvas_w: float = 1000.0
@@ -49,6 +51,8 @@ class PipelineConfig:
     loss_target_db: float = 5.0
     min_bend_radius_um: float = 5.0
     output_dir: str = "out"
+    placement_checkpoint: str | None = None
+    use_real_simulator: bool = False
 
 
 @dataclass
@@ -83,10 +87,120 @@ class PipelineResult:
 
 
 class _DefaultPlacer:
-    """默认布局器（随机贪心）。"""
+    """默认布局器。
+
+    支持两种模式：
+    1. RL 模式：加载训练好的 PPOAgentDiscrete，用 RL 策略布局（推荐）
+    2. 随机贪心模式：固定种子随机布局（回退/无 checkpoint 时）
+
+    RL 模式来源:
+    - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+    - Google Nature 2021: https://www.nature.com/articles/s41586-021-03544-w
+    """
+
+    def __init__(self, checkpoint_path: str | None = None) -> None:
+        """初始化布局器。
+
+        Args:
+            checkpoint_path: PPOAgent 检查点路径。None 时使用随机贪心。
+        """
+        self.checkpoint_path = checkpoint_path
+        self._agent = None
+        self._obs_dim = 0
+        self._n_actions = 0
+        if checkpoint_path:
+            self._try_load_agent(checkpoint_path)
+
+    def _try_load_agent(self, path: str) -> None:
+        """尝试加载 RL agent，失败时回退到随机贪心。"""
+        try:
+            from pathlib import Path
+
+            from polaris.trainer.ppo_buffers import AgentSpec, PPOConfig
+            from polaris.trainer.ppo_torch import PPOAgentDiscrete
+
+            ckpt = Path(path)
+            if not ckpt.exists():
+                logger.warning("检查点不存在: %s，回退到随机贪心", path)
+                return
+
+            # 动态推断 obs_dim 和 n_actions
+            from polaris.engine.floorplan_env import FloorplanEnv, FloorplanEnvConfig
+            from polaris.engine.netlist import load_netlist
+
+            net, devices, _ = load_netlist("data/benchmarks/mzi.json")
+            env = FloorplanEnv(
+                net,
+                devices,
+                config=FloorplanEnvConfig(canvas_w=200.0, canvas_h=200.0, grid_size=20.0),
+            )
+            obs, _ = env.reset()
+            self._obs_dim = len(obs) if hasattr(obs, "__len__") else 1
+            self._n_actions = 400  # MultiDiscrete([10,10,4]) = 400
+
+            spec = AgentSpec(obs_dim=self._obs_dim, n_actions=self._n_actions, hidden_dim=128)
+            cfg = PPOConfig(lr=3e-4, n_epochs=4, batch_size=64)
+            self._agent = PPOAgentDiscrete.load(str(ckpt), cfg, spec)
+            logger.info("RL agent 加载成功: %s (obs_dim=%d)", path, self._obs_dim)
+        except Exception as e:
+            logger.warning("RL agent 加载失败: %s，回退到随机贪心", e)
+            self._agent = None
 
     def place(self, circuit: CircuitSpec, feedback=None) -> dict:
-        """放置器件。"""
+        """放置器件。
+
+        Args:
+            circuit: 电路规格。
+            feedback: 仿真反馈（可选，用于迭代优化）。
+
+        Returns:
+            布局结果 dict {name: {x, y, w, h}}。
+        """
+        if self._agent is not None:
+            return self._place_with_rl(circuit)
+        return self._place_random(circuit)
+
+    def _place_with_rl(self, circuit: CircuitSpec) -> dict:
+        """用 RL 策略布局。"""
+
+        from polaris.engine.floorplan_env import FloorplanEnv, FloorplanEnvConfig
+        from polaris.engine.netlist import Connection, Netlist
+
+        # 构造 Netlist（从 CircuitSpec）
+        connections = [
+            Connection(src_instance=d1, src_port=p1, dst_instance=d2, dst_port=p2)
+            for d1, p1, d2, p2 in circuit.connections
+        ]
+        net = Netlist(devices=circuit.devices, connections=connections)
+        env = FloorplanEnv(
+            net,
+            circuit.devices,
+            config=FloorplanEnvConfig(
+                canvas_w=circuit.canvas_w,
+                canvas_h=circuit.canvas_h,
+                grid_size=20.0,
+            ),
+        )
+        obs, _ = env.reset()
+        placements = {}
+        done = False
+        while not done:
+            action, _, _ = self._agent.get_action(obs)
+            obs, reward, done, truncated, info = env.step(action)
+            if truncated:
+                done = True
+        # 从 env.state 提取布局结果
+        for inst_id, pl in env.state.placements.items():
+            placements[inst_id] = {
+                "x": pl.x,
+                "y": pl.y,
+                "w": pl.device.width_um,
+                "h": pl.device.height_um,
+            }
+        return placements
+
+    def _place_random(self, circuit: CircuitSpec) -> dict:
+        """随机贪心布局（回退模式）。"""
         import random
 
         rng = random.Random(42)
@@ -125,7 +239,16 @@ class _DefaultRouter:
 
 
 class _DefaultSimulator:
-    """默认仿真器（简化损耗估算）。"""
+    """默认仿真器。
+
+    支持两种模式：
+    1. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator（推荐）
+    2. 查表估算：简单损耗查表（回退/无 simphony 时）
+
+    仿真来源:
+    - simphony: https://simphonyphotonics.readthedocs.io/
+    - sax: https://flaport.github.io/sax/
+    """
 
     # 器件类型 → 单位损耗 (dB)
     _LOSS_TABLE: dict[str, float] = {
@@ -138,8 +261,49 @@ class _DefaultSimulator:
         "directional_coupler": 0.2,
     }
 
+    def __init__(self, use_real: bool = False) -> None:
+        """初始化仿真器。
+
+        Args:
+            use_real: True 时使用真实 S 参数仿真器，False 时查表。
+        """
+        self.use_real = use_real
+        self._sim = None
+        if use_real:
+            self._try_init_real_simulator()
+
+    def _try_init_real_simulator(self) -> None:
+        """尝试初始化真实仿真器，失败时回退到查表。"""
+        try:
+            from polaris.sim.simulator import CircuitSimulator
+
+            self._sim = CircuitSimulator()
+            logger.info("真实 S 参数仿真器初始化成功")
+        except Exception as e:
+            logger.warning("真实仿真器初始化失败: %s，回退到查表", e)
+            self._sim = None
+            self.use_real = False
+
     def simulate(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """仿真S参数。"""
+        """仿真 S 参数。"""
+        if self.use_real and self._sim is not None:
+            return self._simulate_real(circuit, placements, paths)
+        return self._simulate_table(circuit, placements, paths)
+
+    def _simulate_real(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
+        """真实 S 参数级联仿真。"""
+        try:
+            result = self._sim.simulate(circuit)
+            return {
+                "total_loss_db": float(result.get("total_loss_db", 0.0)),
+                "n_crossings": int(result.get("n_crossings", 0)),
+            }
+        except Exception as e:
+            logger.warning("真实仿真失败: %s，回退到查表", e)
+            return self._simulate_table(circuit, placements, paths)
+
+    def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
+        """查表估算损耗。"""
         total_loss = 0.0
         for dev in circuit.devices:
             loss = self._LOSS_TABLE.get(dev.device_type, 0.0)
@@ -162,9 +326,9 @@ class IntegratedPipeline:
 
     def __init__(self, config: PipelineConfig | None = None) -> None:
         self.config = config or PipelineConfig()
-        self.placer = _DefaultPlacer()
+        self.placer = _DefaultPlacer(checkpoint_path=self.config.placement_checkpoint)
         self.router = _DefaultRouter()
-        self.simulator = _DefaultSimulator()
+        self.simulator = _DefaultSimulator(use_real=self.config.use_real_simulator)
 
     def run(self, circuit: CircuitSpec | None = None) -> PipelineResult:
         """执行一体化流水线。

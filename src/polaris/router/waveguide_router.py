@@ -135,6 +135,9 @@ class GridRouter:
             # 弯曲半径约束：转弯前须直行 >= min_bend_steps 步
             is_turn = last_dir != -1 and d != last_dir
             new_straight = straight + 1 if d == last_dir else 1
+            # 钳位 new_straight 到 min_bend_steps，避免状态空间无上限膨胀
+            # （straight > min_bend_steps 后行为等价，无需区分）
+            new_straight = min(new_straight, self.min_bend_steps)
             if is_turn and straight < self.min_bend_steps:
                 continue
             neighbors.append((nx, ny, d, new_straight))

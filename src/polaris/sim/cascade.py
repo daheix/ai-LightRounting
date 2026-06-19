@@ -89,24 +89,16 @@ def _compute_cross_term(
     p_j: str,
     ctx: CascadeContext,
 ) -> np.ndarray:
-    """计算通过连接端口的间接传输交叉项。
+    """计算通过连接端口的间接传输交叉项（子网络增长算法）。
 
-    来源:
-    - SAX 子网络增长: https://flaport.github.io/sax/
-    - 光子电路 S 参数级联理论: 标准微波网络理论
+    来源: SAX 子网络增长 https://flaport.github.io/sax/
 
-    Args:
-        s1: 子网络1的 S 参数。
-        s2: 子网络2的 S 参数。
-        p_i: 当前剩余端口 i。
-        p_j: 当前剩余端口 j。
-        ctx: 级联上下文（剩余端口/连接对/频率维度）。
-
-    Returns:
-        交叉项 S_iA * S_Bj / (1 - S_AB * S_BA) 的累加结果。
+    i、j 同子网络时需经对侧端口反射折返（乘 reflect），不同子网络时
+    直接交叉。详见 _connect_ports 的模块文档。
     """
     i_in_1 = p_i in ctx.remaining_1
     j_in_1 = p_j in ctx.remaining_1
+    same_subnet = i_in_1 == j_in_1
     s_cross = np.zeros(ctx.n_freq, dtype=complex)
     for c1, c2 in ctx.connected:
         if i_in_1:
@@ -117,11 +109,17 @@ def _compute_cross_term(
             s_Bj = _get_s_value(s1, c1, p_j, ctx.n_freq)
         else:
             s_Bj = _get_s_value(s2, c2, p_j, ctx.n_freq)
-        s_AB = _get_s_value(s1, c1, c1, ctx.n_freq)
-        s_BA = _get_s_value(s2, c2, c2, ctx.n_freq)
-        denom = 1.0 - s_AB * s_BA
+        s_AA = _get_s_value(s1, c1, c1, ctx.n_freq)
+        s_BB = _get_s_value(s2, c2, c2, ctx.n_freq)
+        denom = 1.0 - s_AA * s_BB
         denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
-        s_cross += s_iA * s_Bj / denom
+        if same_subnet:
+            # 同子网络：信号需经对侧连接端口反射折返
+            reflect = s_BB if i_in_1 else s_AA
+            s_cross += s_iA * reflect * s_Bj / denom
+        else:
+            # 不同子网络：直接交叉路径
+            s_cross += s_iA * s_Bj / denom
     return s_cross
 
 
@@ -317,6 +315,26 @@ def cascade_circuit(
     return final_s
 
 
+def _to_sax_ref(ref: str) -> str:
+    """将 'instance.port' 转为 SAX 要求的 'instance,port' 格式。
+
+    SAX 0.14.7 的 Netlist 校验要求 connections/ports 的键值使用
+    逗号分隔 'instance,port'，而非点号 'instance.port'。
+
+    来源: SAX Netlist 校验逻辑 https://flaport.github.io/sax/
+
+    Args:
+        ref: 点号分隔的实例端口引用 'instance.port'。
+
+    Returns:
+        逗号分隔的 SAX 引用 'instance,port'。
+    """
+    parts = ref.split(".", 1)
+    if len(parts) == 2:
+        return f"{parts[0]},{parts[1]}"
+    return ref
+
+
 def _cascade_with_sax(
     instances: dict[str, SDict],
     connections: list[tuple[str, str]],
@@ -343,10 +361,11 @@ def _cascade_with_sax(
 
         models[model_name] = make_model(sdict)
 
+    # SAX 0.14.7 要求 connections/ports 使用 'instance,port' 逗号分隔格式
     netlist = {
         "instances": netlist_instances,
-        "connections": {c[0]: c[1] for c in connections},
-        "ports": ports,
+        "connections": {_to_sax_ref(c[0]): _to_sax_ref(c[1]) for c in connections},
+        "ports": {ext: _to_sax_ref(int_ref) for ext, int_ref in ports.items()},
     }
 
     circuit, _ = _sax.circuit(netlist=netlist, models=models)

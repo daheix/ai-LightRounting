@@ -213,19 +213,22 @@ def extract_all(tools_dir: Path, output_dir: Path) -> dict:
     index = {
         "stats": stats,
         "lidar_benchmarks": [
-            {"name": b["name"], "n_devices": b["n_devices"], "n_nets": b["n_nets"]}
-            for b in lidar
+            {"name": b["name"], "n_devices": b["n_devices"], "n_nets": b["n_nets"]} for b in lidar
         ],
         "picbench_benchmarks": [{"name": b["name"]} for b in picbench],
         "gdsfactory_circuits": [
-            {"name": c["name"], "n_instances": c["n_instances"]}
-            for c in gdsfactory
+            {"name": c["name"], "n_instances": c["n_instances"]} for c in gdsfactory
         ],
     }
     index_path.write_text(json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    logger.info("提取完成: LiDAR=%d, PICBench=%d, GDSFactory=%d, 总计=%d",
-                len(lidar), len(picbench), len(gdsfactory), stats["total"])
+    logger.info(
+        "提取完成: LiDAR=%d, PICBench=%d, GDSFactory=%d, 总计=%d",
+        len(lidar),
+        len(picbench),
+        len(gdsfactory),
+        stats["total"],
+    )
     return stats
 
 
@@ -234,8 +237,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="提取开源光子电路基准数据")
     parser.add_argument("--tools", default=str(TOOLS_DIR), help="工具目录")
     parser.add_argument("--output", default="data/benchmarks", help="输出目录")
-    parser.add_argument("--source", choices=["all", "lidar", "picbench", "gdsfactory"],
-                        default="all", help="数据源")
+    parser.add_argument(
+        "--source", choices=["all", "lidar", "picbench", "gdsfactory"], default="all", help="数据源"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")

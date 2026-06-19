@@ -106,7 +106,6 @@ def merge_cycle() -> None:
     run_git("fetch", "origin", DEV_BRANCH)
 
     # 4. 检查开发分支是否有新提交
-    local_main = get_rev(MAIN_BRANCH)
     remote_dev = get_rev(f"origin/{DEV_BRANCH}")
     merge_base = get_merge_base(MAIN_BRANCH, f"origin/{DEV_BRANCH}")
 

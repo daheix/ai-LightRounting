@@ -345,28 +345,64 @@ class DRCReport:
         return self.total_violations == 0
 
 
-def _check_device_overlaps(pls: list, min_spacing_um: float) -> tuple[int, int, list[str]]:
-    """检查器件间重叠与间距违规，返回 (重叠数, 间距违规数, 详情列表)。"""
-    from shapely.geometry import box as shapely_box
+def _boxes_intersect(a: tuple, b: tuple) -> bool:
+    """纯 Python 判断两个轴对齐矩形是否相交（含边界接触）。
 
+    替代 shapely.geometry.box.intersects，避免 shapely 依赖（规则 3.2/5.3）。
+
+    Args:
+        a: (xmin, ymin, xmax, ymax)。
+        b: (xmin, ymin, xmax, ymax)。
+
+    Returns:
+        是否相交。
+    """
+    return not (a[2] < b[0] or b[2] < a[0] or a[3] < b[1] or b[3] < a[1])
+
+
+def _boxes_distance(a: tuple, b: tuple) -> float:
+    """纯 Python 计算两个轴对齐矩形之间的最短距离（0 表示相交）。
+
+    替代 shapely.geometry.box.distance，避免 shapely 依赖。
+
+    Args:
+        a: (xmin, ymin, xmax, ymax)。
+        b: (xmin, ymin, xmax, ymax)。
+
+    Returns:
+        最短距离（μm）。
+    """
+    if _boxes_intersect(a, b):
+        return 0.0
+    dx = max(0.0, max(b[0] - a[2], a[0] - b[2]))
+    dy = max(0.0, max(b[1] - a[3], a[1] - b[3]))
+    return (dx * dx + dy * dy) ** 0.5
+
+
+def _check_device_overlaps(pls: list, min_spacing_um: float) -> tuple[int, int, list[str]]:
+    """检查器件间重叠与间距违规，返回 (重叠数, 间距违规数, 详情列表)。
+
+    使用纯 Python 几何运算（_boxes_intersect/_boxes_distance），
+    不依赖 shapely（规则 3.2：shapely 不装，用纯 Python 实现）。
+    """
     overlaps = 0
     spacings = 0
     details: list[str] = []
     for i in range(len(pls)):
         a = pls[i].bbox_abs()
-        sa = shapely_box(a[0], a[1], a[2], a[3])
         for j in range(i + 1, len(pls)):
             b = pls[j].bbox_abs()
-            sb = shapely_box(b[0], b[1], b[2], b[3])
-            if sa.intersects(sb):
+            if _boxes_intersect(a, b):
                 overlaps += 1
                 details.append(f"重叠: {pls[i].instance_id} & {pls[j].instance_id}")
-            elif sa.distance(sb) < min_spacing_um:
-                spacings += 1
-                details.append(
-                    f"间距不足: {pls[i].instance_id} & {pls[j].instance_id} "
-                    f"距离 {sa.distance(sb):.3f}μm < {min_spacing_um}μm"
-                )
+            else:
+                dist = _boxes_distance(a, b)
+                if dist < min_spacing_um:
+                    spacings += 1
+                    details.append(
+                        f"间距不足: {pls[i].instance_id} & {pls[j].instance_id} "
+                        f"距离 {dist:.3f}μm < {min_spacing_um}μm"
+                    )
     return overlaps, spacings, details
 
 
@@ -399,10 +435,9 @@ def run_drc(
 ) -> DRCReport:
     """运行 DRC 检查（间距/重叠/弯曲半径）。
 
-    使用 shapely 几何运算检测器件重叠与间距违规，
-    检查波导路径弯曲半径违规。
-
-    工具来源: shapely https://shapely.readthedocs.io/
+    使用纯 Python 几何运算（_boxes_intersect/_boxes_distance）检测器件
+    重叠与间距违规，检查波导路径弯曲半径违规。
+    不依赖 shapely（规则 3.2：shapely 不装，用纯 Python 实现）。
     """
     report = DRCReport()
     pls = list(placements.values())

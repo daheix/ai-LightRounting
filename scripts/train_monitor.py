@@ -27,9 +27,7 @@ CHECK_INTERVAL = 30  # 30秒检查进程存活
 
 def check_process() -> bool:
     """检查训练进程是否存活。"""
-    result = subprocess.run(
-        ["pgrep", "-f", "train_2m.py"], capture_output=True, text=True
-    )
+    result = subprocess.run(["pgrep", "-f", "train_2m.py"], capture_output=True, text=True)
     return result.returncode == 0
 
 
@@ -76,7 +74,9 @@ def analyze_training(prog: dict, prev_prog: dict) -> str:
     batches = prog.get("batches_completed", 0)
 
     report_lines.append(f"=== 10分钟分析报告 [{time.strftime('%H:%M:%S')}] ===")
-    report_lines.append(f"进度: {pct:.2f}% | {ep:,}ep | {batches}批次 | {speed:.1f}ep/s | ETA {eta:.1f}h")
+    report_lines.append(
+        f"进度: {pct:.2f}% | {ep:,}ep | {batches}批次 | {speed:.1f}ep/s | ETA {eta:.1f}h"
+    )
     report_lines.append(f"布局best: {place_best:.4f} | 布线best: {route_best:.4f}")
 
     # 检测问题
@@ -93,7 +93,11 @@ def analyze_training(prog: dict, prev_prog: dict) -> str:
         place_rewards = [r["reward"] for r in recent if r.get("phase") == "placement"]
         if place_rewards:
             recent_avg = sum(place_rewards[-10:]) / len(place_rewards[-10:])
-            old_avg = sum(place_rewards[:10]) / len(place_rewards[:10]) if len(place_rewards) >= 20 else recent_avg
+            old_avg = (
+                sum(place_rewards[:10]) / len(place_rewards[:10])
+                if len(place_rewards) >= 20
+                else recent_avg
+            )
             if abs(recent_avg - old_avg) < 1e-6:
                 problems.append(f"警告: 布局reward停滞 recent={recent_avg:.4f} old={old_avg:.4f}")
 
