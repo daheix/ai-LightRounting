@@ -6,6 +6,11 @@
 
 ```
 3dtool/
+├── wheels/          # 离线 wheel 包（沙箱重启一键恢复，70 秒装完）
+│   ├── install.sh       # 一键离线安装脚本（核心入口）
+│   ├── MANIFEST.txt     # wheel 清单与 SHA256 校验和
+│   ├── *.whl            # 小 wheel（<24MB，83 个）
+│   └── parts/           # 大 wheel 分卷片段（≤20MB，18 个）
 ├── layout/          # 版图类工具（GDS 生成/读写/DRC）
 ├── simulation/      # 仿真类工具（FDTD/S 参数/模式求解）
 ├── ml/              # 机器学习类工具（PyTorch/Gymnasium/NetworkX）
@@ -21,6 +26,18 @@
     ├── pyCopyFemwell/   # 复刻 femwell（预留）
     └── pyCopyMeow/      # 复刻 meow（预留）
 ```
+
+## 快速开始（沙箱重启后必做）
+
+```bash
+# 一键离线安装全部依赖（70 秒，无需联网）
+bash 3dtool/wheels/install.sh --all
+
+# 仅检查环境
+bash 3dtool/wheels/install.sh --check
+```
+
+详见 [wheels/README.md](wheels/README.md)。
 
 ## 工具分类
 

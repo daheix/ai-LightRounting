@@ -297,6 +297,44 @@ pip install pytest ruff mypy
 pip install -e .
 ```
 
+### 5.1.1 离线一键安装（沙箱/新环境必用，强制）
+
+**沙箱环境随时重启，pip 安装的工具会全部丢失。** 重新联网下载需 4+ 小时，
+项目已将全部依赖打包为离线 wheel，重启后执行一条命令 70 秒恢复：
+
+```bash
+# 沙箱重启后必做：一键离线安装全部依赖
+bash 3dtool/wheels/install.sh --all
+
+# 仅检查环境（不安装）
+bash 3dtool/wheels/install.sh --check
+
+# 仅安装核心依赖
+bash 3dtool/wheels/install.sh --core
+```
+
+**离线 wheel 包结构**（详见 `3dtool/wheels/README.md`）：
+- `3dtool/wheels/*.whl`：小 wheel（<24MB，83 个，直接存放）
+- `3dtool/wheels/parts/*.part_*`：大 wheel 分卷片段（≤20MB，18 个）
+  - torch 184MB → 9 个分片
+  - jaxlib 82MB → 5 个分片
+  - scipy 34MB → 2 个分片
+  - klayout 27MB → 2 个分片
+- `install.sh` 自动合并分卷 + gunzip 还原 + pip install --no-index
+
+**为什么分卷**：GitHub 限制单文件 ≤24MB，大 wheel 经 gzip 压缩 + split 分卷后
+每个片段 ≤20MB，可正常提交。install.sh 安装时自动还原。
+
+**torch CPU 版本**：打包的是 `torch 2.12.1+cpu`（184MB），非 GPU 版（532MB + 2GB CUDA）。
+沙箱通常无 GPU，CPU 版功能完整仅速度较慢。
+
+**平台限制**：当前 wheel 仅适用 Linux x86_64 + Python 3.14。其他平台需重新生成：
+```bash
+pip download --dest 3dtool/wheels/ numpy scipy networkx torch gymnasium matplotlib pyyaml
+pip download --dest 3dtool/wheels/ klayout simphony sax
+pip download --dest 3dtool/wheels/ pytest ruff mypy wheel setuptools
+```
+
 ### 5.2 工具安装决策矩阵
 
 | 工具 | 是否安装 | 决策依据 |

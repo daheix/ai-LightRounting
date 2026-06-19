@@ -17,3 +17,25 @@ build/
 # 虚拟环境
 .venv/
 venv/
+
+# 离线 wheel 包临时还原目录（install.sh 运行时生成，不提交）
+3dtool/wheels/.tmp_restore/
+
+# 密钥与凭据
+.env
+*.key
+credentials.json
+
+# 大型版图文件（按需用 LFS）
+*.gds
+*.oas
+
+# 训练检查点（体积大）
+checkpoints/
+
+# IDE 文件
+.idea/
+.vscode/
+*.swp
+*.swo
+
