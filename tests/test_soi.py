@@ -13,7 +13,7 @@ import pytest
 from polaris.pdk import Device
 from polaris.pdk.soi import SOI_DEVICES
 
-# 所有器件工厂函数名（与 SOI_DEVICES 键一致，共 27 个）
+# 所有器件工厂函数名（与 SOI_DEVICES 键一致，共 30 个）
 _EXPECTED_DEVICE_NAMES = [
     "strip_waveguide",
     "rib_waveguide",
@@ -42,13 +42,16 @@ _EXPECTED_DEVICE_NAMES = [
     "awg",
     "photonic_crystal_waveguide",
     "metasurface_coupler",
+    "linear_taper",
+    "s_bend",
+    "euler_bend",
 ]
 
 
 def test_soi_devices_registry_complete() -> None:
-    """SOI_DEVICES 应包含全部 27 个器件工厂函数。"""
+    """SOI_DEVICES 应包含全部 30 个器件工厂函数。"""
     assert set(SOI_DEVICES.keys()) == set(_EXPECTED_DEVICE_NAMES)
-    assert len(SOI_DEVICES) == 27
+    assert len(SOI_DEVICES) == 30
 
 
 @pytest.mark.parametrize("name", _EXPECTED_DEVICE_NAMES)

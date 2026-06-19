@@ -264,14 +264,40 @@ class FloorplanEnv(gym.Env):
         }
         # GNN 状态编码（可选）：融合器件图特征与栅格空间特征
         # 来源: Basso et al. NeurIPS 2025 R-GCN floorplanning
+        # https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
+        # 端到端训练模式：保留图特征供 GNNPPOAgent 反向传播更新 GNN 参数
         if self.state_encoder is not None:
             obs["gnn_embedding"] = self._compute_gnn_embedding(occ)
+            obs["graph_features"] = self._build_graph_features(occ)
         return obs
 
+    def _build_graph_features(self, occ: np.ndarray) -> dict:
+        """构建 GNN 端到端训练所需的图特征字典。
+
+        保留 node_feats/edge_index/grid_feat 的原始数组，供 GNNPPOAgent
+        在 update 时重建可微计算图，使梯度能流回 StateEncoder 参数。
+
+        Args:
+            occ: 当前占用栅格。
+
+        Returns:
+            含 node_feats/edge_index/grid_feat 的字典。
+        """
+        from polaris.engine.gnn import build_node_features
+
+        node_feats_arr = build_node_features(self.devices, self.state.placements, self.instance_ids)
+        return {
+            "node_feats": node_feats_arr.astype(np.float64),
+            "edge_index": self._edge_index,
+            "grid_feat": occ.astype(np.float64),
+        }
+
     def _compute_gnn_embedding(self, occ: np.ndarray) -> np.ndarray:
-        """计算 GNN 状态嵌入向量。
+        """计算 GNN 状态嵌入向量（前向推理，用于 obs 维度推断）。
 
         从当前器件图构建节点特征，经 StateEncoder 编码为全局状态向量。
+        注意：此处返回 numpy 数组（脱离计算图），仅用于 obs 维度推断与
+        兼容 _obs_to_vector 展平。端到端训练时由 GNNPPOAgent 重建可微路径。
 
         Args:
             occ: 当前占用栅格。

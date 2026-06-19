@@ -185,8 +185,8 @@ def test_cmos_modulator_source() -> None:
 # LNOI_DEVICES 汇总字典校验
 # ---------------------------------------------------------------------------
 def test_lnoi_devices_dict_complete() -> None:
-    """LNOI_DEVICES 须汇总全部 8 个器件工厂函数。"""
-    assert len(LNOI_DEVICES) == 8
+    """LNOI_DEVICES 须汇总全部 14 个器件工厂函数。"""
+    assert len(LNOI_DEVICES) == 14
     expected_keys = {
         "lnoi_waveguide",
         "lnoi_eo_modulator",
@@ -196,6 +196,12 @@ def test_lnoi_devices_dict_complete() -> None:
         "lnoi_photonics_review",
         "lnoi_cmos_modulator",
         "lnoi_tfln_modulator",
+        "lnoi_linear_taper",
+        "lnoi_s_bend",
+        "lnoi_euler_bend",
+        "lnoi_mmi_1x2",
+        "lnoi_directional_coupler",
+        "lnoi_y_branch",
     }
     assert set(LNOI_DEVICES.keys()) == expected_keys
 

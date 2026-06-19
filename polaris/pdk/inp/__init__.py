@@ -65,6 +65,7 @@ from polaris.pdk.inp.lasers import (
     make_sgdbr_laser,
 )
 from polaris.pdk.inp.passive import make_inp_mzm, make_inp_waveguide
+from polaris.pdk.inp.tapers import make_inp_euler_bend, make_inp_linear_taper, make_inp_s_bend
 
 # ===========================================================================
 # InP 平台器件工厂汇总表
@@ -84,6 +85,9 @@ INP_DEVICES: dict[str, Callable[[], Device]] = {
     "imos_dfb_laser": make_imos_dfb_laser,
     "inp_soa_koren": make_inp_soa_koren,
     "inp_eam_mason": make_inp_eam_mason,
+    "inp_linear_taper": make_inp_linear_taper,
+    "inp_s_bend": make_inp_s_bend,
+    "inp_euler_bend": make_inp_euler_bend,
 }
 
 __all__ = [
@@ -95,8 +99,11 @@ __all__ = [
     "make_eam_modulator",
     "make_imos_dfb_laser",
     "make_inp_eam_mason",
+    "make_inp_euler_bend",
+    "make_inp_linear_taper",
     "make_inp_mzm",
     "make_inp_photodetector",
+    "make_inp_s_bend",
     "make_inp_soa_koren",
     "make_inp_waveguide",
     "make_sgdbr_laser",

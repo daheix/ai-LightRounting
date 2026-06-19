@@ -19,8 +19,8 @@ _ALL_DEVICE_KEYS = sorted(SIN_DEVICES.keys())
 
 
 def test_sin_devices_registry_non_empty() -> None:
-    """SIN_DEVICES 注册表应非空，且覆盖全部 14 个器件。"""
-    assert len(SIN_DEVICES) == 14
+    """SIN_DEVICES 注册表应非空，且覆盖全部 20 个器件。"""
+    assert len(SIN_DEVICES) == 20
     # 关键器件应在注册表中
     assert "sin_waveguide_lpcvd" in SIN_DEVICES
     assert "triplex_double_stripe" in SIN_DEVICES

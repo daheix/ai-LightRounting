@@ -348,6 +348,16 @@ def make_lnoi_tfln_modulator() -> Device:
 # ---------------------------------------------------------------------------
 # LNOI 器件汇总字典（按器件名索引工厂函数）
 # ---------------------------------------------------------------------------
+# 导入被动过渡与片上耦合器件（taper/S-bend/Euler bend/MMI/DC/Y-branch）
+from polaris.pdk.lnoi_passive import (  # noqa: E402
+    make_lnoi_directional_coupler,
+    make_lnoi_euler_bend,
+    make_lnoi_linear_taper,
+    make_lnoi_mmi_1x2,
+    make_lnoi_s_bend,
+    make_lnoi_y_branch,
+)
+
 LNOI_DEVICES: dict[str, Callable[[], Device]] = {
     "lnoi_waveguide": make_lnoi_waveguide,
     "lnoi_eo_modulator": make_lnoi_eo_modulator,
@@ -357,4 +367,10 @@ LNOI_DEVICES: dict[str, Callable[[], Device]] = {
     "lnoi_photonics_review": make_lnoi_photonics_review,
     "lnoi_cmos_modulator": make_lnoi_cmos_modulator,
     "lnoi_tfln_modulator": make_lnoi_tfln_modulator,
+    "lnoi_linear_taper": make_lnoi_linear_taper,
+    "lnoi_s_bend": make_lnoi_s_bend,
+    "lnoi_euler_bend": make_lnoi_euler_bend,
+    "lnoi_mmi_1x2": make_lnoi_mmi_1x2,
+    "lnoi_directional_coupler": make_lnoi_directional_coupler,
+    "lnoi_y_branch": make_lnoi_y_branch,
 }

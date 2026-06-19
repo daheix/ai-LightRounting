@@ -66,6 +66,7 @@ from polaris.pdk.soi.passive import (
     make_y_branch,
 )
 from polaris.pdk.soi.resonators import make_double_ring_filter, make_ring_resonator
+from polaris.pdk.soi.tapers import make_euler_bend, make_linear_taper, make_s_bend
 
 # ===========================================================================
 # SOI 平台器件工厂汇总表
@@ -98,6 +99,9 @@ SOI_DEVICES: dict[str, Callable[[], Device]] = {
     "awg": make_awg,
     "photonic_crystal_waveguide": make_photonic_crystal_waveguide,
     "metasurface_coupler": make_metasurface_coupler,
+    "linear_taper": make_linear_taper,
+    "s_bend": make_s_bend,
+    "euler_bend": make_euler_bend,
 }
 
 __all__ = [
@@ -109,9 +113,11 @@ __all__ = [
     "make_directional_coupler",
     "make_double_ring_filter",
     "make_edge_coupler",
+    "make_euler_bend",
     "make_ge_photodetector",
     "make_grating_coupler_1d",
     "make_grating_coupler_2d",
+    "make_linear_taper",
     "make_metasurface_coupler",
     "make_mmi_1x2",
     "make_mmi_1x4",
@@ -123,6 +129,7 @@ __all__ = [
     "make_photonic_crystal_waveguide",
     "make_rib_waveguide",
     "make_ring_resonator",
+    "make_s_bend",
     "make_strip_waveguide",
     "make_thermo_optic_phase_shifter",
     "make_thermo_optic_switch",

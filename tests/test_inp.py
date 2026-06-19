@@ -20,8 +20,8 @@ _ALL_DEVICE_NAMES = list(INP_DEVICES.keys())
 
 
 def test_inp_devices_dict_not_empty() -> None:
-    """INP_DEVICES 字典应非空且包含 14 个器件。"""
-    assert len(INP_DEVICES) == 14, f"期望 14 个器件，实际 {len(INP_DEVICES)}"
+    """INP_DEVICES 字典应非空且包含 17 个器件。"""
+    assert len(INP_DEVICES) == 17, f"期望 17 个器件，实际 {len(INP_DEVICES)}"
 
 
 @pytest.mark.parametrize("device_name", _ALL_DEVICE_NAMES)

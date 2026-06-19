@@ -91,12 +91,7 @@ class TensorArithmeticMixin:
         out = Tensor(self.data @ other.data, rg, (self, other))
 
         def _back(g):
-            if self.requires_grad:
-                self._ensure_grad()
-                self.grad = self.grad + g @ other.data.T
-            if other.requires_grad:
-                other._ensure_grad()
-                other.grad = other.grad + self.data.T @ g
+            matmul_backward(self, other, g)
 
         out._backward = _back
         return out
@@ -365,6 +360,16 @@ def _unbroadcast(grad: np.ndarray, shape) -> np.ndarray:
     return grad
 
 
+# cat / scatter_add / index_select / matmul_backward 等可微运算函数已拆分至 functional.py
+# （规则 4.1：控制 __init__.py 文件行数 ≤ 500）
+from polaris.nn.functional import (  # noqa: E402
+    cat,
+    index_select,
+    matmul_backward,
+    scatter_add,
+)
+
+
 # ---------------------------------------------------------------------------
 # Module（复刻 torch.nn.Module）
 # ---------------------------------------------------------------------------
@@ -572,6 +577,17 @@ class Adam:
         self.v = [np.zeros_like(p.data) for p in self.params]
         self.t = 0
 
+    def add_params(self, params: list[Tensor]) -> None:
+        """向优化器追加参数（同步扩展动量缓冲区 m/v）。
+
+        Args:
+            params: 待追加的可训练参数列表。
+        """
+        for p in params:
+            self.params.append(p)
+            self.m.append(np.zeros_like(p.data))
+            self.v.append(np.zeros_like(p.data))
+
     def zero_grad(self) -> None:
         for p in self.params:
             p.grad = None
@@ -594,6 +610,9 @@ class Adam:
 __all__ = [
     "Tensor",
     "TensorArithmeticMixin",
+    "cat",
+    "scatter_add",
+    "index_select",
     "Module",
     "Linear",
     "ReLU",

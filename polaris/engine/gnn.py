@@ -76,28 +76,35 @@ class GraphEncoder(Module):
         Returns:
             节点嵌入 ``[N, out_dim]``。
         """
+        from polaris.nn import index_select, scatter_add
+
         h = node_feats
         n = h.shape[0]
         for layer in range(self.num_layers):
             self_msg = self.self_linears[layer](h)  # [N, hidden]
             # 邻居聚合：对每条边 src->dst，将 src 特征累加到 dst
             neigh_msg = self.neigh_linears[layer](h)  # [N, hidden]
-            agg = np.zeros((n, self.self_linears[layer].out_features))
             srcs = edge_index[0]
             dsts = edge_index[1]
+            hidden = self.self_linears[layer].out_features
             if len(srcs) > 0:
-                np.add.at(agg, dsts, neigh_msg.data[srcs])
+                # 可微 index_select + scatter_add：
+                # 梯度路径 agg -> scatter_add -> src_msgs -> index_select
+                #   -> neigh_msg -> neigh_linears 参数
+                src_msgs = index_select(neigh_msg, srcs)  # [E, hidden]
+                agg = scatter_add(src_msgs, dsts, n)  # [n, hidden]
                 # 度归一化（与 R-GCN 一致）
                 deg = np.zeros(n)
                 np.add.at(deg, dsts, 1.0)
                 deg = np.maximum(deg, 1.0)
-                agg = agg / deg[:, None]
-            agg_t = Tensor(agg)
+                agg = agg * Tensor(1.0 / deg[:, None])
+            else:
+                agg = Tensor(np.zeros((n, hidden)))
             # 残差连接：当输入输出维度一致时加 skip
             if h.shape[-1] == self_msg.data.shape[-1]:
                 self_msg = self_msg + h
             # LayerNorm + ReLU
-            h = self.relu(self.norms[layer](self_msg + agg_t))
+            h = self.relu(self.norms[layer](self_msg + agg))
         return self.out_proj(h)
 
 
@@ -169,14 +176,16 @@ class StateEncoder(Module):
         Returns:
             全局状态向量 ``[out_dim]``。
         """
+        from polaris.nn import cat
+
         node_emb = self.gnn(node_feats, edge_index)  # [N, hidden]
         # 图级读出：均值池化
         graph_emb = node_emb.mean(axis=0)  # [hidden]
         # 栅格特征：行均值投影（降维）
         grid_flat = grid_feat.mean(axis=0)  # [grid_w]
         grid_emb = self.grid_proj(grid_flat)  # [hidden]
-        # 融合（用 data 拼接计算，避免 autograd 拼接复杂性）
-        fused_input = Tensor(np.concatenate([graph_emb.data, grid_emb.data]))
+        # 可微拼接（梯度从 fused_input 流回 graph_emb 和 grid_emb）
+        fused_input = cat([graph_emb, grid_emb])  # [hidden*2]
         out = self.fuse(fused_input)
         return out
 

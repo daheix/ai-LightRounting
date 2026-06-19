@@ -265,8 +265,9 @@ class PPOAgent:
         self.action_dim = action_dim
         self.ac = ActorCritic(obs_dim, action_dim, hidden_dim=hidden_dim)
         params = self.ac.parameters()
-        # log_std 作为可学习参数
-        params.append(self.ac.action_log_std)
+        # log_std 已被 ac.parameters() 收集（作为 Module 属性），无需重复添加
+        # Bug 修复: 之前 params.append(action_log_std) 导致 log_std 重复出现在
+        # 优化器参数列表中，梯度更新时会被累加两次。
         self.optimizer = Adam(params, lr=self.config.lr)
         self.buffer = RolloutBuffer()
         self.metrics: list[dict] = []
@@ -445,10 +446,8 @@ class PPOAgent:
             "config": self.config.__dict__,
             "obs_dim": self.obs_dim,
             "action_dim": self.action_dim,
-            "params": (
-                [p.data.tolist() for p in self.ac.parameters()]
-                + [self.ac.action_log_std.data.tolist()]
-            ),
+            # ac.parameters() 已含 action_log_std（Module 属性自动收集）
+            "params": [p.data.tolist() for p in self.ac.parameters()],
             "metrics": self.metrics,
         }
         Path(path).write_text(json.dumps(state), encoding="utf-8")
@@ -456,7 +455,7 @@ class PPOAgent:
     def load(self, path: str | Path) -> None:
         """加载检查点。"""
         state = json.loads(Path(path).read_text(encoding="utf-8"))
-        params = self.ac.parameters() + [self.ac.action_log_std]
+        params = self.ac.parameters()
         for p, data in zip(params, state["params"], strict=True):
             p.data = np.array(data, dtype=np.float64)
         self.metrics = state.get("metrics", [])

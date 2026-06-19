@@ -53,6 +53,14 @@ from polaris.pdk.sin.passive import (
     make_triplex_double_stripe,
 )
 from polaris.pdk.sin.resonators import make_sin_ring_double_stripe, make_sin_ring_high_q
+from polaris.pdk.sin.tapers import (
+    make_sin_directional_coupler,
+    make_sin_euler_bend,
+    make_sin_linear_taper,
+    make_sin_mmi_1x2,
+    make_sin_mzi,
+    make_sin_s_bend,
+)
 
 # ===========================================================================
 # SiN 平台器件工厂汇总表
@@ -72,14 +80,26 @@ SIN_DEVICES: dict[str, Callable[[], Device]] = {
     "sin_material": make_sin_material,
     "sin_thermo_optic": make_sin_thermo_optic,
     "sin_waveguide_tsmc": make_sin_waveguide_tsmc,
+    "sin_linear_taper": make_sin_linear_taper,
+    "sin_s_bend": make_sin_s_bend,
+    "sin_euler_bend": make_sin_euler_bend,
+    "sin_mmi_1x2": make_sin_mmi_1x2,
+    "sin_directional_coupler": make_sin_directional_coupler,
+    "sin_mzi": make_sin_mzi,
 }
 
 __all__ = [
     "SIN_DEVICES",
+    "make_sin_directional_coupler",
+    "make_sin_euler_bend",
     "make_sin_grating_coupler_1d",
+    "make_sin_linear_taper",
     "make_sin_material",
+    "make_sin_mmi_1x2",
+    "make_sin_mzi",
     "make_sin_ring_double_stripe",
     "make_sin_ring_high_q",
+    "make_sin_s_bend",
     "make_sin_thermo_optic",
     "make_sin_waveguide_damascene",
     "make_sin_waveguide_epfl",
