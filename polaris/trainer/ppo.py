@@ -56,7 +56,7 @@ class PPOConfig:
     batch_size: int = 64  # 小批量大小
     # 2025 增强：价值函数 clip（防止价值估计异常导致策略崩溃）
     # 来源: SB3 PPO clip_vf 实现
-    clip_vf: float = 10.0  # 价值损失 clip 上限
+    clip_vf: float = 0.0  # 0=禁用clip_vf（之前10.0导致value_loss恒等于100）
     # 2025 增强：学习率调度（cosine annealing + warmup）
     # 来源: Loshchilov & Hutter, 2017, SGDR
     #       https://arxiv.org/abs/1608.03983

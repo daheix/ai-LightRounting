@@ -137,8 +137,8 @@ class FloorplanEnvConfig:
     canvas_w: float = 1000.0
     canvas_h: float = 1000.0
     grid_size: float = 10.0
-    overlap_penalty: float = 100.0
-    hpwl_weight: float = 0.001
+    overlap_penalty: float = 10.0
+    hpwl_weight: float = 0.01
     area_reward: float = 1.0
 
 
@@ -184,7 +184,7 @@ class FloorplanEnv(gym.Env):
                     low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
                 ),
                 "port_positions": spaces.Box(
-                    low=-1, high=1e6, shape=(len(self.instance_ids), 4), dtype=np.float32
+                    low=-1, high=1.0, shape=(len(self.instance_ids), 4), dtype=np.float32
                 ),
                 "step": spaces.Box(
                     low=0, high=len(self.instance_ids), shape=(1,), dtype=np.float32
@@ -213,11 +213,11 @@ class FloorplanEnv(gym.Env):
                 ports = pl.port_positions()
                 if ports:
                     first = next(iter(ports.values()))
-                    port_pos[i, 0] = first[0]
-                    port_pos[i, 1] = first[1]
+                    port_pos[i, 0] = first[0] / self.state.canvas_w
+                    port_pos[i, 1] = first[1] / self.state.canvas_h
                 xmin, ymin, xmax, ymax = pl.bbox_abs()
-                port_pos[i, 2] = (xmin + xmax) / 2
-                port_pos[i, 3] = (ymin + ymax) / 2
+                port_pos[i, 2] = (xmin + xmax) / 2 / self.state.canvas_w
+                port_pos[i, 3] = (ymin + ymax) / 2 / self.state.canvas_h
         return {
             "occupancy": occ,
             "port_positions": port_pos,
@@ -267,7 +267,9 @@ class FloorplanEnv(gym.Env):
         wire = hpwl(self.net, self.state)
         # 重叠
         overlaps = count_overlaps(self.state)
-        reward = self.area_reward * util - self.hpwl_weight * wire - self.overlap_penalty * overlaps
+        # 对数重叠惩罚：避免大量重叠时惩罚完全主导奖励
+        overlap_pen = self.overlap_penalty * (np.log1p(overlaps) if overlaps > 0 else 0.0)
+        reward = self.area_reward * util - self.hpwl_weight * wire - overlap_pen
         return float(reward)
 
     def render(self):

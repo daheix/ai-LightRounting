@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """持续RL训练脚本 — 2M轮一轮，跑完继续下一轮。
 
-关键改进:
-- 每批换不同seed生成不同网表（训练数据多样化）
-- 2M轮跑完自动开始下一轮2M（持续训练）
-- 断点续训 + 自动git commit
-- 监控守护自动重启
+关键修复:
+- PPOAgent 在启动时创建一次，跨所有批次持久化（修复每批重建导致知识丢失的 Bug）
+- 断点续训：从 checkpoint 文件加载已有 agent
+- 每 5 分钟自动保存 checkpoint + git commit
 
 训练规模参考:
 - Google Nature 2021: 6-24小时 TPU集群
@@ -22,21 +21,56 @@ import subprocess
 import time
 from pathlib import Path
 
+import numpy as np
+
+from polaris.engine.floorplan_env import FloorplanEnv
+from polaris.engine.netlist import load_netlist
+from polaris.router.routing_env import RoutingEnv
+from polaris.trainer.dataset import DatasetConfig, generate_dataset
+from polaris.trainer.ppo import PPOAgent, PPOConfig, Transition
+from polaris.trainer.train_loop import (
+    _discretize_floorplan_action,
+    _infer_obs_dim,
+    _obs_to_vector,
+    _pad_obs,
+)
+
 # ── 配置 ──────────────────────────────────────────────
 EPISODES_PER_ROUND = 2_000_000  # 每轮2M
 BATCH_SIZE = 200
 SAVE_DIR = Path("checkpoints/rl_2m")
 PROGRESS_FILE = SAVE_DIR / "progress.json"
 COMMIT_INTERVAL = 300  # 5分钟
+CKPT_EVERY = 1000  # 每1000 episode保存checkpoint
 
-HIDDEN_DIM = 32
+HIDDEN_DIM = 64  # 折中：32太小学不到，128纯NumPy太慢
 LR = 3e-4
 ROLLOUT_STEPS = 16
 CANVAS_W = 500.0
 CANVAS_H = 500.0
 GRID_SIZE = 10.0
-LOG_EVERY = 200
-CKPT_EVERY = 200
+
+PPO_CONFIG = PPOConfig(
+    lr=LR,
+    gamma=0.99,
+    gae_lambda=0.95,
+    clip_eps=0.2,
+    ent_coef=0.01,
+    vf_coef=0.5,
+    max_grad_norm=0.5,
+    n_epochs=2,  # 减少更新轮数加速（原4→2，纯NumPy下4轮太慢）
+    batch_size=64,
+    clip_vf=0,  # 禁用 value clip（原 clip_vf=10 导致 value_loss=100）
+    lr_schedule="cosine",
+    total_steps=EPISODES_PER_ROUND,
+)
+
+DATASET_CFG = DatasetConfig(
+    num_netlists=50,
+    min_devices=3,
+    max_devices=12,
+    seed=42,
+)
 
 
 def load_progress() -> dict:
@@ -73,16 +107,12 @@ def git_commit(prog: dict) -> None:
     try:
         files = [
             "checkpoints/rl_2m/progress.json",
-            "checkpoints/rl_2m/floorplan_final.json",
-            "checkpoints/rl_2m/floorplan_log.json",
-            "checkpoints/rl_2m/routing_final.json",
-            "checkpoints/rl_2m/routing_log.json",
+            "checkpoints/rl_2m/placement_agent.json",
+            "checkpoints/rl_2m/routing_agent.json",
         ]
         for f in files:
             if Path(f).exists():
-                subprocess.run(
-                    ["git", "add", f], capture_output=True, timeout=10
-                )
+                subprocess.run(["git", "add", f], capture_output=True, timeout=10)
         ep = prog["total_episodes_done"]
         rnd = prog.get("rounds_completed", 0)
         subprocess.run(
@@ -101,205 +131,216 @@ def git_commit(prog: dict) -> None:
         print(f"  [git] 失败: {e}", flush=True)
 
 
-def run_placement_batch(batch_episodes: int, batch_seed: int) -> dict:
-    """运行一批布局训练。
+def _try_load_agent(ckpt_path: Path, obs_dim: int, action_dim: int) -> PPOAgent | None:
+    """尝试从 checkpoint 加载 agent，失败返回 None。"""
+    if not ckpt_path.exists():
+        return None
+    try:
+        agent = PPOAgent(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            config=PPO_CONFIG,
+            hidden_dim=HIDDEN_DIM,
+        )
+        agent.load(ckpt_path)
+        print(f"  [续训] 已加载 {ckpt_path}", flush=True)
+        return agent
+    except Exception as e:
+        print(f"  [续训] 加载失败，重新创建: {e}", flush=True)
+        return None
 
-    网表用固定seed=42生成（保证obs_dim一致，续训不崩溃），
-    但每episode内环境reset随机化（器件初始位置不同）。
-    """
-    from polaris.trainer.dataset import DatasetConfig
-    from polaris.trainer.ppo import PPOConfig
-    from polaris.trainer.train_loop import (
-        TrainConfig,
-        _init_floorplan_training,
-        train_floorplan,
-    )
 
-    ppo_cfg = PPOConfig(
-        lr=LR,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_eps=0.2,
-        ent_coef=0.01,
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-        n_epochs=4,
-        batch_size=32,
-        lr_schedule="cosine",
-        total_steps=EPISODES_PER_ROUND,
-    )
-    dataset_cfg = DatasetConfig(
-        num_netlists=50,
-        min_devices=3,
-        max_devices=12,
-        seed=42,
-    )
-    train_cfg = TrainConfig(
-        ppo=ppo_cfg,
-        num_episodes=batch_episodes,
-        dataset=dataset_cfg,
-        rollout_steps=ROLLOUT_STEPS,
+def _infer_dims() -> tuple[int, int, int, list]:
+    """推断布局和布线的 obs_dim/action_dim，返回 (obs_dim, action_dim, obs_dim_route, netlists)。"""
+    netlists = generate_dataset(DATASET_CFG)
+    net0, devices0, _ = load_netlist(netlists[0])
+
+    # 布局维度
+    env0 = FloorplanEnv(net0, devices0, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+    obs_dim = _infer_obs_dim(env0)
+    action_dim = int(np.prod(env0.action_space.shape))
+
+    # 布线维度
+    fp = FloorplanEnv(net0, devices0, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+    fp.reset()
+    for _ in range(len(devices0)):
+        fp.step(fp.action_space.sample())
+    rt_env = RoutingEnv(
+        net0,
+        fp.state.placements,
         canvas_w=CANVAS_W,
         canvas_h=CANVAS_H,
         grid_size=GRID_SIZE,
-        hidden_dim=HIDDEN_DIM,
-        checkpoint_dir=str(SAVE_DIR),
-        checkpoint_every=CKPT_EVERY,
-        log_every=LOG_EVERY,
-        lr_schedule="cosine",
-        seed=42,
     )
+    obs_dim_route = _infer_obs_dim(rt_env)
 
-    # 断点续训
-    agent = None
-    ckpt_path = SAVE_DIR / "floorplan_final.json"
-    if ckpt_path.exists():
-        try:
-            from polaris.trainer.train_loop import load_agent
+    return obs_dim, action_dim, obs_dim_route, netlists
 
-            tmp_agent, _, dims, _ = _init_floorplan_training(train_cfg, None)
-            obs_dim, action_dim = dims
-            agent = load_agent(
-                str(ckpt_path), obs_dim, action_dim, HIDDEN_DIM
-            )
-            del tmp_agent
-        except Exception as e:
-            print(f"  续训失败，重新开始: {e}", flush=True)
-            agent = None
 
-    agent, logs = train_floorplan(train_cfg, agent=agent, verbose=False)
-    rewards = [log.get("ep_reward", 0) for log in logs]
-    plosses = [log.get("policy_loss", 0) for log in logs]
-    vlosses = [log.get("value_loss", 0) for log in logs]
+def run_placement_batch(
+    agent: PPOAgent,
+    netlists: list,
+    batch_episodes: int,
+    obs_dim: int,
+    action_dim: int,
+) -> dict:
+    """运行一批布局训练（agent 持久化，不重建）。"""
+    rewards = []
+    plosses = []
+    vlosses = []
 
-    result = {
-        "episodes": len(logs),
+    for ep in range(batch_episodes):
+        nl = netlists[ep % len(netlists)]
+        net, devices, _ = load_netlist(nl)
+        env = FloorplanEnv(net, devices, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+        obs, _ = env.reset()
+        ep_reward = 0.0
+        for _ in range(ROLLOUT_STEPS):
+            obs_vec = _pad_obs(_obs_to_vector(obs), obs_dim)
+            action, logprob, value = agent.get_action(obs_vec)
+            disc_action = _discretize_floorplan_action(action, env, action_dim)
+            obs, reward, terminated, _, _ = env.step(disc_action)
+            ep_reward += reward
+            agent.store(Transition(obs_vec, action, reward, logprob, value, terminated))
+            if terminated:
+                break
+        metrics = agent.update(last_value=0.0)
+        rewards.append(ep_reward)
+        plosses.append(metrics.get("policy_loss", 0))
+        vlosses.append(metrics.get("value_loss", 0))
+
+    return {
+        "episodes": len(rewards),
         "best_reward": max(rewards) if rewards else -1e9,
         "avg_reward": sum(rewards) / len(rewards) if rewards else 0,
-        "avg_policy_loss": (
-            sum(plosses) / len(plosses) if plosses else 0
-        ),
-        "avg_value_loss": (
-            sum(vlosses) / len(vlosses) if vlosses else 0
-        ),
+        "avg_policy_loss": sum(plosses) / len(plosses) if plosses else 0,
+        "avg_value_loss": sum(vlosses) / len(vlosses) if vlosses else 0,
         "rewards": rewards,
     }
 
-    del agent, logs
-    gc.collect()
-    return result
 
+def run_routing_batch(
+    agent: PPOAgent,
+    netlists: list,
+    batch_episodes: int,
+    obs_dim_route: int,
+) -> dict:
+    """运行一批布线训练（agent 持久化，不重建）。"""
+    rewards = []
+    plosses = []
 
-def run_routing_batch(batch_episodes: int, batch_seed: int) -> dict:
-    """运行一批布线训练。固定seed保证维度一致。"""
-    from polaris.trainer.dataset import DatasetConfig
-    from polaris.trainer.ppo import PPOConfig
-    from polaris.trainer.train_loop import TrainConfig, train_routing
+    for ep in range(batch_episodes):
+        nl = netlists[ep % len(netlists)]
+        net, devices, _ = load_netlist(nl)
+        # 先随机布局再创建布线环境
+        fp = FloorplanEnv(net, devices, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+        fp.reset()
+        for _ in range(len(devices)):
+            fp.step(fp.action_space.sample())
+        rt_env = RoutingEnv(
+            net, fp.state.placements, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE
+        )
+        obs, _ = rt_env.reset()
+        ep_reward = 0.0
+        for _ in range(ROLLOUT_STEPS):
+            obs_vec = _pad_obs(_obs_to_vector(obs), obs_dim_route)
+            action, logprob, value = agent.get_action(obs_vec)
+            obs, reward, terminated, _, _ = rt_env.step(action)
+            ep_reward += reward
+            agent.store(Transition(obs_vec, action, reward, logprob, value, terminated))
+            if terminated:
+                break
+        metrics = agent.update(last_value=0.0)
+        rewards.append(ep_reward)
+        plosses.append(metrics.get("policy_loss", 0))
 
-    ppo_cfg = PPOConfig(
-        lr=LR,
-        gamma=0.99,
-        gae_lambda=0.95,
-        clip_eps=0.2,
-        ent_coef=0.01,
-        vf_coef=0.5,
-        max_grad_norm=0.5,
-        n_epochs=4,
-        batch_size=32,
-        lr_schedule="cosine",
-        total_steps=EPISODES_PER_ROUND,
-    )
-    dataset_cfg = DatasetConfig(
-        num_netlists=50,
-        min_devices=3,
-        max_devices=12,
-        seed=42,
-    )
-    train_cfg = TrainConfig(
-        ppo=ppo_cfg,
-        num_episodes=batch_episodes,
-        dataset=dataset_cfg,
-        rollout_steps=ROLLOUT_STEPS,
-        canvas_w=CANVAS_W,
-        canvas_h=CANVAS_H,
-        grid_size=GRID_SIZE,
-        hidden_dim=HIDDEN_DIM,
-        checkpoint_dir=str(SAVE_DIR),
-        checkpoint_every=CKPT_EVERY,
-        log_every=LOG_EVERY,
-        lr_schedule="cosine",
-        seed=42,
-    )
-
-    agent, logs = train_routing(train_cfg, verbose=False)
-    rewards = [log.get("ep_reward", 0) for log in logs]
-    plosses = [log.get("policy_loss", 0) for log in logs]
-
-    result = {
-        "episodes": len(logs),
+    return {
+        "episodes": len(rewards),
         "best_reward": max(rewards) if rewards else -1e9,
         "avg_reward": sum(rewards) / len(rewards) if rewards else 0,
-        "avg_policy_loss": (
-            sum(plosses) / len(plosses) if plosses else 0
-        ),
+        "avg_policy_loss": sum(plosses) / len(plosses) if plosses else 0,
         "rewards": rewards,
     }
-
-    del agent, logs
-    gc.collect()
-    return result
 
 
 def main() -> None:
     """主训练循环 — 2M轮一轮，跑完继续。"""
     print("=" * 60, flush=True)
-    print("PoLaRIS 持续RL训练", flush=True)
+    print("PoLaRIS 持续RL训练（Agent 持久化版）", flush=True)
     print(f"每轮: {EPISODES_PER_ROUND:,} episodes, 跑完继续", flush=True)
     print(f"批次: {BATCH_SIZE} ep/batch", flush=True)
-    print("每批换seed → 不同网表 → 训练数据多样化", flush=True)
+    print(f"隐藏层: {HIDDEN_DIM}, LR: {LR}, clip_vf: {PPO_CONFIG.clip_vf}", flush=True)
     print("=" * 60, flush=True)
 
     prog = load_progress()
     t0 = time.time()
 
+    # ── 初始化：推断维度 + 创建/加载 agent（只做一次） ──
+    print("\n[初始化] 推断观测/动作维度...", flush=True)
+    obs_dim, action_dim, obs_dim_route, netlists = _infer_dims()
+    print(
+        f"  obs_dim={obs_dim}, action_dim={action_dim}, obs_dim_route={obs_dim_route}",
+        flush=True,
+    )
+
+    SAVE_DIR.mkdir(parents=True, exist_ok=True)
+
+    # 布局 agent：优先从 checkpoint 加载
+    placement_ckpt = SAVE_DIR / "placement_agent.json"
+    placement_agent = _try_load_agent(placement_ckpt, obs_dim, action_dim)
+    if placement_agent is None:
+        placement_agent = PPOAgent(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            config=PPO_CONFIG,
+            hidden_dim=HIDDEN_DIM,
+        )
+        print("  [新建] placement_agent", flush=True)
+
+    # 布线 agent：优先从 checkpoint 加载
+    routing_ckpt = SAVE_DIR / "routing_agent.json"
+    route_action_dim = 3  # (dx, dy, detour)
+    routing_agent = _try_load_agent(routing_ckpt, obs_dim_route, route_action_dim)
+    if routing_agent is None:
+        routing_agent = PPOAgent(
+            obs_dim=obs_dim_route,
+            action_dim=route_action_dim,
+            config=PPO_CONFIG,
+            hidden_dim=HIDDEN_DIM,
+        )
+        print("  [新建] routing_agent", flush=True)
+
+    last_ckpt_ep = 0  # 上次保存 checkpoint 时的总 episode 数
+
+    # ── 主循环 ──
     while True:  # 永不停止
         round_num = prog.get("rounds_completed", 0) + 1
-        round_start_ep = prog["total_episodes_done"]
-        round_t0 = time.time()
+        round_ep = 0
 
         print(f"\n{'#' * 60}", flush=True)
         print(
-            f"# 第 {round_num} 轮训练开始 "
-            f"(总进度: {prog['total_episodes_done']:,}ep)",
+            f"# 第 {round_num} 轮训练开始 (总进度: {prog['total_episodes_done']:,}ep)",
             flush=True,
         )
         print(f"{'#' * 60}", flush=True)
 
-        round_ep = 0
         while round_ep < EPISODES_PER_ROUND:
             batch_num = prog["batches_completed"] + 1
             remaining = EPISODES_PER_ROUND - round_ep
             this_batch = min(BATCH_SIZE, remaining)
-            batch_seed = batch_num * 7 + 42
-
-            pct = (
-                prog["total_episodes_done"]
-                / (
-                    prog["total_episodes_done"] + remaining
-                )
-                * 100
-            )
 
             print(
-                f"\n[批次#{batch_num}] 布局 {this_batch}ep seed={batch_seed} | "
+                f"\n[批次#{batch_num}] 布局 {this_batch}ep | "
                 f"R{round_num} {round_ep:,}/{EPISODES_PER_ROUND:,} | "
                 f"总 {prog['total_episodes_done']:,}ep",
                 flush=True,
             )
 
-            # 布局训练
+            # ── 布局训练 ──
             bt0 = time.time()
-            place_result = run_placement_batch(this_batch, batch_seed)
+            place_result = run_placement_batch(
+                placement_agent, netlists, this_batch, obs_dim, action_dim
+            )
             bt_sec = time.time() - bt0
 
             prog["placement_episodes"] += place_result["episodes"]
@@ -326,22 +367,15 @@ def main() -> None:
                 flush=True,
             )
 
-            # 布线训练（每5批1次）
+            # ── 布线训练（每5批1次） ──
             if batch_num % 5 == 0:
                 rt0 = time.time()
-                route_result = run_routing_batch(
-                    this_batch, batch_seed + 1
-                )
+                route_result = run_routing_batch(routing_agent, netlists, this_batch, obs_dim_route)
                 rt_sec = time.time() - rt0
 
                 prog["routing_episodes"] += route_result["episodes"]
-                if (
-                    route_result["best_reward"]
-                    > prog["best_routing_reward"]
-                ):
-                    prog["best_routing_reward"] = route_result[
-                        "best_reward"
-                    ]
+                if route_result["best_reward"] > prog["best_routing_reward"]:
+                    prog["best_routing_reward"] = route_result["best_reward"]
 
                 for r in route_result["rewards"][-10:]:
                     prog["recent_rewards"].append(
@@ -355,9 +389,18 @@ def main() -> None:
                 print(
                     f"  布线: avg={route_result['avg_reward']:.2f}, "
                     f"best={route_result['best_reward']:.2f}, "
+                    f"ploss={route_result['avg_policy_loss']:.4f}, "
                     f"{rt_sec:.1f}s",
                     flush=True,
                 )
+
+            # ── 定期保存 checkpoint ──
+            total_ep = prog["total_episodes_done"]
+            if total_ep - last_ckpt_ep >= CKPT_EVERY:
+                placement_agent.save(placement_ckpt)
+                routing_agent.save(routing_ckpt)
+                last_ckpt_ep = total_ep
+                print(f"  [ckpt] 已保存 (ep={total_ep:,})", flush=True)
 
             prog["batches_completed"] = batch_num
             prog["total_training_seconds"] = time.time() - t0
@@ -370,20 +413,20 @@ def main() -> None:
             if eps_done > 0:
                 eps_per_sec = eps_done / elapsed
                 print(
-                    f"  速度: {eps_per_sec:.1f} ep/s | "
-                    f"总时间: {elapsed / 3600:.1f}h",
+                    f"  速度: {eps_per_sec:.1f} ep/s | 总时间: {elapsed / 3600:.1f}h",
                     flush=True,
                 )
 
         # 一轮2M完成
-        round_time = time.time() - round_t0
         prog["rounds_completed"] = round_num
+        # 最终保存
+        placement_agent.save(placement_ckpt)
+        routing_agent.save(routing_ckpt)
         save_progress(prog)
 
         print(f"\n{'=' * 60}", flush=True)
         print(
-            f"第 {round_num} 轮完成！"
-            f" {round_ep:,}ep, {round_time / 3600:.1f}h",
+            f"第 {round_num} 轮完成！ {round_ep:,}ep",
             flush=True,
         )
         print(
@@ -398,6 +441,11 @@ def main() -> None:
         )
         print(f"自动开始第 {round_num + 1} 轮...", flush=True)
         print(f"{'=' * 60}", flush=True)
+
+        del netlists
+        gc.collect()
+        # 重新生成数据集（下一轮用不同网表）
+        netlists = generate_dataset(DATASET_CFG)
 
 
 if __name__ == "__main__":

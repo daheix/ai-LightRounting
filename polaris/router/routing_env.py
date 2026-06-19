@@ -72,7 +72,7 @@ class RoutingEnvConfig:
     loss_weight: float = 1.0
     length_weight: float = 0.001
     congestion_weight: float = 0.1
-    drc_penalty: float = 50.0
+    drc_penalty: float = 10.0
 
 
 class RoutingEnv(gym.Env):
@@ -159,11 +159,19 @@ class RoutingEnv(gym.Env):
     def _obs(self) -> dict:
         if self._conn_idx < len(self.connections):
             start, end, _ = self._current_ports()
-            ports = np.array([start[0], start[1], end[0], end[1]], dtype=np.float32)
+            ports = np.array(
+                [
+                    start[0] / self.state.canvas_w,
+                    start[1] / self.state.canvas_h,
+                    end[0] / self.state.canvas_w,
+                    end[1] / self.state.canvas_h,
+                ],
+                dtype=np.float32,
+            )
         else:
             ports = np.zeros(4, dtype=np.float32)
         return {
-            "congestion": self.state.congestion.copy(),
+            "congestion": self.state.congestion.copy() / max(1.0, self.state.congestion.max()),
             "ports": ports,
             "step": np.array([self._conn_idx], dtype=np.float32),
         }
