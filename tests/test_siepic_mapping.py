@@ -86,6 +86,4 @@ def test_mapping_covers_core_siepic_devices():
         "ebeam_wg_strip_1550",
     ]
     for device in core_devices:
-        assert siepic_to_polaris(device) is not None, (
-            f"核心 SiEPIC 器件 {device} 未在映射表中"
-        )
+        assert siepic_to_polaris(device) is not None, f"核心 SiEPIC 器件 {device} 未在映射表中"
