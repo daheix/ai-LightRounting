@@ -89,7 +89,7 @@ class PPOAgentDiscrete:
         tensors = self._build_buffer_tensors(last_value)
         metrics = self._run_minibatch_updates(tensors)
 
-        self._total_steps += len(self.buffer)
+        self._total_steps += 1  # M1.1 修复：按 update 次数计数（非 sample 数）
         self.buffer.clear()
         self._apply_lr_schedule()
         return metrics

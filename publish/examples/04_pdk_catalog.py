@@ -20,7 +20,6 @@ from polaris.pdk import (
     LNOI_DEVICES,
     SIN_DEVICES,
     SOI_DEVICES,
-    DeviceCatalog,
     default_catalog,
 )
 
@@ -71,7 +70,9 @@ def main() -> None:
     print(f"  类别: {mmi.category}")
     print(f"  端口数: {len(mmi.ports)}")
     for p in mmi.ports:
-        print(f"    {p.name}: ({p.x:.2f}, {p.y:.2f}), 方向={p.direction.value}, 宽度={p.width:.2f}μm")
+        print(
+            f"    {p.name}: ({p.x:.2f}, {p.y:.2f}), 方向={p.direction.value}, 宽度={p.width:.2f}μm"
+        )
     print(f"  参数: {dict(list(mmi.params.items())[:5])}...")
     if mmi.source:
         print(f"  来源: {mmi.source.title}")

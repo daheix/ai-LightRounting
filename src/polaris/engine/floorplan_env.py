@@ -164,7 +164,9 @@ class FloorplanEnvConfig:
     canvas_w: float = 1000.0
     canvas_h: float = 1000.0
     grid_size: float = 10.0
-    overlap_penalty: float = 10.0
+    # M1.4 修复：降低 overlap_penalty 从 10.0 到 3.0（旧值导致奖励被重叠惩罚主导）
+    # 平衡：area_reward*util≈0.5, hpwl_weight*wire≈5.0, overlap_pen≈3.0*log1p(5)≈5.4
+    overlap_penalty: float = 3.0
     hpwl_weight: float = 0.01
     area_reward: float = 1.0
     expert_shaper: object | None = None

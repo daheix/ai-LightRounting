@@ -239,14 +239,28 @@ def _try_load_routing_agent(ckpt_path: Path, obs_dim: int, action_dim: int):
 
 
 def _infer_dims() -> tuple[int, int, int, list]:
-    """推断维度，返回 (obs_dim, n_actions_place, obs_dim_route, netlists)."""
-    netlists = generate_dataset(DATASET_CFG)
-    net0, devices0, _ = load_netlist(netlists[0])
+    """推断维度，返回 (obs_dim, n_actions_place, obs_dim_route, netlists).
 
-    env0 = FloorplanEnv(net0, devices0, config=PLACE_ENV_CONFIG)
-    obs_dim = _infer_obs_dim(env0)
+    M1.2 修复：遍历所有网表取最大 obs_dim（旧实现仅用第一个网表，
+    导致 12 器件网表的观测被截断，agent 对器件 4-12 "失明"）。
+    """
+    netlists = generate_dataset(DATASET_CFG)
+    # 遍历所有网表，取最大 obs_dim（对应最大器件数）
+    obs_dim = 0
+    env0 = None
+    devices0 = None
+    net0 = None
+    for nl_path in netlists:
+        net_i, devices_i, _ = load_netlist(nl_path)
+        env_i = FloorplanEnv(net_i, devices_i, config=PLACE_ENV_CONFIG)
+        dim_i = _infer_obs_dim(env_i)
+        if dim_i > obs_dim:
+            obs_dim = dim_i
+            env0 = env_i
+            devices0 = devices_i
+            net0 = net_i
     n_actions = _flatten_multidiscrete(env0.action_space)
-    print(f"  布局: obs_dim={obs_dim}, n_actions={n_actions}", flush=True)
+    print(f"  布局: obs_dim={obs_dim}（数据集最大）, n_actions={n_actions}", flush=True)
     print("  [专家奖励] ExpertRewardShaper 已启用 (ICLR'26)", flush=True)
 
     fp = FloorplanEnv(net0, devices0, config=PLACE_ENV_CONFIG)
@@ -465,7 +479,7 @@ def main() -> None:
                 flush=True,
             )
 
-            if batch_num % 20 == 0:
+            if batch_num % 2 == 0:
                 rt0 = time.time()
                 route_result = run_routing_batch(routing_agent, netlists, this_batch, obs_dim_route)
                 rt_sec = time.time() - rt0

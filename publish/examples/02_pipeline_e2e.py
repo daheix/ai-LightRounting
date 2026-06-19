@@ -27,7 +27,7 @@ def main() -> None:
     print("\n[步骤 2] 调用 run() 无参执行（使用内置默认 MZI 电路）")
     result = pipeline.run()
 
-    print(f"\n[结果]")
+    print("\n[结果]")
     print(f"  成功: {result.success}")
     print(f"  电路: {result.circuit_name}")
     print(f"  器件数: {result.n_devices}")

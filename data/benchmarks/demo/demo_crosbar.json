@@ -1,0 +1,49 @@
+{
+  "name": "demo_crosbar",
+  "description": "2x2 optical crossbar: 4 Y-branch (2 splitters + 2 combiners), 4 waveguide routes, 4 grating couplers",
+  "platform": "SOI",
+  "canvas_w": 400.0,
+  "canvas_h": 300.0,
+  "instances": {
+    "gc1": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc2": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc3": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc4": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "yb1": {"component": "y_branch", "platform": "SOI"},
+    "yb2": {"component": "y_branch", "platform": "SOI"},
+    "yb3": {"component": "y_branch", "platform": "SOI"},
+    "yb4": {"component": "y_branch", "platform": "SOI"},
+    "wg1": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 40.0}},
+    "wg2": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 40.0}},
+    "wg3": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 40.0}},
+    "wg4": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 40.0}}
+  },
+  "devices": [
+    {"name": "gc1", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc2", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc3", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc4", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "yb1", "type": "y_branch", "width_um": 20, "height_um": 8, "ports": [["in", 0, 4, "W"], ["out1", 20, 5, "E"], ["out2", 20, 3, "E"]]},
+    {"name": "yb2", "type": "y_branch", "width_um": 20, "height_um": 8, "ports": [["in", 0, 4, "W"], ["out1", 20, 5, "E"], ["out2", 20, 3, "E"]]},
+    {"name": "yb3", "type": "y_branch", "width_um": 20, "height_um": 8, "ports": [["in", 0, 4, "W"], ["out1", 20, 5, "E"], ["out2", 20, 3, "E"]]},
+    {"name": "yb4", "type": "y_branch", "width_um": 20, "height_um": 8, "ports": [["in", 0, 4, "W"], ["out1", 20, 5, "E"], ["out2", 20, 3, "E"]]},
+    {"name": "wg1", "type": "strip_waveguide", "width_um": 40, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 40, 0, "E"]]},
+    {"name": "wg2", "type": "strip_waveguide", "width_um": 40, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 40, 0, "E"]]},
+    {"name": "wg3", "type": "strip_waveguide", "width_um": 40, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 40, 0, "E"]]},
+    {"name": "wg4", "type": "strip_waveguide", "width_um": 40, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 40, 0, "E"]]}
+  ],
+  "connections": [
+    ["gc1", "wg", "yb1", "in"],
+    ["gc2", "wg", "yb2", "in"],
+    ["yb1", "out1", "wg1", "in"],
+    ["wg1", "out", "yb3", "out1"],
+    ["yb1", "out2", "wg2", "in"],
+    ["wg2", "out", "yb4", "out1"],
+    ["yb2", "out1", "wg3", "in"],
+    ["wg3", "out", "yb3", "out2"],
+    ["yb2", "out2", "wg4", "in"],
+    ["wg4", "out", "yb4", "out2"],
+    ["yb3", "in", "gc3", "wg"],
+    ["yb4", "in", "gc4", "wg"]
+  ]
+}

@@ -378,8 +378,18 @@ class PPOAgent:
         mean, value = self.ac.forward(mb.obs)
         std = np.exp(self.ac.action_log_std.data)
         # 新 logprob（可微路径）
+        # M1.3 修复：完整高斯对数概率 = -0.5*sum((diff/std)^2) - D*log(std) - 0.5*D*log(2π)
+        # 旧实现缺失 1/var 和 -log(std)，导致 ratio 计算错误，PPO 不收敛
+        # 来源: https://spinningup.openai.com/en/latest/spinningup/rl_intro/rl_intro_part2.html
         diff = Tensor(mb.actions) - mean
-        new_lp = -0.5 * (diff * diff).sum(axis=-1)
+        var = std * std  # 方差
+        # 用 Tensor 包装 inv_var 使除法可微（Tensor 无 __truediv__，用乘法替代）
+        inv_var = Tensor(1.0 / var)
+        log_std_val = self.ac.action_log_std.data
+        # -0.5 * sum(diff^2 / var) - sum(log(std))
+        # log_std_val 可能是向量 (action_dim,)，需 sum 为标量
+        log_std_sum = float(np.sum(log_std_val))
+        new_lp = (-0.5 * (diff * diff * inv_var).sum(axis=-1)) + Tensor(-log_std_sum)
         # 日志指标（非可微）
         policy_loss, value_loss, entropy = self._compute_minibatch_metrics(mb, mean, value, std)
         # 可微损失：PPO 策略目标 + 价值损失

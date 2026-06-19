@@ -1,0 +1,49 @@
+{
+  "name": "demo_complex",
+  "description": "Complex photonic circuit: 3 GC, MMI splitter, ring resonator, directional coupler tap, phase shifter, MMI 2x2 combiner, crossing, waveguides, photodetector",
+  "platform": "SOI",
+  "canvas_w": 500.0,
+  "canvas_h": 300.0,
+  "instances": {
+    "gc1": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc2": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc3": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "mmi1": {"component": "mmi_1x2", "platform": "SOI"},
+    "mmi2": {"component": "mmi_2x2", "platform": "SOI"},
+    "ring": {"component": "ring_resonator", "platform": "SOI"},
+    "dc": {"component": "directional_coupler", "platform": "SOI"},
+    "ps1": {"component": "thermo_optic_phase_shifter", "platform": "SOI"},
+    "wg1": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 30.0}},
+    "wg2": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 30.0}},
+    "pd1": {"component": "ge_photodetector", "platform": "SOI"},
+    "crossing": {"component": "crossing", "platform": "SOI"}
+  },
+  "devices": [
+    {"name": "gc1", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc2", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc3", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "mmi1", "type": "mmi_1x2", "width_um": 10, "height_um": 3, "ports": [["in", 0, 0, "W"], ["out1", 10, 0.5, "E"], ["out2", 10, -0.5, "E"]]},
+    {"name": "mmi2", "type": "mmi_2x2", "width_um": 12, "height_um": 3, "ports": [["in1", 0, 0.5, "W"], ["in2", 0, -0.5, "W"], ["out1", 12, 0.5, "E"], ["out2", 12, -0.5, "E"]]},
+    {"name": "ring", "type": "ring_resonator", "width_um": 10, "height_um": 11, "ports": [["in", 0, 0, "W"], ["through", 10, 0, "E"], ["drop", 10, 11, "E"], ["add", 0, 11, "W"]]},
+    {"name": "dc", "type": "directional_coupler", "width_um": 10, "height_um": 1, "ports": [["in1", 0, 0.25, "W"], ["in2", 0, -0.25, "W"], ["out1", 10, 0.25, "E"], ["out2", 10, -0.25, "E"]]},
+    {"name": "ps1", "type": "thermo_optic_phase_shifter", "width_um": 100, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 100, 0, "E"]]},
+    {"name": "wg1", "type": "strip_waveguide", "width_um": 30, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 30, 0, "E"]]},
+    {"name": "wg2", "type": "strip_waveguide", "width_um": 30, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 30, 0, "E"]]},
+    {"name": "pd1", "type": "ge_photodetector", "width_um": 30, "height_um": 0.5, "ports": [["in", 0, 0, "W"]]},
+    {"name": "crossing", "type": "crossing", "width_um": 5, "height_um": 5, "ports": [["in1", 0, 0, "W"], ["out1", 5, 0, "E"], ["in2", 2.5, 0, "S"], ["out2", 2.5, 5, "N"]]}
+  ],
+  "connections": [
+    ["gc1", "wg", "wg1", "in"],
+    ["wg1", "out", "mmi1", "in"],
+    ["mmi1", "out1", "ring", "in"],
+    ["mmi1", "out2", "ps1", "in"],
+    ["ring", "through", "dc", "in1"],
+    ["ps1", "out", "dc", "in2"],
+    ["dc", "out1", "mmi2", "in1"],
+    ["dc", "out2", "pd1", "in"],
+    ["mmi2", "out1", "wg2", "in"],
+    ["wg2", "out", "gc2", "wg"],
+    ["ring", "drop", "crossing", "in1"],
+    ["crossing", "out1", "gc3", "wg"]
+  ]
+}

@@ -78,12 +78,21 @@ def main() -> None:
         from polaris.trainer.ppo_torch import PPOAgentDiscrete, PPOConfig, Transition
 
         config = PPOConfig(
-            lr=3e-4, gamma=0.99, gae_lambda=0.95, clip_eps=0.2,
-            ent_coef=0.1, vf_coef=0.5, max_grad_norm=0.5,
-            n_epochs=4, batch_size=32,
+            lr=3e-4,
+            gamma=0.99,
+            gae_lambda=0.95,
+            clip_eps=0.2,
+            ent_coef=0.1,
+            vf_coef=0.5,
+            max_grad_norm=0.5,
+            n_epochs=4,
+            batch_size=32,
         )
         agent = PPOAgentDiscrete(
-            obs_dim=obs_dim, n_actions=n_actions, config=config, hidden_dim=64,
+            obs_dim=obs_dim,
+            n_actions=n_actions,
+            config=config,
+            hidden_dim=64,
         )
         print("  使用 PyTorch PPO")
     except ImportError:
@@ -91,7 +100,10 @@ def main() -> None:
 
         config = PPOConfig(lr=3e-4, gamma=0.99, gae_lambda=0.95)
         agent = PPOAgent(
-            obs_dim=obs_dim, n_actions=n_actions, config=config, hidden_dim=64,
+            obs_dim=obs_dim,
+            n_actions=n_actions,
+            config=config,
+            hidden_dim=64,
         )
         print("  使用 NumPy PPO")
 

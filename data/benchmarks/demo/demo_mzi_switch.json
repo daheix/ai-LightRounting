@@ -1,0 +1,31 @@
+{
+  "name": "demo_mzi_switch",
+  "description": "MZI with thermal phase shifter: 2 Y-branch, 1 thermo-optic phase shifter, 1 reference waveguide, 2 grating couplers",
+  "platform": "SOI",
+  "canvas_w": 300.0,
+  "canvas_h": 200.0,
+  "instances": {
+    "gc1": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc2": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "yb1": {"component": "y_branch", "platform": "SOI"},
+    "yb2": {"component": "y_branch", "platform": "SOI"},
+    "ps1": {"component": "thermo_optic_phase_shifter", "platform": "SOI"},
+    "wg1": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 50.0}}
+  },
+  "devices": [
+    {"name": "gc1", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc2", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "yb1", "type": "y_branch", "width_um": 20, "height_um": 8, "ports": [["in", 0, 4, "W"], ["out1", 20, 5, "E"], ["out2", 20, 3, "E"]]},
+    {"name": "yb2", "type": "y_branch", "width_um": 20, "height_um": 8, "ports": [["in", 0, 4, "W"], ["out1", 20, 5, "E"], ["out2", 20, 3, "E"]]},
+    {"name": "ps1", "type": "thermo_optic_phase_shifter", "width_um": 100, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 100, 0, "E"]]},
+    {"name": "wg1", "type": "strip_waveguide", "width_um": 50, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 50, 0, "E"]]}
+  ],
+  "connections": [
+    ["gc1", "wg", "yb1", "in"],
+    ["yb1", "out1", "ps1", "in"],
+    ["yb1", "out2", "wg1", "in"],
+    ["ps1", "out", "yb2", "out1"],
+    ["wg1", "out", "yb2", "out2"],
+    ["yb2", "in", "gc2", "wg"]
+  ]
+}

@@ -46,34 +46,64 @@ class CanvasConfig:
     grid_size: float = 5.0
 
 
-def _run_floorplan(net, devices, canvas_w: float, canvas_h: float, grid_size: float):
-    """执行布局：每个器件放到网格 (5,5) 位置（与集成测试一致）。"""
-    from polaris.engine.floorplan_env import FloorplanEnv
-
-    fp = FloorplanEnv(net, devices, canvas_w=canvas_w, canvas_h=canvas_h, grid_size=grid_size)
-    fp.reset()
-    for _ in range(len(devices)):
-        fp.step([5, 5, 0])
-    return fp
+_DIR_TO_LETTER = {
+    "EAST": "E",
+    "WEST": "W",
+    "NORTH": "N",
+    "SOUTH": "S",
+}
 
 
-def _run_routing(net, placements, canvas_w: float, canvas_h: float, grid_size: float):
-    """执行布线：每条连接用零偏移动作（A* 默认路径）。"""
-    import numpy as np
+def _device_to_spec(inst_id: str, dev) -> Any:
+    """将单个 ``Device`` 转换为 ``DeviceSpec``。
 
-    from polaris.router.routing_env import RoutingEnv
+    Args:
+        inst_id: 实例标识（来自网表）。
+        dev: ``polaris.pdk.device.Device`` 实例。
 
-    r_env = RoutingEnv(
-        net,
-        placements,
+    Returns:
+        ``DeviceSpec`` 实例。
+    """
+    from polaris.data.specs import DeviceSpec
+
+    w = dev.bbox.xmax - dev.bbox.xmin
+    h = dev.bbox.ymax - dev.bbox.ymin
+    ports = [(p.name, p.x, p.y, _DIR_TO_LETTER.get(p.direction.name, "E")) for p in dev.ports]
+    return DeviceSpec(
+        name=inst_id,
+        device_type=dev.name,
+        width_um=w,
+        height_um=h,
+        ports=ports,
+        params=dict(dev.params),
+    )
+
+
+def _netlist_to_circuit_spec(net: Any, devices: dict, canvas_w: float, canvas_h: float):
+    """将 Netlist + Device 字典转换为 CircuitSpec（供 IntegratedPipeline 使用）。
+
+    Args:
+        net: 解析后的 Netlist（含 connections）。
+        devices: ``instantiate_devices`` 返回的 ``{id: Device}`` 映射。
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+
+    Returns:
+        CircuitSpec 实例。
+    """
+    from polaris.data.specs import CircuitSpec
+
+    device_specs = [_device_to_spec(iid, dev) for iid, dev in devices.items()]
+    connections = [
+        (c.src_instance, c.src_port, c.dst_instance, c.dst_port) for c in net.connections
+    ]
+    return CircuitSpec(
+        name=net.name,
+        devices=device_specs,
+        connections=connections,
         canvas_w=canvas_w,
         canvas_h=canvas_h,
-        grid_size=grid_size,
     )
-    r_env.reset()
-    for _ in range(len(net.connections)):
-        r_env.step(np.zeros(3, dtype=np.float32))
-    return r_env
 
 
 def _write_report(out_dir: Path, net, devices: dict, placements, paths) -> None:
@@ -124,26 +154,45 @@ def _export_layout(out_dir: Path, placements, paths) -> None:
 
 
 def cmd_run(args: Any) -> int:
-    """CLI run 命令：网表 → 布局 → 布线 → GDS/OAS/PNG → report.json。
+    """CLI run 命令：网表 → IntegratedPipeline → GDS/OAS/PNG → report.json。
+
+    使用 ``IntegratedPipeline`` 统一执行布局→布线→仿真回馈闭环，
+    替代旧的简化 (5,5) 网格布局 + 零偏移布线路径。
 
     Args:
         args: 参数对象，需包含属性 netlist/output/canvas_w/canvas_h/grid_size。
 
     Returns:
         0 表示成功。
+
+    来源:
+    - Apollo arXiv 2025: 端到端 EPDA 流程
+      https://arxiv.org/html/2504.18813v1
     """
     from polaris.engine.netlist import load_netlist
+    from polaris.pipeline._converters import convert_to_paths, convert_to_placements
+    from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
 
     net, devices, _ = load_netlist(args.netlist)
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
     print(f"[1/4] 加载网表: {net.name} ({len(devices)} 器件, {len(net.connections)} 连接)")
-    fp = _run_floorplan(net, devices, args.canvas_w, args.canvas_h, args.grid_size)
-    print(f"[2/4] 布局完成: {len(fp.state.placements)} 器件")
-    r_env = _run_routing(net, fp.state.placements, args.canvas_w, args.canvas_h, args.grid_size)
-    print(f"[3/4] 布线完成: {len(r_env.state.paths)} 连接")
-    placements = fp.state.placements
-    paths = r_env.state.paths
+
+    circuit = _netlist_to_circuit_spec(net, devices, args.canvas_w, args.canvas_h)
+    cfg = PipelineConfig(
+        canvas_w=args.canvas_w,
+        canvas_h=args.canvas_h,
+        grid_size=args.grid_size,
+        max_sim_iterations=3,
+        output_dir=str(out_dir),
+    )
+    pipeline = IntegratedPipeline(cfg)
+    result = pipeline.run(circuit)
+    print(f"[2/4] 布局完成: {result.n_devices} 器件")
+    print(f"[3/4] 布线完成: {result.n_connections} 连接 (损耗 {result.total_loss_db:.2f} dB)")
+
+    placements = convert_to_placements(circuit, result.placements)
+    paths = convert_to_paths(result.paths)
     _export_layout(out_dir, placements, paths)
     _write_report(out_dir, net, devices, placements, paths)
     print(f"[4/4] 报告已保存: {out_dir / 'report.json'}")

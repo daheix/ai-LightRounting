@@ -277,8 +277,8 @@ def test_ppo_agent_discrete_store_and_update():
     assert metrics["entropy"] >= 0.0
     # buffer 应被清空
     assert len(agent.buffer) == 0
-    # total_steps 应累加
-    assert agent._total_steps == 32
+    # total_steps 应累加（M1.1 修复：按 update 次数计数，非 sample 数）
+    assert agent._total_steps == 1
 
 
 def test_ppo_agent_discrete_update_empty_buffer():

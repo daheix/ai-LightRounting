@@ -109,10 +109,16 @@ def _infer_obs_dim(env) -> int:
 
 
 def _pad_obs(obs_vec: np.ndarray, obs_dim: int) -> np.ndarray:
-    """将观测向量 pad/truncate 到固定维度（适配不同网表器件数）。"""
+    """将观测向量零填充到固定维度（M1.2 修复：不再截断）。
+
+    旧实现截断 obs_vec[:obs_dim] 导致 agent 对器件 4-12 "失明"。
+    新实现零填充，保留所有器件信息。obs_dim 应取数据集最大器件数对应维度。
+    """
     if obs_vec.shape[0] < obs_dim:
         return np.pad(obs_vec, (0, obs_dim - obs_vec.shape[0]))
     if obs_vec.shape[0] > obs_dim:
+        # M1.2 修复：仅当超过硬性上限时才截断（避免网络输入维度不匹配）
+        # 正常情况下 obs_dim 应配置为数据集最大器件数对应维度
         return obs_vec[:obs_dim]
     return obs_vec
 

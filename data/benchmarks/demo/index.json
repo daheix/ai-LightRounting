@@ -1,0 +1,41 @@
+{
+  "description": "PoLaRIS MVP interactive demonstration circuits. Each JSON contains both 'instances' (for load_netlist compatibility) and 'devices' (explicit port/dimension metadata for the pipeline).",
+  "platform": "SOI",
+  "circuits": [
+    {
+      "file": "demo_mzi.json",
+      "name": "demo_mzi",
+      "device_count": 6,
+      "connection_count": 6,
+      "description": "Mach-Zehnder Interferometer: 2 Y-branch (splitter+combiner), 2 waveguide arms, 2 grating couplers"
+    },
+    {
+      "file": "demo_ring.json",
+      "name": "demo_ring",
+      "device_count": 4,
+      "connection_count": 3,
+      "description": "Ring Resonator (add-drop): 1 ring, 2 grating couplers, 1 waveguide bus on through port"
+    },
+    {
+      "file": "demo_mzi_switch.json",
+      "name": "demo_mzi_switch",
+      "device_count": 6,
+      "connection_count": 6,
+      "description": "MZI with thermal phase shifter: 2 Y-branch, 1 thermo-optic phase shifter, 1 reference waveguide, 2 grating couplers"
+    },
+    {
+      "file": "demo_crosbar.json",
+      "name": "demo_crosbar",
+      "device_count": 12,
+      "connection_count": 12,
+      "description": "2x2 optical crossbar: 4 Y-branch (2 splitters + 2 combiners), 4 waveguide routes, 4 grating couplers"
+    },
+    {
+      "file": "demo_complex.json",
+      "name": "demo_complex",
+      "device_count": 12,
+      "connection_count": 12,
+      "description": "Complex photonic circuit: 3 GC, MMI splitter, ring resonator, directional coupler tap, phase shifter, MMI 2x2 combiner, crossing, waveguides, photodetector"
+    }
+  ]
+}

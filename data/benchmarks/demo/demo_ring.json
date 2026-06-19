@@ -1,0 +1,24 @@
+{
+  "name": "demo_ring",
+  "description": "Ring Resonator (add-drop): 1 ring, 2 grating couplers, 1 waveguide bus on through port",
+  "platform": "SOI",
+  "canvas_w": 200.0,
+  "canvas_h": 200.0,
+  "instances": {
+    "gc1": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "gc2": {"component": "grating_coupler_1d", "platform": "SOI"},
+    "ring": {"component": "ring_resonator", "platform": "SOI"},
+    "wg1": {"component": "strip_waveguide", "platform": "SOI", "settings": {"length_um": 30.0}}
+  },
+  "devices": [
+    {"name": "gc1", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "gc2", "type": "grating_coupler_1d", "width_um": 30, "height_um": 20, "ports": [["wg", 0, 10, "W"]]},
+    {"name": "ring", "type": "ring_resonator", "width_um": 10, "height_um": 11, "ports": [["in", 0, 0, "W"], ["through", 10, 0, "E"], ["drop", 10, 11, "E"], ["add", 0, 11, "W"]]},
+    {"name": "wg1", "type": "strip_waveguide", "width_um": 30, "height_um": 0.5, "ports": [["in", 0, 0, "W"], ["out", 30, 0, "E"]]}
+  ],
+  "connections": [
+    ["gc1", "wg", "ring", "in"],
+    ["ring", "through", "wg1", "in"],
+    ["wg1", "out", "gc2", "wg"]
+  ]
+}

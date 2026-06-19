@@ -57,7 +57,7 @@ def main() -> None:
     pipeline = IntegratedPipeline(config=config)
     result = pipeline.run(circuit)
 
-    print(f"\n[结果]")
+    print("\n[结果]")
     print(f"  成功: {result.success}")
     print(f"  器件数: {result.n_devices}")
     print(f"  连接数: {result.n_connections}")
