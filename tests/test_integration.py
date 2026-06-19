@@ -243,3 +243,121 @@ def test_lr_schedule_cosine():
     assert _lr_scale(10, 10, "cosine") == pytest.approx(0.0)
     # ep=2.5 (1/4): cos(π/4)=√2/2 → scale≈0.854
     assert _lr_scale(2.5, 10, "cosine") == pytest.approx(0.5 * (1 + 0.7071), abs=0.01)
+
+
+def test_integrated_pipeline_exports_gds(tmp_path):
+    """IntegratedPipeline.run() 应导出 GDS 文件（第三波端到端流水线）。
+
+    验证 SimLoop 闭环 → GDS 导出 → DRC 检查的端到端流程，
+    确保 PipelineResult.gds_path 非空且文件存在。
+    """
+    from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
+
+    cfg = PipelineConfig(
+        canvas_w=300.0,
+        canvas_h=300.0,
+        grid_size=20.0,
+        max_sim_iterations=1,
+        output_dir=str(tmp_path),
+    )
+    pipeline = IntegratedPipeline(config=cfg)
+    result = pipeline.run()
+
+    assert result.circuit_name == "demo_mzi"
+    assert result.n_devices == 3
+    # GDS 文件应存在
+    assert result.gds_path, "gds_path 不应为空"
+    assert os.path.exists(result.gds_path), f"GDS 文件不存在: {result.gds_path}"
+    # DRC 字段应为 bool
+    assert isinstance(result.drc_passed, bool)
+
+
+def test_convert_to_placements_basic():
+    """convert_to_placements 应将 dict 布局转为 Placement 对象字典。"""
+    from polaris.data.specs import CircuitSpec, DeviceSpec
+    from polaris.pipeline._converters import convert_to_placements
+
+    circuit = CircuitSpec(
+        name="test",
+        devices=[
+            DeviceSpec(
+                name="gc1",
+                device_type="grating_coupler",
+                width_um=20.0,
+                height_um=20.0,
+                ports=[("o1", 10.0, 0.0, "N")],
+            ),
+            DeviceSpec(
+                name="mmi1",
+                device_type="mmi_1x2",
+                width_um=30.0,
+                height_um=20.0,
+                ports=[
+                    ("o1", 0.0, 10.0, "E"),
+                    ("o2", 30.0, 5.0, "W"),
+                ],
+            ),
+        ],
+        connections=[("gc1", "o1", "mmi1", "o1")],
+    )
+    sim_placements = {
+        "gc1": {"x": 50.0, "y": 50.0, "w": 20.0, "h": 20.0},
+        "mmi1": {"x": 100.0, "y": 100.0, "w": 30.0, "h": 20.0},
+    }
+    placements = convert_to_placements(circuit, sim_placements)
+
+    assert set(placements.keys()) == {"gc1", "mmi1"}
+    pl_gc = placements["gc1"]
+    assert pl_gc.instance_id == "gc1"
+    assert pl_gc.x == 50.0
+    assert pl_gc.y == 50.0
+    assert pl_gc.rotation == 0
+    # grating_coupler → source 类别
+    assert pl_gc.device.category == "source"
+    # 端口应转换为 Port 对象
+    assert len(pl_gc.device.ports) == 1
+    assert pl_gc.device.ports[0].name == "o1"
+    # mmi → passive
+    assert placements["mmi1"].device.category == "passive"
+
+
+def test_convert_to_paths_basic():
+    """convert_to_paths 应将 dict 路径转为 WaveguidePath 对象字典。"""
+    from polaris.pipeline._converters import convert_to_paths
+
+    sim_paths = {
+        "gc1_o1_mmi1_o1": [(0.0, 0.0), (50.0, 0.0), (50.0, 100.0)],
+        "mmi1_o2_gc2_o1": [(100.0, 100.0), (200.0, 100.0)],
+    }
+    paths = convert_to_paths(sim_paths)
+
+    assert len(paths) == 2
+    # 按枚举顺序编号
+    p0 = paths[0]
+    assert len(p0.points) == 3
+    assert p0.length_um > 0.0
+    assert p0.loss_db > 0.0  # SOI 3 dB/cm 传播损耗
+    # 第二条路径
+    p1 = paths[1]
+    assert len(p1.points) == 2
+    assert p1.length_um == 100.0  # (100,100) → (200,100) = 100μm
+
+
+def test_integrated_pipeline_drc_field(tmp_path):
+    """IntegratedPipeline 返回的 drc_passed 应反映 DRC 检查结果。"""
+    from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
+
+    cfg = PipelineConfig(
+        canvas_w=500.0,
+        canvas_h=500.0,
+        grid_size=20.0,
+        max_sim_iterations=1,
+        output_dir=str(tmp_path),
+    )
+    pipeline = IntegratedPipeline(config=cfg)
+    result = pipeline.run()
+
+    # drc_passed 应为 bool（True 或 False，取决于布局是否重叠）
+    assert isinstance(result.drc_passed, bool)
+    # 报告文件应存在
+    assert os.path.exists(result.report_path)

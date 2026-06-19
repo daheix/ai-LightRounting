@@ -71,6 +71,7 @@ class PipelineResult:
         drc_passed: DRC 是否通过。
         sim_iterations: 仿真迭代次数。
         report_path: 报告路径。
+        gds_path: GDS 文件路径（第三波端到端流水线，空字符串表示未导出）。
     """
 
     success: bool = False
@@ -84,6 +85,12 @@ class PipelineResult:
     drc_passed: bool = False
     sim_iterations: int = 0
     report_path: str = ""
+    gds_path: str = ""
+
+
+# Direction 字母 → Direction 枚举（DeviceSpec.ports 元组第 4 项）
+# 器件类型 → 类别映射、转换函数已迁移到 polaris.pipeline._converters
+# （第三波端到端流水线，规则 7.2 拆分以控制文件行数 ≤500）
 
 
 class _DefaultPlacer:
@@ -351,6 +358,7 @@ class IntegratedPipeline:
 
         sim_result = self._run_sim_loop(circuit, cfg)
         report_path = self._write_report(circuit, cfg, sim_result)
+        gds_path, drc_passed = self._export_layout(circuit, sim_result, cfg)
 
         return PipelineResult(
             success=sim_result.success,
@@ -361,8 +369,10 @@ class IntegratedPipeline:
             paths=sim_result.paths,
             total_loss_db=sim_result.total_loss_db,
             n_crossings=sim_result.n_crossings,
+            drc_passed=drc_passed,
             sim_iterations=sim_result.iterations,
             report_path=report_path,
+            gds_path=gds_path,
         )
 
     def _run_sim_loop(self, circuit: CircuitSpec, cfg: PipelineConfig):
@@ -415,11 +425,12 @@ class IntegratedPipeline:
         """
         try:
             from polaris.eval.layout_render import export_gds, run_drc
+            from polaris.pipeline._converters import convert_to_paths, convert_to_placements
         except ImportError as e:
             logger.warning("GDS 导出依赖缺失: %s", e)
             return "", False
-        placements = _convert_to_placements(circuit, result.placements)
-        paths = _convert_to_paths(result.paths)
+        placements = convert_to_placements(circuit, result.placements)
+        paths = convert_to_paths(result.paths)
         out = Path(cfg.output_dir)
         out.mkdir(parents=True, exist_ok=True)
         gds_path = str(out / f"{circuit.name}.gds")
