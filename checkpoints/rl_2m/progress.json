@@ -1,63 +1,13 @@
 {
-  "total_episodes_done": 8600,
-  "placement_episodes": 8600,
+  "total_episodes_done": 8800,
+  "placement_episodes": 8800,
   "routing_episodes": 1600,
   "best_placement_reward": 0.50754,
   "best_routing_reward": -0.30000000000000004,
-  "total_training_seconds": 1199.4235663414001,
-  "batches_completed": 43,
+  "total_training_seconds": 1204.3495280742645,
+  "batches_completed": 44,
   "last_commit_time": 1781828077.4258716,
   "recent_rewards": [
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -700.1058
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -502.6298
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -200.3063
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -2606.9249
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -3398.9653
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -0.7189
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -399.3794
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -1799.9389
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -201.5642
-    },
-    {
-      "ep": 400,
-      "phase": "placement",
-      "reward": -1600.3122
-    },
     {
       "ep": 600,
       "phase": "placement",
@@ -2505,6 +2455,56 @@
     },
     {
       "ep": 8600,
+      "phase": "placement",
+      "reward": -28599.9422
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -16499.9373
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -16500.0198
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -399.8201
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -28600.1639
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -21998.9653
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -3500.0089
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -3499.3794
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -28599.9389
+    },
+    {
+      "ep": 8800,
+      "phase": "placement",
+      "reward": -1000.0517
+    },
+    {
+      "ep": 8800,
       "phase": "placement",
       "reward": -28599.9422
     }
