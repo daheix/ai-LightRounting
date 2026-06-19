@@ -20,7 +20,12 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from polaris.sim.constraint_checker import ConstraintChecker, ConstraintConfig, Violation
+from polaris.sim.constraint_checker import (
+    CheckContext,
+    ConstraintChecker,
+    ConstraintConfig,
+    Violation,
+)
 from polaris.sim.feedback_adapter import FeedbackAdapter, FeedbackResult
 
 logger = logging.getLogger(__name__)
@@ -149,13 +154,15 @@ class SimLoop:
         return placements, routes, sim_result
 
     def _check_constraints(self, placements, routes, sim_result):
-        """执行约束检查。"""
-        return self.checker.check(
-            placements=placements,
-            paths=routes,
+        """执行约束检查。
+
+        将仿真结果封装为 CheckContext，调用重构后的 check API。
+        """
+        ctx = CheckContext(
             total_loss_db=sim_result.get("total_loss_db", 0.0),
             n_crossings=sim_result.get("n_crossings", 0),
         )
+        return self.checker.check(placements=placements, paths=routes, context=ctx)
 
     @staticmethod
     def _log_iteration(iteration, violations, sim_result):

@@ -158,17 +158,49 @@ def _summarize_calibration(items: list[CalibrationItem]) -> CalibrationResult:
 
 
 def _estimate_loss(data: dict) -> float:
-    """用自研简化模型估算损耗。"""
-    total = 0.0
-    instances = data.get("instances", [])
+    """用自研简化模型估算损耗。
+
+    支持三种基准数据格式：
+    - PICBench: data.netlist.instances (dict, 含 component/settings.length)
+    - LiDAR: instances (dict, 含 component/settings)
+    - gdsfactory: instances (list 或 dict)
+
+    波导类器件按 length 参数计算损耗（2.0 dB/cm），其他器件按类型查表。
+
+    来源:
+    - SiEPIC EBeam PDK 波导损耗典型值 2.0 dB/cm
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    instances = data.get("instances")
+    if instances is None:
+        netlist = data.get("data", {}).get("netlist", {})
+        instances = netlist.get("instances")
+    if instances is None:
+        return 0.0
     if isinstance(instances, dict):
-        return len(instances) * 0.2
-    if not isinstance(instances, list):
-        return total
-    for inst in instances:
-        cell = inst.get("cell_type", inst.get("component", ""))
-        total += _cell_loss(cell)
-    return total
+        return sum(_instance_loss(inst) for inst in instances.values())
+    if isinstance(instances, list):
+        return sum(_instance_loss(inst) for inst in instances)
+    return 0.0
+
+
+def _instance_loss(inst) -> float:
+    """计算单个器件实例的损耗。"""
+    if isinstance(inst, str):
+        return _cell_loss(inst)
+    if not isinstance(inst, dict):
+        return 0.0
+    cell = inst.get("component", inst.get("cell_type", ""))
+    settings = inst.get("settings", {})
+    if isinstance(settings, dict) and "length" in settings:
+        length = settings["length"]
+        if isinstance(length, (int, float)) and length > 0:
+            return _WG_LOSS_DB_PER_UM * length
+    return _cell_loss(cell)
+
+
+# 波导单位长度损耗 (dB/μm)，来源 SiEPIC EBeam PDK 典型值 2.0 dB/cm
+_WG_LOSS_DB_PER_UM: float = 2.0 / 1e4
 
 
 # 器件类型关键字 → 损耗 (dB) 映射表
@@ -186,13 +218,18 @@ _CELL_LOSS_RULES: list[tuple[str, float]] = [
     ("yb", 0.3),
     ("y_branch", 0.3),
     ("crossing", 0.05),
+    ("straight_heat", 0.2),
+    ("phase_shifter", 0.2),
+    ("heater", 0.2),
+    ("rectangle", 0.0),
 ]
 
 
 def _cell_loss(cell: str) -> float:
     """根据器件类型字符串计算损耗。"""
+    cell_lower = cell.lower() if isinstance(cell, str) else ""
     for keyword, loss in _CELL_LOSS_RULES:
-        if keyword in cell:
+        if keyword in cell_lower:
             return loss
     return 0.2
 
