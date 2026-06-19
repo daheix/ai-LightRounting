@@ -3,6 +3,13 @@
 用基准数据训练 RL agent，每个训练样本都经过仿真校验，
 确保自研工具和布局布线一体发展。
 
+本模块是 ``trainer.train_loop`` 的高层封装：
+- 加载基准数据（支持 GDSFactory/PICBench/LiDAR 三种格式）
+- 可选生成变体增强训练数据
+- 调用 ``train_floorplan`` / ``train_routing`` 执行真正的 PPO 训练
+  （rollout 采集 → GAE 优势估计 → PPO clip 更新 → 价值函数拟合）
+- 调用 ``sim.calibration.calibrate`` 做仿真校验
+
 来源:
 - ChiPFormer ICML'23: 离线RL + 迁移学习
   https://arxiv.org/pdf/2306.14744.pdf
@@ -10,18 +17,26 @@
   https://openreview.net/forum?id=yqvNwfxRR6
 - CORE NeurIPS'25: 进化+RL协同
   https://nips.cc/virtual/2025/loc/san-diego/poster/119653
+- PPO 标准训练循环: UC Berkeley Scalable AI Lecture 15 (2026)
+  https://scalable-ai.eecs.berkeley.edu/assets/lecture_slides/lecture_15.pdf
+- CleanRL ppo.py 单文件训练循环
+  https://github.com/vwxyzjn/cleanrl
 """
 
 from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from polaris.data.specs import CircuitSpec, DeviceSpec
-from polaris.data.variant_generator import VariantConfig, estimate_loss_budget
+from polaris.data.variant_generator import VariantConfig
 from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
+from polaris.sim.calibration import CalibrationConfig, CalibrationResult, calibrate
+from polaris.trainer.dataset import DatasetConfig
+from polaris.trainer.ppo import PPOAgent
+from polaris.trainer.train_loop import TrainConfig, train_floorplan, train_routing
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +47,21 @@ class TrainingConfig:
 
     Attributes:
         benchmark_dir: 基准数据目录。
-        variant_config: 变体生成配置。
-        pipeline_config: 一体化流水线配置。
+        variant_config: 变体生成配置（None 表示不生成变体，仅用基准数据）。
+        pipeline_config: 一体化流水线配置（用于最终验证）。
         num_episodes: 训练轮次数。
         hidden_dim: 隐藏层维度。
         lr: 学习率。
         save_dir: 检查点保存目录。
         calibrate_every: 每N轮校准一次。
+        train_floorplan_enabled: 是否训练布局 agent。
+        train_routing_enabled: 是否训练布线 agent。
+        rollout_steps: 每轮采样步数。
+        canvas_w: 画布宽（μm）。
+        canvas_h: 画布高（μm）。
+        grid_size: 栅格大小（μm）。
+        sim_feedback: 是否启用 SimLoop 约束反馈。
+        seed: 随机种子。
     """
 
     benchmark_dir: str = "data/benchmarks"
@@ -49,6 +72,14 @@ class TrainingConfig:
     lr: float = 3e-4
     save_dir: str = "checkpoints"
     calibrate_every: int = 10
+    train_floorplan_enabled: bool = True
+    train_routing_enabled: bool = True
+    rollout_steps: int = 64
+    canvas_w: float = 1000.0
+    canvas_h: float = 1000.0
+    grid_size: float = 10.0
+    sim_feedback: bool = False
+    seed: int = 42
 
 
 @dataclass
@@ -57,17 +88,23 @@ class TrainingResult:
 
     Attributes:
         episodes_completed: 完成的训练轮次。
-        best_reward: 最佳奖励。
+        best_reward: 最佳奖励（布局与布线中的最大值）。
         avg_loss_db: 平均插入损耗。
         calibration_passed: 校准是否通过。
+        calibration_result: 校准详细结果。
         checkpoint_path: 检查点路径。
+        floorplan_logs: 布局训练日志。
+        routing_logs: 布线训练日志。
     """
 
     episodes_completed: int = 0
     best_reward: float = 0.0
     avg_loss_db: float = 0.0
     calibration_passed: bool = False
+    calibration_result: CalibrationResult | None = None
     checkpoint_path: str = ""
+    floorplan_logs: list[dict] = field(default_factory=list)
+    routing_logs: list[dict] = field(default_factory=list)
 
 
 class TrainingPipeline:
@@ -75,8 +112,16 @@ class TrainingPipeline:
 
     基准数据 → 变体生成 → RL训练 → 仿真校验
 
+    真正的 PPO 训练流程（非伪实现）：
+    1. 加载基准数据（GDSFactory/PICBench/LiDAR 三种格式）
+    2. 可选生成变体增强训练数据
+    3. 调用 ``train_floorplan`` / ``train_routing`` 执行 PPO 训练
+       （rollout → GAE → clip 更新 → 价值拟合）
+    4. 调用 ``sim.calibration.calibrate`` 做仿真校验
+
     来源:
     - ChiPFormer ICML'23: https://arxiv.org/pdf/2306.14744.pdf
+    - PPO 标准训练循环: https://scalable-ai.eecs.berkeley.edu/assets/lecture_slides/lecture_15.pdf
     """
 
     def __init__(self, config: TrainingConfig | None = None) -> None:
@@ -97,41 +142,187 @@ class TrainingPipeline:
             logger.error("无基准数据，训练终止")
             return TrainingResult()
 
-        best_reward, avg_loss = self._training_loop(cfg, circuits)
+        floorplan_logs: list[dict] = []
+        routing_logs: list[dict] = []
+        floorplan_agent: PPOAgent | None = None
+        routing_agent: PPOAgent | None = None
 
-        ckpt_path = self._save_checkpoint(cfg, best_reward, avg_loss)
-        return TrainingResult(
+        if cfg.train_floorplan_enabled:
+            floorplan_agent, floorplan_logs = self._train_floorplan_agent(cfg)
+
+        if cfg.train_routing_enabled:
+            routing_agent, routing_logs = self._train_routing_agent(cfg)
+
+        best_reward = self._extract_best_reward(floorplan_logs, routing_logs)
+        avg_loss = self._extract_avg_loss(floorplan_logs, routing_logs)
+
+        cal_result = self._run_calibration(cfg)
+        ckpt_path = self._save_checkpoint(cfg, best_reward, avg_loss, cal_result)
+
+        result = TrainingResult(
             episodes_completed=cfg.num_episodes,
             best_reward=best_reward,
             avg_loss_db=avg_loss,
+            calibration_passed=cal_result.all_passed,
+            calibration_result=cal_result,
             checkpoint_path=ckpt_path,
+            floorplan_logs=floorplan_logs,
+            routing_logs=routing_logs,
         )
+        logger.info(
+            "训练完成: best_reward=%.3f, avg_loss=%.2f dB, 校准=%s",
+            best_reward,
+            avg_loss,
+            "通过" if cal_result.all_passed else "未通过",
+        )
+        return result
 
-    def _training_loop(self, cfg, circuits) -> tuple[float, float]:
-        """执行训练循环。"""
-        best_reward = -1e9
-        total_loss = 0.0
-        n_valid = 0
+    def _train_floorplan_agent(self, cfg: TrainingConfig) -> tuple[PPOAgent, list[dict]]:
+        """执行布局 PPO 训练。
 
-        for ep in range(cfg.num_episodes):
-            circuit = circuits[ep % len(circuits)]
-            result = self.pipeline.run(circuit)
-            reward = self._compute_reward(result)
-            if reward > best_reward:
-                best_reward = reward
-            if result.success:
-                total_loss += result.total_loss_db
-                n_valid += 1
-            if (ep + 1) % cfg.calibrate_every == 0:
-                self._calibrate(circuits)
+        调用 ``train_loop.train_floorplan`` 做真正的 PPO 训练：
+        rollout 采集 → GAE 优势估计 → PPO clip 更新 → 价值函数拟合。
 
-        avg_loss = total_loss / max(1, n_valid)
-        logger.info("训练完成: best_reward=%.3f, avg_loss=%.2f dB", best_reward, avg_loss)
-        return best_reward, avg_loss
+        Args:
+            cfg: 训练配置。
+
+        Returns:
+            (训练后的 agent, 训练日志列表)。
+        """
+        logger.info("开始布局 PPO 训练: %d episodes", cfg.num_episodes)
+        train_cfg = self._build_train_config(cfg)
+        agent, logs = train_floorplan(train_cfg, verbose=True)
+        logger.info(
+            "布局训练完成: best_reward=%.3f, 最终 policy_loss=%.4f",
+            max((lg.get("ep_reward", 0.0) for lg in logs), default=0.0),
+            logs[-1].get("policy_loss", 0.0) if logs else 0.0,
+        )
+        return agent, logs
+
+    def _train_routing_agent(self, cfg: TrainingConfig) -> tuple[PPOAgent, list[dict]]:
+        """执行布线 PPO 训练。
+
+        调用 ``train_loop.train_routing`` 做真正的 PPO 训练：
+        先随机布局再创建 RoutingEnv，rollout 采集 → GAE → clip 更新。
+
+        Args:
+            cfg: 训练配置。
+
+        Returns:
+            (训练后的 agent, 训练日志列表)。
+        """
+        logger.info("开始布线 PPO 训练: %d episodes", cfg.num_episodes)
+        train_cfg = self._build_train_config(cfg)
+        agent, logs = train_routing(train_cfg, verbose=True)
+        logger.info(
+            "布线训练完成: best_reward=%.3f, avg_loss_db=%.3f",
+            max((lg.get("ep_reward", 0.0) for lg in logs), default=0.0),
+            (sum(lg.get("total_loss_db", 0.0) for lg in logs) / len(logs) if logs else 0.0),
+        )
+        return agent, logs
 
     @staticmethod
-    def _save_checkpoint(cfg, best_reward: float, avg_loss: float) -> str:
-        """保存训练检查点。"""
+    def _build_train_config(cfg: TrainingConfig) -> TrainConfig:
+        """从 TrainingConfig 构造 TrainConfig。
+
+        Args:
+            cfg: 训练流水线配置。
+
+        Returns:
+            TrainConfig 实例。
+        """
+        from polaris.trainer.ppo import PPOConfig
+
+        ppo_cfg = PPOConfig(lr=cfg.lr)
+        return TrainConfig(
+            ppo=ppo_cfg,
+            dataset=DatasetConfig(),
+            num_episodes=cfg.num_episodes,
+            rollout_steps=cfg.rollout_steps,
+            canvas_w=cfg.canvas_w,
+            canvas_h=cfg.canvas_h,
+            grid_size=cfg.grid_size,
+            hidden_dim=cfg.hidden_dim,
+            checkpoint_dir=cfg.save_dir,
+            checkpoint_every=max(1, cfg.num_episodes // 5),
+            log_every=max(1, cfg.num_episodes // 10),
+            seed=cfg.seed,
+            sim_feedback=cfg.sim_feedback,
+        )
+
+    @staticmethod
+    def _extract_best_reward(floorplan_logs: list[dict], routing_logs: list[dict]) -> float:
+        """从训练日志中提取最佳奖励。
+
+        Args:
+            floorplan_logs: 布局训练日志。
+            routing_logs: 布线训练日志。
+
+        Returns:
+            布局与布线中的最大 ep_reward。
+        """
+        rewards: list[float] = []
+        rewards.extend(lg.get("ep_reward", 0.0) for lg in floorplan_logs)
+        rewards.extend(lg.get("ep_reward", 0.0) for lg in routing_logs)
+        return max(rewards) if rewards else 0.0
+
+    @staticmethod
+    def _extract_avg_loss(floorplan_logs: list[dict], routing_logs: list[dict]) -> float:
+        """从训练日志中提取平均插入损耗。
+
+        Args:
+            floorplan_logs: 布局训练日志。
+            routing_logs: 布线训练日志。
+
+        Returns:
+            布线日志中 total_loss_db 的平均值（布局无损耗指标，返回 0）。
+        """
+        if not routing_logs:
+            return 0.0
+        losses = [lg.get("total_loss_db", 0.0) for lg in routing_logs]
+        return sum(losses) / len(losses) if losses else 0.0
+
+    @staticmethod
+    def _run_calibration(cfg: TrainingConfig) -> CalibrationResult:
+        """执行仿真校验。
+
+        调用 ``sim.calibration.calibrate`` 对比自研仿真与基准数据。
+
+        Args:
+            cfg: 训练配置。
+
+        Returns:
+            CalibrationResult。
+        """
+        cal_cfg = CalibrationConfig(benchmark_dir=cfg.benchmark_dir)
+        result = calibrate(cal_cfg)
+        logger.info(
+            "校准完成: %d/%d 通过, max_error=%.3f dB, mean_error=%.3f dB",
+            result.passed_items,
+            result.total_items,
+            result.max_error_db,
+            result.mean_error_db,
+        )
+        return result
+
+    @staticmethod
+    def _save_checkpoint(
+        cfg: TrainingConfig,
+        best_reward: float,
+        avg_loss: float,
+        cal_result: CalibrationResult,
+    ) -> str:
+        """保存训练检查点。
+
+        Args:
+            cfg: 训练配置。
+            best_reward: 最佳奖励。
+            avg_loss: 平均损耗。
+            cal_result: 校准结果。
+
+        Returns:
+            检查点文件路径。
+        """
         save_dir = Path(cfg.save_dir)
         save_dir.mkdir(parents=True, exist_ok=True)
         ckpt_path = str(save_dir / "training_result.json")
@@ -139,30 +330,14 @@ class TrainingPipeline:
             "episodes": cfg.num_episodes,
             "best_reward": best_reward,
             "avg_loss_db": avg_loss,
-            "n_valid": 0,
+            "calibration_passed": cal_result.all_passed,
+            "calibration_passed_items": cal_result.passed_items,
+            "calibration_total_items": cal_result.total_items,
+            "calibration_max_error_db": cal_result.max_error_db,
+            "calibration_mean_error_db": cal_result.mean_error_db,
         }
         Path(ckpt_path).write_text(json.dumps(ckpt_data, indent=2), encoding="utf-8")
         return ckpt_path
-
-    @staticmethod
-    def _compute_reward(result) -> float:
-        """计算训练奖励。"""
-        reward = 0.0
-        if result.success:
-            reward += 1.0
-        reward -= result.total_loss_db * 0.1
-        reward -= result.n_crossings * 0.05
-        return reward
-
-    @staticmethod
-    def _calibrate(circuits: list[CircuitSpec]) -> None:
-        """校准验证。"""
-        n_pass = 0
-        for c in circuits[:5]:
-            valid, _ = estimate_loss_budget(c)
-            if valid:
-                n_pass += 1
-        logger.info("校准: %d/%d 通过", n_pass, min(5, len(circuits)))
 
     @staticmethod
     def _load_benchmarks(benchmark_dir: str) -> list[CircuitSpec]:

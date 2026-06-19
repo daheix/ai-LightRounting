@@ -204,6 +204,8 @@ _WG_LOSS_DB_PER_UM: float = 2.0 / 1e4
 
 
 # 器件类型关键字 → 损耗 (dB) 映射表
+# 注意：更具体的关键字必须排在通用关键字之前，避免误匹配。
+# 例如 "grating_coupler" 必须先匹配 "grating"（2.5 dB）而非 "coupler"（0.2 dB）。
 _CELL_LOSS_RULES: list[tuple[str, float]] = [
     ("wg", 0.1),
     ("waveguide", 0.1),
@@ -211,10 +213,10 @@ _CELL_LOSS_RULES: list[tuple[str, float]] = [
     ("ring", 0.3),
     ("mrr", 0.3),
     ("dc", 0.2),
-    ("coupler", 0.2),
-    ("mmi", 0.3),
     ("gc", 2.5),
     ("grating", 2.5),
+    ("coupler", 0.2),
+    ("mmi", 0.3),
     ("yb", 0.3),
     ("y_branch", 0.3),
     ("crossing", 0.05),

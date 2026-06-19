@@ -344,7 +344,7 @@ class PPOAgent:
         self.buffer.advantages = adv
         self.buffer.returns = ret
         # 标准化优势（与 SB3 一致）
-        if adv.std() > 1e-8:
+        if len(adv) > 0 and adv.std() > 1e-8:
             self.buffer.advantages = (adv - adv.mean()) / (adv.std() + 1e-8)
 
     def _process_minibatch(self, mb: BufferTensors) -> dict:
