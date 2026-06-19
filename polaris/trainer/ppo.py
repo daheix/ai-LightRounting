@@ -327,6 +327,50 @@ class PPOAgent:
                 if norm > self.config.max_grad_norm and norm > 1e-8:
                     p.grad = p.grad * (self.config.max_grad_norm / norm)
 
+    def _compute_minibatch_metrics(self, mb, mean, value, std):
+        """计算小批量指标（非可微，仅用于日志）。"""
+        new_lp_data = -0.5 * ((mb.actions - mean.data) ** 2).sum(axis=-1)
+        ratio = np.exp(new_lp_data - mb.old_logprobs)
+        surr1 = ratio * mb.advantages
+        clip_lo = 1 - self.config.clip_eps
+        clip_hi = 1 + self.config.clip_eps
+        surr2 = np.clip(ratio, clip_lo, clip_hi) * mb.advantages
+        policy_loss = -np.minimum(surr1, surr2).mean()
+        value_pred = value.data.flatten()
+        value_diff = mb.returns - value_pred
+        if self.config.clip_vf > 0:
+            value_diff = np.clip(value_diff, -self.config.clip_vf, self.config.clip_vf)
+        value_loss = (value_diff**2).mean()
+        ent = 0.5 * mean.data.shape[-1] * (1 + math.log(2 * math.pi))
+        entropy = np.array(ent + np.log(std).sum())
+        return policy_loss, value_loss, entropy
+
+    def _build_policy_objective(self, mb, new_lp):
+        """构造 PPO clipped surrogate 策略目标（可微）。
+
+        Bug 修复: 之前用 Tensor(adv) * new_lp（REINFORCE 目标），
+        导致 loss 爆炸到 -6e13。改为正确的 PPO ratio 形式。
+        来源: Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+        """
+        old_lp = Tensor(mb.old_logprobs)
+        ratio_t = (new_lp - old_lp).exp()
+        surr1_t = ratio_t * Tensor(mb.advantages)
+        clipped_ratio = np.clip(ratio_t.data, 1 - self.config.clip_eps, 1 + self.config.clip_eps)
+        surr2_data = clipped_ratio * mb.advantages
+        # min 梯度路由: surr1 <= surr2 时梯度流向 surr1，否则为 0
+        # 注意: 必须用 Tensor * ndarray（而非 ndarray * Tensor），否则 numpy
+        # 会创建对象数组而非调用 Tensor.__rmul__，导致 .mean() 类型错误。
+        mask = (surr1_t.data <= surr2_data).astype(np.float64)
+        return (surr1_t * mask).mean()
+
+    def _build_value_objective(self, mb, value):
+        """构造价值损失目标（可微，含 clip_vf）。"""
+        v_diff_t = Tensor(mb.returns) - value.flatten()
+        if self.config.clip_vf > 0:
+            v_diff_t_data = np.clip(v_diff_t.data, -self.config.clip_vf, self.config.clip_vf)
+            v_diff_t = Tensor(v_diff_t_data)
+        return (v_diff_t * v_diff_t).mean()
+
     def _process_minibatch(self, mb: Minibatch) -> dict:
         """处理单个小批量：前向 → 损失 → 反向 → 优化器步进，返回指标。"""
         self.optimizer.zero_grad()
@@ -335,31 +379,11 @@ class PPOAgent:
         # 新 logprob（可微路径）
         diff = Tensor(mb.actions) - mean
         new_lp = -0.5 * (diff * diff).sum(axis=-1)
-        ratio = np.exp(new_lp.data - mb.old_logprobs)
-        # 策略损失（clip）
-        surr1 = ratio * mb.advantages
-        clip_lo = 1 - self.config.clip_eps
-        clip_hi = 1 + self.config.clip_eps
-        surr2 = np.clip(ratio, clip_lo, clip_hi) * mb.advantages
-        policy_loss = -np.minimum(surr1, surr2).mean()
-        # 价值损失（2025 增强：clip 防止异常）
-        # 来源: SB3 PPO clip_vf
-        value_pred = value.data.flatten()
-        value_diff = mb.returns - value_pred
-        if self.config.clip_vf > 0:
-            value_diff = np.clip(value_diff, -self.config.clip_vf, self.config.clip_vf)
-        value_loss = (value_diff**2).mean()
-        # 熵（高斯）
-        ent = 0.5 * mean.data.shape[-1] * (1 + math.log(2 * math.pi))
-        entropy = np.array(ent + np.log(std).sum())
-        # 总损失（构造可微图）：策略目标 + 价值损失
-        weighted = Tensor(mb.advantages) * new_lp
-        policy_obj = weighted.mean()
-        v_diff_t = Tensor(mb.returns) - value.flatten()
-        if self.config.clip_vf > 0:
-            v_diff_t_data = np.clip(v_diff_t.data, -self.config.clip_vf, self.config.clip_vf)
-            v_diff_t = Tensor(v_diff_t_data)
-        value_obj = (v_diff_t * v_diff_t).mean()
+        # 日志指标（非可微）
+        policy_loss, value_loss, entropy = self._compute_minibatch_metrics(mb, mean, value, std)
+        # 可微损失：PPO 策略目标 + 价值损失
+        policy_obj = self._build_policy_objective(mb, new_lp)
+        value_obj = self._build_value_objective(mb, value)
         total = -policy_obj + self.config.vf_coef * value_obj
         total.backward()
         self._clip_grads()

@@ -43,6 +43,9 @@ class TrainConfig:
         seed: 随机种子。
         early_stop_patience: 早停耐心值（连续多少轮无改善则停止，0=禁用）。
         lr_schedule: 学习率调度（"constant"=恒定，"linear"=线性衰减）。
+        sim_feedback: 是否启用 SimLoop 约束反馈（每轮结束后检查约束违规并记入日志）。
+            来源: Apollo arXiv 2025 布线感知布局反馈
+            https://arxiv.org/html/2504.18813v1
     """
 
     ppo: PPOConfig = field(default_factory=PPOConfig)
@@ -59,6 +62,7 @@ class TrainConfig:
     seed: int = 42
     early_stop_patience: int = 0  # 0=禁用早停
     lr_schedule: str = "constant"  # "constant" 或 "linear"
+    sim_feedback: bool = False  # 是否启用 SimLoop 约束反馈
 
 
 def _lr_scale(ep: int, total: int, schedule: str) -> float:
@@ -315,7 +319,41 @@ def _run_floorplan_episode(
         "lr_scale": lr_scale,
         **metrics,
     }
+    # SimLoop 约束反馈：每轮结束后检查布局约束违规并记入日志
+    # 来源: Apollo arXiv 2025 布线感知布局反馈
+    # https://arxiv.org/html/2504.18813v1
+    if config.sim_feedback:
+        log["sim_violations"] = _check_placement_constraints(env)
     return log, ep_reward
+
+
+def _check_placement_constraints(env: FloorplanEnv) -> int:
+    """检查当前布局的约束违规数（SimLoop 反馈）。
+
+    使用 ConstraintChecker 检查器件重叠与间距违规。
+    将 FloorplanEnv 的 Placement 对象转为 dict 格式以适配 ConstraintChecker。
+
+    Args:
+        env: 布局环境（含当前 state.placements）。
+
+    Returns:
+        约束违规总数。
+    """
+    from polaris.sim.constraint_checker import ConstraintChecker, ConstraintConfig
+
+    # Placement 对象 → dict {x, y, w, h} 格式
+    placements_dict: dict[str, dict] = {}
+    for inst_id, pl in env.state.placements.items():
+        xmin, ymin, xmax, ymax = pl.bbox_abs()
+        placements_dict[inst_id] = {
+            "x": xmin,
+            "y": ymin,
+            "w": xmax - xmin,
+            "h": ymax - ymin,
+        }
+    checker = ConstraintChecker(ConstraintConfig())
+    violations = checker.check(placements=placements_dict, paths={})
+    return len(violations)
 
 
 def _run_routing_episode(

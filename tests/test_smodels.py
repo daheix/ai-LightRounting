@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from polaris.pdk.catalog import build_default_catalog
 from polaris.sim import (
@@ -299,7 +300,8 @@ class TestSimphonyIntegration:
         assert simphony.__version__ is not None
 
     def test_sax_import(self):
-        """SAX 应能导入（规则 2 直接集成）。"""
+        """SAX 应能导入（规则 2 直接集成，可选依赖）。"""
+        pytest.importorskip("sax")
         import sax
 
         assert sax is not None

@@ -14,7 +14,8 @@
 1. 每个网连接标注所需的波导类型（ridge/rib/buried）
 2. 同类型区域内正常 A* 布线
 3. 类型边界处自动插入 taper 过渡段
-4. MILP 优化过渡位置以最小化总损耗
+4. 过渡位置采用中点启发式（Ada-Routing ICCAD'25 的 MILP 过渡插入的简化版），
+   完整 MILP 优化留作未来工作
 """
 
 from __future__ import annotations
@@ -167,12 +168,13 @@ def _find_optimal_transition_point(
     to_type: WaveguideType,
     transition_length: float,
 ) -> tuple[float, float]:
-    """找最优过渡点位置（沿路径的参数化位置）。
+    """找过渡点位置（沿路径的中点启发式）。
 
-    简化策略：选择距起点 40%-60% 路径长度的位置作为过渡点，
-    使两段路径都能满足各自波导类型的弯曲半径约束。
+    采用中点策略（路径 50% 位置），使两段路径都能满足各自波导类型的
+    弯曲半径约束。这是 Ada-Routing ICCAD'25 的 MILP 过渡插入的简化版；
+    完整 MILP 优化（最小化总损耗 + 约束满足）留作未来工作。
 
-    来源: Ada-Routing ICCAD'25 的 MILP 过渡插入启发式
+    来源: Ada-Routing ICCAD'25 的过渡插入启发式
     """
     # 选择靠近中点的位置（使两段都足够长以满足弯曲约束）
     ratio = 0.5

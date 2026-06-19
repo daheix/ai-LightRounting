@@ -133,44 +133,44 @@ def test_waveguide_loss_param() -> None:
     """LNOI 波导损耗 <0.4 dB/cm（来源: Liu et al. 2025）。"""
     dev = make_lnoi_waveguide()
     assert "loss_db_cm" in dev.params
-    assert "0.4" in dev.params["loss_db_cm"]
+    assert dev.params["loss_db_cm"] <= 0.4
 
 
 def test_eo_modulator_params() -> None:
     """LNOI 电光调制器带宽 >110GHz，Vπ <3V。"""
     dev = make_lnoi_eo_modulator()
     assert "bandwidth_ghz" in dev.params
-    assert "110" in dev.params["bandwidth_ghz"]
+    assert dev.params["bandwidth_ghz"] >= 110
     assert "vpi_v" in dev.params
-    assert "3" in dev.params["vpi_v"]
+    assert dev.params["vpi_v"] <= 3
 
 
 def test_mzm_high_confined_params() -> None:
     """高约束 MZM VπL 1.2 V·cm，带宽 >40GHz。"""
     dev = make_lnoi_mzm_high_confined()
-    assert dev.params["vpi_l_v_cm"] == "1.2 V·cm"
-    assert "40" in dev.params["bandwidth_ghz"]
+    assert dev.params["vpi_l_v_cm"] == 1.2
+    assert dev.params["bandwidth_ghz"] >= 40
 
 
 def test_mzm_traveling_wave_params() -> None:
     """行波电极 MZM VπL 1.77 V·cm，光损耗 0.022 dB/cm。"""
     dev = make_lnoi_mzm_traveling_wave()
-    assert dev.params["vpi_l_v_cm"] == "1.77 V·cm"
-    assert "0.022" in dev.params["optical_loss_db_cm"]
+    assert dev.params["vpi_l_v_cm"] == 1.77
+    assert dev.params["optical_loss_db_cm"] == 0.022
 
 
 def test_modulator_review_params() -> None:
     """综述调制器 VπL<2 V·cm，双锥形耦合 <0.5dB/facet。"""
     dev = make_lnoi_modulator_review()
-    assert "2" in dev.params["vpi_l_v_cm"]
-    assert "0.5" in dev.params["coupling_loss_db_facet"]
+    assert dev.params["vpi_l_v_cm"] <= 2
+    assert dev.params["coupling_loss_db_facet"] <= 0.5
 
 
 def test_photonics_review_params() -> None:
     """集成光子学综述：透明窗口 0.4-5μm。"""
     dev = make_lnoi_photonics_review()
-    assert "0.4" in dev.params["transparency_window_um"]
-    assert "5" in dev.params["transparency_window_um"]
+    assert dev.params["transparency_window_min_um"] <= 0.4
+    assert dev.params["transparency_window_max_um"] >= 5
 
 
 def test_cmos_modulator_source() -> None:

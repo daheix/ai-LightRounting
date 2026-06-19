@@ -68,9 +68,9 @@ def make_lnoi_waveguide() -> Device:
         ports=ports,
         bbox=bbox,
         params={
-            "loss_db_cm": "<0.4 dB/cm",
-            "width_um": f"{width_um} μm",
-            "length_um": f"{length_um} μm",
+            "loss_db_cm": 0.4,  # <0.4 dB/cm（保守上界）
+            "width_um": width_um,
+            "length_um": length_um,
             "waveguide_type": "lnoi_strip",
         },
         source=Source(
@@ -136,11 +136,11 @@ def make_lnoi_eo_modulator() -> Device:
         name="lnoi_eo_modulator",
         length_um=length_um,
         params={
-            "bandwidth_ghz": ">110 GHz",
-            "vpi_v": "<3 V",
-            "yield": "50%",
-            "wafer_size": "4 inch",
-            "modulator_length_um": f"{length_um} μm",
+            "bandwidth_ghz": 110.0,  # >110 GHz（保守下界）
+            "vpi_v": 3.0,  # <3 V（保守上界）
+            "yield_percent": 50.0,
+            "wafer_size_inch": 4.0,
+            "modulator_length_um": length_um,
         },
         source=Source(
             title="LNOI platform: wafer-scale lithium niobate photonic integrated circuits",
@@ -166,10 +166,10 @@ def make_lnoi_mzm_high_confined() -> Device:
         name="lnoi_mzm_high_confined",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "1.2 V·cm",
-            "excess_loss_db": "~2.4 dB",
-            "bandwidth_ghz": ">40 GHz",
-            "modulator_length_um": f"{length_um} μm",
+            "vpi_l_v_cm": 1.2,
+            "excess_loss_db": 2.4,
+            "bandwidth_ghz": 40.0,  # >40 GHz（保守下界）
+            "modulator_length_um": length_um,
         },
         source=Source(
             title="High-confinement LNOI Mach-Zehnder modulator",
@@ -195,11 +195,11 @@ def make_lnoi_mzm_traveling_wave() -> Device:
         name="lnoi_mzm_traveling_wave",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "1.77 V·cm",
-            "optical_loss_db_cm": "0.022 dB/cm",
-            "bandwidth_ghz": ">100 GHz",
+            "vpi_l_v_cm": 1.77,
+            "optical_loss_db_cm": 0.022,
+            "bandwidth_ghz": 100.0,  # >100 GHz（保守下界）
             "electrode_type": "traveling_wave_coplanar",
-            "modulator_length_um": f"{length_um} μm",
+            "modulator_length_um": length_um,
         },
         source=Source(
             title="U-T double-layer traveling-wave electrode LNOI modulator",
@@ -225,11 +225,11 @@ def make_lnoi_modulator_review() -> Device:
         name="lnoi_modulator_review",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "<2 V·cm",
-            "coupling_loss_db_facet": "<0.5 dB/facet",
+            "vpi_l_v_cm": 2.0,  # <2 V·cm（保守上界）
+            "coupling_loss_db_facet": 0.5,  # <0.5 dB/facet（保守上界）
             "coupler_type": "double_taper",
-            "bandwidth_ghz": ">100 GHz",
-            "modulator_length_um": f"{length_um} μm",
+            "bandwidth_ghz": 100.0,  # >100 GHz（保守下界）
+            "modulator_length_um": length_um,
         },
         source=Source(
             title="LNOI 调制器综述（薄膜铌酸锂电光调制器研究进展）",
@@ -264,10 +264,11 @@ def make_lnoi_photonics_review() -> Device:
         ports=ports,
         bbox=bbox,
         params={
-            "transparency_window_um": "0.4-5 μm",
-            "eo_coefficient_r33": "~30 pm/V",
+            "transparency_window_min_um": 0.4,
+            "transparency_window_max_um": 5.0,
+            "eo_coefficient_r33_pm_v": 30.0,
             "platform": "thin-film lithium niobate on insulator",
-            "length_um": f"{length_um} μm",
+            "length_um": length_um,
         },
         source=Source(
             title="Thin-film lithium niobate integrated photonics (TFLN review)",
@@ -297,11 +298,11 @@ def make_lnoi_cmos_modulator() -> Device:
         name="lnoi_cmos_modulator",
         length_um=length_um,
         params={
-            "drive_voltage_v": "CMOS compatible (<1 V)",
-            "bandwidth_ghz": ">100 GHz",
-            "vpi_v": "<1 V",
+            "drive_voltage_v": 1.0,  # CMOS compatible (<1 V，保守上界）
+            "bandwidth_ghz": 100.0,  # >100 GHz（保守下界）
+            "vpi_v": 1.0,  # <1 V（保守上界）
             "milestone": "first CMOS-compatible voltage LN modulator",
-            "modulator_length_um": f"{length_um} μm",
+            "modulator_length_um": length_um,
         },
         source=Source(
             title="Integrated LN EO modulators operating at CMOS-compatible voltages",
@@ -327,10 +328,10 @@ def make_lnoi_tfln_modulator() -> Device:
         name="lnoi_tfln_modulator",
         length_um=length_um,
         params={
-            "vpi_l_v_cm": "1.5 V·cm",
-            "bandwidth_ghz": ">100 GHz",
+            "vpi_l_v_cm": 1.5,
+            "bandwidth_ghz": 100.0,  # >100 GHz（保守下界）
             "modulator_type": "TFLN MZM",
-            "modulator_length_um": f"{length_um} μm",
+            "modulator_length_um": length_um,
         },
         source=Source(
             title=(

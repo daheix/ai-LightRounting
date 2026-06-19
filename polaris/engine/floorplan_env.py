@@ -132,6 +132,21 @@ class FloorplanEnvConfig:
     向后兼容：``FloorplanEnv(net, devices, config=None, **kwargs)`` 中未提供
     config 时，旧式关键字参数（canvas_w/canvas_h/grid_size/overlap_penalty
     等）会自动转发到本 dataclass 构造。
+
+    Attributes:
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+        grid_size: 栅格分辨率（μm）。
+        overlap_penalty: 重叠惩罚权重。
+        hpwl_weight: HPWL 线长权重。
+        area_reward: 面积利用率奖励权重。
+        expert_shaper: 可选的专家奖励塑形器（None 表示禁用）。
+            来源: ICLR'26 Expertise-Enhanced RL
+            https://openreview.net/forum?id=yqvNwfxRR6
+        state_encoder: 可选的 GNN 状态编码器（None 表示禁用）。
+            启用后 _obs() 会额外返回 "gnn_embedding" 键。
+            来源: Basso et al. NeurIPS 2025 R-GCN floorplanning
+            https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
     """
 
     canvas_w: float = 1000.0
@@ -140,6 +155,8 @@ class FloorplanEnvConfig:
     overlap_penalty: float = 10.0
     hpwl_weight: float = 0.01
     area_reward: float = 1.0
+    expert_shaper: object | None = None
+    state_encoder: object | None = None
 
 
 class FloorplanEnv(gym.Env):
@@ -169,6 +186,9 @@ class FloorplanEnv(gym.Env):
         self.overlap_penalty = config.overlap_penalty
         self.hpwl_weight = config.hpwl_weight
         self.area_reward = config.area_reward
+        self.expert_shaper = config.expert_shaper
+        self.state_encoder = config.state_encoder
+        self._edge_index = self._build_edge_index()
 
         self.state = FloorplanState(
             canvas_w=config.canvas_w, canvas_h=config.canvas_h, grid_size=config.grid_size
@@ -204,6 +224,23 @@ class FloorplanEnv(gym.Env):
         self._last_reward = 0.0  # 上一步的累计奖励（用于计算增量奖励）
         return self._obs(), {"step": 0}
 
+    def _build_edge_index(self) -> np.ndarray:
+        """从 net.connections 构建无向图边索引 ``[2, E]``（双向）。
+
+        供 GNN 状态编码器使用。来源: R-GCN Schlichtkrull 2018。
+        """
+        id_to_idx = {iid: i for i, iid in enumerate(self.instance_ids)}
+        edges: list[list[int]] = []
+        for conn in self.net.connections:
+            if conn.src_instance in id_to_idx and conn.dst_instance in id_to_idx:
+                src = id_to_idx[conn.src_instance]
+                dst = id_to_idx[conn.dst_instance]
+                edges.append([src, dst])
+                edges.append([dst, src])
+        if not edges:
+            return np.zeros((2, 0), dtype=np.int64)
+        return np.array(edges).T
+
     def _obs(self) -> dict:
         placed_ids = list(self.state.placements.keys())
         occ = self.state.occupancy_grid(placed_ids)
@@ -220,11 +257,36 @@ class FloorplanEnv(gym.Env):
                 xmin, ymin, xmax, ymax = pl.bbox_abs()
                 port_pos[i, 2] = (xmin + xmax) / 2 / self.state.canvas_w
                 port_pos[i, 3] = (ymin + ymax) / 2 / self.state.canvas_h
-        return {
+        obs = {
             "occupancy": occ,
             "port_positions": port_pos,
             "step": np.array([self._step_idx], dtype=np.float32),
         }
+        # GNN 状态编码（可选）：融合器件图特征与栅格空间特征
+        # 来源: Basso et al. NeurIPS 2025 R-GCN floorplanning
+        if self.state_encoder is not None:
+            obs["gnn_embedding"] = self._compute_gnn_embedding(occ)
+        return obs
+
+    def _compute_gnn_embedding(self, occ: np.ndarray) -> np.ndarray:
+        """计算 GNN 状态嵌入向量。
+
+        从当前器件图构建节点特征，经 StateEncoder 编码为全局状态向量。
+
+        Args:
+            occ: 当前占用栅格。
+
+        Returns:
+            GNN 嵌入向量 ``[out_dim]``。
+        """
+        from polaris.engine.gnn import build_node_features
+        from polaris.nn import Tensor
+
+        node_feats_arr = build_node_features(self.devices, self.state.placements, self.instance_ids)
+        node_feats = Tensor(node_feats_arr)
+        grid_feat = Tensor(occ.astype(np.float64))
+        embedding = self.state_encoder(node_feats, self._edge_index, grid_feat)
+        return np.asarray(embedding.data, dtype=np.float32).flatten()
 
     def step(self, action):
         if self._step_idx >= len(self.instance_ids):
@@ -257,7 +319,7 @@ class FloorplanEnv(gym.Env):
         return self._obs(), reward, terminated, False, {"step": self._step_idx}
 
     def _reward(self) -> float:
-        """奖励 = 面积利用率 - HPWL*权重 - 重叠*惩罚。"""
+        """奖励 = 面积利用率 - HPWL*权重 - 重叠*惩罚 + 专家奖励。"""
         placed = list(self.state.placements.values())
         if not placed:
             return 0.0
@@ -275,7 +337,39 @@ class FloorplanEnv(gym.Env):
         # 对数重叠惩罚：避免大量重叠时惩罚完全主导奖励
         overlap_pen = self.overlap_penalty * (np.log1p(overlaps) if overlaps > 0 else 0.0)
         reward = self.area_reward * util - self.hpwl_weight * wire - overlap_pen
+        # 专家奖励塑形（可选）：注入光子学领域知识
+        # 来源: ICLR'26 Expertise-Enhanced RL
+        # https://openreview.net/forum?id=yqvNwfxRR6
+        if self.expert_shaper is not None:
+            reward += self._compute_expert_reward()
         return float(reward)
+
+    def _compute_expert_reward(self) -> float:
+        """计算专家知识奖励分量。
+
+        从当前布局状态构建 ExpertRewardInput 并调用 shaper.compute()。
+
+        Returns:
+            专家奖励值（可为正可为负）。
+        """
+        from polaris.trainer.reward_shaping import ExpertRewardInput
+
+        device_positions: dict[str, tuple[float, float]] = {}
+        for inst_id, pl in self.state.placements.items():
+            xmin, ymin, xmax, ymax = pl.bbox_abs()
+            device_positions[inst_id] = ((xmin + xmax) / 2, (ymin + ymax) / 2)
+        connections = [
+            (c.src_instance, c.src_port, c.dst_instance, c.dst_port) for c in self.net.connections
+        ]
+        placed_ids = list(self.state.placements.keys())
+        congestion = self.state.occupancy_grid(placed_ids) if placed_ids else None
+        reward_input = ExpertRewardInput(
+            device_positions=device_positions,
+            connections=connections,
+            congestion_map=congestion,
+        )
+        result = self.expert_shaper.compute(reward_input)
+        return float(result.total_expert_reward)
 
     def render(self):
         pass
