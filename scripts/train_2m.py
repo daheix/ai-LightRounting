@@ -27,13 +27,23 @@ from polaris.engine.floorplan_env import FloorplanEnv
 from polaris.engine.netlist import load_netlist
 from polaris.router.routing_env import RoutingEnv
 from polaris.trainer.dataset import DatasetConfig, generate_dataset
-from polaris.trainer.ppo import PPOAgent, PPOConfig, Transition
 from polaris.trainer.train_loop import (
     _discretize_floorplan_action,
     _infer_obs_dim,
     _obs_to_vector,
     _pad_obs,
 )
+
+try:
+    from polaris.trainer.ppo_torch import PPOAgent as _PPOAgent, PPOConfig as _PPOConfig, Transition  # noqa: I001
+
+    USE_TORCH = True
+    print("[加速] 使用 PyTorch PPO", flush=True)
+except ImportError:
+    from polaris.trainer.ppo import PPOAgent as _PPOAgent, PPOConfig as _PPOConfig, Transition  # noqa: I001
+
+    USE_TORCH = False
+    print("[模式] 使用 NumPy PPO", flush=True)
 
 # ── 配置 ──────────────────────────────────────────────
 EPISODES_PER_ROUND = 2_000_000  # 每轮2M
@@ -43,14 +53,14 @@ PROGRESS_FILE = SAVE_DIR / "progress.json"
 COMMIT_INTERVAL = 300  # 5分钟
 CKPT_EVERY = 1000  # 每1000 episode保存checkpoint
 
-HIDDEN_DIM = 64  # 折中：32太小学不到，128纯NumPy太慢
+HIDDEN_DIM = 128  # torch 可高效处理 128 隐藏层
 LR = 3e-4
 ROLLOUT_STEPS = 16
 CANVAS_W = 500.0
 CANVAS_H = 500.0
 GRID_SIZE = 10.0
 
-PPO_CONFIG = PPOConfig(
+PPO_CONFIG = _PPOConfig(
     lr=LR,
     gamma=0.99,
     gae_lambda=0.95,
@@ -131,12 +141,12 @@ def git_commit(prog: dict) -> None:
         print(f"  [git] 失败: {e}", flush=True)
 
 
-def _try_load_agent(ckpt_path: Path, obs_dim: int, action_dim: int) -> PPOAgent | None:
+def _try_load_agent(ckpt_path: Path, obs_dim: int, action_dim: int) -> _PPOAgent | None:
     """尝试从 checkpoint 加载 agent，失败返回 None。"""
     if not ckpt_path.exists():
         return None
     try:
-        agent = PPOAgent(
+        agent = _PPOAgent(
             obs_dim=obs_dim,
             action_dim=action_dim,
             config=PPO_CONFIG,
@@ -178,7 +188,7 @@ def _infer_dims() -> tuple[int, int, int, list]:
 
 
 def run_placement_batch(
-    agent: PPOAgent,
+    agent: _PPOAgent,
     netlists: list,
     batch_episodes: int,
     obs_dim: int,
@@ -220,7 +230,7 @@ def run_placement_batch(
 
 
 def run_routing_batch(
-    agent: PPOAgent,
+    agent: _PPOAgent,
     netlists: list,
     batch_episodes: int,
     obs_dim_route: int,
@@ -289,7 +299,7 @@ def main() -> None:
     placement_ckpt = SAVE_DIR / "placement_agent.json"
     placement_agent = _try_load_agent(placement_ckpt, obs_dim, action_dim)
     if placement_agent is None:
-        placement_agent = PPOAgent(
+        placement_agent = _PPOAgent(
             obs_dim=obs_dim,
             action_dim=action_dim,
             config=PPO_CONFIG,
@@ -302,7 +312,7 @@ def main() -> None:
     route_action_dim = 3  # (dx, dy, detour)
     routing_agent = _try_load_agent(routing_ckpt, obs_dim_route, route_action_dim)
     if routing_agent is None:
-        routing_agent = PPOAgent(
+        routing_agent = _PPOAgent(
             obs_dim=obs_dim_route,
             action_dim=route_action_dim,
             config=PPO_CONFIG,
