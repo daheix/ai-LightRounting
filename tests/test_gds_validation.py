@@ -254,3 +254,128 @@ def test_boxes_distance_pure_python() -> None:
     assert _boxes_distance((0, 0, 5, 5), (8, 0, 13, 5)) == pytest.approx(3.0)
     # 对角间距：a=[0,0,5,5], b=[8,8,13,13], dx=3, dy=3, dist=sqrt(18)
     assert _boxes_distance((0, 0, 5, 5), (8, 8, 13, 13)) == pytest.approx((3.0**2 + 3.0**2) ** 0.5)
+
+
+# ---------------------------------------------------------------------------
+# SiEPIC Tools 格式验证（第一波B-阶段2：PinRec Path + DEVREC Text）
+# 来源: SiEPIC-Tools Wiki - Layout - Devices
+# https://github.com/SiEPIC/SiEPIC-Tools/wiki
+# ---------------------------------------------------------------------------
+def test_gds_pinrec_uses_path_not_box(klayout_db, tmp_path) -> None:
+    """SiEPIC 要求 PinRec 层用 Path 形状（非 Box）表示端口方向。
+
+    来源: SiEPIC-Tools Wiki - OPTICAL PINS - Pin Recognition layer - PinRec
+    "A Path shape (only) identifying the pin..."
+    """
+    placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
+    gds_path = export_gds(placements, None, str(tmp_path / "pinrec.gds"))
+
+    ly = klayout_db.Layout()
+    ly.read(gds_path)
+    tc = ly.top_cell()
+    # PORT 层 (1,10) = PinRec
+    idx = ly.find_layer(klayout_db.LayerInfo(1, 10))
+    assert idx is not None, "PinRec layer 1/10 未在 GDS 中找到"
+    shapes = tc.shapes(idx)
+    assert shapes.size() > 0, "PinRec layer 上应有至少 1 个 shape"
+    # 验证所有 shape 都是 Path 类型（非 Box）
+    has_path = False
+    for shape in shapes.each():
+        assert shape.is_path(), f"PinRec shape 应为 Path 类型（SiEPIC 要求），实际为 {shape.type()}"
+        has_path = True
+    assert has_path, "PinRec layer 上应至少有 1 个 Path shape"
+
+
+def test_gds_has_pin_name_text(klayout_db, tmp_path) -> None:
+    """SiEPIC 要求 PinRec Path 中点有 pin 名称 Text 标签。
+
+    来源: SiEPIC-Tools Wiki - OPTICAL PINS - Pin Recognition layer - PinRec
+    "A Text shape, with the name of the pin. It must be located exactly
+    in the mid-point of the Path shape."
+    """
+    placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
+    gds_path = export_gds(placements, None, str(tmp_path / "pintext.gds"))
+
+    ly = klayout_db.Layout()
+    ly.read(gds_path)
+    tc = ly.top_cell()
+    # TEXT 层 (10,0)
+    idx = ly.find_layer(klayout_db.LayerInfo(10, 0))
+    assert idx is not None, "TEXT layer 10/0 未在 GDS 中找到"
+    # 收集所有 Text 字符串
+    text_strings: list[str] = []
+    for shape in tc.shapes(idx).each():
+        if shape.is_text():
+            text_strings.append(shape.text.string)
+    # 应包含 pin 名称 "in" 和 "out"（_make_device 创建的端口名）
+    assert "in" in text_strings, f"TEXT layer 应包含 pin 名称 'in'，实际文本: {text_strings}"
+    assert "out" in text_strings, f"TEXT layer 应包含 pin 名称 'out'，实际文本: {text_strings}"
+
+
+def test_gds_has_devrec_component_text(klayout_db, tmp_path) -> None:
+    """SiEPIC 要求 DEVREC 层有 Component=xxx Text 标签（器件识别）。
+
+    来源: SiEPIC-Tools Wiki - Device Recognition layer – DevRec
+    "A Text shape, providing a component name: Component=xxx"
+    """
+    placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
+    gds_path = export_gds(placements, None, str(tmp_path / "devrec.gds"))
+
+    ly = klayout_db.Layout()
+    ly.read(gds_path)
+    tc = ly.top_cell()
+    # TEXT 层 (10,0)
+    idx = ly.find_layer(klayout_db.LayerInfo(10, 0))
+    assert idx is not None
+    text_strings: list[str] = []
+    for shape in tc.shapes(idx).each():
+        if shape.is_text():
+            text_strings.append(shape.text.string)
+    # 应包含 "Component=test_passive"（_make_device 的 name=test_passive）
+    expected = "Component=test_passive"
+    assert expected in text_strings, f"TEXT layer 应包含 '{expected}'，实际文本: {text_strings}"
+
+
+def test_gds_has_devrec_spice_param_text(klayout_db, tmp_path) -> None:
+    """SiEPIC 要求 DEVREC 层有 Spice_param=xxx Text 标签（器件参数）。
+
+    来源: SiEPIC-Tools Wiki - Device Recognition layer – DevRec
+    "Parameterized Cells (PCell) parameters - Spice format:
+    A Text shape, such as Spice_param=wg_width=0.5e-6 gap=2e-6"
+    """
+    # 构造带参数的器件
+    dev = Device(
+        device_id="d1",
+        platform="SOI",
+        category="passive",
+        name="test_param",
+        ports=[
+            Port(
+                name="in",
+                x=0.0,
+                y=2.5,
+                direction=Direction.WEST,
+                waveguide_type="strip",
+                width=0.5,
+            ),
+        ],
+        bbox=BoundingBox(xmin=0.0, ymin=0.0, xmax=5.0, ymax=5.0),
+        params={"wg_width": 0.5e-6, "length": 10e-6},
+    )
+    placements = {"d1": Placement(instance_id="d1", device=dev, x=0.0, y=0.0)}
+    gds_path = export_gds(placements, None, str(tmp_path / "spice.gds"))
+
+    ly = klayout_db.Layout()
+    ly.read(gds_path)
+    tc = ly.top_cell()
+    idx = ly.find_layer(klayout_db.LayerInfo(10, 0))
+    text_strings: list[str] = []
+    for shape in tc.shapes(idx).each():
+        if shape.is_text():
+            text_strings.append(shape.text.string)
+    # 应包含 "Spice_param=wg_width=5e-07 length=1e-05"
+    spice_texts = [t for t in text_strings if t.startswith("Spice_param=")]
+    assert len(spice_texts) >= 1, f"TEXT layer 应包含 Spice_param=xxx，实际文本: {text_strings}"
+    # 验证参数内容
+    assert "wg_width=" in spice_texts[0], f"Spice_param 应含 wg_width，实际: {spice_texts[0]}"
+    assert "length=" in spice_texts[0], f"Spice_param 应含 length，实际: {spice_texts[0]}"

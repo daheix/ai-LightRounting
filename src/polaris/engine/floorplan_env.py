@@ -39,6 +39,18 @@ class Placement:
         moved = dev.translate(self.x - dev.bbox.xmin, self.y - dev.bbox.ymin)
         return {p.name: (p.x, p.y) for p in moved.ports}
 
+    def ports_abs(self) -> list:
+        """返回放置后端口对象列表（含绝对坐标与朝向，考虑旋转+平移）。
+
+        用于 GDS 导出需要端口朝向的场景（如 SiEPIC PinRec Path 方向）。
+
+        Returns:
+            放置后的 ``Port`` 对象列表（绝对坐标，朝向已同步旋转）。
+        """
+        dev = self.device.rotate(self.rotation) if self.rotation else self.device
+        moved = dev.translate(self.x - dev.bbox.xmin, self.y - dev.bbox.ymin)
+        return list(moved.ports)
+
     def bbox_abs(self) -> tuple[float, float, float, float]:
         """返回放置后轴对齐包围盒 (xmin, ymin, xmax, ymax)。"""
         dev = self.device.rotate(self.rotation) if self.rotation else self.device

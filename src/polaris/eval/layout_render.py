@@ -27,6 +27,7 @@ from polaris.pdk.layer_map import (
     POLARIS_CATEGORY_LAYER_MAP,
     POLARIS_GDS_LAYER_MAP,
 )
+from polaris.pdk.port import Direction
 from polaris.router.waveguide_router import WaveguidePath
 
 # 可选依赖：klayout（缺失时 GDS/OASIS 导出抛出明确错误）
@@ -208,6 +209,15 @@ def _um_to_dbu(um: float, dbu: float = 0.001) -> int:
     return int(round(um / dbu))
 
 
+# Direction → 单位向量 (dx, dy)，用于 PinRec Path 方向计算
+_DIR_VEC: dict[Direction, tuple[float, float]] = {
+    Direction.EAST: (1.0, 0.0),
+    Direction.WEST: (-1.0, 0.0),
+    Direction.NORTH: (0.0, 1.0),
+    Direction.SOUTH: (0.0, -1.0),
+}
+
+
 def _create_klayout_layout(dbu: float = 0.001):
     """创建 klayout Layout 并定义工艺层，返回 (layout, top, layer_map)。
 
@@ -241,11 +251,15 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
     - passive/active → WG (1,0)
     - source → SOURCE (110,0)
     - detector → GE (5,0)
-    同时在 DEVREC (68,0) 层画器件包围盒，支持 netlist 提取与连接性验证。
+    同时在 DEVREC (68,0) 层画器件包围盒 + Component/Spice_param Text 标签
+    （SiEPIC Tools 标准，netlist 提取与连接性验证）。
+
+    来源: SiEPIC-Tools Wiki - Layout - Devices
+    https://github.com/SiEPIC/SiEPIC-Tools/wiki
     """
     db = _db
 
-    for pl in placements.values():
+    for _inst_id, pl in placements.items():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
         # 按器件类别查真实 foundry 层名（默认 WG）
         layer_name = POLARIS_CATEGORY_LAYER_MAP.get(pl.device.category, "WG")
@@ -259,23 +273,46 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
         top.shapes(layer).insert(box)
         # DEVREC 层：器件识别层（SiEPIC 标准，netlist 提取/连接性验证）
         top.shapes(layer_map["DEVREC"]).insert(box)
+        # SiEPIC DEVREC Text 标签：Component=xxx（器件名）+ Spice_param=xxx（参数）
+        cx = (xmin + xmax) / 2
+        cy = (ymin + ymax) / 2
+        comp_text = db.DText(f"Component={pl.device.name}", db.DTrans(cx, cy))
+        top.shapes(layer_map["TEXT"]).insert(comp_text)
+        if pl.device.params:
+            params_str = " ".join(f"{k}={v}" for k, v in pl.device.params.items())
+            spice_text = db.DText(f"Spice_param={params_str}", db.DTrans(cx, cy - 1.0))
+            top.shapes(layer_map["TEXT"]).insert(spice_text)
         if add_ports:
-            _place_port_markers(top, pl, layer_map["PORT"], dbu)
+            _place_port_markers(top, pl, layer_map["PORT"], layer_map["TEXT"], dbu)
 
 
-def _place_port_markers(top, pl, layer_port, dbu) -> None:
-    """在端口位置画小矩形标记（PinRec 层，netlist 提取用）。"""
+def _place_port_markers(top, pl, layer_port, layer_text, dbu) -> None:
+    """在端口位置画 PinRec Path + pin 名称 Text（SiEPIC Tools 格式）。
+
+    SiEPIC Tools 要求 PinRec 层用 Path 形状（非 Box）表示端口，
+    Path 从器件内部指向外部，提供信号离开方向；并在 Path 中点
+    添加 pin 名称 Text 标签（netlist 提取依赖此格式）。
+
+    来源: SiEPIC-Tools Wiki - Layout - Devices
+    https://github.com/SiEPIC/SiEPIC-Tools/wiki
+    """
     db = _db
+    pin_len = 1.0  # PinRec Path 长度（μm，SiEPIC 推荐值）
 
-    ps = _um_to_dbu(0.5, dbu)
-    for _, (px, py) in pl.port_positions().items():
-        pbox = db.Box(
-            _um_to_dbu(px, dbu) - ps,
-            _um_to_dbu(py, dbu) - ps,
-            _um_to_dbu(px, dbu) + ps,
-            _um_to_dbu(py, dbu) + ps,
-        )
-        top.shapes(layer_port).insert(pbox)
+    for port in pl.ports_abs():
+        px, py = port.x, port.y
+        dx, dy = _DIR_VEC.get(port.direction, (0.0, 0.0))
+        # Path 跨越器件边界：起点在器件内部，终点在器件外部，中点为端口位置
+        x1 = px - dx * pin_len / 2
+        y1 = py - dy * pin_len / 2
+        x2 = px + dx * pin_len / 2
+        y2 = py + dy * pin_len / 2
+        pts = [db.DPoint(x1, y1), db.DPoint(x2, y2)]
+        path = db.DPath(pts, 0.5)  # 0.5μm 宽
+        top.shapes(layer_port).insert(path)
+        # pin 名称 Text 在 Path 中点（即端口位置）
+        text = db.DText(port.name, db.DTrans(px, py))
+        top.shapes(layer_text).insert(text)
 
 
 def _place_waveguide_paths(top, paths, layer_waveguide) -> None:
