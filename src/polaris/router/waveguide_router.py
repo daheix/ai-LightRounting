@@ -12,12 +12,21 @@
   https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - LiDAR 2.0 分层曲线波导布线（Manhattan/非 Manhattan 状态、弯曲半径约束）
   https://arxiv.org/html/2505.17239v2
+- Jump Point Search (JPS) 网格寻路剪枝（Harabor & Grastien 2011）
+  https://cdn.aaai.org/ojs/7994/7994-13-11522-1-2-20201228.pdf
+- Red Blob Games A* 实现优化（整数编码 + 启发式 + tie-breaker）
+  https://www.redblobgames.com/pathfinding/a-star/implementation.html
 - 欧拉弯曲（clothoid）平滑过渡，曲率线性变化降低弯曲损耗
   来源: Fujisawa et al., Opt. Express 25, 9150 (2017)
   https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件制造鲁棒性
   https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
 - 弯曲半径约束：SOI 2-6μm / SiN 50-100μm（见 spec.md）
+
+性能优化（止血后第一波A，目标 627ms→50ms）：
+- 步骤1: 紧致启发式 + tie-breaker（Red Blob Games，预期 1.5-3x）
+- 步骤2: 整数状态编码 + 障碍 numpy 统一（预期 2-4x）
+- 步骤3: JPS-Bend 跳跃扩展（Harabor 2011，预期 5-15x）
 """
 
 from __future__ import annotations
@@ -27,6 +36,39 @@ import math
 from dataclasses import dataclass, field
 
 import numpy as np
+
+# 从 path_geometry 重导出，保持向后兼容（规则 7.2：拆分后通过重导出保持接口不变）
+# noqa: F401 表示这些导入是有意的重导出，供上层 `from polaris.router.waveguide_router import ...` 使用
+from polaris.router.path_geometry import (  # noqa: F401
+    arc_bend,
+    check_min_spacing,
+    count_crossings,
+    equalize_length,
+    euler_bend,
+    path_length,
+    path_loss,
+    s_bend,
+)
+
+__all__ = [
+    "GridRouter",
+    "RouterConstraints",
+    "WaveguidePath",
+    "WaveguideRouter",
+    "RouteConnectionConfig",
+    "route_connection",
+    "get_platform_constraints",
+    "PLATFORM_CONSTRAINTS",
+    # 重导出的几何工具（向后兼容）
+    "arc_bend",
+    "check_min_spacing",
+    "count_crossings",
+    "equalize_length",
+    "euler_bend",
+    "path_length",
+    "path_loss",
+    "s_bend",
+]
 
 
 @dataclass
@@ -67,7 +109,15 @@ class GridRouter:
 
     在栅格化画布上用 A* 搜索从起点到终点的最短曼哈顿路径，
     避开障碍（已放置器件/已布波导），并满足弯曲半径约束。
+
+    性能优化注记：
+    - ``_route_goal`` / ``_route_blocked`` 在 ``route()`` 期间作为实例属性缓存，
+      使 ``_jump`` / ``_get_jump_successors`` 参数个数 ≤5（规则 7.1）。
+      本类非线程安全（``route()`` 会临时修改 ``self.obstacle``），缓存模式可接受。
     """
+
+    # 方向向量: 0=E(+x), 1=W(-x), 2=N(+y), 3=S(-y)
+    _DIR_VECTORS = ((1, 0), (-1, 0), (0, 1), (0, -1))
 
     def __init__(
         self,
@@ -91,6 +141,9 @@ class GridRouter:
         self.min_spacing_um = cons.min_spacing_um
         # 障碍栅格：0=可走，>0=障碍/占用
         self.obstacle: np.ndarray = np.zeros((grid_h, grid_w), dtype=np.int32)
+        # route() 期间缓存的运行时上下文（降低 _jump/_get_jump_successors 参数个数）
+        self._route_goal: tuple[int, int] = (0, 0)
+        self._route_blocked: set[tuple[int, int]] = set()
 
     def add_obstacle(self, gx: int, gy: int, gw: int = 1, gh: int = 1) -> None:
         """标记障碍区域。"""
@@ -110,6 +163,73 @@ class GridRouter:
 
     def _heuristic(self, a: tuple[int, int], b: tuple[int, int]) -> float:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def _heuristic_bend_aware(
+        self, pos: tuple[int, int], goal: tuple[int, int], last_dir: int, straight: int
+    ) -> float:
+        """弯曲半径感知的紧致启发式（第一波A 步骤1）。
+
+        在 Manhattan 距离基础上，若当前方向与到目标的主方向不一致，
+        加上转弯前必须直行的步数下界（min_bend_steps - straight）。
+
+        保持 admissible：只加"最少必须的额外步数"，不高估。
+        来源: Red Blob Games, "Heuristics",
+        http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html
+
+        Args:
+            pos: 当前网格位置 (x, y)。
+            goal: 目标网格位置 (gx, gy)。
+            last_dir: 当前方向编码（-1=无，0=E, 1=W, 2=N, 3=S）。
+            straight: 当前方向已直行步数。
+
+        Returns:
+            启发式值（admissible，<= 真实最短路径代价）。
+        """
+        dx = goal[0] - pos[0]
+        dy = goal[1] - pos[1]
+        base = abs(dx) + abs(dy)
+        if last_dir < 0 or self.min_bend_steps <= 1:
+            return float(base)
+        if self._dir_towards_goal(last_dir, dx, dy):
+            return float(base)
+        # 当前方向背离目标或垂直于目标方向，至少需要转弯一次
+        # 转弯前还需直行 (min_bend_steps - straight) 步（若 straight < min_bend_steps）
+        remaining = max(0, self.min_bend_steps - straight)
+        return float(base + remaining)
+
+    @staticmethod
+    def _dir_towards_goal(direction: int, dx: int, dy: int) -> bool:
+        """判断当前方向是否朝向目标（降低 _heuristic_bend_aware 圈复杂度，规则 7.3）。
+
+        方向编码: 0=E(+x), 1=W(-x), 2=N(+y), 3=S(-y)
+        """
+        return (
+            (direction == 0 and dx > 0)
+            or (direction == 1 and dx < 0)
+            or (direction == 2 and dy > 0)
+            or (direction == 3 and dy < 0)
+        )
+
+    # ------------------------------------------------------------------
+    # 整数状态编码（第一波A 步骤2，Red Blob Games 优化）
+    # ------------------------------------------------------------------
+    def _encode(self, x: int, y: int, d: int, s: int) -> int:
+        """将 4-tuple 状态编码为单个 int，加速 dict 哈希。
+
+        编码: state = ((y * grid_w + x) * 4 + (d+1)) * min_bend_steps + s
+        d+1 是为了把 -1（无方向）映射到 0，避免负数。
+        """
+        return ((y * self.grid_w + x) * 4 + (d + 1)) * self.min_bend_steps + s
+
+    def _decode(self, state: int) -> tuple[int, int, int, int]:
+        """将 int 状态解码回 (x, y, dir, straight)。"""
+        s = state % self.min_bend_steps
+        rest = state // self.min_bend_steps
+        d = rest % 4 - 1
+        rest = rest // 4
+        x = rest % self.grid_w
+        y = rest // self.grid_w
+        return (x, y, d, s)
 
     def _get_neighbors(
         self,
@@ -143,19 +263,119 @@ class GridRouter:
             neighbors.append((nx, ny, d, new_straight))
         return neighbors
 
+    def _is_passable(self, x: int, y: int) -> bool:
+        """检查网格点是否可通行（边界内 + 非障碍 + 非阻塞）。
+
+        使用 ``self._route_blocked``（route() 期间缓存）降低参数个数。
+        """
+        if not (0 <= x < self.grid_w and 0 <= y < self.grid_h):
+            return False
+        if self.obstacle[y, x]:
+            return False
+        return (x, y) not in self._route_blocked
+
+    def _jump(self, x: int, y: int, d: int, straight: int) -> list[tuple[int, int, int, int, int]]:
+        """JPS-Bend 跳跃扩展（第一波A 步骤3，核心加速）。
+
+        从 (x,y) 沿方向 d 跳跃，跳过无决策意义的直行中间节点，
+        只返回跳跃终点（可转弯点/撞障碍前/到达目标）。
+
+        来源: Harabor & Grastien, AAAI 2011,
+        https://cdn.aaai.org/ojs/7994/7994-13-11522-1-2-20201228.pdf
+
+        Returns:
+            ``[(x, y, d, new_straight, steps), ...]``，steps 为跳跃步数。
+        """
+        dx, dy = self._DIR_VECTORS[d]
+        results: list[tuple[int, int, int, int, int]] = []
+        cx, cy = x, y
+        steps = 0
+        cur_straight = straight
+        while True:
+            cx += dx
+            cy += dy
+            steps += 1
+            if not self._is_passable(cx, cy):
+                break  # 撞障碍/边界，停止
+            cur_straight = min(cur_straight + 1, self.min_bend_steps)
+            # 到达目标
+            if (cx, cy) == self._route_goal:
+                results.append((cx, cy, d, cur_straight, steps))
+                break
+            # 可转弯点：straight >= min_bend_steps，生成转弯分叉
+            if cur_straight >= self.min_bend_steps:
+                results.append((cx, cy, d, cur_straight, steps))
+        return results
+
+    def _get_jump_successors(
+        self, x: int, y: int, last_dir: int, straight: int
+    ) -> list[tuple[int, int, int, int, int]]:
+        """获取 JPS-Bend 后继节点（跳跃终点 + 转弯分叉）。
+
+        对每个可能方向：
+        - 若是当前方向：用 _jump 跳跃到可转弯点或撞障碍
+        - 若是新方向（转弯）：须满足 straight >= min_bend_steps，
+          然后从转弯点开始跳跃
+
+        Returns:
+            ``[(nx, ny, d, new_straight, steps), ...]``
+        """
+        successors: list[tuple[int, int, int, int, int]] = []
+        for d in range(4):
+            is_turn = last_dir != -1 and d != last_dir
+            if is_turn and straight < self.min_bend_steps:
+                continue  # 弯曲半径约束：未直行够不能转弯
+            # 检查第一步是否可通行
+            dx, dy = self._DIR_VECTORS[d]
+            nx, ny = x + dx, y + dy
+            if not self._is_passable(nx, ny):
+                continue
+            # 从 (nx, ny) 沿 d 跳跃
+            jump_start_straight = 1 if is_turn else min(straight + 1, self.min_bend_steps)
+            jumps = self._jump(nx, ny, d, jump_start_straight)
+            # 调整 steps（_jump 内部 steps 从 0 开始，但第一步已走）
+            for jx, jy, jd, js, jsteps in jumps:
+                successors.append((jx, jy, jd, js, jsteps + 1))
+        return successors
+
     def _reconstruct_path(
         self,
-        came_from: dict[tuple[int, int, int, int], tuple[int, int, int, int] | None],
-        pos: tuple[int, int],
-        state: tuple[int, int],
+        came_from: dict[int, int],
+        goal_state: int,
     ) -> list[tuple[int, int]]:
-        """从 came_from 回溯重建路径。"""
-        path: list[tuple[int, int]] = []
-        cur_state: tuple[int, int, int, int] | None = (pos[0], pos[1], state[0], state[1])
-        while cur_state is not None:
-            path.append((cur_state[0], cur_state[1]))
-            cur_state = came_from.get(cur_state)
-        return list(reversed(path))
+        """从 came_from 回溯重建路径（整数状态编码，第一波A 步骤2）。
+
+        JPS-Bend 跳跃会跳过中间节点，回溯时需要补全直行段中间点。
+
+        Args:
+            came_from: int 状态 → int 前驱状态。
+            goal_state: 终点状态编码。
+
+        Returns:
+            网格坐标列表 ``[(x, y), ...]``。
+        """
+        # 先回溯出状态序列
+        states: list[tuple[int, int, int, int]] = []
+        cur: int | None = goal_state
+        while cur is not None:
+            states.append(self._decode(cur))
+            cur = came_from.get(cur)
+        states.reverse()
+        if not states:
+            return []
+        # JPS 跳跃跳过了中间节点，需要补全相邻状态间的直行段
+        path: list[tuple[int, int]] = [(states[0][0], states[0][1])]
+        for i in range(1, len(states)):
+            px, py, pd, _ = states[i - 1]
+            cx, cy, cd, _ = states[i]
+            if pd == cd and pd >= 0:
+                # 同方向直行段，补全中间点
+                dx, dy = self._DIR_VECTORS[cd]
+                steps = abs(cx - px) + abs(cy - py)
+                for s in range(1, steps):
+                    path.append((px + dx * s, py + dy * s))
+            path.append((cx, cy))
+        return path
 
     def _save_endpoints(self, start, goal):
         """保存起点/终点障碍标记并临时清除（器件端口可能在 bbox 内）。"""
@@ -181,6 +401,40 @@ class GridRouter:
         self.obstacle[s1, s0] = orig_start
         self.obstacle[g1, g0] = orig_goal
 
+    def _astar_search(
+        self, start: tuple[int, int], goal: tuple[int, int], start_state: int
+    ) -> tuple[int, dict[int, int]]:
+        """A* 主搜索循环（从 route 拆分，降低函数行数，规则 7.2）。
+
+        Returns:
+            (goal_state_enc, came_from)。goal_state_enc=-1 表示未找到路径。
+        """
+        eps = 1e-3
+        h0 = self._heuristic_bend_aware(start, goal, -1, 0)
+        # heap: (f, g, state_int) —— 整数状态编码减少 tuple 哈希开销
+        open_h: list[tuple[float, int, int]] = []
+        heapq.heappush(open_h, (h0 * (1 + eps), 0, start_state))
+        g_score: dict[int, int] = {start_state: 0}
+        came_from: dict[int, int] = {}
+        while open_h:
+            _f, g, cur_state = heapq.heappop(open_h)
+            x, y, last_dir, straight = self._decode(cur_state)
+            if (x, y) == goal:
+                return cur_state, came_from
+            # JPS-Bend 跳跃扩展（步骤3）
+            for nx, ny, d, new_straight, steps in self._get_jump_successors(
+                x, y, last_dir, straight
+            ):
+                new_state = self._encode(nx, ny, d, new_straight)
+                ng = g + steps
+                if ng < g_score.get(new_state, 1 << 30):
+                    g_score[new_state] = ng
+                    came_from[new_state] = cur_state
+                    nh = self._heuristic_bend_aware((nx, ny), goal, d, new_straight)
+                    nf = ng + nh * (1 + eps)
+                    heapq.heappush(open_h, (nf, ng, new_state))
+        return -1, came_from
+
     def route(
         self,
         start: tuple[int, int],
@@ -189,246 +443,28 @@ class GridRouter:
     ) -> list[tuple[int, int]] | None:
         """A* 搜索路径（返回网格坐标列表，失败返回 None）。
 
-        约束：避开 obstacle 与 blocked；弯曲半径约束通过限制连续直行步数
-        后才允许转弯来近似（min_bend_steps）。
+        性能优化（第一波A，目标 627ms→50ms）：
+        - 整数状态编码（步骤2）：dict 键从 4-tuple 改为 int
+        - JPS-Bend 跳跃（步骤3）：跳过直行段中间节点
+        - 紧致启发式（步骤1）：弯曲半径感知 + tie-breaker
+
+        Args:
+            start: 起点网格坐标。
+            goal: 终点网格坐标。
+            blocked: 额外阻塞点集合。
+
+        Returns:
+            网格坐标列表，失败返回 None。
         """
-        blocked = blocked or set()
+        self._route_goal = goal
+        self._route_blocked = blocked or set()
         orig_start, orig_goal = self._save_endpoints(start, goal)
-        start_state = (start[0], start[1], -1, 0)
-        open_h: list[tuple[float, int, int, int, int, int]] = []
-        heapq.heappush(open_h, (self._heuristic(start, goal), 0, start[0], start[1], -1, 0))
-        g_score: dict[tuple[int, int, int, int], int] = {start_state: 0}
-        came_from: dict[tuple[int, int, int, int], tuple[int, int, int, int] | None] = {
-            start_state: None
-        }
-        while open_h:
-            _f, g, x, y, last_dir, straight = heapq.heappop(open_h)
-            if (x, y) == goal:
-                self._restore_endpoints(start, goal, orig_start, orig_goal)
-                return self._reconstruct_path(came_from, (x, y), (last_dir, straight))
-            for nx, ny, d, new_straight in self._get_neighbors(
-                (x, y), (last_dir, straight), blocked
-            ):
-                new_state = (nx, ny, d, new_straight)
-                ng = g + 1
-                if ng < g_score.get(new_state, 1 << 30):
-                    g_score[new_state] = ng
-                    came_from[new_state] = (x, y, last_dir, straight)
-                    nf = ng + self._heuristic((nx, ny), goal)
-                    heapq.heappush(open_h, (nf, ng, nx, ny, d, new_straight))
+        start_state = self._encode(start[0], start[1], -1, 0)
+        goal_state_enc, came_from = self._astar_search(start, goal, start_state)
         self._restore_endpoints(start, goal, orig_start, orig_goal)
-        return None
-
-
-# ---------------------------------------------------------------------------
-# SubTask 11.2: S 弯/弯曲路径生成（贝塞尔/欧拉曲线）
-# ---------------------------------------------------------------------------
-def s_bend(
-    x0: float,
-    y0: float,
-    x1: float,
-    y1: float,
-    n_points: int = 20,
-) -> list[tuple[float, float]]:
-    """生成 S 弯路径（贝塞尔曲线，光波导标准方法）。
-
-    用三次贝塞尔曲线连接两点，控制点保证平滑过渡。
-    """
-    dx = x1 - x0
-    # 控制点：水平偏移
-    cp1 = (x0 + dx * 0.5, y0)
-    cp2 = (x0 + dx * 0.5, y1)
-    pts = []
-    for i in range(n_points + 1):
-        t = i / n_points
-        # 三次贝塞尔
-        mt = 1 - t
-        x = mt**3 * x0 + 3 * mt**2 * t * cp1[0] + 3 * mt * t**2 * cp2[0] + t**3 * x1
-        y = mt**3 * y0 + 3 * mt**2 * t * cp1[1] + 3 * mt * t**2 * cp2[1] + t**3 * y1
-        pts.append((x, y))
-    return pts
-
-
-def euler_bend(
-    radius_um: float,
-    angle_deg: float = 90.0,
-    n_points: int = 30,
-) -> list[tuple[float, float]]:
-    """生成欧拉弯曲路径（光波导标准方法，损耗最低）。
-
-    欧拉弯曲（clothoid）曲率从 0 线性增加到 1/R，过渡平滑，
-    是低损耗波导弯曲的标准选择。
-
-    来源:
-    - Fujisawa et al., Opt. Express 25, 9150 (2017) 首次将 clothoid 曲线
-      用于硅波导 90° 弯曲，损耗显著低于圆弧弯曲
-      https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
-    - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件
-      制造鲁棒性（RAMZI 交错滤波器）
-      https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
-    """
-    angle = math.radians(angle_deg)
-    # 欧拉螺旋参数
-    L = radius_um * math.sqrt(angle)  # 近似弧长
-    pts = []
-    s = 0.0
-    ds = L / n_points
-    x, y = 0.0, 0.0
-    theta = 0.0
-    for _ in range(n_points + 1):
-        # 先记录当前点（保证起点为 (0, 0)），再积分前进一步
-        pts.append((x, y))
-        # 曲率 k = s / (R * L) 线性增长
-        k = (s / L) / radius_um if L > 0 else 0.0
-        theta += k * ds
-        x += ds * math.cos(theta)
-        y += ds * math.sin(theta)
-        s += ds
-    return pts
-
-
-def arc_bend(
-    radius_um: float,
-    angle_deg: float = 90.0,
-    n_points: int = 20,
-) -> list[tuple[float, float]]:
-    """生成圆弧弯曲路径（标准方法）。"""
-    angle = math.radians(angle_deg)
-    pts = []
-    for i in range(n_points + 1):
-        t = i / n_points
-        a = angle * t
-        x = radius_um * math.sin(a)
-        y = radius_um * (1 - math.cos(a))
-        pts.append((x, y))
-    return pts
-
-
-# ---------------------------------------------------------------------------
-# SubTask 11.3: 波导间距约束检查 + 交叉最小化
-# ---------------------------------------------------------------------------
-def check_min_spacing(
-    path1: list[tuple[float, float]],
-    path2: list[tuple[float, float]],
-    min_spacing_um: float,
-) -> bool:
-    """检查两条波导路径间最小间距是否满足。"""
-    for p1 in path1:
-        for p2 in path2:
-            if math.hypot(p1[0] - p2[0], p1[1] - p2[1]) < min_spacing_um:
-                return False
-    return True
-
-
-def count_crossings(
-    path1: list[tuple[float, float]],
-    path2: list[tuple[float, float]],
-) -> int:
-    """统计两条折线路径的交叉数（线段相交检测）。"""
-    count = 0
-    for i in range(len(path1) - 1):
-        a1, a2 = path1[i], path1[i + 1]
-        for j in range(len(path2) - 1):
-            b1, b2 = path2[j], path2[j + 1]
-            if _segments_intersect(a1, a2, b1, b2):
-                count += 1
-    return count
-
-
-def _segments_intersect(
-    p1: tuple[float, float],
-    p2: tuple[float, float],
-    p3: tuple[float, float],
-    p4: tuple[float, float],
-) -> bool:
-    """检测两线段是否相交（CCW 叉积法）。"""
-    d1 = _cross(p3, p4, p1)
-    d2 = _cross(p3, p4, p2)
-    d3 = _cross(p1, p2, p3)
-    d4 = _cross(p1, p2, p4)
-    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and (
-        (d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)
-    ):
-        return True
-    return False
-
-
-def _cross(
-    o: tuple[float, float],
-    a: tuple[float, float],
-    b: tuple[float, float],
-) -> float:
-    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-
-
-# ---------------------------------------------------------------------------
-# SubTask 11.4: 等长路径约束
-# ---------------------------------------------------------------------------
-def equalize_length(
-    path: list[tuple[float, float]],
-    target_length_um: float,
-    detour_step: float = 1.0,
-) -> list[tuple[float, float]]:
-    """通过添加蛇形绕行使路径达到目标长度（等长约束）。
-
-    用于 MZI 臂、差分对长度匹配。在路径末端添加 U 形绕行。
-    """
-    current = path_length(path)
-    if current >= target_length_um:
-        return path
-    deficit = target_length_um - current
-    # 添加蛇形绕行：每个 U 形增加约 2*detour_step 长度
-    last = path[-1]
-    second_last = path[-2] if len(path) >= 2 else (last[0] - 1, last[1])
-    # 绕行方向垂直于最后一段
-    dx = last[0] - second_last[0]
-    dy = last[1] - second_last[1]
-    # 垂直方向
-    perp_x = -dy
-    perp_y = dx
-    norm = math.hypot(perp_x, perp_y)
-    if norm < 1e-9:
-        perp_x, perp_y = 0.0, detour_step
-        norm = detour_step
-    perp_x = perp_x / norm * detour_step
-    perp_y = perp_y / norm * detour_step
-    new_pts = list(path)
-    n_u = max(1, math.ceil(deficit / (2 * detour_step)))
-    for _ in range(n_u):
-        new_pts.append((last[0] + perp_x, last[1] + perp_y))
-        new_pts.append((last[0], last[1]))
-    return new_pts
-
-
-def path_length(path: list[tuple[float, float]]) -> float:
-    """计算折线路径总长度。"""
-    total = 0.0
-    for i in range(1, len(path)):
-        total += math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1])
-    return total
-
-
-def path_loss(
-    path: list[tuple[float, float]],
-    loss_db_cm: float,
-    bend_loss_db: float = 0.05,
-    crossing_loss_db: float = 0.3,
-    num_crossings: int = 0,
-) -> float:
-    """计算波导路径损耗（传播损耗 + 弯曲损耗 + 交叉损耗）。"""
-    length_um = path_length(path)
-    propagation = loss_db_cm * length_um / 1e4  # cm = 1e4 μm
-    # 估算弯曲数（方向变化点）
-    num_bends = 0
-    for i in range(1, len(path) - 1):
-        dx1 = path[i][0] - path[i - 1][0]
-        dy1 = path[i][1] - path[i - 1][1]
-        dx2 = path[i + 1][0] - path[i][0]
-        dy2 = path[i + 1][1] - path[i][1]
-        # 方向变化则计为弯曲
-        if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
-            num_bends += 1
-    return propagation + num_bends * bend_loss_db + num_crossings * crossing_loss_db
+        if goal_state_enc < 0:
+            return None
+        return self._reconstruct_path(came_from, goal_state_enc)
 
 
 # ---------------------------------------------------------------------------
