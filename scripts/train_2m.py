@@ -59,6 +59,7 @@ CKPT_EVERY = 1000
 HIDDEN_DIM = 128
 LR = 3e-4
 ROLLOUT_STEPS = 32
+UPDATE_EVERY = 16  # 积累16个episode再更新PPO（保证buffer>=128样本）
 CANVAS_W = 200.0
 CANVAS_H = 200.0
 GRID_SIZE = 20.0  # 10x10网格
@@ -72,7 +73,7 @@ PPO_CONFIG = _PPOConfig(
     vf_coef=0.5,
     max_grad_norm=0.5,
     n_epochs=4,
-    batch_size=128,
+    batch_size=64,  # 降低到64，适配小buffer
     clip_vf=0,
     lr_schedule="cosine",
     total_steps=EPISODES_PER_ROUND,
@@ -102,30 +103,43 @@ def _flat_to_multidiscrete(flat_action: int, action_space) -> np.ndarray:
     return result
 
 
+_DEFAULT_PROGRESS = {
+    "total_episodes_done": 0,
+    "placement_episodes": 0,
+    "routing_episodes": 0,
+    "best_placement_reward": -1e9,
+    "best_routing_reward": -1e9,
+    "total_training_seconds": 0.0,
+    "batches_completed": 0,
+    "last_commit_time": 0,
+    "recent_rewards": [],
+    "rounds_completed": 0,
+}
+
+
 def load_progress() -> dict:
-    """加载训练进度。"""
-    if PROGRESS_FILE.exists():
-        return json.loads(PROGRESS_FILE.read_text(encoding="utf-8"))
-    return {
-        "total_episodes_done": 0,
-        "placement_episodes": 0,
-        "routing_episodes": 0,
-        "best_placement_reward": -1e9,
-        "best_routing_reward": -1e9,
-        "total_training_seconds": 0.0,
-        "batches_completed": 0,
-        "last_commit_time": 0,
-        "recent_rewards": [],
-        "rounds_completed": 0,
-    }
+    """加载训练进度（异常容错：文件损坏时返回默认值，不崩溃）。"""
+    if not PROGRESS_FILE.exists():
+        return dict(_DEFAULT_PROGRESS)
+    try:
+        data = json.loads(PROGRESS_FILE.read_text(encoding="utf-8"))
+        # 合并默认字段，防止旧版本缺字段
+        merged = dict(_DEFAULT_PROGRESS)
+        merged.update(data)
+        return merged
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"  [警告] progress.json 损坏，使用默认值: {e}", flush=True)
+        return dict(_DEFAULT_PROGRESS)
 
 
 def save_progress(prog: dict) -> None:
-    """保存训练进度。"""
+    """保存训练进度（原子写入：先写临时文件再rename，防止崩溃损坏）。"""
     SAVE_DIR.mkdir(parents=True, exist_ok=True)
     if len(prog["recent_rewards"]) > 500:
         prog["recent_rewards"] = prog["recent_rewards"][-500:]
-    PROGRESS_FILE.write_text(json.dumps(prog, indent=2), encoding="utf-8")
+    tmp_path = PROGRESS_FILE.with_suffix(".json.tmp")
+    tmp_path.write_text(json.dumps(prog, indent=2), encoding="utf-8")
+    tmp_path.replace(PROGRESS_FILE)  # 原子rename
 
 
 def git_commit(prog: dict) -> None:
@@ -201,10 +215,11 @@ def run_placement_batch(
     batch_episodes: int,
     obs_dim: int,
 ) -> dict:
-    """运行一批布局训练（离散PPO + Agent持久化）。"""
+    """运行一批布局训练（离散PPO + Agent持久化 + 多episode积累更新）。"""
     rewards = []
     plosses = []
     vlosses = []
+    ep_count = 0
 
     for ep in range(batch_episodes):
         nl = netlists[ep % len(netlists)]
@@ -221,8 +236,18 @@ def run_placement_batch(
             agent.store(Transition(obs_vec, flat_action, reward, logprob, value, done))
             if done:
                 break
-        metrics = agent.update(last_value=0.0)
         rewards.append(ep_reward)
+        ep_count += 1
+        # 积累 UPDATE_EVERY 个episode再更新（保证buffer有足够样本）
+        if ep_count >= UPDATE_EVERY:
+            metrics = agent.update(last_value=0.0)
+            plosses.append(metrics.get("policy_loss", 0))
+            vlosses.append(metrics.get("value_loss", 0))
+            ep_count = 0
+
+    # 处理剩余buffer
+    if ep_count > 0:
+        metrics = agent.update(last_value=0.0)
         plosses.append(metrics.get("policy_loss", 0))
         vlosses.append(metrics.get("value_loss", 0))
 
@@ -242,9 +267,10 @@ def run_routing_batch(
     batch_episodes: int,
     obs_dim_route: int,
 ) -> dict:
-    """运行一批布线训练。"""
+    """运行一批布线训练（多episode积累更新）。"""
     rewards = []
     plosses = []
+    ep_count = 0
 
     for ep in range(batch_episodes):
         nl = netlists[ep % len(netlists)]
@@ -266,8 +292,15 @@ def run_routing_batch(
             agent.store(Transition(obs_vec, action, reward, logprob, value, done))
             if done:
                 break
-        metrics = agent.update(last_value=0.0)
         rewards.append(ep_reward)
+        ep_count += 1
+        if ep_count >= UPDATE_EVERY:
+            metrics = agent.update(last_value=0.0)
+            plosses.append(metrics.get("policy_loss", 0))
+            ep_count = 0
+
+    if ep_count > 0:
+        metrics = agent.update(last_value=0.0)
         plosses.append(metrics.get("policy_loss", 0))
 
     return {

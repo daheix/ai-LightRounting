@@ -285,7 +285,7 @@ class PPOAgentDiscrete:
         for _ in range(self.config.n_epochs):
             indices = np.arange(len(self.buffer))
             np.random.shuffle(indices)
-            mb_size = self.config.batch_size
+            mb_size = min(self.config.batch_size, len(self.buffer))
 
             for start in range(0, len(self.buffer), mb_size):
                 end = start + mb_size
