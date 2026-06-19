@@ -1,10 +1,15 @@
-"""GDS 导出与 DRC 验证测试（Task 16 增强）。
+"""GDS 导出与 DRC 验证测试（Task 16 增强 + 止血7）。
 
 现有 ``tests/test_render.py`` 的 GDS 测试仅断言文件存在且非空，
 本测试模块补充以下验证：
 - GDS 可被 klayout.db 重新读取（cell 数量、layer 数量）
-- 器件类别到 GDS layer 的映射正确（passive=1/0, active=2/0, source=3/0, detector=4/0）
-- 波导位于 layer 5/0
+- 器件类别到 GDS layer 的映射正确（止血7：真实 foundry layer 编号）
+  - passive/active → WG (1,0)
+  - source → SOURCE (110,0)
+  - detector → GE (5,0)
+  - 器件包围盒同时画到 DEVREC (68,0)
+  - 端口画到 PORT (1,10)
+  - 波导画到 WG (1,0)
 - DRC 在无重叠/间距/弯曲半径违规时通过
 - DRC 能检测重叠、间距不足、弯曲半径不足
 - 纯 Python 几何运算（_boxes_intersect/_boxes_distance）正确性
@@ -14,6 +19,8 @@ klayout 为可选依赖（规则 5.3）：缺失时 GDS 相关测试用
 
 工具来源:
 - klayout Python: https://www.klayout.de/ （GDSII 读写 + DRC）
+- SiEPIC EBeam PDK (MIT): https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- ubcpdk (MIT): https://github.com/gdsfactory/ubc/blob/main/ubcpdk/tech.py
 """
 
 from __future__ import annotations
@@ -107,7 +114,7 @@ def test_gds_can_be_reloaded(klayout_db, tmp_path) -> None:
     top_cells = list(ly.top_cells())
     assert len(top_cells) >= 1, "GDS 应至少含 1 个 top cell"
     layer_infos = list(ly.layer_infos())
-    # passive(1/0) + waveguide(5/0) + port(10/0) 至少 3 层
+    # 止血7 真实 foundry layer：WG(1/0) + DEVREC(68/0) + PORT(1/10) 至少 3 层
     assert len(layer_infos) >= 3, f"GDS 应至少含 3 个 layer，实际 {len(layer_infos)}"
     tc = ly.top_cell()
     assert tc is not None
@@ -115,7 +122,14 @@ def test_gds_can_be_reloaded(klayout_db, tmp_path) -> None:
 
 
 def test_gds_layer_mapping(klayout_db, tmp_path) -> None:
-    """器件类别应映射到正确的 GDS layer（passive=1/0, active=2/0, source=3/0, detector=4/0）。"""
+    """器件类别应映射到真实 foundry GDS layer（止血7）。
+
+    - passive/active → WG (1,0)
+    - source → SOURCE (110,0)
+    - detector → GE (5,0)
+    - 所有器件包围盒同时画到 DEVREC (68,0)
+    - 端口画到 PORT (1,10)
+    """
     placements = {
         "p1": _make_placement("p1", "passive", 0.0, 0.0),
         "a1": _make_placement("a1", "active", 20.0, 0.0),
@@ -127,21 +141,23 @@ def test_gds_layer_mapping(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
+    # 真实 foundry layer 映射（止血7，借鉴 SiEPIC/ubcpdk/gdsfactory）
     expected = {
-        "passive": (1, 0),
-        "active": (2, 0),
-        "source": (3, 0),
-        "detector": (4, 0),
+        "WG (passive/active)": (1, 0),
+        "SOURCE": (110, 0),
+        "GE (detector)": (5, 0),
+        "DEVREC": (68, 0),
+        "PORT": (1, 10),
     }
-    for category, (g, d) in expected.items():
+    for label, (g, d) in expected.items():
         idx = ly.find_layer(klayout_db.LayerInfo(g, d))
-        assert idx is not None, f"layer {g}/{d}（{category}）未在 GDS 中找到"
+        assert idx is not None, f"layer {g}/{d}（{label}）未在 GDS 中找到"
         cnt = tc.shapes(idx).size()
-        assert cnt >= 1, f"layer {g}/{d}（{category}）上应有至少 1 个 shape，实际 {cnt}"
+        assert cnt >= 1, f"layer {g}/{d}（{label}）上应有至少 1 个 shape，实际 {cnt}"
 
 
 def test_gds_has_waveguide_layer(klayout_db, tmp_path) -> None:
-    """波导路径应绘制在 layer 5/0 上。"""
+    """波导路径应绘制在 WG layer (1,0) 上（止血7：与器件同层）。"""
     placements = {"d1": _make_placement("d1", "passive", 0.0, 0.0)}
     paths = {0: WaveguidePath(points=[(5.0, 2.5), (20.0, 2.5)], length_um=15.0)}
     gds_path = export_gds(placements, paths, str(tmp_path / "wg.gds"))
@@ -149,10 +165,11 @@ def test_gds_has_waveguide_layer(klayout_db, tmp_path) -> None:
     ly = klayout_db.Layout()
     ly.read(gds_path)
     tc = ly.top_cell()
-    idx = ly.find_layer(klayout_db.LayerInfo(5, 0))
-    assert idx is not None, "波导 layer 5/0 未在 GDS 中找到"
+    # 止血7：波导画在 WG (1,0) 层（与器件同层，SiEPIC 标准）
+    idx = ly.find_layer(klayout_db.LayerInfo(1, 0))
+    assert idx is not None, "波导 layer 1/0 (WG) 未在 GDS 中找到"
     cnt = tc.shapes(idx).size()
-    assert cnt >= 1, f"波导 layer 5/0 上应有至少 1 个 shape，实际 {cnt}"
+    assert cnt >= 1, f"波导 layer 1/0 (WG) 上应有至少 1 个 shape，实际 {cnt}"
 
 
 # ---------------------------------------------------------------------------

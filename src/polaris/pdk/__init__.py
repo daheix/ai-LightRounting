@@ -11,6 +11,13 @@
 from polaris.pdk.catalog import DeviceCatalog, default_catalog
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.inp import INP_DEVICES
+from polaris.pdk.layer_map import (
+    POLARIS_CATEGORY_LAYER_MAP,
+    POLARIS_GDS_LAYER_MAP,
+    GDSLayer,
+    get_category_layer_tuple,
+    get_layer_tuple,
+)
 from polaris.pdk.lnoi import LNOI_DEVICES
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.sin import SIN_DEVICES
@@ -22,11 +29,16 @@ __all__ = [
     "Device",
     "DeviceCatalog",
     "Direction",
+    "GDSLayer",
     "INP_DEVICES",
     "LNOI_DEVICES",
+    "POLARIS_CATEGORY_LAYER_MAP",
+    "POLARIS_GDS_LAYER_MAP",
     "Port",
     "SIN_DEVICES",
     "SOI_DEVICES",
     "Source",
     "default_catalog",
+    "get_category_layer_tuple",
+    "get_layer_tuple",
 ]

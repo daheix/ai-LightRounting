@@ -23,6 +23,10 @@ from dataclasses import dataclass
 import numpy as np
 
 from polaris.engine.floorplan_env import Placement
+from polaris.pdk.layer_map import (
+    POLARIS_CATEGORY_LAYER_MAP,
+    POLARIS_GDS_LAYER_MAP,
+)
 from polaris.router.waveguide_router import WaveguidePath
 
 # 可选依赖：klayout（缺失时 GDS/OASIS 导出抛出明确错误）
@@ -205,31 +209,47 @@ def _um_to_dbu(um: float, dbu: float = 0.001) -> int:
 
 
 def _create_klayout_layout(dbu: float = 0.001):
-    """创建 klayout Layout 并定义工艺层，返回 (layout, top, layer_map)。"""
+    """创建 klayout Layout 并定义工艺层，返回 (layout, top, layer_map)。
+
+    使用真实 foundry layer 编号（止血7），借鉴 SiEPIC EBeam PDK + ubcpdk +
+    gdsfactory generic_pdk（均 MIT 许可证）。详见 ``polaris.pdk.layer_map``。
+
+    Args:
+        dbu: database unit（μm，默认 1nm）。
+
+    Returns:
+        ``(layout, top_cell, layer_map)`` 元组。``layer_map`` 为名称到
+        klayout layer info 的字典，包含 WG/PORT/DEVREC/TEXT/FLOORPLAN 等层。
+    """
     _require_klayout("GDS/OASIS 导出")
     db = _db
 
     ly = db.Layout()
     ly.dbu = dbu
     top = ly.create_cell("TOP")
-    layer_map = {
-        "passive": ly.layer(1, 0),
-        "active": ly.layer(2, 0),
-        "source": ly.layer(3, 0),
-        "detector": ly.layer(4, 0),
-        "waveguide": ly.layer(5, 0),
-        "port": ly.layer(10, 0),
-    }
+    # 使用真实 foundry layer 编号（SiEPIC/gdsfactory 标准，止血7）
+    layer_map: dict[str, object] = {}
+    for name, gds_layer in POLARIS_GDS_LAYER_MAP.items():
+        layer_map[name] = ly.layer(gds_layer.layer, gds_layer.datatype)
     return ly, top, layer_map
 
 
 def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> None:
-    """将器件矩形画到对应工艺层，可选添加端口标记。"""
+    """将器件矩形画到对应工艺层，可选添加端口标记。
+
+    器件按其 ``category`` 映射到真实 foundry 层（止血7）：
+    - passive/active → WG (1,0)
+    - source → SOURCE (110,0)
+    - detector → GE (5,0)
+    同时在 DEVREC (68,0) 层画器件包围盒，支持 netlist 提取与连接性验证。
+    """
     db = _db
 
     for pl in placements.values():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
-        layer = layer_map.get(pl.device.category, layer_map["passive"])
+        # 按器件类别查真实 foundry 层名（默认 WG）
+        layer_name = POLARIS_CATEGORY_LAYER_MAP.get(pl.device.category, "WG")
+        layer = layer_map[layer_name]
         box = db.Box(
             _um_to_dbu(xmin, dbu),
             _um_to_dbu(ymin, dbu),
@@ -237,12 +257,14 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
             _um_to_dbu(ymax, dbu),
         )
         top.shapes(layer).insert(box)
+        # DEVREC 层：器件识别层（SiEPIC 标准，netlist 提取/连接性验证）
+        top.shapes(layer_map["DEVREC"]).insert(box)
         if add_ports:
-            _place_port_markers(top, pl, layer_map["port"], dbu)
+            _place_port_markers(top, pl, layer_map["PORT"], dbu)
 
 
 def _place_port_markers(top, pl, layer_port, dbu) -> None:
-    """在端口位置画小矩形标记。"""
+    """在端口位置画小矩形标记（PinRec 层，netlist 提取用）。"""
     db = _db
 
     ps = _um_to_dbu(0.5, dbu)
@@ -257,7 +279,7 @@ def _place_port_markers(top, pl, layer_port, dbu) -> None:
 
 
 def _place_waveguide_paths(top, paths, layer_waveguide) -> None:
-    """将波导路径画到布线层。"""
+    """将波导路径画到布线层（WG 层，与器件同层）。"""
     db = _db
 
     if not paths:
@@ -278,7 +300,11 @@ def export_gds(
 ) -> str:
     """导出 GDSII 文件（通过 klayout.db）。
 
-    将器件矩形画到对应工艺层，波导画到布线层，端口画到端口层。
+    使用真实 foundry layer 编号（止血7）：
+    - 器件按类别画到 WG/SOURCE/GE 层
+    - 器件包围盒同时画到 DEVREC 层（netlist 提取）
+    - 端口画到 PORT (PinRec) 层
+    - 波导画到 WG 层（与器件同层）
 
     Args:
         placements: 器件放置结果。
@@ -291,7 +317,7 @@ def export_gds(
     """
     ly, top, layers = _create_klayout_layout(dbu)
     _place_device_boxes(top, placements, layers, dbu, add_ports=True)
-    _place_waveguide_paths(top, paths, layers["waveguide"])
+    _place_waveguide_paths(top, paths, layers["WG"])
     ly.write(output_path)
     return output_path
 
@@ -304,6 +330,8 @@ def export_oasis(
 ) -> str:
     """导出 OASIS 文件（通过 klayout.db）。
 
+    使用真实 foundry layer 编号（止血7，详见 ``export_gds``）。
+
     Args:
         placements: 器件放置结果。
         paths: 波导路径。
@@ -315,7 +343,7 @@ def export_oasis(
     """
     ly, top, layers = _create_klayout_layout(dbu)
     _place_device_boxes(top, placements, layers, dbu, add_ports=False)
-    _place_waveguide_paths(top, paths, layers["waveguide"])
+    _place_waveguide_paths(top, paths, layers["WG"])
     ly.write(output_path)
     return output_path
 
