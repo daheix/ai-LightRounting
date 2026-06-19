@@ -399,6 +399,35 @@ class IntegratedPipeline:
         Path(report_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
         return report_path
 
+    def _export_layout(self, circuit: CircuitSpec, result, cfg: PipelineConfig) -> tuple[str, bool]:
+        """导出 GDS + DRC（第三波端到端流水线）。
+
+        将 SimLoop 的 dict 布局/路径转换为 Placement/WaveguidePath 对象，
+        调用 export_gds 导出 SiEPIC 格式 GDS，并运行 DRC 检查。
+
+        Args:
+            circuit: 电路规格。
+            result: SimLoop 结果。
+            cfg: 流水线配置。
+
+        Returns:
+            (GDS 文件路径, DRC 是否通过)。GDS 导出失败时路径为空。
+        """
+        try:
+            from polaris.eval.layout_render import export_gds, run_drc
+        except ImportError as e:
+            logger.warning("GDS 导出依赖缺失: %s", e)
+            return "", False
+        placements = _convert_to_placements(circuit, result.placements)
+        paths = _convert_to_paths(result.paths)
+        out = Path(cfg.output_dir)
+        out.mkdir(parents=True, exist_ok=True)
+        gds_path = str(out / f"{circuit.name}.gds")
+        export_gds(placements, paths, gds_path)
+        drc_report = run_drc(placements, paths)
+        logger.info("GDS 导出: %s (DRC: %s)", gds_path, "通过" if drc_report.passed else "失败")
+        return gds_path, drc_report.passed
+
 
 __all__ = [
     "IntegratedPipeline",
