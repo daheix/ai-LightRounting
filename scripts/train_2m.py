@@ -65,7 +65,7 @@ PPO_CONFIG = _PPOConfig(
     gamma=0.99,
     gae_lambda=0.95,
     clip_eps=0.2,
-    ent_coef=0.01,
+    ent_coef=0.05,  # 增大熵系数（原0.01太小，探索不足）
     vf_coef=0.5,
     max_grad_norm=0.5,
     n_epochs=2,  # 减少更新轮数加速（原4→2，纯NumPy下4轮太慢）
@@ -378,7 +378,7 @@ def main() -> None:
             )
 
             # ── 布线训练（每5批1次） ──
-            if batch_num % 5 == 0:
+            if batch_num % 20 == 0:  # 每20批1次布线（原5批太频繁，A*太慢）
                 rt0 = time.time()
                 route_result = run_routing_batch(routing_agent, netlists, this_batch, obs_dim_route)
                 rt_sec = time.time() - rt0
