@@ -72,7 +72,7 @@ class RoutingEnvConfig:
     loss_weight: float = 1.0
     length_weight: float = 0.001
     congestion_weight: float = 0.1
-    drc_penalty: float = 50.0
+    drc_penalty: float = 10.0
 
 
 class RoutingEnv(gym.Env):
@@ -159,11 +159,19 @@ class RoutingEnv(gym.Env):
     def _obs(self) -> dict:
         if self._conn_idx < len(self.connections):
             start, end, _ = self._current_ports()
-            ports = np.array([start[0], start[1], end[0], end[1]], dtype=np.float32)
+            ports = np.array(
+                [
+                    start[0] / self.state.canvas_w,
+                    start[1] / self.state.canvas_h,
+                    end[0] / self.state.canvas_w,
+                    end[1] / self.state.canvas_h,
+                ],
+                dtype=np.float32,
+            )
         else:
             ports = np.zeros(4, dtype=np.float32)
         return {
-            "congestion": self.state.congestion.copy(),
+            "congestion": self.state.congestion.copy() / max(1.0, self.state.congestion.max()),
             "ports": ports,
             "step": np.array([self._conn_idx], dtype=np.float32),
         }
@@ -186,7 +194,7 @@ class RoutingEnv(gym.Env):
             ):
                 continue
             obstacles.append(pl.bbox_abs())
-        # 布线
+        # 布线（捕获A*失败，给大惩罚）
         try:
             wp = route_connection(
                 start=(start[0] + dx, start[1] + dy),
@@ -197,15 +205,12 @@ class RoutingEnv(gym.Env):
                 canvas_h=self.state.canvas_h,
                 obstacles=obstacles,
             )
-        except (RuntimeError, IndexError, ValueError):
-            # 布线失败：给大惩罚，跳过此连接
-            self._conn_idx += 1
-            terminated = self._conn_idx >= len(self.connections)
-            return self._obs(), -100.0, terminated, False, {"step": self._conn_idx}
-        self.state.paths[self._conn_idx] = wp
-        self.state.update_congestion(wp)
-        # 奖励
-        reward = self._reward(wp)
+            self.state.paths[self._conn_idx] = wp
+            self.state.update_congestion(wp)
+            reward = self._reward(wp)
+        except Exception:
+            # A*找不到路径或越界等异常 → 大惩罚，跳过此连接
+            reward = -1000.0
         self._conn_idx += 1
         terminated = self._conn_idx >= len(self.connections)
         return self._obs(), reward, terminated, False, {"step": self._conn_idx}

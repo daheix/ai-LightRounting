@@ -14,7 +14,7 @@ import numpy as np
 from polaris.engine.floorplan_env import FloorplanEnv
 from polaris.engine.netlist import load_netlist
 from polaris.eval.layout_render import export_gds, run_drc
-from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
+from polaris.pipeline import cmd_run
 from polaris.router.routing_env import RoutingEnv
 from polaris.trainer.dataset import DatasetConfig, generate_dataset
 from polaris.trainer.train_loop import TrainConfig, train_floorplan
@@ -88,69 +88,69 @@ def test_training_loop_short(tmp_path):
 
 
 def test_pipeline_cli_run(tmp_path):
-    """IntegratedPipeline 应能完成端到端流程。"""
-    from polaris.data.specs import CircuitSpec, DeviceSpec
-
+    """CLI run 命令应能完成端到端流程。"""
     netlist_path = tmp_path / "net.yaml"
     netlist_path.write_text(YAML_NETLIST, encoding="utf-8")
     out_dir = tmp_path / "out"
-
-    # 直接从YAML构建CircuitSpec
-    devices = [
-        DeviceSpec(name="wg1", device_type="strip_waveguide", width_um=100.0, height_um=10.0),
-        DeviceSpec(name="mmi1", device_type="mmi_1x2", width_um=50.0, height_um=30.0),
-        DeviceSpec(name="wg2", device_type="strip_waveguide", width_um=100.0, height_um=10.0),
-        DeviceSpec(name="pd1", device_type="ge_photodetector", width_um=30.0, height_um=30.0),
-    ]
-    connections = [
-        ("wg1", "out", "mmi1", "in"),
-        ("mmi1", "out1", "wg2", "in"),
-        ("mmi1", "out2", "pd1", "in"),
-    ]
-    circuit = CircuitSpec(
-        name="integration_test",
-        devices=devices,
-        connections=connections,
-        canvas_w=400.0,
-        canvas_h=400.0,
+    cmd_run(
+        type(
+            "Args",
+            (),
+            {
+                "netlist": str(netlist_path),
+                "output": str(out_dir),
+                "checkpoint": None,
+                "canvas_w": 400.0,
+                "canvas_h": 400.0,
+                "grid_size": 10.0,
+                "hidden_dim": 64,
+            },
+        )()
     )
-    cfg = PipelineConfig(
-        canvas_w=400.0,
-        canvas_h=400.0,
-        output_dir=str(out_dir),
-        max_sim_iterations=1,
-    )
-    pipeline = IntegratedPipeline(cfg)
-    result = pipeline.run(circuit)
-    assert (out_dir / f"{circuit.name}_report.json").exists()
+    assert (out_dir / "layout.gds").exists()
+    assert (out_dir / "layout.oas").exists()
+    assert (out_dir / "layout.png").exists()
+    assert (out_dir / "report.json").exists()
+    report = json.loads((out_dir / "report.json").read_text())
+    assert report["num_devices"] == 4
+    assert report["num_connections"] == 3
 
 
 def test_pipeline_cli_catalog(capsys):
-    """PDK catalog 应列出器件。"""
-    from polaris.pdk.catalog import build_default_catalog
+    """CLI catalog 命令应列出器件。"""
+    from polaris.pipeline import cmd_catalog
 
-    cat = build_default_catalog()
-    devs = cat.list_devices(platform="SOI")
-    assert len(devs) > 0
-    assert any("waveguide" in d.device_id for d in devs)
+    ret = cmd_catalog(type("Args", (), {"platform": "SOI"})())
+    assert ret == 0
+    captured = capsys.readouterr()
+    assert "SOI" in captured.out
+    assert "strip_waveguide" in captured.out
 
 
 def test_pipeline_cli_train(tmp_path):
-    """RLTrainingPipeline 应能启动训练。"""
-    from polaris.pipeline.training import RLTrainingPipeline, RLTrainingConfig
+    """CLI train 命令应能启动训练。"""
+    from polaris.pipeline import cmd_train
 
-    cfg = RLTrainingConfig(
-        num_episodes=2,
-        rollout_steps=8,
-        hidden_dim=16,
-        save_dir=str(tmp_path / "ckpt"),
-        log_every=1,
-        checkpoint_every=1,
+    ret = cmd_train(
+        type(
+            "Args",
+            (),
+            {
+                "episodes": 2,
+                "rollout_steps": 16,
+                "num_netlists": 2,
+                "min_devices": 3,
+                "max_devices": 4,
+                "canvas_w": 300.0,
+                "canvas_h": 300.0,
+                "grid_size": 10.0,
+                "hidden_dim": 16,
+                "output": str(tmp_path / "ckpt"),
+            },
+        )()
     )
-    pipeline = RLTrainingPipeline(cfg)
-    result = pipeline.train()
-    assert result.placement_episodes >= 1
-    assert (tmp_path / "ckpt" / "rl_training_summary.json").exists()
+    assert ret == 0
+    assert (tmp_path / "ckpt" / "floorplan_final.json").exists()
 
 
 def test_all_platforms_have_devices():

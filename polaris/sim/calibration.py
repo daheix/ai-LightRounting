@@ -122,11 +122,6 @@ def _collect_calibration_items(
         ref_loss = data.get("reference_loss_db", data.get("total_loss_db", 0.0))
         sim_loss = _estimate_loss(data)
         error = abs(sim_loss - ref_loss)
-        # 当 ref_loss=0 且 sim_loss>0 时，基准数据可能缺少损耗标注，
-        # 跳过校准而非标记为失败
-        if ref_loss == 0.0 and sim_loss > 0.0:
-            logger.info("跳过无基准损耗的电路: %s", name)
-            continue
         items.append(CalibrationItem(
             circuit_name=name,
             reference_loss_db=ref_loss,
