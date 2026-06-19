@@ -1,11 +1,11 @@
 {
-  "total_episodes_done": 9500,
-  "placement_episodes": 9500,
-  "routing_episodes": 0,
+  "total_episodes_done": 10000,
+  "placement_episodes": 10000,
+  "routing_episodes": 500,
   "best_placement_reward": 0.30514928,
-  "best_routing_reward": -1000000000.0,
-  "total_training_seconds": 140.76686692237854,
-  "batches_completed": 19,
+  "best_routing_reward": -0.30000000000000004,
+  "total_training_seconds": 32.44742941856384,
+  "batches_completed": 20,
   "last_commit_time": 1781834264.1270213,
   "recent_rewards": [
     {
@@ -957,6 +957,106 @@
       "ep": 9500,
       "phase": "placement",
       "reward": -312.8579
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -38.4232
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -38.3407
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -13.4459
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -42.4282
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -39.5885
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -27.9444
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -26.4439
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -41.9978
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -19.8667
+    },
+    {
+      "ep": 10000,
+      "phase": "placement",
+      "reward": -42.1075
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -3003.3447
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -8.1928
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -1000.8849
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -4019.9011
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -2003.7106
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -4.0682
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -2001.5
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -11.5991
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -2.3814
+    },
+    {
+      "ep": 10000,
+      "phase": "routing",
+      "reward": -3007.0892
     }
   ],
   "rounds_completed": 0
