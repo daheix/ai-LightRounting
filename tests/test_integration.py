@@ -10,6 +10,7 @@ import json
 import os
 
 import numpy as np
+import pytest
 
 from polaris.engine.floorplan_env import FloorplanEnv
 from polaris.engine.netlist import load_netlist
@@ -224,3 +225,21 @@ def test_lr_schedule_linear():
     assert _lr_scale(10, 10, "linear") == 0.0
     assert _lr_scale(0, 10, "constant") == 1.0
     assert _lr_scale(5, 10, "constant") == 1.0
+
+
+def test_lr_schedule_cosine():
+    """cosine 学习率调度应从 1.0 余弦衰减到 0.0（第二波训练收敛修复）。
+
+    来源: Loshchilov & Hutter, 2017, SGDR
+    https://arxiv.org/abs/1608.03983
+    """
+    from polaris.trainer.train_loop import _lr_scale
+
+    # ep=0: cos(0)=1 → scale=1.0
+    assert _lr_scale(0, 10, "cosine") == pytest.approx(1.0)
+    # ep=5 (中点): cos(π/2)=0 → scale=0.5
+    assert _lr_scale(5, 10, "cosine") == pytest.approx(0.5)
+    # ep=10 (终点): cos(π)=-1 → scale=0.0
+    assert _lr_scale(10, 10, "cosine") == pytest.approx(0.0)
+    # ep=2.5 (1/4): cos(π/4)=√2/2 → scale≈0.854
+    assert _lr_scale(2.5, 10, "cosine") == pytest.approx(0.5 * (1 + 0.7071), abs=0.01)

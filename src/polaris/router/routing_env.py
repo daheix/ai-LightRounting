@@ -77,6 +77,11 @@ class RoutingEnvConfig:
     length_weight: float = 0.001
     congestion_weight: float = 0.1
     drc_penalty: float = 10.0
+    # Reward clipping 上限（第二波训练收敛修复）：单步 reward 限制在
+    # [-reward_clip_max, 0] 范围，防止异常长路径或累积 DRC 违规产生
+    # -1000~-9000 的灾难值摧毁价值函数（历史 progress.json 显示极端值）。
+    # 来源: PPO reward clipping 最佳实践，参考 SB3 RewardWrapper
+    reward_clip_max: float = 20.0
 
 
 @dataclass
@@ -124,6 +129,7 @@ class RoutingEnv(gym.Env):
         self.length_weight = config.length_weight
         self.congestion_weight = config.congestion_weight
         self.drc_penalty = config.drc_penalty
+        self.reward_clip_max = config.reward_clip_max
 
         self.state = RoutingState(
             canvas_w=config.canvas_w, canvas_h=config.canvas_h, grid_size=config.grid_size
@@ -263,6 +269,10 @@ class RoutingEnv(gym.Env):
         DRC 惩罚检查弯曲半径是否过小（急转弯），而非方向变化数。
         波导本身需要弯曲，方向变化是合法的；只有弯曲半径小于工艺
         最小值才是 DRC 违规。
+
+        第二波训练收敛修复：添加 reward clipping，限制单步 reward 在
+        [-reward_clip_max, 0] 范围，防止异常长路径或累积 DRC 违规
+        产生灾难值摧毁价值函数。
         """
         loss = wp.loss_db
         length = wp.length_um
@@ -273,6 +283,8 @@ class RoutingEnv(gym.Env):
         drc_violations = _count_bend_radius_violations(wp.points)
         drc_pen = self.drc_penalty * drc_violations * 0.01
         reward = -(self.loss_weight * loss + self.length_weight * length + congestion_pen + drc_pen)
+        # Reward clipping：限制单步 reward 下限，防止异常值摧毁价值函数
+        reward = max(-self.reward_clip_max, reward)
         return float(reward)
 
     def congestion_heatmap(self) -> np.ndarray:

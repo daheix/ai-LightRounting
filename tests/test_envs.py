@@ -113,3 +113,44 @@ def test_routing_metrics(env_setup):
     assert "total_loss_db" in metrics
     assert "total_length_um" in metrics
     assert metrics["num_routed"] == len(net.connections)
+
+
+def test_routing_reward_clipping(env_setup):
+    """reward clipping 应限制单步 reward 下限，防止异常值摧毁价值函数。
+
+    第二波训练收敛修复：历史 progress.json 显示布线 reward 出现 -9000
+    灾难值，导致价值函数 vloss=14-15 无法收敛。reward clipping 将单步
+    reward 限制在 [-reward_clip_max, 0] 范围。
+    """
+    from polaris.router.routing_env import RoutingEnvConfig
+    from polaris.router.waveguide_router import WaveguidePath
+
+    net, devices, env = env_setup
+    env.reset()
+    for _ in range(len(devices)):
+        env.step([5, 5, 0])
+    # 使用小 clip_max 验证 clipping 生效
+    cfg = RoutingEnvConfig(canvas_w=300, canvas_h=300, grid_size=5, reward_clip_max=5.0)
+    r_env = RoutingEnv(net, env.state.placements, config=cfg)
+    r_env.reset()
+    assert r_env.reward_clip_max == 5.0
+    # 构造一个高损耗的路径（模拟异常长路径或高 DRC 违规）
+    # loss_db=100, length=10000 → 原始 reward = -(1*100 + 0.001*10000) = -110
+    # clipping 后应为 -5.0
+    wp = WaveguidePath(points=[(0, 0), (100, 0)], length_um=10000.0, loss_db=100.0)
+    reward = r_env._reward(wp)
+    assert reward == -5.0, f"reward 应被 clip 到 -5.0，实际 {reward}"
+
+
+def test_routing_reward_clip_default(env_setup):
+    """默认 reward_clip_max=20.0，正常布线 reward 不受影响。"""
+    net, devices, env = env_setup
+    env.reset()
+    for _ in range(len(devices)):
+        env.step([5, 5, 0])
+    r_env = RoutingEnv(net, env.state.placements, canvas_w=300, canvas_h=300, grid_size=5)
+    r_env.reset()
+    assert r_env.reward_clip_max == 20.0
+    # 正常布线 reward 应在 [-20, 0] 范围内，不受 clipping 影响
+    obs, reward, term, _, _ = r_env.step(np.zeros(3, dtype=np.float32))
+    assert -20.0 <= reward <= 0.0, f"reward {reward} 应在 [-20, 0] 范围"

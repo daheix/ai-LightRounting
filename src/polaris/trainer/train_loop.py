@@ -60,8 +60,8 @@ class TrainConfig:
     checkpoint_every: int = 10
     log_every: int = 1
     seed: int = 42
-    early_stop_patience: int = 0  # 0=禁用早停
-    lr_schedule: str = "constant"  # "constant" 或 "linear"
+    early_stop_patience: int = 50  # 0=禁用早停；50轮无改善则停止（第二波收敛修复）
+    lr_schedule: str = "cosine"  # "constant"/"linear"/"cosine"（第二波收敛修复：cosine 退火）
     sim_feedback: bool = False  # 是否启用 SimLoop 约束反馈
 
 
@@ -71,15 +71,25 @@ def _lr_scale(ep: int, total: int, schedule: str) -> float:
     Args:
         ep: 当前轮次（0-based）。
         total: 总轮数。
-        schedule: "constant" 返回 1.0；"linear" 从 1.0 线性衰减到 0。
+        schedule: "constant" 返回 1.0；"linear" 从 1.0 线性衰减到 0；
+            "cosine" 从 1.0 余弦衰减到 0（第二波训练收敛修复）。
 
     Returns:
         学习率缩放因子（0.0~1.0）。
+
+    来源:
+    - Loshchilov & Hutter, 2017, SGDR (cosine annealing)
+      https://arxiv.org/abs/1608.03983
     """
+    if total <= 0:
+        return 1.0
     if schedule == "linear":
-        if total <= 0:
-            return 1.0
         return max(0.0, 1.0 - ep / total)
+    if schedule == "cosine":
+        # cosine annealing: 0.5 * (1 + cos(π * ep / total))
+        import math
+
+        return 0.5 * (1.0 + math.cos(math.pi * ep / total))
     return 1.0
 
 
