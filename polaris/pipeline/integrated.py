@@ -88,6 +88,7 @@ class _DefaultPlacer:
     def place(self, circuit: CircuitSpec, feedback=None) -> dict:
         """放置器件。"""
         import random
+
         rng = random.Random(42)
         placements = {}
         margin = 50.0
@@ -104,6 +105,7 @@ class _DefaultRouter:
     def route(self, circuit: CircuitSpec, placements: dict) -> dict:
         """布线连接。"""
         from polaris.router.waveguide_router import GridRouter, RouterConstraints
+
         grid_w = int(circuit.canvas_w / 10)
         grid_h = int(circuit.canvas_h / 10)
         cons = RouterConstraints(min_bend_radius_um=5.0, min_spacing_um=1.0)
@@ -174,8 +176,12 @@ class IntegratedPipeline:
             PipelineResult。
         """
         cfg = self.config
-        logger.info("一体化流水线启动: %s (%d 器件, %d 连接)",
-                     circuit.name, len(circuit.devices), len(circuit.connections))
+        logger.info(
+            "一体化流水线启动: %s (%d 器件, %d 连接)",
+            circuit.name,
+            len(circuit.devices),
+            len(circuit.connections),
+        )
 
         sim_result = self._run_sim_loop(circuit, cfg)
         report_path = self._write_report(circuit, cfg, sim_result)
@@ -207,7 +213,9 @@ class IntegratedPipeline:
 
     @staticmethod
     def _write_report(
-        circuit: CircuitSpec, cfg: PipelineConfig, result,
+        circuit: CircuitSpec,
+        cfg: PipelineConfig,
+        result,
     ) -> str:
         """输出报告文件。"""
         out = Path(cfg.output_dir)

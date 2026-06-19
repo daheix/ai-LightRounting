@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 import gymnasium as gym
@@ -182,18 +183,22 @@ class RoutingEnv(gym.Env):
         action = np.asarray(action, dtype=np.float32)
         start, end, platform = self._current_ports()
         cons = get_platform_constraints(platform)
-        # 动作微调：偏移终点附近的中间路径点
+        # 动作微调：
+        # - action[0], action[1]: 起点偏移（在端口附近微调布线起点）
+        # - action[2]: detour 因子，控制路径是否绕行拥塞区域
         dx = float(action[0]) * cons["min_bend_radius_um"]
         dy = float(action[1]) * cons["min_bend_radius_um"]
-        # 障碍：已放置器件（除起终点器件）
-        obstacles = []
-        for inst_id, pl in self.placements.items():
-            if inst_id in (
-                self.connections[self._conn_idx].src_instance,
-                self.connections[self._conn_idx].dst_instance,
-            ):
-                continue
-            obstacles.append(pl.bbox_abs())
+        detour = float(action[2])  # [-1, 1]，>0 倾向绕行，<0 倾向直行
+        obstacles = self._collect_obstacles()
+        # detour > 0 时，添加虚拟障碍鼓励绕行（避开直线最短路径附近的拥塞）
+        if detour > 0.1:
+            _add_detour_obstacles(
+                obstacles,
+                start=(start[0] + dx, start[1] + dy),
+                end=end,
+                detour_factor=detour,
+                grid_size=self.state.grid_size,
+            )
         # 布线（捕获A*失败，给大惩罚）
         try:
             wp = route_connection(
@@ -215,23 +220,30 @@ class RoutingEnv(gym.Env):
         terminated = self._conn_idx >= len(self.connections)
         return self._obs(), reward, terminated, False, {"step": self._conn_idx}
 
+    def _collect_obstacles(self) -> list:
+        """收集当前连接的布线障碍（已放置器件，排除起终点器件）。"""
+        obstacles: list = []
+        conn = self.connections[self._conn_idx]
+        for inst_id, pl in self.placements.items():
+            if inst_id in (conn.src_instance, conn.dst_instance):
+                continue
+            obstacles.append(pl.bbox_abs())
+        return obstacles
+
     def _reward(self, wp: WaveguidePath) -> float:
-        """奖励 = -(损耗*权重 + 长度*权重 + 拥塞惩罚 + DRC 惩罚)。"""
+        """奖励 = -(损耗*权重 + 长度*权重 + 拥塞惩罚 + DRC 惩罚)。
+
+        DRC 惩罚检查弯曲半径是否过小（急转弯），而非方向变化数。
+        波导本身需要弯曲，方向变化是合法的；只有弯曲半径小于工艺
+        最小值才是 DRC 违规。
+        """
         loss = wp.loss_db
         length = wp.length_um
         # 拥塞：路径经过的栅格最大占用
         max_cong = float(self.state.congestion.max()) if self.state.congestion.size else 0.0
         congestion_pen = self.congestion_weight * max_cong
-        # DRC：弯曲半径/间距违规（简化为路径方向变化数过多）
-        drc_violations = 0
-        if len(wp.points) > 3:
-            for i in range(1, len(wp.points) - 1):
-                dx1 = wp.points[i][0] - wp.points[i - 1][0]
-                dy1 = wp.points[i][1] - wp.points[i - 1][1]
-                dx2 = wp.points[i + 1][0] - wp.points[i][0]
-                dy2 = wp.points[i + 1][1] - wp.points[i][1]
-                if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
-                    drc_violations += 1
+        # DRC：检查弯曲半径是否过小（三点圆弧半径估计）
+        drc_violations = _count_bend_radius_violations(wp.points)
         drc_pen = self.drc_penalty * drc_violations * 0.01
         reward = -(self.loss_weight * loss + self.length_weight * length + congestion_pen + drc_pen)
         return float(reward)
@@ -252,3 +264,64 @@ class RoutingEnv(gym.Env):
             "num_routed": len(self.state.paths),
             "num_connections": len(self.connections),
         }
+
+
+def _count_bend_radius_violations(points: list[tuple[float, float]]) -> int:
+    """统计路径中弯曲半径过小的转弯数。
+
+    用三点圆弧半径估计：对每个中间点 p1，由 (p0, p1, p2) 估算弯曲半径，
+    若半径 < 工艺最小值则计为违规。工艺最小值取 5.0 μm（SOI 默认）。
+
+    来源: 三点圆弧半径公式 R = |v1||v2||v1-v2| / (2|v1×v2|)
+           与 polaris.sim.constraint_checker._estimate_bend_radius 一致
+
+    Args:
+        points: 路径点序列。
+
+    Returns:
+        弯曲半径违规数。
+    """
+    if len(points) < 3:
+        return 0
+    min_radius = 5.0  # SOI 默认最小弯曲半径
+    violations = 0
+    for i in range(1, len(points) - 1):
+        p0, p1, p2 = points[i - 1], points[i], points[i + 1]
+        v1 = (p1[0] - p0[0], p1[1] - p0[1])
+        v2 = (p2[0] - p1[0], p2[1] - p1[1])
+        cross = abs(v1[0] * v2[1] - v1[1] * v2[0])
+        if cross < 1e-9:
+            continue  # 直线，无弯曲
+        l1 = math.hypot(*v1)
+        l2 = math.hypot(*v2)
+        l3 = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
+        radius = l1 * l2 * l3 / (2.0 * cross)
+        if 0 < radius < min_radius:
+            violations += 1
+    return violations
+
+
+def _add_detour_obstacles(
+    obstacles: list,
+    start: tuple[float, float],
+    end: tuple[float, float],
+    detour_factor: float,
+    grid_size: float,
+) -> None:
+    """根据 detour 因子在直线最短路径附近添加虚拟障碍，鼓励 A* 绕行。
+
+    detour_factor 越大，虚拟障碍覆盖的直线段比例越高。
+
+    Args:
+        obstacles: 障碍列表（原地修改）。
+        start: 起点。
+        end: 终点。
+        detour_factor: 绕行因子 [0, 1]。
+        grid_size: 栅格尺寸。
+    """
+    # 在直线段中点附近添加一个小障碍，迫使 A* 绕行
+    mid_x = (start[0] + end[0]) / 2.0
+    mid_y = (start[1] + end[1]) / 2.0
+    # 障碍尺寸随 detour_factor 增大
+    size = grid_size * (1 + int(detour_factor * 5))
+    obstacles.append((mid_x - size, mid_y - size, mid_x + size, mid_y + size))

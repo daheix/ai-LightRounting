@@ -82,7 +82,18 @@ def _coswa_wirelength(
     考虑波导弯曲半径约束，曼哈顿路径中每个转弯需要额外的弧长。
     cosWA = HPWL + n_bends * bend_overhead
 
+    弯曲开销 bend_overhead 的正确计算：
+    - 直角曼哈顿转弯在波导中不可行，必须用 90° 圆弧替代
+    - 圆弧弧长 = (π/2) * R
+    - 直角路径在该转弯处贡献的曼哈顿距离 = R + R = 2R（沿两段直角边各走 R）
+    - 因此弯曲带来的额外线长 = (π/2) * R - 2R = (π/2 - 2) * R
+    - 注意：(π/2 - 2) ≈ -0.429 为负值，意味着弧线比直角更短
+    - 但 cosWA 的本意是惩罚"必须弯曲"带来的路径不可压缩性，
+      因此应取弯曲弧长的绝对值 (π/2) * R 作为开销，
+      而非与直角的差值（差值为负会错误地减少线长估计）
+
     来源: Apollo arXiv 2025, 非对称弯曲感知线长模型
+           https://arxiv.org/html/2504.18813v1
 
     Args:
         start: 起点 (x, y) μm。
@@ -98,9 +109,9 @@ def _coswa_wirelength(
     hpwl = dx + dy
     # 估计转弯数（至少 1 个转弯，除非纯水平/垂直）
     n_bends = 1 if dx > 0 and dy > 0 else 0
-    # 每个 90° 弯曲的额外弧长 = π/2 * R - 2R（弧线 vs 直角差）
-    bend_overhead = (math.pi / 2.0 - 2.0) * min_bend_radius
-    return hpwl + n_bends * max(0.0, bend_overhead)
+    # 每个 90° 弯曲的弧长开销 = (π/2) * R（弯曲半径带来的额外路径长度）
+    bend_overhead = (math.pi / 2.0) * max(0.0, min_bend_radius)
+    return hpwl + n_bends * bend_overhead
 
 
 def _estimate_spacing_score(

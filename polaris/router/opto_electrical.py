@@ -235,11 +235,45 @@ class OptoElectricalRouter:
         return result
 
     def _mark_optical_as_electrical_obstacle(self, wp: WaveguidePath) -> None:
-        """将光波导路径标记为电层障碍（防止金属线覆盖波导）。"""
-        for pt in wp.points:
-            gx = int(pt[0] / self.grid_size)
-            gy = int(pt[1] / self.grid_size)
+        """将光波导路径标记为电层障碍（防止金属线覆盖波导）。
+
+        使用 Bresenham 算法标记线段经过的所有栅格，避免单点标记留缝隙
+        导致金属线从缝隙穿过。
+        """
+        for i in range(len(wp.points) - 1):
+            x0, y0 = wp.points[i]
+            x1, y1 = wp.points[i + 1]
+            self._mark_segment_as_obstacle(x0, y0, x1, y1)
+
+    def _mark_segment_as_obstacle(
+        self,
+        x0: float,
+        y0: float,
+        x1: float,
+        y1: float,
+    ) -> None:
+        """用 Bresenham 算法标记线段经过的所有栅格为障碍。"""
+        gx0 = int(x0 / self.grid_size)
+        gy0 = int(y0 / self.grid_size)
+        gx1 = int(x1 / self.grid_size)
+        gy1 = int(y1 / self.grid_size)
+        dx = abs(gx1 - gx0)
+        dy = abs(gy1 - gy0)
+        sx = 1 if gx0 < gx1 else -1
+        sy = 1 if gy0 < gy1 else -1
+        err = dx - dy
+        gx, gy = gx0, gy0
+        while True:
             self.electrical_router.add_obstacle(gx, gy)
+            if gx == gx1 and gy == gy1:
+                break
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                gx += sx
+            if e2 < dx:
+                err += dx
+                gy += sy
 
     def _count_optical_crossings(self, e_pts: list[tuple[float, float]]) -> int:
         """计算电线路径与光波导的交叉数。"""

@@ -81,8 +81,13 @@ class GridRouter:
         self.grid_h = grid_h
         self.grid_size = grid_size
         self.min_bend_radius_um = cons.min_bend_radius_um
-        # 弯曲半径对应的网格步数（至少 2 步才能转弯）
-        self.min_bend_steps = max(2, int(round(cons.min_bend_radius_um / grid_size)))
+        # 弯曲半径对应的网格步数：
+        # - min_bend_radius_um > 0：转弯前须直行 >= min_bend_steps 步（光波导约束）
+        # - min_bend_radius_um <= 0：无弯曲约束（电金属布线），min_bend_steps=1 允许任意转弯
+        if cons.min_bend_radius_um <= 0.0:
+            self.min_bend_steps = 1
+        else:
+            self.min_bend_steps = max(2, int(round(cons.min_bend_radius_um / grid_size)))
         self.min_spacing_um = cons.min_spacing_um
         # 障碍栅格：0=可走，>0=障碍/占用
         self.obstacle: np.ndarray = np.zeros((grid_h, grid_w), dtype=np.int32)

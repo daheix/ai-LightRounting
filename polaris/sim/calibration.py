@@ -106,7 +106,8 @@ def calibrate(
 
 
 def _collect_calibration_items(
-    bdir: Path, cfg: CalibrationConfig,
+    bdir: Path,
+    cfg: CalibrationConfig,
 ) -> list[CalibrationItem]:
     """收集并计算各电路的校准结果。"""
     items: list[CalibrationItem] = []
@@ -122,13 +123,15 @@ def _collect_calibration_items(
         ref_loss = data.get("reference_loss_db", data.get("total_loss_db", 0.0))
         sim_loss = _estimate_loss(data)
         error = abs(sim_loss - ref_loss)
-        items.append(CalibrationItem(
-            circuit_name=name,
-            reference_loss_db=ref_loss,
-            simulated_loss_db=sim_loss,
-            error_db=error,
-            passed=error <= cfg.loss_tolerance_db,
-        ))
+        items.append(
+            CalibrationItem(
+                circuit_name=name,
+                reference_loss_db=ref_loss,
+                simulated_loss_db=sim_loss,
+                error_db=error,
+                passed=error <= cfg.loss_tolerance_db,
+            )
+        )
     return items
 
 
@@ -146,7 +149,10 @@ def _summarize_calibration(items: list[CalibrationItem]) -> CalibrationResult:
     )
     logger.info(
         "校准完成: %d/%d 通过, 最大误差 %.2f dB, 平均误差 %.2f dB",
-        n_passed, len(items), result.max_error_db, result.mean_error_db,
+        n_passed,
+        len(items),
+        result.max_error_db,
+        result.mean_error_db,
     )
     return result
 
@@ -167,13 +173,18 @@ def _estimate_loss(data: dict) -> float:
 
 # 器件类型关键字 → 损耗 (dB) 映射表
 _CELL_LOSS_RULES: list[tuple[str, float]] = [
-    ("wg", 0.1), ("waveguide", 0.1),
+    ("wg", 0.1),
+    ("waveguide", 0.1),
     ("mzi", 0.5),
-    ("ring", 0.3), ("mrr", 0.3),
-    ("dc", 0.2), ("coupler", 0.2),
+    ("ring", 0.3),
+    ("mrr", 0.3),
+    ("dc", 0.2),
+    ("coupler", 0.2),
     ("mmi", 0.3),
-    ("gc", 2.5), ("grating", 2.5),
-    ("yb", 0.3), ("y_branch", 0.3),
+    ("gc", 2.5),
+    ("grating", 2.5),
+    ("yb", 0.3),
+    ("y_branch", 0.3),
     ("crossing", 0.05),
 ]
 

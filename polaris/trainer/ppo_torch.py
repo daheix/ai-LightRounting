@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import math
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -22,182 +21,28 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+from polaris.trainer.ppo_buffers import (
+    AgentSpec,
+    BufferTensors,
+    PPOConfig,
+    RolloutBuffer,
+    Transition,
+    compute_gae,
+)
+from polaris.trainer.ppo_networks import ActorCritic, ActorCriticDiscrete
 
-@dataclass
-class PPOConfig:
-    """PPO 超参数（与 Stable-Baselines3 默认值对齐 + 2025 增强技巧）。
-
-    增强来源:
-    - Basso et al., NeurIPS 2025, routing-aware floorplanning RL
-      https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
-    - SB3 PPO 实现: https://stable-baselines3.readthedocs.io/
-    """
-
-    lr: float = 3e-4
-    gamma: float = 0.99  # 折扣因子
-    gae_lambda: float = 0.95  # GAE lambda
-    clip_eps: float = 0.2  # PPO clip
-    ent_coef: float = 0.01  # 熵系数
-    vf_coef: float = 0.5  # 价值损失系数
-    max_grad_norm: float = 0.5  # 梯度裁剪
-    n_epochs: int = 4  # 每次 rollout 的更新轮数
-    batch_size: int = 64  # 小批量大小
-    # 2025 增强：价值函数 clip（防止价值估计异常导致策略崩溃）
-    # 来源: SB3 PPO clip_vf 实现
-    clip_vf: float = 0.0  # 0=禁用clip_vf（之前10.0导致value_loss恒等于100）
-    # 2025 增强：学习率调度（cosine annealing + warmup）
-    # 来源: Loshchilov & Hutter, 2017, SGDR
-    #       https://arxiv.org/abs/1608.03983
-    lr_schedule: str = "constant"  # constant / cosine / linear
-    lr_warmup_steps: int = 0  # warmup 步数
-    total_steps: int = 1000  # 总训练步数（用于 cosine 调度）
-
-
-class ActorCritic(nn.Module):
-    """Actor-Critic 网络（共享编码器 + 策略头 + 价值头）。
-
-    复刻 SB3 ``ActorCriticPolicy``：共享特征提取器，分出
-    ``action_net``（策略）与 ``value_net``（价值）。
-    使用 orthogonal 初始化（与 SB3/CleanRL 一致）。
-
-    来源:
-    - Engstrom et al., 2020, Implementation Matters in PPO
-      https://arxiv.org/abs/2005.12729
-    - SB3 网络初始化: https://stable-baselines3.readthedocs.io/
-    """
-
-    def __init__(
-        self,
-        obs_dim: int,
-        action_dim: int,
-        hidden_dim: int = 64,
-    ) -> None:
-        super().__init__()
-        self.shared = nn.Sequential(
-            nn.Linear(obs_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-        self.action_mean = nn.Linear(hidden_dim, action_dim)
-        self.action_log_std = nn.Parameter(torch.zeros(action_dim))
-        self.value_head = nn.Linear(hidden_dim, 1)
-        # Orthogonal 初始化（与 SB3/CleanRL 一致）
-        self._init_weights()
-
-    def _init_weights(self) -> None:
-        """Orthogonal 初始化所有线性层。"""
-        for module in self.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
-                nn.init.constant_(module.bias, 0.0)
-        # 策略头用较小 gain（SB3 默认 0.01）
-        nn.init.orthogonal_(self.action_mean.weight, gain=0.01)
-        nn.init.constant_(self.action_mean.bias, 0.0)
-
-    def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        """前向传播，返回 (action_mean, value)。"""
-        feats = self.shared(obs)
-        mean = self.action_mean(feats)
-        value = self.value_head(feats)
-        return mean, value
-
-    def get_action(self, obs_np: np.ndarray) -> tuple[np.ndarray, float, float]:
-        """采样动作 + 返回 logprob + value（用于 rollout）。
-
-        Args:
-            obs_np: numpy 观测数组。
-
-        Returns:
-            (action_numpy, logprob_float, value_float)
-        """
-        obs_t = torch.as_tensor(obs_np, dtype=torch.float32).unsqueeze(0)
-        with torch.no_grad():
-            mean, value = self.forward(obs_t)
-            std = torch.exp(self.action_log_std)
-            dist = torch.distributions.Normal(mean, std)
-            action = dist.sample()
-            logprob = dist.log_prob(action).sum(dim=-1)
-        action_np = action.cpu().numpy().flatten()
-        lp = float(logprob.item())
-        v = float(value.item())
-        return action_np, lp, v
-
-    def evaluate(
-        self, obs: torch.Tensor, actions: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """重新评估给定动作的 logprob + value + entropy（用于 PPO 更新）。
-
-        Args:
-            obs: 观测张量 (batch, obs_dim)。
-            actions: 动作张量 (batch, action_dim)。
-
-        Returns:
-            (logprob, value, entropy) 均为张量。
-        """
-        mean, value = self.forward(obs)
-        std = torch.exp(self.action_log_std)
-        dist = torch.distributions.Normal(mean, std)
-        logprob = dist.log_prob(actions).sum(dim=-1)
-        entropy = dist.entropy().sum(dim=-1)
-        return logprob, value.squeeze(-1), entropy
-
-
-class ActorCriticDiscrete(nn.Module):
-    """离散动作空间的 Actor-Critic 网络（用于 MultiDiscrete 环境）。
-
-    将 MultiDiscrete 动作展平为单个 Categorical 分布。
-    例如 MultiDiscrete([10,10,4]) → 400 个离散动作。
-
-    来源:
-    - SB3 MultiInputPolicy: https://stable-baselines3.readthedocs.io/
-    - CleanRL discrete PPO: https://github.com/vwxyzjn/cleanrl
-    """
-
-    def __init__(self, obs_dim: int, n_actions: int, hidden_dim: int = 128):
-        super().__init__()
-        self.shared = nn.Sequential(
-            nn.Linear(obs_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-        )
-        self.action_logits = nn.Linear(hidden_dim, n_actions)
-        self.value_head = nn.Linear(hidden_dim, 1)
-        self.n_actions = n_actions
-        self._init_weights()
-
-    def _init_weights(self) -> None:
-        for module in self.modules():
-            if isinstance(module, nn.Linear):
-                nn.init.orthogonal_(module.weight, gain=np.sqrt(2))
-                nn.init.constant_(module.bias, 0.0)
-        nn.init.orthogonal_(self.action_logits.weight, gain=0.01)
-        nn.init.constant_(self.action_logits.bias, 0.0)
-
-    def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        feats = self.shared(obs)
-        logits = self.action_logits(feats)
-        value = self.value_head(feats)
-        return logits, value
-
-    def get_action(self, obs_np: np.ndarray) -> tuple[int, float, float]:
-        obs_t = torch.as_tensor(obs_np, dtype=torch.float32).unsqueeze(0)
-        with torch.no_grad():
-            logits, value = self.forward(obs_t)
-            dist = torch.distributions.Categorical(logits=logits)
-            action = dist.sample()
-            logprob = dist.log_prob(action)
-        return int(action.item()), float(logprob.item()), float(value.item())
-
-    def evaluate(
-        self, obs: torch.Tensor, actions: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        logits, value = self.forward(obs)
-        dist = torch.distributions.Categorical(logits=logits)
-        logprob = dist.log_prob(actions.squeeze(-1))
-        entropy = dist.entropy()
-        return logprob, value.squeeze(-1), entropy
+__all__ = [
+    "AgentSpec",
+    "ActorCritic",
+    "ActorCriticDiscrete",
+    "BufferTensors",
+    "PPOAgent",
+    "PPOAgentDiscrete",
+    "PPOConfig",
+    "RolloutBuffer",
+    "Transition",
+    "compute_gae",
+]
 
 
 class PPOAgentDiscrete:
@@ -241,24 +86,22 @@ class PPOAgentDiscrete:
         if len(self.buffer) == 0:
             return {"loss": 0, "policy_loss": 0, "value_loss": 0, "entropy": 0}
 
-        b_obs = torch.as_tensor(
-            np.array(self.buffer.obs), dtype=torch.float32
-        )
-        b_actions = torch.as_tensor(
-            np.array(self.buffer.actions), dtype=torch.long
-        )
-        b_logprobs = torch.as_tensor(
-            np.array(self.buffer.logprobs), dtype=torch.float32
-        )
-        b_values = torch.as_tensor(
-            np.array(self.buffer.values), dtype=torch.float32
-        )
-        b_dones = torch.as_tensor(
-            np.array(self.buffer.dones), dtype=torch.float32
-        )
-        b_rewards = torch.as_tensor(
-            np.array(self.buffer.rewards), dtype=torch.float32
-        )
+        tensors = self._build_buffer_tensors(last_value)
+        metrics = self._run_minibatch_updates(tensors)
+
+        self._total_steps += len(self.buffer)
+        self.buffer.clear()
+        self._apply_lr_schedule()
+        return metrics
+
+    def _build_buffer_tensors(self, last_value: float) -> BufferTensors:
+        """将 rollout buffer 转换为 torch 张量并计算 GAE 优势/回报。"""
+        b_obs = torch.as_tensor(np.array(self.buffer.obs), dtype=torch.float32)
+        b_actions = torch.as_tensor(np.array(self.buffer.actions), dtype=torch.long)
+        b_logprobs = torch.as_tensor(np.array(self.buffer.logprobs), dtype=torch.float32)
+        b_values = torch.as_tensor(np.array(self.buffer.values), dtype=torch.float32)
+        b_dones = torch.as_tensor(np.array(self.buffer.dones), dtype=torch.float32)
+        b_rewards = torch.as_tensor(np.array(self.buffer.rewards), dtype=torch.float32)
 
         advantages, returns = compute_gae(
             b_rewards.numpy().tolist(),
@@ -272,78 +115,107 @@ class PPOAgentDiscrete:
 
         # 归一化优势
         if b_advantages.numel() > 1:
-            b_advantages = (b_advantages - b_advantages.mean()) / (
-                b_advantages.std() + 1e-8
-            )
+            b_advantages = (b_advantages - b_advantages.mean()) / (b_advantages.std() + 1e-8)
+        return BufferTensors(
+            obs=b_obs,
+            actions=b_actions,
+            logprobs=b_logprobs,
+            values=b_values,
+            advantages=b_advantages,
+            returns=b_returns,
+        )
 
+    def _run_minibatch_updates(self, tensors: BufferTensors) -> dict:
+        """多 epoch 小批量更新，返回平均指标。"""
         total_loss_val = 0.0
         total_ploss = 0.0
         total_vloss = 0.0
         total_ent = 0.0
         n_updates = 0
+        n_samples = len(self.buffer)
+        mb_size = min(self.config.batch_size, n_samples)
 
         for _ in range(self.config.n_epochs):
-            indices = np.arange(len(self.buffer))
+            indices = np.arange(n_samples)
             np.random.shuffle(indices)
-            mb_size = min(self.config.batch_size, len(self.buffer))
-
-            for start in range(0, len(self.buffer), mb_size):
+            for start in range(0, n_samples, mb_size):
                 end = start + mb_size
                 mb_idx = indices[start:end]
-
-                new_logprob, new_value, entropy = self.network.evaluate(
-                    b_obs[mb_idx], b_actions[mb_idx]
-                )
-
-                # PPO clip
-                logratio = new_logprob - b_logprobs[mb_idx]
-                ratio = torch.exp(logratio)
-                surr1 = ratio * b_advantages[mb_idx]
-                surr2 = (
-                    torch.clamp(
-                        ratio,
-                        1 - self.config.clip_eps,
-                        1 + self.config.clip_eps,
-                    )
-                    * b_advantages[mb_idx]
-                )
-                policy_loss = -torch.min(surr1, surr2).mean()
-
-                # Value loss
-                if self.config.clip_vf > 0:
-                    v_clipped = b_values[mb_idx] + torch.clamp(
-                        new_value - b_values[mb_idx],
-                        -self.config.clip_vf,
-                        self.config.clip_vf,
-                    )
-                    v_loss1 = (new_value - b_returns[mb_idx]).pow(2)
-                    v_loss2 = (v_clipped - b_returns[mb_idx]).pow(2)
-                    value_loss = 0.5 * torch.max(v_loss1, v_loss2).mean()
-                else:
-                    value_loss = 0.5 * (
-                        (new_value - b_returns[mb_idx]).pow(2).mean()
-                    )
-
-                entropy_loss = -self.config.ent_coef * entropy.mean()
-                loss = policy_loss + self.config.vf_coef * value_loss + entropy_loss
-
-                self.optimizer.zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(
-                    self.network.parameters(), self.config.max_grad_norm
-                )
-                self.optimizer.step()
-
-                total_loss_val += float(loss.item())
-                total_ploss += float(policy_loss.item())
-                total_vloss += float(value_loss.item())
-                total_ent += float(entropy.mean().item())
+                mb_metrics = self._update_minibatch(tensors, mb_idx)
+                total_loss_val += mb_metrics["loss"]
+                total_ploss += mb_metrics["policy_loss"]
+                total_vloss += mb_metrics["value_loss"]
+                total_ent += mb_metrics["entropy"]
                 n_updates += 1
 
-        self._total_steps += len(self.buffer)
-        self.buffer.clear()
+        return {
+            "loss": total_loss_val / max(1, n_updates),
+            "policy_loss": total_ploss / max(1, n_updates),
+            "value_loss": total_vloss / max(1, n_updates),
+            "entropy": total_ent / max(1, n_updates),
+        }
 
-        # 学习率调度（cosine/linear/constant）
+    def _update_minibatch(self, tensors: BufferTensors, mb_idx: np.ndarray) -> dict:
+        """单个小批量的前向 → 损失 → 反向 → 优化器步进。"""
+        b_obs = tensors.obs[mb_idx]
+        b_actions = tensors.actions[mb_idx]
+        b_logprobs = tensors.logprobs[mb_idx]
+        b_values = tensors.values[mb_idx]
+        b_advantages = tensors.advantages[mb_idx]
+        b_returns = tensors.returns[mb_idx]
+
+        new_logprob, new_value, entropy = self.network.evaluate(b_obs, b_actions)
+
+        # PPO clip
+        logratio = new_logprob - b_logprobs
+        ratio = torch.exp(logratio)
+        surr1 = ratio * b_advantages
+        surr2 = (
+            torch.clamp(
+                ratio,
+                1 - self.config.clip_eps,
+                1 + self.config.clip_eps,
+            )
+            * b_advantages
+        )
+        policy_loss = -torch.min(surr1, surr2).mean()
+
+        value_loss = self._compute_value_loss(new_value, b_returns, b_values)
+        entropy_loss = -self.config.ent_coef * entropy.mean()
+        loss = policy_loss + self.config.vf_coef * value_loss + entropy_loss
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.network.parameters(), self.config.max_grad_norm)
+        self.optimizer.step()
+
+        return {
+            "loss": float(loss.item()),
+            "policy_loss": float(policy_loss.item()),
+            "value_loss": float(value_loss.item()),
+            "entropy": float(entropy.mean().item()),
+        }
+
+    def _compute_value_loss(
+        self,
+        new_value: torch.Tensor,
+        b_returns: torch.Tensor,
+        b_values: torch.Tensor,
+    ) -> torch.Tensor:
+        """计算价值损失（支持 clip_vf）。"""
+        if self.config.clip_vf <= 0:
+            return 0.5 * ((new_value - b_returns).pow(2).mean())
+        v_clipped = b_values + torch.clamp(
+            new_value - b_values,
+            -self.config.clip_vf,
+            self.config.clip_vf,
+        )
+        v_loss1 = (new_value - b_returns).pow(2)
+        v_loss2 = (v_clipped - b_returns).pow(2)
+        return 0.5 * torch.max(v_loss1, v_loss2).mean()
+
+    def _apply_lr_schedule(self) -> None:
+        """根据 lr_schedule 调整优化器学习率。"""
         if self.config.lr_schedule == "cosine" and self.config.total_steps > 0:
             progress = min(1.0, self._total_steps / self.config.total_steps)
             new_lr = self.config.lr * 0.5 * (1 + np.cos(np.pi * progress))
@@ -354,13 +226,6 @@ class PPOAgentDiscrete:
             new_lr = self.config.lr * (1 - progress)
             for pg in self.optimizer.param_groups:
                 pg["lr"] = max(new_lr, 1e-6)
-
-        return {
-            "loss": total_loss_val / max(1, n_updates),
-            "policy_loss": total_ploss / max(1, n_updates),
-            "value_loss": total_vloss / max(1, n_updates),
-            "entropy": total_ent / max(1, n_updates),
-        }
 
     def save(self, path: str) -> None:
         torch.save(
@@ -374,101 +239,25 @@ class PPOAgentDiscrete:
         )
 
     @classmethod
-    def load(cls, path: str, obs_dim: int, n_actions: int, config: PPOConfig, hidden_dim: int = 128) -> "PPOAgentDiscrete":
-        agent = cls(obs_dim, n_actions, config, hidden_dim)
+    def load(
+        cls,
+        path: str,
+        config: PPOConfig,
+        spec: AgentSpec,
+    ) -> PPOAgentDiscrete:
+        """从检查点加载智能体。
+
+        Args:
+            path: 检查点文件路径。
+            config: PPO 配置。
+            spec: 智能体形状规格（obs_dim/n_actions/hidden_dim）。
+        """
+        agent = cls(spec.obs_dim, spec.n_actions, config, spec.hidden_dim)
         data = torch.load(path, weights_only=False)
         agent.network.load_state_dict(data["network"])
         agent.optimizer.load_state_dict(data["optimizer"])
         agent._total_steps = data.get("total_steps", 0)
         return agent
-
-
-@dataclass
-class RolloutBuffer:
-    """PPO rollout 缓冲区。"""
-
-    obs: list = field(default_factory=list)
-    actions: list = field(default_factory=list)
-    rewards: list = field(default_factory=list)
-    logprobs: list = field(default_factory=list)
-    values: list = field(default_factory=list)
-    dones: list = field(default_factory=list)
-    advantages: np.ndarray = field(default_factory=lambda: np.array([]))
-    returns: np.ndarray = field(default_factory=lambda: np.array([]))
-
-    def clear(self) -> None:
-        self.obs.clear()
-        self.actions.clear()
-        self.rewards.clear()
-        self.logprobs.clear()
-        self.values.clear()
-        self.dones.clear()
-        self.advantages = np.array([])
-        self.returns = np.array([])
-
-    def __len__(self) -> int:
-        return len(self.obs)
-
-
-@dataclass
-class Transition:
-    """单步转移数据（将 store 的多个参数打包，降低函数参数个数）。
-
-    Attributes:
-        obs: 观测。
-        action: 动作。
-        reward: 奖励。
-        logprob: 动作对数概率。
-        value: 价值估计。
-        done: 是否终止。
-    """
-
-    obs: object
-    action: object
-    reward: float
-    logprob: float
-    value: float
-    done: bool
-
-
-def compute_gae(
-    rewards: list[float],
-    values: list[float],
-    dones: list[bool],
-    last_value: float,
-    config: PPOConfig | None = None,
-) -> tuple[np.ndarray, np.ndarray]:
-    """计算 GAE 优势与回报（与 SB3/CleanRL 一致）。
-
-    来源: Schulman et al., 2015, GAE https://arxiv.org/abs/1506.02438
-
-    Args:
-        rewards: 每步奖励序列。
-        values: 每步价值估计序列。
-        dones: 每步终止标志序列。
-        last_value: 最后一步的价值估计（bootstrap）。
-        config: PPO 配置（提供 gamma 与 gae_lambda），None 时使用默认值。
-
-    Returns:
-        (优势数组, 回报数组)。
-    """
-    gamma = config.gamma if config else 0.99
-    gae_lambda = config.gae_lambda if config else 0.95
-    n = len(rewards)
-    advantages = np.zeros(n, dtype=np.float64)
-    last_gae = 0.0
-    for t in reversed(range(n)):
-        if t == n - 1:
-            next_value = last_value
-            next_non_terminal = 0.0 if dones[t] else 1.0
-        else:
-            next_value = values[t + 1]
-            next_non_terminal = 0.0 if dones[t] else 1.0
-        delta = rewards[t] + gamma * next_value * next_non_terminal - values[t]
-        last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
-        advantages[t] = last_gae
-    returns = advantages + np.array(values, dtype=np.float64)
-    return advantages, returns
 
 
 class PPOAgent:
@@ -558,31 +347,24 @@ class PPOAgent:
         if adv.std() > 1e-8:
             self.buffer.advantages = (adv - adv.mean()) / (adv.std() + 1e-8)
 
-    def _process_minibatch(
-        self,
-        obs: torch.Tensor,
-        actions: torch.Tensor,
-        old_logprobs: torch.Tensor,
-        advantages: torch.Tensor,
-        returns: torch.Tensor,
-    ) -> dict:
+    def _process_minibatch(self, mb: BufferTensors) -> dict:
         """处理单个小批量：前向 → 损失 → 反向 → 优化器步进，返回指标。"""
         self.optimizer.zero_grad()
 
-        new_logprob, value_pred, entropy = self.ac.evaluate(obs, actions)
+        new_logprob, value_pred, entropy = self.ac.evaluate(mb.obs, mb.actions)
 
         # ratio = exp(new_logprob - old_logprob)
-        ratio = torch.exp(new_logprob - old_logprobs)
+        ratio = torch.exp(new_logprob - mb.logprobs)
 
         # 策略损失（clip）
-        surr1 = ratio * advantages
+        surr1 = ratio * mb.advantages
         surr2 = (
             torch.clamp(
                 ratio,
                 1.0 - self.config.clip_eps,
                 1.0 + self.config.clip_eps,
             )
-            * advantages
+            * mb.advantages
         )
         policy_loss = -torch.min(surr1, surr2).mean()
 
@@ -590,11 +372,11 @@ class PPOAgent:
         # 来源: SB3 PPO clip_vf
         if self.config.clip_vf > 0:
             # 直接 clip value_diff（与 NumPy 版一致）
-            value_diff = returns - value_pred
+            value_diff = mb.returns - value_pred
             value_diff = torch.clamp(value_diff, -self.config.clip_vf, self.config.clip_vf)
             value_loss = (value_diff**2).mean()
         else:
-            value_loss = ((returns - value_pred) ** 2).mean()
+            value_loss = ((mb.returns - value_pred) ** 2).mean()
 
         # 熵奖励
         entropy_mean = entropy.mean()
@@ -632,19 +414,34 @@ class PPOAgent:
                 "entropy": 0.0,
             }
 
+        tensors = self._stack_buffer_tensors()
+        metrics_sum, n_updates = self._run_ppo_epochs(tensors, n)
+
+        for k in metrics_sum:
+            metrics_sum[k] /= max(1, n_updates)
+        self.metrics.append(metrics_sum)
+        self.buffer.clear()
+        return metrics_sum
+
+    def _stack_buffer_tensors(self) -> BufferTensors:
+        """将 rollout buffer 转为 torch 张量（一次性，避免重复转换）。"""
         obs_np = np.array(self.buffer.obs, dtype=np.float32)
         actions_np = np.array(self.buffer.actions, dtype=np.float32)
         old_logprobs_np = np.array(self.buffer.logprobs, dtype=np.float32)
         advantages_np = self.buffer.advantages.astype(np.float32)
         returns_np = self.buffer.returns.astype(np.float32)
+        values_np = np.array(self.buffer.values, dtype=np.float32)
+        return BufferTensors(
+            obs=torch.as_tensor(obs_np),
+            actions=torch.as_tensor(actions_np),
+            logprobs=torch.as_tensor(old_logprobs_np),
+            values=torch.as_tensor(values_np),
+            advantages=torch.as_tensor(advantages_np),
+            returns=torch.as_tensor(returns_np),
+        )
 
-        # 转为 torch 张量（一次性，避免重复转换）
-        obs_t = torch.as_tensor(obs_np)
-        actions_t = torch.as_tensor(actions_np)
-        old_logprobs_t = torch.as_tensor(old_logprobs_np)
-        advantages_t = torch.as_tensor(advantages_np)
-        returns_t = torch.as_tensor(returns_np)
-
+    def _run_ppo_epochs(self, tensors: BufferTensors, n: int) -> tuple[dict, int]:
+        """跑多 epoch 小批量更新，返回指标累加和与更新次数。"""
         indices = np.arange(n)
         batch_size = min(self.config.batch_size, n)
         metrics_sum = {
@@ -659,22 +456,20 @@ class PPOAgent:
             np.random.shuffle(indices)
             for start in range(0, n, batch_size):
                 idx = indices[start : start + batch_size]
-                mb_metrics = self._process_minibatch(
-                    obs=obs_t[idx],
-                    actions=actions_t[idx],
-                    old_logprobs=old_logprobs_t[idx],
-                    advantages=advantages_t[idx],
-                    returns=returns_t[idx],
+                mb = BufferTensors(
+                    obs=tensors.obs[idx],
+                    actions=tensors.actions[idx],
+                    logprobs=tensors.logprobs[idx],
+                    values=tensors.values[idx],
+                    advantages=tensors.advantages[idx],
+                    returns=tensors.returns[idx],
                 )
+                mb_metrics = self._process_minibatch(mb)
                 for k in metrics_sum:
                     metrics_sum[k] += mb_metrics[k]
                 n_updates += 1
 
-        for k in metrics_sum:
-            metrics_sum[k] /= max(1, n_updates)
-        self.metrics.append(metrics_sum)
-        self.buffer.clear()
-        return metrics_sum
+        return metrics_sum, n_updates
 
     def save(self, path: str | Path) -> None:
         """保存检查点（JSON 格式，与 NumPy 版兼容）。"""

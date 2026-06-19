@@ -136,7 +136,8 @@ class SimLoop:
 
         logger.warning(
             "SimLoop 达到最大迭代 %d，仍有 %d 违规",
-            cfg.max_iterations, len(violations),
+            cfg.max_iterations,
+            len(violations),
         )
         return self._make_result(False, state, cfg.max_iterations, history)
 
@@ -161,7 +162,8 @@ class SimLoop:
         """记录迭代日志。"""
         logger.info(
             "  迭代 %d: %d 违规, 损耗 %.2f dB, %s",
-            iteration + 1, len(violations),
+            iteration + 1,
+            len(violations),
             sim_result.get("total_loss_db", 0.0),
             "通过" if not violations else "需调整",
         )

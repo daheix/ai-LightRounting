@@ -28,7 +28,9 @@ class ViolationType(Enum):
     CROSSTALK = "crosstalk"  # 串扰超标
     CROSSING = "crossing"  # 波导交叉过多
     OVERLAP = "overlap"  # 器件重叠
-    THERAL = "thermal"  # 热串扰
+    THERMAL = "thermal"  # 热串扰
+    MIN_WIDTH = "min_width"  # 波导宽度不足
+    COUPLING_GAP = "coupling_gap"  # 耦合间隙不足
 
 
 @dataclass
@@ -63,6 +65,8 @@ class ConstraintConfig:
         max_crosstalk_db: 最大允许串扰（dB）。
         max_crossings: 最大允许交叉数。
         safe_thermal_distance_um: 热安全距离（μm）。
+        min_waveguide_width_um: 最小波导宽度（μm），SOI 典型 0.4-0.5μm。
+        min_coupling_gap_um: 最小耦合间隙（μm），DC/环谐振器典型 0.1-0.3μm。
     """
 
     min_bend_radius_um: float = 5.0
@@ -71,6 +75,8 @@ class ConstraintConfig:
     max_crosstalk_db: float = -20.0
     max_crossings: int = 5
     safe_thermal_distance_um: float = 100.0
+    min_waveguide_width_um: float = 0.4
+    min_coupling_gap_um: float = 0.1
 
 
 def check_bend_radius(
@@ -96,13 +102,15 @@ def check_bend_radius(
             p0, p1, p2 = pts[i - 1], pts[i], pts[i + 1]
             radius = _estimate_bend_radius(p0, p1, p2)
             if 0 < radius < min_radius:
-                violations.append(Violation(
-                    vtype=ViolationType.BEND_RADIUS,
-                    severity=1.0 - radius / min_radius,
-                    message=f"弯曲半径 {radius:.1f} μm < 最小 {min_radius:.1f} μm",
-                    net_id=net_id,
-                    location=p1,
-                ))
+                violations.append(
+                    Violation(
+                        vtype=ViolationType.BEND_RADIUS,
+                        severity=1.0 - radius / min_radius,
+                        message=f"弯曲半径 {radius:.1f} μm < 最小 {min_radius:.1f} μm",
+                        net_id=net_id,
+                        location=p1,
+                    )
+                )
     return violations
 
 
@@ -127,12 +135,14 @@ def check_spacing(
             n2, p2 = items[j]
             gap = _rect_gap(p1, p2)
             if gap < min_spacing:
-                violations.append(Violation(
-                    vtype=ViolationType.SPACING,
-                    severity=1.0 - gap / min_spacing if min_spacing > 0 else 1.0,
-                    message=f"间距 {gap:.2f} μm < 最小 {min_spacing:.1f} μm",
-                    device_name=f"{n1}-{n2}",
-                ))
+                violations.append(
+                    Violation(
+                        vtype=ViolationType.SPACING,
+                        severity=1.0 - gap / min_spacing if min_spacing > 0 else 1.0,
+                        message=f"间距 {gap:.2f} μm < 最小 {min_spacing:.1f} μm",
+                        device_name=f"{n1}-{n2}",
+                    )
+                )
     return violations
 
 
@@ -150,11 +160,13 @@ def check_insertion_loss(
         违规列表。
     """
     if total_loss_db > max_loss_db:
-        return [Violation(
-            vtype=ViolationType.INSERTION_LOSS,
-            severity=min(1.0, (total_loss_db - max_loss_db) / max_loss_db),
-            message=f"插入损耗 {total_loss_db:.2f} dB > 最大 {max_loss_db:.1f} dB",
-        )]
+        return [
+            Violation(
+                vtype=ViolationType.INSERTION_LOSS,
+                severity=min(1.0, (total_loss_db - max_loss_db) / max_loss_db),
+                message=f"插入损耗 {total_loss_db:.2f} dB > 最大 {max_loss_db:.1f} dB",
+            )
+        ]
     return []
 
 
@@ -164,11 +176,13 @@ def check_crossings(
 ) -> list[Violation]:
     """检查波导交叉数约束。"""
     if n_crossings > max_crossings:
-        return [Violation(
-            vtype=ViolationType.CROSSING,
-            severity=min(1.0, (n_crossings - max_crossings) / max(1, max_crossings)),
-            message=f"交叉数 {n_crossings} > 最大 {max_crossings}",
-        )]
+        return [
+            Violation(
+                vtype=ViolationType.CROSSING,
+                severity=min(1.0, (n_crossings - max_crossings) / max(1, max_crossings)),
+                message=f"交叉数 {n_crossings} > 最大 {max_crossings}",
+            )
+        ]
     return []
 
 
@@ -181,13 +195,101 @@ def check_overlap(placements: dict) -> list[Violation]:
             n1, p1 = items[i]
             n2, p2 = items[j]
             if _rects_overlap(p1, p2):
-                violations.append(Violation(
-                    vtype=ViolationType.OVERLAP,
-                    severity=1.0,
-                    message=f"器件重叠: {n1} 和 {n2}",
-                    device_name=f"{n1}-{n2}",
-                ))
+                violations.append(
+                    Violation(
+                        vtype=ViolationType.OVERLAP,
+                        severity=1.0,
+                        message=f"器件重叠: {n1} 和 {n2}",
+                        device_name=f"{n1}-{n2}",
+                    )
+                )
     return violations
+
+
+def check_min_width(
+    waveguide_widths: dict[str, float],
+    min_width: float,
+) -> list[Violation]:
+    """检查波导最小宽度约束。
+
+    光子版图 DRC 关键项：波导宽度低于工艺最小值会导致模式泄露、损耗增大。
+    SOI 典型最小宽度 400-500nm，SiN 800-1000nm。
+
+    来源: SiEPIC EBeam PDK 设计规则
+           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+    Args:
+        waveguide_widths: 波导宽度字典 {net_id: width_um}。
+        min_width: 最小允许宽度（μm）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for net_id, width in waveguide_widths.items():
+        if width < min_width:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.MIN_WIDTH,
+                    severity=1.0 - width / min_width if min_width > 0 else 1.0,
+                    message=f"波导宽度 {width:.3f} μm < 最小 {min_width:.3f} μm",
+                    net_id=net_id,
+                )
+            )
+    return violations
+
+
+def check_coupling_gap(
+    coupling_gaps: dict[str, float],
+    min_gap: float,
+) -> list[Violation]:
+    """检查耦合间隙约束。
+
+    光子版图 DRC 关键项：定向耦合器、环谐振器的耦合间隙通常 100-300nm，
+    间隙过小会导致工艺无法实现（光刻分辨率限制），过大会导致耦合效率不足。
+
+    来源: SiEPIC EBeam PDK 设计规则
+           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+    Args:
+        coupling_gaps: 耦合间隙字典 {device_name: gap_um}。
+        min_gap: 最小允许间隙（μm）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for dev_name, gap in coupling_gaps.items():
+        if gap < min_gap:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.COUPLING_GAP,
+                    severity=1.0 - gap / min_gap if min_gap > 0 else 1.0,
+                    message=f"耦合间隙 {gap:.3f} μm < 最小 {min_gap:.3f} μm",
+                    device_name=dev_name,
+                )
+            )
+    return violations
+
+
+@dataclass
+class CheckContext:
+    """约束检查上下文（可选 DRC 输入）。
+
+    用于向 ConstraintChecker.check 传递损耗、交叉数、波导宽度、耦合间隙等
+    可选 DRC 输入，避免函数参数过多（规则 4.1：参数上限 5）。
+
+    Attributes:
+        total_loss_db: 总插入损耗（dB）。
+        n_crossings: 波导交叉数。
+        waveguide_widths: 波导宽度字典 {net_id: width_um}。
+        coupling_gaps: 耦合间隙字典 {device_name: gap_um}。
+    """
+
+    total_loss_db: float = 0.0
+    n_crossings: int = 0
+    waveguide_widths: dict[str, float] | None = None
+    coupling_gaps: dict[str, float] | None = None
 
 
 class ConstraintChecker:
@@ -206,27 +308,30 @@ class ConstraintChecker:
         self,
         placements: dict,
         paths: dict,
-        total_loss_db: float = 0.0,
-        n_crossings: int = 0,
+        context: CheckContext | None = None,
     ) -> list[Violation]:
         """综合约束检查。
 
         Args:
             placements: 器件布局。
             paths: 布线路径。
-            total_loss_db: 总插入损耗。
-            n_crossings: 交叉数。
+            context: DRC 上下文（损耗、交叉数、波导宽度、耦合间隙等）。
 
         Returns:
             所有违规列表。
         """
         cfg = self.config
+        ctx = context or CheckContext()
         violations: list[Violation] = []
         violations.extend(check_overlap(placements))
         violations.extend(check_spacing(placements, cfg.min_spacing_um))
         violations.extend(check_bend_radius(paths, cfg.min_bend_radius_um))
-        violations.extend(check_insertion_loss(total_loss_db, cfg.max_insertion_loss_db))
-        violations.extend(check_crossings(n_crossings, cfg.max_crossings))
+        violations.extend(check_insertion_loss(ctx.total_loss_db, cfg.max_insertion_loss_db))
+        violations.extend(check_crossings(ctx.n_crossings, cfg.max_crossings))
+        if ctx.waveguide_widths is not None:
+            violations.extend(check_min_width(ctx.waveguide_widths, cfg.min_waveguide_width_um))
+        if ctx.coupling_gaps is not None:
+            violations.extend(check_coupling_gap(ctx.coupling_gaps, cfg.min_coupling_gap_um))
         return violations
 
     def check_passed(self, **kwargs) -> bool:
@@ -235,7 +340,9 @@ class ConstraintChecker:
 
 
 def _estimate_bend_radius(
-    p0: tuple, p1: tuple, p2: tuple,
+    p0: tuple,
+    p1: tuple,
+    p2: tuple,
 ) -> float:
     """估算三点弯曲半径。
 
@@ -254,10 +361,14 @@ def _estimate_bend_radius(
 
 def _rect_gap(p1: dict, p2: dict) -> float:
     """计算两矩形最小间距。"""
-    gap_x = max(p2.get("x", 0) - (p1.get("x", 0) + p1.get("w", 10)),
-                p1.get("x", 0) - (p2.get("x", 0) + p2.get("w", 10)))
-    gap_y = max(p2.get("y", 0) - (p1.get("y", 0) + p1.get("h", 10)),
-                p1.get("y", 0) - (p2.get("y", 0) + p2.get("h", 10)))
+    gap_x = max(
+        p2.get("x", 0) - (p1.get("x", 0) + p1.get("w", 10)),
+        p1.get("x", 0) - (p2.get("x", 0) + p2.get("w", 10)),
+    )
+    gap_y = max(
+        p2.get("y", 0) - (p1.get("y", 0) + p1.get("h", 10)),
+        p1.get("y", 0) - (p2.get("y", 0) + p2.get("h", 10)),
+    )
     if gap_x > 0 and gap_y > 0:
         return math.hypot(gap_x, gap_y)
     return max(gap_x, gap_y)
@@ -276,6 +387,7 @@ def _rects_overlap(p1: dict, p2: dict) -> bool:
 __all__ = [
     "ConstraintChecker",
     "ConstraintConfig",
+    "CheckContext",
     "Violation",
     "ViolationType",
     "check_bend_radius",
@@ -283,4 +395,6 @@ __all__ = [
     "check_insertion_loss",
     "check_crossings",
     "check_overlap",
+    "check_min_width",
+    "check_coupling_gap",
 ]

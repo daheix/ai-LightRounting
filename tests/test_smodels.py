@@ -315,9 +315,8 @@ class TestSimphonyIntegration:
 
     def test_simphony_y_branch(self):
         """Simphony Y 分支模型应返回 S 参数字典。"""
-        import numpy as np
-        from simphony.libraries import siepic
+        from simphony.libraries.siepic import y_branch
 
-        s = siepic.y_branch(wl=np.array([1.55]))
+        s = y_branch(wl=np.array([1.55]))
         assert isinstance(s, dict)
         assert len(s) > 0

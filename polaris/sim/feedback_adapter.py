@@ -115,10 +115,7 @@ class FeedbackAdapter:
                     r_hints.append(hint)
 
         should_retry = len(violations) > 0
-        summary = (
-            f"{len(violations)} 违规 → "
-            f"{len(p_hints)} 布局建议 + {len(r_hints)} 布线建议"
-        )
+        summary = f"{len(violations)} 违规 → {len(p_hints)} 布局建议 + {len(r_hints)} 布线建议"
 
         return FeedbackResult(
             placement_hints=p_hints,

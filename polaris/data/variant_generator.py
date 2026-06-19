@@ -51,11 +51,13 @@ class VariantConfig:
     position_jitter_um: float = 50.0
     n_scale_variants: int = 3
     scale_factors: list[int] = field(default_factory=lambda: [2, 4])
-    param_sweep_ranges: dict = field(default_factory=lambda: {
-        "radius": [5.0, 10.0, 15.0, 20.0],
-        "gap": [0.2, 0.3, 0.5],
-        "length": [10.0, 20.0, 50.0, 100.0],
-    })
+    param_sweep_ranges: dict = field(
+        default_factory=lambda: {
+            "radius": [5.0, 10.0, 15.0, 20.0],
+            "gap": [0.2, 0.3, 0.5],
+            "length": [10.0, 20.0, 50.0, 100.0],
+        }
+    )
     seed: int = 42
 
 
@@ -140,8 +142,7 @@ def _build_cross_group_connections(
         for dev in base_circuit.devices:
             if dev.ports and len(dev.ports) >= 2:
                 cross_connections.append(
-                    (f"{dev.name}_s{i}", dev.ports[-1][0],
-                     f"{dev.name}_s{i + 1}", dev.ports[0][0])
+                    (f"{dev.name}_s{i}", dev.ports[-1][0], f"{dev.name}_s{i + 1}", dev.ports[0][0])
                 )
     return cross_connections
 
@@ -275,12 +276,16 @@ def _calc_device_loss(dev: DeviceSpec) -> float:
     return _DEVICE_LOSS_DB.get(dev.device_type, 0.0)
 
 
-def validate_with_simulation(circuit: CircuitSpec) -> tuple[bool, float]:
-    """用自研 S 参数仿真校验变体电路。
+def estimate_loss_budget(circuit: CircuitSpec) -> tuple[bool, float]:
+    """估算电路的总插入损耗预算（基于器件损耗查表）。
 
-    对电路进行 S 参数级联仿真，检查：
-    1. 仿真是否成功（无 NaN/Inf）
-    2. 总插入损耗是否在合理范围内
+    注意：本函数不是 S 参数仿真，而是基于器件类型→典型损耗的查表估算，
+    用于变体生成阶段的快速可行性筛查。真正的 S 参数级联仿真请使用
+    ``polaris.sim.cascade.cascade_circuit``。
+
+    检查项：
+    1. 总损耗是否在合理范围（0-50 dB）
+    2. 是否出现 NaN
 
     Args:
         circuit: 待校验电路。
@@ -298,7 +303,7 @@ def validate_with_simulation(circuit: CircuitSpec) -> tuple[bool, float]:
         return valid, total_loss
 
     except Exception as e:
-        logger.warning("仿真校验失败: %s (%s)", circuit.name, e)
+        logger.warning("损耗估算失败: %s (%s)", circuit.name, e)
         return False, 999.0
 
 
@@ -327,7 +332,9 @@ def _is_valid_placements(placements: dict) -> bool:
 
 
 def _save_position_variants(
-    base: dict, base_dir: Path, cfg: VariantConfig,
+    base: dict,
+    base_dir: Path,
+    cfg: VariantConfig,
 ) -> tuple[int, int]:
     """保存位置扰动变体到文件。
 
@@ -368,7 +375,9 @@ def _save_position_variants(
 
 
 def _save_param_sweep_variants(
-    base: dict, base_dir: Path, cfg: VariantConfig,
+    base: dict,
+    base_dir: Path,
+    cfg: VariantConfig,
 ) -> tuple[int, int]:
     """保存参数扫描变体到文件。
 
@@ -407,7 +416,9 @@ def _save_param_sweep_variants(
 
 
 def _process_base_circuit(
-    base: dict, base_dir: Path, cfg: VariantConfig,
+    base: dict,
+    base_dir: Path,
+    cfg: VariantConfig,
 ) -> tuple[int, int, int]:
     """处理单个基准电路：生成变体并仿真校验。
 
@@ -428,17 +439,20 @@ def _process_base_circuit(
     total_variants = nv + nv2
     total_valid = nvv + nvv2
 
-    valid, loss = validate_with_simulation(CircuitSpec(name=name))
+    valid, loss = estimate_loss_budget(CircuitSpec(name=name))
     if not valid:
-        logger.warning("仿真校验失败: %s/%s (loss=%.2f dB)", source, name, loss)
+        logger.warning("损耗估算失败: %s/%s (loss=%.2f dB)", source, name, loss)
         return total_variants, total_valid, 1
     total_valid += 1
     return total_variants, total_valid, 0
 
 
 def _save_stats(
-    out: Path, total_variants: int, total_valid: int,
-    total_invalid: int, n_base: int,
+    out: Path,
+    total_variants: int,
+    total_valid: int,
+    total_invalid: int,
+    n_base: int,
 ) -> dict:
     """保存并返回变体生成统计。
 
@@ -460,8 +474,13 @@ def _save_stats(
     }
     stats_path = out / "variant_stats.json"
     stats_path.write_text(json.dumps(stats, indent=2), encoding="utf-8")
-    logger.info("变体生成完成: %d 基准 × 变体 = %d 总变体 (有效=%d, 无效=%d)",
-                n_base, total_variants, total_valid, total_invalid)
+    logger.info(
+        "变体生成完成: %d 基准 × 变体 = %d 总变体 (有效=%d, 无效=%d)",
+        n_base,
+        total_variants,
+        total_valid,
+        total_invalid,
+    )
     return stats
 
 
@@ -506,7 +525,7 @@ __all__ = [
     "generate_position_variants",
     "generate_scale_variants",
     "generate_param_sweep_variants",
-    "validate_with_simulation",
+    "estimate_loss_budget",
     "VariantConfig",
     "VariantResult",
 ]
