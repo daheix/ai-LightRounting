@@ -538,3 +538,17 @@ def route_connection(
     loss_db_cm = _PLATFORM_LOSS_DB_CM.get(platform, 2.0)
     loss = path_loss(pts, loss_db_cm=loss_db_cm)
     return WaveguidePath(points=pts, length_um=path_length(pts), loss_db=loss)
+
+
+# ---------------------------------------------------------------------------
+# 命名兼容别名（便于上层统一以 ``WaveguideRouter`` 名称访问）
+# ---------------------------------------------------------------------------
+# 历史代码与文档中曾以 ``WaveguideRouter`` 作为布线器统一入口名称，实际实现
+# 为 ``GridRouter``（A* 网格布线器）。此处提供别名以保持向后兼容，避免上层
+# 调用方在重构后出现 ImportError。
+WaveguideRouter = GridRouter
+"""布线器统一别名（指向 GridRouter）。
+
+上层代码可通过 ``from polaris.router.waveguide_router import WaveguideRouter``
+访问，与文档/接口约定保持一致。
+"""

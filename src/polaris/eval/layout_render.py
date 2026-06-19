@@ -9,6 +9,11 @@
 - klayout Python: https://www.klayout.de/ （GDSII/OASIS 读写 + DRC）
 - matplotlib: https://matplotlib.org/ （版图渲染）
 - gdsfactory GDS 导出参考: https://gdsfactory.github.io/gdsfactory/
+
+可选依赖处理（规则 5.3.1）：
+- klayout 为可选依赖（pyproject.toml [project.optional-dependencies].layout）
+- 缺失时 GDS/OASIS 导出函数抛出 ImportError 并提示安装命令
+- 核心功能（PDK/布局/布线/训练）不依赖 klayout
 """
 
 from __future__ import annotations
@@ -19,6 +24,32 @@ import numpy as np
 
 from polaris.engine.floorplan_env import Placement
 from polaris.router.waveguide_router import WaveguidePath
+
+# 可选依赖：klayout（缺失时 GDS/OASIS 导出抛出明确错误）
+try:
+    import klayout.db as _db
+
+    _HAS_KLAYOUT = True
+except ImportError:
+    _db = None
+    _HAS_KLAYOUT = False
+
+
+def _require_klayout(feature_name: str) -> None:
+    """检查 klayout 是否可用，不可用时抛出 ImportError。
+
+    Args:
+        feature_name: 功能名称（用于错误提示）。
+
+    Raises:
+        ImportError: klayout 未安装时。
+    """
+    if not _HAS_KLAYOUT:
+        raise ImportError(
+            f"{feature_name} 需要 klayout 库。请安装：pip install klayout"
+            "（或 pip install polaris-pnr[layout]）"
+        )
+
 
 # 器件类别 → 渲染颜色
 _CATEGORY_COLORS = {
@@ -175,7 +206,8 @@ def _um_to_dbu(um: float, dbu: float = 0.001) -> int:
 
 def _create_klayout_layout(dbu: float = 0.001):
     """创建 klayout Layout 并定义工艺层，返回 (layout, top, layer_map)。"""
-    import klayout.db as db
+    _require_klayout("GDS/OASIS 导出")
+    db = _db
 
     ly = db.Layout()
     ly.dbu = dbu
@@ -193,7 +225,7 @@ def _create_klayout_layout(dbu: float = 0.001):
 
 def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> None:
     """将器件矩形画到对应工艺层，可选添加端口标记。"""
-    import klayout.db as db
+    db = _db
 
     for pl in placements.values():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
@@ -211,7 +243,7 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
 
 def _place_port_markers(top, pl, layer_port, dbu) -> None:
     """在端口位置画小矩形标记。"""
-    import klayout.db as db
+    db = _db
 
     ps = _um_to_dbu(0.5, dbu)
     for _, (px, py) in pl.port_positions().items():
@@ -226,7 +258,7 @@ def _place_port_markers(top, pl, layer_port, dbu) -> None:
 
 def _place_waveguide_paths(top, paths, layer_waveguide) -> None:
     """将波导路径画到布线层。"""
-    import klayout.db as db
+    db = _db
 
     if not paths:
         return

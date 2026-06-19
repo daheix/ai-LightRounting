@@ -153,14 +153,15 @@ def default_models() -> dict[str, ModelFunc]:
 def simphony_models() -> dict[str, ModelFunc]:
     """返回 Simphony SiEPIC 模型库（规则 2 直接集成）。
 
+    可选依赖处理（规则 5.3.1）：simphony 缺失时返回空字典，
+    上层代码回退到 pyCopySiPANN 复刻模型。
+
     来源: https://simphonyphotonics.readthedocs.io/
     """
     try:
-        import sax  # noqa: F401
+        from simphony.libraries import siepic
     except ImportError:
         return {}
-
-    from simphony.libraries import siepic
 
     return {
         "siepic_waveguide": siepic.waveguide,

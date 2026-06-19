@@ -39,6 +39,21 @@ dev = [
     "ruff",
     "mypy",
 ]
+layout = [
+    "klayout",
+    "gdsfactory",
+    "gdstk",
+]
+simulation = [
+    "simphony",
+    "SiPANN",
+]
+ml = [
+    "torch>=2.0",
+]
+
+[project.scripts]
+polaris = "polaris.pipeline:main"
 
 [project.urls]
 Repository = "https://github.com/daheix/ai-LightRounting"

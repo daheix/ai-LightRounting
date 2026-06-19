@@ -23,10 +23,11 @@ from pathlib import Path
 
 import numpy as np
 
-from polaris.engine.floorplan_env import FloorplanEnv
+from polaris.engine.floorplan_env import FloorplanEnv, FloorplanEnvConfig
 from polaris.engine.netlist import load_netlist
 from polaris.router.routing_env import RoutingEnv
 from polaris.trainer.dataset import DatasetConfig, generate_dataset
+from polaris.trainer.reward_shaping import ExpertRewardShaper
 from polaris.trainer.train_loop import (
     _infer_obs_dim,
     _obs_to_vector,
@@ -84,6 +85,19 @@ DATASET_CFG = DatasetConfig(
     min_devices=3,
     max_devices=12,
     seed=42,
+)
+
+# 专家知识奖励塑形器（ICLR'26 Expertise-Enhanced RL）
+# 来源: https://openreview.net/forum?id=yqvNwfxRR6
+# 注入光子学领域知识：端口对齐/弯曲半径/交叉/拥塞/热串扰
+EXPERT_SHAPER = ExpertRewardShaper()
+
+# 布局环境配置（注入专家奖励塑形器）
+PLACE_ENV_CONFIG = FloorplanEnvConfig(
+    canvas_w=CANVAS_W,
+    canvas_h=CANVAS_H,
+    grid_size=GRID_SIZE,
+    expert_shaper=EXPERT_SHAPER,
 )
 
 
@@ -175,15 +189,50 @@ def git_commit(prog: dict) -> None:
 
 
 def _try_load_agent(ckpt_path: Path, obs_dim: int, n_actions: int) -> _PPOAgent | None:
-    """尝试从 checkpoint 加载 agent。"""
+    """尝试从 checkpoint 加载 agent。
+
+    Bug 修复: 原调用 _PPOAgent.load(path, obs_dim, n_actions, config, hidden_dim) 传 5 参数，
+    但 PPOAgentDiscrete.load 签名为 load(path, config, spec)，导致续训失败。
+    修复: 用 AgentSpec 打包 obs_dim/n_actions/hidden_dim，匹配正确签名。
+    """
     if not ckpt_path.exists():
         return None
     try:
-        agent = _PPOAgent.load(ckpt_path, obs_dim, n_actions, PPO_CONFIG, HIDDEN_DIM)
+        from polaris.trainer.ppo_buffers import AgentSpec
+
+        spec = AgentSpec(obs_dim=obs_dim, n_actions=n_actions, hidden_dim=HIDDEN_DIM)
+        agent = _PPOAgent.load(ckpt_path, PPO_CONFIG, spec)
         print(f"  [续训] 已加载 {ckpt_path}", flush=True)
         return agent
     except Exception as e:
         print(f"  [续训] 加载失败，重新创建: {e}", flush=True)
+        return None
+
+
+def _try_load_routing_agent(
+    ckpt_path: Path, obs_dim: int, action_dim: int
+):
+    """尝试从 checkpoint 加载布线 agent（连续 PPO）。
+
+    Bug 修复: 原代码根本未尝试加载 routing_ckpt，每次重启都从零开始。
+    修复: 新增加载逻辑，匹配 PPOAgent.load(path) 签名。
+    """
+    if not ckpt_path.exists():
+        return None
+    try:
+        from polaris.trainer.ppo_torch import PPOAgent as _PPOAgentCont
+
+        agent = _PPOAgentCont(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            config=PPO_CONFIG,
+            hidden_dim=HIDDEN_DIM,
+        )
+        agent.load(ckpt_path)
+        print(f"  [续训] 已加载 {ckpt_path}", flush=True)
+        return agent
+    except Exception as e:
+        print(f"  [续训] 布线 agent 加载失败，重新创建: {e}", flush=True)
         return None
 
 
@@ -192,12 +241,13 @@ def _infer_dims() -> tuple[int, int, int, list]:
     netlists = generate_dataset(DATASET_CFG)
     net0, devices0, _ = load_netlist(netlists[0])
 
-    env0 = FloorplanEnv(net0, devices0, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+    env0 = FloorplanEnv(net0, devices0, config=PLACE_ENV_CONFIG)
     obs_dim = _infer_obs_dim(env0)
     n_actions = _flatten_multidiscrete(env0.action_space)
     print(f"  布局: obs_dim={obs_dim}, n_actions={n_actions}", flush=True)
+    print(f"  [专家奖励] ExpertRewardShaper 已启用 (ICLR'26)", flush=True)
 
-    fp = FloorplanEnv(net0, devices0, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+    fp = FloorplanEnv(net0, devices0, config=PLACE_ENV_CONFIG)
     fp.reset()
     for _ in range(len(devices0)):
         fp.step(fp.action_space.sample())
@@ -224,7 +274,7 @@ def run_placement_batch(
     for ep in range(batch_episodes):
         nl = netlists[ep % len(netlists)]
         net, devices, _ = load_netlist(nl)
-        env = FloorplanEnv(net, devices, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+        env = FloorplanEnv(net, devices, config=PLACE_ENV_CONFIG)
         obs, _ = env.reset()
         ep_reward = 0.0
         for _ in range(ROLLOUT_STEPS):
@@ -275,7 +325,7 @@ def run_routing_batch(
     for ep in range(batch_episodes):
         nl = netlists[ep % len(netlists)]
         net, devices, _ = load_netlist(nl)
-        fp = FloorplanEnv(net, devices, canvas_w=CANVAS_W, canvas_h=CANVAS_H, grid_size=GRID_SIZE)
+        fp = FloorplanEnv(net, devices, config=PLACE_ENV_CONFIG)
         fp.reset()
         for _ in range(len(devices)):
             fp.step(fp.action_space.sample())
@@ -342,10 +392,12 @@ def main() -> None:
 
     routing_ckpt = SAVE_DIR / "routing_agent.json"
     route_action_dim = 3
-    routing_agent = _PPOAgentCont(
-        obs_dim=obs_dim_route, action_dim=route_action_dim, config=PPO_CONFIG, hidden_dim=HIDDEN_DIM,
-    )
-    print("  [新建] routing_agent (连续PPO)", flush=True)
+    routing_agent = _try_load_routing_agent(routing_ckpt, obs_dim_route, route_action_dim)
+    if routing_agent is None:
+        routing_agent = _PPOAgentCont(
+            obs_dim=obs_dim_route, action_dim=route_action_dim, config=PPO_CONFIG, hidden_dim=HIDDEN_DIM,
+        )
+        print("  [新建] routing_agent (连续PPO)", flush=True)
 
     last_ckpt_ep = 0
 

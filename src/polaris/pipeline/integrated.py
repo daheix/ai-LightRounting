@@ -166,15 +166,17 @@ class IntegratedPipeline:
         self.router = _DefaultRouter()
         self.simulator = _DefaultSimulator()
 
-    def run(self, circuit: CircuitSpec) -> PipelineResult:
+    def run(self, circuit: CircuitSpec | None = None) -> PipelineResult:
         """执行一体化流水线。
 
         Args:
-            circuit: 电路规格。
+            circuit: 电路规格。None 时使用内置默认 MZI 电路（方便快速演示与无参调用）。
 
         Returns:
             PipelineResult。
         """
+        if circuit is None:
+            circuit = _default_demo_circuit()
         cfg = self.config
         logger.info(
             "一体化流水线启动: %s (%d 器件, %d 连接)",
@@ -239,3 +241,27 @@ __all__ = [
     "PipelineConfig",
     "PipelineResult",
 ]
+
+
+def _default_demo_circuit() -> CircuitSpec:
+    """内置默认演示电路（MZI 风格，3 器件 2 连接）。
+
+    用于 ``IntegratedPipeline.run()`` 无参调用时提供快速演示，
+    避免第三方用户必须构造 CircuitSpec 才能体验流水线。
+    """
+    from polaris.data.specs import DeviceSpec
+
+    return CircuitSpec(
+        name="demo_mzi",
+        devices=[
+            DeviceSpec(name="gc1", device_type="grating_coupler", width_um=10.0, height_um=10.0),
+            DeviceSpec(name="mmi1", device_type="mmi_1x2", width_um=20.0, height_um=10.0),
+            DeviceSpec(name="gc2", device_type="grating_coupler", width_um=10.0, height_um=10.0),
+        ],
+        connections=[
+            ("gc1", "o1", "mmi1", "o1"),
+            ("mmi1", "o2", "gc2", "o1"),
+        ],
+        canvas_w=200.0,
+        canvas_h=200.0,
+    )

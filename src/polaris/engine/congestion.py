@@ -342,8 +342,23 @@ def _downsample_congestion(cong: np.ndarray, oh: int, ow: int) -> np.ndarray:
 
 __all__ = [
     "CongestionCNN",
+    "CongestionPredictor",
     "CNNTrainConfig",
     "DatasetConfig",
     "grid_from_devices",
     "generate_congestion_dataset",
 ]
+
+
+# ---------------------------------------------------------------------------
+# 命名兼容别名（便于上层统一以 ``CongestionPredictor`` 名称访问）
+# ---------------------------------------------------------------------------
+# 历史代码与文档中曾以 ``CongestionPredictor`` 作为拥塞预测器统一入口名称，
+# 实际实现为 ``CongestionCNN``（3 层 CNN + 2 层 FC）。此处提供别名以保持
+# 向后兼容，避免上层调用方在重构后出现 ImportError。
+CongestionPredictor = CongestionCNN
+"""拥塞预测器统一别名（指向 CongestionCNN）。
+
+上层代码可通过 ``from polaris.engine.congestion import CongestionPredictor``
+访问，与文档/接口约定保持一致。
+"""

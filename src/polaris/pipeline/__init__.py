@@ -1,7 +1,13 @@
 """一体化流水线包。
 
 提供端到端自动布局布线 + 仿真回馈一体化流水线，以及 CLI 入口函数
-``cmd_run`` / ``cmd_catalog`` / ``cmd_train``。
+``cmd_run`` / ``cmd_catalog`` / ``cmd_train`` 与 ``main`` argparse 入口。
+
+CLI 用法::
+
+    python -m polaris run --netlist circuit.yaml --output out/
+    python -m polaris train --episodes 50 --output checkpoints/
+    python -m polaris catalog --platform SOI
 
 来源:
 - Apollo arXiv 2025: https://arxiv.org/html/2504.18813v1
@@ -11,8 +17,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +28,22 @@ from polaris.pdk.catalog import build_default_catalog
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["cmd_run", "cmd_catalog", "cmd_train"]
+__all__ = ["cmd_run", "cmd_catalog", "cmd_train", "main"]
+
+
+@dataclass
+class CanvasConfig:
+    """画布尺寸配置（将 _place/_route 的画布参数打包，降低函数参数个数）。
+
+    Attributes:
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+        grid_size: 栅格大小（μm）。
+    """
+
+    canvas_w: float = 200.0
+    canvas_h: float = 200.0
+    grid_size: float = 5.0
 
 
 def _run_floorplan(net, devices, canvas_w: float, canvas_h: float, grid_size: float):
@@ -104,8 +127,7 @@ def cmd_run(args: Any) -> int:
     """CLI run 命令：网表 → 布局 → 布线 → GDS/OAS/PNG → report.json。
 
     Args:
-        args: 参数对象，需包含属性 netlist/output/checkpoint/canvas_w/canvas_h/
-            grid_size/hidden_dim。
+        args: 参数对象，需包含属性 netlist/output/canvas_w/canvas_h/grid_size。
 
     Returns:
         0 表示成功。
@@ -115,12 +137,16 @@ def cmd_run(args: Any) -> int:
     net, devices, _ = load_netlist(args.netlist)
     out_dir = Path(args.output)
     out_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[1/4] 加载网表: {net.name} ({len(devices)} 器件, {len(net.connections)} 连接)")
     fp = _run_floorplan(net, devices, args.canvas_w, args.canvas_h, args.grid_size)
+    print(f"[2/4] 布局完成: {len(fp.state.placements)} 器件")
     r_env = _run_routing(net, fp.state.placements, args.canvas_w, args.canvas_h, args.grid_size)
+    print(f"[3/4] 布线完成: {len(r_env.state.paths)} 连接")
     placements = fp.state.placements
     paths = r_env.state.paths
     _export_layout(out_dir, placements, paths)
     _write_report(out_dir, net, devices, placements, paths)
+    print(f"[4/4] 报告已保存: {out_dir / 'report.json'}")
     logger.info("流水线完成: %s (%d 器件, %d 连接)", net.name, len(devices), len(net.connections))
     return 0
 
@@ -172,3 +198,56 @@ def cmd_train(args: Any) -> int:
     cfg.dataset.max_devices = int(args.max_devices)
     train_floorplan(cfg, verbose=False)
     return 0
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    """构建 CLI argparse 解析器。"""
+    parser = argparse.ArgumentParser(
+        prog="polaris",
+        description="PoLaRIS 光电子 AI 智能布局布线引擎",
+    )
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    # run
+    p_run = sub.add_parser("run", help="端到端运行：网表 → 布局 → 布线 → GDS/OAS → 报告")
+    p_run.add_argument("--netlist", required=True, help="网表文件路径 (YAML/JSON)")
+    p_run.add_argument("--output", "-o", default="out", help="输出目录")
+    p_run.add_argument("--canvas-w", type=float, default=200.0)
+    p_run.add_argument("--canvas-h", type=float, default=200.0)
+    p_run.add_argument("--grid-size", type=float, default=5.0)
+    p_run.set_defaults(func=cmd_run)
+
+    # train
+    p_train = sub.add_parser("train", help="训练 PPO 智能体")
+    p_train.add_argument("--episodes", type=int, default=50)
+    p_train.add_argument("--rollout-steps", type=int, default=64)
+    p_train.add_argument("--num-netlists", type=int, default=50)
+    p_train.add_argument("--min-devices", type=int, default=3)
+    p_train.add_argument("--max-devices", type=int, default=12)
+    p_train.add_argument("--canvas-w", type=float, default=200.0)
+    p_train.add_argument("--canvas-h", type=float, default=200.0)
+    p_train.add_argument("--grid-size", type=float, default=5.0)
+    p_train.add_argument("--hidden-dim", type=int, default=64)
+    p_train.add_argument("--output", "-o", default="checkpoints")
+    p_train.set_defaults(func=cmd_train)
+
+    # catalog
+    p_cat = sub.add_parser("catalog", help="列出器件目录")
+    p_cat.add_argument("--platform", default=None, help="过滤平台 (SOI/SiN/InP/LNOI)")
+    p_cat.set_defaults(func=cmd_catalog)
+
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    """CLI 主入口。
+
+    Args:
+        argv: 命令行参数列表，None 时读取 sys.argv。
+
+    Returns:
+        退出码（0 成功）。
+    """
+    parser = _build_parser()
+    args = parser.parse_args(argv)
+    return args.func(args)
