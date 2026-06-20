@@ -4,23 +4,19 @@
 用于训练具备规模泛化能力和参数鲁棒性的 RL 布局布线智能体。
 
 设计方法:
-1. **规模变体（Scale Variants）**: 基于 Curriculum Learning 思想，按器件数分阶段生成
+1. **规模变体**: 基于 Curriculum Learning 思想，按器件数分阶段生成
    小/中/大/超大四个级别的电路，支持从小规模到大规模的渐进训练。
-2. **参数扫描变体（Parameter Sweep Variants）**: 基于 Domain Randomization 思想，
-   对器件物理参数（radius/gap/length 等）进行扫描，提升策略对参数变化的鲁棒性。
-3. **参数化 PDK 工厂**: 根据器件类型和参数动态生成 DeviceSpec，支持大规模电路生成。
+2. **参数扫描变体**: 基于 Domain Randomization 思想，对器件物理参数
+   （radius/gap/length 等）进行扫描，提升策略对参数变化的鲁棒性。
+3. **参数化 PDK 工厂**: 根据器件类型和参数动态生成 DeviceSpec。
 
 来源:
 - Bengio et al., "Curriculum Learning", ICML 2009
   https://dl.acm.org/doi/abs/10.1145/1553374.1553380
 - OpenAI, "Solving Rubik's Cube with a Robot Hand" (ADR), 2019
   https://ar5iv.labs.arxiv.org/html/1910.07113
-- CircuitNet 3.0, ICLR 2026 (语法树变异 + 任务导向过滤)
-  https://github.com/sklp-eda-lab/iclr-circuitnet_3.0/
-- LiDAR 2.0, 2025 (PIC 可扩展 benchmark 生成器)
-  https://arxiv.org/pdf/2505.17239v1.pdf
-- OSIRIS, 2026 (模拟 IC 可扩展数据集生成)
-  https://arxiv.org/html/2601.19439v1
+- CircuitNet 3.0, ICLR 2026 https://github.com/sklp-eda-lab/iclr-circuitnet_3.0/
+- LiDAR 2.0, 2025 https://arxiv.org/pdf/2505.17239v1.pdf
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK (MIT, UBC)
 """
 
