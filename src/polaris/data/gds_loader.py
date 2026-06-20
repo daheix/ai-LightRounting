@@ -37,8 +37,10 @@ _PIN_LAYER = (69, 0)
 
 # 端口位置匹配容差（μm）
 # SiEPIC EBeam PDK 中相邻器件端口间距典型值 5.5μm（如 y_branch 的 pin2/pin3），
-# 容差需 ≥6.0μm 才能匹配跨器件连接，同时排除同器件端口（由 device_name 检查保证）
-_PORT_MATCH_TOL = 6.0
+# 但跨器件直接对齐的端口间距可达 10-15μm（如 DC 与波导的连接）。
+# 容差 15.0μm 可匹配大多数直接对齐连接，同时通过 device_name 检查排除同器件端口。
+# 来源: SiEPIC EBeam PDK 器件尺寸 https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+_PORT_MATCH_TOL = 15.0
 
 # 忽略的非器件实例名前缀
 _IGNORE_PREFIXES = (
@@ -125,14 +127,15 @@ def _apply_trans(trans, x: float, y: float, dbu: float = 1.0) -> tuple[float, fl
     klayout Python 绑定中 ``DCplxTrans * DPoint`` 运算符不生效，
     需手动分解旋转/镜像/缩放/平移并应用。
 
-    注意: ``RecursiveShapeIterator.dtrans()`` 返回的位移单位是数据库单位（dbu），
-    需除以 dbu 转换为微米；``inst.cplx_trans`` 的位移已是微米，dbu=1.0 即可。
+    注意: ``DCplxTrans`` 的位移单位始终是微米（D = double micrometers），
+    无论来自 ``inst.cplx_trans`` 还是 ``RecursiveShapeIterator.dtrans()``。
+    ``dbu`` 参数保留仅为向后兼容，不再使用。
 
     Args:
         trans: ``klayout.db.DCplxTrans`` 变换对象。
         x: 点 x 坐标（μm）。
         y: 点 y 坐标（μm）。
-        dbu: 数据库单位转微米因子（dtrans 需传入实际 dbu，cplx_trans 传 1.0）。
+        dbu: 已废弃，保留仅为向后兼容。
 
     Returns:
         变换后的 (x, y) 坐标元组。
@@ -141,10 +144,9 @@ def _apply_trans(trans, x: float, y: float, dbu: float = 1.0) -> tuple[float, fl
     angle = trans.angle  # 旋转角度（度）
     mirror = trans.is_mirror  # 是否镜像
     scale = trans.mag  # 缩放因子
-    disp = trans.disp  # 平移向量 (DPoint)
-    # dtrans() 的位移在 dbu 中，需转换为 μm
-    dx = disp.x / dbu if dbu != 1.0 else disp.x
-    dy = disp.y / dbu if dbu != 1.0 else disp.y
+    disp = trans.disp  # 平移向量 (DPoint)，单位微米
+    dx = disp.x
+    dy = disp.y
     # 应用缩放
     sx, sy = x * scale, y * scale
     # 应用镜像
@@ -181,7 +183,9 @@ def _collect_device_instances(top, dbu: float) -> list[dict]:
         idx = name_counter.get(cell_name, 0)
         unique_name = f"{cell_name}_{idx}" if idx > 0 else cell_name
         name_counter[cell_name] = idx + 1
-        trans = inst.cplx_trans
+        # 用 dcplx_trans（DCplxTrans，微米单位）而非 cplx_trans（ICplxTrans，dbu 单位）
+        # 来源: klayout Instance API https://www.klayout.org/klayout-pypi/overview/instances/
+        trans = inst.dcplx_trans
         cell_bbox = inst.cell.dbbox()
         cx = (cell_bbox.left + cell_bbox.right) / 2
         cy = (cell_bbox.bottom + cell_bbox.top) / 2

@@ -1,0 +1,112 @@
+{
+  "name": "MZI_bdc",
+  "platform": "SOI",
+  "source": "SiEPIC EBeam PDK GDS",
+  "canvas_w": 121.10000000000001,
+  "canvas_h": 187.70000000000002,
+  "devices": [
+    {
+      "name": "ebeam_y_1550",
+      "type": "y_branch",
+      "width_um": 15.0,
+      "height_um": 7.0,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "Ref: Zeqin Lu, et al., \"Comparison of photonic 2x2 3-dB couplers for 220 nm silicon-on-insulator platforms,\" GFP 2015",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "type": "grating_coupler_1d",
+      "width_um": 33.1,
+      "height_um": 21.4,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_terminator_te1550",
+      "type": "terminator",
+      "width_um": 11.0,
+      "height_um": 2.0,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_bdc_te1550",
+      "type": "directional_coupler",
+      "width_um": 70.95,
+      "height_um": 7.200000000000001,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    }
+  ],
+  "connections": []
+}

@@ -1,0 +1,281 @@
+{
+  "name": "Ring",
+  "platform": "SOI",
+  "source": "SiEPIC EBeam PDK GDS",
+  "canvas_w": 335.85,
+  "canvas_h": 441.7,
+  "devices": [
+    {
+      "name": "ebeam_dc_halfring_straight",
+      "type": "ring_resonator",
+      "width_um": 11.700000000000001,
+      "height_um": 6.45,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius": 5.0,
+        "Lc": 0.0,
+        "orthogonal_identifier": 1.0
+      }
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "type": "grating_coupler_1d",
+      "width_um": 33.099999999999994,
+      "height_um": 21.399999999999977,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_dc_halfring_straight_1",
+      "type": "ring_resonator",
+      "width_um": 11.700000000000001,
+      "height_um": 6.450000000000001,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius": 5.0,
+        "Lc": 0.0,
+        "orthogonal_identifier": 1.0
+      }
+    },
+    {
+      "name": "ebeam_dc_halfring_straight$1",
+      "type": "ebeam_dc_halfring_straight$1",
+      "width_um": 7.699999999999989,
+      "height_um": 4.450000000000001,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius": 3.0,
+        "Lc": 0.0,
+        "orthogonal_identifier": 1.0
+      }
+    },
+    {
+      "name": "ebeam_gc_te1550_1",
+      "type": "grating_coupler_1d",
+      "width_um": 33.10000000000001,
+      "height_um": 21.399999999999977,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_dc_halfring_straight$1_1",
+      "type": "ebeam_dc_halfring_straight$1",
+      "width_um": 7.699999999999989,
+      "height_um": 4.45,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius": 3.0,
+        "Lc": 0.0,
+        "orthogonal_identifier": 1.0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "ebeam_dc_halfring_straight",
+      "pin2",
+      "ebeam_dc_halfring_straight_1",
+      "pin2"
+    ],
+    [
+      "ebeam_dc_halfring_straight",
+      "pin4",
+      "ebeam_dc_halfring_straight_1",
+      "pin4"
+    ],
+    [
+      "ebeam_dc_halfring_straight",
+      "pin1",
+      "ebeam_dc_halfring_straight_1",
+      "pin1"
+    ],
+    [
+      "ebeam_dc_halfring_straight",
+      "pin3",
+      "ebeam_dc_halfring_straight_1",
+      "pin3"
+    ],
+    [
+      "ebeam_dc_halfring_straight$1",
+      "pin2",
+      "ebeam_dc_halfring_straight$1_1",
+      "pin2"
+    ],
+    [
+      "ebeam_dc_halfring_straight$1",
+      "pin4",
+      "ebeam_dc_halfring_straight$1_1",
+      "pin4"
+    ],
+    [
+      "ebeam_dc_halfring_straight$1",
+      "pin1",
+      "ebeam_dc_halfring_straight$1_1",
+      "pin1"
+    ],
+    [
+      "ebeam_dc_halfring_straight$1",
+      "pin3",
+      "ebeam_dc_halfring_straight$1_1",
+      "pin3"
+    ]
+  ]
+}

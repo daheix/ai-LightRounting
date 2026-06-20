@@ -1,0 +1,157 @@
+{
+  "name": "series_rings",
+  "platform": "SOI",
+  "source": "SiEPIC EBeam PDK GDS",
+  "canvas_w": 142.75,
+  "canvas_h": 441.7,
+  "devices": [
+    {
+      "name": "DirectionalCoupler_SeriesRings$1",
+      "type": "DirectionalCoupler_SeriesRings$1",
+      "width_um": 21.5,
+      "height_um": 20.799999999999997,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius1": 10.0,
+        "radius2": 10.0
+      }
+    },
+    {
+      "name": "DirectionalCoupler_SeriesRings$1_1",
+      "type": "DirectionalCoupler_SeriesRings$1",
+      "width_um": 21.5,
+      "height_um": 20.8,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius1": 10.0,
+        "radius2": 10.0
+      }
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "type": "grating_coupler_1d",
+      "width_um": 33.099999999999994,
+      "height_um": 21.399999999999977,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "DirectionalCoupler_SeriesRings$1_2",
+      "type": "DirectionalCoupler_SeriesRings$1",
+      "width_um": 21.5,
+      "height_um": 20.800000000000004,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius1": 10.0,
+        "radius2": 10.0
+      }
+    }
+  ],
+  "connections": []
+}
