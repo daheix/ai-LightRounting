@@ -215,6 +215,10 @@ def instantiate_devices(
 ) -> dict[str, Device]:
     """将网表实例实例化为 ``Device`` 对象（通过 catalog 检索器件模板）。
 
+    当实例 ``settings`` 含 ``ports`` 字段时，用其覆盖 catalog 模板端口，
+    以支持 LiDAR 等外部 benchmark 的端口命名约定（如 ``o1/o2`` 而非
+    ``in/out1``），确保连接能正确解析（规则 16 Bug 修复）。
+
     Args:
         net: 解析后的网表。
         catalog: 器件注册表（默认使用全部内置平台）。
@@ -227,13 +231,14 @@ def instantiate_devices(
     devices: dict[str, Device] = {}
     for inst in net.instances:
         dev = catalog.get(inst.component, platform=inst.platform)
+        ports = _resolve_ports(dev, inst.settings)
         # 用实例 id 覆盖 device_id 以区分同类型多实例
         dev = Device(
             device_id=inst.instance_id,
             platform=dev.platform,
             category=dev.category,
             name=dev.name,
-            ports=dev.ports,
+            ports=ports,
             bbox=dev.bbox,
             params={**dev.params, **inst.settings},
             source=dev.source,
@@ -241,6 +246,51 @@ def instantiate_devices(
         )
         devices[inst.instance_id] = dev
     return devices
+
+
+def _resolve_ports(dev: Device, settings: dict) -> list:
+    """从 settings 解析端口列表，无则用 catalog 模板端口。
+
+    Args:
+        dev: catalog 模板器件。
+        settings: 实例配置（可能含 ``ports`` 字段覆盖模板端口）。
+
+    Returns:
+        ``Port`` 列表。
+    """
+    raw_ports = settings.get("ports") if settings else None
+    if not raw_ports:
+        return dev.ports
+    from polaris.pdk.port import Port
+
+    resolved = []
+    for p in raw_ports:
+        if isinstance(p, Port):
+            resolved.append(p)
+        elif isinstance(p, dict):
+            direction = _parse_direction(p.get("direction", "E"))
+            resolved.append(
+                Port(
+                    name=str(p["name"]),
+                    x=float(p.get("x", 0.0)),
+                    y=float(p.get("y", 0.0)),
+                    direction=direction,
+                    waveguide_type=str(p.get("waveguide_type", "strip")),
+                    width=float(p.get("width", 0.5)),
+                )
+            )
+    return resolved if resolved else dev.ports
+
+
+def _parse_direction(val):
+    """解析端口朝向（支持字符串首字母 N/S/E/W 或 Direction 枚举）。"""
+    from polaris.pdk.port import Direction
+
+    if isinstance(val, Direction):
+        return val
+    s = str(val).strip().upper()[:1]
+    mapping = {"N": Direction.NORTH, "S": Direction.SOUTH, "E": Direction.EAST, "W": Direction.WEST}
+    return mapping.get(s, Direction.EAST)
 
 
 def build_graph(net: Netlist, devices: dict[str, Device]) -> nx.Graph:

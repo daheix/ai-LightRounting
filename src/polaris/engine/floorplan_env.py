@@ -205,7 +205,6 @@ class FloorplanEnv(gym.Env):
         self.expert_shaper = config.expert_shaper
         self.state_encoder = config.state_encoder
         self._edge_index = self._build_edge_index()
-
         self.state = FloorplanState(
             canvas_w=config.canvas_w, canvas_h=config.canvas_h, grid_size=config.grid_size
         )
@@ -213,9 +212,12 @@ class FloorplanEnv(gym.Env):
         self.grid_h = self.state.grid_h
         self._step_idx = 0
         self._last_reward = 0.0  # 上一步的累计奖励（用于计算增量奖励）
-
         self.action_space = spaces.MultiDiscrete([self.grid_w, self.grid_h, 4])
-        self.observation_space = spaces.Dict(
+        self.observation_space = self._build_observation_space()
+
+    def _build_observation_space(self) -> spaces.Dict:
+        """构建观测空间（occupancy + congestion + port_positions + step）。"""
+        return spaces.Dict(
             {
                 "occupancy": spaces.Box(
                     low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
@@ -298,15 +300,18 @@ class FloorplanEnv(gym.Env):
         对齐 DeepPlace (NeurIPS 2021) congestion map 作为 obs 通道的业界标准。
         来源: DREAMPlace RUDY https://arxiv.org/abs/2004.10746
         """
-        from polaris.engine.congestion import rudy_congestion
+        from polaris.engine.congestion import RudyConfig, rudy_congestion
 
-        return rudy_congestion(
-            placements=self.state.placements,
-            connections=self.net.connections,
+        cfg = RudyConfig(
             grid_h=self.grid_h,
             grid_w=self.grid_w,
             canvas_w=self.state.canvas_w,
             canvas_h=self.state.canvas_h,
+        )
+        return rudy_congestion(
+            placements=self.state.placements,
+            connections=self.net.connections,
+            cfg=cfg,
         )
 
     def _build_graph_features(self, occ: np.ndarray) -> dict:

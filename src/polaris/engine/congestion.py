@@ -340,13 +340,27 @@ def _downsample_congestion(cong: np.ndarray, oh: int, ow: int) -> np.ndarray:
     return out
 
 
+@dataclass
+class RudyConfig:
+    """RUDY 拥塞计算配置（降低 rudy_congestion 参数个数）。
+
+    Attributes:
+        grid_h: 栅格高度。
+        grid_w: 栅格宽度。
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+    """
+
+    grid_h: int
+    grid_w: int
+    canvas_w: float
+    canvas_h: float
+
+
 def rudy_congestion(
     placements: dict,
     connections: list,
-    grid_h: int,
-    grid_w: int,
-    canvas_w: float,
-    canvas_h: float,
+    cfg: RudyConfig,
 ) -> np.ndarray:
     """RUDY (Rectangular Uniform wire DensitY) 即时拥塞估计。
 
@@ -362,37 +376,44 @@ def rudy_congestion(
     Args:
         placements: ``{instance_id: Placement}`` 字典（已放置器件）。
         connections: ``NetlistConnection`` 列表。
-        grid_h: 栅格高度。
-        grid_w: 栅格宽度。
-        canvas_w: 画布宽度（μm）。
-        canvas_h: 画布高度（μm）。
+        cfg: 栅格与画布规格。
 
     Returns:
         归一化拥塞图 ``[grid_h, grid_w]``，值域 [0, 1]。
     """
-    cong = np.zeros((grid_h, grid_w), dtype=np.float32)
+    cong = np.zeros((cfg.grid_h, cfg.grid_w), dtype=np.float32)
     for conn in connections:
-        src_pl = placements.get(conn.src_instance)
-        dst_pl = placements.get(conn.dst_instance)
-        if src_pl is None or dst_pl is None:
-            continue
-        src_port = src_pl.port_positions().get(conn.src_port)
-        dst_port = dst_pl.port_positions().get(conn.dst_port)
-        if src_port is None or dst_port is None:
-            continue
-        x0, y0 = src_port
-        x1, y1 = dst_port
-        xmin, xmax = min(x0, x1), max(x0, x1)
-        ymin, ymax = min(y0, y1), max(y0, y1)
-        gi0 = max(0, int(xmin / canvas_w * grid_w))
-        gi1 = min(grid_w, int(xmax / canvas_w * grid_w) + 1)
-        gj0 = max(0, int(ymin / canvas_h * grid_h))
-        gj1 = min(grid_h, int(ymax / canvas_h * grid_h) + 1)
-        if gi1 <= gi0 or gj1 <= gj0:
-            continue
-        cong[gj0:gj1, gi0:gi1] += 1.0
+        _accumulate_conn_rudy(cong, placements, conn, cfg)
     mx = cong.max()
     return cong / mx if mx > 0 else cong
+
+
+def _accumulate_conn_rudy(
+    cong: np.ndarray,
+    placements: dict,
+    conn,
+    cfg: RudyConfig,
+) -> None:
+    """累加单条连接的 RUDY 拥塞到栅格。"""
+    src_pl = placements.get(conn.src_instance)
+    dst_pl = placements.get(conn.dst_instance)
+    if src_pl is None or dst_pl is None:
+        return
+    src_port = src_pl.port_positions().get(conn.src_port)
+    dst_port = dst_pl.port_positions().get(conn.dst_port)
+    if src_port is None or dst_port is None:
+        return
+    x0, y0 = src_port
+    x1, y1 = dst_port
+    xmin, xmax = min(x0, x1), max(x0, x1)
+    ymin, ymax = min(y0, y1), max(y0, y1)
+    gi0 = max(0, int(xmin / cfg.canvas_w * cfg.grid_w))
+    gi1 = min(cfg.grid_w, int(xmax / cfg.canvas_w * cfg.grid_w) + 1)
+    gj0 = max(0, int(ymin / cfg.canvas_h * cfg.grid_h))
+    gj1 = min(cfg.grid_h, int(ymax / cfg.canvas_h * cfg.grid_h) + 1)
+    if gi1 <= gi0 or gj1 <= gj0:
+        return
+    cong[gj0:gj1, gi0:gi1] += 1.0
 
 
 __all__ = [
@@ -400,6 +421,7 @@ __all__ = [
     "CongestionPredictor",
     "CNNTrainConfig",
     "DatasetConfig",
+    "RudyConfig",
     "grid_from_devices",
     "generate_congestion_dataset",
     "rudy_congestion",
