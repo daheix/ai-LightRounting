@@ -2,14 +2,11 @@
   "hooks": {
     "Stop": [
       {
+        "name": "polaris-continue-unfinished",
+        "enabled": true,
         "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .trae/hooks/stop-continue.sh",
-            "timeout": 30
-          }
-        ]
+        "command": "bash .trae/hooks/stop-continue.sh",
+        "timeout": 30
       }
     ]
   }
