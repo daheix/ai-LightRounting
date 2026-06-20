@@ -1,0 +1,152 @@
+{
+  "name": "f",
+  "canvas_w": 173385.5,
+  "canvas_h": 254060.7,
+  "devices": [
+    {
+      "name": "waveguide_bump$1",
+      "device_type": "waveguide_bump$1",
+      "width_um": 20.200000000000728,
+      "height_um": 3.671000000000049,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "wg_length": 20.06,
+        "wg_width": 0.5
+      }
+    },
+    {
+      "name": "ebeam_bdc_te1550",
+      "device_type": "directional_coupler",
+      "width_um": 70.95000000000437,
+      "height_um": 7.2000000000000455,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "Ref: Zeqin Lu, et al., \"Comparison of photonic 2x2 3-dB couplers for 220 nm silicon-on-insulator platforms,\" GFP 2015",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_bdc_te1550_1",
+      "device_type": "directional_coupler",
+      "width_um": 70.95000000000437,
+      "height_um": 7.2000000000000455,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "Ref: Zeqin Lu, et al., \"Comparison of photonic 2x2 3-dB couplers for 220 nm silicon-on-insulator platforms,\" GFP 2015",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "device_type": "grating_coupler_1d",
+      "width_um": 33.10000000000582,
+      "height_um": 21.400000000023283,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_terminator_te1550",
+      "device_type": "terminator",
+      "width_um": 11.0,
+      "height_um": 2.0,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    }
+  ],
+  "connections": []
+}

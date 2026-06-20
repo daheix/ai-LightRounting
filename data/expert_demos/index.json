@@ -1,0 +1,146 @@
+{
+  "dataset_name": "PoLaRIS Expert Demos (SiEPIC)",
+  "description": "从真实 SiEPIC EBeam PDK GDS 提取的专家示范三元组数据集",
+  "source": {
+    "name": "SiEPIC_EBeam_PDK",
+    "publisher": "University of British Columbia (UBC), SiEPIC",
+    "author": "Lukas Chrostowski et al.",
+    "license": "MIT",
+    "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+    "examples_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/tree/master/Examples",
+    "year": "2015-2023"
+  },
+  "extract_time": "2026-06-20T05:35:49.637737",
+  "stats": {
+    "total_gds": 10,
+    "success": 10,
+    "failed": 0,
+    "total_devices": 28,
+    "total_routes": 3691,
+    "total_placements": 28,
+    "records": [
+      {
+        "name": "Crossings",
+        "n_devices": 5,
+        "n_routes": 320,
+        "status": "success"
+      },
+      {
+        "name": "MZI1",
+        "n_devices": 3,
+        "n_routes": 364,
+        "status": "success"
+      },
+      {
+        "name": "MZI_bdc",
+        "n_devices": 0,
+        "n_routes": 1,
+        "status": "success"
+      },
+      {
+        "name": "MZI_bdc_500microns",
+        "n_devices": 4,
+        "n_routes": 329,
+        "status": "success"
+      },
+      {
+        "name": "RingResonator",
+        "n_devices": 6,
+        "n_routes": 1256,
+        "status": "success"
+      },
+      {
+        "name": "Ring_series",
+        "n_devices": 4,
+        "n_routes": 636,
+        "status": "success"
+      },
+      {
+        "name": "Simple_MZI",
+        "n_devices": 1,
+        "n_routes": 311,
+        "status": "success"
+      },
+      {
+        "name": "ebeam_taper_475_500_te1550",
+        "n_devices": 0,
+        "n_routes": 1,
+        "status": "success"
+      },
+      {
+        "name": "mzi_adjustable_splitter",
+        "n_devices": 5,
+        "n_routes": 472,
+        "status": "success"
+      },
+      {
+        "name": "wg_test",
+        "n_devices": 0,
+        "n_routes": 1,
+        "status": "success"
+      }
+    ]
+  },
+  "records": [
+    {
+      "name": "Crossings",
+      "n_devices": 5,
+      "n_routes": 320,
+      "status": "success"
+    },
+    {
+      "name": "MZI1",
+      "n_devices": 3,
+      "n_routes": 364,
+      "status": "success"
+    },
+    {
+      "name": "MZI_bdc",
+      "n_devices": 0,
+      "n_routes": 1,
+      "status": "success"
+    },
+    {
+      "name": "MZI_bdc_500microns",
+      "n_devices": 4,
+      "n_routes": 329,
+      "status": "success"
+    },
+    {
+      "name": "RingResonator",
+      "n_devices": 6,
+      "n_routes": 1256,
+      "status": "success"
+    },
+    {
+      "name": "Ring_series",
+      "n_devices": 4,
+      "n_routes": 636,
+      "status": "success"
+    },
+    {
+      "name": "Simple_MZI",
+      "n_devices": 1,
+      "n_routes": 311,
+      "status": "success"
+    },
+    {
+      "name": "ebeam_taper_475_500_te1550",
+      "n_devices": 0,
+      "n_routes": 1,
+      "status": "success"
+    },
+    {
+      "name": "mzi_adjustable_splitter",
+      "n_devices": 5,
+      "n_routes": 472,
+      "status": "success"
+    },
+    {
+      "name": "wg_test",
+      "n_devices": 0,
+      "n_routes": 1,
+      "status": "success"
+    }
+  ]
+}

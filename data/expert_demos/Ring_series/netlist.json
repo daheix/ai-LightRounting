@@ -1,0 +1,155 @@
+{
+  "name": "series_rings",
+  "canvas_w": 81960.85,
+  "canvas_h": 381060.7,
+  "devices": [
+    {
+      "name": "DirectionalCoupler_SeriesRings$1",
+      "device_type": "DirectionalCoupler_SeriesRings$1",
+      "width_um": 21.5,
+      "height_um": 20.799999999999272,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius1": 10.0,
+        "radius2": 10.0
+      }
+    },
+    {
+      "name": "DirectionalCoupler_SeriesRings$1_1",
+      "device_type": "DirectionalCoupler_SeriesRings$1",
+      "width_um": 21.5,
+      "height_um": 20.800000000000182,
+      "ports": [
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius1": 10.0,
+        "radius2": 10.0
+      }
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "device_type": "grating_coupler_1d",
+      "width_um": 33.10000000000582,
+      "height_um": 21.400000000023283,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "DirectionalCoupler_SeriesRings$1_2",
+      "device_type": "DirectionalCoupler_SeriesRings$1",
+      "width_um": 21.5,
+      "height_um": 20.799999999995634,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "wg_width": 0.5,
+        "gap": 0.1,
+        "radius1": 10.0,
+        "radius2": 10.0
+      }
+    }
+  ],
+  "connections": []
+}
