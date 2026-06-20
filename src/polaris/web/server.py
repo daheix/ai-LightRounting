@@ -296,3 +296,7 @@ def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     """启动 PoLaRIS Web UI 服务器（阻塞）。"""
     server = WebServer(host=host, port=port)
     server.start(blocking=True)
+
+
+if __name__ == "__main__":
+    run_server()
