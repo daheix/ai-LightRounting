@@ -125,7 +125,7 @@ src/polaris/
 └── pycopy/                # 自研复刻工具（规则 4）
 ```
 
-### 3.2 三方工具清单与安装状态（实际核查 2026-06-19）
+### 3.2 三方工具清单与安装状态（实际核查 2026-06-20）
 
 #### layout/ — 版图类工具
 
@@ -133,18 +133,18 @@ src/polaris/
 |------|---------|------|------|----------|-------------|
 | gdsfactory | ❌ 未装 | — | 版图生成/PDK/GDS导出 | `pip install gdsfactory` | src/polaris/pdk/ 参考 |
 | klayout | ✅ 已装 | 0.30.9 | DRC/LVS/版图查看 | `pip install klayout` | src/polaris/eval/layout_render.py |
-| gdstk | ❌ 未装 | — | 高性能 GDS 读写 | `pip install gdstk` | 可选（gdsfactory 依赖） |
+| gdstk | ❌ 未装 | — | 高性能 GDS 读写 | `pip install gdstk` | gdsfactory 依赖 |
 
 #### simulation/ — 仿真类工具
 
 | 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
 |------|---------|------|------|----------|-------------|
-| meep | ❌ 未装 | — | FDTD 电磁仿真 | `pip install meep` | 可选（器件级仿真） |
-| simphony | ✅ 已装 | 0.7.3 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
-| sax | ✅ 已装 | 0.14.7 | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有复刻兜底） |
+| meep | ❌ 未装 | — | FDTD 电磁仿真 | `pip install meep` | 器件级仿真 |
+| simphony | ✅ 已装 | 0.6.0 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
+| sax | ✅ 已装 | 0.14.7 | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有 pyCopySAX 复刻） |
 | SiPANN | ❌ 未装 | — | 硅光器件模型 | `pip install SiPANN` | src/polaris/sim/models.py（已复刻） |
-| femwell | ❌ 未装 | — | FEM 模式求解器 | `pip install femwell` | 可选 |
-| meow | ❌ 未装 | — | 模式求解器 | `pip install meow` | 可选 |
+| femwell | ❌ 未装 | — | FEM 模式求解器 | `pip install femwell` | 模式求解 |
+| meow | ❌ 未装 | — | 模式求解器 | `pip install meow` | 模式求解 |
 
 #### ml/ — 机器学习类工具
 
@@ -160,7 +160,7 @@ src/polaris/
 |------|---------|------|------|----------|-------------|
 | numpy | ✅ 已装 | 2.4.6 | 数值计算 | `pip install numpy` | 全项目核心 |
 | scipy | ✅ 已装 | 1.17.1 | 优化求解 | `pip install scipy` | 优化求解 |
-| shapely | ❌ 未装 | — | 几何运算 | `pip install shapely` | 可选（constraint_checker 用纯 Python） |
+| shapely | ❌ 未装 | — | 几何运算 | `pip install shapely` | constraint_checker 用纯 Python 实现 |
 
 #### viz/ — 可视化类工具
 
@@ -184,15 +184,16 @@ src/polaris/
 | wheel | ✅ 已装 | 0.47.0 | wheel 构建 | `pip install wheel` | 打包 |
 | setuptools | ✅ 已装 | 81.0.0 | 构建工具 | `pip install setuptools` | 打包 |
 
-**注**：所有工具均已在 `3dtool/wheels/` 离线打包，沙箱重启后执行
+**注**：所有已装工具均已在 `3dtool/wheels/` 离线打包，沙箱重启后执行
 `bash 3dtool/wheels/install.sh --all` 一键恢复（70 秒，规则 5.1.1）。
+install.sh 统一安装全部依赖（无核心/可选之分），确保环境完整。
 
 ### 3.3 工具使用原则
 
 1. **优先直接集成**：能用 pip 安装的开源库，直接集成，不重复造轮子
 2. **复刻须 100% 可用**：不好集成的，用纯 Python 复刻完整可用版本（规则 4）
 3. **来源须标注**：每个集成的工具记录来源 URL（规则 15）
-4. **依赖最小化**：核心功能依赖精简，仿真类工具作为可选依赖
+4. **依赖完整安装**：install.sh 统一安装全部依赖（无核心/可选之分），确保环境完整
 5. **不依赖商业工具**：禁止依赖 Lumerical/IPKISS/Tidy3D 等商业软件作为核心功能
 6. **说明文档同步**：工具安装状态变更后，必须同步更新 `3dtool/<category>/README.md`
 
@@ -351,25 +352,21 @@ done
 仅当离线 wheel 包不存在、不兼容当前平台、或需安装新工具时使用：
 
 ```bash
-# 1. 核心依赖（必装，pip 安装即用）
+# 1. 全部依赖（install.sh 离线包不可用时，联网安装）
 pip install numpy scipy networkx torch gymnasium matplotlib pyyaml
+pip install klayout simphony sax
+pip install pytest ruff mypy wheel setuptools
 
-# 2. 版图与仿真依赖（按需安装）
-pip install klayout simphony           # 已验证可装
-pip install gdsfactory gdstk            # 版图生成（可选）
-pip install SiPANN                      # 硅光器件模型（可选，已有复刻）
-
-# 3. 重型仿真依赖（谨慎安装，依赖链大）
-# pip install sax                       # 200-400 MB（jax/jaxlib/optax），已有复刻兜底
-# pip install meep                      # FDTD，需 MPI 依赖
-# pip install femwell meow              # 模式求解器，FEM 依赖重
-
-# 4. 开发依赖
-pip install pytest ruff mypy
-
-# 5. 安装本项目（开发模式）
+# 2. 安装本项目（开发模式）
 pip install -e .
 ```
+
+**未安装工具说明**（项目未直接使用，无需安装）：
+- `gdsfactory`/`gdstk`：版图生成，项目用自研 PDK
+- `SiPANN`：硅光器件模型，已有 pyCopySiPANN 完整复刻
+- `meep`：FDTD 电磁仿真，项目未使用器件级 FDTD
+- `femwell`/`meow`：FEM 模式求解器，项目未使用
+- `shapely`：几何运算，constraint_checker 用纯 Python 实现
 
 **重要**：联网安装新工具后，必须同步更新离线 wheel 包（规则 5.5.3）。
 
@@ -378,22 +375,25 @@ pip install -e .
 | 工具 | 是否安装 | 决策依据 |
 |------|---------|----------|
 | numpy/scipy/networkx/matplotlib/pyyaml | ✅ 必装 | 核心依赖，pip 即用 |
-| torch | ✅ 必装 | GNN/PPO 训练核心（CPU 版 2.12.1+cpu，也有 pyCopyTorch 复刻兜底） |
+| torch | ✅ 必装 | GNN/PPO 训练核心（CPU 版 2.12.1+cpu，也有 pyCopyTorch 复刻） |
 | gymnasium | ✅ 必装 | RL 环境核心 |
-| klayout | ✅ 必装 | GDS 导出 + DRC，已验证可装 |
-| simphony | ✅ 建议装 | S 参数仿真，已验证可装 |
-| sax | ✅ 已装 | 已离线打包（含 jax/jaxlib/optax 依赖链），也有 pyCopySAX 复刻兜底 |
-| gdsfactory | ⚠️ 按需 | 版图生成，依赖链中等 |
-| gdstk | ⚠️ 按需 | GDS 高性能读写，gdsfactory 依赖 |
-| SiPANN | ⚠️ 按需 | 已有 pyCopySiPANN 完整复刻 |
-| meep | ❌ 不装 | FDTD 重型依赖，项目未使用器件级 FDTD |
-| femwell/meow | ❌ 不装 | FEM 模式求解器，项目未使用 |
-| lygadgets | ❌ 不装 | KLayout 已直接安装，无需 lygadgets 工具链 |
-| shapely | ❌ 不装 | constraint_checker 用纯 Python 实现，无需 shapely |
+| klayout | ✅ 必装 | GDS 导出 + DRC |
+| simphony | ✅ 必装 | S 参数仿真 |
+| sax | ✅ 必装 | 已离线打包（含 jax/jaxlib/optax 依赖链），也有 pyCopySAX 复刻 |
+| pytest/ruff/mypy/wheel/setuptools | ✅ 必装 | 开发工具链 |
+| gdsfactory | ❌ 未装 | 版图生成，依赖链中等，项目未直接使用 |
+| gdstk | ❌ 未装 | GDS 高性能读写，gdsfactory 依赖 |
+| SiPANN | ❌ 未装 | 已有 pyCopySiPANN 完整复刻 |
+| meep | ❌ 未装 | FDTD 重型依赖，项目未使用器件级 FDTD |
+| femwell/meow | ❌ 未装 | FEM 模式求解器，项目未使用 |
+| lygadgets | ❌ 未装 | KLayout 已直接安装，无需 lygadgets 工具链 |
+| shapely | ❌ 未装 | constraint_checker 用纯 Python 实现 |
+
+**注**：所有标记 ✅ 必装的工具均已在 `3dtool/wheels/` 离线打包，由 install.sh 统一安装。
 
 ### 5.3 工具使用规范
 
-1. **可选依赖必须 try/except**：代码中 import 可选工具时必须用 try/except 包裹，缺失时回退到复刻品
+1. **三方工具 import 须 try/except**：代码中 import 三方工具时用 try/except 包裹，缺失时回退到复刻品
    ```python
    try:
        import sax as _sax
@@ -403,9 +403,9 @@ pip install -e .
        _HAS_SAX = False
    ```
 2. **复刻品优先级**：原工具可用时优先用原工具，不可用时回退到 `3dtool/pycopy/pyCopy<Xxx>`
-3. **禁止硬依赖**：核心功能（PDK/布局/布线/训练）不得硬依赖可选工具
-4. **import 位置**：可选工具的 import 必须在函数内部或模块顶部 try/except，禁止裸 import
-5. **测试兼容**：测试中用 `pytest.importorskip("sax")` 跳过缺失可选依赖的测试
+3. **核心功能独立**：核心功能（PDK/布局/布线/训练）不硬依赖三方工具，复刻品保证可用
+4. **import 位置**：三方工具的 import 必须在函数内部或模块顶部 try/except，禁止裸 import
+5. **测试兼容**：测试中用 `pytest.importorskip("sax")` 跳过缺失三方依赖的测试
 
 ### 5.4 环境验证命令
 
@@ -418,7 +418,7 @@ bash 3dtool/wheels/install.sh --check
 # 2. 验证核心依赖
 python -c "import numpy, scipy, networkx, torch, gymnasium, matplotlib, yaml; print('core OK')"
 
-# 3. 验证可选依赖
+# 3. 验证仿真依赖
 python -c "import klayout; print('klayout OK')"
 python -c "import simphony; print('simphony OK')"
 python -c "import sax; print('sax OK')"
@@ -860,19 +860,18 @@ jobs:
 
 | 类别 | 文件 | 说明 |
 |------|------|------|
-| 核心依赖 | `pyproject.toml [project.dependencies]` | PDK/布局/布线/训练必需 |
-| 可选依赖 | `pyproject.toml [project.optional-dependencies]` | 仿真类工具（simphony/sax/SiPANN） |
+| 运行依赖 | `pyproject.toml [project.dependencies]` | PDK/布局/布线/训练/仿真必需 |
 | 开发依赖 | `pyproject.toml [project.optional-dependencies.dev]` | ruff/pytest/mypy 等 |
 | 离线 wheel | `3dtool/wheels/` | 沙箱重启一键恢复（规则 5.1.1） |
 
 ### 13.2 依赖原则
 
-1. **最小化**：核心功能依赖精简，不引入非必要大型库
+1. **完整安装**：install.sh 统一安装全部依赖（无核心/可选之分），确保环境完整
 2. **版本锁定**：`pyproject.toml` 中指定最低版本，`3dtool/wheels/` 锁定精确版本
 3. **禁止商业依赖**：不依赖 Lumerical/IPKISS/Tidy3D 等商业软件
 4. **安全审计**：定期运行 `pip-audit` 检查已知漏洞
 5. **许可兼容**：所有依赖须与项目许可证兼容（MIT/Apache/BSD）
-6. **复刻兜底**：可选依赖缺失时必须有 pyCopy 复刻品兜底（规则 4）
+6. **复刻保障**：三方工具缺失时必须有 pyCopy 复刻品保障核心功能可用（规则 4）
 7. **离线包同步**：新增/升级/删除依赖后必须同步更新 `3dtool/wheels/`（规则 5.5.1）
 
 ### 13.3 离线 wheel 包管理
@@ -882,8 +881,7 @@ wheel 包存放在 `3dtool/wheels/`，重启后执行 `bash 3dtool/wheels/instal
 即可在 70 秒内恢复（vs 联网下载 4 小时）。
 
 **wheel 包组成**（详见 `3dtool/wheels/README.md`）：
-- 核心依赖：numpy/scipy/networkx/torch(CPU)/gymnasium/matplotlib/pyyaml
-- 可选依赖：klayout/simphony/sax（含 jax/jaxlib/optax 完整依赖链）
+- 运行依赖：numpy/scipy/networkx/torch(CPU)/gymnasium/matplotlib/pyyaml/klayout/simphony/sax
 - 开发依赖：pytest/ruff/mypy/wheel/setuptools
 - 大 wheel 分卷：>24MB 的 wheel 经 gzip+split 分卷为 ≤20MB 片段（绕过 GitHub 限制）
 

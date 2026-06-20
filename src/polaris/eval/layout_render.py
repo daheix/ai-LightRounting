@@ -10,10 +10,10 @@
 - matplotlib: https://matplotlib.org/ （版图渲染）
 - gdsfactory GDS 导出参考: https://gdsfactory.github.io/gdsfactory/
 
-可选依赖处理（规则 5.3.1）：
-- klayout 为可选依赖（pyproject.toml [project.optional-dependencies].layout）
-- 缺失时 GDS/OASIS 导出函数抛出 ImportError 并提示安装命令
-- 核心功能（PDK/布局/布线/训练）不依赖 klayout
+三方工具 import 处理（规则 5.3）：
+- klayout 为运行依赖（pyproject.toml [project.dependencies]），install.sh 统一安装
+- import 失败时 GDS/OASIS 导出函数抛出 ImportError 并提示安装命令
+- 核心功能（PDK/布局/布线/训练）独立于 klayout
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ from polaris.pdk.layer_map import (
 from polaris.pdk.port import Direction
 from polaris.router.waveguide_router import WaveguidePath
 
-# 可选依赖：klayout（缺失时 GDS/OASIS 导出抛出明确错误）
+# 三方工具：klayout（import 失败时 GDS/OASIS 导出抛出明确错误）
 try:
     import klayout.db as _db
 

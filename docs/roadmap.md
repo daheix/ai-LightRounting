@@ -120,7 +120,7 @@
 #### M2.3 gdsfactory 真实器件生成对比
 - **任务**：用 gdsfactory 生成相同参数的 MZI/Ring GDS，对比 PoLaRIS 导出的 GDS 几何形状
 - **输出**：`tests/test_gdsfactory_comparison.py`
-- **注意**：gdsfactory 为可选依赖，缺失时跳过
+- **注意**：gdsfactory import 失败时跳过
 
 #### M2.4 基准性能回归测试
 - **任务**：建立性能基准（网表解析/A*布线/GNN推理/GDS导出），纳入 CI

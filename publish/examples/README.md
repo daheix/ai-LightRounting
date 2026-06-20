@@ -21,8 +21,8 @@ python publish/examples/04_pdk_catalog.py
 
 ## 依赖
 
-- 核心示例（01/02/04）：仅需核心依赖（numpy/scipy/networkx/gymnasium）
-- 训练示例（03）：可选依赖 torch（缺失时自动回退到 NumPy PPO）
+- 核心示例（01/02/04）：仅需运行依赖子集（numpy/scipy/networkx/gymnasium）
+- 训练示例（03）：运行依赖 torch（import 失败时自动回退到 NumPy PPO）
 
 ## 完整训练
 

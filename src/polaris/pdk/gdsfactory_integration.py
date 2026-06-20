@@ -1,11 +1,11 @@
 """gdsfactory 集成模块（步骤4：生成真实参数化器件 GDS）。
 
 gdsfactory 是开源光子芯片设计库（MIT 许可证），含数百个参数化组件。
-本模块提供 gdsfactory 集成接口，缺失时优雅降级到 PoLaRIS 原生 GDS 导出。
+本模块提供 gdsfactory 集成接口，import 失败时降级到 PoLaRIS 原生 GDS 导出。
 
-按规则 5.3，gdsfactory 为可选依赖：
-- 已安装时：用 gdsfactory 生成真实参数化器件 GDS（含真实几何形状）
-- 未安装时：降级到 polaris.eval.layout_render.export_gds（矩形抽象）
+按规则 5.3，gdsfactory import 须 try/except：
+- import 成功时：用 gdsfactory 生成真实参数化器件 GDS（含真实几何形状）
+- import 失败时：降级到 polaris.eval.layout_render.export_gds（矩形抽象）
 
 来源:
 - gdsfactory (MIT): https://gdsfactory.github.io/gdsfactory/

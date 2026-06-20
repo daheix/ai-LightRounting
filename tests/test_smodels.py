@@ -300,7 +300,7 @@ class TestSimphonyIntegration:
         assert simphony.__version__ is not None
 
     def test_sax_import(self):
-        """SAX 应能导入（规则 2 直接集成，可选依赖）。"""
+        """SAX 应能导入（规则 2 直接集成）。"""
         pytest.importorskip("sax")
         import sax
 

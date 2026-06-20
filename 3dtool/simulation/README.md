@@ -10,7 +10,7 @@
 - **状态**: ❌ 未安装
 - **来源**: https://meep.readthedocs.io/
 - **安装**: `pip install meep`
-- **项目使用**: 可选依赖，用于器件级 FDTD 仿真
+- **项目使用**: 器件级 FDTD 仿真（项目未使用，预留）
 
 ### simphony
 
@@ -45,7 +45,7 @@
 - **状态**: ❌ 未安装
 - **来源**: https://helgegehring.github.io/femwell/
 - **安装**: `pip install femwell`
-- **项目使用**: 可选依赖
+- **项目使用**: FEM 模式求解器（项目未使用，预留）
 - **复刻品**: `../pycopy/pyCopyFemwell/`（预留，有效折射率法）
 
 ### meow
@@ -54,5 +54,5 @@
 - **状态**: ❌ 未安装
 - **来源**: https://github.com/flaport/meow
 - **安装**: `pip install meow`
-- **项目使用**: 可选依赖
+- **项目使用**: 模式求解器（项目未使用，预留）
 - **复刻品**: `../pycopy/pyCopyMeow/`（预留）

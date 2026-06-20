@@ -1,7 +1,7 @@
 """gdsfactory 集成模块测试（步骤4：生成真实参数化器件 GDS）。
 
-验证 gdsfactory 集成模块的接口正确性。gdsfactory 为可选依赖
-（规则 5.3）：缺失时测试用 ``pytest.importorskip`` 跳过真实生成测试，
+验证 gdsfactory 集成模块的接口正确性。gdsfactory import 失败时
+（规则 5.3）测试用 ``pytest.importorskip`` 跳过真实生成测试，
 但降级行为测试始终运行。
 
 来源:

@@ -14,7 +14,7 @@
 - DRC 能检测重叠、间距不足、弯曲半径不足
 - 纯 Python 几何运算（_boxes_intersect/_boxes_distance）正确性
 
-klayout 为可选依赖（规则 5.3）：缺失时 GDS 相关测试用
+klayout 为运行依赖（规则 5.3）：import 失败时 GDS 相关测试用
 ``pytest.importorskip("klayout")`` 跳过；DRC 与纯 Python 几何测试不依赖 klayout。
 
 工具来源:

@@ -88,6 +88,14 @@ bash 3dtool/wheels/install.sh --check
 |------|------|------|----------|
 | pyyaml | ✅ 已装 6.0.3 | 网表/配置序列化 | `pip install pyyaml` |
 
+### dev/ — 开发类工具
+
+| 工具 | 状态 | 用途 | 安装方式 |
+|------|------|------|----------|
+| pytest | ✅ 已装 9.1.0 | 测试框架 | `pip install pytest` |
+| ruff | ✅ 已装 0.15.18 | Lint + Format | `pip install ruff` |
+| mypy | ✅ 已装 2.1.0 | 类型检查 | `pip install mypy` |
+
 ## pycopy/ — 自研复刻工具
 
 按 `project_rules.md` 规则 3，对于开源但安装困难的工具，用纯 Python 100% 复刻。
@@ -108,7 +116,7 @@ bash 3dtool/wheels/install.sh --check
 1. **优先直接集成**：能用 pip 安装的开源库，直接集成（规则 2.4）
 2. **复刻须 100% 可用**：不好集成的，用纯 Python 复刻完整可用版本（规则 3）
 3. **来源须标注**：每个集成的工具或复刻的算法，记录来源 URL（规则 15）
-4. **依赖最小化**：核心功能依赖精简，仿真类工具作为可选依赖（规则 2.4）
+4. **依赖最小化**：核心功能依赖精简，仿真类工具作为补充依赖（规则 2.4）
 
 来源:
 - GDSFactory: https://gdsfactory.github.io/gdsfactory/

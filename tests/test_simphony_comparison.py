@@ -3,7 +3,7 @@
 验证 PoLaRIS 复刻的 S 参数模型（src/polaris/sim/models.py）与
 simphony siepic 库（真实 SiEPIC EBeam PDK 器件模型）的输出一致性。
 
-simphony 为可选依赖（规则 5.3）：缺失时测试用
+simphony 为运行依赖（规则 5.3）：import 失败时测试用
 ``pytest.importorskip("simphony")`` 跳过。
 
 来源:

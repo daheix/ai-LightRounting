@@ -31,6 +31,9 @@ dependencies = [
     "gymnasium",
     "matplotlib",
     "pyyaml",
+    "klayout",
+    "simphony",
+    "sax",
 ]
 
 [project.optional-dependencies]
@@ -38,18 +41,6 @@ dev = [
     "pytest",
     "ruff",
     "mypy",
-]
-layout = [
-    "klayout",
-    "gdsfactory",
-    "gdstk",
-]
-simulation = [
-    "simphony",
-    "SiPANN",
-]
-ml = [
-    "torch>=2.0",
 ]
 
 [project.scripts]

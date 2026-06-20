@@ -77,7 +77,7 @@ bash 3dtool/wheels/install.sh --check
 | matplotlib | 3.11.0 | 版图渲染 | 8MB |
 | pyyaml | 6.0.3 | 网表序列化 | 1MB |
 
-### 可选依赖（按需，2 个）
+### 仿真依赖（2 个）
 
 | 包 | 版本 | 用途 | 大小 |
 |----|------|------|------|
@@ -116,7 +116,7 @@ pip install torch  # 自动安装 GPU 版本
 ### sax 完整依赖链
 
 sax 依赖 jax/jaxlib/optax/flax 等（jaxlib 82MB）。本目录已打包完整依赖链，
-安装 sax 时会自动安装全部依赖。项目代码中 sax 为可选依赖，缺失时回退到
+安装 sax 时会自动安装全部依赖。项目代码中 sax import 失败时回退到
 `pyCopySAX` 复刻品（规则 4）。
 
 ### 平台限制

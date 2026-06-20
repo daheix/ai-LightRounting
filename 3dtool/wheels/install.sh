@@ -10,7 +10,7 @@
 #   3. 安装时先合并分卷 → gunzip 还原 → pip install --no-index 离线安装
 #
 # 用法：
-#   bash 3dtool/wheels/install.sh           # 安装全部依赖
+#   bash 3dtool/wheels/install.sh           # 安装全部依赖（默认）
 #   bash 3dtool/wheels/install.sh --core    # 仅安装核心依赖
 #   bash 3dtool/wheels/install.sh --check   # 仅检查环境，不安装
 #
@@ -37,17 +37,20 @@ log_warn()  { echo -e "${YELLOW}[WARN]${NC} $*"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 log_step()  { echo -e "${BLUE}[STEP]${NC} $*"; }
 
-# 核心依赖清单（必装）
+# 全部依赖清单（统一安装，无核心/可选之分）
+# 含 sax 完整依赖链：jax + jaxlib + optax + pydantic + pandas + xarray
+ALL_PACKAGES=(
+    numpy scipy networkx torch gymnasium matplotlib pyyaml
+    klayout simphony sax
+    pytest ruff mypy
+)
+
+# 核心依赖子集（--core 模式使用）
 CORE_PACKAGES=(
     numpy scipy networkx torch gymnasium matplotlib pyyaml
 )
 
-# 可选依赖清单（按需，含 sax 完整依赖链 jax/jaxlib/optax）
-OPTIONAL_PACKAGES=(
-    klayout simphony sax
-)
-
-# 开发依赖
+# 开发依赖子集（--dev 模式使用）
 DEV_PACKAGES=(
     pytest ruff mypy
 )
@@ -62,7 +65,7 @@ case "${1:-}" in
     *)
         echo "用法: bash $0 [--core|--all|--dev|--check]"
         echo "  --core   仅安装核心依赖（numpy/scipy/torch 等）"
-        echo "  --all    安装全部依赖（核心+可选+重型+开发，默认）"
+        echo "  --all    安装全部依赖（默认）"
         echo "  --dev    仅安装开发依赖（pytest/ruff/mypy）"
         echo "  --check  仅检查环境，不安装"
         exit 1
@@ -143,33 +146,14 @@ fi
 if [[ "${MODE}" == "check" ]]; then
     log_step "步骤 5: 环境检查（仅检查，不安装）"
     echo ""
-    echo "--- 核心依赖检查 ---"
-    for pkg in "${CORE_PACKAGES[@]}"; do
+    echo "--- 全部依赖检查 ---"
+    for pkg in "${ALL_PACKAGES[@]}"; do
         # pyyaml 的 import 名是 yaml
         import_name="${pkg}"
         [[ "${pkg}" == "pyyaml" ]] && import_name="yaml"
         if python3 -c "import ${import_name}" 2>/dev/null; then
             ver=$(python3 -c "import ${import_name}; print(${import_name}.__version__)" 2>/dev/null || echo "?")
             echo "  ✅ ${pkg} ${ver}"
-        else
-            echo "  ❌ ${pkg} 未安装"
-        fi
-    done
-    echo ""
-    echo "--- 可选依赖检查 ---"
-    for pkg in "${OPTIONAL_PACKAGES[@]}"; do
-        if python3 -c "import ${pkg}" 2>/dev/null; then
-            ver=$(python3 -c "import ${pkg}; print(${pkg}.__version__)" 2>/dev/null || echo "?")
-            echo "  ✅ ${pkg} ${ver}"
-        else
-            echo "  ⚠️  ${pkg} 未安装（可选）"
-        fi
-    done
-    echo ""
-    echo "--- 开发依赖检查 ---"
-    for pkg in "${DEV_PACKAGES[@]}"; do
-        if python3 -c "import ${pkg}" 2>/dev/null || command -v ${pkg} &>/dev/null; then
-            echo "  ✅ ${pkg}"
         else
             echo "  ❌ ${pkg} 未安装"
         fi
@@ -197,13 +181,8 @@ case "${MODE}" in
         python3 -m pip install ${INSTALL_ARGS} "${DEV_PACKAGES[@]}"
         ;;
     all)
-        log_info "安装核心依赖: ${CORE_PACKAGES[*]}"
-        python3 -m pip install ${INSTALL_ARGS} "${CORE_PACKAGES[@]}"
-        log_info "安装可选依赖: ${OPTIONAL_PACKAGES[*]}"
-        python3 -m pip install ${INSTALL_ARGS} "${OPTIONAL_PACKAGES[@]}" || \
-            log_warn "部分可选依赖安装失败（可接受，有复刻品兜底）"
-        log_info "安装开发依赖: ${DEV_PACKAGES[*]}"
-        python3 -m pip install ${INSTALL_ARGS} "${DEV_PACKAGES[@]}"
+        log_info "安装全部依赖: ${ALL_PACKAGES[*]}"
+        python3 -m pip install ${INSTALL_ARGS} "${ALL_PACKAGES[@]}"
         ;;
 esac
 
@@ -236,8 +215,8 @@ fi
 # 步骤 9：验证安装
 log_step "步骤 9: 验证安装"
 echo ""
-echo "--- 核心依赖验证 ---"
-for pkg in "${CORE_PACKAGES[@]}"; do
+echo "--- 全部依赖验证 ---"
+for pkg in "${ALL_PACKAGES[@]}"; do
     import_name="${pkg}"
     [[ "${pkg}" == "pyyaml" ]] && import_name="yaml"
     if python3 -c "import ${import_name}" 2>/dev/null; then
@@ -253,12 +232,12 @@ echo "--- 复刻品验证 ---"
 if python3 -c "from pycopy.pyCopyTorch import Tensor" 2>/dev/null; then
     echo "  ✅ pyCopyTorch"
 else
-    echo "  ⚠️  pyCopyTorch（需先安装 polaris）"
+    echo "  ❌ pyCopyTorch 验证失败"
 fi
 if python3 -c "from pycopy.pyCopySAX import cascade_circuit" 2>/dev/null; then
     echo "  ✅ pyCopySAX"
 else
-    echo "  ⚠️  pyCopySAX（需先安装 polaris）"
+    echo "  ❌ pyCopySAX 验证失败"
 fi
 
 echo ""
