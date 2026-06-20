@@ -204,6 +204,38 @@ def _mean_placement_size(placements: list) -> float:
     return total / len(placements) if placements else 10.0
 
 
+def _count_spacing_violations(placements: list, min_spacing: float) -> int:
+    """统计器件间距违规对数（间距 < min_spacing 的器件对数）。
+
+    F3 DRV 消除：将间距违规纳入 RL reward，引导 agent 学习满足间距约束的布局。
+    对齐 LiDAR ISPD'25 DRV-free 标准。
+
+    Args:
+        placements: 已放置器件列表（Placement 对象）。
+        min_spacing: 最小间距（μm）。
+
+    Returns:
+        间距违规对数。
+    """
+    count = 0
+    n = len(placements)
+    for i in range(n):
+        a = placements[i].bbox_abs()
+        for j in range(i + 1, n):
+            b = placements[j].bbox_abs()
+            gap = _rect_gap(a, b)
+            if gap < min_spacing:
+                count += 1
+    return count
+
+
+def _rect_gap(a: tuple, b: tuple) -> float:
+    """计算两个 AABB 之间的最小间距（不重叠时为正，重叠时为负）。"""
+    dx = max(a[0] - b[2], b[0] - a[2], 0.0)
+    dy = max(a[1] - b[3], b[1] - a[3], 0.0)
+    return (dx * dx + dy * dy) ** 0.5
+
+
 @dataclass
 class FloorplanEnvConfig:
     """布局环境配置（画布尺寸 + 奖励权重）。
@@ -241,6 +273,10 @@ class FloorplanEnvConfig:
     overlap_penalty: float = 3.0
     hpwl_weight: float = 0.01
     area_reward: float = 1.0
+    # F3 DRV 消除：间距违规惩罚（对齐 LiDAR ISPD'25 DRV-free 标准）
+    # 来源: LiDAR ISPD'25 https://dl.acm.org/doi/10.1145/3698364.3705355
+    spacing_penalty: float = 1.0
+    min_spacing_um: float = 5.0
     expert_shaper: object | None = None
     state_encoder: object | None = None
 
@@ -272,6 +308,8 @@ class FloorplanEnv(gym.Env):
         self.overlap_penalty = config.overlap_penalty
         self.hpwl_weight = config.hpwl_weight
         self.area_reward = config.area_reward
+        self.spacing_penalty = config.spacing_penalty
+        self.min_spacing_um = config.min_spacing_um
         self.expert_shaper = config.expert_shaper
         self.state_encoder = config.state_encoder
         self._edge_index = self._build_edge_index()
@@ -458,7 +496,7 @@ class FloorplanEnv(gym.Env):
         return self._obs(), reward, terminated, False, {"step": self._step_idx}
 
     def _reward(self) -> float:
-        """奖励 = 面积利用率 - HPWL*权重 - 重叠*惩罚 + 专家奖励。"""
+        """奖励 = 面积利用率 - HPWL*权重 - 重叠*惩罚 - 间距违规*惩罚 + 专家奖励。"""
         placed = list(self.state.placements.values())
         if not placed:
             return 0.0
@@ -471,11 +509,16 @@ class FloorplanEnv(gym.Env):
         util = used_area / total_area if total_area > 0 else 0.0
         # HPWL
         wire = hpwl(self.net, self.state)
-        # 重叠
+        # 重叠（DRV 主要来源）
         overlaps = count_overlaps(self.state)
         # 对数重叠惩罚：避免大量重叠时惩罚完全主导奖励
         overlap_pen = self.overlap_penalty * (np.log1p(overlaps) if overlaps > 0 else 0.0)
-        reward = self.area_reward * util - self.hpwl_weight * wire - overlap_pen
+        # F3 DRV 消除：间距违规惩罚（对齐 LiDAR ISPD'25 DRV-free 标准）
+        spacing_violations = _count_spacing_violations(placed, self.min_spacing_um)
+        spacing_pen = self.spacing_penalty * (
+            np.log1p(spacing_violations) if spacing_violations > 0 else 0.0
+        )
+        reward = self.area_reward * util - self.hpwl_weight * wire - overlap_pen - spacing_pen
         # 专家奖励塑形（可选）：注入光子学领域知识
         # 来源: ICLR'26 Expertise-Enhanced RL
         # https://openreview.net/forum?id=yqvNwfxRR6

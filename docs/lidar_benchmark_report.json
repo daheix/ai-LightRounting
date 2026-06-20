@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-06-20T10:53:17.566656",
+  "timestamp": "2026-06-20T12:04:58.415359",
   "total_benchmarks": 9,
   "metrics": [
     {
@@ -8,11 +8,11 @@
       "n_connections": 2,
       "n_routed": 2,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 1242.8441856839218,
-      "hpwl_um": 1192.7231469710118,
+      "total_wire_length_um": 80.0,
+      "hpwl_um": 80.0,
       "n_drc_violations": 0,
-      "total_loss_db": 1.2428441856839219,
-      "runtime_seconds": 0.03292131423950195,
+      "total_loss_db": 0.08,
+      "runtime_seconds": 0.016392946243286133,
       "n_overlaps": 0
     },
     {
@@ -21,11 +21,11 @@
       "n_connections": 30,
       "n_routed": 30,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 20991.38487119505,
-      "hpwl_um": 20577.867932654233,
+      "total_wire_length_um": 2041.4187657280418,
+      "hpwl_um": 2078.7999999999997,
       "n_drc_violations": 0,
-      "total_loss_db": 20.99138487119505,
-      "runtime_seconds": 3.2020626068115234,
+      "total_loss_db": 2.0414187657280416,
+      "runtime_seconds": 0.14039325714111328,
       "n_overlaps": 0
     },
     {
@@ -34,11 +34,11 @@
       "n_connections": 79,
       "n_routed": 79,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 53339.9444890874,
-      "hpwl_um": 52468.94694096808,
+      "total_wire_length_um": 9119.562350021122,
+      "hpwl_um": 9080.0,
       "n_drc_violations": 0,
-      "total_loss_db": 53.3399444890874,
-      "runtime_seconds": 6.331369638442993,
+      "total_loss_db": 9.119562350021122,
+      "runtime_seconds": 0.2669508457183838,
       "n_overlaps": 0
     },
     {
@@ -47,12 +47,12 @@
       "n_connections": 111,
       "n_routed": 111,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 75064.0250640797,
-      "hpwl_um": 73032.03800765827,
-      "n_drc_violations": 12,
-      "total_loss_db": 75.0640250640797,
-      "runtime_seconds": 9.94202470779419,
-      "n_overlaps": 12
+      "total_wire_length_um": 25311.272193067427,
+      "hpwl_um": 24980.0,
+      "n_drc_violations": 0,
+      "total_loss_db": 25.311272193067428,
+      "runtime_seconds": 0.9067347049713135,
+      "n_overlaps": 0
     },
     {
       "name": "mrr_weight_bank_8x8",
@@ -60,12 +60,12 @@
       "n_connections": 94,
       "n_routed": 94,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 68723.07558844182,
-      "hpwl_um": 66669.01147804124,
-      "n_drc_violations": 1,
-      "total_loss_db": 68.72307558844182,
-      "runtime_seconds": 8.814798355102539,
-      "n_overlaps": 1
+      "total_wire_length_um": 18620.29884283925,
+      "hpwl_um": 18597.599999999988,
+      "n_drc_violations": 0,
+      "total_loss_db": 18.62029884283925,
+      "runtime_seconds": 0.701411247253418,
+      "n_overlaps": 0
     },
     {
       "name": "multiportmmi_16x16",
@@ -73,25 +73,25 @@
       "n_connections": 223,
       "n_routed": 223,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 187128.91289020347,
-      "hpwl_um": 182843.23717478535,
-      "n_drc_violations": 40,
-      "total_loss_db": 187.12891289020348,
-      "runtime_seconds": 37.780418157577515,
-      "n_overlaps": 40
+      "total_wire_length_um": 85618.94299733665,
+      "hpwl_um": 85230.0,
+      "n_drc_violations": 0,
+      "total_loss_db": 85.61894299733665,
+      "runtime_seconds": 3.990987539291382,
+      "n_overlaps": 0
     },
     {
       "name": "clements_16x16",
       "n_devices": 168,
       "n_connections": 287,
-      "n_routed": 285,
-      "routing_success_rate": 0.9930313588850174,
-      "total_wire_length_um": 253612.8044601081,
-      "hpwl_um": 250891.99862826793,
-      "n_drc_violations": 5,
-      "total_loss_db": 253.61280446010812,
-      "runtime_seconds": 44.901737213134766,
-      "n_overlaps": 5
+      "n_routed": 287,
+      "routing_success_rate": 1.0,
+      "total_wire_length_um": 79781.86898938572,
+      "hpwl_um": 79360.0,
+      "n_drc_violations": 0,
+      "total_loss_db": 79.78186898938573,
+      "runtime_seconds": 2.5719375610351562,
+      "n_overlaps": 0
     },
     {
       "name": "multiportmmi_32x32",
@@ -99,40 +99,40 @@
       "n_connections": 447,
       "n_routed": 447,
       "routing_success_rate": 1.0,
-      "total_wire_length_um": 511974.76695997734,
-      "hpwl_um": 506842.7324183611,
-      "n_drc_violations": 84,
-      "total_loss_db": 511.97476695997733,
-      "runtime_seconds": 220.58018279075623,
-      "n_overlaps": 84
+      "total_wire_length_um": 267083.71348775236,
+      "hpwl_um": 266260.0,
+      "n_drc_violations": 0,
+      "total_loss_db": 267.0837134877524,
+      "runtime_seconds": 22.406981229782104,
+      "n_overlaps": 0
     },
     {
       "name": "mrr_weight_bank_16x16",
       "n_devices": 319,
       "n_connections": 318,
-      "n_routed": 317,
-      "routing_success_rate": 0.9968553459119497,
-      "total_wire_length_um": 381762.29655512574,
-      "hpwl_um": 379040.2048467075,
-      "n_drc_violations": 2,
-      "total_loss_db": 381.7622965551258,
-      "runtime_seconds": 135.41284918785095,
-      "n_overlaps": 2
+      "n_routed": 318,
+      "routing_success_rate": 1.0,
+      "total_wire_length_um": 149688.64067593543,
+      "hpwl_um": 147324.80000000016,
+      "n_drc_violations": 0,
+      "total_loss_db": 149.68864067593543,
+      "runtime_seconds": 15.386050939559937,
+      "n_overlaps": 0
     }
   ],
   "summary": {
     "total_benchmarks": 9,
     "successful_benchmarks": 9,
-    "avg_routing_success_rate": 0.9988763005329964,
-    "avg_runtime_seconds": 51.888707107967804,
-    "max_runtime_seconds": 220.58018279075623,
-    "total_wire_length_um": 1553840.0550639026,
-    "total_drv": 144,
+    "avg_routing_success_rate": 1.0,
+    "avg_runtime_seconds": 5.154204474555121,
+    "max_runtime_seconds": 22.406981229782104,
+    "total_wire_length_um": 637345.718302066,
+    "total_drv": 0,
     "max_devices": 319,
     "target_routing_success_rate": 0.95,
     "target_drv_count": 0,
     "target_runtime_1000_dev_sec": 600,
     "meets_routing_target": true,
-    "meets_drv_target": false
+    "meets_drv_target": true
   }
 }

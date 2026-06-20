@@ -134,14 +134,15 @@ def _circuit_to_netlist(circuit: CircuitSpec) -> Netlist:
 
 
 def _run_placement(net: Netlist, circuit: CircuitSpec) -> dict:
-    """执行随机贪心布局，返回 placements dict。
+    """执行无重叠行打包布局，返回 placements dict。
 
-    使用简单随机放置（非 FloorplanEnv），避免 RUDY 拥塞计算开销，
-    提供 benchmark 用的快速 baseline 布局。
+    F3 DRV 消除：用确定性行打包（row packing）替代随机布局，
+    保证器件无重叠且满足最小间距，达成 DRV=0 商业化门槛。
+    对齐 LiDAR ISPD'25 DRV-free 标准。
+
+    算法：贪心行打包——器件按顺序排列，当前行放不下时换行。
+    来源: 经典 floorplan 行打包算法（OpenROAD/RePlAce 简化版）
     """
-    import random
-
-    rng = random.Random(42)
     canvas_w = max(1000.0, circuit.canvas_w)
     canvas_h = max(1000.0, circuit.canvas_h)
     # 大规模电路扩大画布避免拥挤
@@ -150,17 +151,27 @@ def _run_placement(net: Netlist, circuit: CircuitSpec) -> dict:
         canvas_w = max(canvas_w, 1000.0 * scale)
         canvas_h = max(canvas_h, 1000.0 * scale)
 
+    min_spacing = 10.0  # 器件最小间距（μm）
+    margin = 10.0  # 画布边距（μm）
     placements: dict[str, dict] = {}
+    cur_x = margin
+    cur_y = margin
+    row_max_h = 0.0  # 当前行最高器件高度
+
     for dev in circuit.devices:
-        margin = 10.0
-        x = rng.uniform(margin, canvas_w - dev.width_um - margin)
-        y = rng.uniform(margin, canvas_h - dev.height_um - margin)
-        placements[dev.name] = {
-            "x": x,
-            "y": y,
-            "w": dev.width_um,
-            "h": dev.height_um,
-        }
+        w = dev.width_um
+        h = dev.height_um
+        # 当前行放不下时换行
+        if cur_x + w + margin > canvas_w:
+            cur_x = margin
+            cur_y += row_max_h + min_spacing
+            row_max_h = 0.0
+        # 画布高度不够时扩展（保证不溢出）
+        if cur_y + h + margin > canvas_h:
+            canvas_h = cur_y + h + margin
+        placements[dev.name] = {"x": cur_x, "y": cur_y, "w": w, "h": h}
+        cur_x += w + min_spacing
+        row_max_h = max(row_max_h, h)
     return placements
 
 
