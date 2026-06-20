@@ -55,7 +55,7 @@ bash 3dtool/wheels/install.sh --check
 |------|------|------|----------|
 | meep | ❌ 未安装 | FDTD 电磁仿真 | `pip install meep` |
 | simphony | ✅ 已装 0.6.0 | 光子电路 S 参数仿真 | `pip install simphony` |
-| sax | ❌ 未安装 | 光子电路频率域仿真 | `pip install sax` |
+| sax | ✅ 已装 0.14.7 | 光子电路频率域仿真 | `pip install sax` |
 | SiPANN | ❌ 未安装 | 硅光器件模型 | `pip install SiPANN` |
 | femwell | ❌ 未安装 | FEM 模式求解器 | `pip install femwell` |
 | meow | ❌ 未安装 | 模式求解器 | `pip install meow` |
@@ -64,7 +64,7 @@ bash 3dtool/wheels/install.sh --check
 
 | 工具 | 状态 | 用途 | 安装方式 |
 |------|------|------|----------|
-| torch | ✅ 已装 2.12.1 | GNN/PPO 神经网络 | `pip install torch` |
+| torch | ✅ 已装 2.12.1+cpu | GNN/PPO 神经网络 | `pip install torch` |
 | gymnasium | ✅ 已装 1.3.0 | RL 环境 | `pip install gymnasium` |
 | networkx | ✅ 已装 3.6.1 | 器件连接图建模 | `pip install networkx` |
 
@@ -74,7 +74,7 @@ bash 3dtool/wheels/install.sh --check
 |------|------|------|----------|
 | numpy | ✅ 已装 2.4.6 | 数值计算 | `pip install numpy` |
 | scipy | ✅ 已装 1.17.1 | 优化求解 | `pip install scipy` |
-| shapely | ✅ 已装 2.1.2 | 几何运算 | `pip install shapely` |
+| shapely | ❌ 未安装 | 几何运算（constraint_checker 用纯 Python 实现，无需 shapely） | `pip install shapely` |
 
 ### viz/ — 可视化类工具
 

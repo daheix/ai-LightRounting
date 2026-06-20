@@ -23,7 +23,7 @@
 ### sax
 
 - **用途**: 光子电路频率域仿真
-- **状态**: ❌ 未安装
+- **状态**: ✅ 已装 0.14.7
 - **来源**: https://flaport.github.io/sax/
 - **安装**: `pip install sax`
 - **项目使用**: `src/polaris/sim/cascade.py` 优先用 sax，回退到纯 numpy 复刻

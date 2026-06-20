@@ -23,7 +23,7 @@
 ### shapely
 
 - **用途**: 几何运算（多边形、缓冲区、相交检测）
-- **状态**: ✅ 已装 2.1.2
+- **状态**: ❌ 未安装
 - **来源**: https://shapely.readthedocs.io/
 - **安装**: `pip install shapely`
-- **项目使用**: 几何运算（当前 constraint_checker.py 用纯 Python 矩形运算，未直接依赖）
+- **项目使用**: 几何运算（当前 constraint_checker.py 用纯 Python 矩形运算，未直接依赖，无需安装）

@@ -42,14 +42,9 @@ CORE_PACKAGES=(
     numpy scipy networkx torch gymnasium matplotlib pyyaml
 )
 
-# 可选依赖清单（按需）
+# 可选依赖清单（按需，含 sax 完整依赖链 jax/jaxlib/optax）
 OPTIONAL_PACKAGES=(
-    klayout simphony
-)
-
-# 重型仿真依赖（sax 完整依赖链，含 jax/jaxlib/optax）
-HEAVY_PACKAGES=(
-    sax
+    klayout simphony sax
 )
 
 # 开发依赖
@@ -162,7 +157,7 @@ if [[ "${MODE}" == "check" ]]; then
     done
     echo ""
     echo "--- 可选依赖检查 ---"
-    for pkg in "${OPTIONAL_PACKAGES[@]}" "${HEAVY_PACKAGES[@]}"; do
+    for pkg in "${OPTIONAL_PACKAGES[@]}"; do
         if python3 -c "import ${pkg}" 2>/dev/null; then
             ver=$(python3 -c "import ${pkg}; print(${pkg}.__version__)" 2>/dev/null || echo "?")
             echo "  ✅ ${pkg} ${ver}"
@@ -207,9 +202,6 @@ case "${MODE}" in
         log_info "安装可选依赖: ${OPTIONAL_PACKAGES[*]}"
         python3 -m pip install ${INSTALL_ARGS} "${OPTIONAL_PACKAGES[@]}" || \
             log_warn "部分可选依赖安装失败（可接受，有复刻品兜底）"
-        log_info "安装重型仿真依赖: ${HEAVY_PACKAGES[*]}"
-        python3 -m pip install ${INSTALL_ARGS} "${HEAVY_PACKAGES[@]}" || \
-            log_warn "重型仿真依赖安装失败（可接受，有 pyCopySAX 复刻品兜底）"
         log_info "安装开发依赖: ${DEV_PACKAGES[*]}"
         python3 -m pip install ${INSTALL_ARGS} "${DEV_PACKAGES[@]}"
         ;;
