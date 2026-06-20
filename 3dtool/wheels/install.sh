@@ -183,8 +183,29 @@ case "${MODE}" in
         python3 -m pip install ${INSTALL_ARGS} "${DEV_PACKAGES[@]}"
         ;;
     all)
-        log_info "安装全部依赖: ${ALL_PACKAGES[*]}"
-        python3 -m pip install ${INSTALL_ARGS} "${ALL_PACKAGES[@]}"
+        log_info "安装全部依赖（含传递依赖）"
+        # 方案 1：先尝试正常安装（自动解析依赖）
+        if ! python3 -m pip install ${INSTALL_ARGS} "${ALL_PACKAGES[@]}" 2>/dev/null; then
+            log_warn "正常安装失败（可能因依赖版本冲突），改用 --no-deps 分步安装"
+            # 方案 2：用 --no-deps 安装主包，再安装所有 wheel 中的传递依赖
+            python3 -m pip install ${INSTALL_ARGS} --no-deps "${ALL_PACKAGES[@]}"
+            # 安装所有 wheel 文件（覆盖传递依赖，--no-deps 避免版本冲突）
+            log_info "安装传递依赖（wheel 目录全部 wheel）"
+            ALL_WHEELS=$(find "${WHEELS_DIR}" -maxdepth 1 -name "*.whl" | sort)
+            if [[ -d "${TMP_DIR}" ]]; then
+                ALL_WHEELS="${ALL_WHEELS} $(find "${TMP_DIR}" -maxdepth 1 -name "*.whl" | sort)"
+            fi
+            # 过滤掉已安装的主包 wheel，只装传递依赖
+            for whl in ${ALL_WHEELS}; do
+                pkg_name=$(basename "${whl}" | sed 's/-[0-9].*//')
+                # 跳过主包（已用 --no-deps 安装）
+                case "${pkg_name}" in
+                    numpy|scipy|networkx|torch|gymnasium|matplotlib|pyyaml|klayout|simphony|sax|pytest|ruff|mypy)
+                        continue ;;
+                esac
+                python3 -m pip install ${INSTALL_ARGS} --no-deps "${whl}" 2>/dev/null || true
+            done
+        fi
         ;;
 esac
 
