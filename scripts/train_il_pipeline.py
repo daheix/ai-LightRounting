@@ -35,10 +35,15 @@ import argparse
 import json
 import logging
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+
+try:
+    import torch
+except ImportError:
+    torch = None  # type: ignore[assignment]
 
 # 确保 src/ 在 sys.path
 ROOT = Path(__file__).resolve().parent.parent
@@ -86,6 +91,7 @@ class PipelineConfig:
     batch_size: int = 16
     output_dir: str = "checkpoints/il_pipeline"
     expert_data_dir: str = "data/expert_demos"
+    seed: int = 42
 
 
 @dataclass
@@ -147,6 +153,7 @@ def args_to_config(args: argparse.Namespace) -> PipelineConfig:
         batch_size=args.batch_size,
         output_dir=args.output,
         expert_data_dir=args.expert_data,
+        seed=args.seed,
     )
 
 
@@ -193,7 +200,10 @@ def run_bc_pretrain(cfg: PipelineConfig) -> tuple[PPOAgent, StageResult]:
     agent.save(str(ckpt_path))
     logger.info(
         "BC 预训练完成: loss=%.6f, mse=%.6f, nll=%.6f → %s",
-        final["loss"], final.get("mse", 0.0), final.get("nll", 0.0), ckpt_path,
+        final["loss"],
+        final.get("mse", 0.0),
+        final.get("nll", 0.0),
+        ckpt_path,
     )
     return agent, StageResult("bc", cfg.bc_epochs, final["loss"], 0.0, str(ckpt_path))
 
@@ -230,8 +240,13 @@ def run_rl_finetune(
         阶段结果。
     """
     logger.info("=" * 60)
-    logger.info("阶段: %s RL 微调 (%s 级别, %d 器件, %d episodes)",
-                stage_name, level.name, level.n_devices_min, n_episodes)
+    logger.info(
+        "阶段: %s RL 微调 (%s 级别, %d 器件, %d episodes)",
+        stage_name,
+        level.name,
+        level.n_devices_min,
+        n_episodes,
+    )
     logger.info("=" * 60)
     # RL 微调：在变体数据上跑 PPO 训练循环
     # 注：完整 RL 训练循环由 train_2m.py 实现，这里做轻量级微调演示
@@ -242,7 +257,9 @@ def run_rl_finetune(
     agent.save(str(ckpt_path))
     logger.info(
         "%s RL 微调完成: avg_reward=%.4f → %s",
-        stage_name, avg_reward, ckpt_path,
+        stage_name,
+        avg_reward,
+        ckpt_path,
     )
     return StageResult(stage_name, n_episodes, 0.0, avg_reward, str(ckpt_path))
 
@@ -259,12 +276,14 @@ def _run_lightweight_rl_loop(
     Args:
         agent: PPOAgent。
         n_episodes: 轮次数。
-        seed: 随机种子。
+        seed: 随机种子（同时设置 numpy 和 torch 种子保证可复现）。
 
     Returns:
         平均奖励。
     """
     rng = np.random.default_rng(seed)
+    if torch is not None:
+        torch.manual_seed(seed)
     rewards: list[float] = []
     for _ in range(min(n_episodes, 100)):  # 限制为 100 步用于演示
         obs = rng.standard_normal((1, OBS_DIM)).astype(np.float32)
@@ -273,6 +292,7 @@ def _run_lightweight_rl_loop(
         reward = -float(np.sum((action - 0.5) ** 2))
         rewards.append(reward)
         from polaris.trainer.ppo_torch import Transition
+
         agent.store(Transition(obs[0], action, reward, logprob, value, True))
         if len(agent.buffer) >= 32:
             agent.update(last_value=0.0)
@@ -331,32 +351,55 @@ def main() -> int:
     if args.stage in ("all", "bc-small", "bc-small-medium"):
         small_level = _find_level("small")
         if small_level and cfg.small_episodes > 0:
-            results.append(run_rl_finetune(
-                agent, small_level, cfg.small_episodes, cfg, "small",
-            ))
+            results.append(
+                run_rl_finetune(
+                    agent,
+                    small_level,
+                    cfg.small_episodes,
+                    cfg,
+                    "small",
+                )
+            )
 
     # 阶段3: PPO 中规模 RL 微调
     if args.stage in ("all", "bc-small-medium"):
         medium_level = _find_level("medium")
         if medium_level and cfg.medium_episodes > 0:
-            results.append(run_rl_finetune(
-                agent, medium_level, cfg.medium_episodes, cfg, "medium",
-            ))
+            results.append(
+                run_rl_finetune(
+                    agent,
+                    medium_level,
+                    cfg.medium_episodes,
+                    cfg,
+                    "medium",
+                )
+            )
 
     # 阶段4: PPO 大规模 RL 微调
     if args.stage == "all":
         large_level = _find_level("large")
         if large_level and cfg.large_episodes > 0:
-            results.append(run_rl_finetune(
-                agent, large_level, cfg.large_episodes, cfg, "large",
-            ))
+            results.append(
+                run_rl_finetune(
+                    agent,
+                    large_level,
+                    cfg.large_episodes,
+                    cfg,
+                    "large",
+                )
+            )
 
     save_pipeline_summary(results, cfg, output_dir)
     logger.info("=" * 60)
     logger.info("4 阶段流水线训练完成！")
     for r in results:
-        logger.info("  %s: %d episodes, loss=%.4f, reward=%.4f",
-                    r.stage_name, r.episodes, r.final_loss, r.final_reward)
+        logger.info(
+            "  %s: %d episodes, loss=%.4f, reward=%.4f",
+            r.stage_name,
+            r.episodes,
+            r.final_loss,
+            r.final_reward,
+        )
     logger.info("=" * 60)
     return 0
 
