@@ -1,7 +1,12 @@
-"""外部数据源加载器。
+"""外部数据源加载器（公开 API）。
 
-支持从 LiDAR PIC IR (YAML)、PICBench (YAML/Python)、
-GDSFactory (*.pic.yml) 等格式加载光子电路训练数据。
+支持从 LiDAR PIC IR (YAML)、PICBench (YAML/JSON)、
+GDSFactory (*.pic.yml)、PhIDO (YAML/JSON) 等格式加载光子电路训练数据。
+
+格式特定的解析器拆分到：
+- ``_pic_ir.py``: LiDAR PIC IR 格式
+- ``_other_formats.py``: GDSFactory / PICBench / PhIDO 格式
+- ``_common.py``: 共享工具函数
 
 数据来源:
 - LiDAR PIC IR: https://github.com/ScopeX-ASU/LiDAR
@@ -12,529 +17,18 @@ GDSFactory (*.pic.yml) 等格式加载光子电路训练数据。
 
 from __future__ import annotations
 
-import json
 import logging
 from pathlib import Path
 
-import yaml
-
-from polaris.data.specs import CircuitSpec, DeviceSpec
+from polaris.data._other_formats import (
+    load_gdsfactory_yaml,
+    load_phido,
+    load_picbench,
+)
+from polaris.data._pic_ir import load_pic_ir
+from polaris.data.specs import CircuitSpec
 
 logger = logging.getLogger(__name__)
-
-
-def _parse_pic_ir_ports(
-    inst: dict,
-) -> list[tuple[str, float, float, str]]:
-    """解析 PIC IR 实例的端口列表。"""
-    ports: list[tuple[str, float, float, str]] = []
-    for p in inst.get("ports", []):
-        pname = p.get("name", "o1")
-        px = float(p.get("x", 0.0))
-        py = float(p.get("y", 0.0))
-        pdir = p.get("direction", "E")
-        ports.append((pname, px, py, pdir))
-    return ports
-
-
-def _parse_pic_ir_nets(
-    raw: dict,
-) -> list[tuple[str, str, str, str]]:
-    """解析 PIC IR 网络连接列表。
-
-    LiDAR PIC IR 的 nets 字段有两种可能结构：
-    - dict: {net_name: [src_port_ref, dst_port_ref]}（实际基准文件格式）
-    - list: [{src, dst}, ...]（早期格式兼容）
-    """
-    nets = raw.get("nets", [])
-    if isinstance(nets, dict):
-        return _parse_pic_ir_nets_dict(nets)
-    if isinstance(nets, list):
-        return _parse_pic_ir_nets_list(nets)
-    return []
-
-
-def _parse_pic_ir_nets_dict(
-    nets: dict,
-) -> list[tuple[str, str, str, str]]:
-    """解析 PIC IR nets 字段为 dict 格式的连接。
-
-    Args:
-        nets: {net_name: endpoints} 字典，endpoints 可为 list/tuple 或 dict。
-
-    Returns:
-        连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
-    """
-    connections: list[tuple[str, str, str, str]] = []
-    for _net_name, endpoints in nets.items():
-        conn = _parse_pic_ir_endpoints(endpoints)
-        if conn is not None:
-            connections.append(conn)
-    return connections
-
-
-def _parse_pic_ir_endpoints(endpoints: object) -> tuple[str, str, str, str] | None:
-    """解析单个 net 的 endpoints（list/tuple 或 dict）。
-
-    Args:
-        endpoints: net 端点对象，可为 [src_ref, dst_ref] 列表或
-            {src, dst} 字典。
-
-    Returns:
-        (src_dev, src_port, dst_dev, dst_port) 或 None（解析失败）。
-    """
-    if isinstance(endpoints, (list, tuple)) and len(endpoints) >= 2:
-        src_ref = str(endpoints[0])
-        dst_ref = str(endpoints[1])
-    elif isinstance(endpoints, dict):
-        src_ref = str(endpoints.get("src", endpoints.get("source", "")))
-        dst_ref = str(endpoints.get("dst", endpoints.get("destination", "")))
-    else:
-        return None
-    src_dev, src_port = _split_port_ref(src_ref)
-    dst_dev, dst_port = _split_port_ref(dst_ref)
-    if src_dev and dst_dev:
-        return (src_dev, src_port, dst_dev, dst_port)
-    return None
-
-
-def _parse_pic_ir_nets_list(
-    nets: list,
-) -> list[tuple[str, str, str, str]]:
-    """解析 PIC IR nets 字段为 list 格式的连接。
-
-    Args:
-        nets: [{src, dst}, ...] 列表，src/dst 可为 "dev,port" 字符串。
-
-    Returns:
-        连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
-    """
-    connections: list[tuple[str, str, str, str]] = []
-    for net in nets:
-        if not isinstance(net, dict):
-            continue
-        src = net.get("src", net.get("source", ""))
-        dst = net.get("dst", net.get("destination", ""))
-        if "," in src and "," in dst:
-            src_parts = src.split(",")
-            dst_parts = dst.split(",")
-            if len(src_parts) == 2 and len(dst_parts) == 2:
-                connections.append((src_parts[0], src_parts[1], dst_parts[0], dst_parts[1]))
-    return connections
-
-
-def load_pic_ir(path: str | Path) -> CircuitSpec:
-    """加载 LiDAR PIC IR 格式 (YAML)。
-
-    PIC IR 是 Apollo/LiDAR 定义的光子电路中间表示格式，
-    包含 instances、nets、constraints 等字段。
-
-    来源: https://github.com/ScopeX-ASU/LiDAR
-
-    Args:
-        path: PIC IR YAML 文件路径。
-
-    Returns:
-        CircuitSpec。
-    """
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    devices = _parse_pic_ir_instances(raw.get("instances", {}))
-    connections = _parse_pic_ir_nets(raw)
-    canvas = raw.get("canvas", raw.get("die", {}))
-    cw = float(canvas.get("width", canvas.get("xsize", 1000.0)))
-    ch = float(canvas.get("height", canvas.get("ysize", 1000.0)))
-    return CircuitSpec(
-        name=raw.get("name", Path(path).stem),
-        devices=devices,
-        connections=connections,
-        canvas_w=cw,
-        canvas_h=ch,
-    )
-
-
-def _parse_pic_ir_instances(instances: dict | list) -> list[DeviceSpec]:
-    """解析 PIC IR instances 字段（dict 或 list）。
-
-    Args:
-        instances: instances 字段，可为 {name: inst_dict} 或 [inst_dict, ...]。
-
-    Returns:
-        DeviceSpec 列表。
-    """
-    if isinstance(instances, dict):
-        items = instances.items()
-    else:
-        items = [(inst.get("name", "unknown"), inst) for inst in instances]
-
-    devices: list[DeviceSpec] = []
-    for name, inst in items:
-        if not isinstance(inst, dict):
-            continue
-        if not name or name == "unknown":
-            name = inst.get("name", "unknown")
-        cell = inst.get("cell_type", inst.get("cell", inst.get("component", "unknown")))
-        settings = inst.get("settings", {})
-        w = float(inst.get("width", inst.get("xsize", settings.get("length", 10.0))))
-        h = float(inst.get("height", inst.get("ysize", settings.get("gap", 10.0))))
-        ports = _parse_pic_ir_ports(inst)
-        devices.append(
-            DeviceSpec(name=name, device_type=cell, width_um=w, height_um=h, ports=ports)
-        )
-    return devices
-
-
-def load_gdsfactory_yaml(path: str | Path) -> CircuitSpec:
-    """加载 GDSFactory *.pic.yml 格式。
-
-    GDSFactory YAML 网表格式包含 instances、placements、
-    connections、routes、ports 等字段。
-
-    来源: https://gdsfactory.github.io/gdsfactory/
-
-    Args:
-        path: GDSFactory YAML 文件路径。
-
-    Returns:
-        CircuitSpec。
-    """
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    devices: list[DeviceSpec] = []
-    connections: list[tuple[str, str, str, str]] = []
-
-    for name, inst in raw.get("instances", {}).items():
-        if not isinstance(inst, dict):
-            continue
-        component = inst.get("component", "unknown")
-        settings = inst.get("settings", {})
-        w = float(settings.get("length", settings.get("width", 10.0)))
-        h = float(settings.get("gap", 10.0))
-        devices.append(DeviceSpec(name=name, device_type=component, width_um=w, height_um=h))
-
-    connections = _parse_gdsfactory_connections(raw)
-
-    return CircuitSpec(
-        name=raw.get("name", Path(path).stem),
-        devices=devices,
-        connections=connections,
-    )
-
-
-def load_picbench(path: str | Path) -> CircuitSpec:
-    """加载 PICBench 格式 (YAML/JSON)。
-
-    PICBench 是 HKUST(GZ) 定义的光子电路设计基准，
-    包含自然语言描述和仿真就绪网表。
-
-    来源: https://github.com/PICDA/PICBench
-
-    Args:
-        path: PICBench YAML/JSON 文件路径。
-
-    Returns:
-        CircuitSpec。
-    """
-    p = Path(path)
-    if p.suffix == ".json":
-        raw = json.loads(p.read_text(encoding="utf-8"))
-    else:
-        raw = yaml.safe_load(p.read_text(encoding="utf-8"))
-
-    data_section = raw.get("data", {})
-    if isinstance(data_section, dict) and "netlist" in data_section:
-        devices, connections = _parse_picbench_netlist_section(data_section)
-    else:
-        devices, connections = _parse_picbench_components_section(raw)
-
-    return CircuitSpec(
-        name=raw.get("name", raw.get("id", p.stem)),
-        devices=devices,
-        connections=connections,
-    )
-
-
-def _parse_picbench_netlist_section(
-    data_section: dict,
-) -> tuple[list[DeviceSpec], list[tuple[str, str, str, str]]]:
-    """解析 PICBench data.netlist 嵌套结构。
-
-    Args:
-        data_section: PICBench data 字段（含 netlist 键）。
-
-    Returns:
-        (devices, connections) 元组。
-    """
-    netlist = data_section.get("netlist", {})
-    devices = _parse_picbench_instances(netlist.get("instances", {}))
-    connections = _parse_picbench_conns(netlist.get("connections", {}))
-    return devices, connections
-
-
-def _parse_picbench_instances(
-    instances: dict | list,
-) -> list[DeviceSpec]:
-    """解析 PICBench instances 字段（dict 或 list）。
-
-    Args:
-        instances: instances 字段，可为 {name: comp_ref} 或 [inst_dict, ...]。
-
-    Returns:
-        DeviceSpec 列表。
-    """
-    devices: list[DeviceSpec] = []
-    if isinstance(instances, dict):
-        for name, comp_ref in instances.items():
-            ctype = comp_ref if isinstance(comp_ref, str) else str(comp_ref)
-            devices.append(DeviceSpec(name=name, device_type=ctype, width_um=10.0, height_um=10.0))
-    elif isinstance(instances, list):
-        for inst in instances:
-            if not isinstance(inst, dict):
-                continue
-            name = inst.get("name", "unknown")
-            ctype = inst.get("type", inst.get("component", "unknown"))
-            devices.append(DeviceSpec(name=name, device_type=ctype, width_um=10.0, height_um=10.0))
-    return devices
-
-
-def _parse_picbench_conns(
-    conns: dict | list,
-) -> list[tuple[str, str, str, str]]:
-    """解析 PICBench connections 字段（dict 或 list）。
-
-    Args:
-        conns: connections 字段，可为 {src_ref: dst_ref} 或 [conn_dict, ...]。
-
-    Returns:
-        连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
-    """
-    connections: list[tuple[str, str, str, str]] = []
-    if isinstance(conns, dict):
-        for src_ref, dst_ref in conns.items():
-            src_dev, src_port = _split_port_ref(str(src_ref))
-            dst_dev, dst_port = _split_port_ref(str(dst_ref))
-            if src_dev and dst_dev:
-                connections.append((src_dev, src_port, dst_dev, dst_port))
-    elif isinstance(conns, list):
-        for conn in conns:
-            pair = _extract_conn_pair(conn)
-            if pair is None:
-                continue
-            src, dst = pair
-            src_dev, src_port = _split_port_ref(str(src))
-            dst_dev, dst_port = _split_port_ref(str(dst))
-            if src_dev and dst_dev:
-                connections.append((src_dev, src_port, dst_dev, dst_port))
-    return connections
-
-
-def _extract_conn_pair(conn: object) -> tuple[str, str] | None:
-    """从单个连接对象提取 (src, dst) 对。
-
-    Args:
-        conn: 连接对象，可为 dict、list/tuple。
-
-    Returns:
-        (src, dst) 字符串对，或 None（无法解析）。
-    """
-    if isinstance(conn, dict):
-        src = conn.get("source", conn.get("src", ""))
-        dst = conn.get("destination", conn.get("dst", ""))
-        return str(src), str(dst)
-    if isinstance(conn, (list, tuple)) and len(conn) >= 2:
-        return str(conn[0]), str(conn[1])
-    return None
-
-
-def _parse_picbench_components_section(
-    raw: dict,
-) -> tuple[list[DeviceSpec], list[tuple[str, str, str, str]]]:
-    """解析 PICBench 顶层 components/connections 结构（无 data.netlist 嵌套）。
-
-    Args:
-        raw: PICBench 原始字典。
-
-    Returns:
-        (devices, connections) 元组。
-    """
-    devices: list[DeviceSpec] = []
-    for comp in raw.get("components", raw.get("devices", [])):
-        if not isinstance(comp, dict):
-            continue
-        name = comp.get("name", "unknown")
-        ctype = comp.get("type", comp.get("component", "unknown"))
-        w = float(comp.get("width", comp.get("xsize", 10.0)))
-        h = float(comp.get("height", comp.get("ysize", 10.0)))
-        devices.append(DeviceSpec(name=name, device_type=ctype, width_um=w, height_um=h))
-
-    connections: list[tuple[str, str, str, str]] = []
-    for conn in raw.get("connections", raw.get("nets", [])):
-        pair = _extract_conn_pair(conn)
-        if pair is None:
-            continue
-        src, dst = pair
-        src_dev, src_port = _split_port_ref(str(src))
-        dst_dev, dst_port = _split_port_ref(str(dst))
-        if src_dev and dst_dev:
-            connections.append((src_dev, src_port, dst_dev, dst_port))
-    return devices, connections
-
-
-def load_phido(path: str | Path) -> CircuitSpec:
-    """加载 PhIDO 格式 (YAML/JSON)。
-
-    PhIDO 是 U of Toronto/GDSFactory/MIT 定义的
-    光子设计自动化测试基准。
-
-    来源: https://github.com/JPPhotonics/PhIDO-Release
-
-    Args:
-        path: PhIDO YAML/JSON 文件路径。
-
-    Returns:
-        CircuitSpec。
-    """
-    p = Path(path)
-    if p.suffix == ".json":
-        raw = json.loads(p.read_text(encoding="utf-8"))
-    else:
-        raw = yaml.safe_load(p.read_text(encoding="utf-8"))
-
-    devices: list[DeviceSpec] = []
-    connections: list[tuple[str, str, str, str]] = []
-
-    for inst in raw.get("instances", raw.get("components", [])):
-        if isinstance(inst, dict):
-            name = inst.get("name", "unknown")
-            ctype = inst.get("component", inst.get("type", "unknown"))
-            w = float(inst.get("width", inst.get("xsize", 10.0)))
-            h = float(inst.get("height", inst.get("ysize", 10.0)))
-            devices.append(DeviceSpec(name=name, device_type=ctype, width_um=w, height_um=h))
-
-    for conn in raw.get("connections", raw.get("nets", [])):
-        if isinstance(conn, dict):
-            src = conn.get("source", conn.get("src", ""))
-            dst = conn.get("destination", conn.get("dst", ""))
-        else:
-            continue
-        src_dev, src_port = _split_port_ref(str(src))
-        dst_dev, dst_port = _split_port_ref(str(dst))
-        if src_dev and dst_dev:
-            connections.append((src_dev, src_port, dst_dev, dst_port))
-
-    return CircuitSpec(
-        name=raw.get("name", raw.get("design_id", p.stem)),
-        devices=devices,
-        connections=connections,
-    )
-
-
-def _split_port_ref(ref: str) -> tuple[str, str]:
-    """拆分端口引用 'device,port' → (device, port)。"""
-    if "," in ref:
-        parts = ref.split(",", 1)
-        return parts[0].strip(), parts[1].strip()
-    if ":" in ref:
-        parts = ref.split(":", 1)
-        return parts[0].strip(), parts[1].strip()
-    return ref.strip(), "o1"
-
-
-def _parse_gdsfactory_connections(
-    raw: dict,
-) -> list[tuple[str, str, str, str]]:
-    """解析 GDSFactory 连接。
-
-    GDSFactory 连接有三种可能结构：
-    - dict: {"src_dev,src_port": "dst_dev,dst_port"}（实际基准文件格式）
-    - list[dict]: [{source, destination}, ...]
-    - list[str]: ["src,dst", ...]
-
-    另外路由信息在 routes.optical.links（dict 格式）。
-    """
-    connections = _parse_gdsfactory_conns_field(raw.get("connections", []))
-    connections.extend(_parse_gdsfactory_routes_field(raw.get("routes", {})))
-    return connections
-
-
-def _parse_gdsfactory_conns_field(
-    raw_conns: dict | list,
-) -> list[tuple[str, str, str, str]]:
-    """解析 GDSFactory connections 字段。
-
-    Args:
-        raw_conns: connections 字段，可为 dict 或 list。
-
-    Returns:
-        连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
-    """
-    connections: list[tuple[str, str, str, str]] = []
-    if isinstance(raw_conns, dict):
-        for src_ref, dst_ref in raw_conns.items():
-            src_dev, src_port = _split_port_ref(str(src_ref))
-            dst_dev, dst_port = _split_port_ref(str(dst_ref))
-            if src_dev and dst_dev:
-                connections.append((src_dev, src_port, dst_dev, dst_port))
-    elif isinstance(raw_conns, list):
-        for conn in raw_conns:
-            pair = _extract_gdsfactory_conn_pair(conn)
-            if pair is None:
-                continue
-            src, dst = pair
-            src_dev, src_port = _split_port_ref(str(src))
-            dst_dev, dst_port = _split_port_ref(str(dst))
-            if src_dev and dst_dev:
-                connections.append((src_dev, src_port, dst_dev, dst_port))
-    return connections
-
-
-def _extract_gdsfactory_conn_pair(conn: object) -> tuple[str, str] | None:
-    """从单个 GDSFactory 连接对象提取 (src, dst) 对。
-
-    Args:
-        conn: 连接对象，可为 dict 或 "src,dst" 字符串。
-
-    Returns:
-        (src, dst) 字符串对，或 None（无法解析）。
-    """
-    if isinstance(conn, dict):
-        src = conn.get("source", conn.get("src", ""))
-        dst = conn.get("destination", conn.get("dst", ""))
-        return str(src), str(dst)
-    if isinstance(conn, str):
-        parts = conn.split(",")
-        src = parts[0] if len(parts) >= 1 else ""
-        dst = parts[1] if len(parts) >= 2 else ""
-        return src, dst
-    return None
-
-
-def _parse_gdsfactory_routes_field(
-    routes: dict,
-) -> list[tuple[str, str, str, str]]:
-    """解析 GDSFactory routes.optical.links 字段。
-
-    Args:
-        routes: routes 字段，期望为 {route_name: {links: {src: dst}}}。
-
-    Returns:
-        连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
-    """
-    connections: list[tuple[str, str, str, str]] = []
-    if not isinstance(routes, dict):
-        return connections
-    for route_data in routes.values():
-        if not isinstance(route_data, dict):
-            continue
-        links = route_data.get("links", {})
-        if not isinstance(links, dict):
-            continue
-        for src_ref, dst_ref in links.items():
-            src_dev, src_port = _split_port_ref(str(src_ref))
-            dst_dev, dst_port = _split_port_ref(str(dst_ref))
-            if src_dev and dst_dev:
-                conn = (src_dev, src_port, dst_dev, dst_port)
-                if conn not in connections:
-                    connections.append(conn)
-    return connections
 
 
 def load_directory(
@@ -575,7 +69,18 @@ def load_directory(
 
 
 def _load_file(fp: Path, fmt: str) -> CircuitSpec:
-    """根据格式加载单个文件。"""
+    """根据格式加载单个文件。
+
+    Args:
+        fp: 文件路径。
+        fmt: 格式（auto/pic_ir/gdsfactory/picbench/phido）。
+
+    Returns:
+        CircuitSpec。
+
+    Raises:
+        ValueError: auto 模式下无法识别格式时。
+    """
     if fmt == "pic_ir":
         return load_pic_ir(fp)
     if fmt == "gdsfactory":
@@ -593,10 +98,82 @@ def _load_file(fp: Path, fmt: str) -> CircuitSpec:
     raise ValueError(f"无法识别文件格式: {fp}")
 
 
+def circuit_spec_to_netlist_dict(circuit: CircuitSpec) -> dict:
+    """将 CircuitSpec 转换为 Netlist 解析器期望的 dict 格式。
+
+    ``polaris.engine.netlist.parse_netlist`` 接受 dict 格式
+    ``{name, instances: {id: {component, settings}}, connections: [...]}``。
+    本函数将 ``CircuitSpec`` 转换为该格式，打通数据加载→布局环境链路。
+
+    LiDAR benchmark 使用的 gdsfactory 器件名（如 ``mmi1x2``/``mzi``/
+    ``grating_coupler_elliptical_lumerical``）需映射到 PoLaRIS PDK
+    catalog 中的标准器件名（如 ``soi_mmi_1x2``/``soi_mzi``/
+    ``soi_grating_coupler_2d``）。
+
+    Args:
+        circuit: CircuitSpec 数据类。
+
+    Returns:
+        Netlist dict，可直接传给 ``parse_netlist`` 或 ``load_netlist``。
+    """
+    instances: dict[str, dict] = {}
+    for dev in circuit.devices:
+        component = _LIDAR_TO_POLARIS_DEVICE_MAP.get(dev.device_type, dev.device_type)
+        instances[dev.name] = {
+            "component": component,
+            "settings": {
+                "width_um": dev.width_um,
+                "height_um": dev.height_um,
+                "ports": [
+                    {"name": p[0], "x": p[1], "y": p[2], "direction": p[3]} for p in dev.ports
+                ],
+                **dev.params,
+            },
+        }
+    connections = [
+        [src_dev, src_port, dst_dev, dst_port]
+        for src_dev, src_port, dst_dev, dst_port in circuit.connections
+    ]
+    return {
+        "name": circuit.name,
+        "instances": instances,
+        "connections": connections,
+    }
+
+
+# LiDAR gdsfactory 器件名 → PoLaRIS PDK catalog 器件名映射。
+# 来源: LiDAR benchmarks/ 目录实际使用的 component 名
+#   https://github.com/ScopeX-ASU/LiDAR/tree/main/src/picroute/benchmarks
+# 映射目标: src/polaris/pdk/soi/ 下的标准器件
+_LIDAR_TO_POLARIS_DEVICE_MAP: dict[str, str] = {
+    "grating_coupler_elliptical_lumerical": "soi_grating_coupler_2d",
+    "mmi1x2": "soi_mmi_1x2",
+    "mmi2x2": "soi_mmi_2x2",
+    "mmi": "soi_mmi_2x2",
+    "mzi": "soi_mzi",
+    "mzi1x2": "soi_mzi",
+    "mzi2x2_2x2_phase_shifter": "soi_mzi",
+    "ring_single_pn": "soi_ring_resonator",
+    "ring_double_pn": "soi_double_ring_filter",
+    "ring_single": "soi_ring_resonator",
+    "ring_double": "soi_double_ring_filter",
+    "straight": "soi_strip_waveguide",
+    "straight_heater_metal_undercut": "soi_thermo_optic_phase_shifter",
+    "y_branch": "soi_y_branch",
+    "crossing": "soi_crossing",
+    "directional_coupler": "soi_directional_coupler",
+    "dc": "soi_directional_coupler",
+    "terminator": "soi_edge_coupler",
+    "heater": "soi_thermo_optic_phase_shifter",
+    "rectangle": "soi_strip_waveguide",
+}
+
+
 __all__ = [
     "load_pic_ir",
     "load_gdsfactory_yaml",
     "load_picbench",
     "load_phido",
     "load_directory",
+    "circuit_spec_to_netlist_dict",
 ]

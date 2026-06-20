@@ -29,7 +29,8 @@ from train_il_pipeline import (  # noqa: E402
     PipelineConfig,
     StageResult,
     _find_level,
-    _run_lightweight_rl_loop,
+    _run_real_rl_loop,
+    _select_lidar_benchmark,
     args_to_config,
     parse_args,
     run_bc_pretrain,
@@ -273,23 +274,42 @@ def test_run_rl_finetune_large(pipeline_cfg: PipelineConfig) -> None:
 
 
 # ---------------------------------------------------------------------------
-# _run_lightweight_rl_loop 轻量级 RL 循环
+# _run_real_rl_loop 真实 RL 循环（FloorplanEnv + PPO）
 # ---------------------------------------------------------------------------
 
 
-def test_run_lightweight_rl_loop_basic(pipeline_cfg: PipelineConfig) -> None:
-    """测试轻量级 RL 循环基本功能。"""
+def test_select_lidar_benchmark_small() -> None:
+    """测试 small 级别 LiDAR benchmark 选择。"""
+    level = _find_level("small")
+    assert level is not None
+    path = _select_lidar_benchmark(level)
+    assert path is not None
+    assert Path(path).exists()
+
+
+def test_select_lidar_benchmark_large() -> None:
+    """测试 large 级别 LiDAR benchmark 选择。"""
+    level = _find_level("large")
+    assert level is not None
+    path = _select_lidar_benchmark(level)
+    assert path is not None
+    assert Path(path).exists()
+
+
+def test_run_real_rl_loop_basic(pipeline_cfg: PipelineConfig) -> None:
+    """测试真实 RL 循环基本功能（FloorplanEnv + PPO）。"""
     agent, _ = run_bc_pretrain(pipeline_cfg)
-    avg_reward = _run_lightweight_rl_loop(agent, 10, pipeline_cfg.seed)
+    level = _find_level("small")
+    assert level is not None
+    benchmark_path = _select_lidar_benchmark(level)
+    assert benchmark_path is not None
+    avg_reward = _run_real_rl_loop(agent, benchmark_path, 3, pipeline_cfg.seed)
     assert isinstance(avg_reward, float)
     assert np.isfinite(avg_reward)
 
 
-def test_run_lightweight_rl_loop_reproducible(pipeline_cfg: PipelineConfig) -> None:
-    """测试轻量级 RL 循环可复现性（同种子同结果）。
-
-    用同一 BC 检查点加载两个相同 agent，确保起点一致后跑 RL 循环。
-    """
+def test_run_real_rl_loop_reproducible(pipeline_cfg: PipelineConfig) -> None:
+    """测试真实 RL 循环可复现性（同种子同结果）。"""
     from polaris.trainer.ppo_buffers import PPOConfig
 
     _, bc_result = run_bc_pretrain(pipeline_cfg)
@@ -307,8 +327,12 @@ def test_run_lightweight_rl_loop_reproducible(pipeline_cfg: PipelineConfig) -> N
     )
     agent1.load(bc_result.checkpoint_path)
     agent2.load(bc_result.checkpoint_path)
-    r1 = _run_lightweight_rl_loop(agent1, 10, 42)
-    r2 = _run_lightweight_rl_loop(agent2, 10, 42)
+    level = _find_level("small")
+    assert level is not None
+    benchmark_path = _select_lidar_benchmark(level)
+    assert benchmark_path is not None
+    r1 = _run_real_rl_loop(agent1, benchmark_path, 3, 42)
+    r2 = _run_real_rl_loop(agent2, benchmark_path, 3, 42)
     assert abs(r1 - r2) < 1e-6
 
 
