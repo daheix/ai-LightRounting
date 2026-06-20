@@ -21,6 +21,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+# BCConfig 与 BC 预训练辅助函数（避免在函数签名中展开 7+ 参数，规则 7.1；
+# 同时避免本文件超过 500 行有效代码限制，规则 7.1）
+from polaris.trainer.bc import (  # noqa: E402
+    BCConfig,
+    _run_bc_pretrain_continuous,
+    _run_bc_pretrain_discrete,
+)
 from polaris.trainer.ppo_buffers import (
     AgentSpec,
     BufferTensors,
@@ -49,12 +56,9 @@ class PPOAgentDiscrete:
     """离散动作空间的 PPO 智能体。
 
     接口与 PPOAgent 兼容，但使用 Categorical 分布代替 Gaussian。
-    适用于 MultiDiscrete/Discrete 动作空间。
 
-    来源:
-    - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
-    - Schulman et al., 2015, GAE https://arxiv.org/abs/1506.02438
-    - SB3 PPO: https://stable-baselines3.readthedocs.io/
+    来源: Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+          SB3 PPO: https://stable-baselines3.readthedocs.io/
     """
 
     def __init__(
@@ -259,21 +263,65 @@ class PPOAgentDiscrete:
         agent._total_steps = data.get("total_steps", 0)
         return agent
 
+    def bc_update(
+        self,
+        obs: torch.Tensor,
+        expert_actions: torch.Tensor,
+        grad_clip: float = 1.0,
+    ) -> dict:
+        """单步 Behavior Cloning 更新（离散动作，交叉熵）。
+
+        来源: Pomerleau, NeurIPS 1989, ALVINN
+              https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
+
+        Args:
+            obs: 观测张量 (batch, obs_dim)。
+            expert_actions: 专家离散动作张量 (batch,) 或 (batch, 1)。
+            grad_clip: 梯度裁剪最大范数。
+
+        Returns:
+            {loss, accuracy} 指标字典。
+        """
+        self.optimizer.zero_grad()
+        loss, acc = self.network.bc_loss(obs, expert_actions)
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.network.parameters(), grad_clip)
+        self.optimizer.step()
+        return {"loss": float(loss.item()), "accuracy": float(acc.item())}
+
+    def pretrain(
+        self,
+        expert_obs: np.ndarray,
+        expert_actions: np.ndarray,
+        config: BCConfig | None = None,
+    ) -> list[dict]:
+        """Behavior Cloning 预训练入口（离散动作）。
+
+        在专家数据上监督学习策略网络，作为 PPO RL 微调的初始化。
+
+        来源: Pomerleau, NeurIPS 1989, ALVINN
+              https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
+
+        Args:
+            expert_obs: 专家观测数组 [N, obs_dim]。
+            expert_actions: 专家离散动作数组 [N] 或 [N, 1]。
+            config: BC 训练配置（None 用默认 BCConfig）。
+
+        Returns:
+            训练指标历史列表。
+        """
+        return _run_bc_pretrain_discrete(self, expert_obs, expert_actions, config)
+
 
 class PPOAgent:
     """PPO 智能体（actor-critic + clip + GAE + 2025 增强技巧）— PyTorch 版。
 
-    复刻 Stable-Baselines3 ``PPO`` 的核心训练循环，并集成:
-    - 学习率调度（cosine annealing + warmup）
-    - 价值函数 clip
-    - orthogonal 初始化
+    复刻 Stable-Baselines3 ``PPO`` 核心训练循环，集成学习率调度、价值函数 clip、
+    orthogonal 初始化。接口与 polaris.trainer.ppo.PPOAgent 完全兼容。
 
-    接口与 polaris.trainer.ppo.PPOAgent 完全兼容，可无缝切换。
-
-    来源:
-    - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
-    - SB3 PPO: https://stable-baselines3.readthedocs.io/
-    - Loshchilov & Hutter, 2017, SGDR https://arxiv.org/abs/1608.03983
+    来源: Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+          SB3 PPO: https://stable-baselines3.readthedocs.io/
+          Loshchilov & Hutter, 2017, SGDR https://arxiv.org/abs/1608.03983
     """
 
     def __init__(
@@ -293,14 +341,7 @@ class PPOAgent:
         self.current_step = 0  # 用于学习率调度
 
     def get_action(self, obs: np.ndarray):
-        """采样动作。
-
-        Args:
-            obs: numpy 观测数组。
-
-        Returns:
-            (action_numpy, logprob_float, value_float)
-        """
+        """采样动作，返回 (action, logprob, value)。"""
         return self.ac.get_action(obs)
 
     def _get_lr(self) -> float:
@@ -493,3 +534,65 @@ class PPOAgent:
             p_data = np.array(data, dtype=np.float32)
             p.data = torch.as_tensor(p_data)
         self.metrics = state.get("metrics", [])
+
+    def bc_update(
+        self,
+        obs: torch.Tensor,
+        expert_actions: torch.Tensor,
+        loss_type: str = "nll",
+        grad_clip: float = 1.0,
+    ) -> dict:
+        """单步 Behavior Cloning 更新（连续动作）。
+
+        用专家示范数据监督学习策略网络，作为 PPO RL 微调的初始化。
+        价值头不参与 BC 训练（PPO 阶段再学习）。
+
+        来源: Pomerleau, NeurIPS 1989, ALVINN
+              https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
+              Ross & Bagnell, AISTATS 2011, DAgger https://arxiv.org/abs/1011.0686
+
+        Args:
+            obs: 观测张量 (batch, obs_dim)。
+            expert_actions: 专家动作张量 (batch, action_dim)。
+            loss_type: "nll"（负对数似然，默认）或 "mse"。
+            grad_clip: 梯度裁剪最大范数。
+
+        Returns:
+            {loss, mse, nll} 指标字典。
+        """
+        self.optimizer.zero_grad()
+        loss, mse_loss = self.ac.bc_loss(obs, expert_actions, loss_type=loss_type)
+        loss.backward()
+        nn.utils.clip_grad_norm_(self.ac.parameters(), grad_clip)
+        self.optimizer.step()
+        # nll 与 mse 的关系：loss_type=="mse" 时 loss==mse，nll 用 bc_loss 内部计算
+        nll_val = float(loss.item()) if loss_type == "nll" else 0.0
+        return {
+            "loss": float(loss.item()),
+            "mse": float(mse_loss.item()),
+            "nll": nll_val,
+        }
+
+    def pretrain(
+        self,
+        expert_obs: np.ndarray,
+        expert_actions: np.ndarray,
+        config: BCConfig | None = None,
+    ) -> list[dict]:
+        """Behavior Cloning 预训练入口（连续动作）。
+
+        在专家数据上监督学习策略网络，作为 PPO RL 微调的初始化。
+        训练完成后调用 ``save()`` 保存检查点，再交给 PPO 训练循环微调。
+
+        来源: Pomerleau, NeurIPS 1989, ALVINN
+              https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
+
+        Args:
+            expert_obs: 专家观测数组 [N, obs_dim]。
+            expert_actions: 专家动作数组 [N, action_dim]。
+            config: BC 训练配置（None 用默认 BCConfig）。
+
+        Returns:
+            训练指标历史列表。
+        """
+        return _run_bc_pretrain_continuous(self, expert_obs, expert_actions, config)

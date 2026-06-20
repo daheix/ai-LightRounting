@@ -105,6 +105,34 @@ class ActorCritic(nn.Module):
         entropy = dist.entropy().sum(dim=-1)
         return logprob, value.squeeze(-1), entropy
 
+    def bc_loss(
+        self,
+        obs: torch.Tensor,
+        expert_actions: torch.Tensor,
+        loss_type: str = "nll",
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """计算 Behavior Cloning 损失（连续动作）。
+
+        来源: Pomerleau, NeurIPS 1989, ALVINN
+              https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
+
+        Args:
+            obs: 观测张量 (batch, obs_dim)。
+            expert_actions: 专家动作张量 (batch, action_dim)。
+            loss_type: "nll"（负对数似然，默认）或 "mse"（均方误差）。
+
+        Returns:
+            (total_loss, mse_loss) 张量。
+        """
+        mean, _ = self.forward(obs)
+        mse_loss = nn.functional.mse_loss(mean, expert_actions)
+        if loss_type == "mse":
+            return mse_loss, mse_loss
+        std = torch.exp(self.action_log_std)
+        dist = torch.distributions.Normal(mean, std)
+        nll_loss = -dist.log_prob(expert_actions).sum(dim=-1).mean()
+        return nll_loss, mse_loss
+
 
 class ActorCriticDiscrete(nn.Module):
     """离散动作空间的 Actor-Critic 网络（用于 MultiDiscrete 环境）。
@@ -161,6 +189,31 @@ class ActorCriticDiscrete(nn.Module):
         logprob = dist.log_prob(actions.squeeze(-1))
         entropy = dist.entropy()
         return logprob, value.squeeze(-1), entropy
+
+    def bc_loss(
+        self,
+        obs: torch.Tensor,
+        expert_actions: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """计算 Behavior Cloning 损失（离散动作，交叉熵）。
+
+        来源: Pomerleau, NeurIPS 1989, ALVINN
+              https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
+
+        Args:
+            obs: 观测张量 (batch, obs_dim)。
+            expert_actions: 专家离散动作张量 (batch,) 或 (batch, 1)。
+
+        Returns:
+            (cross_entropy_loss, accuracy) 张量。
+        """
+        logits, _ = self.forward(obs)
+        target = expert_actions.squeeze(-1).long()
+        ce_loss = nn.functional.cross_entropy(logits, target)
+        with torch.no_grad():
+            preds = logits.argmax(dim=-1)
+            acc = (preds == target).float().mean()
+        return ce_loss, acc
 
 
 __all__ = ["ActorCritic", "ActorCriticDiscrete"]
