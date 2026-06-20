@@ -35,10 +35,9 @@ import heapq
 import math
 from dataclasses import dataclass, field
 
-import numpy as np
-
 # 从 path_geometry 重导出，保持向后兼容（规则 7.2：拆分后通过重导出保持接口不变）
 # noqa: F401 表示这些导入是有意的重导出，供上层 `from polaris.router.waveguide_router import ...` 使用
+from polaris.router.obstacle_grid import ObstacleGrid, auto_grid_size  # noqa: F401
 from polaris.router.path_geometry import (  # noqa: F401
     arc_bend,
     check_min_spacing,
@@ -59,6 +58,8 @@ __all__ = [
     "route_connection",
     "get_platform_constraints",
     "PLATFORM_CONSTRAINTS",
+    "auto_grid_size",
+    "ObstacleGrid",
     # 重导出的几何工具（向后兼容）
     "arc_bend",
     "check_min_spacing",
@@ -139,19 +140,17 @@ class GridRouter:
         else:
             self.min_bend_steps = max(2, int(round(cons.min_bend_radius_um / grid_size)))
         self.min_spacing_um = cons.min_spacing_um
-        # 障碍栅格：0=可走，>0=障碍/占用
-        self.obstacle: np.ndarray = np.zeros((grid_h, grid_w), dtype=np.int32)
+        # 障碍栅格：自适应稠密 numpy / 稀疏 set 存储（C3 优化）
+        # 来源: Sturtevant AAAI AIIDE 2011 稀疏网格动态环境表示
+        # https://cdn.aaai.org/ojs/12438/12438-52-15966-1-2-20201228.pdf
+        self.obstacle = ObstacleGrid(grid_w, grid_h)
         # route() 期间缓存的运行时上下文（降低 _jump/_get_jump_successors 参数个数）
         self._route_goal: tuple[int, int] = (0, 0)
         self._route_blocked: set[tuple[int, int]] = set()
 
     def add_obstacle(self, gx: int, gy: int, gw: int = 1, gh: int = 1) -> None:
         """标记障碍区域。"""
-        x0 = max(0, gx)
-        y0 = max(0, gy)
-        x1 = min(self.grid_w, gx + gw)
-        y1 = min(self.grid_h, gy + gh)
-        self.obstacle[y0:y1, x0:x1] = 1
+        self.obstacle.mark_region(gx, gy, gx + gw, gy + gh)
 
     def add_obstacle_box(self, xmin: float, ymin: float, xmax: float, ymax: float) -> None:
         """按画布坐标添加障碍盒。"""
@@ -159,7 +158,7 @@ class GridRouter:
         gy0 = max(0, int(ymin / self.grid_size))
         gx1 = min(self.grid_w, int(math.ceil(xmax / self.grid_size)))
         gy1 = min(self.grid_h, int(math.ceil(ymax / self.grid_size)))
-        self.obstacle[gy0:gy1, gx0:gx1] = 1
+        self.obstacle.mark_region(gx0, gy0, gx1, gy1)
 
     def _heuristic(self, a: tuple[int, int], b: tuple[int, int]) -> float:
         return abs(a[0] - b[0]) + abs(a[1] - b[1])
@@ -250,7 +249,7 @@ class GridRouter:
             nx, ny = x + dx, y + dy
             if not (0 <= nx < self.grid_w and 0 <= ny < self.grid_h):
                 continue
-            if self.obstacle[ny, nx] or (nx, ny) in blocked:
+            if self.obstacle.is_blocked(nx, ny) or (nx, ny) in blocked:
                 continue
             # 弯曲半径约束：转弯前须直行 >= min_bend_steps 步
             is_turn = last_dir != -1 and d != last_dir
@@ -270,7 +269,7 @@ class GridRouter:
         """
         if not (0 <= x < self.grid_w and 0 <= y < self.grid_h):
             return False
-        if self.obstacle[y, x]:
+        if self.obstacle.is_blocked(x, y):
             return False
         return (x, y) not in self._route_blocked
 
@@ -385,10 +384,10 @@ class GridRouter:
         s1 = max(0, min(start[1], h - 1))
         g0 = max(0, min(goal[0], w - 1))
         g1 = max(0, min(goal[1], h - 1))
-        orig_start = self.obstacle[s1, s0]
-        orig_goal = self.obstacle[g1, g0]
-        self.obstacle[s1, s0] = 0
-        self.obstacle[g1, g0] = 0
+        orig_start = self.obstacle.get(s0, s1)
+        orig_goal = self.obstacle.get(g0, g1)
+        self.obstacle.set(s0, s1, 0)
+        self.obstacle.set(g0, g1, 0)
         return orig_start, orig_goal
 
     def _restore_endpoints(self, start, goal, orig_start, orig_goal):
@@ -398,8 +397,8 @@ class GridRouter:
         s1 = max(0, min(start[1], h - 1))
         g0 = max(0, min(goal[0], w - 1))
         g1 = max(0, min(goal[1], h - 1))
-        self.obstacle[s1, s0] = orig_start
-        self.obstacle[g1, g0] = orig_goal
+        self.obstacle.set(s0, s1, orig_start)
+        self.obstacle.set(g0, g1, orig_goal)
 
     def _astar_search(
         self, start: tuple[int, int], goal: tuple[int, int], start_state: int
@@ -493,6 +492,16 @@ class RouteConnectionConfig:
     向后兼容：``route_connection(start, end, platform, config=None, **kwargs)``
     中未提供 config 时，旧式关键字参数（grid_size/canvas_w/canvas_h/obstacles/
     target_length_um）会自动转发到本 dataclass 构造。
+
+    Attributes:
+        grid_size: 栅格分辨率（μm）。当 ``auto_grid=True`` 时此字段被忽略。
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+        obstacles: 障碍盒列表 ``[(xmin, ymin, xmax, ymax), ...]``。
+        target_length_um: 等长目标（μm）。None 表示不约束等长。
+        auto_grid: 是否根据画布尺寸与平台约束自动选择 grid_size（C3 优化）。
+            启用后使用 ``auto_grid_size()`` 计算最优分辨率，支持大规模电路。
+            来源: LiDAR ISPD 2025 + DREAMPlace DAC 2019
     """
 
     grid_size: float = 1.0
@@ -500,6 +509,7 @@ class RouteConnectionConfig:
     canvas_h: float = 1000.0
     obstacles: list[tuple[float, float, float, float]] | None = None
     target_length_um: float | None = None
+    auto_grid: bool = False
 
 
 # 平台传播损耗（dB/cm），来自 SiEPIC EBeam PDK + spec.md 真实参数
@@ -509,15 +519,37 @@ class RouteConnectionConfig:
 _PLATFORM_LOSS_DB_CM = {"SOI": 3.0, "SiN": 0.1, "LNOI": 0.4}
 
 
+def _resolve_grid_size(config: RouteConnectionConfig, platform: str) -> float:
+    """解析实际使用的 grid_size（支持 auto_grid 模式）。
+
+    Args:
+        config: 布线配置。
+        platform: 工艺平台。
+
+    Returns:
+        实际使用的 grid_size（μm）。
+    """
+    if config.auto_grid:
+        cons = get_platform_constraints(platform)
+        return auto_grid_size(
+            canvas_w=config.canvas_w,
+            canvas_h=config.canvas_h,
+            platform=platform,
+            min_bend_radius_um=cons["min_bend_radius_um"],
+        )
+    return config.grid_size
+
+
 def _build_router_for_platform(config: RouteConnectionConfig, platform: str) -> GridRouter:
     """根据配置与平台约束构建 GridRouter 并添加障碍。"""
     cons = get_platform_constraints(platform)
-    grid_w = int(config.canvas_w / config.grid_size)
-    grid_h = int(config.canvas_h / config.grid_size)
+    grid_size = _resolve_grid_size(config, platform)
+    grid_w = int(config.canvas_w / grid_size)
+    grid_h = int(config.canvas_h / grid_size)
     router = GridRouter(
         grid_w=grid_w,
         grid_h=grid_h,
-        grid_size=config.grid_size,
+        grid_size=grid_size,
         constraints=RouterConstraints(
             min_bend_radius_um=cons["min_bend_radius_um"],
             min_spacing_um=cons["min_spacing_um"],
@@ -530,14 +562,14 @@ def _build_router_for_platform(config: RouteConnectionConfig, platform: str) -> 
 
 def _grid_path_to_points(
     grid_path: list[tuple[int, int]] | None,
-    config: RouteConnectionConfig,
+    grid_size: float,
     start: tuple[float, float],
     end: tuple[float, float],
 ) -> list[tuple[float, float]]:
     """将网格路径转换为画布坐标点，起终点对齐到精确坐标。"""
     if grid_path is None:
         raise RuntimeError(f"A* 布线失败：无法找到从 {start} 到 {end} 的可行路径")
-    pts = [(g[0] * config.grid_size, g[1] * config.grid_size) for g in grid_path]
+    pts = [(g[0] * grid_size, g[1] * grid_size) for g in grid_path]
     if pts:
         pts[0] = start
         pts[-1] = end
@@ -569,11 +601,12 @@ def route_connection(
     """
     if config is None:
         config = RouteConnectionConfig(**kwargs)
+    grid_size = _resolve_grid_size(config, platform)
     router = _build_router_for_platform(config, platform)
-    sg = (int(start[0] / config.grid_size), int(start[1] / config.grid_size))
-    eg = (int(end[0] / config.grid_size), int(end[1] / config.grid_size))
+    sg = (int(start[0] / grid_size), int(start[1] / grid_size))
+    eg = (int(end[0] / grid_size), int(end[1] / grid_size))
     grid_path = router.route(sg, eg)
-    pts = _grid_path_to_points(grid_path, config, start, end)
+    pts = _grid_path_to_points(grid_path, grid_size, start, end)
     if config.target_length_um is not None:
         cons = get_platform_constraints(platform)
         pts = equalize_length(pts, config.target_length_um, detour_step=cons["min_bend_radius_um"])

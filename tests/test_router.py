@@ -1,11 +1,13 @@
-"""波导约束布线器测试（Task 11）。"""
+"""波导约束布线器测试（Task 11 + C3 稀疏网格 + 动态 grid_size）。"""
 
 from __future__ import annotations
 
 import pytest
 
+from polaris.router.obstacle_grid import ObstacleGrid, auto_grid_size
 from polaris.router.waveguide_router import (
     GridRouter,
+    RouteConnectionConfig,
     RouterConstraints,
     WaveguidePath,
     arc_bend,
@@ -176,3 +178,195 @@ def test_route_connection_equal_length():
         target_length_um=200.0,
     )
     assert wp.length_um >= 200.0
+
+
+# =============================================================================
+# C3: 稀疏网格 + 动态 grid_size 测试
+# =============================================================================
+
+
+def test_auto_grid_size_small_canvas():
+    """小画布应返回弯曲半径约束下的 grid_size。"""
+    gs = auto_grid_size(canvas_w=500.0, canvas_h=500.0, platform="SOI")
+    # SOI: w=0.5, R=5 → max(0.6, 2.5, 0.25) = 2.5
+    assert gs == pytest.approx(2.5)
+
+
+def test_auto_grid_size_large_canvas():
+    """大画布应返回计算可扩展性约束下的 grid_size。"""
+    gs = auto_grid_size(canvas_w=5000.0, canvas_h=5000.0, platform="SOI")
+    # SOI: w=0.5, R=5 → max(0.6, 2.5, 2.5) = 2.5
+    assert gs == pytest.approx(2.5)
+    # 验证总单元数在合理范围（≤ 4M）
+    total_cells = (5000 / gs) * (5000 / gs)
+    assert total_cells <= 4_000_000
+
+
+def test_auto_grid_size_sin_platform():
+    """SiN 平台弯曲半径更大，grid_size 应更大。"""
+    gs = auto_grid_size(canvas_w=5000.0, canvas_h=5000.0, platform="SiN")
+    # SiN: w=1.0, R=50 → max(1.2, 25.0, 2.5) = 25.0
+    assert gs == pytest.approx(25.0)
+
+
+def test_auto_grid_size_invalid_canvas():
+    """非正画布尺寸应抛出 ValueError。"""
+    with pytest.raises(ValueError):
+        auto_grid_size(canvas_w=0, canvas_h=100)
+    with pytest.raises(ValueError):
+        auto_grid_size(canvas_w=100, canvas_h=-1)
+
+
+def test_obstacle_grid_dense_mode():
+    """小栅格应使用稠密存储。"""
+    grid = ObstacleGrid(100, 100)
+    assert grid.is_dense is True
+    assert grid.shape == (100, 100)
+    assert grid.total_cells == 10_000
+    # 初始无障碍
+    assert grid.is_blocked(50, 50) is False
+    assert grid.get(50, 50) == 0
+
+
+def test_obstacle_grid_sparse_mode():
+    """大栅格应自动切换到稀疏存储。"""
+    # 3000×3000 = 9M 单元 > 4M 阈值
+    grid = ObstacleGrid(3000, 3000)
+    assert grid.is_dense is False
+    assert grid.shape == (3000, 3000)
+    assert grid.total_cells == 9_000_000
+    # 初始无障碍
+    assert grid.is_blocked(100, 100) is False
+    # 标记障碍
+    grid.set(100, 100, 1)
+    assert grid.is_blocked(100, 100) is True
+    assert grid.get(100, 100) == 1
+    # 清除障碍
+    grid.set(100, 100, 0)
+    assert grid.is_blocked(100, 100) is False
+
+
+def test_obstacle_grid_mark_region_dense():
+    """稠密模式标记矩形区域。"""
+    grid = ObstacleGrid(50, 50)
+    grid.mark_region(10, 10, 20, 20)
+    for x in range(10, 20):
+        for y in range(10, 20):
+            assert grid.is_blocked(x, y) is True
+    # 区域外无障碍
+    assert grid.is_blocked(5, 5) is False
+    assert grid.is_blocked(25, 25) is False
+
+
+def test_obstacle_grid_mark_region_sparse():
+    """稀疏模式标记矩形区域。"""
+    grid = ObstacleGrid(3000, 3000)
+    grid.mark_region(100, 100, 110, 110)
+    for x in range(100, 110):
+        for y in range(100, 110):
+            assert grid.is_blocked(x, y) is True
+    assert grid.is_blocked(50, 50) is False
+
+
+def test_obstacle_grid_mark_region_clamped():
+    """标记区域超出边界应被钳位。"""
+    grid = ObstacleGrid(20, 20)
+    # 超出右下边界
+    grid.mark_region(15, 15, 30, 30)
+    for x in range(15, 20):
+        for y in range(15, 20):
+            assert grid.is_blocked(x, y) is True
+    # 不应影响负坐标（已钳位到 0）
+    assert grid.is_blocked(0, 0) is False
+
+
+def test_obstacle_grid_memory_estimate():
+    """内存估算应返回合理值。"""
+    dense = ObstacleGrid(100, 100)
+    dense.mark_region(0, 0, 10, 10)
+    # 稠密：100×100×4 = 40000 字节
+    assert dense.memory_estimate_bytes() == 40_000
+
+    sparse = ObstacleGrid(3000, 3000)
+    sparse.mark_region(0, 0, 10, 10)
+    # 稀疏：100 个障碍 × 72 字节 = 7200 字节
+    assert sparse.memory_estimate_bytes() == 7200
+
+
+def test_grid_router_with_sparse_obstacle():
+    """GridRouter 在大栅格下应自动使用稀疏存储并正确路由。"""
+    # 3000×3000 = 9M 单元 → 稀疏模式
+    router = GridRouter(
+        3000,
+        3000,
+        grid_size=1.0,
+        constraints=RouterConstraints(min_bend_radius_um=5.0),
+    )
+    assert router.obstacle.is_dense is False
+    # 添加障碍
+    router.add_obstacle(1500, 1500, 100, 100)
+    # 路由应绕过障碍
+    path = router.route((100, 100), (2900, 2900))
+    assert path is not None
+    assert path[0] == (100, 100)
+    assert path[-1] == (2900, 2900)
+    # 路径不应穿过障碍区
+    for x, y in path:
+        assert not (1500 <= x < 1600 and 1500 <= y < 1600)
+
+
+def test_route_connection_with_auto_grid():
+    """route_connection 启用 auto_grid 应正确路由。"""
+    config = RouteConnectionConfig(
+        canvas_w=5000.0,
+        canvas_h=5000.0,
+        auto_grid=True,
+    )
+    wp = route_connection(
+        (0, 0),
+        (1000, 1000),
+        platform="SOI",
+        config=config,
+    )
+    assert isinstance(wp, WaveguidePath)
+    assert wp.length_um > 0
+    assert len(wp.points) >= 2
+
+
+def test_route_connection_auto_grid_large_canvas():
+    """大画布 auto_grid 应避免内存爆炸（5000×5000 μm）。"""
+    config = RouteConnectionConfig(
+        canvas_w=5000.0,
+        canvas_h=5000.0,
+        auto_grid=True,
+        obstacles=[(2000, 2000, 2100, 2100)],
+    )
+    wp = route_connection(
+        (100, 100),
+        (4900, 4900),
+        platform="SOI",
+        config=config,
+    )
+    assert wp.length_um > 0
+    # 路径应绕过障碍
+    for x, y in wp.points:
+        assert not (2000 <= x <= 2100 and 2000 <= y <= 2100)
+
+
+def test_route_connection_auto_grid_vs_fixed():
+    """auto_grid 与固定 grid_size 在小画布上结果应一致（同 grid_size）。"""
+    # SOI 500×500 画布：auto_grid_size = max(0.6, 2.5, 0.25) = 2.5
+    wp_auto = route_connection(
+        (0, 0),
+        (100, 100),
+        platform="SOI",
+        config=RouteConnectionConfig(canvas_w=500.0, canvas_h=500.0, auto_grid=True),
+    )
+    wp_fixed = route_connection(
+        (0, 0),
+        (100, 100),
+        platform="SOI",
+        config=RouteConnectionConfig(canvas_w=500.0, canvas_h=500.0, grid_size=2.5),
+    )
+    # 两者 grid_size 相同，路径长度应接近
+    assert wp_auto.length_um == pytest.approx(wp_fixed.length_um, rel=1e-6)
