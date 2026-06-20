@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import threading
 import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -56,38 +55,99 @@ def _get_presets() -> list[dict]:
     ]
 
 
+def _mzi_circuit():
+    """构建 MZI 干涉仪电路。"""
+    from polaris.data.specs import CircuitSpec, DeviceSpec
+
+    return CircuitSpec(
+        name="MZI",
+        canvas_w=500,
+        canvas_h=300,
+        devices=[
+            DeviceSpec("gc1", "grating_coupler", 10, 10),
+            DeviceSpec("mmi1", "mmi_1x2", 20, 10),
+            DeviceSpec("wg1", "strip_waveguide", 100, 0.5),
+            DeviceSpec("wg2", "strip_waveguide", 120, 0.5),
+            DeviceSpec("mmi2", "mmi_2x2", 20, 10),
+        ],
+        connections=[
+            ("gc1", "out", "mmi1", "in"),
+            ("mmi1", "out0", "wg1", "in"),
+            ("mmi1", "out1", "wg2", "in"),
+            ("wg1", "out", "mmi2", "in0"),
+            ("wg2", "out", "mmi2", "in1"),
+        ],
+    )
+
+
+def _ring_circuit():
+    """构建微环谐振器电路。"""
+    from polaris.data.specs import CircuitSpec, DeviceSpec
+
+    return CircuitSpec(
+        name="Ring",
+        canvas_w=400,
+        canvas_h=300,
+        devices=[
+            DeviceSpec("gc1", "grating_coupler", 10, 10),
+            DeviceSpec("wg1", "strip_waveguide", 200, 0.5),
+            DeviceSpec("ring1", "ring_resonator", 30, 30),
+            DeviceSpec("gc2", "grating_coupler", 10, 10),
+        ],
+        connections=[
+            ("gc1", "out", "wg1", "in"),
+            ("wg1", "out", "ring1", "bus_in"),
+            ("ring1", "bus_out", "gc2", "in"),
+        ],
+    )
+
+
+_PRESET_BUILDERS = {
+    "mzi": _mzi_circuit,
+    "ring": _ring_circuit,
+}
+
+
 def _build_circuit(preset_id: str):
     """根据预设 ID 构建电路规格。"""
-    from polaris.data.circuit_spec import CircuitSpec, DeviceSpec
-
-    if preset_id == "mzi":
-        circuit = CircuitSpec(name="MZI", canvas_w=500, canvas_h=300, platform="SOI")
-        circuit.add_device(DeviceSpec("mmi1", "mmi_1x2", 20, 10))
-        circuit.add_device(DeviceSpec("wg1", "strip_waveguide", 100, 0.5))
-        circuit.add_device(DeviceSpec("wg2", "strip_waveguide", 120, 0.5))
-        circuit.add_device(DeviceSpec("mmi2", "mmi_2x2", 20, 10))
-        circuit.add_device(DeviceSpec("gc1", "grating_coupler", 10, 10))
-        circuit.add_connection("gc1", "out", "mmi1", "in")
-        circuit.add_connection("mmi1", "out0", "wg1", "in")
-        circuit.add_connection("mmi1", "out1", "wg2", "in")
-        circuit.add_connection("wg1", "out", "mmi2", "in0")
-        circuit.add_connection("wg2", "out", "mmi2", "in1")
-        return circuit
-    if preset_id == "ring":
-        circuit = CircuitSpec(name="Ring", canvas_w=400, canvas_h=300, platform="SOI")
-        circuit.add_device(DeviceSpec("gc1", "grating_coupler", 10, 10))
-        circuit.add_device(DeviceSpec("wg1", "strip_waveguide", 200, 0.5))
-        circuit.add_device(DeviceSpec("ring1", "ring_resonator", 30, 30))
-        circuit.add_device(DeviceSpec("gc2", "grating_coupler", 10, 10))
-        circuit.add_connection("gc1", "out", "wg1", "in")
-        circuit.add_connection("wg1", "out", "ring1", "bus_in")
-        circuit.add_connection("ring1", "bus_out", "gc2", "in")
-        return circuit
+    if preset_id in _PRESET_BUILDERS:
+        return _PRESET_BUILDERS[preset_id]()
     if preset_id == "clements_4x4":
-        from polaris.data.benchmarks import build_clements
+        from polaris.pipeline.integrated import _default_demo_circuit
 
-        return build_clements(n=4, platform="SOI")
+        return _default_demo_circuit()
     raise ValueError(f"未知预设: {preset_id}")
+
+
+def _extract_placements(result) -> list[dict]:
+    """从 PipelineResult 提取器件布局列表。"""
+    placements = []
+    for name, pl in result.placements.items():
+        placements.append({"name": name, "x": pl["x"], "y": pl["y"], "w": pl["w"], "h": pl["h"]})
+    return placements
+
+
+def _extract_paths(result) -> list[dict]:
+    """从 PipelineResult 提取布线路径列表。"""
+    paths = []
+    for conn_key, pts in result.paths.items():
+        if hasattr(pts, "points"):
+            points, length_um, loss_db = pts.points, pts.length_um, pts.loss_db
+        elif isinstance(pts, list):
+            points, length_um, loss_db = pts, 0.0, 0.0
+        else:
+            points = pts.get("points", [])
+            length_um = pts.get("length_um", 0)
+            loss_db = pts.get("loss_db", 0)
+        paths.append(
+            {
+                "connection": conn_key,
+                "points": points,
+                "length_um": length_um,
+                "loss_db": loss_db,
+            }
+        )
+    return paths
 
 
 def _run_pipeline(preset_id: str, router_type: str = "default") -> dict:
@@ -98,35 +158,23 @@ def _run_pipeline(preset_id: str, router_type: str = "default") -> dict:
     config = PipelineConfig(router_type=router_type)
     pipeline = IntegratedPipeline(config=config)
     result = pipeline.run(circuit)
-
-    placements = []
-    for name, pl in result.get("placements", {}).items():
-        placements.append(
-            {"name": name, "x": pl["x"], "y": pl["y"], "w": pl["w"], "h": pl["h"]}
-        )
-
-    paths = []
-    for conn_key, wp in result.get("paths", {}).items():
-        paths.append(
-            {
-                "connection": conn_key,
-                "points": wp.points if hasattr(wp, "points") else wp.get("points", []),
-                "length_um": wp.length_um if hasattr(wp, "length_um") else wp.get("length_um", 0),
-                "loss_db": wp.loss_db if hasattr(wp, "loss_db") else wp.get("loss_db", 0),
-            }
-        )
-
     return {
         "preset": preset_id,
-        "n_devices": len(placements),
-        "n_paths": len(paths),
-        "placements": placements,
-        "paths": paths,
+        "circuit_name": result.circuit_name,
+        "n_devices": result.n_devices,
+        "n_connections": result.n_connections,
+        "n_paths": len(result.paths),
+        "placements": _extract_placements(result),
+        "paths": _extract_paths(result),
         "canvas_w": circuit.canvas_w,
         "canvas_h": circuit.canvas_h,
-        "total_wire_length": result.get("total_wire_length_um", 0),
-        "routing_success_rate": result.get("routing_success_rate", 0),
-        "drc_violations": result.get("drc_violations", 0),
+        "total_loss_db": result.total_loss_db,
+        "n_crossings": result.n_crossings,
+        "drc_passed": result.drc_passed,
+        "sim_iterations": result.sim_iterations,
+        "report_path": result.report_path,
+        "gds_path": result.gds_path,
+        "success": result.success,
     }
 
 
@@ -231,9 +279,7 @@ class WebServer:
         if blocking:
             self._server.serve_forever()
         else:
-            self._thread = threading.Thread(
-                target=self._server.serve_forever, daemon=True
-            )
+            self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
             self._thread.start()
 
     def stop(self) -> None:
