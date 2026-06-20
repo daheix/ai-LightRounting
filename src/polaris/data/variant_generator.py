@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-@dataclass(frozen=True)
+@dataclass
 class CurriculumLevel:
     """课程学习级别（Bengio et al., ICML 2009）。
 
@@ -63,6 +63,25 @@ class CurriculumLevel:
     n_devices_max: int
     canvas_w: float
     canvas_h: float
+
+
+@dataclass
+class VariantConfig:
+    """变体数据集生成配置（用于训练流水线集成）。
+
+    Attributes:
+        enabled: 是否启用变体生成。
+        output_dir: 变体输出目录。
+        n_per_level: 每个课程级别的规模变体数。
+        n_sweeps: 每个基准电路的参数扫描变体数。
+        seed: 随机种子。
+    """
+
+    enabled: bool = False
+    output_dir: str = "data/variants"
+    n_per_level: int = 10
+    n_sweeps: int = 10
+    seed: int = 42
 
 
 # 四级课程：小→中→大→超大
@@ -598,6 +617,7 @@ __all__ = [
     "CURRICULUM_LEVELS",
     "CurriculumLevel",
     "PARAM_SWEEP_RANGES",
+    "VariantConfig",
     "generate_param_sweep_variants",
     "generate_scale_variants",
     "make_device_with_params",
