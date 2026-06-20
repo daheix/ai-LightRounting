@@ -93,9 +93,7 @@ class TestLiDARBenchmarkLoading:
                 "straight",
                 "straight_heater_metal_undercut",
             }:
-                assert len(dev.ports) >= 1, (
-                    f"{name}/{dev.name}({dev.device_type}): 端口未推断"
-                )
+                assert len(dev.ports) >= 1, f"{name}/{dev.name}({dev.device_type}): 端口未推断"
 
     def test_python_tuple_tag_parsed(self) -> None:
         """验证 !!python/tuple 标签能被解析（clements 系列含此标签）。"""
@@ -162,6 +160,4 @@ class TestLiDARBenchmarkConnectivity:
             if name == "toy_example" or n_dev < 5:
                 continue
             ratio = n_conn / n_dev
-            assert 0.5 <= ratio <= 3.0, (
-                f"{name}: 连接/器件比 {ratio:.2f} 超出 [0.5, 3.0]"
-            )
+            assert 0.5 <= ratio <= 3.0, f"{name}: 连接/器件比 {ratio:.2f} 超出 [0.5, 3.0]"

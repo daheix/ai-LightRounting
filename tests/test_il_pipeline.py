@@ -25,12 +25,15 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
+from il_rl_loops import (  # noqa: E402
+    _select_lidar_benchmark,
+    run_gnn_rl_loop,
+    run_real_rl_loop,
+)
 from train_il_pipeline import (  # noqa: E402
     PipelineConfig,
     StageResult,
     _find_level,
-    _run_real_rl_loop,
-    _select_lidar_benchmark,
     args_to_config,
     parse_args,
     run_bc_pretrain,
@@ -303,7 +306,7 @@ def test_run_real_rl_loop_basic(pipeline_cfg: PipelineConfig) -> None:
     assert level is not None
     benchmark_path = _select_lidar_benchmark(level)
     assert benchmark_path is not None
-    avg_reward = _run_real_rl_loop(agent, benchmark_path, 3, pipeline_cfg.seed)
+    avg_reward = run_real_rl_loop(agent, benchmark_path, 3, pipeline_cfg.seed)
     assert isinstance(avg_reward, float)
     assert np.isfinite(avg_reward)
 
@@ -331,9 +334,92 @@ def test_run_real_rl_loop_reproducible(pipeline_cfg: PipelineConfig) -> None:
     assert level is not None
     benchmark_path = _select_lidar_benchmark(level)
     assert benchmark_path is not None
-    r1 = _run_real_rl_loop(agent1, benchmark_path, 3, 42)
-    r2 = _run_real_rl_loop(agent2, benchmark_path, 3, 42)
+    r1 = run_real_rl_loop(agent1, benchmark_path, 3, 42)
+    r2 = run_real_rl_loop(agent2, benchmark_path, 3, 42)
     assert abs(r1 - r2) < 1e-6
+
+
+# ---------------------------------------------------------------------------
+# run_gnn_rl_loop GNN-PPO 循环（孤岛#1 打通）
+# ---------------------------------------------------------------------------
+
+
+def test_run_gnn_rl_loop_basic(pipeline_cfg: PipelineConfig) -> None:
+    """测试 GNN-PPO RL 循环基本功能（孤岛#1 打通）。"""
+    agent, _ = run_bc_pretrain(pipeline_cfg)
+    pipeline_cfg.use_gnn = True
+    pipeline_cfg.gnn_out_dim = 32
+    level = _find_level("small")
+    assert level is not None
+    benchmark_path = _select_lidar_benchmark(level)
+    assert benchmark_path is not None
+    avg_reward = run_gnn_rl_loop(agent, benchmark_path, 2, pipeline_cfg)
+    assert isinstance(avg_reward, float)
+    assert np.isfinite(avg_reward)
+
+
+def test_run_gnn_rl_loop_reproducible(pipeline_cfg: PipelineConfig) -> None:
+    """测试 GNN-PPO RL 循环可复现性（同种子同结果）。"""
+    pipeline_cfg.use_gnn = True
+    pipeline_cfg.gnn_out_dim = 32
+    _, bc_result = run_bc_pretrain(pipeline_cfg)
+    from polaris.trainer.ppo_buffers import PPOConfig
+
+    agent1 = PPOAgent(
+        obs_dim=OBS_DIM,
+        action_dim=ACTION_DIM,
+        config=PPOConfig(lr=pipeline_cfg.lr),
+        hidden_dim=pipeline_cfg.hidden_dim,
+    )
+    agent2 = PPOAgent(
+        obs_dim=OBS_DIM,
+        action_dim=ACTION_DIM,
+        config=PPOConfig(lr=pipeline_cfg.lr),
+        hidden_dim=pipeline_cfg.hidden_dim,
+    )
+    agent1.load(bc_result.checkpoint_path)
+    agent2.load(bc_result.checkpoint_path)
+    level = _find_level("small")
+    assert level is not None
+    benchmark_path = _select_lidar_benchmark(level)
+    assert benchmark_path is not None
+    r1 = run_gnn_rl_loop(agent1, benchmark_path, 2, pipeline_cfg)
+    r2 = run_gnn_rl_loop(agent2, benchmark_path, 2, pipeline_cfg)
+    assert abs(r1 - r2) < 1e-6
+
+
+def test_pipeline_config_use_gnn_flag() -> None:
+    """测试 PipelineConfig.use_gnn 默认值与设置。"""
+    cfg = PipelineConfig()
+    assert cfg.use_gnn is False
+    assert cfg.gnn_out_dim == 64
+    cfg.use_gnn = True
+    cfg.gnn_out_dim = 128
+    assert cfg.use_gnn is True
+    assert cfg.gnn_out_dim == 128
+
+
+def test_parse_args_use_gnn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """测试 --use-gnn CLI 参数解析。"""
+    monkeypatch.setattr(
+        "sys.argv",
+        ["train_il_pipeline.py", "--use-gnn", "--gnn-out-dim", "128"],
+    )
+    args = parse_args()
+    assert args.use_gnn is True
+    assert args.gnn_out_dim == 128
+
+
+def test_args_to_config_use_gnn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """测试 args_to_config 转换 use_gnn 字段。"""
+    monkeypatch.setattr(
+        "sys.argv",
+        ["train_il_pipeline.py", "--use-gnn"],
+    )
+    args = parse_args()
+    cfg = args_to_config(args)
+    assert cfg.use_gnn is True
+    assert cfg.gnn_out_dim == 64
 
 
 # ---------------------------------------------------------------------------

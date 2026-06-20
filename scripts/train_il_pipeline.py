@@ -9,8 +9,12 @@
 
 每个阶段加载上一阶段的检查点作为初始化，实现 Curriculum Learning。
 
-**孤岛打通（roadmap 2.1.1）**：RL 微调阶段使用真实 ``FloorplanEnv`` +
-PPO rollout/update 循环，替代轻量级 mock 环境，打通 BC→真实 RL 链路。
+**孤岛打通（roadmap 2.1.1）**：
+- 孤岛#2 BC→真实RL：RL 微调阶段使用真实 ``FloorplanEnv`` + PPO rollout/update 循环
+- 孤岛#1 BC→GNN-PPO：``--use-gnn`` 开关启用 GNN 状态编码器，RL 微调用
+  ``GNNPPOAgent`` 联合训练 GNN + 策略网络（Basso et al. NeurIPS 2025 范式）
+
+RL 循环实现拆分到 ``scripts/il_rl_loops.py``（规则 7.2）。
 
 来源:
 - Pomerleau, NeurIPS 1989, ALVINN (BC)
@@ -18,6 +22,8 @@ PPO rollout/update 循环，替代轻量级 mock 环境，打通 BC→真实 RL 
 - Bengio et al., "Curriculum Learning", ICML 2009
   https://dl.acm.org/doi/abs/10.1145/1553374.1553380
 - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
+- Basso et al., NeurIPS 2025, R-GCN routing-aware floorplanning RL
+  https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK (MIT, UBC)
 - LiDAR Benchmark: https://github.com/ScopeX-ASU/LiDAR (MIT, ISPD 2025)
 
@@ -27,6 +33,9 @@ PPO rollout/update 循环，替代轻量级 mock 环境，打通 BC→真实 RL 
 
     # 仅 BC 预训练阶段
     python scripts/train_il_pipeline.py --stage bc-only --output checkpoints/il_pipeline
+
+    # 启用 GNN-PPO（孤岛#1 打通）
+    python scripts/train_il_pipeline.py --use-gnn --output checkpoints/il_pipeline
 
     # 自定义各阶段轮数
     python scripts/train_il_pipeline.py \\
@@ -44,16 +53,18 @@ from pathlib import Path
 
 import numpy as np
 
-import torch
-
 # 确保 src/ 在 sys.path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from polaris.data.data_loader import circuit_spec_to_netlist_dict, load_pic_ir  # noqa: E402
+# RL 循环函数从 il_rl_loops 导入（规则 7.2 拆分）
+from il_rl_loops import (  # noqa: E402
+    _select_lidar_benchmark,
+    run_gnn_rl_loop,
+    run_real_rl_loop,
+)
+
 from polaris.data.variant_generator import CURRICULUM_LEVELS, CurriculumLevel  # noqa: E402
-from polaris.engine.floorplan_env import FloorplanEnv  # noqa: E402
-from polaris.engine.netlist import load_netlist  # noqa: E402
 from polaris.trainer.bc import BCConfig  # noqa: E402
 from polaris.trainer.expert_dataset import (  # noqa: E402
     ACTION_DIM,
@@ -61,16 +72,13 @@ from polaris.trainer.expert_dataset import (  # noqa: E402
     ExpertDataset,
 )
 from polaris.trainer.ppo_buffers import PPOConfig  # noqa: E402
-from polaris.trainer.ppo_torch import PPOAgent, Transition  # noqa: E402
+from polaris.trainer.ppo_torch import PPOAgent  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger("il_pipeline")
-
-# LiDAR benchmark 目录（roadmap 2.1.2 引入公开 benchmark）
-LIDAR_BENCHMARK_DIR = ROOT / "data" / "benchmarks" / "lidar"
 
 
 @dataclass
@@ -87,6 +95,9 @@ class PipelineConfig:
         batch_size: BC 批量大小。
         output_dir: 输出目录。
         expert_data_dir: 专家示范数据目录。
+        seed: 随机种子。
+        use_gnn: 启用 GNN-PPO（孤岛#1 打通）。
+        gnn_out_dim: GNN 状态编码器输出维度。
     """
 
     bc_epochs: int = 50
@@ -99,6 +110,8 @@ class PipelineConfig:
     output_dir: str = "checkpoints/il_pipeline"
     expert_data_dir: str = "data/expert_demos"
     seed: int = 42
+    use_gnn: bool = False
+    gnn_out_dim: int = 64
 
 
 @dataclass
@@ -145,6 +158,18 @@ def parse_args() -> argparse.Namespace:
         help="专家示范数据目录",
     )
     p.add_argument("--seed", type=int, default=42, help="随机种子")
+    p.add_argument(
+        "--use-gnn",
+        action="store_true",
+        default=False,
+        help="启用 GNN-PPO（孤岛#1 打通，Basso 2025 R-GCN 范式）",
+    )
+    p.add_argument(
+        "--gnn-out-dim",
+        type=int,
+        default=64,
+        help="GNN 状态编码器输出维度（--use-gnn 时生效）",
+    )
     return p.parse_args()
 
 
@@ -161,6 +186,8 @@ def args_to_config(args: argparse.Namespace) -> PipelineConfig:
         output_dir=args.output,
         expert_data_dir=args.expert_data,
         seed=args.seed,
+        use_gnn=args.use_gnn,
+        gnn_out_dim=args.gnn_out_dim,
     )
 
 
@@ -184,7 +211,28 @@ def run_bc_pretrain(cfg: PipelineConfig) -> tuple[PPOAgent, StageResult]:
     if n_samples == 0:
         logger.error("专家数据集为空，无法 BC 预训练")
         return _create_empty_agent(cfg), StageResult("bc", 0, 0.0, 0.0, "")
+    agent, history = _train_bc_agent(ds, cfg)
+    return _save_bc_checkpoint(agent, cfg, history)
+
+
+def _create_empty_agent(cfg: PipelineConfig) -> PPOAgent:
+    """创建空 agent（数据集为空时的兜底）。"""
+    return PPOAgent(
+        obs_dim=OBS_DIM,
+        action_dim=ACTION_DIM,
+        config=PPOConfig(lr=cfg.lr),
+        hidden_dim=cfg.hidden_dim,
+    )
+
+
+def _train_bc_agent(ds: ExpertDataset, cfg: PipelineConfig) -> tuple[PPOAgent, list[dict]]:
+    """用专家数据训练 BC agent。
+
+    Returns:
+        (训练后的 agent, BC 训练指标历史)。
+    """
     obs_all, action_all = ds.get_all()
+    n_samples = len(obs_all)
     logger.info("专家数据: %d 样本, obs_dim=%d, action_dim=%d", n_samples, OBS_DIM, ACTION_DIM)
     agent = PPOAgent(
         obs_dim=OBS_DIM,
@@ -200,65 +248,32 @@ def run_bc_pretrain(cfg: PipelineConfig) -> tuple[PPOAgent, StageResult]:
         log_every=max(1, cfg.bc_epochs // 5),
     )
     history = agent.pretrain(obs_all, action_all, config=bc_config)
-    final = history[-1]
+    return agent, history
+
+
+def _save_bc_checkpoint(
+    agent: PPOAgent,
+    cfg: PipelineConfig,
+    history: list[dict],
+) -> tuple[PPOAgent, StageResult]:
+    """保存 BC 检查点并返回结果。
+
+    Args:
+        agent: 训练后的 agent。
+        cfg: 流水线配置。
+        history: BC 训练指标历史（来自 ``agent.pretrain()`` 返回值）。
+    """
+    final = history[-1] if history else {"loss": 0.0, "mse": 0.0, "nll": 0.0}
     out_dir = Path(cfg.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     ckpt_path = out_dir / "bc_pretrain.json"
     agent.save(str(ckpt_path))
     logger.info(
-        "BC 预训练完成: loss=%.6f, mse=%.6f, nll=%.6f → %s",
-        final["loss"],
-        final.get("mse", 0.0),
-        final.get("nll", 0.0),
+        "BC 预训练完成: loss=%.6f → %s",
+        final.get("loss", 0.0),
         ckpt_path,
     )
-    return agent, StageResult("bc", cfg.bc_epochs, final["loss"], 0.0, str(ckpt_path))
-
-
-def _create_empty_agent(cfg: PipelineConfig) -> PPOAgent:
-    """创建空 agent（数据集为空时的兜底）。"""
-    return PPOAgent(
-        obs_dim=OBS_DIM,
-        action_dim=ACTION_DIM,
-        config=PPOConfig(lr=cfg.lr),
-        hidden_dim=cfg.hidden_dim,
-    )
-
-
-def _select_lidar_benchmark(level: CurriculumLevel) -> str | None:
-    """按课程级别选择合适规模的 LiDAR benchmark。
-
-    Args:
-        level: 课程级别（small/medium/large/xlarge）。
-
-    Returns:
-        benchmark YAML 路径，无匹配返回 None。
-    """
-    # 按器件数从小到大排序的 LiDAR benchmark
-    candidates = [
-        ("toy_example/toy_example.gp.yml", 6),
-        ("mrr_weight_bank_4x4/mrr_weight_bank_4x4.yml", 31),
-        ("clements_8x8/clements_8x8.yml", 52),
-        ("multiportmmi_8x8/multiportmmi_8x8.yml", 82),
-        ("mrr_weight_bank_8x8/mrr_weight_bank_8x8.yml", 95),
-        ("clements_16x16/clements_16x16.yml", 168),
-        ("multiportmmi_16x16/multiportmmi_16x16.yml", 162),
-        ("mrr_weight_bank_16x16/mrr_weight_bank_16x16.yml", 319),
-        ("multiportmmi_32x32/multiportmmi_32x32.yml", 318),
-    ]
-    # 按课程级别器件数范围筛选
-    for rel_path, n_dev in candidates:
-        if level.n_devices_min <= n_dev <= level.n_devices_max:
-            full = LIDAR_BENCHMARK_DIR / rel_path
-            if full.exists():
-                return str(full)
-    # 兜底：选最接近级别下限的
-    for rel_path, n_dev in candidates:
-        if n_dev >= level.n_devices_min:
-            full = LIDAR_BENCHMARK_DIR / rel_path
-            if full.exists():
-                return str(full)
-    return None
+    return agent, StageResult("bc", cfg.bc_epochs, final.get("loss", 0.0), 0.0, str(ckpt_path))
 
 
 def run_rl_finetune(
@@ -272,6 +287,7 @@ def run_rl_finetune(
 
     在 LiDAR 公开 benchmark 上用真实 ``FloorplanEnv`` + PPO 训练循环微调，
     打通 BC→真实 RL 链路（roadmap 2.1.1 孤岛 #2）。
+    ``--use-gnn`` 时用 GNN-PPO 联合训练（孤岛#1）。
 
     Args:
         agent: 待微调的 PPOAgent（已加载 BC 预训练权重）。
@@ -298,139 +314,35 @@ def run_rl_finetune(
         logger.warning("未找到匹配 %s 级别的 LiDAR benchmark，跳过", level.name)
         return StageResult(stage_name, 0, 0.0, 0.0, "")
     logger.info("使用 LiDAR benchmark: %s", benchmark_path)
-    avg_reward = _run_real_rl_loop(agent, benchmark_path, n_episodes, cfg.seed)
-    out_dir = Path(cfg.output_dir)
-    ckpt_path = out_dir / f"{stage_name}_finetune.json"
-    agent.save(str(ckpt_path))
-    logger.info(
-        "%s RL 微调完成: avg_reward=%.4f → %s",
-        stage_name,
-        avg_reward,
-        ckpt_path,
-    )
-    return StageResult(stage_name, n_episodes, 0.0, avg_reward, str(ckpt_path))
+    avg_reward = _dispatch_rl_loop(agent, benchmark_path, n_episodes, cfg)
+    return _save_rl_checkpoint(agent, avg_reward, n_episodes, stage_name, cfg)
 
 
-def _run_real_rl_loop(
+def _dispatch_rl_loop(
     agent: PPOAgent,
     benchmark_path: str,
     n_episodes: int,
-    seed: int,
+    cfg: PipelineConfig,
 ) -> float:
-    """真实 RL 训练循环（FloorplanEnv + PPO rollout/update）。
-
-    在 LiDAR benchmark 上跑真实布局环境，打通 BC→真实 RL 链路。
-
-    **维度对齐说明**：BC 预训练用器件级固定 obs_dim=16，而 FloorplanEnv
-    的 obs 是全局特征（occupancy grid + port_positions），维度随器件数变化。
-    当前实现：RL 微调阶段创建新 agent（obs_dim 匹配环境），BC 权重迁移
-    留待 roadmap 中期目标（架构对齐后实现）。
-
-    Args:
-        agent: PPOAgent（BC 预训练权重，当前未迁移到 RL agent）。
-        benchmark_path: LiDAR benchmark YAML 路径。
-        n_episodes: 轮次数。
-        seed: 随机种子。
-
-    Returns:
-        平均奖励。
-    """
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    # 加载 LiDAR benchmark → CircuitSpec → Netlist → FloorplanEnv
-    circuit = load_pic_ir(benchmark_path)
-    nl_dict = circuit_spec_to_netlist_dict(circuit)
-    net, devices, _ = load_netlist(nl_dict)
-    # 画布与网格：按器件数自适应（避免大规模下动作空间爆炸）
-    n_dev = len(devices)
-    grid_size = max(20.0, min(50.0, circuit.canvas_w / 30.0))
-    env = FloorplanEnv(
-        net,
-        devices,
-        canvas_w=circuit.canvas_w,
-        canvas_h=circuit.canvas_h,
-        grid_size=grid_size,
-    )
-    # 创建 RL agent（obs_dim 匹配真实环境）
-    obs, _ = env.reset()
-    obs_dim = _flatten_obs(obs).shape[0]
-    action_dim = int(np.prod(env.action_space.shape))
-    rl_agent = PPOAgent(
-        obs_dim=obs_dim,
-        action_dim=action_dim,
-        config=PPOConfig(lr=agent.config.lr),
-        hidden_dim=agent.obs_dim,  # 复用 BC agent 的 hidden_dim
-    )
-    rewards: list[float] = []
-    rollout_steps = min(64, n_dev)
-    for ep in range(n_episodes):
-        obs, _ = env.reset()
-        ep_reward = 0.0
-        for _step in range(rollout_steps):
-            obs_vec = _flatten_obs(obs)
-            # 动作维度对齐：PPO 连续动作 → MultiDiscrete 离散动作
-            action, logprob, value = rl_agent.get_action(obs_vec)
-            discrete_action = _continuous_to_discrete(action, env.action_space)
-            obs, reward, terminated, truncated, _info = env.step(discrete_action)
-            ep_reward += reward
-            rl_agent.store(Transition(obs_vec, action, reward, logprob, value, terminated))
-            if len(rl_agent.buffer) >= 32:
-                rl_agent.update(last_value=0.0)
-            if terminated or truncated:
-                break
-        rewards.append(ep_reward)
-    # 将 RL agent 的权重同步回原 agent（供下一阶段使用）
-    _sync_agent_weights(rl_agent, agent)
-    return float(np.mean(rewards)) if rewards else 0.0
+    """根据 use_gnn 分发到对应 RL 循环。"""
+    if cfg.use_gnn:
+        return run_gnn_rl_loop(agent, benchmark_path, n_episodes, cfg)
+    return run_real_rl_loop(agent, benchmark_path, n_episodes, cfg.seed)
 
 
-def _sync_agent_weights(src: PPOAgent, dst: PPOAgent) -> None:
-    """将 src agent 的权重同步到 dst（维度匹配的层）。
-
-    BC 预训练 agent 与 RL agent 维度不同，仅同步匹配的层（如价值头）。
-    维度不匹配的层跳过（保留 dst 原值）。
-
-    Args:
-        src: 源 agent（RL 微调后）。
-        dst: 目标 agent（BC 预训练，供下一阶段）。
-    """
-    src_params = list(src.ac.parameters())
-    dst_params = list(dst.ac.parameters())
-    for sp, dp in zip(src_params, dst_params, strict=False):
-        if sp.shape == dp.shape:
-            dp.data = sp.data.clone()
-
-
-def _flatten_obs(obs: dict) -> np.ndarray:
-    """将 FloorplanEnv 的 dict 观测展平为向量（供 PPO 使用）。"""
-    parts = []
-    for v in obs.values():
-        arr = np.asarray(v, dtype=np.float32).flatten()
-        parts.append(arr)
-    return np.concatenate(parts)
-
-
-def _continuous_to_discrete(action: np.ndarray, action_space) -> np.ndarray:
-    """将 PPO 连续动作映射到 MultiDiscrete 离散动作空间。
-
-    PPO 输出连续动作（3 维），FloorplanEnv 期望 MultiDiscrete([grid_w, grid_h, 4])。
-    用 sigmoid 归一化到 [0,1] 再缩放到各维度范围。
-
-    Args:
-        action: PPO 连续动作向量。
-        action_space: Gymnasium MultiDiscrete 动作空间。
-
-    Returns:
-        离散动作向量。
-    """
-    n = action_space.shape[0]
-    # sigmoid 归一化到 [0, 1]
-    norm = 1.0 / (1.0 + np.exp(-action[:n]))
-    discrete = np.zeros(n, dtype=np.int64)
-    for i in range(n):
-        dim_size = int(action_space.nvec[i])
-        discrete[i] = int(norm[i] * dim_size) % dim_size
-    return discrete
+def _save_rl_checkpoint(
+    agent: PPOAgent,
+    avg_reward: float,
+    n_episodes: int,
+    stage_name: str,
+    cfg: PipelineConfig,
+) -> StageResult:
+    """保存 RL 检查点并返回结果。"""
+    out_dir = Path(cfg.output_dir)
+    ckpt_path = out_dir / f"{stage_name}_finetune.json"
+    agent.save(str(ckpt_path))
+    logger.info("%s RL 微调完成: avg_reward=%.4f → %s", stage_name, avg_reward, ckpt_path)
+    return StageResult(stage_name, n_episodes, 0.0, avg_reward, str(ckpt_path))
 
 
 def save_pipeline_summary(
@@ -447,6 +359,7 @@ def save_pipeline_summary(
             "large_episodes": cfg.large_episodes,
             "hidden_dim": cfg.hidden_dim,
             "lr": cfg.lr,
+            "use_gnn": cfg.use_gnn,
         },
         "stages": [
             {
@@ -464,6 +377,22 @@ def save_pipeline_summary(
     logger.info("流水线汇总已保存: %s", summary_path)
 
 
+def _find_level(name: str) -> CurriculumLevel | None:
+    """按名称查找课程级别。"""
+    for lv in CURRICULUM_LEVELS:
+        if lv.name == name:
+            return lv
+    return None
+
+
+# 课程级别 → (level_name, episodes_field) 映射
+STAGE_MAP = [
+    ("small", "small_episodes", ("all", "bc-small", "bc-small-medium")),
+    ("medium", "medium_episodes", ("all", "bc-small-medium")),
+    ("large", "large_episodes", ("all",)),
+]
+
+
 def main() -> int:
     """4 阶段流水线主入口。
 
@@ -476,54 +405,25 @@ def main() -> int:
     output_dir = Path(cfg.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     results: list[StageResult] = []
-
-    # 阶段1: BC 预训练
     agent, bc_result = run_bc_pretrain(cfg)
     results.append(bc_result)
-
-    # 阶段2: PPO 小规模 RL 微调
-    if args.stage in ("all", "bc-small", "bc-small-medium"):
-        small_level = _find_level("small")
-        if small_level and cfg.small_episodes > 0:
-            results.append(
-                run_rl_finetune(
-                    agent,
-                    small_level,
-                    cfg.small_episodes,
-                    cfg,
-                    "small",
-                )
-            )
-
-    # 阶段3: PPO 中规模 RL 微调
-    if args.stage in ("all", "bc-small-medium"):
-        medium_level = _find_level("medium")
-        if medium_level and cfg.medium_episodes > 0:
-            results.append(
-                run_rl_finetune(
-                    agent,
-                    medium_level,
-                    cfg.medium_episodes,
-                    cfg,
-                    "medium",
-                )
-            )
-
-    # 阶段4: PPO 大规模 RL 微调
-    if args.stage == "all":
-        large_level = _find_level("large")
-        if large_level and cfg.large_episodes > 0:
-            results.append(
-                run_rl_finetune(
-                    agent,
-                    large_level,
-                    cfg.large_episodes,
-                    cfg,
-                    "large",
-                )
-            )
-
+    for level_name, episodes_field, valid_stages in STAGE_MAP:
+        if args.stage not in valid_stages:
+            continue
+        level = _find_level(level_name)
+        if level is None:
+            continue
+        n_episodes = getattr(cfg, episodes_field)
+        if n_episodes <= 0:
+            continue
+        results.append(run_rl_finetune(agent, level, n_episodes, cfg, level_name))
     save_pipeline_summary(results, cfg, output_dir)
+    _log_final_summary(results)
+    return 0
+
+
+def _log_final_summary(results: list[StageResult]) -> None:
+    """打印最终汇总日志。"""
     logger.info("=" * 60)
     logger.info("4 阶段流水线训练完成！")
     for r in results:
@@ -535,15 +435,6 @@ def main() -> int:
             r.final_reward,
         )
     logger.info("=" * 60)
-    return 0
-
-
-def _find_level(name: str) -> CurriculumLevel | None:
-    """按名称查找课程级别。"""
-    for lv in CURRICULUM_LEVELS:
-        if lv.name == name:
-            return lv
-    return None
 
 
 if __name__ == "__main__":
