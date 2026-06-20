@@ -4,7 +4,7 @@
 
 集成方式:
 - 优先使用 SAX（规则 2 直接集成）
-- 回退到纯 numpy 子网络增长（规则 3 复刻）
+- SAX 不可用时使用纯 numpy 子网络增长（规则 3 复刻，独立实现）
 
 来源:
 - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
@@ -57,7 +57,7 @@ class CircuitSimulator:
 
     集成方式:
     - 优先使用 SAX（规则 2 直接集成）
-    - 回退到纯 numpy 子网络增长（规则 3 复刻）
+    - SAX 不可用时使用纯 numpy 子网络增长（规则 3 复刻，独立实现）
 
     来源:
     - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
@@ -154,7 +154,7 @@ def simphony_models() -> dict[str, ModelFunc]:
     """返回 Simphony SiEPIC 模型库（规则 2 直接集成）。
 
     三方工具 import 处理（规则 5.3）：simphony import 失败时返回空字典，
-    上层代码回退到 pyCopySiPANN 复刻模型。
+    上层代码使用 pyCopySiPANN 复刻模型（src/polaris/sim/models.py）。
 
     来源: https://simphonyphotonics.readthedocs.io/
     """

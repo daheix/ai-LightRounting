@@ -143,7 +143,7 @@ def get_category_layer_tuple(category: str) -> tuple[int, int]:
     """按器件类别获取 GDS (layer, datatype) 元组。
 
     将 PoLaRIS 器件类别（passive/active/source/detector/waveguide/port）
-    映射到真实 foundry 层编号。未知类别回退到 ``WG`` 层。
+    映射到真实 foundry 层编号。未知类别默认使用 ``WG`` 层。
 
     Args:
         category: 器件类别（如 ``"passive"``/``"detector"``）。

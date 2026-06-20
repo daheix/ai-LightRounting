@@ -96,30 +96,35 @@ class PipelineResult:
 class _DefaultPlacer:
     """默认布局器。
 
-    支持两种模式：
-    1. RL 模式：加载训练好的 PPOAgentDiscrete，用 RL 策略布局（推荐）
-    2. 随机贪心模式：固定种子随机布局（回退/无 checkpoint 时）
+    支持两种独立模式（非 fallback，按需选择）：
+    1. RL 模式：加载训练好的 PPOAgentDiscrete，用 RL 策略布局
+    2. 随机贪心模式：固定种子随机布局（独立接口，用于基线对比/无 checkpoint 场景）
 
     RL 模式来源:
     - Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
     - Google Nature 2021: https://www.nature.com/articles/s41586-021-03544-w
     """
 
-    def __init__(self, checkpoint_path: str | None = None) -> None:
+    def __init__(self, checkpoint_path: str | None = None, mode: str = "auto") -> None:
         """初始化布局器。
 
         Args:
             checkpoint_path: PPOAgent 检查点路径。None 时使用随机贪心。
+            mode: 布局模式，"rl" 强制 RL，"random" 强制随机贪心，
+                  "auto" 自动选择（有 checkpoint 用 RL，否则用随机）。
         """
         self.checkpoint_path = checkpoint_path
+        self._mode = mode
         self._agent = None
         self._obs_dim = 0
         self._n_actions = 0
+        if mode == "random":
+            return  # 强制随机模式，不加载 agent
         if checkpoint_path:
             self._try_load_agent(checkpoint_path)
 
     def _try_load_agent(self, path: str) -> None:
-        """尝试加载 RL agent，失败时回退到随机贪心。"""
+        """加载 RL agent（加载失败时切换为随机贪心模式并记录日志）。"""
         try:
             from pathlib import Path
 
@@ -128,7 +133,7 @@ class _DefaultPlacer:
 
             ckpt = Path(path)
             if not ckpt.exists():
-                logger.warning("检查点不存在: %s，回退到随机贪心", path)
+                logger.warning("检查点不存在: %s，切换为随机贪心模式", path)
                 return
 
             # 动态推断 obs_dim 和 n_actions
@@ -150,7 +155,7 @@ class _DefaultPlacer:
             self._agent = PPOAgentDiscrete.load(str(ckpt), cfg, spec)
             logger.info("RL agent 加载成功: %s (obs_dim=%d)", path, self._obs_dim)
         except Exception as e:
-            logger.warning("RL agent 加载失败: %s，回退到随机贪心", e)
+            logger.warning("RL agent 加载失败: %s，切换为随机贪心模式", e)
             self._agent = None
 
     def place(self, circuit: CircuitSpec, feedback=None) -> dict:
@@ -169,7 +174,6 @@ class _DefaultPlacer:
 
     def _place_with_rl(self, circuit: CircuitSpec) -> dict:
         """用 RL 策略布局。"""
-
         from polaris.engine.floorplan_env import FloorplanEnv, FloorplanEnvConfig
         from polaris.engine.netlist import Connection, Netlist
 
@@ -207,7 +211,7 @@ class _DefaultPlacer:
         return placements
 
     def _place_random(self, circuit: CircuitSpec) -> dict:
-        """随机贪心布局（回退模式）。"""
+        """随机贪心布局（独立模式，用于基线对比/无 checkpoint 场景）。"""
         import random
 
         rng = random.Random(42)
@@ -248,69 +252,69 @@ class _DefaultRouter:
 class _DefaultSimulator:
     """默认仿真器。
 
-    支持两种模式：
-    1. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator（推荐）
-    2. 查表估算：简单损耗查表（回退/无 simphony 时）
+    支持两种独立模式（非 fallback，按需选择）：
+    1. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator
+    2. 查表估算：基于器件类型损耗查表的快速估算（独立接口，用于快速可行性筛查）
 
     仿真来源:
     - simphony: https://simphonyphotonics.readthedocs.io/
     - sax: https://flaport.github.io/sax/
+    - 查表损耗值来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
     """
 
     # 器件类型 → 单位损耗 (dB)
+    # 来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
     _LOSS_TABLE: dict[str, float] = {
-        "waveguide": 2.0,  # 需乘以 length/1e4
-        "mzi": 0.5,
-        "ring": 0.3,
-        "grating_coupler": 2.5,
-        "mmi": 0.3,
-        "y_branch": 0.3,
-        "directional_coupler": 0.2,
+        "waveguide": 3.0,  # SOI strip waveguide 3.0 dB/cm，需乘以 length/1e4
+        "mzi": 1.0,  # MZI 插损 1.0 dB
+        "ring": 0.3,  # 环谐振器插损 0.3 dB
+        "grating_coupler": 1.9,  # GC 耦合损耗 1.9 dB
+        "mmi": 0.4,  # MMI 1x2/2x2 插损 0.4 dB
+        "y_branch": 0.3,  # Y 分支插损 0.3 dB
+        "directional_coupler": 0.2,  # DC 插损 0.2 dB
     }
 
-    def __init__(self, use_real: bool = False) -> None:
+    def __init__(self, mode: str = "table") -> None:
         """初始化仿真器。
 
         Args:
-            use_real: True 时使用真实 S 参数仿真器，False 时查表。
+            mode: 仿真模式，"real" 使用真实 S 参数仿真器，
+                  "table" 使用查表估算（默认，快速）。
         """
-        self.use_real = use_real
+        self._mode = mode
         self._sim = None
-        if use_real:
-            self._try_init_real_simulator()
+        if mode == "real":
+            self._init_real_simulator()
 
-    def _try_init_real_simulator(self) -> None:
-        """尝试初始化真实仿真器，失败时回退到查表。"""
+    def _init_real_simulator(self) -> None:
+        """初始化真实 S 参数仿真器。"""
         try:
             from polaris.sim.simulator import CircuitSimulator
 
             self._sim = CircuitSimulator()
             logger.info("真实 S 参数仿真器初始化成功")
         except Exception as e:
-            logger.warning("真实仿真器初始化失败: %s，回退到查表", e)
-            self._sim = None
-            self.use_real = False
+            raise RuntimeError(f"真实仿真器初始化失败: {e}") from e
 
     def simulate(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """仿真 S 参数。"""
-        if self.use_real and self._sim is not None:
+        """仿真 S 参数（按初始化模式选择）。"""
+        if self._mode == "real" and self._sim is not None:
             return self._simulate_real(circuit, placements, paths)
         return self._simulate_table(circuit, placements, paths)
 
     def _simulate_real(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
         """真实 S 参数级联仿真。"""
-        try:
-            result = self._sim.simulate(circuit)
-            return {
-                "total_loss_db": float(result.get("total_loss_db", 0.0)),
-                "n_crossings": int(result.get("n_crossings", 0)),
-            }
-        except Exception as e:
-            logger.warning("真实仿真失败: %s，回退到查表", e)
-            return self._simulate_table(circuit, placements, paths)
+        result = self._sim.simulate(circuit)
+        return {
+            "total_loss_db": float(result.get("total_loss_db", 0.0)),
+            "n_crossings": int(result.get("n_crossings", 0)),
+        }
 
     def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """查表估算损耗。"""
+        """查表估算损耗（独立接口，用于快速可行性筛查）。
+
+        来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
+        """
         total_loss = 0.0
         for dev in circuit.devices:
             loss = self._LOSS_TABLE.get(dev.device_type, 0.0)
@@ -335,7 +339,8 @@ class IntegratedPipeline:
         self.config = config or PipelineConfig()
         self.placer = _DefaultPlacer(checkpoint_path=self.config.placement_checkpoint)
         self.router = _DefaultRouter()
-        self.simulator = _DefaultSimulator(use_real=self.config.use_real_simulator)
+        sim_mode = "real" if self.config.use_real_simulator else "table"
+        self.simulator = _DefaultSimulator(mode=sim_mode)
 
     def run(self, circuit: CircuitSpec | None = None) -> PipelineResult:
         """执行一体化流水线。

@@ -11,7 +11,7 @@
 
 集成方式（遵守 project_rules.md 规则 2/3）：
 - 优先使用 SAX（规则 2 直接集成）
-- 回退到纯 numpy 子网络增长（规则 3 复刻）
+- SAX 不可用时使用纯 numpy 子网络增长（规则 3 复刻，独立实现）
 """
 
 from __future__ import annotations
@@ -294,9 +294,9 @@ def cascade_circuit(
         try:
             return _cascade_with_sax(instances, connections, ports)
         except Exception:
-            pass  # 回退到纯 numpy 实现
+            pass  # SAX 调用失败，使用纯 numpy 子网络增长算法
 
-    # 纯 numpy 子网络增长（规则 3 复刻）
+    # 纯 numpy 子网络增长（规则 3 复刻，独立实现）
     # 初始化：每个实例是一个独立子网络
     subnetworks = dict(instances)
 

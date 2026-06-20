@@ -284,15 +284,15 @@ class HybridRouter:
 
         path1, path2 = self._route_two_segments(net, trans_point)
         if path1 is None or path2 is None:
-            logger.warning("混合布线某段失败，回退到默认类型")
-            fallback = HybridNetConnection(
+            logger.warning("混合布线某段失败，切换为单一波导类型模式")
+            single_type_net = HybridNetConnection(
                 net_id=net.net_id,
                 start=net.start,
                 end=net.end,
                 wg_type_start=net.wg_type_start,
                 wg_type_end=net.wg_type_start,
             )
-            return self._route_single_type(fallback, net.wg_type_start)
+            return self._route_single_type(single_type_net, net.wg_type_start)
 
         return self._build_mixed_result(net, path1, path2, trans_point)
 
