@@ -212,6 +212,28 @@ class ObstacleGrid:
             else:
                 self._sparse.discard((x, y))
 
+    def __getitem__(self, key: tuple[int, int]) -> int:
+        """下标访问 ``grid[y, x]``（兼容旧 numpy 风格代码）。
+
+        Args:
+            key: ``(y, x)`` 元组。
+
+        Returns:
+            0 表示可通行，1 表示障碍物。
+        """
+        y, x = key
+        return self.get(x, y)
+
+    def __setitem__(self, key: tuple[int, int], val: int) -> None:
+        """下标赋值 ``grid[y, x] = val``（兼容旧 numpy 风格代码）。
+
+        Args:
+            key: ``(y, x)`` 元组。
+            val: 0 表示清除，非 0 表示标记为障碍物。
+        """
+        y, x = key
+        self.set(x, y, val)
+
     def blocked_cells(self) -> Iterable[tuple[int, int]]:
         """返回所有被阻塞的单元坐标（用于调试/测试）。
 

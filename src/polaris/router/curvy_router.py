@@ -22,8 +22,15 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from polaris.router.diagonal_router import DiagonalGridRouter
+
+if TYPE_CHECKING:
+    from polaris.router.waveguide_router import (
+        RouteConnectionConfig,
+        WaveguidePath,
+    )
 
 
 class CurveType(Enum):
@@ -413,9 +420,100 @@ def _calc_path_length(points: list[tuple[float, float]]) -> float:
     return total
 
 
+def _build_curvy_router(
+    config: RouteConnectionConfig,
+    platform: str,
+    grid_size: float,
+    curve_type: str,
+) -> CurvyRouter:
+    """构建弯曲布线器（封装 CurvyRouter 实例化与障碍添加）。
+
+    Args:
+        config: 布线配置。
+        platform: 工艺平台。
+        grid_size: 栅格分辨率。
+        curve_type: 弯曲类型。
+
+    Returns:
+        配置好的 CurvyRouter 实例。
+    """
+    from polaris.router.waveguide_router import get_platform_constraints
+
+    cons = get_platform_constraints(platform)
+    grid_w = int(config.canvas_w / grid_size)
+    grid_h = int(config.canvas_h / grid_size)
+    curve_enum = {
+        "euler": CurveType.EULER,
+        "arc": CurveType.ARC,
+        "bezier": CurveType.BEZIER,
+    }.get(curve_type, CurveType.EULER)
+    curvy_cfg = CurvyRouteConfig(
+        grid_w=grid_w, grid_h=grid_h, grid_size=grid_size, curve_type=curve_enum
+    )
+    router = CurvyRouter(curvy_cfg)
+    router.min_bend_radius_um = cons["min_bend_radius_um"]
+    for box in config.obstacles or []:
+        router.add_obstacle_box(*box)
+    return router
+
+
+def _resolve_curve_type(kwargs: dict) -> str:
+    """从 kwargs 提取 curve_type（默认 euler，向后兼容）。"""
+    return str(kwargs.pop("curve_type", "euler"))
+
+
+def _to_canvas_points(
+    result: CurvyPathResult,
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> list[tuple[float, float]]:
+    """将网格路径结果转换为画布坐标，起终点对齐到精确坐标。"""
+    if not result.points:
+        return []
+    pts = list(result.points)
+    pts[0] = start
+    pts[-1] = end
+    return pts
+
+
+def route_curvy_connection(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    platform: str = "SOI",
+    config: RouteConnectionConfig | None = None,
+    **kwargs: float | list | None,
+) -> WaveguidePath:
+    """弯曲感知布线（LiDAR ISPD'25 curvy-aware routing）。
+
+    在 A* 网格路径基础上用欧拉/圆弧曲线替换直角弯，输出平滑弯曲波导路径，
+    损耗比折线布线低 30-50%。``curve_type`` 通过 ``**kwargs`` 传递（向后兼容）。
+
+    来源: LiDAR ISPD'25 https://dl.acm.org/doi/10.1145/3698364.3705355
+    """
+    from polaris.router.waveguide_router import (
+        RouteConnectionConfig,
+        WaveguidePath,
+        _resolve_grid_size,
+    )
+
+    curve_type = _resolve_curve_type(kwargs)
+    if config is None:
+        config = RouteConnectionConfig(**kwargs)
+    grid_size = _resolve_grid_size(config, platform)
+    router = _build_curvy_router(config, platform, grid_size, curve_type)
+    sg = (int(start[0] / grid_size), int(start[1] / grid_size))
+    eg = (int(end[0] / grid_size), int(end[1] / grid_size))
+    result = router.route_curvy(sg, eg)
+    pts = _to_canvas_points(result, start, end)
+    if not pts:
+        raise RuntimeError(f"弯曲布线失败：无法找到从 {start} 到 {end} 的可行路径")
+    return WaveguidePath(points=pts, length_um=result.length_um, loss_db=result.loss_db)
+
+
 __all__ = [
     "CurvyRouter",
     "CurvyRouteConfig",
     "CurvyPathResult",
     "CurveType",
+    "route_curvy_connection",
 ]

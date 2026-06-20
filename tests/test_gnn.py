@@ -122,9 +122,7 @@ def test_build_edge_features_shape():
     net, devices, g = load_netlist(YAML_NETLIST)
     inst_ids = list(devices.keys())
     edges = edges_from_graph(g, inst_ids)
-    placements = {
-        iid: {"x": 0.0, "y": 0.0, "w": 10.0, "h": 5.0} for iid in inst_ids
-    }
+    placements = {iid: {"x": 0.0, "y": 0.0, "w": 10.0, "h": 5.0} for iid in inst_ids}
     feats = build_edge_features(devices, placements, inst_ids, edges)
     assert feats.shape == (edges.shape[1], 7)
 

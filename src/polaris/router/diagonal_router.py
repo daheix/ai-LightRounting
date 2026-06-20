@@ -149,7 +149,7 @@ class DiagonalGridRouter(GridRouter):
             _f, g, x, y, last_dir, straight = heapq.heappop(open_h)
             if (x, y) == goal:
                 self._restore_endpoints(start, goal, orig_start, orig_goal)
-                return self._reconstruct_path(came_from, (x, y), (last_dir, straight))
+                return self._reconstruct_path_tuple(came_from, (x, y, last_dir, straight))
             for nx, ny, d, new_straight, cost in self._get_neighbors(
                 (x, y), (last_dir, straight), blocked
             ):
@@ -162,6 +162,31 @@ class DiagonalGridRouter(GridRouter):
                     heapq.heappush(open_h, (nf, ng, nx, ny, d, new_straight))
         self._restore_endpoints(start, goal, orig_start, orig_goal)
         return None
+
+    def _reconstruct_path_tuple(
+        self,
+        came_from: dict[tuple[int, int, int, int], tuple[int, int, int, int] | None],
+        goal_state: tuple[int, int, int, int],
+    ) -> list[tuple[int, int]]:
+        """从 came_from 回溯重建路径（元组状态编码版本）。
+
+        DiagonalGridRouter 用 ``(x, y, dir, straight)`` 元组作为状态键，
+        与父类 GridRouter 的整数状态编码不同，因此需要独立实现。
+
+        Args:
+            came_from: 元组状态 → 前驱元组状态（或 None）。
+            goal_state: 终点状态元组。
+
+        Returns:
+            网格坐标列表 ``[(x, y), ...]``。
+        """
+        states: list[tuple[int, int, int, int]] = []
+        cur: tuple[int, int, int, int] | None = goal_state
+        while cur is not None:
+            states.append(cur)
+            cur = came_from.get(cur)
+        states.reverse()
+        return [(s[0], s[1]) for s in states]
 
 
 __all__ = ["DiagonalGridRouter"]

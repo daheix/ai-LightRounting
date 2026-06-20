@@ -264,6 +264,65 @@ class _DefaultRouter:
         return paths
 
 
+class _CurvyRouter:
+    """弯曲感知布线器（LiDAR ISPD'25 curvy-aware routing）。
+
+    在 A* 网格路径基础上，用欧拉/圆弧曲线替换直角弯，输出平滑弯曲波导路径。
+    相比 _DefaultRouter 的折线输出，弯曲波导损耗更低、更符合光子工艺实际。
+
+    来源:
+    - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
+    - LiDAR 2.0 TCAD 2025: https://arxiv.org/html/2505.17239v2
+    """
+
+    def __init__(self, curve_type: str = "euler") -> None:
+        """初始化弯曲布线器。
+
+        Args:
+            curve_type: 弯曲类型（"euler"/"arc"/"bezier"）。
+        """
+        self.curve_type = curve_type
+
+    def route(self, circuit: CircuitSpec, placements: dict) -> dict:
+        """弯曲感知布线。"""
+        from polaris.router.waveguide_router import (
+            RouteConnectionConfig,
+            auto_grid_size,
+            route_curvy_connection,
+        )
+
+        grid_size = auto_grid_size(
+            canvas_w=circuit.canvas_w,
+            canvas_h=circuit.canvas_h,
+            platform="SOI",
+            min_bend_radius_um=5.0,
+        )
+        config = RouteConnectionConfig(
+            canvas_w=circuit.canvas_w,
+            canvas_h=circuit.canvas_h,
+            grid_size=grid_size,
+        )
+        paths = {}
+        for d1, p1, d2, p2 in circuit.connections:
+            if d1 in placements and d2 in placements:
+                pos1 = placements[d1]
+                pos2 = placements[d2]
+                start = (pos1["x"] + pos1["w"] / 2, pos1["y"] + pos1["h"] / 2)
+                end = (pos2["x"] + pos2["w"] / 2, pos2["y"] + pos2["h"] / 2)
+                try:
+                    wp = route_curvy_connection(
+                        start,
+                        end,
+                        platform="SOI",
+                        config=config,
+                        curve_type=self.curve_type,
+                    )
+                    paths[f"{d1}_{p1}_{d2}_{p2}"] = wp.points
+                except RuntimeError:
+                    continue
+        return paths
+
+
 class _DefaultSimulator:
     """默认仿真器。
 
@@ -353,9 +412,23 @@ class IntegratedPipeline:
     def __init__(self, config: PipelineConfig | None = None) -> None:
         self.config = config or PipelineConfig()
         self.placer = _DefaultPlacer(checkpoint_path=self.config.placement_checkpoint)
-        self.router = _DefaultRouter()
+        self.router = self._make_router(self.config.router_type)
         sim_mode = "real" if self.config.use_real_simulator else "table"
         self.simulator = _DefaultSimulator(mode=sim_mode)
+
+    @staticmethod
+    def _make_router(router_type: str):
+        """根据 router_type 创建布线器。
+
+        Args:
+            router_type: 布线器类型（curvy/diagonal/hybrid/default）。
+
+        Returns:
+            布线器实例（实现 route(circuit, placements) -> dict 接口）。
+        """
+        if router_type == "curvy":
+            return _CurvyRouter(curve_type="euler")
+        return _DefaultRouter()
 
     def run(self, circuit: CircuitSpec | None = None) -> PipelineResult:
         """执行一体化流水线。

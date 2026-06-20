@@ -19,6 +19,7 @@ from polaris.router.waveguide_router import (
     path_length,
     path_loss,
     route_connection,
+    route_curvy_connection,
     s_bend,
 )
 
@@ -370,3 +371,84 @@ def test_route_connection_auto_grid_vs_fixed():
     )
     # 两者 grid_size 相同，路径长度应接近
     assert wp_auto.length_um == pytest.approx(wp_fixed.length_um, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# 阶段F2：弯曲感知布线（curvy-aware routing）测试
+# 来源: LiDAR ISPD'25 https://dl.acm.org/doi/10.1145/3698364.3705355
+# ---------------------------------------------------------------------------
+
+
+def test_route_curvy_connection_euler():
+    """弯曲感知布线（欧拉弯曲）输出平滑路径。"""
+    config = RouteConnectionConfig(canvas_w=200.0, canvas_h=200.0, grid_size=5.0)
+    wp = route_curvy_connection(
+        (10, 10), (150, 100), platform="SOI", config=config, curve_type="euler"
+    )
+    assert wp.points[0] == (10, 10)
+    assert wp.points[-1] == (150, 100)
+    assert wp.length_um > 0
+    assert wp.loss_db >= 0
+    # 弯曲路径点数应多于直线段数（平滑后采样点密集）
+    assert len(wp.points) > 3
+
+
+def test_route_curvy_connection_arc():
+    """弯曲感知布线（圆弧弯曲）输出平滑路径。"""
+    config = RouteConnectionConfig(canvas_w=200.0, canvas_h=200.0, grid_size=5.0)
+    wp = route_curvy_connection(
+        (10, 10), (150, 100), platform="SOI", config=config, curve_type="arc"
+    )
+    assert wp.points[0] == (10, 10)
+    assert wp.points[-1] == (150, 100)
+    assert wp.length_um > 0
+
+
+def test_route_curvy_connection_with_obstacles():
+    """弯曲感知布线绕过障碍物。"""
+    config = RouteConnectionConfig(
+        canvas_w=200.0,
+        canvas_h=200.0,
+        grid_size=5.0,
+        obstacles=[(60, 40, 80, 80)],  # 中间障碍
+    )
+    wp = route_curvy_connection(
+        (10, 10), (150, 100), platform="SOI", config=config, curve_type="euler"
+    )
+    assert wp.points[0] == (10, 10)
+    assert wp.points[-1] == (150, 100)
+    assert wp.length_um > 0
+
+
+def test_route_curvy_connection_sin_platform():
+    """SiN 平台弯曲感知布线（不同弯曲半径约束）。"""
+    config = RouteConnectionConfig(canvas_w=200.0, canvas_h=200.0, grid_size=5.0)
+    wp = route_curvy_connection(
+        (10, 10), (150, 100), platform="SiN", config=config, curve_type="euler"
+    )
+    assert wp.points[0] == (10, 10)
+    assert wp.points[-1] == (150, 100)
+
+
+def test_route_curvy_vs_straight_loss():
+    """弯曲布线与直角布线均能成功且损耗为正（弯曲路径更长但转弯损耗低）。"""
+    config = RouteConnectionConfig(canvas_w=200.0, canvas_h=200.0, grid_size=5.0)
+    wp_curvy = route_curvy_connection(
+        (10, 10), (150, 100), platform="SOI", config=config, curve_type="euler"
+    )
+    wp_straight = route_connection((10, 10), (150, 100), platform="SOI", config=config)
+    # 两者都应成功布线且损耗为正
+    assert wp_curvy.loss_db > 0
+    assert wp_straight.loss_db > 0
+    # 弯曲布线路径点数应更多（平滑采样）
+    assert len(wp_curvy.points) >= len(wp_straight.points)
+
+
+def test_route_curvy_connection_invalid_curve_type_defaults_euler():
+    """无效 curve_type 回退到 euler。"""
+    config = RouteConnectionConfig(canvas_w=200.0, canvas_h=200.0, grid_size=5.0)
+    wp = route_curvy_connection(
+        (10, 10), (150, 100), platform="SOI", config=config, curve_type="invalid"
+    )
+    assert wp.points[0] == (10, 10)
+    assert wp.points[-1] == (150, 100)

@@ -4,19 +4,14 @@
 + 等长路径约束（MZI 臂、差分对）+ S 弯/弯曲路径生成。
 
 方法参考（方案检索，见项目规则 1.1）：
-- A* 搜索算法（经典网格寻路，Hart, Nilsson & Raphael 1968）
-  https://en.wikipedia.org/wiki/A*_search_algorithm
-- Cheng et al., NeurIPS 2022 一次性生成式布线模型（SJTU+华为）
-  https://openreview.net/pdf?id=uNYqDfPEDD8
-- LiDAR (ISPD 2025) 曲线感知 A* 光波导详细布线（grid-based curvy-aware A*）
-  https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
-- LiDAR 2.0 分层曲线波导布线（Manhattan/非 Manhattan 状态、弯曲半径约束）
-  https://arxiv.org/html/2505.17239v2
+- A* 搜索算法（Hart, Nilsson & Raphael 1968）https://en.wikipedia.org/wiki/A*_search_algorithm
+- Cheng et al., NeurIPS 2022 一次性生成式布线模型 https://openreview.net/pdf?id=uNYqDfPEDD8
+- LiDAR (ISPD 2025) 曲线感知 A* 光波导详细布线 https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+- LiDAR 2.0 分层曲线波导布线 https://arxiv.org/html/2505.17239v2
 - Jump Point Search (JPS) 网格寻路剪枝（Harabor & Grastien 2011）
   https://cdn.aaai.org/ojs/7994/7994-13-11522-1-2-20201228.pdf
-- Red Blob Games A* 实现优化（整数编码 + 启发式 + tie-breaker）
-  https://www.redblobgames.com/pathfinding/a-star/implementation.html
-- 欧拉弯曲（clothoid）平滑过渡，曲率线性变化降低弯曲损耗
+- Red Blob Games A* 实现优化 https://www.redblobgames.com/pathfinding/a-star/implementation.html
+- 欧拉弯曲（clothoid）平滑过渡，降低弯曲损耗
   来源: Fujisawa et al., Opt. Express 25, 9150 (2017)
   https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件制造鲁棒性
@@ -56,6 +51,7 @@ __all__ = [
     "WaveguideRouter",
     "RouteConnectionConfig",
     "route_connection",
+    "route_curvy_connection",
     "get_platform_constraints",
     "PLATFORM_CONSTRAINTS",
     "auto_grid_size",
@@ -487,11 +483,7 @@ class RouteConnectionConfig:
     """单连接布线配置（栅格 + 画布 + 障碍 + 等长约束）。
 
     将 ``route_connection`` 的布线参数打包为单一配置对象，降低函数参数个数
-    （规则 4.1：参数上限 7）。
-
-    向后兼容：``route_connection(start, end, platform, config=None, **kwargs)``
-    中未提供 config 时，旧式关键字参数（grid_size/canvas_w/canvas_h/obstacles/
-    target_length_um）会自动转发到本 dataclass 构造。
+    （规则 4.1：参数上限 7）。未提供 config 时，旧式关键字参数会自动转发到本 dataclass。
 
     Attributes:
         grid_size: 栅格分辨率（μm）。当 ``auto_grid=True`` 时此字段被忽略。
@@ -499,9 +491,7 @@ class RouteConnectionConfig:
         canvas_h: 画布高度（μm）。
         obstacles: 障碍盒列表 ``[(xmin, ymin, xmax, ymax), ...]``。
         target_length_um: 等长目标（μm）。None 表示不约束等长。
-        auto_grid: 是否根据画布尺寸与平台约束自动选择 grid_size（C3 优化）。
-            启用后使用 ``auto_grid_size()`` 计算最优分辨率，支持大规模电路。
-            来源: LiDAR ISPD 2025 + DREAMPlace DAC 2019
+        auto_grid: 是否自动选择 grid_size（C3 优化，来源: LiDAR ISPD 2025 + DREAMPlace DAC 2019）。
     """
 
     grid_size: float = 1.0
@@ -589,9 +579,7 @@ def route_connection(
         start: 起点画布坐标 (x, y) μm。
         end: 终点画布坐标 (x, y) μm。
         platform: 工艺平台（决定弯曲半径/间距约束）。
-        config: 布线配置（栅格/画布/障碍/等长）。未提供时从 kwargs 构建。
-        **kwargs: 旧式关键字参数（grid_size/canvas_w/canvas_h/obstacles/
-            target_length_um），向后兼容。
+        config: 布线配置。未提供时从 kwargs 构建（向后兼容）。
 
     Returns:
         ``WaveguidePath``（含折线点、长度、损耗）。
@@ -615,15 +603,28 @@ def route_connection(
     return WaveguidePath(points=pts, length_um=path_length(pts), loss_db=loss)
 
 
+def route_curvy_connection(
+    start: tuple[float, float],
+    end: tuple[float, float],
+    platform: str = "SOI",
+    config: RouteConnectionConfig | None = None,
+    **kwargs: float | list | None,
+) -> WaveguidePath:
+    """弯曲感知布线（LiDAR ISPD'25 curvy-aware routing）。
+
+    委托到 :func:`polaris.router.curvy_router.route_curvy_connection`。
+    ``curve_type`` 通过 ``**kwargs`` 传递（向后兼容旧调用方式）。
+
+    来源:
+    - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
+    - LiDAR 2.0 TCAD 2025: https://arxiv.org/html/2505.17239v2
+    """
+    from polaris.router.curvy_router import route_curvy_connection as _impl
+
+    return _impl(start, end, platform, config, **kwargs)
+
+
 # ---------------------------------------------------------------------------
 # 命名兼容别名（便于上层统一以 ``WaveguideRouter`` 名称访问）
 # ---------------------------------------------------------------------------
-# 历史代码与文档中曾以 ``WaveguideRouter`` 作为布线器统一入口名称，实际实现
-# 为 ``GridRouter``（A* 网格布线器）。此处提供别名以保持向后兼容，避免上层
-# 调用方在重构后出现 ImportError。
-WaveguideRouter = GridRouter
-"""布线器统一别名（指向 GridRouter）。
-
-上层代码可通过 ``from polaris.router.waveguide_router import WaveguideRouter``
-访问，与文档/接口约定保持一致。
-"""
+WaveguideRouter = GridRouter  # 历史别名，指向 GridRouter（A* 网格布线器）
