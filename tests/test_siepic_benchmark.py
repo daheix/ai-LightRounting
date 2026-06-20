@@ -49,8 +49,7 @@ def _load_siepic_circuit(json_path: Path):
             for d in devices.values()
         ],
         connections=[
-            (c.src_instance, c.src_port, c.dst_instance, c.dst_port)
-            for c in net.connections
+            (c.src_instance, c.src_port, c.dst_instance, c.dst_port) for c in net.connections
         ],
         canvas_w=1000.0,
         canvas_h=1000.0,
@@ -109,8 +108,8 @@ def test_siepic_gds_export_layers(name: str, json_path: Path, tmp_path: Path) ->
     """
     import klayout.db as db
 
-    from polaris.eval.layout_render import export_gds
     from polaris.engine.floorplan_env import Placement
+    from polaris.eval.layout_render import export_gds
     from polaris.pdk.device import Device
 
     circuit = _load_siepic_circuit(json_path)
@@ -137,7 +136,6 @@ def test_siepic_gds_export_layers(name: str, json_path: Path, tmp_path: Path) ->
     assert gds_path.exists(), "GDS 文件未生成"
     ly = db.Layout()
     ly.read(str(gds_path))
-    top = ly.top_cells()[0]
     layer_infos = [(li.layer, li.datatype) for li in ly.layer_infos()]
     assert (1, 0) in layer_infos, "缺少 WG layer (1,0)"
     assert (68, 0) in layer_infos, "缺少 DEVREC layer (68,0)"
@@ -177,7 +175,7 @@ def test_siepic_y_branch_loss_vs_simphony() -> None:
     siepic_yb = siepic.y_branch()
     siepic_s = siepic_yb(wl)
     siepic_t = np.abs(siepic_s[("o0", "o1")][0]) ** 2
-    siepic_loss_db = -10 * np.log10(sieptic_t + 1e-15) if siepic_t > 0 else 99.0
+    siepic_loss_db = -10 * np.log10(siepic_t + 1e-15) if siepic_t > 0 else 99.0
 
     # Y 分支理论分束比 50:50，插损约 3.01 dB（分束）+ 额外插损
     assert 2.5 < polaris_loss_db < 4.0, f"PoLaRIS Y 分支损耗异常: {polaris_loss_db:.2f} dB"
