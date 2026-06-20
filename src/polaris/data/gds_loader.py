@@ -3,6 +3,8 @@
 读取 SiEPIC EBeam PDK 格式的 GDS 文件，提取器件与连接信息，
 转换为 PoLaRIS CircuitSpec。
 
+专家布局/布线提取（用于模仿学习）见 :mod:`polaris.data.expert_layout`。
+
 SiEPIC GDS 格式（来源: SiEPIC_EBeam_PDK, MIT, UBC）:
 - DEVREC layer (68,0): 器件识别层
   - Polygon: 器件边界框
@@ -12,9 +14,10 @@ SiEPIC GDS 格式（来源: SiEPIC_EBeam_PDK, MIT, UBC）:
   - Text: 端口名（如 ``pin1``/``pin2``/``opt_input``/``opt_output``）
 
 来源:
-- SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK (MIT, UBC, Lukas Chrostowski)
 - SiEPIC netlist extraction: https://github.com/SiEPIC/SiEPIC-Tools
 - klayout.db API: https://www.klayout.de/doc-qt5/code/class_LayerInfo.html
+- klayout Instance class: https://www.klayout.org/klayout-pypi/overview/instances/
 """
 
 from __future__ import annotations
@@ -33,7 +36,9 @@ _DEVREC_LAYER = (68, 0)
 _PIN_LAYER = (69, 0)
 
 # 端口位置匹配容差（μm）
-_PORT_MATCH_TOL = 2.0
+# SiEPIC EBeam PDK 中相邻器件端口间距典型值 5.5μm（如 y_branch 的 pin2/pin3），
+# 容差需 ≥6.0μm 才能匹配跨器件连接，同时排除同器件端口（由 device_name 检查保证）
+_PORT_MATCH_TOL = 6.0
 
 # 忽略的非器件实例名前缀
 _IGNORE_PREFIXES = (
