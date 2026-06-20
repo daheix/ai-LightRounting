@@ -60,6 +60,8 @@ def test_pipeline_config_defaults() -> None:
     assert cfg.small_episodes == 500
     assert cfg.medium_episodes == 1000
     assert cfg.large_episodes == 2000
+    assert cfg.xlarge_episodes == 3000
+    assert cfg.huge_episodes == 5000
     assert cfg.hidden_dim == 64
     assert cfg.lr == 3e-4
     assert cfg.batch_size == 16

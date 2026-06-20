@@ -64,7 +64,16 @@ def test_curriculum_levels_ordering() -> None:
 def test_curriculum_level_names() -> None:
     """测试课程级别名称。"""
     names = [lv.name for lv in CURRICULUM_LEVELS]
-    assert names == ["small", "medium", "large", "xlarge"]
+    assert names == ["small", "medium", "large", "xlarge", "huge"]
+
+
+def test_curriculum_level_huge_range() -> None:
+    """测试 huge 级别器件数范围（500-1000，roadmap 2.1.3 规模扩展）。"""
+    huge = next(lv for lv in CURRICULUM_LEVELS if lv.name == "huge")
+    assert huge.n_devices_min == 500
+    assert huge.n_devices_max == 1000
+    assert huge.canvas_w == 5000.0
+    assert huge.canvas_h == 5000.0
 
 
 def test_curriculum_level_canvas_scales_with_devices() -> None:

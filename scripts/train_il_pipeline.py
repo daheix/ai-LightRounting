@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""模仿学习 + RL 微调 4 阶段流水线训练脚本。
+"""模仿学习 + RL 微调 5 阶段流水线训练脚本。
 
 完整训练流程:
 1. **阶段1 BC 预训练**: 用 SiEPIC 专家示范数据预训练 PPO 策略网络
 2. **阶段2 PPO 小规模**: 在 small 级别变体（5-10 器件）上 RL 微调
 3. **阶段3 PPO 中规模**: 在 medium 级别变体（20-50 器件）上 RL 微调
 4. **阶段4 PPO 大规模**: 在 large 级别变体（80-120 器件）上 RL 微调
+5. **阶段5 PPO 超大规模**: 在 huge 级别变体（500-1000 器件）上 RL 微调
 
 每个阶段加载上一阶段的检查点作为初始化，实现 Curriculum Learning。
 
@@ -83,13 +84,15 @@ logger = logging.getLogger("il_pipeline")
 
 @dataclass
 class PipelineConfig:
-    """4 阶段流水线配置。
+    """5 阶段流水线配置。
 
     Attributes:
         bc_epochs: BC 预训练轮数。
         small_episodes: small 级别 RL 微调轮次数。
         medium_episodes: medium 级别 RL 微调轮次数。
         large_episodes: large 级别 RL 微调轮次数。
+        xlarge_episodes: xlarge 级别 RL 微调轮次数。
+        huge_episodes: huge 级别 RL 微调轮次数（500-1000 器件）。
         hidden_dim: 网络隐藏层维度。
         lr: 学习率。
         batch_size: BC 批量大小。
@@ -104,6 +107,8 @@ class PipelineConfig:
     small_episodes: int = 500
     medium_episodes: int = 1000
     large_episodes: int = 2000
+    xlarge_episodes: int = 3000
+    huge_episodes: int = 5000
     hidden_dim: int = 64
     lr: float = 3e-4
     batch_size: int = 16
@@ -141,12 +146,16 @@ def parse_args() -> argparse.Namespace:
         type=str,
         default="all",
         choices=["all", "bc-only", "bc-small", "bc-small-medium"],
-        help="训练阶段: all=全部4阶段, bc-only=仅BC, bc-small=BC+小规模, bc-small-medium=BC+小+中",
+        help="训练阶段: all=全部5阶段, bc-only=仅BC, bc-small=BC+小规模, bc-small-medium=BC+小+中",
     )
     p.add_argument("--bc-epochs", type=int, default=50, help="BC 预训练轮数")
     p.add_argument("--small-episodes", type=int, default=500, help="small 级别 RL 轮次")
     p.add_argument("--medium-episodes", type=int, default=1000, help="medium 级别 RL 轮次")
     p.add_argument("--large-episodes", type=int, default=2000, help="large 级别 RL 轮次")
+    p.add_argument("--xlarge-episodes", type=int, default=3000, help="xlarge 级别 RL 轮次")
+    p.add_argument(
+        "--huge-episodes", type=int, default=5000, help="huge 级别 RL 轮次（500-1000 器件）"
+    )
     p.add_argument("--hidden-dim", type=int, default=64, help="网络隐藏层维度")
     p.add_argument("--lr", type=float, default=3e-4, help="学习率")
     p.add_argument("--batch-size", type=int, default=16, help="BC 批量大小")
@@ -180,6 +189,8 @@ def args_to_config(args: argparse.Namespace) -> PipelineConfig:
         small_episodes=args.small_episodes,
         medium_episodes=args.medium_episodes,
         large_episodes=args.large_episodes,
+        xlarge_episodes=args.xlarge_episodes,
+        huge_episodes=args.huge_episodes,
         hidden_dim=args.hidden_dim,
         lr=args.lr,
         batch_size=args.batch_size,
@@ -390,11 +401,13 @@ STAGE_MAP = [
     ("small", "small_episodes", ("all", "bc-small", "bc-small-medium")),
     ("medium", "medium_episodes", ("all", "bc-small-medium")),
     ("large", "large_episodes", ("all",)),
+    ("xlarge", "xlarge_episodes", ("all",)),
+    ("huge", "huge_episodes", ("all",)),
 ]
 
 
 def main() -> int:
-    """4 阶段流水线主入口。
+    """5 阶段流水线主入口。
 
     Returns:
         退出码（0 成功，非 0 失败）。
@@ -425,7 +438,7 @@ def main() -> int:
 def _log_final_summary(results: list[StageResult]) -> None:
     """打印最终汇总日志。"""
     logger.info("=" * 60)
-    logger.info("4 阶段流水线训练完成！")
+    logger.info("5 阶段流水线训练完成！")
     for r in results:
         logger.info(
             "  %s: %d episodes, loss=%.4f, reward=%.4f",

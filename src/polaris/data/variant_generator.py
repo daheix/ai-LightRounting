@@ -87,6 +87,7 @@ CURRICULUM_LEVELS: list[CurriculumLevel] = [
     CurriculumLevel("medium", 20, 50, 1000.0, 1000.0),
     CurriculumLevel("large", 80, 120, 2000.0, 2000.0),
     CurriculumLevel("xlarge", 150, 200, 3000.0, 3000.0),
+    CurriculumLevel("huge", 500, 1000, 5000.0, 5000.0),
 ]
 
 

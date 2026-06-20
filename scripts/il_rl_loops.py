@@ -40,8 +40,12 @@ LIDAR_BENCHMARK_DIR = Path(__file__).resolve().parent.parent / "data" / "benchma
 def _select_lidar_benchmark(level: CurriculumLevel) -> str | None:
     """按课程级别选择合适规模的 LiDAR benchmark。
 
+    对于 huge 级别（500-1000 器件），LiDAR 公开 benchmark 最大仅 319 器件，
+    此时返回最大的 LiDAR benchmark（319 器件）作为基础，实际 huge 规模
+    训练由 variant_generator 生成合成电路（roadmap 2.1.3 规模扩展）。
+
     Args:
-        level: 课程级别（small/medium/large/xlarge）。
+        level: 课程级别（small/medium/large/xlarge/huge）。
 
     Returns:
         benchmark YAML 路径，无匹配返回 None。
@@ -59,6 +63,12 @@ def _select_lidar_benchmark(level: CurriculumLevel) -> str | None:
     ]
     for rel_path, n_dev in candidates:
         if level.n_devices_min <= n_dev <= level.n_devices_max:
+            full = LIDAR_BENCHMARK_DIR / rel_path
+            if full.exists():
+                return str(full)
+    # huge 级别：返回最大的 LiDAR benchmark 作为基础
+    if level.name == "huge":
+        for rel_path, _ in reversed(candidates):
             full = LIDAR_BENCHMARK_DIR / rel_path
             if full.exists():
                 return str(full)
