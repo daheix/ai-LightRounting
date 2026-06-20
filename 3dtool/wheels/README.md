@@ -15,7 +15,7 @@
 3dtool/wheels/
 ├── install.sh              # 一键离线安装脚本（核心入口）
 ├── MANIFEST.txt            # wheel 清单与 SHA256 校验和
-├── *.whl                   # 小 wheel 文件（<24MB，直接存放，83 个）
+├── *.whl                   # 小 wheel 文件（<24MB，直接存放，79 个）
 └── parts/                  # 大 wheel 分卷片段（每个 ≤20MB，18 个）
     ├── torch-*.whl.gz.part_aa    # torch 184MB → 9 个分片
     ├── jaxlib-*.whl.gz.part_*    # jaxlib 82MB → 5 个分片
@@ -82,7 +82,7 @@ bash 3dtool/wheels/install.sh --check
 | 包 | 版本 | 用途 | 大小 |
 |----|------|------|------|
 | klayout | 0.30.9 | GDS 导出 + DRC | 27MB（分卷） |
-| simphony | 0.6.0 | S 参数仿真 | 1MB |
+| simphony | 0.7.3 | S 参数仿真 | 1MB |
 
 ### 重型仿真依赖（含完整依赖链，1 个）
 

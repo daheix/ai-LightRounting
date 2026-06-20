@@ -152,7 +152,9 @@ if [[ "${MODE}" == "check" ]]; then
         import_name="${pkg}"
         [[ "${pkg}" == "pyyaml" ]] && import_name="yaml"
         if python3 -c "import ${import_name}" 2>/dev/null; then
-            ver=$(python3 -c "import ${import_name}; print(${import_name}.__version__)" 2>/dev/null || echo "?")
+            # 优先用 pip show 获取版本（避免 __version__ 上游 bug，如 simphony 0.7.3 报 0.6.0）
+            ver=$(python3 -m pip show "${pkg}" 2>/dev/null | grep '^Version:' | cut -d' ' -f2 || echo "?")
+            [[ -z "${ver}" ]] && ver=$(python3 -c "import ${import_name}; print(${import_name}.__version__)" 2>/dev/null || echo "?")
             echo "  ✅ ${pkg} ${ver}"
         else
             echo "  ❌ ${pkg} 未安装"
@@ -220,7 +222,9 @@ for pkg in "${ALL_PACKAGES[@]}"; do
     import_name="${pkg}"
     [[ "${pkg}" == "pyyaml" ]] && import_name="yaml"
     if python3 -c "import ${import_name}" 2>/dev/null; then
-        ver=$(python3 -c "import ${import_name}; print(${import_name}.__version__)" 2>/dev/null || echo "?")
+        # 优先用 pip show 获取版本（避免 __version__ 上游 bug）
+        ver=$(python3 -m pip show "${pkg}" 2>/dev/null | grep '^Version:' | cut -d' ' -f2 || echo "?")
+        [[ -z "${ver}" ]] && ver=$(python3 -c "import ${import_name}; print(${import_name}.__version__)" 2>/dev/null || echo "?")
         echo "  ✅ ${pkg} ${ver}"
     else
         echo "  ❌ ${pkg} 安装失败"

@@ -15,7 +15,7 @@
 ### simphony
 
 - **用途**: 光子电路 S 参数仿真
-- **状态**: ✅ 已装 0.6.0
+- **状态**: ✅ 已装 0.7.3
 - **来源**: https://simphonyphotonics.readthedocs.io/
 - **安装**: `pip install simphony`
 - **项目使用**: `src/polaris/sim/simulator.py` 的 `simphony_models()` 集成 SiEPIC 模型库

@@ -140,7 +140,7 @@ src/polaris/
 | 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
 |------|---------|------|------|----------|-------------|
 | meep | ❌ 未装 | — | FDTD 电磁仿真 | `pip install meep` | 器件级仿真 |
-| simphony | ✅ 已装 | 0.6.0 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
+| simphony | ✅ 已装 | 0.7.3 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
 | sax | ✅ 已装 | 0.14.7 | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有 pyCopySAX 复刻） |
 | SiPANN | ❌ 未装 | — | 硅光器件模型 | `pip install SiPANN` | src/polaris/sim/models.py（已复刻） |
 | femwell | ❌ 未装 | — | FEM 模式求解器 | `pip install femwell` | 模式求解 |
@@ -317,7 +317,7 @@ bash 3dtool/wheels/install.sh --dev
 ```
 
 **离线 wheel 包结构**（详见 `3dtool/wheels/README.md`）：
-- `3dtool/wheels/*.whl`：小 wheel（<24MB，83 个，直接存放）
+- `3dtool/wheels/*.whl`：小 wheel（<24MB，79 个，直接存放）
 - `3dtool/wheels/parts/*.part_*`：大 wheel 分卷片段（≤20MB，18 个）
   - torch 184MB → 9 个分片
   - jaxlib 82MB → 5 个分片
