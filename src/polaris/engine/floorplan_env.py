@@ -122,8 +122,21 @@ def hpwl(net: Netlist, state: FloorplanState) -> float:
 
 
 def count_overlaps(state: FloorplanState) -> int:
-    """统计已放置器件间的重叠对数。"""
+    """统计已放置器件间的重叠对数（空间哈希加速）。
+
+    对小规模（<50 器件）用 O(n²) 暴力检测；对大规模用空间哈希网格
+    将器件分桶，仅检测同桶及相邻桶的器件对，平均 O(n)。
+    来源: 空间哈希经典算法（OpenROAD/R-tree 的简化版）
+    """
     placements = list(state.placements.values())
+    n = len(placements)
+    if n < 50:
+        return _count_overlaps_brute_force(placements)
+    return _count_overlaps_spatial_hash(placements, state)
+
+
+def _count_overlaps_brute_force(placements: list) -> int:
+    """O(n²) 暴力重叠检测（小规模用）。"""
     count = 0
     for i in range(len(placements)):
         a = placements[i].bbox_abs()
@@ -132,6 +145,63 @@ def count_overlaps(state: FloorplanState) -> int:
             if a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]:
                 count += 1
     return count
+
+
+def _count_overlaps_spatial_hash(placements: list, state: FloorplanState) -> int:
+    """空间哈希加速重叠检测（大规模用）。
+
+    将画布划分为栅格，每个器件按其包围盒注册到覆盖的栅格桶中。
+    仅检测共享至少一个栅格桶的器件对，避免全量两两比较。
+    """
+    cell_size = max(state.grid_size, _mean_placement_size(placements))
+    buckets = _build_spatial_buckets(placements, cell_size)
+    return _count_bucket_overlaps(buckets, placements)
+
+
+def _build_spatial_buckets(placements: list, cell_size: float) -> dict:
+    """构建空间哈希桶：{grid_cell: [placement_idx]}。"""
+    buckets: dict[tuple[int, int], list[int]] = {}
+    for idx, pl in enumerate(placements):
+        xmin, ymin, xmax, ymax = pl.bbox_abs()
+        gi0 = int(xmin // cell_size)
+        gi1 = int(xmax // cell_size)
+        gj0 = int(ymin // cell_size)
+        gj1 = int(ymax // cell_size)
+        for gi in range(gi0, gi1 + 1):
+            for gj in range(gj0, gj1 + 1):
+                buckets.setdefault((gi, gj), []).append(idx)
+    return buckets
+
+
+def _count_bucket_overlaps(buckets: dict, placements: list) -> int:
+    """统计桶内器件对的重叠数（去重）。"""
+    checked: set[tuple[int, int]] = set()
+    count = 0
+    for indices in buckets.values():
+        for i in range(len(indices)):
+            for j in range(i + 1, len(indices)):
+                a_idx, b_idx = indices[i], indices[j]
+                pair = (a_idx, b_idx) if a_idx < b_idx else (b_idx, a_idx)
+                if pair in checked:
+                    continue
+                checked.add(pair)
+                if _bbox_overlap(placements[a_idx].bbox_abs(), placements[b_idx].bbox_abs()):
+                    count += 1
+    return count
+
+
+def _bbox_overlap(a: tuple, b: tuple) -> bool:
+    """判断两个 AABB 是否重叠。"""
+    return a[0] < b[2] and a[2] > b[0] and a[1] < b[3] and a[3] > b[1]
+
+
+def _mean_placement_size(placements: list) -> float:
+    """计算已放置器件的平均尺寸（用于空间哈希桶大小）。"""
+    total = 0.0
+    for pl in placements:
+        xmin, ymin, xmax, ymax = pl.bbox_abs()
+        total += max(xmax - xmin, ymax - ymin)
+    return total / len(placements) if placements else 10.0
 
 
 @dataclass
