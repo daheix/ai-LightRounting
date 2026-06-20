@@ -386,7 +386,11 @@ class PPOAgent:
         log_std = self.ac.action_log_std
         inv_var = (-2.0 * log_std).exp()
         log_std_sum = log_std.sum()
-        new_lp = (-0.5 * (diff * diff * inv_var).sum(axis=-1)) - log_std_sum
+        # 完整高斯 logprob：含 -0.5*D*log(2π) 常数项（与 get_action 的 old_lp 对齐）
+        # 缺失此项会导致 ratio 恒偏移 exp(0.5*D*log(2π))≈6.3，PPO clip 失效
+        action_dim = mean.data.shape[-1]
+        const_term = 0.5 * action_dim * math.log(2 * math.pi)
+        new_lp = (-0.5 * (diff * diff * inv_var).sum(axis=-1)) - log_std_sum - const_term
         # 日志指标（非可微）
         std = np.exp(self.ac.action_log_std.data)
         policy_loss, value_loss, entropy = self._compute_minibatch_metrics(mb, mean, value, std)
