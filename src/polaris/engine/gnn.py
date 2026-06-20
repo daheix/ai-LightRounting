@@ -1,4 +1,4 @@
-"""GNN 状态编码器（Task 10 + 2025 增强）。
+"""GNN 状态编码器（Task 10 + 2025 增强 + edge-GNN 2026）。
 
 实现器件-连接图的图神经网络编码（消息传递 GNN），融合栅格空间特征。
 torch 无法安装时，使用 ``polaris.nn`` 纯 NumPy 复刻实现（规则 3）。
@@ -18,6 +18,11 @@ torch 无法安装时，使用 ``polaris.nn`` 纯 NumPy 复刻实现（规则 3�
   来源: Ba et al., 2016 https://arxiv.org/abs/1607.06450
 - 边特征: 支持边类型，不同连接用不同变换矩阵
   来源: R-GCN Schlichtkrull 2018 + Basso 2025 pin-enhanced graph
+
+2026 edge-GNN（来源: AlphaChip Nature 2021 + Circuit Training）:
+- 边特征消息传递: h_i^{l+1} = W_self @ h_i + sum_{(j,e) in N(i)} W_edge[e] @ (h_j || e)
+- 来源: Mirhoseini et al., Nature 2021, https://www.nature.com/articles/s41586-021-03544-w
+- 来源: Circuit Training, https://github.com/google-research/circuit_training
 
 消息传递公式（与 R-GCN/GraphSAGE 一致，含残差 + LayerNorm）::
 
@@ -223,10 +228,188 @@ def edges_from_graph(graph, instance_ids: list[str]) -> np.ndarray:
     return np.array(edges).T  # [2, E]
 
 
+@dataclass
+class EdgeEncoderConfig:
+    """edge-GNN 超参配置（规则 4：参数分组降低函数参数数）。
+
+    将 ``hidden_dim``/``out_dim``/``num_layers`` 聚合为单一配置对象，
+    使 ``EdgeGraphEncoder.__init__`` 参数数低于警告阈值。
+
+    Attributes:
+        hidden_dim: 隐藏层维度。
+        out_dim: 输出节点嵌入维度。
+        num_layers: 消息传递层数。
+    """
+
+    hidden_dim: int = 64
+    out_dim: int = 64
+    num_layers: int = 2
+
+
+class EdgeGraphEncoder(Module):
+    """边特征图神经网络编码器（edge-GNN，复刻 AlphaChip 核心创新）。
+
+    与 ``GraphEncoder`` 的区别：消息传递时显式融合边特征（边类型/距离/带宽），
+    而非仅做节点特征聚合。这是 AlphaChip (Mirhoseini et al., Nature 2021) 的
+    核心创新之一——通过边特征让 GNN 感知 net 的物理属性（线长/拥塞/优先级）。
+
+    消息传递公式（edge-aware）::
+
+        msg_{j->i} = W_edge @ concat(h_j, e_{ji})   # 边特征融合
+        h_i^{l+1} = LayerNorm(W_self @ h_i
+                              + (1/|N(i)|) * sum_{j in N(i)} msg_{j->i}
+                              + h_i)  # 残差
+
+    来源:
+    - Mirhoseini et al., "A graph placement methodology for fast chip design",
+      Nature 2021, https://www.nature.com/articles/s41586-021-03544-w
+    - Circuit Training (开源实现), https://github.com/google-research/circuit_training
+    - Gilmer et al., "Neural Message Passing for Quantum Chemistry", ICML 2017,
+      https://arxiv.org/abs/1704.01212 (MPNN 边特征消息传递框架)
+    """
+
+    def __init__(
+        self,
+        in_dim: int,
+        edge_feat_dim: int,
+        config: EdgeEncoderConfig | None = None,
+    ) -> None:
+        """初始化 edge-GNN。
+
+        Args:
+            in_dim: 节点输入特征维度。
+            edge_feat_dim: 边特征维度（如 [距离, 带宽, 优先级, 类型 one-hot]）。
+            config: 超参配置（hidden_dim/out_dim/num_layers），默认 ``EdgeEncoderConfig()``。
+        """
+        super().__init__()
+        cfg = config or EdgeEncoderConfig()
+        self.num_layers = cfg.num_layers
+        self.self_linears: list[Linear] = []
+        self.edge_msg_linears: list[Linear] = []
+        self.norms: list[LayerNorm] = []
+        dim = in_dim
+        for _ in range(cfg.num_layers):
+            self.self_linears.append(Linear(dim, cfg.hidden_dim))
+            # 边消息：concat(h_j, e_{ji}) -> hidden_dim
+            self.edge_msg_linears.append(Linear(dim + edge_feat_dim, cfg.hidden_dim))
+            self.norms.append(LayerNorm(cfg.hidden_dim))
+            dim = cfg.hidden_dim
+        self.out_proj = Linear(cfg.hidden_dim, cfg.out_dim)
+        self.relu = ReLU()
+
+    def forward(
+        self,
+        node_feats: Tensor,
+        edge_index: np.ndarray,
+        edge_feats: Tensor,
+    ) -> Tensor:
+        """前向边特征消息传递（含残差 + LayerNorm）。
+
+        Args:
+            node_feats: 节点特征 ``[N, in_dim]``。
+            edge_index: 边索引 ``[2, E]``（每列 (src, dst)）。
+            edge_feats: 边特征 ``[E, edge_feat_dim]``。
+
+        Returns:
+            节点嵌入 ``[N, out_dim]``。
+        """
+        from polaris.nn import cat, index_select, scatter_add
+
+        h = node_feats
+        n = h.shape[0]
+        for layer in range(self.num_layers):
+            self_msg = self.self_linears[layer](h)  # [N, hidden]
+            hidden = self.self_linears[layer].out_features
+            srcs = edge_index[0]
+            dsts = edge_index[1]
+            if len(srcs) > 0:
+                # 边特征消息传递：msg = W @ concat(h_src, e)
+                src_msgs = index_select(h, srcs)  # [E, in_dim]
+                edge_msgs = cat([src_msgs, edge_feats], axis=1)  # [E, in_dim+edge_dim]
+                msg = self.edge_msg_linears[layer](edge_msgs)  # [E, hidden]
+                agg = scatter_add(msg, dsts, n)  # [n, hidden]
+                # 度归一化
+                deg = np.zeros(n)
+                np.add.at(deg, dsts, 1.0)
+                deg = np.maximum(deg, 1.0)
+                agg = agg * Tensor(1.0 / deg[:, None])
+            else:
+                agg = Tensor(np.zeros((n, hidden)))
+            # 残差连接
+            if h.shape[-1] == self_msg.data.shape[-1]:
+                self_msg = self_msg + h
+            h = self.relu(self.norms[layer](self_msg + agg))
+        return self.out_proj(h)
+
+
+def build_edge_features(
+    devices: dict,
+    placements: dict,
+    instance_ids: list[str],
+    edge_index: np.ndarray,
+) -> np.ndarray:
+    """构建边特征矩阵（AlphaChip 风格）。
+
+    边特征: [距离, 带宽需求, 优先级, 类型_one_hot(4)]
+    总维度: 1 + 1 + 1 + 4 = 7
+
+    Args:
+        devices: 器件字典 {inst_id: DeviceSpec}。
+        placements: 放置位置 {inst_id: {"x", "y", "w", "h"}}。
+        instance_ids: 实例 ID 列表（与节点索引对应）。
+        edge_index: 边索引 ``[2, E]``。
+
+    Returns:
+        边特征矩阵 ``[E, 7]``。
+    """
+    n_edges = edge_index.shape[1]
+    feats = np.zeros((n_edges, 7), dtype=np.float64)
+    for i in range(n_edges):
+        src_idx = edge_index[0, i]
+        dst_idx = edge_index[1, i]
+        src_id = instance_ids[src_idx]
+        dst_id = instance_ids[dst_idx]
+        # 距离特征（曼哈顿距离，未放置时为 0）
+        if src_id in placements and dst_id in placements:
+            p1 = placements[src_id]
+            p2 = placements[dst_id]
+            x1, y1 = p1["x"] + p1["w"] / 2, p1["y"] + p1["h"] / 2
+            x2, y2 = p2["x"] + p2["w"] / 2, p2["y"] + p2["h"] / 2
+            feats[i, 0] = abs(x1 - x2) + abs(y1 - y2)
+        # 带宽需求（端口数代理，来源: AlphaChip net bandwidth）
+        src_dev = devices.get(src_id)
+        dst_dev = devices.get(dst_id)
+        if src_dev and dst_dev:
+            feats[i, 1] = min(len(src_dev.ports), len(dst_dev.ports))
+        # 优先级（默认 1.0，可扩展）
+        feats[i, 2] = 1.0
+        # 类型 one-hot（4 类：passive-passive, passive-active, active-active, other）
+        src_cat = src_dev.category if src_dev else "other"
+        dst_cat = dst_dev.category if dst_dev else "other"
+        type_idx = _edge_type_index(src_cat, dst_cat)
+        feats[i, 3 + type_idx] = 1.0
+    return feats
+
+
+def _edge_type_index(src_cat: str, dst_cat: str) -> int:
+    """计算边类型索引（0-3）。"""
+    cats = {src_cat, dst_cat}
+    if cats == {"passive"}:
+        return 0
+    if cats == {"active"}:
+        return 1
+    if "passive" in cats and "active" in cats:
+        return 2
+    return 3
+
+
 __all__ = [
     "GraphEncoder",
+    "EdgeGraphEncoder",
+    "EdgeEncoderConfig",
     "StateEncoder",
     "EncoderConfig",
     "build_node_features",
+    "build_edge_features",
     "edges_from_graph",
 ]
