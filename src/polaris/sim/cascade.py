@@ -9,9 +9,8 @@
 - SAX 子网络增长: https://flaport.github.io/sax/
 - 光子电路 S 参数级联理论: 标准微波网络理论
 
-集成方式（遵守 project_rules.md 规则 2/3）：
-- 优先使用 SAX（规则 2 直接集成）
-- SAX 不可用时使用纯 numpy 子网络增长（规则 3 复刻，独立实现）
+集成方式（规则 2 直接集成，无可选依赖）：
+- SAX 为必装依赖，直接 import；纯 numpy 子网络增长为复刻兜底实现
 """
 
 from __future__ import annotations
@@ -19,17 +18,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+import sax as _sax
 
 from polaris.sim.types import SDict
-
-# 尝试导入 SAX（规则 2 直接集成）
-try:
-    import sax as _sax
-
-    _HAS_SAX = True
-except ImportError:
-    _sax = None
-    _HAS_SAX = False
 
 
 @dataclass
@@ -289,8 +280,8 @@ def cascade_circuit(
     Returns:
         电路级 S 参数字典。
     """
-    # 如果有 SAX，优先使用（规则 2 直接集成）
-    if _HAS_SAX and ports is not None:
+    # SAX 为必装依赖，优先使用（规则 2 直接集成）
+    if ports is not None:
         try:
             return _cascade_with_sax(instances, connections, ports)
         except Exception:

@@ -449,12 +449,8 @@ def _load_klayout_layout(gds_path: Path):
 
     Raises:
         FileNotFoundError: GDS 文件不存在。
-        ImportError: klayout 未安装。
     """
-    try:
-        import klayout.db as db
-    except ImportError as e:
-        raise ImportError("klayout 未安装，无法解析 GDS 文件。请运行: pip install klayout") from e
+    import klayout.db as db
 
     if not gds_path.exists():
         raise FileNotFoundError(f"GDS 文件不存在: {gds_path}")

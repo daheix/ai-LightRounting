@@ -393,19 +393,30 @@ pip install -e .
 
 ### 5.3 工具使用规范
 
-1. **三方工具 import 须 try/except**：代码中 import 三方工具时用 try/except 包裹，缺失时回退到复刻品
+**规则 5.2 强制**：所有依赖均为必装，无可选依赖。代码中直接 import 三方工具，
+禁止 try/except 回退（例外：gdsfactory/SiPANN 因上游 Python 3.14 兼容性问题保留兜底）。
+
+1. **三方工具直接 import**：代码中 import 三方工具时直接 import，禁止 try/except 回退
    ```python
-   try:
-       import sax as _sax
-       _HAS_SAX = True
-   except ImportError:
-       _sax = None
-       _HAS_SAX = False
+   # 正确（规则 5.2 必装依赖）
+   import sax as _sax
+
+   # 错误（禁止可选依赖回退）
+   # try:
+   #     import sax as _sax
+   #     _HAS_SAX = True
+   # except ImportError:
+   #     _sax = None
    ```
-2. **复刻品优先级**：原工具可用时优先用原工具，不可用时回退到 `3dtool/pycopy/pyCopy<Xxx>`
-3. **核心功能独立**：核心功能（PDK/布局/布线/训练）不硬依赖三方工具，复刻品保证可用
-4. **import 位置**：三方工具的 import 必须在函数内部或模块顶部 try/except，禁止裸 import
-5. **测试兼容**：测试中用 `pytest.importorskip("sax")` 跳过缺失三方依赖的测试
+2. **复刻品定位**：复刻品（pyCopy*）作为算法学习与对照实现保留，不再作为运行时兜底
+3. **核心功能依赖**：核心功能（PDK/布局/布线/训练）直接依赖三方工具，复刻品仅用于算法对照
+4. **import 位置**：三方工具的 import 在模块顶部或函数内部直接 import
+5. **测试兼容**：测试中直接 import 三方工具；仅 gdsfactory/SiPANN 因上游兼容性问题保留 importorskip
+
+**例外说明**（上游兼容性问题，非项目可控）：
+- `gdsfactory`：8.18.0 锁定 pydantic<2.10，pydantic<2.10 的 pydantic-core 无 Python 3.14 wheel
+- `SiPANN`：依赖 tensorflow，tensorflow 无 Python 3.14 wheel
+- 在 Python 3.10-3.13 环境下两者均为必装
 
 ### 5.4 环境验证命令
 
@@ -762,7 +773,7 @@ mypy src/polaris/ --ignore-missing-imports  # 类型检查（可选但推荐）
 - 使用 `pytest.fixture` 共享测试数据
 - 浮点比较用 `np.testing.assert_almost_equal`，指定 `decimal` 容差
 - 禁止依赖测试执行顺序，每个测试独立
-- 可选依赖测试用 `pytest.importorskip("sax")` 跳过
+- 可选依赖测试直接 import 三方工具；仅 gdsfactory/SiPANN 因上游兼容性问题保留 importorskip
 
 来源：pytest 最佳实践 https://docs.pytest.org/en/stable/explanation/goodpractices.html
 

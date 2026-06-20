@@ -16,7 +16,6 @@ from pathlib import Path
 
 import pytest
 
-from polaris.data.specs import CircuitSpec, DeviceSpec
 from polaris.data.variant_generator import (
     CURRICULUM_LEVELS,
     PARAM_SWEEP_RANGES,
@@ -25,7 +24,6 @@ from polaris.data.variant_generator import (
     generate_scale_variants,
     make_device_with_params,
 )
-
 
 # ---------------------------------------------------------------------------
 # make_device_with_params（参数化 PDK 工厂）
@@ -172,6 +170,7 @@ def test_generate_param_sweep_variants_reproducible(tmp_path: Path) -> None:
 def test_generate_param_sweep_variants_custom_base(tmp_path: Path) -> None:
     """测试自定义基准电路。"""
     from polaris.data.variant_generator import _scale_mzi_lattice
+
     base = [_scale_mzi_lattice(5, "custom_mzi")]
     stats = generate_param_sweep_variants(tmp_path, base_circuits=base, n_sweeps=2)
     assert stats["total_circuits"] == 2

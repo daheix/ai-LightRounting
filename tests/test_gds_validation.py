@@ -90,8 +90,7 @@ def _make_placement(
 
 @pytest.fixture
 def klayout_db():
-    """提供 klayout.db 模块，缺失时跳过依赖它的测试（规则 5.3）。"""
-    pytest.importorskip("klayout")
+    """提供 klayout.db 模块（必装依赖，规则 2 直接集成）。"""
     import klayout.db as db
 
     return db

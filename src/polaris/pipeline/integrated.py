@@ -428,12 +428,9 @@ class IntegratedPipeline:
         Returns:
             (GDS 文件路径, DRC 是否通过)。GDS 导出失败时路径为空。
         """
-        try:
-            from polaris.eval.layout_render import export_gds, run_drc
-            from polaris.pipeline._converters import convert_to_paths, convert_to_placements
-        except ImportError as e:
-            logger.warning("GDS 导出依赖缺失: %s", e)
-            return "", False
+        from polaris.eval.layout_render import export_gds, run_drc
+        from polaris.pipeline._converters import convert_to_paths, convert_to_placements
+
         placements = convert_to_placements(circuit, result.placements)
         paths = convert_to_paths(result.paths)
         out = Path(cfg.output_dir)

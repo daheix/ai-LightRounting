@@ -45,20 +45,20 @@ bash 3dtool/wheels/install.sh --check
 
 | 工具 | 状态 | 用途 | 安装方式 |
 |------|------|------|----------|
-| gdsfactory | ❌ 未安装 | 版图生成/PDK/GDS导出 | `pip install gdsfactory` |
+| gdsfactory | ✅ 已装 8.18.0 | 版图生成/PDK/GDS导出 | `pip install gdsfactory` |
 | klayout | ✅ 已装 0.30.9 | DRC/LVS/版图查看 | `pip install klayout` |
-| gdstk | ❌ 未安装 | 高性能 GDS 读写 | `pip install gdstk` |
+| gdstk | ✅ 已装 1.0.0 | 高性能 GDS 读写 | `pip install gdstk` |
 
 ### simulation/ — 仿真类工具
 
 | 工具 | 状态 | 用途 | 安装方式 |
 |------|------|------|----------|
-| meep | ❌ 未安装 | FDTD 电磁仿真 | `pip install meep` |
-| simphony | ✅ 已装 0.6.0 | 光子电路 S 参数仿真 | `pip install simphony` |
+| meep | ⏳ 预留 | FDTD 电磁仿真（项目未使用） | `pip install meep` |
+| simphony | ✅ 已装 0.7.3 | 光子电路 S 参数仿真 | `pip install simphony` |
 | sax | ✅ 已装 0.14.7 | 光子电路频率域仿真 | `pip install sax` |
-| SiPANN | ❌ 未安装 | 硅光器件模型 | `pip install SiPANN` |
-| femwell | ❌ 未安装 | FEM 模式求解器 | `pip install femwell` |
-| meow | ❌ 未安装 | 模式求解器 | `pip install meow` |
+| SiPANN | ⚠️ Py3.10-3.13 必装 | 硅光器件模型（依赖 tensorflow，无 Py3.14） | `pip install SiPANN` |
+| femwell | ⏳ 预留 | FEM 模式求解器（项目未使用） | `pip install femwell` |
+| meow | ⏳ 预留 | 模式求解器（项目未使用） | `pip install meow` |
 
 ### ml/ — 机器学习类工具
 
@@ -74,7 +74,7 @@ bash 3dtool/wheels/install.sh --check
 |------|------|------|----------|
 | numpy | ✅ 已装 2.4.6 | 数值计算 | `pip install numpy` |
 | scipy | ✅ 已装 1.17.1 | 优化求解 | `pip install scipy` |
-| shapely | ❌ 未安装 | 几何运算（constraint_checker 用纯 Python 实现，无需 shapely） | `pip install shapely` |
+| shapely | ✅ 已装 2.1.2 | 几何运算 | `pip install shapely` |
 
 ### viz/ — 可视化类工具
 

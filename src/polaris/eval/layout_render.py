@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+# 三方工具：klayout（必装依赖，规则 2 直接集成）
+import klayout.db as _db
 import numpy as np
 
 from polaris.engine.floorplan_env import Placement
@@ -29,32 +31,6 @@ from polaris.pdk.layer_map import (
 )
 from polaris.pdk.port import Direction
 from polaris.router.waveguide_router import WaveguidePath
-
-# 三方工具：klayout（import 失败时 GDS/OASIS 导出抛出明确错误）
-try:
-    import klayout.db as _db
-
-    _HAS_KLAYOUT = True
-except ImportError:
-    _db = None
-    _HAS_KLAYOUT = False
-
-
-def _require_klayout(feature_name: str) -> None:
-    """检查 klayout 是否可用，不可用时抛出 ImportError。
-
-    Args:
-        feature_name: 功能名称（用于错误提示）。
-
-    Raises:
-        ImportError: klayout 未安装时。
-    """
-    if not _HAS_KLAYOUT:
-        raise ImportError(
-            f"{feature_name} 需要 klayout 库。请安装：pip install klayout"
-            "（或 pip install polaris-pnr[layout]）"
-        )
-
 
 # 器件类别 → 渲染颜色
 _CATEGORY_COLORS = {
@@ -231,7 +207,6 @@ def _create_klayout_layout(dbu: float = 0.001):
         ``(layout, top_cell, layer_map)`` 元组。``layer_map`` 为名称到
         klayout layer info 的字典，包含 WG/PORT/DEVREC/TEXT/FLOORPLAN 等层。
     """
-    _require_klayout("GDS/OASIS 导出")
     db = _db
 
     ly = db.Layout()

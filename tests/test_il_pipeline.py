@@ -21,8 +21,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-torch = pytest.importorskip("torch")
-
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))

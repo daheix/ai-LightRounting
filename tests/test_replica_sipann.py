@@ -18,6 +18,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+# SiPANN 依赖 tensorflow，无 Python 3.14 支持（上游兼容性问题）。
+# 在 Python 3.10-3.13 环境下可正常安装使用。
 SiPANN = pytest.importorskip("SiPANN")
 
 from pycopy.pyCopySiPANN import waveguide_s, y_branch_s  # noqa: E402

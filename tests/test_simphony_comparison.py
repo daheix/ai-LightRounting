@@ -15,9 +15,7 @@ simphony 为运行依赖（规则 5.3）：import 失败时测试用
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
-simphony = pytest.importorskip("simphony")
 from polaris.sim.models import (  # noqa: E402
     grating_coupler_s,
     waveguide_s,

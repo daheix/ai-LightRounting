@@ -12,10 +12,7 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
-
-sax = pytest.importorskip("sax")
-
+import sax
 from pycopy.pyCopySAX import cascade_circuit  # noqa: E402
 
 from polaris.sim.models import waveguide_s  # noqa: E402

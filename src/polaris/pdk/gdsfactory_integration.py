@@ -1,11 +1,12 @@
 """gdsfactory 集成模块（步骤4：生成真实参数化器件 GDS）。
 
 gdsfactory 是开源光子芯片设计库（MIT 许可证），含数百个参数化组件。
-本模块提供 gdsfactory 集成接口，import 失败时降级到 PoLaRIS 原生 GDS 导出。
+本模块提供 gdsfactory 集成接口。
 
-按规则 5.3，gdsfactory import 须 try/except：
-- import 成功时：用 gdsfactory 生成真实参数化器件 GDS（含真实几何形状）
-- import 失败时：降级到 polaris.eval.layout_render.export_gds（矩形抽象）
+注：gdsfactory 8.18.0 锁定 pydantic<2.10，而 pydantic<2.10 的 pydantic-core
+无 Python 3.14 wheel，因此在 Python 3.14 环境下 gdsfactory 可能 import 失败。
+这是上游版本锁定问题，非项目代码问题。在其他 Python 版本（3.10-3.13）下
+gdsfactory 可正常安装使用。
 
 来源:
 - gdsfactory (MIT): https://gdsfactory.github.io/gdsfactory/
@@ -18,6 +19,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# gdsfactory 为必装依赖（规则 2 直接集成）。
+# Python 3.14 环境下因上游 pydantic 版本锁定可能 import 失败，保留兜底。
 try:
     import gdsfactory as gf
 
@@ -28,12 +31,19 @@ except ImportError:
 
 
 def is_available() -> bool:
-    """检查 gdsfactory 是否可用。
+    """检查 gdsfactory 是否可用（import 成功且 PDK 可激活）。
 
     Returns:
-        True 若 gdsfactory 已安装。
+        True 若 gdsfactory 已安装且 PDK 可正常激活。
     """
-    return _HAS_GDSFACTORY
+    if not _HAS_GDSFACTORY:
+        return False
+    try:
+        # 严格检查：PDK 可激活（gdsfactory 8.18.0 与 pydantic 2.x 可能不兼容）
+        gf.PDK.get_generic().activate()
+        return True
+    except Exception:
+        return False
 
 
 def generate_mzi_gds(

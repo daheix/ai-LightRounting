@@ -15,8 +15,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-
-torch = pytest.importorskip("torch")
+import torch
 
 from polaris.trainer.bc import (  # noqa: E402
     BCConfig,
@@ -123,13 +122,15 @@ def test_bc_discrete_accuracy_improves() -> None:
 
 def test_ppo_agent_pretrain_continuous(dataset: ExpertDataset) -> None:
     """测试 PPOAgent.pretrain 接口（连续动作）。"""
+    torch.manual_seed(42)
+    np.random.seed(42)
     agent = PPOAgent(obs_dim=OBS_DIM, action_dim=ACTION_DIM, config=PPOConfig(), hidden_dim=32)
     obs, act = dataset.get_all()
-    bc_cfg = BCConfig(n_epochs=5, batch_size=8, log_every=100)
+    bc_cfg = BCConfig(n_epochs=10, batch_size=8, log_every=100)
     history = agent.pretrain(obs, act, config=bc_cfg)
-    assert len(history) == 5
+    assert len(history) == 10
     assert history[-1]["loss"] > 0
-    # 损失应下降
+    # 损失应下降（10 epoch 足以稳定下降）
     assert history[-1]["loss"] < history[0]["loss"]
 
 

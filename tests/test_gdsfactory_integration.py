@@ -1,8 +1,10 @@
 """gdsfactory 集成模块测试（步骤4：生成真实参数化器件 GDS）。
 
-验证 gdsfactory 集成模块的接口正确性。gdsfactory import 失败时
-（规则 5.3）测试用 ``pytest.importorskip`` 跳过真实生成测试，
-但降级行为测试始终运行。
+验证 gdsfactory 集成模块的接口正确性。
+
+注：gdsfactory 8.18.0 锁定 pydantic<2.10，在 Python 3.14 环境下可能 import 失败
+（上游版本锁定问题）。测试用 ``pytest.importorskip`` 跳过真实生成测试，
+但降级行为测试始终运行。在 Python 3.10-3.13 环境下 gdsfactory 可正常使用。
 
 来源:
 - gdsfactory (MIT): https://gdsfactory.github.io/gdsfactory/

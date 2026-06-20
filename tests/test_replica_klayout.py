@@ -11,9 +11,6 @@ DRC 引擎的约束检查结果一致性，覆盖间距、重叠、最小宽度�
 
 from __future__ import annotations
 
-import pytest
-
-klayout = pytest.importorskip("klayout")
 from klayout.db import Box, Region  # noqa: E402
 from pycopy.pyCopyKLayout import (  # noqa: E402
     check_min_width,
