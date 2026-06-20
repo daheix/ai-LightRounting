@@ -220,6 +220,9 @@ class FloorplanEnv(gym.Env):
                 "occupancy": spaces.Box(
                     low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
                 ),
+                "congestion": spaces.Box(
+                    low=0, high=1, shape=(self.grid_h, self.grid_w), dtype=np.float32
+                ),
                 "port_positions": spaces.Box(
                     low=-1, high=1.0, shape=(len(self.instance_ids), 4), dtype=np.float32
                 ),
@@ -260,6 +263,7 @@ class FloorplanEnv(gym.Env):
     def _obs(self) -> dict:
         placed_ids = list(self.state.placements.keys())
         occ = self.state.occupancy_grid(placed_ids)
+        cong = self._compute_congestion()
         # 端口位置（每个实例取首端口 x,y + 包围盒中心）
         port_pos = np.full((len(self.instance_ids), 4), -1.0, dtype=np.float32)
         for i, inst_id in enumerate(self.instance_ids):
@@ -275,6 +279,7 @@ class FloorplanEnv(gym.Env):
                 port_pos[i, 3] = (ymin + ymax) / 2 / self.state.canvas_h
         obs = {
             "occupancy": occ,
+            "congestion": cong,
             "port_positions": port_pos,
             "step": np.array([self._step_idx], dtype=np.float32),
         }
@@ -286,6 +291,23 @@ class FloorplanEnv(gym.Env):
             obs["gnn_embedding"] = self._compute_gnn_embedding(occ)
             obs["graph_features"] = self._build_graph_features(occ)
         return obs
+
+    def _compute_congestion(self) -> np.ndarray:
+        """计算 RUDY 拥塞图（即时，无需训练）。
+
+        对齐 DeepPlace (NeurIPS 2021) congestion map 作为 obs 通道的业界标准。
+        来源: DREAMPlace RUDY https://arxiv.org/abs/2004.10746
+        """
+        from polaris.engine.congestion import rudy_congestion
+
+        return rudy_congestion(
+            placements=self.state.placements,
+            connections=self.net.connections,
+            grid_h=self.grid_h,
+            grid_w=self.grid_w,
+            canvas_w=self.state.canvas_w,
+            canvas_h=self.state.canvas_h,
+        )
 
     def _build_graph_features(self, occ: np.ndarray) -> dict:
         """构建 GNN 端到端训练所需的图特征字典。

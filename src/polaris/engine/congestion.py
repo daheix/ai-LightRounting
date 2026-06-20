@@ -340,6 +340,61 @@ def _downsample_congestion(cong: np.ndarray, oh: int, ow: int) -> np.ndarray:
     return out
 
 
+def rudy_congestion(
+    placements: dict,
+    connections: list,
+    grid_h: int,
+    grid_w: int,
+    canvas_w: float,
+    canvas_h: float,
+) -> np.ndarray:
+    """RUDY (Rectangular Uniform wire DensitY) 即时拥塞估计。
+
+    对每条连接的 bounding box 均匀分配 1 单位布线需求，累加到栅格。
+    比详细布线快 1000×，是业界 RL 布局 obs 通道的标准做法。
+
+    来源:
+    - DREAMPlace (DAC 2020) RUDY 工业标准实现
+      https://arxiv.org/abs/2004.10746
+    - DeepPlace (NeurIPS 2021 ML-CAD) congestion map 作为 obs 通道
+      https://openreview.net/pdf?id=uNYqDfPEDD8
+
+    Args:
+        placements: ``{instance_id: Placement}`` 字典（已放置器件）。
+        connections: ``NetlistConnection`` 列表。
+        grid_h: 栅格高度。
+        grid_w: 栅格宽度。
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+
+    Returns:
+        归一化拥塞图 ``[grid_h, grid_w]``，值域 [0, 1]。
+    """
+    cong = np.zeros((grid_h, grid_w), dtype=np.float32)
+    for conn in connections:
+        src_pl = placements.get(conn.src_instance)
+        dst_pl = placements.get(conn.dst_instance)
+        if src_pl is None or dst_pl is None:
+            continue
+        src_port = src_pl.port_positions().get(conn.src_port)
+        dst_port = dst_pl.port_positions().get(conn.dst_port)
+        if src_port is None or dst_port is None:
+            continue
+        x0, y0 = src_port
+        x1, y1 = dst_port
+        xmin, xmax = min(x0, x1), max(x0, x1)
+        ymin, ymax = min(y0, y1), max(y0, y1)
+        gi0 = max(0, int(xmin / canvas_w * grid_w))
+        gi1 = min(grid_w, int(xmax / canvas_w * grid_w) + 1)
+        gj0 = max(0, int(ymin / canvas_h * grid_h))
+        gj1 = min(grid_h, int(ymax / canvas_h * grid_h) + 1)
+        if gi1 <= gi0 or gj1 <= gj0:
+            continue
+        cong[gj0:gj1, gi0:gi1] += 1.0
+    mx = cong.max()
+    return cong / mx if mx > 0 else cong
+
+
 __all__ = [
     "CongestionCNN",
     "CongestionPredictor",
@@ -347,6 +402,7 @@ __all__ = [
     "DatasetConfig",
     "grid_from_devices",
     "generate_congestion_dataset",
+    "rudy_congestion",
 ]
 
 

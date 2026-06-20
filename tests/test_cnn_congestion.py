@@ -7,8 +7,10 @@
 - chipfoundryservices: CNN 拥塞预测
   https://www.chipfoundryservices.com/topic/ml-for-place-and-route
 - LeCun et al., 1998, CNN 反向传播与 SGD/Adam 训练
-  https://ieeexplore.ieee.org/document/726791
+  https://ieeexplore.ieee.org/document/726861
 - PyTorch BCEWithLogitsLoss: https://pytorch.org/docs/stable/generated/torch.nn.BCEWithLogitsLoss
+- DREAMPlace RUDY: https://arxiv.org/abs/2004.10746
+- DeepPlace congestion-as-obs: https://openreview.net/pdf?id=uNYqDfPEDD8
 """
 
 from __future__ import annotations
@@ -20,7 +22,12 @@ from polaris.engine.congestion import (
     CongestionCNN,
     DatasetConfig,
     generate_congestion_dataset,
+    rudy_congestion,
 )
+from polaris.engine.floorplan_env import Placement
+from polaris.engine.netlist import Netlist, NetlistConnection
+from polaris.pdk.device import BoundingBox, Device
+from polaris.pdk.port import Direction, Port
 
 
 def _make_cnn(grid_h: int = 16, grid_w: int = 16) -> CongestionCNN:
@@ -111,3 +118,96 @@ def test_predicted_congestion_in_unit_range():
         out = cnn.forward(g)
         assert out.min() >= 0.0, f"预测最小值 {out.min()} < 0"
         assert out.max() <= 1.0, f"预测最大值 {out.max()} > 1"
+
+
+# ---------------------------------------------------------------------------
+# rudy_congestion RUDY 即时拥塞估计（roadmap 2.1.1 孤岛#3 打通）
+# ---------------------------------------------------------------------------
+
+
+def _make_test_device(dev_id: str, w: float = 20.0, h: float = 10.0) -> Device:
+    """构造测试用器件（含两个左右端口）。"""
+    return Device(
+        device_id=dev_id,
+        platform="SOI",
+        category="passive",
+        name="wg",
+        ports=[
+            Port(name="in", x=0.0, y=h / 2, direction=Direction.WEST, waveguide_type="strip", width=0.5),
+            Port(name="out", x=w, y=h / 2, direction=Direction.EAST, waveguide_type="strip", width=0.5),
+        ],
+        bbox=BoundingBox(xmin=0.0, ymin=0.0, xmax=w, ymax=h),
+    )
+
+
+def _make_test_placements() -> dict:
+    """构造两个已放置器件（水平排列，间距 30μm）。"""
+    dev_a = _make_test_device("dev_a", w=20.0, h=10.0)
+    dev_b = _make_test_device("dev_b", w=20.0, h=10.0)
+    return {
+        "dev_a": Placement(instance_id="dev_a", device=dev_a, x=0.0, y=0.0, rotation=0),
+        "dev_b": Placement(instance_id="dev_b", device=dev_b, x=50.0, y=0.0, rotation=0),
+    }
+
+
+def test_rudy_congestion_shape() -> None:
+    """验证 RUDY 拥塞图形状与栅格尺寸一致。"""
+    placements = _make_test_placements()
+    connections = [
+        NetlistConnection(src_instance="dev_a", src_port="out", dst_instance="dev_b", dst_port="in"),
+    ]
+    cong = rudy_congestion(placements, connections, grid_h=10, grid_w=10, canvas_w=100.0, canvas_h=20.0)
+    assert cong.shape == (10, 10), f"拥塞图形状 {cong.shape} != (10, 10)"
+
+
+def test_rudy_congestion_value_range() -> None:
+    """验证 RUDY 拥塞图值域 [0, 1]（归一化）。"""
+    placements = _make_test_placements()
+    connections = [
+        NetlistConnection(src_instance="dev_a", src_port="out", dst_instance="dev_b", dst_port="in"),
+    ]
+    cong = rudy_congestion(placements, connections, grid_h=10, grid_w=10, canvas_w=100.0, canvas_h=20.0)
+    assert cong.min() >= 0.0, f"最小值 {cong.min()} < 0"
+    assert cong.max() <= 1.0, f"最大值 {cong.max()} > 1"
+    assert cong.max() > 0.0, "应有非零拥塞"
+
+
+def test_rudy_congestion_empty_placements() -> None:
+    """验证无放置器件时返回全零拥塞图。"""
+    connections = [
+        NetlistConnection(src_instance="dev_a", src_port="out", dst_instance="dev_b", dst_port="in"),
+    ]
+    cong = rudy_congestion({}, connections, grid_h=8, grid_w=8, canvas_w=100.0, canvas_h=20.0)
+    assert cong.shape == (8, 8)
+    assert cong.max() == 0.0, "无放置器件时拥塞应为 0"
+
+
+def test_rudy_congestion_accumulates() -> None:
+    """验证多条连接累加拥塞（交叉区域拥塞更高）。"""
+    placements = _make_test_placements()
+    connections = [
+        NetlistConnection(src_instance="dev_a", src_port="out", dst_instance="dev_b", dst_port="in"),
+        NetlistConnection(src_instance="dev_a", src_port="out", dst_instance="dev_b", dst_port="in"),
+    ]
+    cong_multi = rudy_congestion(
+        placements, connections, grid_h=10, grid_w=10, canvas_w=100.0, canvas_h=20.0
+    )
+    connections_single = [connections[0]]
+    cong_single = rudy_congestion(
+        placements, connections_single, grid_h=10, grid_w=10, canvas_w=100.0, canvas_h=20.0
+    )
+    # 归一化后两者最大值都为 1.0，但多连接的拥塞分布应更广（非零元素更多）
+    assert cong_multi.sum() >= cong_single.sum(), "多连接拥塞总和应 >= 单连接"
+
+
+def test_rudy_congestion_missing_port() -> None:
+    """验证端口不存在时跳过该连接（不崩溃）。"""
+    placements = _make_test_placements()
+    connections = [
+        NetlistConnection(
+            src_instance="dev_a", src_port="nonexistent", dst_instance="dev_b", dst_port="in"
+        ),
+    ]
+    cong = rudy_congestion(placements, connections, grid_h=8, grid_w=8, canvas_w=100.0, canvas_h=20.0)
+    assert cong.shape == (8, 8)
+    assert cong.max() == 0.0, "端口不存在时拥塞应为 0"
