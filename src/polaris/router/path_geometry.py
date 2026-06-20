@@ -213,7 +213,27 @@ def path_loss(
     crossing_loss_db: float = 0.3,
     num_crossings: int = 0,
 ) -> float:
-    """计算波导路径损耗（传播损耗 + 弯曲损耗 + 交叉损耗）。"""
+    """计算波导路径损耗（传播损耗 + 弯曲损耗 + 交叉损耗）。
+
+    默认损耗值来源（SiEPIC EBeam PDK 真实测量值）:
+    - bend_loss_db=0.05: 欧拉弯曲单弯损耗，SiEPIC EBeam PDK 中 euler bend
+      在 1550nm 波段下单弯损耗典型值 0.005-0.05 dB
+      来源: SiEPIC_EBeam_PDK, Lukas Chrostowski et al., UBC, MIT 协议
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - crossing_loss_db=0.3: 波导交叉损耗，SiEPIC EBeam PDK 中 crossing_te1550
+      在 1550nm 波段下单次交叉损耗典型值 0.15-0.3 dB
+      来源: 同上 SiEPIC_EBeam_PDK
+
+    Args:
+        path: 折线路径点序列。
+        loss_db_cm: 传播损耗系数 (dB/cm)。
+        bend_loss_db: 单弯损耗 (dB)，默认 0.05（SiEPIC EBeam PDK）。
+        crossing_loss_db: 单次交叉损耗 (dB)，默认 0.3（SiEPIC EBeam PDK）。
+        num_crossings: 交叉数。
+
+    Returns:
+        总损耗 (dB)。
+    """
     length_um = path_length(path)
     propagation = loss_db_cm * length_um / 1e4  # cm = 1e4 μm
     # 估算弯曲数（方向变化点）

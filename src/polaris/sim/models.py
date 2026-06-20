@@ -180,7 +180,11 @@ def ring_resonator_s(
     # 环内损耗（振幅）— 默认给一个小损耗以显示谐振
     loss_db_cm = params.loss_db_cm
     if loss_db_cm <= 0:
-        loss_db_cm = 0.1  # 默认 0.1 dB/cm 以显示谐振陷波
+        # 默认 0.1 dB/cm 以显示谐振陷波
+        # 来源: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗典型值 0.1-3.0 dB/cm
+        #   SiEPIC_EBeam_PDK, Lukas Chrostowski et al., UBC, MIT 协议
+        #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        loss_db_cm = 0.1
     a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
     # 直通振幅（自耦合系数）
     t = np.sqrt(1.0 - params.coupling)

@@ -73,6 +73,8 @@ class RoutingEnvConfig:
     canvas_w: float = 1000.0
     canvas_h: float = 1000.0
     grid_size: float = 5.0
+    # RL 奖励权重（经验调参值，来源: LiDAR ISPD'25 RL routing
+    # https://arxiv.org/abs/2504.18813 + PPO reward clipping 最佳实践 SB3）
     loss_weight: float = 1.0
     length_weight: float = 0.001
     congestion_weight: float = 0.1
@@ -280,7 +282,10 @@ class RoutingEnv(gym.Env):
         max_cong = float(self.state.congestion.max()) if self.state.congestion.size else 0.0
         congestion_pen = self.congestion_weight * max_cong
         # DRC：检查弯曲半径是否过小（三点圆弧半径估计）
-        drc_violations = _count_bend_radius_violations(wp.points)
+        # 从平台约束读取 min_radius（SOI=5/SiN=50/InP=100/LNOI=30 μm）
+        _, _, platform = self._current_ports()
+        min_radius = get_platform_constraints(platform)["min_bend_radius_um"]
+        drc_violations = _count_bend_radius_violations(wp.points, min_radius=min_radius)
         drc_pen = self.drc_penalty * drc_violations * 0.01
         reward = -(self.loss_weight * loss + self.length_weight * length + congestion_pen + drc_pen)
         # Reward clipping：限制单步 reward 下限，防止异常值摧毁价值函数
@@ -305,24 +310,31 @@ class RoutingEnv(gym.Env):
         }
 
 
-def _count_bend_radius_violations(points: list[tuple[float, float]]) -> int:
+def _count_bend_radius_violations(
+    points: list[tuple[float, float]],
+    min_radius: float = 5.0,
+) -> int:
     """统计路径中弯曲半径过小的转弯数。
 
     用三点圆弧半径估计：对每个中间点 p1，由 (p0, p1, p2) 估算弯曲半径，
-    若半径 < 工艺最小值则计为违规。工艺最小值取 5.0 μm（SOI 默认）。
+    若半径 < 工艺最小值则计为违规。
 
     来源: 三点圆弧半径公式 R = |v1||v2||v1-v2| / (2|v1×v2|)
            与 polaris.sim.constraint_checker._estimate_bend_radius 一致
+    工艺最小值来源: polaris.router.waveguide_router.PLATFORM_CONSTRAINTS
+           SOI=5.0μm / SiN=50.0μm / InP=100.0μm / LNOI=30.0μm
+           来源: SiEPIC EBeam PDK 与各 foundry 工艺手册
+           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
     Args:
         points: 路径点序列。
+        min_radius: 工艺最小弯曲半径 (μm)，默认 5.0（SOI）。
 
     Returns:
         弯曲半径违规数。
     """
     if len(points) < 3:
         return 0
-    min_radius = 5.0  # SOI 默认最小弯曲半径
     violations = 0
     for i in range(1, len(points) - 1):
         p0, p1, p2 = points[i - 1], points[i], points[i + 1]
