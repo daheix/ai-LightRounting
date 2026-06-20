@@ -14,7 +14,7 @@ import subprocess
 import time
 from pathlib import Path
 
-INTERVAL = 300  # 5分钟
+INTERVAL = 1200  # 20分钟（用户规则：自动提交代码间隔）
 DEV_BRANCH = "trae/solo-agent-fk2qDL"
 MAIN_BRANCH = "main"
 LOG_FILE = Path("/workspace/checkpoints/rl_2m/auto_merge.log")
