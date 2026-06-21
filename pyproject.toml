@@ -36,12 +36,18 @@ dependencies = [
     "sax",
     "gdstk",
     "shapely",
-    "gdsfactory>=8.0",
 ]
 
 [project.optional-dependencies]
-# 无可选依赖：所有依赖均为必装（规则 5.2）
+# gdsfactory 因上游 pydantic 版本锁定，在 Python 3.14 下不可用（规则 5.3 例外）
+# 在 Python 3.10-3.13 环境下安装: pip install polaris-pnr[gdsfactory]
+gdsfactory = [
+    "gdsfactory>=8.0",
+]
 # SiPANN 因依赖 tensorflow 无 Python 3.14 支持，仅在 Python 3.10-3.13 环境下安装
+sipann = [
+    "SiPANN",
+]
 dev = [
     "pytest",
     "ruff",

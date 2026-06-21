@@ -26,6 +26,9 @@ _SIEPIC_GDS_DIR = Path("data/benchmarks/siepic_examples")
 def _load_siepic_circuit(json_path: Path):
     """从 SiEPIC JSON netlist 加载 CircuitSpec。
 
+    SiEPIC JSON 使用 ``devices`` 列表格式（非 PoLaRIS 的 ``instances`` 字典格式），
+    因此直接从 JSON 构建 CircuitSpec，不通过 ``load_netlist``。
+
     Args:
         json_path: JSON netlist 文件路径。
 
@@ -33,29 +36,27 @@ def _load_siepic_circuit(json_path: Path):
         CircuitSpec 对象。
     """
     from polaris.data.specs import CircuitSpec, DeviceSpec
-    from polaris.engine.netlist import load_netlist
 
-    net, devices, _ = load_netlist(str(json_path))
-    circuit = CircuitSpec(
-        name=net.name,
-        devices=[
-            DeviceSpec(
-                name=d.device_id,
-                device_type=d.name,
-                width_um=max(d.bbox.xmax - d.bbox.xmin, 1.0),
-                height_um=max(d.bbox.ymax - d.bbox.ymin, 1.0),
-                ports=[(p.name, p.x, p.y, p.direction.name) for p in d.ports],
-            )
-            for d in devices.values()
-        ],
-        connections=[
-            (c.src_instance, c.src_port, c.dst_instance, c.dst_port)
-            for c in net.connections
-        ],
-        canvas_w=1000.0,
-        canvas_h=1000.0,
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+    devices = [
+        DeviceSpec(
+            name=d["name"],
+            device_type=d.get("type", d.get("component", "unknown")),
+            width_um=float(d.get("width_um", 10.0)),
+            height_um=float(d.get("height_um", 10.0)),
+            ports=[tuple(p) for p in d.get("ports", [])],
+            params=d.get("params", {}),
+        )
+        for d in data.get("devices", [])
+    ]
+    connections = [tuple(c) for c in data.get("connections", [])]
+    return CircuitSpec(
+        name=data.get("name", json_path.stem),
+        devices=devices,
+        connections=connections,
+        canvas_w=float(data.get("canvas_w", 1000.0)),
+        canvas_h=float(data.get("canvas_h", 1000.0)),
     )
-    return circuit
 
 
 def _get_benchmark_circuits() -> list[tuple[str, Path]]:
@@ -109,19 +110,48 @@ def test_siepic_gds_export_layers(name: str, json_path: Path, tmp_path: Path) ->
     """
     import klayout.db as db
 
-    from polaris.eval.layout_render import export_gds
     from polaris.engine.floorplan_env import Placement
-    from polaris.pdk.device import Device
+    from polaris.eval.layout_render import export_gds
+    from polaris.pdk.device import BoundingBox, Device
+    from polaris.pdk.port import Direction, Port
 
     circuit = _load_siepic_circuit(json_path)
     placements: dict[str, Placement] = {}
     x_offset = 0.0
     for dev_spec in circuit.devices:
+        w = int(dev_spec.width_um)
+        h = int(dev_spec.height_um)
+        # 从 SiEPIC JSON ports 构建 Port 对象（去重避免重复端口名）
+        dir_map = {
+            "N": Direction.NORTH,
+            "S": Direction.SOUTH,
+            "E": Direction.EAST,
+            "W": Direction.WEST,
+        }
+        seen_names: set[str] = set()
+        ports: list[Port] = []
+        for p in dev_spec.ports:
+            pname = str(p[0])
+            if pname in seen_names:
+                continue
+            seen_names.add(pname)
+            ports.append(
+                Port(
+                    name=pname,
+                    x=float(p[1]),
+                    y=float(p[2]),
+                    direction=dir_map.get(str(p[3])[:1].upper(), Direction.EAST),
+                    waveguide_type="strip",
+                    width=0.5,
+                )
+            )
         dev = Device(
-            name=dev_spec.device_type,
-            ports=[],
-            bbox=db.Box(0, 0, int(dev_spec.width_um), int(dev_spec.height_um)),
+            device_id=dev_spec.name,
+            platform="SOI",
             category="passive",
+            name=dev_spec.device_type,
+            ports=ports,
+            bbox=BoundingBox(0, 0, w, h),
         )
         placements[dev_spec.name] = Placement(
             instance_id=dev_spec.name,
@@ -137,7 +167,6 @@ def test_siepic_gds_export_layers(name: str, json_path: Path, tmp_path: Path) ->
     assert gds_path.exists(), "GDS 文件未生成"
     ly = db.Layout()
     ly.read(str(gds_path))
-    top = ly.top_cells()[0]
     layer_infos = [(li.layer, li.datatype) for li in ly.layer_infos()]
     assert (1, 0) in layer_infos, "缺少 WG layer (1,0)"
     assert (68, 0) in layer_infos, "缺少 DEVREC layer (68,0)"
@@ -145,7 +174,12 @@ def test_siepic_gds_export_layers(name: str, json_path: Path, tmp_path: Path) ->
 
 
 def test_siepic_waveguide_s_param_vs_simphony() -> None:
-    """PoLaRIS 波导 S 参数与 simphony siepic 一致（误差 < 0.5 dB）。"""
+    """PoLaRIS 波导 S 参数与 simphony siepic 一致（误差 < 0.5 dB）。
+
+    simphony 0.7.3 API 变化：waveguide 直接返回 dict（非可调用对象），
+    且不再接受 neff/ng 参数（改用 width/height 内部计算模式）。
+    此处仅对比无损耗波导的传输率（两者均应为 1.0）。
+    """
     from polaris.sim.models import waveguide_s
 
     wl = np.array([1.55])
@@ -154,8 +188,8 @@ def test_siepic_waveguide_s_param_vs_simphony() -> None:
 
     from simphony.libraries import siepic
 
-    siepic_wg = siepic.waveguide(length=100.0, neff=2.4, ng=4.0, loss=0.0)
-    siepic_s = siepic_wg(wl)
+    # simphony 0.7.3: waveguide(wl, pol, length, width, height, loss) 直接返回 dict
+    siepic_s = siepic.waveguide(wl=wl, length=100.0, loss=0.0)
     siepic_t = np.abs(siepic_s[("o0", "o1")][0]) ** 2
 
     assert polaris_t == pytest.approx(1.0, abs=1e-6), "PoLaRIS 无损耗波导传输应为 1.0"
@@ -164,7 +198,10 @@ def test_siepic_waveguide_s_param_vs_simphony() -> None:
 
 
 def test_siepic_y_branch_loss_vs_simphony() -> None:
-    """PoLaRIS Y 分支插损与 simphony siepic 在合理范围内（< 1 dB 差异）。"""
+    """PoLaRIS Y 分支插损与 simphony siepic 在合理范围内（< 1 dB 差异）。
+
+    simphony 0.7.3 API 变化：y_branch 直接返回 dict（非可调用对象）。
+    """
     from polaris.sim.models import y_branch_s
 
     wl = np.array([1.55])
@@ -174,10 +211,10 @@ def test_siepic_y_branch_loss_vs_simphony() -> None:
 
     from simphony.libraries import siepic
 
-    siepic_yb = siepic.y_branch()
-    siepic_s = siepic_yb(wl)
+    # simphony 0.7.3: y_branch(wl, pol, thickness, width) 直接返回 dict
+    siepic_s = siepic.y_branch(wl=wl)
     siepic_t = np.abs(siepic_s[("o0", "o1")][0]) ** 2
-    siepic_loss_db = -10 * np.log10(sieptic_t + 1e-15) if siepic_t > 0 else 99.0
+    siepic_loss_db = -10 * np.log10(siepic_t + 1e-15) if siepic_t > 0 else 99.0
 
     # Y 分支理论分束比 50:50，插损约 3.01 dB（分束）+ 额外插损
     assert 2.5 < polaris_loss_db < 4.0, f"PoLaRIS Y 分支损耗异常: {polaris_loss_db:.2f} dB"
