@@ -370,10 +370,17 @@ def _make_device_spec(
     width: float = 10.0,
     height: float = 10.0,
 ) -> DeviceSpec:
-    """构造合成 DeviceSpec（含标准 in/out 端口）。"""
+    """构造合成 DeviceSpec（含标准 in/out 端口）。
+
+    device_type 会通过 ``_LIDAR_TO_POLARIS_DEVICE_MAP`` 映射到 catalog
+    中的标准器件名，确保 ``circuit_spec_to_netlist_dict`` 转换后能被
+    ``instantiate_devices`` 正确实例化。
+    """
+    # 映射到 catalog 中的标准器件名（与 circuit_spec_to_netlist_dict 一致）
+    catalog_name = _LIDAR_TO_POLARIS_DEVICE_MAP.get(device_type, device_type)
     return DeviceSpec(
         name=name,
-        device_type=device_type,
+        device_type=catalog_name,
         width_um=width,
         height_um=height,
         ports=[
@@ -391,7 +398,8 @@ def _gen_tilos_ariane(num_devices: int) -> CircuitSpec:
     from polaris.data.specs import BenchmarkSource, TargetMetric
 
     devices = [
-        _make_device_spec(f"mod_{i}", "wg", width=20.0, height=20.0) for i in range(num_devices)
+        _make_device_spec(f"mod_{i}", "straight", width=20.0, height=20.0)
+        for i in range(num_devices)
     ]
     # 网格连接：mod_i.out → mod_{i+1}.in
     connections = [(f"mod_{i}", "out", f"mod_{i + 1}", "in") for i in range(num_devices - 1)]
@@ -444,7 +452,8 @@ def _gen_apollo_onoc(num_devices: int) -> CircuitSpec:
     # 中心路由器 + 叶节点
     devices = [_make_device_spec("router_0", "mmi", width=30.0, height=30.0)]
     devices.extend(
-        _make_device_spec(f"node_{i}", "wg", width=10.0, height=10.0) for i in range(1, num_devices)
+        _make_device_spec(f"node_{i}", "straight", width=10.0, height=10.0)
+        for i in range(1, num_devices)
     )
     # 星型连接：router_0.out → node_i.in
     connections = [("router_0", "out", f"node_{i}", "in") for i in range(1, num_devices)]
@@ -470,7 +479,7 @@ def _gen_lidar(num_devices: int) -> CircuitSpec:
     from polaris.data.specs import BenchmarkSource, TargetMetric
 
     devices = [
-        _make_device_spec(f"wg_{i}", "wg", width=10.0, height=5.0) for i in range(num_devices)
+        _make_device_spec(f"wg_{i}", "straight", width=10.0, height=5.0) for i in range(num_devices)
     ]
     # 链式连接：wg_i.out → wg_{i+1}.in
     connections = [(f"wg_{i}", "out", f"wg_{i + 1}", "in") for i in range(num_devices - 1)]
