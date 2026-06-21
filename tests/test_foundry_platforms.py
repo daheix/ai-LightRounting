@@ -1,6 +1,6 @@
-"""P0-3 PDK 覆盖扩展测试（第13轮）。
+"""P0-3 PDK 覆盖扩展测试（第13轮，第20轮扩展 LNOI）。
 
-验证 10 个公开 foundry 平台元数据的正确性与完整性。
+验证 11 个公开 foundry 平台元数据的正确性与完整性。
 
 来源: commercial_gap_analysis.md P0-3 PDK 覆盖
 """
@@ -22,8 +22,8 @@ class TestFoundryPlatformsRegistry:
     """Foundry 平台注册表测试。"""
 
     def test_platform_count(self):
-        """验证至少 10 个 foundry 平台已注册。"""
-        assert foundry_platform_count() >= 10
+        """验证至少 11 个 foundry 平台已注册。"""
+        assert foundry_platform_count() >= 11
 
     def test_list_platforms(self):
         """list_foundry_platforms 返回所有平台名。"""
@@ -143,14 +143,14 @@ class TestFoundryPlatformIntegration:
     """Foundry 平台与 PoLaRIS 集成测试。"""
 
     def test_total_platform_coverage(self):
-        """PDK 覆盖：4 内置 + 10 foundry = 14 平台。"""
+        """PDK 覆盖：4 内置 + 11 foundry = 15 平台。"""
         from polaris.pdk.catalog import _PLATFORM_DEFAULT_PROCESS_NODE
 
         builtin_count = len(_PLATFORM_DEFAULT_PROCESS_NODE)
         foundry_count = foundry_platform_count()
         total = builtin_count + foundry_count
         # 对齐 Luceda IPKISS 15+ PDK 目标
-        assert total >= 14, f"总平台数 {total} < 14（目标对齐 IPKISS 15+）"
+        assert total >= 15, f"总平台数 {total} < 15（目标对齐 IPKISS 15+）"
         print(f"\nPDK 覆盖: {builtin_count} 内置 + {foundry_count} foundry = {total} 平台")
 
     def test_foundry_platforms_immutable(self):
@@ -162,7 +162,17 @@ class TestFoundryPlatformIntegration:
     def test_material_platform_categories(self):
         """材料平台分类覆盖所有类别。"""
         all_materials = {fp.material_platform for fp in FOUNDRY_PLATFORMS.values()}
-        # 应包含 SOI/SiN/Hybrid/ThickSOI 等
+        # 应包含 SOI/SiN/Hybrid/ThickSOI/LNOI 等
         assert "SOI" in all_materials
         assert "SiN" in all_materials
         assert "Hybrid" in all_materials
+        assert "LNOI" in all_materials
+
+    def test_hyperlight_lnoi_platform(self):
+        """HyperLight LNOI 平台元数据完整性（第20轮新增）。"""
+        hl = get_foundry_platform("HyperLight")
+        assert hl.foundry == "HyperLight Corporation"
+        assert hl.material_platform == "LNOI"
+        assert hl.wafer_size_mm == 100
+        assert hl.waveguide_width_um == 0.8
+        assert len(hl.sources) >= 2
