@@ -5,15 +5,22 @@
 
 ## 架构
 
-- ``GPUBackend``：统一 GPU 后端接口（CPU/GPU 自动切换）
+- ``GPUBackend``：统一 GPU 后端接口（CPU/GPU 双模式设计）
 - ``CuPyBackend``：CuPy GPU 后端（FFT/矩阵运算/密度场）
-- ``NumPyBackend``：NumPy CPU 后端（fallback）
+- ``NumPyBackend``：NumPy CPU 后端（独立模式，非 fall-back）
+
+## 设计原则
+
+CPU/GPU 双模式是性能优化设计（计算结果相同，仅速度不同），
+非功能降级。用户可通过 ``force_cpu=True`` 显式选择 CPU 模式，
+或通过 ``device_type`` 属性查看当前使用的设备。
+这与 MEEP→Analytical 的功能降级 fall-back 本质不同。
 
 ## 商业差距
 
 P1-1 布局算法先进性深化：
 - 商业标杆：DREAMPlace GPU 40× 加速，AlphaChip TPU 加速
-- 本模块提供 CuPy GPU 后端，自动降级为 NumPy CPU 后端
+- 本模块提供 CuPy GPU 后端，CPU/GPU 双模式设计
 
 ## 来源
 
@@ -214,7 +221,8 @@ class CuPyBackend:
 class GPUBackend:
     """统一 GPU 后端接口。
 
-    自动检测 CuPy 可用性，可用时使用 GPU，否则降级为 CPU。
+    CPU/GPU 双模式设计（非 fall-back，计算结果相同，仅速度不同）。
+    可用时使用 GPU，否则使用 CPU。用户可通过 ``force_cpu=True`` 显式选择 CPU。
     对标 DREAMPlace 自动 GPU/CPU 切换。
 
     来源:
