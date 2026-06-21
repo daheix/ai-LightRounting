@@ -294,9 +294,34 @@ class RoutingEnv(gym.Env):
         reward = self._try_route(
             _RouteParams(start=start, end=end, platform=platform, dx=dx, dy=dy, obstacles=obstacles)
         )
+        # P1-2 优化（第8轮）：在 _conn_idx 自增前获取当前连接的全局 waypoints，
+        # 供上层调用者（训练脚本/评估脚本）利用全局路径引导详细布线。
+        global_waypoints = self._current_global_waypoints() if self.use_global_router else None
         self._conn_idx += 1
         terminated = self._conn_idx >= len(self.connections)
-        return self._obs(), reward, terminated, False, {"step": self._conn_idx}
+        info = {"step": self._conn_idx}
+        if self.use_global_router:
+            info["global_waypoints"] = global_waypoints
+        return self._obs(), reward, terminated, False, info
+
+    def _current_global_waypoints(self) -> list[tuple[float, float]]:
+        """返回当前连接的全局布线 waypoints（μm 坐标）。
+
+        P1-2 优化（第8轮）：从 ``self._global_routes`` 中检索当前连接的
+        全局路径，返回其 waypoints 供详细布线引导。
+
+        来源: Cadence Innovus 全局-详细分层布线
+        https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
+
+        Returns:
+            waypoints 列表（μm 坐标），无全局路径时返回空列表。
+        """
+        if not self._global_routes:
+            return []
+        for gr in self._global_routes:
+            if gr.conn_idx == self._conn_idx:
+                return list(gr.waypoints)
+        return []
 
     def _try_route(self, params: _RouteParams) -> float:
         """执行单连接布线，返回 reward。失败时返回适度惩罚。"""
