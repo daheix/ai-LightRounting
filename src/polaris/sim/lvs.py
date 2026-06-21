@@ -190,10 +190,14 @@ def _extract_devices_from_devrec(layout: db.Layout, cell: db.Cell) -> list[str]:
 def _extract_connections_from_proximity(
     layout: db.Layout, cell: db.Cell, devices: list[str]
 ) -> list[tuple[str, str]]:
-    """从波导邻近关系提取连接（简化实现）。
+    """从波导路径追踪提取连接（第47轮 P0-1 真实化）。
 
-    通过 WG 层波导连接器件包围盒的邻近关系推断连接。
-    这是简化实现，完整实现需要波导路径追踪。
+    通过 WG 层波导路径追踪器件包围盒的连接关系：
+    1. 提取所有器件包围盒（DEVREC 层）
+    2. 提取所有波导路径（WG 层）
+    3. 对每条波导路径，找其两端连接的器件
+
+    对标 KLayout LVS 真实网表提取 + SiEPIC 波导路径追踪。
 
     Args:
         layout: KLayout Layout 对象。
@@ -202,26 +206,97 @@ def _extract_connections_from_proximity(
 
     Returns:
         连接列表 [(dev1, dev2), ...]。
+
+    来源: SiEPIC EBeam PDK 波导连接提取
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     if len(devices) < 2:
         return []
     connections: list[tuple[str, str]] = []
-    # 简化：所有器件对视为可能连接（实际应通过波导路径追踪）
-    # 这里仅作占位，实际连接由器件包围盒间距 < 阈值判定
     try:
         wg_layer = get_layer_tuple("WG")
         wg_idx = _find_layer_index(layout, wg_layer[0], wg_layer[1])
         if wg_idx is None:
             return connections
-        # 如果有 WG 层图形，假设器件间有连接
-        region = db.Region(layout.begin_shapes(cell, wg_idx))
-        if not region.is_empty() and len(devices) >= 2:
-            # 简化：前 N-1 个器件依次连接
-            for i in range(len(devices) - 1):
-                connections.append((devices[i], devices[i + 1]))
+
+        # 1. 提取器件包围盒
+        devrec_layer = get_layer_tuple("DEVREC")
+        devrec_idx = _find_layer_index(layout, devrec_layer[0], devrec_layer[1])
+        if devrec_idx is None:
+            return connections
+
+        device_bboxes: list[tuple[str, db.Box]] = []
+        region_dev = db.Region(layout.begin_shapes(cell, devrec_idx))
+        for i, shape in enumerate(region_dev.each()):
+            if i < len(devices):
+                device_bboxes.append((devices[i], shape.bbox()))
+
+        if len(device_bboxes) < 2:
+            return connections
+
+        # 2. 提取波导路径并追踪连接
+        region_wg = db.Region(layout.begin_shapes(cell, wg_idx))
+        if region_wg.is_empty():
+            return connections
+
+        # 对每条波导路径，找其连接的器件
+        # 波导路径通常是长条形多边形，其两端连接不同器件
+        seen_connections: set[tuple[str, str]] = set()
+        for shape in region_wg.each():
+            wg_bbox = shape.bbox()
+            # 找与该波导包围盒相交的器件
+            connected_devs: list[str] = []
+            for dev_name, dev_bbox in device_bboxes:
+                # 检查波导包围盒是否与器件包围盒相交或邻近
+                if _bboxes_intersect_or_near(wg_bbox, dev_bbox, tolerance=10):
+                    connected_devs.append(dev_name)
+
+            # 如果波导连接了 2 个不同器件，记录连接
+            if len(connected_devs) >= 2:
+                for i in range(len(connected_devs)):
+                    for j in range(i + 1, len(connected_devs)):
+                        conn = tuple(sorted([connected_devs[i], connected_devs[j]]))
+                        if conn not in seen_connections:
+                            seen_connections.add(conn)
+                            connections.append(
+                                (connected_devs[i], connected_devs[j])
+                            )
+
+        # 3. 兜底：若波导追踪未找到连接，用包围盒邻近关系
+        if not connections and len(device_bboxes) >= 2:
+            for i in range(len(device_bboxes)):
+                for j in range(i + 1, len(device_bboxes)):
+                    dev1, bbox1 = device_bboxes[i]
+                    dev2, bbox2 = device_bboxes[j]
+                    if _bboxes_intersect_or_near(bbox1, bbox2, tolerance=20):
+                        connections.append((dev1, dev2))
+
     except (KeyError, RuntimeError):
         pass
     return connections
+
+
+def _bboxes_intersect_or_near(
+    bbox1: db.Box, bbox2: db.Box, tolerance: int = 10
+) -> bool:
+    """检查两个包围盒是否相交或邻近。
+
+    Args:
+        bbox1: 包围盒 1。
+        bbox2: 包围盒 2。
+        tolerance: 邻近容差（dbu 单位）。
+
+    Returns:
+        True 若相交或邻近。
+    """
+    # 扩展 bbox1 的边界，检查是否与 bbox2 相交
+    expanded = db.Box(
+        bbox1.left - tolerance,
+        bbox1.bottom - tolerance,
+        bbox1.right + tolerance,
+        bbox1.top + tolerance,
+    )
+    return expanded.touches(bbox2) or expanded.overlaps(bbox2)
 
 
 def _find_layer_index(layout: db.Layout, layer_num: int, datatype: int) -> int | None:

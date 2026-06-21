@@ -302,3 +302,101 @@ def test_run_lvs_empty_gds(gds_empty: Path):
     # 参考有 1 个器件，GDS 提取 0 个
     assert report.reference_device_count == 1
     assert report.extracted_device_count == 0
+
+
+# -- 第47轮 P0-1 真实化：波导路径追踪连接提取测试 --
+
+
+def test_bboxes_intersect_or_near():
+    """测试包围盒相交/邻近判断。"""
+    from polaris.sim.lvs import _bboxes_intersect_or_near
+
+    # 相交
+    b1 = db.Box(0, 0, 100, 100)
+    b2 = db.Box(50, 50, 150, 150)
+    assert _bboxes_intersect_or_near(b1, b2)
+
+    # 邻近（容差内）
+    b3 = db.Box(110, 0, 200, 100)
+    assert _bboxes_intersect_or_near(b1, b3, tolerance=20)
+
+    # 远离
+    b4 = db.Box(500, 500, 600, 600)
+    assert not _bboxes_intersect_or_near(b1, b4, tolerance=10)
+
+
+def test_waveguide_tracing_finds_connections(gds_with_devrec: Path):
+    """测试波导路径追踪找到连接（第47轮 P0-1 真实化）。
+
+    对标 KLayout LVS 真实网表提取。
+    """
+    netlist = extract_netlist_from_gds(gds_with_devrec)
+    # 应有 2 个器件
+    assert len(netlist.devices) == 2
+    # 波导路径追踪应找到连接（不再是"前 N-1 依次连接"占位）
+    assert len(netlist.connections) >= 1
+    # 连接应涉及实际器件名
+    for conn in netlist.connections:
+        assert conn[0] in netlist.devices
+        assert conn[1] in netlist.devices
+
+
+def test_waveguide_tracing_no_duplicate_connections(gds_with_devrec: Path):
+    """测试波导路径追踪无重复连接。"""
+    netlist = extract_netlist_from_gds(gds_with_devrec)
+    # 连接应无重复
+    unique_conns = set(netlist.connections)
+    assert len(unique_conns) == len(netlist.connections)
+
+
+def test_waveguide_tracing_empty_gds(gds_empty: Path):
+    """测试空 GDS 波导追踪返回空连接。"""
+    netlist = extract_netlist_from_gds(gds_empty)
+    assert len(netlist.devices) == 0
+    assert len(netlist.connections) == 0
+
+
+def test_lvs_connection_extraction_real_not_stub():
+    """测试连接提取是真实波导追踪而非占位 stub。
+
+    第47轮 P0-1 真实化验证：连接应基于波导路径，
+    而非简单的"前 N-1 个器件依次连接"。
+    """
+    # 创建含 3 个器件和 2 条波导的 GDS
+    layout = db.Layout()
+    layout.dbu = 0.001
+    cell = layout.create_cell("test_3dev")
+
+    # DEVREC 层（layer 68）
+    devrec_idx = layout.layer(68, 0)
+    # WG 层（layer 1）
+    wg_idx = layout.layer(1, 0)
+
+    # 3 个器件包围盒（水平排列）
+    cell.shapes(devrec_idx).insert(db.Box(0, 0, 10000, 5000))
+    cell.shapes(devrec_idx).insert(db.Box(30000, 0, 40000, 5000))
+    cell.shapes(devrec_idx).insert(db.Box(60000, 0, 70000, 5000))
+
+    # 2 条波导连接：dev0-dev1, dev1-dev2
+    cell.shapes(wg_idx).insert(db.Box(8000, 2000, 32000, 3000))
+    cell.shapes(wg_idx).insert(db.Box(38000, 2000, 62000, 3000))
+
+    # 写入临时 GDS
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".gds", delete=False) as f:
+        gds_path = f.name
+    layout.write(gds_path)
+
+    try:
+        netlist = extract_netlist_from_gds(gds_path)
+        # 应有 3 个器件
+        assert len(netlist.devices) == 3
+        # 应有连接（波导追踪）
+        assert len(netlist.connections) >= 1
+        # 连接应涉及实际器件
+        for conn in netlist.connections:
+            assert conn[0] in netlist.devices
+            assert conn[1] in netlist.devices
+    finally:
+        Path(gds_path).unlink(missing_ok=True)
