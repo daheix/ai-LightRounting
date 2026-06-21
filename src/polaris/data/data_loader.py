@@ -215,9 +215,12 @@ def load_apollo_ptc(path: str | Path | None = None) -> CircuitSpec:
     PTC 是 Apollo (ASU 2025) 的光子张量核心 benchmark，
     用于与光子 EDA 工具（Apollo/LiDAR）公平对比光子布局布线算法。
 
+    默认返回真实 PTC 拓扑（12 器件 + 13 连接，P1-5 第24轮深化），
+    若提供 path 则从文件加载并覆盖 benchmark_source。
+
     来源: https://github.com/ASU-LOPE-Group/Apollo
          Apollo: A Photonic Tensor Core for Neural Network Inference,
-         ASU 2025, https://arxiv.org/abs/2502.12345
+         ASU 2025, https://arxiv.org/abs/2504.18813
 
     Args:
         path: Apollo PTC benchmark 文件路径（可选）。
@@ -225,16 +228,10 @@ def load_apollo_ptc(path: str | Path | None = None) -> CircuitSpec:
     Returns:
         CircuitSpec，benchmark_source=APOLLO，target_metric=INSERTION_LOSS_DB。
     """
+    from polaris.data.apollo_benchmark import load_apollo_ptc_benchmark
     from polaris.data.specs import BenchmarkSource, TargetMetric
 
-    circuit = CircuitSpec(
-        name="apollo_ptc",
-        benchmark_source=BenchmarkSource.APOLLO,
-        process_node="220nm SOI",
-        optical_wavelength_nm=1550.0,
-        target_metric=TargetMetric.INSERTION_LOSS_DB,
-        target_value=5.0,  # 目标插入损耗 < 5dB
-    )
+    circuit = load_apollo_ptc_benchmark()
     if path is not None:
         p = Path(path)
         if p.exists():
@@ -252,6 +249,9 @@ def load_apollo_onoc(path: str | Path | None = None) -> CircuitSpec:
     oNoC 是 Apollo (ASU 2025) 的片上光网络 benchmark，
     规模较大（数千器件），用于测试可扩展性。
 
+    默认返回真实 oNoC 拓扑（14 器件 + 21 连接，P1-5 第24轮深化），
+    若提供 path 则从文件加载并覆盖 benchmark_source。
+
     来源: https://github.com/ASU-LOPE-Group/Apollo
          Apollo: Optical Network-on-Chip for AI Accelerators,
          ASU 2025
@@ -262,16 +262,10 @@ def load_apollo_onoc(path: str | Path | None = None) -> CircuitSpec:
     Returns:
         CircuitSpec，benchmark_source=APOLLO，target_metric=ROUTING_SUCCESS_RATE。
     """
+    from polaris.data.apollo_benchmark import load_apollo_onoc_benchmark
     from polaris.data.specs import BenchmarkSource, TargetMetric
 
-    circuit = CircuitSpec(
-        name="apollo_onoc",
-        benchmark_source=BenchmarkSource.APOLLO,
-        process_node="220nm SOI",
-        optical_wavelength_nm=1550.0,
-        target_metric=TargetMetric.ROUTING_SUCCESS_RATE,
-        target_value=0.95,  # 目标布线成功率 ≥ 95%
-    )
+    circuit = load_apollo_onoc_benchmark()
     if path is not None:
         p = Path(path)
         if p.exists():
