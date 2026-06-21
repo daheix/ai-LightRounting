@@ -13,7 +13,6 @@
 - **项目使用**:
   - `src/polaris/trainer/ppo_torch.py` — PyTorch PPO 实现
   - `src/polaris/trainer/ppo_networks.py` — ActorCritic 网络
-- **复刻品**: `../pycopy/pyCopyTorch/`（纯 NumPy 复刻，用于 torch 无法安装时）
 
 ### gymnasium
 

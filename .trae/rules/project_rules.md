@@ -211,17 +211,29 @@ install.sh 统一安装全部依赖（无核心/可选之分），确保环境�
 
 ## 规则 4：自研复刻工具规范（强制）
 
-对于开源但安装困难的工具，按规则用纯 Python 100% 复刻，复刻品统一存放在 `3dtool/pycopy/`，
-加 `pyCopy` 前缀表示是替代品。
+对于开源但**在目标运行环境无法安装**的工具，按规则用纯 Python 100% 复刻，
+复刻品统一存放在 `3dtool/pycopy/`，加 `pyCopy` 前缀表示是替代品。
 
-### 4.1 复刻触发条件
+### 4.1 复刻触发条件（严格，避免过度工程）
 
-满足以下任一条件即触发 100% 复刻：
-- 该工具为开源但无对应平台的预编译 wheel
-- 安装需复杂系统级依赖（如 C++/Fortran 编译链、MPI、CUDA toolkit 非标准路径）
-- 在目标运行环境（Linux 沙箱/CI）中 `pip install` 失败或不可用
-- 集成成本（编译/配置/调试）高于自行复刻等价实现
-- 依赖链过重（如 sax 依赖 jax/jaxlib/optax 等 200+ MB，但项目只用其子网络增长算法）
+**必须同时满足**以下两个条件才触发复刻：
+1. **原工具不可安装**：满足以下任一即可
+   - 该工具无对应平台（OS + Python 版本）的预编译 wheel
+   - 原工具依赖链在目标环境不可用（如 tensorflow 无 Python 3.14 wheel）
+   - 安装需复杂系统级依赖且无法用离线 wheel 解决
+2. **项目实际需要该工具的功能**：项目代码中确实 import 并使用了该工具的 API
+
+**禁止复刻的情况**（违反即过度工程）：
+- ❌ 原工具可直接 `pip install` 安装（即使依赖链较重，用离线 wheel 解决）
+- ❌ 原工具活跃维护（有近一年的 release）
+- ❌ 项目未实际使用该工具（仅为"预留"而复刻）
+- ❌ 复刻目的是"学习"而非"运行时替代"（学习代码放个人仓库，不放项目）
+
+**已删除的过度复刻（2026-06-21 清理）**：
+- pyCopyTorch：torch 2.12.0 活跃维护，直接用原工具 + 离线 wheel
+- pyCopySAX：sax 0.15.12 活跃维护，直接用原工具 + 离线 wheel
+- pyCopyKLayout：klayout 0.30.9 极度活跃，直接用原工具 + 离线 wheel
+- pyCopyMEEP/pyCopyFemwell/pyCopyMeow：项目未使用，删除预留空包
 
 ### 4.2 复刻品目录结构
 
@@ -229,26 +241,19 @@ install.sh 统一安装全部依赖（无核心/可选之分），确保环境�
 3dtool/pycopy/
 ├── __init__.py                    # pycopy 包入口
 ├── README.md                      # 复刻品清单与设计原则
-├── pyCopyTorch/__init__.py        # 复刻 torch（重导出 src/polaris/nn）
-├── pyCopySAX/__init__.py          # 复刻 sax（重导出 src/polaris/sim/cascade）
-├── pyCopySiPANN/__init__.py       # 复刻 SiPANN（重导出 src/polaris/sim/models）
-├── pyCopyKLayout/__init__.py      # 复刻 klayout DRC（重导出 src/polaris/sim/constraint_checker）
-├── pyCopyMEEP/__init__.py         # 预留（未实现）
-├── pyCopyFemwell/__init__.py      # 预留（未实现）
-└── pyCopyMeow/__init__.py         # 预留（未实现）
+└── pyCopySiPANN/                  # 唯一保留的复刻品（SiPANN 依赖 tensorflow 无 Py3.14 wheel）
+    ├── __init__.py                # 重导出 src/polaris/sim/models
+    └── VERSION.md                 # 版本历史
 ```
 
-### 4.3 复刻品清单（实际状态 2026-06-19）
+### 4.3 复刻品清单（实际状态 2026-06-21）
 
-| 复刻包 | 原工具 | 协议 | 复刻位置（src/） | 状态 | 复刻内容 |
-|--------|--------|------|-----------------|------|----------|
-| pyCopyTorch | torch | BSD-3-Clause | src/polaris/nn/ | ✅ 完整 | Tensor/autograd/Linear/LayerNorm/ReLU/Sequential/Adam/Conv2d/MaxPool2d |
-| pyCopySAX | sax | Apache-2.0 | src/polaris/sim/cascade.py | ✅ 完整 | 子网络增长算法（cascade_circuit） |
-| pyCopySiPANN | SiPANN | MIT | src/polaris/sim/models.py | ✅ 完整 | 10 个 S 参数模型（waveguide/y_branch/DC/ring/MMI/GC/crossing/terminator/phase_shifter） |
-| pyCopyKLayout | klayout DRC | GPL-2.0 | src/polaris/sim/constraint_checker.py | ✅ 完整 | 8 种违规检查（bend_radius/spacing/loss/crossings/overlap/min_width/coupling_gap） |
-| pyCopyMEEP | meep FDTD | GPL-2.0+ | — | ⏳ 预留 | 未实现（项目未使用 FDTD） |
-| pyCopyFemwell | femwell | MIT | — | ⏳ 预留 | 未实现（项目未使用 FEM） |
-| pyCopyMeow | meow | GPL-3.0 | — | ⏳ 预留 | 未实现（项目未使用模式求解） |
+| 复刻包 | 原工具 | 协议 | 复刻位置（src/） | 状态 | 复刻原因 | 复刻内容 |
+|--------|--------|------|-----------------|------|----------|----------|
+| pyCopySiPANN | SiPANN | MIT | src/polaris/sim/models.py | ✅ v1.0.0 | tensorflow 无 Python 3.14 wheel | 10 个 S 参数模型（waveguide/y_branch/DC/ring/MMI/GC/crossing/terminator/phase_shifter） |
+
+**已删除复刻品**（见 `3dtool/pycopy/README.md` "已删除的复刻品"章节）：
+pyCopyTorch/pyCopySAX/pyCopyKLayout/pyCopyMEEP/pyCopyFemwell/pyCopyMeow
 
 ### 4.4 复刻质量要求（100% 一致）
 
@@ -264,24 +269,24 @@ install.sh 统一安装全部依赖（无核心/可选之分），确保环境�
 `3dtool/pycopy/pyCopy<Xxx>/__init__.py` 必须重导出 src/polaris/ 对应模块的公开 API：
 
 ```python
-"""pyCopyTorch — torch 纯 NumPy 100% 复刻（规则 4）。
+"""pyCopySiPANN — SiPANN 纯 Python 100% 复刻（规则 4）。
 
-原工具: PyTorch https://pytorch.org/ (BSD-3-Clause)
-复刻位置: src/polaris/nn/
+原工具: SiPANN https://sipann.readthedocs.io/ (MIT)
+复刻位置: src/polaris/sim/models.py
 """
 
-from polaris.nn import Tensor, Linear, Adam  # noqa: F401
+from polaris.sim.models import waveguide_s, y_branch_s  # noqa: F401
 
-__all__ = ["Tensor", "Linear", "Adam"]
+__all__ = ["waveguide_s", "y_branch_s"]
 ```
 
 上层代码可通过两种方式访问复刻 API：
 ```python
 # 方式 1：通过复刻包名（推荐，明确表示使用复刻品）
-from pycopy.pyCopyTorch import Tensor
+from pycopy.pyCopySiPANN import waveguide_s
 
 # 方式 2：通过 polaris 包（等价）
-from polaris.nn import Tensor
+from polaris.sim.models import waveguide_s
 ```
 
 ### 4.6 验证与回归
@@ -377,15 +382,15 @@ pip install -e .
 | 工具 | 是否安装 | 决策依据 |
 |------|---------|----------|
 | numpy/scipy/networkx/matplotlib/pyyaml | ✅ 必装 | 核心依赖，pip 即用 |
-| torch | ✅ 必装 | GNN/PPO 训练核心（CPU 版 2.12.1+cpu，也有 pyCopyTorch 复刻） |
+| torch | ✅ 必装 | GNN/PPO 训练核心（CPU 版 2.12.1+cpu） |
 | gymnasium | ✅ 必装 | RL 环境核心 |
 | klayout | ✅ 必装 | GDS 导出 + DRC |
 | simphony | ✅ 必装 | S 参数仿真 |
-| sax | ✅ 必装 | 已离线打包（含 jax/jaxlib/optax 依赖链），也有 pyCopySAX 复刻 |
+| sax | ✅ 必装 | 已离线打包（含 jax/jaxlib/optax 依赖链） |
 | pytest/ruff/mypy/wheel/setuptools | ✅ 必装 | 开发工具链 |
 | gdsfactory | ❌ 未装 | 版图生成，依赖链中等，项目未直接使用 |
 | gdstk | ❌ 未装 | GDS 高性能读写，gdsfactory 依赖 |
-| SiPANN | ❌ 未装 | 已有 pyCopySiPANN 完整复刻 |
+| SiPANN | ❌ 未装 | 依赖 tensorflow 无 Py3.14 wheel，已有 pyCopySiPANN 完整复刻 |
 | meep | ❌ 未装 | FDTD 重型依赖，项目未使用器件级 FDTD |
 | femwell/meow | ❌ 未装 | FEM 模式求解器，项目未使用 |
 | lygadgets | ❌ 未装 | KLayout 已直接安装，无需 lygadgets 工具链 |
@@ -410,8 +415,8 @@ pip install -e .
    # except ImportError:
    #     _sax = None
    ```
-2. **复刻品定位**：复刻品（pyCopy*）作为算法学习与对照实现保留，不再作为运行时兜底
-3. **核心功能依赖**：核心功能（PDK/布局/布线/训练）直接依赖三方工具，复刻品仅用于算法对照
+2. **复刻品定位**：复刻品（pyCopySiPANN）仅用于原工具因上游兼容性问题无法安装时的运行时替代，不作为算法学习材料
+3. **核心功能依赖**：核心功能（PDK/布局/布线/训练）直接依赖三方工具
 4. **import 位置**：三方工具的 import 在模块顶部或函数内部直接 import
 5. **测试兼容**：测试中直接 import 三方工具；仅 gdsfactory/SiPANN 因上游兼容性问题保留 importorskip
 
@@ -437,8 +442,7 @@ python -c "import simphony; print('simphony OK')"
 python -c "import sax; print('sax OK')"
 
 # 4. 验证复刻品
-python -c "from pycopy.pyCopyTorch import Tensor; print('pyCopyTorch OK')"
-python -c "from pycopy.pyCopySAX import cascade_circuit; print('pyCopySAX OK')"
+python -c "from pycopy.pyCopySiPANN import waveguide_s; print('pyCopySiPANN OK')"
 
 # 5. 验证项目包
 python -c "import polaris; print('polaris OK')"
@@ -1293,13 +1297,7 @@ find . -path ./.git -prune -o -type f -size +100M -print
 
 | 复刻品 | v2.0.x 优化方向 |
 |--------|----------------|
-| pyCopyTorch | 自动混合精度/算子融合/Conv2d im2col 优化/分布式 |
-| pyCopySAX | 子网络增长算法并行化/稀疏矩阵/S 参数缓存 |
 | pyCopySiPANN | 矩形波导解析解加速/耦合模理论精度提升/Monte Carlo 容差分析 |
-| pyCopyKLayout | DRC 规则并行检查/增量 DRC/几何算法空间索引（R-tree） |
-| pyCopyMEEP | FDTD Yee 网格/UPML 吸收边界/多波长扫描（预留） |
-| pyCopyFemwell | FEM 网格生成/模式求解器（预留） |
-| pyCopyMeow | 模式重叠积分/波导截面求解（预留） |
 
 ### 21.4 验收流程
 

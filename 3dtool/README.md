@@ -17,14 +17,8 @@
 ├── numeric/         # 数值计算类工具（NumPy/SciPy/Shapely）
 ├── viz/             # 可视化类工具（Matplotlib）
 ├── serialization/   # 序列化类工具（PyYAML）
-└── pycopy/          # 自研复刻工具（pyCopyxx 前缀，规则 3 复刻品）
-    ├── pyCopyTorch/     # 复刻 torch（对应 src/polaris/nn）
-    ├── pyCopySAX/       # 复刻 sax（对应 src/polaris/sim/cascade.py）
-    ├── pyCopySiPANN/    # 复刻 SiPANN（对应 src/polaris/sim/models.py）
-    ├── pyCopyKLayout/   # 复刻 klayout DRC（对应 src/polaris/sim/constraint_checker.py）
-    ├── pyCopyMEEP/      # 复刻 meep FDTD（预留）
-    ├── pyCopyFemwell/   # 复刻 femwell（预留）
-    └── pyCopyMeow/      # 复刻 meow（预留）
+└── pycopy/          # 自研复刻工具（pyCopy 前缀，规则 4 复刻品）
+    └── pyCopySiPANN/    # 复刻 SiPANN（对应 src/polaris/sim/models.py，因 tensorflow 无 Py3.14 wheel）
 ```
 
 ## 快速开始（沙箱重启后必做）
@@ -98,18 +92,18 @@ bash 3dtool/wheels/install.sh --check
 
 ## pycopy/ — 自研复刻工具
 
-按 `project_rules.md` 规则 3，对于开源但安装困难的工具，用纯 Python 100% 复刻。
+按 `project_rules.md` 规则 4，对于开源但**在目标环境无法安装**的工具，用纯 Python 100% 复刻。
 复刻品统一存放于 `pycopy/` 目录，加 `pyCopy` 前缀表示是替代品。
 
-| 复刻包 | 对应原工具 | 复刻位置 | 状态 |
-|--------|-----------|----------|------|
-| pyCopyTorch | torch | src/polaris/nn/ | ✅ 完整复刻（Tensor/autograd/Linear/Adam/Conv2d） |
-| pyCopySAX | sax | src/polaris/sim/cascade.py | ✅ 完整复刻（子网络增长算法） |
-| pyCopySiPANN | SiPANN | src/polaris/sim/models.py | ✅ 完整复刻（10 个 S 参数模型） |
-| pyCopyKLayout | klayout DRC | src/polaris/sim/constraint_checker.py | ✅ 完整复刻（8 种违规检查） |
-| pyCopyMEEP | meep FDTD | — | ⏳ 预留（未实现） |
-| pyCopyFemwell | femwell | — | ⏳ 预留（未实现） |
-| pyCopyMeow | meow | — | ⏳ 预留（未实现） |
+**只复刻真正无法安装的工具**（2026-06-21 修订，避免过度工程）：
+
+| 复刻包 | 对应原工具 | 复刻位置 | 状态 | 复刻原因 |
+|--------|-----------|----------|------|----------|
+| pyCopySiPANN | SiPANN | src/polaris/sim/models.py | ✅ v1.0.0 | tensorflow 无 Python 3.14 wheel |
+
+**已删除的过度复刻**（原工具可直接 pip 安装且活跃维护）：
+pyCopyTorch（torch 2.12.0）/ pyCopySAX（sax 0.15.12）/ pyCopyKLayout（klayout 0.30.9）/
+pyCopyMEEP/pyCopyFemwell/pyCopyMeow（项目未使用）
 
 ## 使用原则
 

@@ -17,7 +17,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 |------|------|----------|
 | 布局算法 | RL（PPO + GNN/CNN）+ BC 预训练 + 专家奖励塑形 | 单机训练，200 器件规模 |
 | 布线算法 | 8 方向 A* + Rip-up&Reroute + 拥塞感知 + 多层/光电/曲线/对角/混合路由 | 网格 100×100，单连接 < 50ms 目标 |
-| 仿真精度 | S 参数级联 + SimLoop 反馈闭环 + 校准 | 10 个 S 参数模型（pyCopySiPANN 复刻） |
+| 仿真精度 | S 参数级联 + SimLoop 反馈闭环 + 校准 | 10 个 S 参数模型（pyCopySiPANN 复刻，因 tensorflow 无 Py3.14 wheel） |
 | PDK 覆盖 | SOI/SiN/InP/LNOI 四平台 | 81 个器件，全部来源溯源 |
 | AI 能力 | PPO（离散/连续）+ GAE + GNN-PPO + BC | PyTorch 2.12.1+cpu，无分布式 |
 | 工艺节点 | SOI/SiN/InP/LNOI（无 CMOS 节点标注） | 130nm/90nm/45nm CMOS photonics 未覆盖 |
@@ -25,7 +25,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 | 性能规模 | 百器件级（xlarge=200 器件） | 万器件规模未验证 |
 | 测试覆盖 | 770+ 测试用例，0 警告 0 错误门禁 | ruff/mypy/质量门禁全通过 |
 | 开源开放 | MIT 协议，GitHub 公开 | ✅ 对齐业界开源标准 |
-| 复刻品生态 | pyCopyTorch/pyCopySAX/pyCopySiPANN/pyCopyKLayout | 4 个 100% 复刻，3 个预留 |
+| 复刻品生态 | pyCopySiPANN（仅复刻 tensorflow 不可装的工具） | 1 个 100% 复刻，避免过度工程 |
 | 离线 wheel 包 | 3dtool/wheels/ 一键 70 秒恢复 | 79 个小 wheel + 18 个分卷片段 |
 
 ### 1.2 一句话定位
@@ -84,7 +84,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 - **量化差距**：8 项自研 DRC vs foundry runset 通常 50-200 条规则
 - **解决办法**：
   1. 集成 KLayout 内置 DRC 引擎（已装 0.30.9），编写 foundry runset 适配层
-  2. pyCopy 复刻 KLayout LVS 功能 → `3dtool/pycopy/pyCopyKLayout/`
+  2. 用 KLayout 原生 LVS API（klayout 活跃维护，直接用原工具，不复刻）
   3. 与 SiEPIC/AIM Photonics PDK 对齐 DRC 规则
   4. 实现 GDS 网表提取 → 与原理图比对（LVS 核心）
 
@@ -128,7 +128,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 - **量化差距**：0 FDTD vs Tidy3D 10-5000× 加速 = 仿真能力代际差距
 - **解决办法**：
   1. 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，v1.0）
-  2. pyCopyMEEP 复刻 MEEP FDTD（开源，GPL）→ `3dtool/pycopy/pyCopyMEEP/`（v2.0）
+  2. 集成 MEEP 开源 FDTD（`pip install meep`，GPL 协议，MIT 开发）→ 直接用原工具（v2.0）
   3. 保留 S 参数级联作为快速电路级仿真（已实现，适合 RL 反馈）
   4. 建立 S 参数模型 → FDTD 校准流程（参考 Lumerical CML Compiler）
 
@@ -180,7 +180,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   4. 对齐 IHP SG25H5（v2.0，部分开源）
 
 #### P1-4 无分布式训练与 GPU 加速
-- **现状**：单机 PyTorch CPU 2.12.1+cpu，pyCopyTorch 复刻仅 CPU
+- **现状**：单机 PyTorch CPU 2.12.1+cpu
 - **商业标杆**：
   - AlphaChip：分布式 TPU 训练
   - DREAMPlace：GPU 加速 40×，PyTorch 后端
@@ -189,7 +189,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 - **解决办法**：
   1. 引入 Ray 分布式 PPO（v2.0）
   2. 切换 PyTorch GPU 版本（v2.0，需 GPU 环境，沙箱无 GPU）
-  3. 保留 pyCopyTorch 作为 CPU 算法对照（已实现，规则 4）
+  3. 直接用 PyTorch 原生 CPU/GPU 后端（活跃维护，无需复刻）
   4. 支持 GPU/CPU 双模式自动切换
 
 #### P1-5 无公开 Benchmark 与可复现评估
@@ -214,7 +214,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   - Lumerical lumopt：adjoint method 逆向设计（开源 https://github.com/chriskeraly/lumopt）
   - Tidy3D：PSO/GA/adjoint/topology/level-set 全套逆向设计
   - 学术：Molesky et al., Nature Photonics 2018 逆向设计综述
-- **解决办法**：pyCopy 复刻 lumopt adjoint 框架（v3.0）→ `3dtool/pycopy/pyCopyLumopt/`
+- **解决办法**：集成 lumopt 开源 adjoint 框架（v3.0，`pip install lumopt`，直接用原工具）
 
 #### P2-2 无光电协同仿真
 - **现状**：opto_electrical.py 仅基础光电布线，无 SPICE 联合仿真
@@ -259,7 +259,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 | 优先级 | 任务 | 解决办法 | 对应差距 |
 |--------|------|----------|----------|
 | P0 | KLayout DRC runset 适配层 | 集成 KLayout 0.30.9 DRC 引擎 | P0-1 |
-| P0 | LVS 基础实现 | pyCopyKLayout 复刻 LVS | P0-1 |
+| P0 | LVS 基础实现 | 用 KLayout 原生 LVS API（直接用原工具） | P0-1 |
 | P0 | 规模扩展至 500 器件 | 解析法 warm-start + 分块布局 | P0-2 |
 | P0 | SiEPIC PDK 完整对齐 | 已有 siepic_mapping.py，补全器件 | P0-3 |
 | P0 | gdsfactory PDK 桥接 | gdsfactory_integration.py 增强 | P0-3 |
@@ -277,7 +277,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 |--------|------|----------|----------|
 | P0 | 1000-5000 器件规模 | 分层布局 + 分布式训练 | P0-2 |
 | P0 | 5+ foundry PDK 对齐 | AIM/AMF/CompoundTek/IHP（NDA） | P0-3 |
-| P0 | pyCopyMEEP FDTD 复刻 | 100% 复刻 MEEP 开源 FDTD | P0-4 |
+| P0 | MEEP FDTD 集成 | `pip install meep` 直接用开源原工具 | P0-4 |
 | P1 | Edge-GNN 实现 | 参考 Circuit Training 开源 | P1-1 |
 | P1 | DREAMPlace 解析法集成 | GPU 加速 warm-start | P1-1, P1-4 |
 | P1 | Global-Detail 分层布线 | 全局布线器 + LiDAR Curvy A* | P1-2 |
@@ -293,7 +293,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 | 优先级 | 任务 | 解决办法 | 对应差距 |
 |--------|------|----------|----------|
-| P2 | 逆向设计框架 | pyCopyLumopt adjoint 复刻 | P2-1 |
+| P2 | 逆向设计框架 | 集成 lumopt 开源 adjoint 框架（直接用原工具） | P2-1 |
 | P2 | 光电协同仿真 | Verilog-A + SPICE 联合 | P2-2 |
 | P2 | KLayout 级 GUI | Web UI 增强 + 桌面化 | P2-3 |
 | P2 | LLM Agent 集成 | 自然语言 PIC 设计 | P2-4 |
@@ -416,7 +416,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
    建议通过 gdsfactory 桥接快速扩展，而非自研全部 PDK。
 
 4. **FDTD 缺失（P0-4）影响器件级精度**，但电路级 S 参数级联已满足布局布线反馈需求，
-   建议通过 Tidy3D 云 API + pyCopyMEEP 复刻双路解决，而非自研 FDTD。
+   建议通过 Tidy3D 云 API + MEEP 开源 FDTD（`pip install meep`）双路解决，而非自研 FDTD。
 
 ### 7.2 优先级建议
 

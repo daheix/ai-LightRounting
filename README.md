@@ -99,12 +99,12 @@ workspace/
 │   ├── numeric/             # 数值计算类工具（numpy/scipy）
 │   ├── viz/                 # 可视化类工具（matplotlib）
 │   ├── serialization/       # 序列化类工具（pyyaml）
-│   └── pycopy/              # 自研复刻工具（pyCopyTorch/pyCopySAX/...）
+│   └── pycopy/              # 自研复刻工具（pyCopySiPANN，仅复刻无法安装的工具）
 ├── src/polaris/         # 所有自研代码（src layout）
 │   ├── data/            # 数据加载与电路规格（CircuitSpec/GDS loader）
 │   ├── engine/          # 布局引擎（FloorplanEnv/GNN/CNN/Netlist）
 │   ├── eval/            # 评估与渲染（GDS导出/DRC）
-│   ├── nn/              # 纯 NumPy 神经网络库（pyCopyTorch 复刻）
+│   ├── nn/              # 纯 NumPy 神经网络库（算法对照实现，生产用 torch）
 │   ├── pdk/             # 光子器件库（SOI/SiN/InP/LNOI + SiEPIC mapping）
 │   ├── pipeline/        # 端到端流水线（IntegratedPipeline/TrainingPipeline）
 │   ├── router/          # 布线引擎（WaveguideRouter/RoutingEnv）
@@ -133,7 +133,7 @@ workspace/
 | `sim` | 仿真系统 | Simulator, SimLoop, ConstraintChecker, Calibration |
 | `pipeline` | 端到端流水线 | SimLoop, IntegratedPipeline, TrainingPipeline |
 | `eval` | 评测渲染 | LayoutRender, export_gds, run_drc |
-| `nn` | NumPy 神经网络 | Tensor, Linear, Adam（pyCopyTorch 复刻） |
+| `nn` | NumPy 神经网络 | Tensor, Linear, Adam（算法对照实现，生产用 torch） |
 | `data` | 数据加载 | CircuitSpec, DeviceSpec, load_gds_to_circuit |
 
 ## 技术来源

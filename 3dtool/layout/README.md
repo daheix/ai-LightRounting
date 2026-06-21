@@ -34,4 +34,4 @@
 
 ## 复刻品
 
-版图类工具的复刻品位于 `../pycopy/pyCopyKLayout/`，复刻 klayout 的 DRC 检查功能。
+版图类工具无复刻品。klayout 活跃维护（0.30.9, 2026-06-20），直接用原工具 + 离线 wheel。

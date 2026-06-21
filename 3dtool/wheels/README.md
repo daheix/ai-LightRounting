@@ -116,8 +116,7 @@ pip install torch  # 自动安装 GPU 版本
 ### sax 完整依赖链
 
 sax 依赖 jax/jaxlib/optax/flax 等（jaxlib 82MB）。本目录已打包完整依赖链，
-安装 sax 时会自动安装全部依赖。项目代码中 sax import 失败时回退到
-`pyCopySAX` 复刻品（规则 4）。
+安装 sax 时会自动安装全部依赖。项目代码中直接 `import sax`（规则 5.3）。
 
 ### 平台限制
 
