@@ -16,15 +16,17 @@
 - 每个方案须记录：来源标题、作者/机构、年份、网址 URL，写入对应模块的 `source` 字段或文档。
 - 禁止使用未经检索核实的参数或方案；禁止假数据。
 
-### 1.2 代码提交纪律（每 5 分钟一次）
-- 实现过程中，每 5 分钟必须向远端 `main` 分支提交一次代码。
-- 提交流程：
+### 1.2 代码提交纪律（每 20 分钟一次）
+- 实现过程中，每 20 分钟必须向远端 `main` 分支提交一次代码（由 `scripts/auto_merge.py` 后台守护进程自动执行）。
+- 提交流程（自动）：
   1. `git add` 相关变更文件（按文件名精确添加，禁止 `git add -A`/`git add .`）
   2. `git commit -m "<type>: <简述>"`，type 遵循 Conventional Commits（feat/fix/docs/refactor/test/chore）
   3. `git push origin main`
-- 若 5 分钟内仍在进行复杂改动，先创建一个可编译/可测试的中间状态再提交，保证 `main` 分支始终可用。
+  4. 切回开发分支继续开发
+- 若 20 分钟内仍在进行复杂改动，先创建一个可编译/可测试的中间状态再提交，保证 `main` 分支始终可用。
 - 提交前必须通过本地 lint/typecheck（如 ruff、mypy、pytest 冒烟测试）。
 - 禁止 force push 到 `main`；禁止提交含密钥/凭据的文件。
+- 没有代码更新和新文件更新时，等待下次上传，不创建空提交。
 
 ### 1.3 完整产品流程遵守
 - 完整的产品研发流程必须遵守，不得跳过：
@@ -1201,6 +1203,160 @@ python -m pytest tests/ -q --tb=short --continue-on-collection-errors
 - Git 提交最佳实践: https://www.conventionalcommits.org/
 - 变更日志规范: https://keepachangelog.com/
 - 可追溯性要求: ISO/IEC 25010 维护性
+
+## 规则 20：3dtool 大文件管理规范（强制）
+
+### 20.1 单文件大小限制
+
+- `3dtool/` 目录下**单个文件大小上限为 100 MB**（含 wheel 包、分卷片段、复刻品源码、文档等所有文件）
+- 超过 100 MB 的文件必须按以下方式处理：
+  1. **wheel 包**：使用 `gzip + split` 分卷为 ≤20 MB 片段存放到 `3dtool/wheels/parts/`（规则 5.1.1）
+  2. **数据文件**：拆分为多个小文件，或使用 Git LFS 管理
+  3. **模型 checkpoint**：存放至 `checkpoints/` 并加入 `.gitignore`，不提交到 git
+  4. **二进制资源**：压缩后仍超 100 MB 的，必须使用外部存储（OSS/S3/HuggingFace Hub）并在 README 标注下载方式
+
+### 20.2 检查命令
+
+```bash
+# 检查 3dtool/ 下超过 100MB 的文件
+find 3dtool/ -type f -size +100M -exec ls -lh {} \;
+
+# 检查全部超 100MB 文件（不含 .git/）
+find . -path ./.git -prune -o -type f -size +100M -print
+```
+
+### 20.3 处理流程
+
+1. **新增文件前预估**：下载/生成大文件前先预估大小，超 100 MB 直接走分卷/外部存储
+2. **定期巡检**：CI 中执行检查命令，发现超限文件立即告警
+3. **历史文件整改**：已存在的超限文件须在下一个版本前完成整改
+4. **例外白名单**：仅 `3dtool/wheels/parts/` 下的分卷片段允许 ≤20 MB（更严格），无任何文件可超 100 MB
+
+### 20.4 禁止行为
+
+- ❌ 禁止提交 >100 MB 的文件到 git（GitHub 会拒绝，且克隆/拉取极慢）
+- ❌ 禁止用 `git add -A` 一次性添加大量大文件
+- ❌ 禁止将模型 checkpoint（`.pt`/`.pth`/`.json` >100 MB）提交到 git
+- ❌ 禁止在 `3dtool/` 下存放视频/数据集等非工具类大文件
+
+来源：
+- GitHub 文件大小限制: https://docs.github.com/en/repositories/working-with-files/managing-large-files
+- Git LFS: https://git-lfs.com/
+- split 分卷: https://www.gnu.org/software/coreutils/manual/html_node/split-invocation.html
+
+## 规则 21：pyCopy 复刻品版本管理规范（强制）
+
+### 21.1 版本号规则
+
+所有 `3dtool/pycopy/pyCopy<Xxx>/` 复刻品遵循 SemVer 语义化版本：
+
+| 版本阶段 | 含义 | 验收标准 |
+|---------|------|---------|
+| `v0.x.x` | 开发中 | API 不稳定，禁止用于生产 |
+| `v1.0.0` | 100% 复刻完成 | 与原工具行为对比测试 100% 通过（浮点 1e-9 容差），覆盖项目使用的全部功能子集 |
+| `v1.0.x` | Bug 修复 | 修复复刻缺陷，不改变 API |
+| `v1.x.0` | 功能扩展 | 新增原工具没有但项目需要的功能（须标注"扩展"） |
+| `v2.0.x` | 能力优化 | 在 100% 复刻基础上优化性能/精度/易用性，每个能力提升递增 x |
+| `v3.0.x` | 重大重写 | 架构级重写（如 NumPy → C 扩展） |
+
+### 21.2 版本文件要求
+
+每个 `pyCopy<Xxx>/` 目录必须包含：
+
+1. `__init__.py`：重导出公开 API，顶部声明 `__version__`
+2. `VERSION.md`：版本历史记录，格式如下
+3. `README.md`：复刻说明（原工具/协议/复刻位置/对比测试结果）
+
+`VERSION.md` 格式：
+```markdown
+# pyCopy<Xxx> 版本历史
+
+## v1.0.0 (YYYY-MM-DD) — 100% 复刻完成
+- 复刻内容: Tensor/autograd/Linear/Adam/...
+- 对比测试: tests/test_replica_<tool>.py 全部通过（N 个用例）
+- 行为一致性: 浮点容差 1e-9
+- 来源: https://github.com/original/repo (commit abc123, 协议 MIT)
+
+## v2.0.1 (YYYY-MM-DD) — 性能优化
+- 优化点: 用 NumPy 向量化替代 for 循环，前向推理提速 3x
+- 测试: 对比测试仍 100% 通过
+- 基准: 100 样本前向耗时 50ms → 17ms
+
+## v2.0.2 (YYYY-MM-DD) — 精度提升
+- 优化点: LayerNorm 数值稳定性（添加 eps 滑动平均）
+- 测试: 对比测试容差从 1e-9 收紧到 1e-12
+```
+
+### 21.3 v2.0.x 能力优化方向
+
+每个复刻品在 v1.0.0 完成后，按以下方向递增 v2.0.x：
+
+| 复刻品 | v2.0.x 优化方向 |
+|--------|----------------|
+| pyCopyTorch | 自动混合精度/算子融合/Conv2d im2col 优化/分布式 |
+| pyCopySAX | 子网络增长算法并行化/稀疏矩阵/S 参数缓存 |
+| pyCopySiPANN | 矩形波导解析解加速/耦合模理论精度提升/Monte Carlo 容差分析 |
+| pyCopyKLayout | DRC 规则并行检查/增量 DRC/几何算法空间索引（R-tree） |
+| pyCopyMEEP | FDTD Yee 网格/UPML 吸收边界/多波长扫描（预留） |
+| pyCopyFemwell | FEM 网格生成/模式求解器（预留） |
+| pyCopyMeow | 模式重叠积分/波导截面求解（预留） |
+
+### 21.4 验收流程
+
+新增/升级复刻品必须执行：
+
+1. **100% 行为对比**：`pytest tests/test_replica_<tool>.py -v` 全部通过
+2. **门禁检查**：`python scripts/code_quality_gate.py` 0 警告 0 错误
+3. **来源标注**：`__init__.py` 头部声明原仓库 URL/协议/commit
+4. **版本登记**：更新 `VERSION.md` 和 `3dtool/pycopy/README.md` 清单
+5. **操作记录**：在 `操作记录.md` 记录本次复刻/升级
+
+### 21.5 禁止行为
+
+- ❌ 禁止跳过 v1.0.0 直接做 v2.0.x（必须先 100% 复刻验证）
+- ❌ 禁止 v2.0.x 改变 v1.0.0 的公开 API（破坏性变更须升 v3.0.0）
+- ❌ 禁止复刻品与原工具行为不一致（浮点容差除外）
+- ❌ 禁止不写 VERSION.md 就发布版本
+- ❌ 禁止用"复刻"名义抄袭而不标注来源
+
+来源：
+- SemVer 语义化版本: https://semver.org/
+- PyTorch 协议: https://pytorch.org/ (BSD-3-Clause)
+- SAX 协议: https://flaport.github.io/sax/ (Apache-2.0)
+- SiPANN 协议: https://sipann.readthedocs.io/ (MIT)
+
+## 规则 22：商业交付与差距分析纪律（强制）
+
+### 22.1 强制要求
+
+1. **定期差距分析**：每个里程碑（v1.0/v2.0/v3.0）必须执行一次商业工具差距分析，产出 `docs/commercial_gap_analysis.md`
+2. **对标最强商业工具**：必须对比 Lumerical/IPKISS/Tidy3D/Cadence Innovus/Synopsys ICC2 等行业标杆
+3. **差距分级**：按 P0（阻断商业交付）/P1（影响竞争力）/P2（长期演进）分级
+4. **解决路线图**：每个差距须给出具体解决办法和版本规划
+5. **来源真实**：所有商业工具能力数据须来自官方文档/权威评测，禁止编造
+
+### 22.2 MVP 交付标准
+
+MVP（v1.0）必须满足：
+- 端到端流水线跑通：网表 → 布局 → 布线 → 仿真 → GDS → DRC → 报告
+- 100 次迭代稳定性 ≥ 95%（`scripts/mvp_100_iterations.py`）
+- 至少 5 个演示电路全部成功
+- 质量门禁 0 警告 0 错误
+- 测试通过率 100%
+
+### 22.3 商业级交付标准
+
+商业级（v2.0）必须满足：
+- 支持 ≥ 1000 器件规模布局布线
+- PDK 覆盖 ≥ 8 个工艺平台
+- DRC/LVS 工业链路完整（KLayout 集成）
+- 训练良好的模型（PPO 收敛 + BC 预训练 + GNN 状态编码）
+- 性能基准达标（规则 15.1）
+- 与商业工具差距分析报告显示差距 ≤ 2.0 分（10 分制）
+
+来源：
+- 工业级 EDA 标准: https://www.cadence.com/ (Innovus)
+- 光子 EDA 评测: https://www.luceda.com/ (IPKISS)
 
 ## 参考来源汇总
 

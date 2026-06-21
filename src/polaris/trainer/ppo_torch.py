@@ -52,6 +52,54 @@ __all__ = [
 ]
 
 
+def _migrate_weight_tensor(old_tensor: torch.Tensor, new_tensor: torch.Tensor) -> torch.Tensor:
+    """迁移权重张量到新形状（输入维度变化时）。
+
+    当 checkpoint 的 obs_dim 与当前不一致（如 113 → 249），按 min(old, new)
+    复制重叠部分，新增维度保持初始化值（零），截断维度丢弃尾部。
+
+    来源: 神经网络权重迁移标准做法（迁移学习/在线学习）
+    """
+    result = new_tensor.clone()
+    # 取各维度最小值作为复制范围
+    slices = tuple(slice(0, min(o, n)) for o, n in zip(old_tensor.shape, new_tensor.shape))
+    result[slices] = old_tensor[slices]
+    return result
+
+
+def _migrate_state_dict(
+    saved_state: dict,
+    new_state: dict,
+) -> tuple[dict, int, int]:
+    """迁移 checkpoint 的 state_dict 到新模型结构。
+
+    当 checkpoint 的 obs_dim 与当前不一致时，自动 padding/截断权重，
+    而非丢弃整个 checkpoint 从头训练。
+
+    Args:
+        saved_state: checkpoint 中的 network state_dict。
+        new_state: 新模型的 state_dict（含初始化权重）。
+
+    Returns:
+        (migrated_state, n_migrated, n_skipped)
+    """
+    migrated = 0
+    skipped = 0
+    for key, new_tensor in new_state.items():
+        if key not in saved_state:
+            skipped += 1
+            continue
+        old_tensor = saved_state[key]
+        if old_tensor.shape == new_tensor.shape:
+            new_state[key] = old_tensor
+        elif old_tensor.dim() == new_tensor.dim() and old_tensor.dim() >= 2:
+            new_state[key] = _migrate_weight_tensor(old_tensor, new_tensor)
+            migrated += 1
+        else:
+            skipped += 1
+    return new_state, migrated, skipped
+
+
 class PPOAgentDiscrete:
     """离散动作空间的 PPO 智能体。
 
@@ -255,12 +303,24 @@ class PPOAgentDiscrete:
             path: 检查点文件路径。
             config: PPO 配置。
             spec: 智能体形状规格（obs_dim/n_actions/hidden_dim）。
+
+        Bug 修复: 当 checkpoint 的 obs_dim 与当前 spec 不一致时（数据集变化导致），
+        自动迁移权重（padding 零或截断），而非丢弃整个 checkpoint 从头训练。
         """
         agent = cls(spec.obs_dim, spec.n_actions, config, spec.hidden_dim)
         data = torch.load(path, weights_only=False)
-        agent.network.load_state_dict(data["network"])
-        agent.optimizer.load_state_dict(data["optimizer"])
+        new_state = agent.network.state_dict()
+        new_state, migrated, skipped = _migrate_state_dict(data["network"], new_state)
+        agent.network.load_state_dict(new_state)
+        # optimizer 状态可能与迁移后的网络不匹配，重建以避免 Adam moment 维度错误
+        agent.optimizer = torch.optim.Adam(agent.network.parameters(), lr=agent.config.lr)
         agent._total_steps = data.get("total_steps", 0)
+        if migrated > 0:
+            print(
+                f"  [迁移] {migrated} 个权重张量已迁移"
+                f"（checkpoint obs_dim 与当前不一致），{skipped} 个跳过",
+                flush=True,
+            )
         return agent
 
     def bc_update(
