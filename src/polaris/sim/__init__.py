@@ -11,12 +11,13 @@
         device_models.py   — 51 器件到 S 参数模型映射
         constraint_checker.py — 约束检查器（16 项 DRC 规则）
         klayout_drc.py     — KLayout DRC runset 适配层（第2轮 P0-1）
+        lvs.py             — LVS 基础实现（第3轮 P0-1）
 
 集成方式（遵守 project_rules.md 规则 2/3）：
 1. 直接集成 simphony + sax（规则 2）
 2. SiPANN 安装失败 → 纯 numpy 100% 复刻（规则 3）
 3. Touchstone .s2p/.snp 文件支持
-4. KLayout DRC 引擎直接集成（规则 4.1，klayout 活跃维护）
+4. KLayout DRC/LVS 引擎直接集成（规则 4.1，klayout 活跃维护）
 
 来源:
 - Simphony: https://simphonyphotonics.readthedocs.io/
@@ -24,6 +25,7 @@
 - SiPANN: https://sipann.readthedocs.io/
 - Touchstone: https://en.wikipedia.org/wiki/Touchstone_file
 - KLayout DRC: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 """
 
 from polaris.sim.cascade import cascade_circuit
@@ -34,6 +36,16 @@ from polaris.sim.klayout_drc import (
     DRCRule,
     KLayoutDRCRunner,
     run_klayout_drc,
+)
+from polaris.sim.lvs import (
+    ExtractedNetlist,
+    LVSMismatch,
+    LVSMismatchType,
+    LVSReport,
+    circuit_spec_to_netlist,
+    compare_netlists,
+    extract_netlist_from_gds,
+    run_lvs,
 )
 from polaris.sim.models import (
     RingParams,
@@ -91,4 +103,13 @@ __all__ = [
     "KLayoutDRCRunner",
     "SIEPIC_EBEAM_DRC_RUNSET",
     "run_klayout_drc",
+    # LVS（第3轮 P0-1）
+    "ExtractedNetlist",
+    "LVSMismatch",
+    "LVSMismatchType",
+    "LVSReport",
+    "circuit_spec_to_netlist",
+    "compare_netlists",
+    "extract_netlist_from_gds",
+    "run_lvs",
 ]
