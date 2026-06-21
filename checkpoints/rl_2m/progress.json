@@ -1,1213 +1,13 @@
 {
-  "total_episodes_done": 1478500,
-  "placement_episodes": 1478500,
-  "routing_episodes": 103500,
+  "total_episodes_done": 1486500,
+  "placement_episodes": 1486500,
+  "routing_episodes": 107500,
   "best_placement_reward": 1.3164424445128056,
   "best_routing_reward": -0.2,
-  "total_training_seconds": 2318.5545675754547,
-  "batches_completed": 2970,
-  "last_commit_time": 1782013254.1679232,
+  "total_training_seconds": 2644.9159359931946,
+  "batches_completed": 2986,
+  "last_commit_time": 1782013582.0309048,
   "recent_rewards": [
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -10.786
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -10.8706
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -3.5465
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -5.9136
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -13.4733
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -2.9843
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -5.0179
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -3.1574
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -2.5131
-    },
-    {
-      "ep": 1462500,
-      "phase": "placement",
-      "reward": -7.0401
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -111.2037
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -47.9562
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -12.2324
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -71.3566
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -134.45
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -24.0504
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -55.0
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -104.2604
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -22.6765
-    },
-    {
-      "ep": 1462500,
-      "phase": "routing",
-      "reward": -176.8547
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -8.7666
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -8.9411
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -1.9029
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -2.9418
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -8.1365
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -0.2537
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -4.3216
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -5.1548
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": 0.2661
-    },
-    {
-      "ep": 1463000,
-      "phase": "placement",
-      "reward": -6.51
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -12.0358
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -9.828
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -1.9645
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -1.4381
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -10.8554
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -0.9547
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -5.7249
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -8.9909
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -2.4974
-    },
-    {
-      "ep": 1463500,
-      "phase": "placement",
-      "reward": -5.5778
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -100.4237
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -37.2021
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -12.3602
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -39.8279
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -115.6559
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -24.8829
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -44.6375
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -94.2421
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -12.3428
-    },
-    {
-      "ep": 1463500,
-      "phase": "routing",
-      "reward": -146.9921
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -10.8952
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -10.8206
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -1.9486
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -2.6447
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -9.4136
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -6.2721
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -4.3159
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -8.2885
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": 0.2578
-    },
-    {
-      "ep": 1464000,
-      "phase": "placement",
-      "reward": -4.7316
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -7.9577
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -10.1177
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -2.1844
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -8.943
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -8.8262
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -1.3026
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -7.019
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -6.4481
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": 0.2813
-    },
-    {
-      "ep": 1464500,
-      "phase": "placement",
-      "reward": -7.0131
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -121.0
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -57.454
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -12.2401
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -61.5813
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -143.9317
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -14.6058
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -33.8558
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -55.9849
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -22.7524
-    },
-    {
-      "ep": 1464500,
-      "phase": "routing",
-      "reward": -126.2586
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -11.1252
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -7.901
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -1.9283
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -1.9214
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -11.2121
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -0.1448
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -7.4452
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -5.0339
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": 0.2738
-    },
-    {
-      "ep": 1465000,
-      "phase": "placement",
-      "reward": -4.4717
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -8.0981
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -10.2857
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": 0.8255
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -2.1275
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -13.5374
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -3.9264
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -6.0625
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -6.59
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": 0.1121
-    },
-    {
-      "ep": 1465500,
-      "phase": "placement",
-      "reward": -5.5775
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -89.882
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -27.4401
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -11.9418
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -42.3361
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -126.1397
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -24.5171
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -44.3868
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -103.5646
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -11.7632
-    },
-    {
-      "ep": 1465500,
-      "phase": "routing",
-      "reward": -139.3694
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -8.5858
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -10.8329
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -1.9318
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -1.6791
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -9.0403
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -1.7764
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -4.7092
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -1.9831
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": 0.1886
-    },
-    {
-      "ep": 1466000,
-      "phase": "placement",
-      "reward": -6.4381
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -7.4608
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -5.0721
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -1.9145
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -4.3594
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -10.1116
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -1.5746
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -7.4749
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -1.2595
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -0.447
-    },
-    {
-      "ep": 1466500,
-      "phase": "placement",
-      "reward": -7.6236
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -70.7803
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -80.4657
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -22.0
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -60.4917
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -125.2963
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -24.0596
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -55.0
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -104.6533
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -11.5233
-    },
-    {
-      "ep": 1466500,
-      "phase": "routing",
-      "reward": -187.0
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -11.7114
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -10.3188
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -1.907
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -4.0222
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -3.7444
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -1.6536
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": 0.2106
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -6.0038
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": 0.2696
-    },
-    {
-      "ep": 1467000,
-      "phase": "placement",
-      "reward": -7.7488
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -7.086
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -8.0476
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": 0.8245
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -1.9863
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -10.677
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": 0.0635
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -6.8264
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -1.6337
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": 0.2685
-    },
-    {
-      "ep": 1467500,
-      "phase": "placement",
-      "reward": -7.8441
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -121.0
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -57.163
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -11.539
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -82.4806
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -134.6363
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -25.7445
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -55.0
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -105.8167
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -13.4008
-    },
-    {
-      "ep": 1467500,
-      "phase": "routing",
-      "reward": -155.3335
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -8.0805
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -12.1624
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -3.5384
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -6.0147
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -9.7648
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -1.1894
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -6.8428
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -9.4033
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": 0.2697
-    },
-    {
-      "ep": 1468000,
-      "phase": "placement",
-      "reward": -6.2062
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -7.0234
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -9.2814
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -1.9383
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -5.5315
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -10.0007
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": 0.0753
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -7.0176
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -6.3195
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": 0.2866
-    },
-    {
-      "ep": 1468500,
-      "phase": "placement",
-      "reward": -5.4054
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -81.5964
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -67.813
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -11.9953
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -52.1403
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -165.0
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -33.9389
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -44.7808
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -113.0247
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -1.6801
-    },
-    {
-      "ep": 1468500,
-      "phase": "routing",
-      "reward": -126.2012
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -8.0101
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -9.8429
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -1.9038
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -5.5931
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -12.02
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -0.6786
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -4.8604
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -6.7517
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": 0.1228
-    },
-    {
-      "ep": 1469000,
-      "phase": "placement",
-      "reward": -8.5648
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -6.6542
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -6.7777
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -3.5384
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -8.0126
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -7.2686
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -0.4637
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -6.2222
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -4.5625
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": 0.2526
-    },
-    {
-      "ep": 1469500,
-      "phase": "placement",
-      "reward": -5.3819
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -80.8008
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -68.2596
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -22.0
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -51.6062
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -144.0755
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -14.1988
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -55.0
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -112.21
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -22.4651
-    },
-    {
-      "ep": 1469500,
-      "phase": "routing",
-      "reward": -100.6658
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -8.5009
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -8.5986
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": 0.854
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -3.2647
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -7.8296
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -0.6521
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -5.7399
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -2.2593
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": 0.2533
-    },
-    {
-      "ep": 1470000,
-      "phase": "placement",
-      "reward": -4.7305
-    },
     {
       "ep": 1470500,
       "phase": "placement",
@@ -2507,6 +1307,1206 @@
       "ep": 1478500,
       "phase": "routing",
       "reward": -135.6574
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -7.6646
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -9.3744
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": 0.8484
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -2.8315
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -8.2329
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -1.5308
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -6.0098
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -7.6561
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -2.5375
+    },
+    {
+      "ep": 1479000,
+      "phase": "placement",
+      "reward": -8.6325
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -8.5931
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -3.0529
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -1.9679
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -1.0226
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -8.9345
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -1.7536
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -5.9473
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -7.8355
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": 0.2866
+    },
+    {
+      "ep": 1479500,
+      "phase": "placement",
+      "reward": -5.3846
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -100.6141
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -36.434
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -1.5606
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -70.1177
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -107.4004
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -24.4214
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -55.0
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -114.852
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -33.0
+    },
+    {
+      "ep": 1479500,
+      "phase": "routing",
+      "reward": -177.0565
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -11.1822
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -7.5667
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": 0.8609
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -7.547
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -9.4132
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -1.4408
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -6.8695
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -5.9295
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": 0.2783
+    },
+    {
+      "ep": 1480000,
+      "phase": "placement",
+      "reward": -6.4097
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -10.6988
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -8.1945
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": 0.825
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -2.4166
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -7.7823
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -0.8349
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -5.4224
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -7.3835
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": 0.1227
+    },
+    {
+      "ep": 1480500,
+      "phase": "placement",
+      "reward": -4.6968
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -90.1327
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -89.5757
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -11.7125
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -49.8684
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -76.4481
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -24.4366
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -55.0
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -105.3622
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -12.1724
+    },
+    {
+      "ep": 1480500,
+      "phase": "routing",
+      "reward": -187.0
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -6.5966
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -8.8245
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": 0.8295
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -6.02
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -10.1296
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -1.0464
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -4.8827
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -4.5449
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": 0.2603
+    },
+    {
+      "ep": 1481000,
+      "phase": "placement",
+      "reward": -4.2097
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -13.0735
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -9.0156
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -1.9394
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -5.4161
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -10.3128
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -1.0758
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -6.8039
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -4.0557
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": 0.2585
+    },
+    {
+      "ep": 1481500,
+      "phase": "placement",
+      "reward": -6.4435
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -100.2111
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -49.2374
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -2.0801
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -41.1326
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -104.9198
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -34.8535
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -45.2868
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -64.7552
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -12.7147
+    },
+    {
+      "ep": 1481500,
+      "phase": "routing",
+      "reward": -136.5956
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -4.8164
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -10.084
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -3.7779
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -8.239
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -9.8527
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -3.7021
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -5.7295
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -6.0536
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -0.0662
+    },
+    {
+      "ep": 1482000,
+      "phase": "placement",
+      "reward": -5.5802
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -9.0051
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -3.2003
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -1.9392
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -5.7644
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -10.1336
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -2.8192
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -7.9199
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -7.1647
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": 0.2465
+    },
+    {
+      "ep": 1482500,
+      "phase": "placement",
+      "reward": -8.1662
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -99.9321
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -39.297
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -11.6613
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -51.9504
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -155.1881
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -25.5106
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -55.0
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -66.0362
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -22.5091
+    },
+    {
+      "ep": 1482500,
+      "phase": "routing",
+      "reward": -167.085
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -9.2936
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -2.5454
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": 0.8406
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -4.6157
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -8.402
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -1.1578
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -5.4441
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -3.1643
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": 0.194
+    },
+    {
+      "ep": 1483000,
+      "phase": "placement",
+      "reward": -6.996
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -5.2222
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -6.4592
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": 0.8342
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -1.5297
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -10.8643
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -3.4608
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -6.8725
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -6.3138
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": 0.2411
+    },
+    {
+      "ep": 1483500,
+      "phase": "placement",
+      "reward": -4.976
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -100.7186
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -57.1061
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -12.6068
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -49.064
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -125.6028
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -25.012
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -44.9433
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -48.7522
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -12.4602
+    },
+    {
+      "ep": 1483500,
+      "phase": "routing",
+      "reward": -156.5279
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -7.7967
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -10.7977
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -1.9309
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -4.936
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -7.2893
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -1.6762
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -6.1654
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -1.4701
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": 0.0782
+    },
+    {
+      "ep": 1484000,
+      "phase": "placement",
+      "reward": -6.4123
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -3.9994
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -10.7338
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -2.1868
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -2.8493
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -10.0242
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -0.4383
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -6.5341
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -3.3886
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": 0.1074
+    },
+    {
+      "ep": 1484500,
+      "phase": "placement",
+      "reward": -7.1802
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -110.1
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -38.4363
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -11.7328
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -61.3675
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -144.4583
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -25.198
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -55.0
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -74.3287
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -22.5531
+    },
+    {
+      "ep": 1484500,
+      "phase": "routing",
+      "reward": -176.577
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -9.1819
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -7.2295
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": 0.8181
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -4.6336
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -10.7208
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -3.7315
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -4.997
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -5.9257
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": 0.1956
+    },
+    {
+      "ep": 1485000,
+      "phase": "placement",
+      "reward": -6.2287
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -6.23
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -4.6798
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": 0.8176
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -4.4584
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -9.6461
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -2.6348
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -8.2666
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -4.8637
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -2.6501
+    },
+    {
+      "ep": 1485500,
+      "phase": "placement",
+      "reward": -3.0453
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -121.0
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -68.3281
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -22.0
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -79.7164
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -102.8311
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -14.3704
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -34.2829
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -103.8524
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -1.9737
+    },
+    {
+      "ep": 1485500,
+      "phase": "routing",
+      "reward": -187.0
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -8.7739
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -10.9131
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -2.3331
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -6.6713
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -9.0407
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -1.219
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -4.434
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -4.1374
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -0.4266
+    },
+    {
+      "ep": 1486000,
+      "phase": "placement",
+      "reward": -7.6036
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -10.5505
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -8.9089
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -1.9748
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -3.7358
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -8.7219
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -1.3185
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -4.9393
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -3.498
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -2.6531
+    },
+    {
+      "ep": 1486500,
+      "phase": "placement",
+      "reward": -6.3551
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -101.8019
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -58.0371
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -2.0288
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -69.9833
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -144.5426
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -24.2365
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -55.0
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -64.243
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -1.8905
+    },
+    {
+      "ep": 1486500,
+      "phase": "routing",
+      "reward": -167.0731
     }
   ],
   "rounds_completed": 0
