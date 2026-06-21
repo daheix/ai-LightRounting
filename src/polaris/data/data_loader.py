@@ -26,7 +26,7 @@ from polaris.data._other_formats import (
     load_picbench,
 )
 from polaris.data._pic_ir import load_pic_ir
-from polaris.data.specs import CircuitSpec
+from polaris.data.specs import CircuitSpec, DeviceSpec
 
 logger = logging.getLogger(__name__)
 
@@ -320,6 +320,174 @@ def load_lidar_benchmark(path: str | Path | None = None) -> CircuitSpec:
     return circuit
 
 
+def generate_synthetic_benchmark(
+    benchmark_type: str,
+    num_devices: int = 10,
+) -> CircuitSpec:
+    """生成合成 benchmark 电路（P1-5，第9轮）。
+
+    当无法获取真实 benchmark 数据（需 NDA 或 GitHub 下载）时，
+    生成合成电路用于 CI 回归测试与算法验证。合成电路模拟真实
+    benchmark 的拓扑结构，但规模较小（默认 10 器件）。
+
+    支持的 benchmark 类型：
+    - ``tilos_ariane``：电子芯片网格布局（模拟 RISC-V CPU 模块）
+    - ``apollo_ptc``：光子 MZI 阵列（模拟张量核心矩阵乘法器）
+    - ``apollo_onoc``：光子星型网络（模拟片上光网络）
+    - ``lidar``：光子链式布线（模拟曲线波导布线）
+
+    来源:
+    - TILOS Ariane: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - Apollo PTC/oNoC: https://github.com/ASU-LOPE-Group/Apollo
+    - LiDAR ISPD'25: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+
+    Args:
+        benchmark_type: benchmark 类型（tilos_ariane/apollo_ptc/apollo_onoc/lidar）。
+        num_devices: 合成器件数量（默认 10）。
+
+    Returns:
+        合成 CircuitSpec，含器件与连接。
+
+    Raises:
+        ValueError: 不支持的 benchmark 类型。
+    """
+    generators = {
+        "tilos_ariane": _gen_tilos_ariane,
+        "apollo_ptc": _gen_apollo_ptc,
+        "apollo_onoc": _gen_apollo_onoc,
+        "lidar": _gen_lidar,
+    }
+    if benchmark_type not in generators:
+        raise ValueError(
+            f"不支持的 benchmark 类型: {benchmark_type}，支持: {list(generators.keys())}"
+        )
+    return generators[benchmark_type](num_devices)
+
+
+def _make_device_spec(
+    name: str,
+    device_type: str,
+    width: float = 10.0,
+    height: float = 10.0,
+) -> DeviceSpec:
+    """构造合成 DeviceSpec（含标准 in/out 端口）。"""
+    return DeviceSpec(
+        name=name,
+        device_type=device_type,
+        width_um=width,
+        height_um=height,
+        ports=[
+            ("in", 0.0, height / 2, "WEST"),
+            ("out", width, height / 2, "EAST"),
+        ],
+    )
+
+
+def _gen_tilos_ariane(num_devices: int) -> CircuitSpec:
+    """生成 TILOS Ariane 合成 benchmark（电子芯片网格布局）。
+
+    模拟 RISC-V CPU 模块的网格状连接拓扑。
+    """
+    from polaris.data.specs import BenchmarkSource, TargetMetric
+
+    devices = [
+        _make_device_spec(f"mod_{i}", "wg", width=20.0, height=20.0) for i in range(num_devices)
+    ]
+    # 网格连接：mod_i.out → mod_{i+1}.in
+    connections = [(f"mod_{i}", "out", f"mod_{i + 1}", "in") for i in range(num_devices - 1)]
+    return CircuitSpec(
+        name="tilos_ariane_synthetic",
+        devices=devices,
+        connections=connections,
+        canvas_w=1000.0,
+        canvas_h=1000.0,
+        benchmark_source=BenchmarkSource.TILOS,
+        process_node="NanGate45",
+        target_metric=TargetMetric.HPWL,
+        target_value=100000.0,
+    )
+
+
+def _gen_apollo_ptc(num_devices: int) -> CircuitSpec:
+    """生成 Apollo PTC 合成 benchmark（光子 MZI 阵列）。
+
+    模拟光子张量核心的 MZI 矩阵乘法器拓扑。
+    """
+    from polaris.data.specs import BenchmarkSource, TargetMetric
+
+    devices = [
+        _make_device_spec(f"mzi_{i}", "mzi", width=15.0, height=10.0) for i in range(num_devices)
+    ]
+    # MZI 阵列连接：mzi_i.out → mzi_{i+2}.in（交叉连接模拟矩阵乘法）
+    connections = [(f"mzi_{i}", "out", f"mzi_{i + 2}", "in") for i in range(num_devices - 2)]
+    return CircuitSpec(
+        name="apollo_ptc_synthetic",
+        devices=devices,
+        connections=connections,
+        canvas_w=800.0,
+        canvas_h=600.0,
+        benchmark_source=BenchmarkSource.APOLLO,
+        process_node="220nm SOI",
+        optical_wavelength_nm=1550.0,
+        target_metric=TargetMetric.INSERTION_LOSS_DB,
+        target_value=5.0,
+    )
+
+
+def _gen_apollo_onoc(num_devices: int) -> CircuitSpec:
+    """生成 Apollo oNoC 合成 benchmark（光子星型网络）。
+
+    模拟片上光网络的星型拓扑（中心路由器 + 叶节点）。
+    """
+    from polaris.data.specs import BenchmarkSource, TargetMetric
+
+    # 中心路由器 + 叶节点
+    devices = [_make_device_spec("router_0", "mmi", width=30.0, height=30.0)]
+    devices.extend(
+        _make_device_spec(f"node_{i}", "wg", width=10.0, height=10.0) for i in range(1, num_devices)
+    )
+    # 星型连接：router_0.out → node_i.in
+    connections = [("router_0", "out", f"node_{i}", "in") for i in range(1, num_devices)]
+    return CircuitSpec(
+        name="apollo_onoc_synthetic",
+        devices=devices,
+        connections=connections,
+        canvas_w=1200.0,
+        canvas_h=1200.0,
+        benchmark_source=BenchmarkSource.APOLLO,
+        process_node="220nm SOI",
+        optical_wavelength_nm=1550.0,
+        target_metric=TargetMetric.ROUTING_SUCCESS_RATE,
+        target_value=0.95,
+    )
+
+
+def _gen_lidar(num_devices: int) -> CircuitSpec:
+    """生成 LiDAR 合成 benchmark（光子链式布线）。
+
+    模拟 LiDAR ISPD'25 的链式波导布线拓扑。
+    """
+    from polaris.data.specs import BenchmarkSource, TargetMetric
+
+    devices = [
+        _make_device_spec(f"wg_{i}", "wg", width=10.0, height=5.0) for i in range(num_devices)
+    ]
+    # 链式连接：wg_i.out → wg_{i+1}.in
+    connections = [(f"wg_{i}", "out", f"wg_{i + 1}", "in") for i in range(num_devices - 1)]
+    return CircuitSpec(
+        name="lidar_ispd25_synthetic",
+        devices=devices,
+        connections=connections,
+        canvas_w=500.0,
+        canvas_h=500.0,
+        benchmark_source=BenchmarkSource.LIDAR,
+        process_node="220nm SOI",
+        optical_wavelength_nm=1550.0,
+        target_metric=TargetMetric.ROUTING_SUCCESS_RATE,
+        target_value=1.0,
+    )
+
+
 __all__ = [
     "load_pic_ir",
     "load_gdsfactory_yaml",
@@ -331,4 +499,5 @@ __all__ = [
     "load_apollo_ptc",
     "load_apollo_onoc",
     "load_lidar_benchmark",
+    "generate_synthetic_benchmark",
 ]
