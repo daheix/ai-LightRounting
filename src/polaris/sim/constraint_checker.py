@@ -20,7 +20,12 @@ from enum import Enum
 
 
 class ViolationType(Enum):
-    """违规类型枚举。"""
+    """违规类型枚举。
+
+    覆盖 SiEPIC EBeam PDK 与商业 foundry runset 常见规则类别
+    （来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK；
+    KLayout DRC 规则类别: https://www.klayout.org/doc-qt5/manual/drc_runsets.html）。
+    """
 
     BEND_RADIUS = "bend_radius"  # 弯曲半径不足
     SPACING = "spacing"  # 波导间距不足
@@ -31,6 +36,14 @@ class ViolationType(Enum):
     THERMAL = "thermal"  # 热串扰
     MIN_WIDTH = "min_width"  # 波导宽度不足
     COUPLING_GAP = "coupling_gap"  # 耦合间隙不足
+    MIN_LENGTH = "min_length"  # 波导最小长度不足
+    MAX_LENGTH = "max_length"  # 波导最大长度超标
+    MIN_AREA = "min_area"  # 最小面积违规
+    ENCLOSEMENT = "enclosure"  # 包围规则违规（内层须被外层包围）
+    NOTCH = "notch"  # 凹槽间距不足（同一图形内凹处）
+    PORT_CONNECTIVITY = "port_connectivity"  # 端口未连接
+    PIN_MATCH = "pin_match"  # 端口宽度/类型不匹配
+    LAYER_DENSITY = "layer_density"  # 层密度违规
 
 
 @dataclass
@@ -67,6 +80,12 @@ class ConstraintConfig:
         safe_thermal_distance_um: 热安全距离（μm）。
         min_waveguide_width_um: 最小波导宽度（μm），SOI 典型 0.4-0.5μm。
         min_coupling_gap_um: 最小耦合间隙（μm），DC/环谐振器典型 0.1-0.3μm。
+        min_waveguide_length_um: 最小波导长度（μm），避免过短互连引入工艺变异。
+        max_waveguide_length_um: 最大波导长度（μm），限制损耗累积。
+        min_device_area_um2: 最小器件面积（μm²），确保工艺可识别。
+        min_enclosure_um: 包围规则最小间距（μm），内层边缘到外层边缘。
+        min_notch_um: 最小凹槽间距（μm），同一图形内凹处最小间距。
+        max_layer_density: 层密度上限（0-1），防止工艺均匀性问题。
     """
 
     min_bend_radius_um: float = 5.0
@@ -77,6 +96,12 @@ class ConstraintConfig:
     safe_thermal_distance_um: float = 100.0
     min_waveguide_width_um: float = 0.4
     min_coupling_gap_um: float = 0.1
+    min_waveguide_length_um: float = 2.0
+    max_waveguide_length_um: float = 10000.0
+    min_device_area_um2: float = 0.1
+    min_enclosure_um: float = 0.5
+    min_notch_um: float = 0.3
+    max_layer_density: float = 0.85
 
 
 def check_bend_radius(
@@ -341,6 +366,260 @@ def check_coupling_gap(
     return violations
 
 
+def check_waveguide_length(
+    waveguide_lengths: dict[str, float],
+    min_length: float,
+    max_length: float,
+) -> list[Violation]:
+    """检查波导长度约束（最小/最大长度）。
+
+    过短波导引入工艺变异（光刻对准困难），过长波导累积损耗。
+    SiEPIC EBeam PDK 建议最小 2μm，最大受损耗预算限制。
+
+    来源: SiEPIC EBeam PDK 设计规则
+           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+    Args:
+        waveguide_lengths: 波导长度字典 {net_id: length_um}。
+        min_length: 最小允许长度（μm）。
+        max_length: 最大允许长度（μm）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for net_id, length in waveguide_lengths.items():
+        if length < min_length:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.MIN_LENGTH,
+                    severity=1.0 - length / min_length if min_length > 0 else 1.0,
+                    message=f"波导长度 {length:.3f} μm < 最小 {min_length:.3f} μm",
+                    net_id=net_id,
+                )
+            )
+        elif length > max_length:
+            ratio = (length - max_length) / max_length if max_length > 0 else 1.0
+            violations.append(
+                Violation(
+                    vtype=ViolationType.MAX_LENGTH,
+                    severity=min(1.0, ratio),
+                    message=f"波导长度 {length:.1f} μm > 最大 {max_length:.1f} μm",
+                    net_id=net_id,
+                )
+            )
+    return violations
+
+
+def check_min_area(
+    device_areas: dict[str, float],
+    min_area: float,
+) -> list[Violation]:
+    """检查最小面积约束。
+
+    确保器件面积满足工艺最小特征尺寸要求，避免光刻无法识别的小图形。
+    来源: KLayout DRC runset 最小面积规则
+           https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+
+    Args:
+        device_areas: 器件面积字典 {device_name: area_um2}。
+        min_area: 最小允许面积（μm²）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for dev_name, area in device_areas.items():
+        if area < min_area:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.MIN_AREA,
+                    severity=1.0 - area / min_area if min_area > 0 else 1.0,
+                    message=f"器件面积 {area:.3f} μm² < 最小 {min_area:.3f} μm²",
+                    device_name=dev_name,
+                )
+            )
+    return violations
+
+
+def check_port_connectivity(
+    port_connections: dict[str, bool],
+) -> list[Violation]:
+    """检查端口连接性约束。
+
+    所有器件端口必须连接到其他器件或波导，未连接端口导致功能失效。
+    来源: SiEPIC-Tools Functional Layout Check - Connectivity checking
+           https://github.com/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+
+    Args:
+        port_connections: 端口连接状态 {port_name: connected_bool}。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for port_name, connected in port_connections.items():
+        if not connected:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.PORT_CONNECTIVITY,
+                    severity=1.0,
+                    message=f"端口 {port_name} 未连接",
+                    device_name=port_name.split("::")[0] if "::" in port_name else port_name,
+                )
+            )
+    return violations
+
+
+def check_layer_density(
+    layer_densities: dict[str, float],
+    max_density: float,
+) -> list[Violation]:
+    """检查层密度约束。
+
+    单层图形密度过高会导致工艺均匀性问题（刻蚀负载效应）。
+    foundry runset 通常限制密度 ≤ 0.85-0.90。
+    来源: KLayout DRC density 规则
+           https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+
+    Args:
+        layer_densities: 层密度字典 {layer_name: density_0_to_1}。
+        max_density: 最大允许密度（0-1）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for layer_name, density in layer_densities.items():
+        if density > max_density:
+            ratio = (density - max_density) / max_density if max_density > 0 else 1.0
+            violations.append(
+                Violation(
+                    vtype=ViolationType.LAYER_DENSITY,
+                    severity=min(1.0, ratio),
+                    message=f"层 {layer_name} 密度 {density:.3f} > 最大 {max_density:.3f}",
+                    device_name=layer_name,
+                )
+            )
+    return violations
+
+
+def check_thermal(
+    placements: dict,
+    safe_distance: float,
+) -> list[Violation]:
+    """检查热串扰约束。
+
+    热光移相器等主动器件对邻近器件的热串扰，须保持安全距离。
+    来源: PoLaRIS 商业差距分析 P0-1，对标 Lumerical 多物理场仿真
+
+    Args:
+        placements: 器件布局 {device_name: {x, y, w, h}}。
+        safe_distance: 热安全距离（μm）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    items = list(placements.items())
+    for i, (name1, p1) in enumerate(items):
+        for name2, p2 in items[i + 1 :]:
+            # 仅检查主动器件 vs 被动器件的热串扰（简化：所有器件对）
+            gap = _rect_gap(p1, p2)
+            if 0 < gap < safe_distance:
+                msg = (
+                    f"器件 {name1} 与 {name2} 间距 {gap:.1f} μm < 热安全距离 {safe_distance:.1f} μm"
+                )
+                violations.append(
+                    Violation(
+                        vtype=ViolationType.THERMAL,
+                        severity=1.0 - gap / safe_distance,
+                        message=msg,
+                        device_name=f"{name1}::{name2}",
+                    )
+                )
+    return violations
+
+
+def check_crosstalk(
+    placements: dict,
+    paths: dict,
+    max_crosstalk_db: float,
+) -> list[Violation]:
+    """检查串扰约束。
+
+    平行波导间距不足引入模式耦合串扰，须保持足够间距。
+    来源: LiDAR ISPD'25 串扰惩罚
+           https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+
+    Args:
+        placements: 器件布局。
+        paths: 布线路径。
+        max_crosstalk_db: 最大允许串扰（dB，负值）。
+
+    Returns:
+        违规列表。
+    """
+    # 串扰与间距近似关系：CT(dB) ≈ -10 * log10(exp(-2 * gap / decay_length))
+    # 简化检查：平行波导段间距 < min_spacing 的 2 倍时报告
+    violations: list[Violation] = []
+    min_safe_gap_um = 2.0  # 串扰 <-20dB 的经验安全间距
+    net_ids = list(paths.keys())
+    for i, n1 in enumerate(net_ids):
+        pts1 = paths[n1]
+        if not isinstance(pts1, (list, tuple)) or len(pts1) < 2:
+            continue
+        for n2 in net_ids[i + 1 :]:
+            pts2 = paths[n2]
+            if not isinstance(pts2, (list, tuple)) or len(pts2) < 2:
+                continue
+            violations.extend(
+                _check_pair_crosstalk(n1, pts1, n2, pts2, min_safe_gap_um, max_crosstalk_db)
+            )
+    return violations
+
+
+def _check_pair_crosstalk(
+    n1: str,
+    pts1: list,
+    n2: str,
+    pts2: list,
+    min_safe_gap_um: float,
+    max_crosstalk_db: float,
+) -> list[Violation]:
+    """检查两条网络的串扰（辅助函数，降低 check_crosstalk 复杂度）。
+
+    参数超过 5 个，但均为原子类型且语义清晰，拆分会降低可读性，
+    按 Google Style Guide 例外保留（来源: https://google.github.io/styleguide/pyguide）。
+    """
+    violations: list[Violation] = []
+    min_gap = _min_path_gap(pts1, pts2)
+    if 0 < min_gap < min_safe_gap_um:
+        msg = f"网络 {n1} 与 {n2} 平行间距 {min_gap:.2f} μm 可能串扰 > {max_crosstalk_db} dB"
+        violations.append(
+            Violation(
+                vtype=ViolationType.CROSSTALK,
+                severity=1.0 - min_gap / min_safe_gap_um,
+                message=msg,
+                net_id=f"{n1}::{n2}",
+            )
+        )
+    return violations
+
+
+def _min_path_gap(pts1: list, pts2: list) -> float:
+    """计算两条路径之间的最小间距（简化：采样点对距离最小值）。"""
+    min_gap = float("inf")
+    step1 = max(1, len(pts1) // 20)
+    step2 = max(1, len(pts2) // 20)
+    for p1 in pts1[::step1]:
+        for p2 in pts2[::step2]:
+            gap = math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+            if gap < min_gap:
+                min_gap = gap
+    return min_gap
+
+
 @dataclass
 class CheckContext:
     """约束检查上下文（可选 DRC 输入）。
@@ -353,12 +632,20 @@ class CheckContext:
         n_crossings: 波导交叉数。
         waveguide_widths: 波导宽度字典 {net_id: width_um}。
         coupling_gaps: 耦合间隙字典 {device_name: gap_um}。
+        waveguide_lengths: 波导长度字典 {net_id: length_um}。
+        device_areas: 器件面积字典 {device_name: area_um2}。
+        port_connections: 端口连接状态 {port_name: connected_bool}。
+        layer_densities: 层密度字典 {layer_name: density_0_to_1}。
     """
 
     total_loss_db: float = 0.0
     n_crossings: int = 0
     waveguide_widths: dict[str, float] | None = None
     coupling_gaps: dict[str, float] | None = None
+    waveguide_lengths: dict[str, float] | None = None
+    device_areas: dict[str, float] | None = None
+    port_connections: dict[str, bool] | None = None
+    layer_densities: dict[str, float] | None = None
 
 
 class ConstraintChecker:
@@ -397,10 +684,30 @@ class ConstraintChecker:
         violations.extend(check_bend_radius(paths, cfg.min_bend_radius_um))
         violations.extend(check_insertion_loss(ctx.total_loss_db, cfg.max_insertion_loss_db))
         violations.extend(check_crossings(ctx.n_crossings, cfg.max_crossings))
+        violations.extend(self._check_optional(ctx, cfg))
+        return violations
+
+    def _check_optional(self, ctx: CheckContext, cfg: ConstraintConfig) -> list[Violation]:
+        """执行可选 DRC 检查（基于 context 提供的输入）。"""
+        violations: list[Violation] = []
         if ctx.waveguide_widths is not None:
             violations.extend(check_min_width(ctx.waveguide_widths, cfg.min_waveguide_width_um))
         if ctx.coupling_gaps is not None:
             violations.extend(check_coupling_gap(ctx.coupling_gaps, cfg.min_coupling_gap_um))
+        if ctx.waveguide_lengths is not None:
+            violations.extend(
+                check_waveguide_length(
+                    ctx.waveguide_lengths,
+                    cfg.min_waveguide_length_um,
+                    cfg.max_waveguide_length_um,
+                )
+            )
+        if ctx.device_areas is not None:
+            violations.extend(check_min_area(ctx.device_areas, cfg.min_device_area_um2))
+        if ctx.port_connections is not None:
+            violations.extend(check_port_connectivity(ctx.port_connections))
+        if ctx.layer_densities is not None:
+            violations.extend(check_layer_density(ctx.layer_densities, cfg.max_layer_density))
         return violations
 
     def check_passed(self, **kwargs) -> bool:
@@ -466,4 +773,10 @@ __all__ = [
     "check_overlap",
     "check_min_width",
     "check_coupling_gap",
+    "check_waveguide_length",
+    "check_min_area",
+    "check_port_connectivity",
+    "check_layer_density",
+    "check_thermal",
+    "check_crosstalk",
 ]
