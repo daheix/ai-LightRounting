@@ -233,6 +233,8 @@ def instantiate_devices(
         dev = catalog.get(inst.component, platform=inst.platform)
         ports = _resolve_ports(dev, inst.settings)
         # 用实例 id 覆盖 device_id 以区分同类型多实例
+        # P1-3 修复（第7轮）：传递 process_node，避免从 catalog 模板实例化后
+        # 丢失工艺节点信息。来源: docs/commercial_gap_analysis.md P1-3
         dev = Device(
             device_id=inst.instance_id,
             platform=dev.platform,
@@ -243,6 +245,7 @@ def instantiate_devices(
             params={**dev.params, **inst.settings},
             source=dev.source,
             constraints=dev.constraints,
+            process_node=dev.process_node,
         )
         devices[inst.instance_id] = dev
     return devices
