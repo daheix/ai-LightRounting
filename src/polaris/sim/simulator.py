@@ -3,8 +3,8 @@
 对光子电路网表执行频率扫描，计算传输谱（S 参数 vs 频率/波长）。
 
 集成方式:
-- 优先使用 SAX（规则 2 直接集成）
-- SAX 不可用时使用纯 numpy 子网络增长（规则 3 复刻，独立实现）
+- 纯 numpy 子网络增长实现（规则 3 复刻，独立实现）
+- SAX 作为可选依赖（规则 2 直接集成），但本模块不依赖 SAX
 
 来源:
 - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
@@ -56,8 +56,8 @@ class CircuitSimulator:
     对光子电路网表执行频率扫描，计算传输谱（S 参数 vs 频率/波长）。
 
     集成方式:
-    - 优先使用 SAX（规则 2 直接集成）
-    - SAX 不可用时使用纯 numpy 子网络增长（规则 3 复刻，独立实现）
+    - 纯 numpy 子网络增长实现（规则 3 复刻，独立实现）
+    - SAX 作为可选依赖（规则 2 直接集成），但本模块不依赖 SAX
 
     来源:
     - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
