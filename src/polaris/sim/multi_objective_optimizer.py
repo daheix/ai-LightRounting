@@ -83,6 +83,14 @@ class Individual:
     rank: int = 0
     crowding_distance: float = 0.0
 
+    def __eq__(self, other: object) -> bool:
+        """相等判断（基于 id，避免数组比较歧义）。"""
+        return self is other
+
+    def __hash__(self) -> int:
+        """哈希（基于 id）。"""
+        return id(self)
+
 
 @dataclass
 class NSGA2Config:
@@ -178,6 +186,8 @@ def fast_non_dominated_sort(
         分层列表 [F1, F2, ...]。
     """
     n = len(population)
+    # 用 id 建立索引，避免 == 比较数组
+    id_to_idx = {id(ind): i for i, ind in enumerate(population)}
     domination_count = [0] * n  # 被 a 支配的解数
     dominated_set: list[list[int]] = [[] for _ in range(n)]  # a 支配的解索引
     fronts: list[list[Individual]] = [[]]
@@ -202,7 +212,7 @@ def fast_non_dominated_sort(
     while fronts[k]:
         next_front: list[Individual] = []
         for individual in fronts[k]:
-            idx = population.index(individual)
+            idx = id_to_idx[id(individual)]
             for j in dominated_set[idx]:
                 domination_count[j] -= 1
                 if domination_count[j] == 0:
@@ -508,7 +518,7 @@ class NSGA2Optimizer:
         objective_history: list[np.ndarray] = []
 
         # 2. 迭代
-        for gen in range(self.config.max_generations):
+        for _gen in range(self.config.max_generations):
             # 非支配排序 + 拥挤距离
             fronts = fast_non_dominated_sort(population, self.objectives)
             for front in fronts:
