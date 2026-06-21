@@ -21,6 +21,10 @@ venv/
 # 离线 wheel 包临时还原目录（install.sh 运行时生成，不提交）
 3dtool/wheels/.tmp_restore/
 
+# Tidy3D 安装目录（pip install --target 生成，531MB，不提交）
+# 安装方式: bash 3dtool/wheels/tidy3d_install.sh
+3dtool/wheels/tidy3d/
+
 # 密钥与凭据
 .env
 *.key
