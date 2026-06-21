@@ -1,7 +1,8 @@
-"""MEEP Adjoint 后端集成（第34轮 P2-1 深化）。
+"""MEEP Adjoint 后端集成（第34轮 P2-1 深化，第51轮删除 fall-back）。
 
 实现 MEEP adjoint method 后端，对标 lumopt 的 MEEP 集成。
-当 MEEP 不可用时降级为解析模型，保证测试可运行。
+MEEP 不可时直接报错退出（不降级，不 fall-back）。
+若需解析模型，请直接使用 AnalyticalWaveguideCoupler（独立接口，非 fall-back）。
 
 ## MEEP Adjoint Method 原理
 
@@ -47,12 +48,10 @@ class MeepAvailability(Enum):
 
     Attributes:
         AVAILABLE: MEEP 已安装，可用真实 FDTD 仿真。
-        FALLBACK: MEEP 不可用，降级为解析模型。
         UNKNOWN: 未检测。
     """
 
     AVAILABLE = "available"
-    FALLBACK = "fallback"
     UNKNOWN = "unknown"
 
 
@@ -67,7 +66,7 @@ def check_meep_availability() -> MeepAvailability:
 
         return MeepAvailability.AVAILABLE
     except ImportError:
-        return MeepAvailability.FALLBACK
+        return MeepAvailability.UNKNOWN
 
 
 @dataclass
@@ -126,8 +125,8 @@ class MeepAdjointBackend:
     1. `compute_figure_of_merit(params)` → FoM
     2. `compute_gradient(params)` → 梯度（adjoint method）
 
-    当 MEEP 不可用时降级为解析模型（AnalyticalWaveguideCoupler），
-    保证测试可运行。
+    MEEP 不可用时直接 raise ImportError（不降级，不 fall-back）。
+    若需解析模型，请直接使用 AnalyticalWaveguideCoupler 独立接口。
 
     来源:
     - MEEP adjoint: https://meep.readthedocs.io/en/latest/Python_Tutorials/Adjoint/
@@ -137,47 +136,53 @@ class MeepAdjointBackend:
     def __init__(
         self,
         sim_config: MeepSimulationConfig | None = None,
-        fallback_simulator: Any | None = None,
     ) -> None:
         """初始化 MEEP adjoint 后端。
 
         Args:
             sim_config: MEEP 仿真配置（None 用默认）。
-            fallback_simulator: MEEP 不可用时的降级仿真器
-                （None 则用 AnalyticalWaveguideCoupler）。
+
+        Raises:
+            ImportError: MEEP 未安装时直接报错（不降级）。
         """
         self.sim_config = sim_config or MeepSimulationConfig()
         self.availability = check_meep_availability()
         self._meep = None
-        self._fallback = fallback_simulator
         self._init_backend()
 
     def _init_backend(self) -> None:
-        """初始化后端（MEEP 或降级）。"""
+        """初始化后端（MEEP 不可用时 raise ImportError）。"""
         if self.availability == MeepAvailability.AVAILABLE:
             try:
                 import meep  # type: ignore[import-not-found]
 
                 self._meep = meep
-            except ImportError:
-                self.availability = MeepAvailability.FALLBACK
-        if self.availability == MeepAvailability.FALLBACK and self._fallback is None:
-            from polaris.sim.adjoint_optimizer import AnalyticalWaveguideCoupler
-
-            self._fallback = AnalyticalWaveguideCoupler()
+            except ImportError as e:
+                raise ImportError(
+                    "MEEP 后端不可用：未安装 meep。"
+                    "安装方式: conda install -c conda-forge meep"
+                    "（MEEP 仅支持 Python 3.10-3.13，不支持 Python 3.14）。"
+                    "来源: https://meep.readthedocs.io/en/latest/Installation/"
+                    "若需解析模型，请直接使用 AnalyticalWaveguideCoupler。"
+                ) from e
+        else:
+            raise ImportError(
+                "MEEP 后端不可用：未安装 meep。"
+                "安装方式: conda install -c conda-forge meep"
+                "（MEEP 仅支持 Python 3.10-3.13，不支持 Python 3.14）。"
+                "来源: https://meep.readthedocs.io/en/latest/Installation/"
+                "若需解析模型，请直接使用 AnalyticalWaveguideCoupler。"
+            )
 
     @property
     def backend_used(self) -> OptimizationBackend:
         """实际使用的后端。"""
-        if self.availability == MeepAvailability.AVAILABLE:
-            return OptimizationBackend.MEEP
-        return OptimizationBackend.ANALYTICAL
+        return OptimizationBackend.MEEP
 
     def compute_figure_of_merit(self, params: np.ndarray) -> float:
         """计算目标函数值。
 
-        MEEP 可用时：运行 FDTD 正向仿真，计算 monitor 处的 FoM。
-        MEEP 不可用时：调用降级仿真器。
+        运行 MEEP FDTD 正向仿真，计算 monitor 处的 FoM。
 
         Args:
             params: 设计参数。
@@ -185,19 +190,14 @@ class MeepAdjointBackend:
         Returns:
             FoM 值。
         """
-        if self.availability == MeepAvailability.AVAILABLE and self._meep is not None:
-            return self._meep_forward_fom(params)
-        return self._fallback.compute_figure_of_merit(params)
+        return self._meep_forward_fom(params)
 
     def compute_gradient(self, params: np.ndarray) -> np.ndarray:
         """计算梯度（adjoint method）。
 
-        MEEP 可用时：
         1. 正向仿真获取 E_forward
         2. 伴随仿真获取 E_adjoint
         3. 梯度 = Re[E_forward * E_adjoint * dε/dθ]
-
-        MEEP 不可用时：调用降级仿真器的解析梯度。
 
         Args:
             params: 设计参数。
@@ -205,9 +205,7 @@ class MeepAdjointBackend:
         Returns:
             梯度数组。
         """
-        if self.availability == MeepAvailability.AVAILABLE and self._meep is not None:
-            return self._meep_adjoint_gradient(params)
-        return self._fallback.compute_gradient(params)
+        return self._meep_adjoint_gradient(params)
 
     def _meep_forward_fom(self, params: np.ndarray) -> float:
         """MEEP 正向仿真计算 FoM（真实 FDTD）。
@@ -449,7 +447,10 @@ def create_meep_adjoint_backend(
         sim_config: 仿真配置（None 用默认）。
 
     Returns:
-        MeepAdjointBackend 实例（MEEP 不可用时自动降级）。
+        MeepAdjointBackend 实例。
+
+    Raises:
+        ImportError: MEEP 未安装时直接报错（不降级）。
     """
     return MeepAdjointBackend(sim_config=sim_config)
 
@@ -489,7 +490,7 @@ def get_meep_status() -> dict[str, Any]:
         "backend": (
             OptimizationBackend.MEEP.value
             if availability == MeepAvailability.AVAILABLE
-            else OptimizationBackend.ANALYTICAL.value
+            else None
         ),
     }
     if availability == MeepAvailability.AVAILABLE:
@@ -501,7 +502,6 @@ def get_meep_status() -> dict[str, Any]:
             status["version"] = "unknown"
     else:
         status["version"] = None
-        status["fallback_reason"] = "MEEP 未安装，使用解析模型降级"
     return status
 
 
