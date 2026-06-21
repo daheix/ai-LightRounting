@@ -221,12 +221,9 @@ class AnalyticalPlacer:
         return grad
 
     def _density_gradient(self, pos: np.ndarray) -> np.ndarray:
-        """计算密度惩罚梯度（高斯核卷积近似）。
+        """计算密度惩罚梯度。
 
-        用高斯核计算每个器件位置的密度，梯度推动器件从高密度区
-        向低密度区扩散。
-
-        简化实现：对每对器件，若距离 < bandwidth，施加排斥力。
+        小规模（≤200）用 O(n²) 精确计算，大规模（>200）用网格化密度场加速。
         来源: DREAMPlace 密度场（TCAD 2020 公式 7-9）。
 
         Args:
@@ -236,10 +233,29 @@ class AnalyticalPlacer:
             密度梯度 ``(n, 2)``。
         """
         bw = self.config.density_bandwidth
+        if self.n <= 200:
+            return self._density_gradient_pairwise(pos, bw)
+        # 大规模：用网格化密度场加速（第30轮 P1-1 深化）
+        return self._density_gradient_grid(pos, bw)
+
+    def _density_gradient_pairwise(
+        self,
+        pos: np.ndarray,
+        bw: float,
+    ) -> np.ndarray:
+        """O(n²) 双重循环密度梯度（小规模精确计算）。
+
+        对每对器件，若距离 < bandwidth，施加排斥力。
+        来源: DREAMPlace 密度场（TCAD 2020 公式 7-9）。
+
+        Args:
+            pos: 当前坐标 ``(n, 2)``。
+            bw: 密度场带宽。
+
+        Returns:
+            密度梯度 ``(n, 2)``。
+        """
         grad = np.zeros_like(pos)
-        # 简化：对每对器件计算排斥力（O(n²)，小规模可用）
-        if self.n > 200:
-            return grad  # 大规模跳过密度梯度（用网格化加速）
         for i in range(self.n):
             for j in range(i + 1, self.n):
                 dx = pos[i, 0] - pos[j, 0]
@@ -254,6 +270,39 @@ class AnalyticalPlacer:
                     grad[j, 0] -= force * dx
                     grad[j, 1] -= force * dy
         return grad
+
+    def _density_gradient_grid(
+        self,
+        pos: np.ndarray,
+        bw: float,
+    ) -> np.ndarray:
+        """网格化密度场梯度（大规模加速，第30轮 P1-1 深化）。
+
+        用 DensityField 网格化 + 高斯卷积 + 中心差分梯度，
+        复杂度从 O(n²) 降到 O(G² log G + n)。
+
+        来源: DREAMPlace TCAD 2020 Section III.B 网格化密度场。
+
+        Args:
+            pos: 当前坐标 ``(n, 2)``。
+            bw: 密度场带宽（高斯核标准差）。
+
+        Returns:
+            密度梯度 ``(n, 2)``。
+        """
+        from polaris.engine.density_field import DensityField, DensityFieldConfig
+
+        # 网格大小自适应：大规模用 128，中规模用 64
+        grid_size = 128 if self.n > 500 else 64
+        config = DensityFieldConfig(
+            grid_size=grid_size,
+            gaussian_sigma=bw,
+            gradient_scale=1.0,
+        )
+        field = DensityField(self.canvas_w, self.canvas_h, config)
+        field.build(pos, self.widths, self.heights)
+        field.smooth_gaussian(bw)
+        return field.gradient_at(pos)
 
     def _adam_update(
         self,
