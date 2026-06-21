@@ -122,6 +122,104 @@ class TestScale500:
         assert len(env.state.placements) == 500
 
 
+class TestScale500RLSmoke:
+    """500 器件 RL 训练 smoke test（第50轮 P0-2 真实实测）。
+
+    验证 PPO RL 训练流程（rollout + update）在 500 器件规模下能跑通。
+    这不是规模性能测试，而是 RL 训练流程端到端验证。
+
+    来源:
+    - P0-2 差距分析: docs/commercial_gap_analysis.md
+    - PPO 算法: Schulman et al., 2017, https://arxiv.org/abs/1707.06347
+    - 第49轮分析发现 TestScale500 未真正运行 RL 训练
+    """
+
+    def test_500_devices_floorplan_rl_smoke(self, tmp_path):
+        """500 器件布局 RL 训练 1 episode smoke test。
+
+        验证 PPO rollout + update 在 500 器件下能跑通（< 60s）。
+        """
+        from polaris.trainer.ppo import PPOAgent, PPOConfig
+        from polaris.trainer.train_loop import (
+            TrainConfig,
+            _collect_floorplan_rollout,
+            _infer_obs_dim,
+        )
+
+        # 生成 500 器件 lidar 网表
+        circuit = generate_synthetic_benchmark("lidar", num_devices=500)
+        netlist_dict = circuit_spec_to_netlist_dict(circuit)
+        net, devices, _graph = load_netlist(netlist_dict)
+        assert len(net.instances) == 500
+
+        # 构造小规模训练配置（smoke test）
+        config = TrainConfig(
+            ppo=PPOConfig(
+                lr=3e-4,
+                n_epochs=2,  # 减少 epoch 数加速
+                batch_size=16,
+                clip_eps=0.2,
+            ),
+            num_episodes=1,
+            rollout_steps=8,  # 短 rollout 加速
+            canvas_w=10000.0,
+            canvas_h=10000.0,
+            grid_size=100.0,
+            hidden_dim=64,
+            checkpoint_dir=str(tmp_path),
+            checkpoint_every=1,
+            log_every=1,
+            seed=42,
+            early_stop_patience=0,
+            lr_schedule="constant",
+            sim_feedback=False,
+        )
+
+        # 构建环境并推断维度
+        env = FloorplanEnv(
+            net,
+            devices,
+            canvas_w=config.canvas_w,
+            canvas_h=config.canvas_h,
+            grid_size=config.grid_size,
+        )
+        obs_dim = _infer_obs_dim(env)
+        action_dim = 3  # (gx, gy, rot)
+
+        # 创建 PPO 智能体
+        agent = PPOAgent(
+            obs_dim=obs_dim,
+            action_dim=action_dim,
+            config=config.ppo,
+            hidden_dim=config.hidden_dim,
+        )
+
+        # 执行 1 episode RL 训练
+        obs, _ = env.reset()
+        t0 = time.perf_counter()
+        ep_reward, steps = _collect_floorplan_rollout(
+            agent, env, obs, (obs_dim, action_dim), config.rollout_steps
+        )
+        metrics = agent.update(last_value=0.0)
+        t_elapsed = time.perf_counter() - t0
+
+        # 断言 RL 训练流程跑通
+        assert steps > 0, "RL 训练未采集到任何步"
+        assert "policy_loss" in metrics, "PPO update 未返回 policy_loss"
+        assert "value_loss" in metrics, "PPO update 未返回 value_loss"
+        assert np.isfinite(metrics["policy_loss"]), "policy_loss 非有限值"
+        assert np.isfinite(metrics["value_loss"]), "value_loss 非有限值"
+        # smoke test 应在 60 秒内完成
+        assert t_elapsed < 60.0, f"500 器件 RL smoke 耗时 {t_elapsed:.1f}s > 60s"
+
+        print(
+            f"\n500 器件 RL smoke: {steps} 步, "
+            f"reward={ep_reward:.3f}, "
+            f"policy_loss={metrics['policy_loss']:.4f}, "
+            f"耗时={t_elapsed*1000:.0f}ms"
+        )
+
+
 class TestScale1000:
     """1000 器件规模验证（v2.0 目标）。"""
 
