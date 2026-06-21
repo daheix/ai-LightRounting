@@ -62,6 +62,52 @@ def test_instantiate_devices():
     assert devices["wg1"].name == "strip_waveguide"
 
 
+def test_instantiate_devices_preserves_process_node():
+    """P1-3 修复（第7轮）：instantiate_devices 应保留 catalog 模板的 process_node。
+
+    来源: docs/commercial_gap_analysis.md P1-3
+    修复前：instantiate_devices 重建 Device 时未传递 process_node，导致
+           从 catalog 模板实例化后丢失工艺节点信息。
+    """
+    net = parse_netlist(YAML_NETLIST)
+    devices = instantiate_devices(net)
+    # SOI 平台默认工艺节点 = "220nm SOI"（catalog 自动填充）
+    assert devices["wg1"].process_node == "220nm SOI"
+    assert devices["mmi1"].process_node == "220nm SOI"
+    assert devices["wg2"].process_node == "220nm SOI"
+
+
+def test_instantiate_devices_process_node_multi_platform():
+    """P1-3：多平台实例化后 process_node 正确（SiN/InP/LNOI）。
+
+    网表 component 字段对应器件的 name（非 device_id），
+    catalog.get(component, platform=...) 按 平台::name 检索。
+    """
+    yaml_multi = """
+name: multi
+instances:
+  wg_soi:
+    component: strip_waveguide
+    platform: SOI
+  wg_sin:
+    component: sin_waveguide_strip
+    platform: SiN
+  wg_inp:
+    component: inp_waveguide
+    platform: InP
+  wg_lnoi:
+    component: lnoi_waveguide
+    platform: LNOI
+connections: []
+"""
+    net = parse_netlist(yaml_multi)
+    devices = instantiate_devices(net)
+    assert devices["wg_soi"].process_node == "220nm SOI"
+    assert devices["wg_sin"].process_node == "SiN TriPleX"
+    assert devices["wg_inp"].process_node == "InP generic"
+    assert devices["wg_lnoi"].process_node == "LNOI X-cut"
+
+
 def test_instantiate_with_settings():
     data = {
         "instances": {
