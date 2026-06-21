@@ -9,20 +9,32 @@
         cascade.py         — S 参数级联器（子网络增长算法，规则3复刻 SAX）
         simulator.py       — CircuitSimulator 电路级频率域仿真器
         device_models.py   — 51 器件到 S 参数模型映射
+        constraint_checker.py — 约束检查器（16 项 DRC 规则）
+        klayout_drc.py     — KLayout DRC runset 适配层（第2轮 P0-1）
 
 集成方式（遵守 project_rules.md 规则 2/3）：
 1. 直接集成 simphony + sax（规则 2）
 2. SiPANN 安装失败 → 纯 numpy 100% 复刻（规则 3）
 3. Touchstone .s2p/.snp 文件支持
+4. KLayout DRC 引擎直接集成（规则 4.1，klayout 活跃维护）
 
 来源:
 - Simphony: https://simphonyphotonics.readthedocs.io/
 - SAX: https://flaport.github.io/sax/
 - SiPANN: https://sipann.readthedocs.io/
 - Touchstone: https://en.wikipedia.org/wiki/Touchstone_file
+- KLayout DRC: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 """
 
 from polaris.sim.cascade import cascade_circuit
+from polaris.sim.klayout_drc import (
+    SIEPIC_EBEAM_DRC_RUNSET,
+    DRCCheckType,
+    DRCResult,
+    DRCRule,
+    KLayoutDRCRunner,
+    run_klayout_drc,
+)
 from polaris.sim.models import (
     RingParams,
     crossing_s,
@@ -72,4 +84,11 @@ __all__ = [
     "CircuitSimulator",
     "default_models",
     "simphony_models",
+    # KLayout DRC（第2轮 P0-1）
+    "DRCCheckType",
+    "DRCResult",
+    "DRCRule",
+    "KLayoutDRCRunner",
+    "SIEPIC_EBEAM_DRC_RUNSET",
+    "run_klayout_drc",
 ]
