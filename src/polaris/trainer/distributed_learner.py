@@ -352,13 +352,21 @@ class DistributedLearner:
         """Ray 分布式采集（需安装 ray）。
 
         Ray 后端实现真正的多机多卡分布式训练。
-        沙箱环境通常无 ray，此方法在 ray 不可用时降级为顺序执行。
+        Ray 不可用时明确报错（不降级，不 fall-back）。
+
+        来源:
+        - Ray RLlib: https://docs.ray.io/en/latest/rllib/index.html
+        - Ray 分布式训练: https://docs.ray.io/en/latest/train/train.html
         """
         try:
             import ray  # type: ignore[import-not-found]
-        except ImportError:
-            print("Ray 不可用，降级为顺序执行")
-            return self._collect_sequential()
+        except ImportError as e:
+            raise ImportError(
+                "Ray 后端不可用：未安装 ray。"
+                "安装方式: pip install ray（需 Python 3.10-3.13，"
+                "Python 3.14 暂不支持）。"
+                "来源: https://docs.ray.io/en/latest/ray-overview/installation.html"
+            ) from e
         if not ray.is_initialized():
             ray.init(ignore_reinit_error=True, num_cpus=self.config.num_workers)
         remote_workers = [
