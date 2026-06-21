@@ -32,12 +32,20 @@ class Placement:
     x: float  # 左下角 x（μm）
     y: float  # 左下角 y（μm）
     rotation: int = 0  # 0/90/180/270
+    # P0-2 规模扩展（第11轮）：缓存 bbox_abs/port_positions 计算结果。
+    # Placement 一旦创建即不可变（x/y/rotation 不变），缓存后避免每步
+    # 重复旋转/平移计算。500 器件 × 500 步从 25 万次变换降为 500 次。
+    _cache: dict = field(default_factory=dict, repr=False, compare=False)
 
     def port_positions(self) -> dict[str, tuple[float, float]]:
         """返回放置后端口绝对坐标（考虑旋转+平移）。"""
+        if "ports" in self._cache:
+            return self._cache["ports"]
         dev = self.device.rotate(self.rotation) if self.rotation else self.device
         moved = dev.translate(self.x - dev.bbox.xmin, self.y - dev.bbox.ymin)
-        return {p.name: (p.x, p.y) for p in moved.ports}
+        result = {p.name: (p.x, p.y) for p in moved.ports}
+        self._cache["ports"] = result
+        return result
 
     def ports_abs(self) -> list:
         """返回放置后端口对象列表（含绝对坐标与朝向，考虑旋转+平移）。
@@ -53,10 +61,14 @@ class Placement:
 
     def bbox_abs(self) -> tuple[float, float, float, float]:
         """返回放置后轴对齐包围盒 (xmin, ymin, xmax, ymax)。"""
+        if "bbox" in self._cache:
+            return self._cache["bbox"]
         dev = self.device.rotate(self.rotation) if self.rotation else self.device
         w = dev.bbox.xmax - dev.bbox.xmin
         h = dev.bbox.ymax - dev.bbox.ymin
-        return (self.x, self.y, self.x + w, self.y + h)
+        result = (self.x, self.y, self.x + w, self.y + h)
+        self._cache["bbox"] = result
+        return result
 
 
 @dataclass
@@ -210,6 +222,11 @@ def _count_spacing_violations(placements: list, min_spacing: float) -> int:
     F3 DRV 消除：将间距违规纳入 RL reward，引导 agent 学习满足间距约束的布局。
     对齐 LiDAR ISPD'25 DRV-free 标准。
 
+    P0-2 规模扩展（第11轮）：对小规模（<50 器件）保留 O(n²) 暴力检测；
+    对大规模用空间哈希将每个器件的 bbox 向外膨胀 min_spacing 后分桶，
+    仅检测共享桶的器件对，平均 O(n)。500 器件时从 12.5 万对/步降至
+    约 2500 对/步（50× 加速）。
+
     Args:
         placements: 已放置器件列表（Placement 对象）。
         min_spacing: 最小间距（μm）。
@@ -217,6 +234,14 @@ def _count_spacing_violations(placements: list, min_spacing: float) -> int:
     Returns:
         间距违规对数。
     """
+    n = len(placements)
+    if n < 50:
+        return _count_spacing_violations_brute_force(placements, min_spacing)
+    return _count_spacing_violations_spatial_hash(placements, min_spacing)
+
+
+def _count_spacing_violations_brute_force(placements: list, min_spacing: float) -> int:
+    """O(n²) 暴力间距检测（小规模用）。"""
     count = 0
     n = len(placements)
     for i in range(n):
@@ -226,6 +251,44 @@ def _count_spacing_violations(placements: list, min_spacing: float) -> int:
             gap = _rect_gap(a, b)
             if gap < min_spacing:
                 count += 1
+    return count
+
+
+def _count_spacing_violations_spatial_hash(placements: list, min_spacing: float) -> int:
+    """空间哈希加速间距检测（大规模用）。
+
+    将每个器件的 bbox 向外膨胀 min_spacing 后注册到空间哈希桶中。
+    仅检测膨胀 bbox 有交集的器件对（即原始间距 < min_spacing 的候选对），
+    再用原始 bbox 计算精确间距判断是否违规。
+
+    来源: 空间哈希经典算法（OpenROAD/R-tree 的简化版），与
+    ``_count_overlaps_spatial_hash`` 复用同一分桶框架。
+    """
+    cell_size = max(_mean_placement_size(placements), min_spacing * 2.0)
+    buckets: dict[tuple[int, int], list[int]] = {}
+    for idx, pl in enumerate(placements):
+        xmin, ymin, xmax, ymax = pl.bbox_abs()
+        # 膨胀 bbox：向外扩展 min_spacing，使相邻器件落入同一桶
+        gi0 = int((xmin - min_spacing) // cell_size)
+        gi1 = int((xmax + min_spacing) // cell_size)
+        gj0 = int((ymin - min_spacing) // cell_size)
+        gj1 = int((ymax + min_spacing) // cell_size)
+        for gi in range(gi0, gi1 + 1):
+            for gj in range(gj0, gj1 + 1):
+                buckets.setdefault((gi, gj), []).append(idx)
+    checked: set[tuple[int, int]] = set()
+    count = 0
+    for indices in buckets.values():
+        for i in range(len(indices)):
+            for j in range(i + 1, len(indices)):
+                a_idx, b_idx = indices[i], indices[j]
+                pair = (a_idx, b_idx) if a_idx < b_idx else (b_idx, a_idx)
+                if pair in checked:
+                    continue
+                checked.add(pair)
+                gap = _rect_gap(placements[a_idx].bbox_abs(), placements[b_idx].bbox_abs())
+                if gap < min_spacing:
+                    count += 1
     return count
 
 
