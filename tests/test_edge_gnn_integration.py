@@ -180,7 +180,7 @@ instances:
     env_cfg.state_encoder = state_encoder
     env = FloorplanEnv(net, devices, env_cfg)
 
-    obs = env.reset()
+    obs, _info = env.reset()
     graph_features = obs.get("graph_features", {})
     # 默认模式不应有 edge_feats
     assert "edge_feats" not in graph_features, "默认模式不应构建 edge_feats"
