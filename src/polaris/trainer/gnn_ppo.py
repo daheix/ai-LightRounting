@@ -42,11 +42,14 @@ class GNNGraphState:
         node_feats: 节点特征 ``[N, node_feat_dim]``。
         edge_index: 边索引 ``[2, E]``。
         grid_feat: 栅格特征 ``[grid_h, grid_w]``。
+        edge_feats: 边特征 ``[E, edge_feat_dim]``（仅 edge-GNN 模式，
+            第4轮 P1-1 增强，AlphaChip 风格）。
     """
 
     node_feats: np.ndarray
     edge_index: np.ndarray
     grid_feat: np.ndarray
+    edge_feats: np.ndarray | None = None
 
 
 @dataclass
@@ -138,6 +141,8 @@ class GNNPPOAgent:
     def _encode_graph(self, graph_state: GNNGraphState) -> Tensor:
         """用 StateEncoder 编码图特征，返回可微 Tensor embedding。
 
+        第4轮 P1-1 增强：edge-GNN 模式时传递边特征。
+
         Args:
             graph_state: 图特征快照。
 
@@ -146,7 +151,12 @@ class GNNPPOAgent:
         """
         node_feats = Tensor(graph_state.node_feats)
         grid_feat = Tensor(graph_state.grid_feat)
-        return self.state_encoder(node_feats, graph_state.edge_index, grid_feat)
+        edge_feats = None
+        if graph_state.edge_feats is not None:
+            edge_feats = Tensor(graph_state.edge_feats)
+        return self.state_encoder(
+            node_feats, graph_state.edge_index, grid_feat, edge_feats
+        )
 
     def get_action(self, obs_vec: np.ndarray, graph_state: GNNGraphState):
         """采样动作（前向推理，GNN 编码通过加法注入 obs）。

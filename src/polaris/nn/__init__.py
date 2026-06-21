@@ -218,6 +218,12 @@ class Tensor(TensorArithmeticMixin):
         self._ensure_grad()
         self.grad = self.grad + grad
         for t in reversed(topo):
+            # 跳过 grad 为 None 的节点（requires_grad=False 的中间节点
+            # 不会被下游 _backward 设置 grad，调用其 _backward(None) 会触发
+            # np.split(None, ...) 等错误）。与 autograd 行为一致：
+            # requires_grad=False 的节点不参与反向传播。
+            if t.grad is None:
+                continue
             t._backward(t.grad)
 
     def zero_grad(self) -> None:

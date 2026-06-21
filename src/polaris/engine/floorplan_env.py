@@ -428,20 +428,33 @@ class FloorplanEnv(gym.Env):
         保留 node_feats/edge_index/grid_feat 的原始数组，供 GNNPPOAgent
         在 update 时重建可微计算图，使梯度能流回 StateEncoder 参数。
 
+        第4轮 P1-1 增强：当 StateEncoder 启用 edge-GNN 模式时，额外构建
+        edge_feats（AlphaChip 风格边特征）。
+
         Args:
             occ: 当前占用栅格。
 
         Returns:
-            含 node_feats/edge_index/grid_feat 的字典。
+            含 node_feats/edge_index/grid_feat 的字典（edge-GNN 模式额外含 edge_feats）。
         """
-        from polaris.engine.gnn import build_node_features
+        from polaris.engine.gnn import build_edge_features, build_node_features
 
         node_feats_arr = build_node_features(self.devices, self.state.placements, self.instance_ids)
-        return {
+        result = {
             "node_feats": node_feats_arr.astype(np.float64),
             "edge_index": self._edge_index,
             "grid_feat": occ.astype(np.float64),
         }
+        # edge-GNN 模式：额外构建边特征
+        if hasattr(self.state_encoder, "use_edge_gnn") and self.state_encoder.use_edge_gnn:
+            edge_feats_arr = build_edge_features(
+                self.devices,
+                self.state.placements,
+                self.instance_ids,
+                self._edge_index,
+            )
+            result["edge_feats"] = edge_feats_arr.astype(np.float64)
+        return result
 
     def _compute_gnn_embedding(self, occ: np.ndarray) -> np.ndarray:
         """计算 GNN 状态嵌入向量（前向推理，用于 obs 维度推断）。
@@ -450,19 +463,30 @@ class FloorplanEnv(gym.Env):
         注意：此处返回 numpy 数组（脱离计算图），仅用于 obs 维度推断与
         兼容 _obs_to_vector 展平。端到端训练时由 GNNPPOAgent 重建可微路径。
 
+        第4轮 P1-1 增强：edge-GNN 模式时构建并传递边特征。
+
         Args:
             occ: 当前占用栅格。
 
         Returns:
             GNN 嵌入向量 ``[out_dim]``。
         """
-        from polaris.engine.gnn import build_node_features
+        from polaris.engine.gnn import build_edge_features, build_node_features
         from polaris.nn import Tensor
 
         node_feats_arr = build_node_features(self.devices, self.state.placements, self.instance_ids)
         node_feats = Tensor(node_feats_arr)
         grid_feat = Tensor(occ.astype(np.float64))
-        embedding = self.state_encoder(node_feats, self._edge_index, grid_feat)
+        edge_feats = None
+        if hasattr(self.state_encoder, "use_edge_gnn") and self.state_encoder.use_edge_gnn:
+            edge_feats_arr = build_edge_features(
+                self.devices,
+                self.state.placements,
+                self.instance_ids,
+                self._edge_index,
+            )
+            edge_feats = Tensor(edge_feats_arr.astype(np.float64))
+        embedding = self.state_encoder(node_feats, self._edge_index, grid_feat, edge_feats)
         return np.asarray(embedding.data, dtype=np.float32).flatten()
 
     def step(self, action):
