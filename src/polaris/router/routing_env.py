@@ -20,6 +20,10 @@ from gymnasium import spaces
 
 from polaris.engine.floorplan_env import Placement
 from polaris.engine.netlist import Netlist
+from polaris.router.global_router import (
+    GlobalRouter,
+    GlobalRouterConfig,
+)
 from polaris.router.waveguide_router import (
     WaveguidePath,
     get_platform_constraints,
@@ -68,6 +72,23 @@ class RoutingEnvConfig:
     向后兼容：``RoutingEnv(config=None, **kwargs)`` 中未提供 config 时，
     旧式关键字参数（canvas_w/canvas_h/grid_size/loss_weight 等）会自动
     转发到本 dataclass 构造。
+
+    Attributes:
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+        grid_size: 栅格分辨率（μm）。
+        loss_weight: 损耗奖励权重。
+        length_weight: 长度奖励权重。
+        congestion_weight: 拥塞惩罚权重。
+        drc_penalty: DRC 违规惩罚。
+        reward_clip_max: Reward clipping 上限。
+        use_global_router: 是否启用全局布线层（P1-2，第6轮）。
+            启用后 reset() 时先跑 GlobalRouter 生成全局路径与拥塞预估，
+            将全局拥塞图作为额外观测通道 ``global_congestion`` 注入 obs。
+            来源: Cadence Innovus 全局-详细分层布线
+            https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
+        global_router_gcell_size_um: 全局布线 GCell 边长（μm），仅
+            use_global_router=True 时生效。
     """
 
     canvas_w: float = 1000.0
@@ -84,6 +105,9 @@ class RoutingEnvConfig:
     # -1000~-9000 的灾难值摧毁价值函数（历史 progress.json 显示极端值）。
     # 来源: PPO reward clipping 最佳实践，参考 SB3 RewardWrapper
     reward_clip_max: float = 20.0
+    # P1-2 全局布线层（第6轮）
+    use_global_router: bool = False
+    global_router_gcell_size_um: float = 50.0
 
 
 @dataclass
@@ -132,6 +156,8 @@ class RoutingEnv(gym.Env):
         self.congestion_weight = config.congestion_weight
         self.drc_penalty = config.drc_penalty
         self.reward_clip_max = config.reward_clip_max
+        self.use_global_router = config.use_global_router
+        self.global_router_gcell_size_um = config.global_router_gcell_size_um
 
         self.state = RoutingState(
             canvas_w=config.canvas_w, canvas_h=config.canvas_h, grid_size=config.grid_size
@@ -139,20 +165,30 @@ class RoutingEnv(gym.Env):
         self.grid_w = self.state.grid_w
         self.grid_h = self.state.grid_h
         self._conn_idx = 0
+        # 全局布线结果（use_global_router=True 时在 reset 中填充）
+        self._global_routes: list = []
+        self._global_congestion: np.ndarray | None = None
 
         # 动作：路径偏移 (dx, dy, detour) ∈ [-1,1]^3
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
-        self.observation_space = spaces.Dict(
-            {
-                "congestion": spaces.Box(
-                    low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
-                ),
-                "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
-                "step": spaces.Box(
-                    low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
-                ),
-            }
-        )
+        # 观测空间：基础 + 可选全局拥塞通道
+        obs_spaces = {
+            "congestion": spaces.Box(
+                low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
+            ),
+            "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
+            "step": spaces.Box(
+                low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
+            ),
+        }
+        if self.use_global_router:
+            # 全局拥塞图通道（GCell 网格大小，与详细栅格不同）
+            gw = max(1, int(config.canvas_w / self.global_router_gcell_size_um))
+            gh = max(1, int(config.canvas_h / self.global_router_gcell_size_um))
+            obs_spaces["global_congestion"] = spaces.Box(
+                low=-1e6, high=1e6, shape=(gh, gw), dtype=np.float32
+            )
+        self.observation_space = spaces.Dict(obs_spaces)
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
@@ -163,7 +199,30 @@ class RoutingEnv(gym.Env):
         )
         self.state.init_congestion()
         self._conn_idx = 0
+        # P1-2 全局布线层（第6轮）：reset 时先跑 GlobalRouter 生成全局路径
+        # 与拥塞预估，对齐 Cadence Innovus 全局-详细分层布线架构。
+        # 来源: https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
+        if self.use_global_router:
+            self._run_global_routing()
         return self._obs(), {"step": 0}
+
+    def _run_global_routing(self) -> None:
+        """执行全局布线并存储结果与拥塞图。
+
+        在 reset() 中调用，生成全局路径 ``self._global_routes`` 和
+        GCell 级拥塞图 ``self._global_congestion``。后者作为额外观测
+        通道注入 obs，让 RL agent 感知全局拥塞分布。
+        """
+        gr_config = GlobalRouterConfig(gcell_size_um=self.global_router_gcell_size_um)
+        router = GlobalRouter(
+            net=self.net,
+            placements=self.placements,
+            canvas_w=self.state.canvas_w,
+            canvas_h=self.state.canvas_h,
+            config=gr_config,
+        )
+        self._global_routes = router.route()
+        self._global_congestion = router.congestion_map().astype(np.float32)
 
     def _current_ports(self) -> tuple[tuple[float, float], tuple[float, float], str]:
         """返回当前连接的起止端口坐标与平台。"""
@@ -198,11 +257,21 @@ class RoutingEnv(gym.Env):
             )
         else:
             ports = np.zeros(4, dtype=np.float32)
-        return {
+        obs = {
             "congestion": self.state.congestion.copy() / max(1.0, self.state.congestion.max()),
             "ports": ports,
             "step": np.array([self._conn_idx], dtype=np.float32),
         }
+        # P1-2 全局布线层（第6轮）：注入 GCell 级全局拥塞图作为额外观测通道
+        if self.use_global_router:
+            if self._global_congestion is None:
+                # 兜底：未跑全局布线时填零（不应发生，reset 已调用）
+                gw = max(1, int(self.state.canvas_w / self.global_router_gcell_size_um))
+                gh = max(1, int(self.state.canvas_h / self.global_router_gcell_size_um))
+                obs["global_congestion"] = np.zeros((gh, gw), dtype=np.float32)
+            else:
+                obs["global_congestion"] = self._global_congestion.copy()
+        return obs
 
     def step(self, action):
         if self._conn_idx >= len(self.connections):
