@@ -168,6 +168,10 @@ class RoutingEnv(gym.Env):
         # 全局布线结果（use_global_router=True 时在 reset 中填充）
         self._global_routes: list = []
         self._global_congestion: np.ndarray | None = None
+        # P0-2 规模扩展（第11轮）：缓存所有器件的 bbox_abs()，避免每连接
+        # 重复计算旋转/平移。placements 在 episode 期间不变，reset 时刷新。
+        self._obstacle_bboxes: list[tuple[float, float, float, float]] = []
+        self._obstacle_inst_ids: list[str] = []
 
         # 动作：路径偏移 (dx, dy, detour) ∈ [-1,1]^3
         self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
@@ -199,6 +203,11 @@ class RoutingEnv(gym.Env):
         )
         self.state.init_congestion()
         self._conn_idx = 0
+        # P0-2 规模扩展（第11轮）：刷新障碍 bbox 缓存。
+        # placements 在 episode 期间不变，缓存后 _collect_obstacles() 从
+        # O(N) 降为 O(N) 一次（reset 时）+ O(1) 每连接（仅过滤起终点）。
+        self._obstacle_bboxes = [pl.bbox_abs() for pl in self.placements.values()]
+        self._obstacle_inst_ids = list(self.placements.keys())
         # P1-2 全局布线层（第6轮）：reset 时先跑 GlobalRouter 生成全局路径
         # 与拥塞预估，对齐 Cadence Innovus 全局-详细分层布线架构。
         # 来源: https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
@@ -350,13 +359,19 @@ class RoutingEnv(gym.Env):
             return -(self.loss_weight * 10.0 + self.drc_penalty * 0.1)
 
     def _collect_obstacles(self) -> list:
-        """收集当前连接的布线障碍（已放置器件，排除起终点器件）。"""
-        obstacles: list = []
+        """收集当前连接的布线障碍（已放置器件，排除起终点器件）。
+
+        P0-2 规模扩展（第11轮）：从 reset() 时缓存的 bbox 列表中过滤起终点，
+        避免每连接重复计算 bbox_abs()（旋转+平移）。500 器件 × 500 连接
+        从 25 万次 bbox 计算降为 500 次（reset 时一次性计算）。
+        """
         conn = self.connections[self._conn_idx]
-        for inst_id, pl in self.placements.items():
-            if inst_id in (conn.src_instance, conn.dst_instance):
+        src, dst = conn.src_instance, conn.dst_instance
+        obstacles: list = []
+        for inst_id, bbox in zip(self._obstacle_inst_ids, self._obstacle_bboxes):
+            if inst_id == src or inst_id == dst:
                 continue
-            obstacles.append(pl.bbox_abs())
+            obstacles.append(bbox)
         return obstacles
 
     def _reward(self, wp: WaveguidePath) -> float:
