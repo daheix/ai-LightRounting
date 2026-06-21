@@ -1,7 +1,7 @@
 """公开 Foundry 平台元数据（第13轮 P0-3 PDK 覆盖扩展）。
 
-定义 10 个公开光电子 foundry 平台的技术参数元数据，使 PoLaRIS 的
-PDK 覆盖从 4 平台扩展到 14 平台（4 内置 + 10 foundry），对齐
+定义 11 个公开光电子 foundry 平台的技术参数元数据，使 PoLaRIS 的
+PDK 覆盖从 4 平台扩展到 15 平台（4 内置 + 11 foundry），对齐
 Luceda IPKISS 15+ PDK 的商业覆盖能力。
 
 ## 数据来源
@@ -27,6 +27,7 @@ Luceda IPKISS 15+ PDK 的商业覆盖能力。
 - LioniX TriPleX: https://www.lionix-international.com/wp-content/uploads/2022/08/Briefings-MPW-manual.pdf
 - VTT: https://cloud.tencent.com/developer/article/1678542
 - Tyndall: https://pattern-project.eu/technology/material-platforms/inp-platform/
+- HyperLight LNOI: https://www.hyperlightcorp.com/
 """
 
 from __future__ import annotations
@@ -64,7 +65,7 @@ class FoundryPlatform:
 
 
 # =============================================================================
-# 10 个公开 Foundry 平台元数据
+# 11 个公开 Foundry 平台元数据
 # 所有参数来自公开文献，非 NDA 信息
 # =============================================================================
 
@@ -223,6 +224,22 @@ FOUNDRY_PLATFORMS: dict[str, FoundryPlatform] = {
         ],
         notes="爱尔兰 Tyndall，InP DBR 激光器异质集成，μTP 工艺",
     ),
+    # --- LNOI 薄膜铌酸锂平台 ---
+    "HyperLight": FoundryPlatform(
+        name="HyperLight",
+        foundry="HyperLight Corporation",
+        process_node="600nm LNOI X-cut (100mm)",
+        material_platform="LNOI",
+        waveguide_width_um=0.8,
+        min_bend_radius_um=80.0,
+        waveguide_loss_db_cm=0.5,
+        wafer_size_mm=100,
+        sources=[
+            "https://www.hyperlightcorp.com/",
+            "https://doi.org/10.1038/s41377-024-01389-6",
+        ],
+        notes="美国 HyperLight，X-cut LNOI，Pockels 调制 100GHz，CMOS 兼容",
+    ),
 }
 
 
@@ -251,7 +268,7 @@ def list_foundry_platforms() -> list[str]:
     """列出所有已注册的 foundry 平台名。
 
     Returns:
-        平台名列表（10 个公开 foundry 平台）。
+        平台名列表（11 个公开 foundry 平台）。
     """
     return list(FOUNDRY_PLATFORMS.keys())
 
@@ -276,7 +293,7 @@ def foundry_platform_count() -> int:
     """返回已注册的 foundry 平台总数。
 
     Returns:
-        平台数量（当前 10 个公开 foundry 平台）。
+        平台数量（当前 11 个公开 foundry 平台）。
     """
     return len(FOUNDRY_PLATFORMS)
 
