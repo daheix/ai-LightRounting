@@ -67,8 +67,10 @@ def is_available() -> bool:
     if not _HAS_GDSFACTORY:
         return False
     try:
-        # 严格检查：PDK 可激活（gdsfactory 8.18.0 与 pydantic 2.x 可能不兼容）
-        gf.PDK.get_generic().activate()
+        # gdsfactory 8.18.0 API: gdsfactory.pdk.get_active_pdk()
+        from gdsfactory.pdk import get_active_pdk
+
+        get_active_pdk()
         return True
     except Exception:
         return False
@@ -112,7 +114,7 @@ def generate_mzi_gds(
             # ubcpdk 不可用，用 gdsfactory generic_pdk
             import gdsfactory as gf
 
-            gf.PDK.get_generic().activate()
+            gf.get_active_pdk()
             mzi = gf.components.mzi(delta_length=delta_length_um)
             mzi.write_gds(output_path)
             logger.info("gdsfactory generic MZI GDS 生成: %s", output_path)
@@ -157,7 +159,7 @@ def generate_ring_resonator_gds(
         except ImportError:
             import gdsfactory as gf
 
-            gf.PDK.get_generic().activate()
+            gf.get_active_pdk()
             ring = gf.components.ring_single(radius=radius_um, gap=gap_nm * 1e-3)
             ring.write_gds(output_path)
             logger.info("gdsfactory generic Ring GDS 生成: %s", output_path)
@@ -195,7 +197,7 @@ def generate_component_gds(
     try:
         import gdsfactory as gf
 
-        gf.PDK.get_generic().activate()
+        gf.get_active_pdk()
         component_func = getattr(gf.components, component_name, None)
         if component_func is None:
             logger.error("gdsfactory 无 %s 器件", component_name)
@@ -282,7 +284,9 @@ def gdsfactory_to_polaris_device(
     """
     # 提取端口
     ports: list[Port] = []
-    for port_name, gf_port in component.ports.items():
+    # gdsfactory 8.18.0: Ports 对象支持迭代，每个元素有 name 属性
+    for gf_port in component.ports:
+        port_name = getattr(gf_port, "name", "") or ""
         orientation = getattr(gf_port, "orientation", 0) or 0
         direction = _orientation_to_direction(orientation)
         width = getattr(gf_port, "width", 0.5) or 0.5
@@ -300,14 +304,24 @@ def gdsfactory_to_polaris_device(
         )
 
     # 提取包围盒
-    bbox_array = component.bbox
-    # gdsfactory bbox 是 numpy array [[xmin, ymin], [xmax, ymax]]
-    bbox = BoundingBox(
-        xmin=float(bbox_array[0, 0]),
-        ymin=float(bbox_array[0, 1]),
-        xmax=float(bbox_array[1, 0]),
-        ymax=float(bbox_array[1, 1]),
-    )
+    # gdsfactory 8.18.0: component.bbox 是方法，调用返回 klayout Box
+    if callable(component.bbox):
+        bbox_obj = component.bbox()
+        bbox = BoundingBox(
+            xmin=float(bbox_obj.left),
+            ymin=float(bbox_obj.bottom),
+            xmax=float(bbox_obj.right),
+            ymax=float(bbox_obj.top),
+        )
+    else:
+        # 旧版 API: bbox 是 numpy array [[xmin, ymin], [xmax, ymax]]
+        bbox_array = component.bbox
+        bbox = BoundingBox(
+            xmin=float(bbox_array[0, 0]),
+            ymin=float(bbox_array[0, 1]),
+            xmax=float(bbox_array[1, 0]),
+            ymax=float(bbox_array[1, 1]),
+        )
 
     return Device(
         device_id=device_id,
@@ -378,7 +392,7 @@ def load_gdsfactory_pdk(
     try:
         # 激活指定 PDK
         if pdk_name == "generic":
-            gf.PDK.get_generic().activate()
+            gf.get_active_pdk()
             components = gf.components
         elif pdk_name == "ubcpdk":
             import ubcpdk

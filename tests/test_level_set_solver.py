@@ -287,19 +287,21 @@ class TestCurvature(unittest.TestCase):
 
         半径 R 的圆，曲率 |κ| = 1/R。
         phi = R² - r² 约定下 κ = -1/R（材料在内部，法向量指向内）。
+        网格 x=linspace(-1,1,50)，dx=2/49。
         """
         g = 50
         x = np.linspace(-1, 1, g)
+        dx = x[1] - x[0]
         xx, yy = np.meshgrid(x, x, indexing="ij")
         R = 0.5
         phi = R**2 - (xx**2 + yy**2)
-        k = compute_curvature(phi)
+        k = compute_curvature(phi, dx=dx, dy=dx)
         # 边界附近曲率绝对值应接近 1/R = 2.0
         boundary = np.abs(phi) < 0.02
         if boundary.any():
             k_mean = float(k[boundary].mean())
-            # |κ| 应大于 0.5（理论值 2.0，允许离散化误差）
-            self.assertGreater(abs(k_mean), 0.5)
+            # |κ| 应接近 2.0（允许离散化误差）
+            self.assertGreater(abs(k_mean), 1.0)
 
     def test_flat_zero_curvature(self) -> None:
         """测试平面零曲率。"""

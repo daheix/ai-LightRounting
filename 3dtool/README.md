@@ -39,7 +39,7 @@ bash 3dtool/wheels/install.sh --check
 
 | 工具 | 状态 | 用途 | 安装方式 |
 |------|------|------|----------|
-| gdsfactory | ✅ 已装 8.18.0 | 版图生成/PDK/GDS导出 | `pip install gdsfactory` |
+| gdsfactory | ✅ 已装 8.18.0 | 版图生成/PDK/GDS导出 | `bash 3dtool/wheels/gdsfactory/install.sh` |
 | klayout | ✅ 已装 0.30.9 | DRC/LVS/版图查看 | `pip install klayout` |
 | gdstk | ✅ 已装 1.0.0 | 高性能 GDS 读写 | `pip install gdstk` |
 

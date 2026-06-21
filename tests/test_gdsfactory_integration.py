@@ -139,7 +139,7 @@ def test_gdsfactory_to_polaris_device_straight():
     """测试 gdsfactory Component → PoLaRIS Device 转换。"""
     import gdsfactory as gf
 
-    gf.PDK.get_generic().activate()
+    gf.get_active_pdk()
     component = gf.components.straight(length=10.0, width=0.5)
     device = gdsfactory_to_polaris_device(
         component=component,
@@ -172,7 +172,7 @@ def test_gdsfactory_to_polaris_device_ring():
     """测试 ring 器件转换（验证端口提取）。"""
     import gdsfactory as gf
 
-    gf.PDK.get_generic().activate()
+    gf.get_active_pdk()
     component = gf.components.ring_single(radius=5.0, gap=0.2)
     device = gdsfactory_to_polaris_device(
         component=component,

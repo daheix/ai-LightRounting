@@ -47,7 +47,9 @@ def compute_normal_vector(phi: np.ndarray) -> np.ndarray:
     return np.stack([nx, ny], axis=-1)
 
 
-def compute_curvature(phi: np.ndarray) -> np.ndarray:
+def compute_curvature(
+    phi: np.ndarray, dx: float = 1.0, dy: float = 1.0
+) -> np.ndarray:
     """计算水平集曲率场。
 
     κ = ∇·(∇φ / |∇φ|)
@@ -57,14 +59,16 @@ def compute_curvature(phi: np.ndarray) -> np.ndarray:
 
     Args:
         phi: 水平集函数（Gx×Gy）。
+        dx: x 方向网格步长（默认 1.0）。
+        dy: y 方向网格步长（默认 1.0）。
 
     Returns:
         曲率场（Gx×Gy）。
     """
-    grad_x, grad_y = np.gradient(phi)
-    grad_xx = np.gradient(grad_x, axis=0)
-    grad_yy = np.gradient(grad_y, axis=1)
-    grad_xy = np.gradient(grad_x, axis=1)
+    grad_x, grad_y = np.gradient(phi, dx, dy)
+    grad_xx = np.gradient(grad_x, dx, axis=0)
+    grad_yy = np.gradient(grad_y, dy, axis=1)
+    grad_xy = np.gradient(grad_x, dy, axis=1)
 
     grad_mag = np.sqrt(grad_x**2 + grad_y**2)
     grad_mag_cubed = np.where(grad_mag < 1e-12, 1e-12, grad_mag**3)
@@ -76,7 +80,7 @@ def compute_curvature(phi: np.ndarray) -> np.ndarray:
 
 
 def compute_mean_curvature_motion(
-    phi: np.ndarray, coefficient: float = 1.0
+    phi: np.ndarray, coefficient: float = 1.0, dx: float = 1.0, dy: float = 1.0
 ) -> np.ndarray:
     """计算平均曲率运动速度场。
 
@@ -87,12 +91,14 @@ def compute_mean_curvature_motion(
     Args:
         phi: 水平集函数。
         coefficient: 曲率系数（>0 平滑，<0 锐化）。
+        dx: x 方向网格步长。
+        dy: y 方向网格步长。
 
     Returns:
         曲率运动速度场（Gx×Gy）。
     """
-    kappa = compute_curvature(phi)
-    grad_x, grad_y = np.gradient(phi)
+    kappa = compute_curvature(phi, dx, dy)
+    grad_x, grad_y = np.gradient(phi, dx, dy)
     grad_mag = np.sqrt(grad_x**2 + grad_y**2)
     return -coefficient * kappa * grad_mag
 
