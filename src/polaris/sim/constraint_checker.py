@@ -87,6 +87,9 @@ def check_bend_radius(
 
     对每条布线路径，检查转弯处的弯曲半径是否满足最小值。
 
+    修复: 原实现遍历每个相邻三点，对欧拉曲线密集采样点误报大量小半径违规。
+    现改为只检查"宏观转弯点"（角度变化 ≥ 30°），跳过曲线采样点的局部波动。
+
     Args:
         paths: 布线路径 {net_id: list[(x,y)]}。
         min_radius: 最小弯曲半径（μm）。
@@ -95,11 +98,16 @@ def check_bend_radius(
         违规列表。
     """
     violations: list[Violation] = []
+    angle_threshold_rad = math.radians(45.0)  # 只检查角度变化 ≥45° 的宏观转弯
     for net_id, pts in paths.items():
         if not isinstance(pts, (list, tuple)) or len(pts) < 3:
             continue
-        for i in range(1, len(pts) - 1):
-            p0, p1, p2 = pts[i - 1], pts[i], pts[i + 1]
+        # 下采样：对密集采样的曲线路径，按最小段长过滤，避免局部波动误报
+        sampled = _downsample_path(pts, min_segment_um=min_radius * 0.5)
+        # 先识别宏观转弯点（角度变化超阈值）
+        turn_points = _identify_turn_points(sampled, angle_threshold_rad)
+        for i in turn_points:
+            p0, p1, p2 = sampled[i - 1], sampled[i], sampled[i + 1]
             radius = _estimate_bend_radius(p0, p1, p2)
             if 0 < radius < min_radius:
                 violations.append(
@@ -112,6 +120,67 @@ def check_bend_radius(
                     )
                 )
     return violations
+
+
+def _downsample_path(pts: list, min_segment_um: float) -> list:
+    """下采样路径：合并距离过近的相邻点。
+
+    欧拉曲线采样点密集（间距 <1μm），直接检查会误报大量小半径违规。
+    下采样后保留宏观路径结构，过滤局部波动。
+
+    Args:
+        pts: 原始路径点列表 [(x, y), ...]。
+        min_segment_um: 最小段长（μm），短于此值的相邻点合并。
+
+    Returns:
+        下采样后的路径点列表。
+    """
+    if len(pts) < 3:
+        return list(pts)
+    result: list = [pts[0]]
+    for i in range(1, len(pts)):
+        dx = pts[i][0] - result[-1][0]
+        dy = pts[i][1] - result[-1][1]
+        if math.hypot(dx, dy) >= min_segment_um:
+            result.append(pts[i])
+    # 保证至少保留首尾
+    if result[-1] != pts[-1]:
+        result.append(pts[-1])
+    return result
+
+
+def _identify_turn_points(
+    pts: list,
+    angle_threshold_rad: float,
+) -> list[int]:
+    """识别路径中的宏观转弯点（角度变化超阈值的索引）。
+
+    跳过曲线采样点的局部波动，只保留真正的方向变化点。
+
+    Args:
+        pts: 路径点列表 [(x, y), ...]。
+        angle_threshold_rad: 角度变化阈值（弧度）。
+
+    Returns:
+        转弯点索引列表（pts 中间点索引，即 1..len-2）。
+    """
+    if len(pts) < 3:
+        return []
+    turn_points: list[int] = []
+    for i in range(1, len(pts) - 1):
+        p0, p1, p2 = pts[i - 1], pts[i], pts[i + 1]
+        v1 = (p1[0] - p0[0], p1[1] - p0[1])
+        v2 = (p2[0] - p1[0], p2[1] - p1[1])
+        l1 = math.hypot(*v1)
+        l2 = math.hypot(*v2)
+        if l1 < 1e-9 or l2 < 1e-9:
+            continue
+        cos_a = (v1[0] * v2[0] + v1[1] * v2[1]) / (l1 * l2)
+        cos_a = max(-1.0, min(1.0, cos_a))
+        angle = math.acos(cos_a)
+        if angle >= angle_threshold_rad:
+            turn_points.append(i)
+    return turn_points
 
 
 def check_spacing(
