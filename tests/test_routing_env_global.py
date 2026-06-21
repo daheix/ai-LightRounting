@@ -319,3 +319,61 @@ class TestRoutingEnvBackwardCompat:
         env, _, _ = _make_env_setup(use_global_router=False)
         env.reset()
         assert env._global_congestion is None
+
+
+class TestRoutingEnvGlobalWaypoints:
+    """P1-2 优化（第8轮）：全局 waypoints 暴露测试。"""
+
+    def test_step_info_contains_global_waypoints_when_enabled(self):
+        """启用全局布线后 step() info 包含 global_waypoints。"""
+        env, _, _ = _make_env_setup(use_global_router=True)
+        env.reset()
+        action = np.zeros(3, dtype=np.float32)
+        _obs, _r, _t, _tr, info = env.step(action)
+        assert "global_waypoints" in info
+        assert isinstance(info["global_waypoints"], list)
+
+    def test_step_info_no_global_waypoints_when_disabled(self):
+        """默认模式 step() info 不包含 global_waypoints。"""
+        env, _, _ = _make_env_setup(use_global_router=False)
+        env.reset()
+        action = np.zeros(3, dtype=np.float32)
+        _obs, _r, _t, _tr, info = env.step(action)
+        assert "global_waypoints" not in info
+
+    def test_current_global_waypoints_returns_list(self):
+        """_current_global_waypoints() 返回列表。"""
+        env, _, _ = _make_env_setup(use_global_router=True)
+        env.reset()
+        wps = env._current_global_waypoints()
+        assert isinstance(wps, list)
+        # 每条全局路径至少有 1 个 waypoint（起点 GCell）
+        assert len(wps) >= 1
+
+    def test_current_global_waypoints_coords_in_canvas(self):
+        """waypoints 坐标在画布范围内。"""
+        env, _, _ = _make_env_setup(use_global_router=True, gcell_size=50.0)
+        env.reset()
+        wps = env._current_global_waypoints()
+        for x, y in wps:
+            assert 0.0 <= x <= 300.0
+            assert 0.0 <= y <= 300.0
+
+    def test_current_global_waypoints_empty_when_no_global_routes(self):
+        """无全局路径时 _current_global_waypoints() 返回空列表。"""
+        env, _, _ = _make_env_setup(use_global_router=False)
+        env.reset()
+        wps = env._current_global_waypoints()
+        assert wps == []
+
+    def test_step_info_global_waypoints_matches_method(self):
+        """step() info 中 global_waypoints 与 _current_global_waypoints() 一致。"""
+        env, _, _ = _make_env_setup(use_global_router=True)
+        env.reset()
+        # step 前 _conn_idx=0，step 后 _conn_idx=1
+        # 所以 info 中的 waypoints 是 _conn_idx=0 的，step 后方法返回的是 _conn_idx=1 的
+        # 需要在 step 前获取方法返回值
+        wps_before = env._current_global_waypoints()
+        action = np.zeros(3, dtype=np.float32)
+        _obs, _r, _t, _tr, info = env.step(action)
+        assert info["global_waypoints"] == wps_before
