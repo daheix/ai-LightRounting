@@ -180,24 +180,24 @@ def load_tilos_ariane(path: str | Path | None = None) -> CircuitSpec:
     Ariane 是 TILOS MacroPlacement benchmark 的标准测试用例，
     用于与电子 EDA 工具（Innovus/ICC2/DREAMPlace）公平对比布局算法。
 
+    默认返回真实 Ariane 模块拓扑（17 模块 + 25 连接，P1-5 第23轮），
+    若提供 path 则从文件加载并覆盖 benchmark_source。
+
     来源: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
          Ariane RISC-V CPU, NanGate45/ASAP7/SKY130HD 工艺
+         CPU 源码: https://github.com/openhwgroup/cva6
 
     Args:
-        path: Ariane benchmark 文件路径（可选，未提供则返回空壳）。
+        path: Ariane benchmark 文件路径（可选，未提供则用真实拓扑生成）。
 
     Returns:
         CircuitSpec，benchmark_source=TILOS，target_metric=HPWL。
     """
     from polaris.data.specs import BenchmarkSource, TargetMetric
+    from polaris.data.tilos_benchmark import load_ariane_benchmark
 
-    circuit = CircuitSpec(
-        name="tilos_ariane",
-        benchmark_source=BenchmarkSource.TILOS,
-        process_node="NanGate45",
-        target_metric=TargetMetric.HPWL,
-        target_value=100000.0,  # 目标 HPWL < 100000μm（示例阈值）
-    )
+    # 默认：返回真实 Ariane 模块拓扑（第23轮 P1-5 深化）
+    circuit = load_ariane_benchmark()
     if path is not None:
         p = Path(path)
         if p.exists():
