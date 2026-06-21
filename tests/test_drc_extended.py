@@ -234,4 +234,5 @@ def test_load_lidar_benchmark():
 
     circuit = load_lidar_benchmark()
     assert circuit.benchmark_source == BenchmarkSource.LIDAR
-    assert circuit.name == "lidar_ispd25"
+    # 第25轮深化：load_lidar_benchmark 返回真实 PTC 拓扑（lidar_ptc）
+    assert circuit.name == "lidar_ptc"

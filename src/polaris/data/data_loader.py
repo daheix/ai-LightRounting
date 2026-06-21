@@ -283,9 +283,13 @@ def load_lidar_benchmark(path: str | Path | None = None) -> CircuitSpec:
     LiDAR 是 ASU ISPD 2025 的光子曲线布线 benchmark，
     用于测试 curvy A* 布线算法。
 
+    默认返回真实 LiDAR PTC 拓扑（12 器件 + 13 连接，P1-5 第25轮深化），
+    若提供 path 则从文件加载并覆盖 benchmark_source。
+
     来源: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
          LiDAR: Curvy Waveguide Routing for Photonic Integrated Circuits,
          ASU ISPD 2025
+         代码: https://github.com/ScopeX-ASU/LiDAR
 
     Args:
         path: LiDAR benchmark 文件路径（可选）。
@@ -293,16 +297,10 @@ def load_lidar_benchmark(path: str | Path | None = None) -> CircuitSpec:
     Returns:
         CircuitSpec，benchmark_source=LIDAR，target_metric=ROUTING_SUCCESS_RATE。
     """
+    from polaris.data.lidar_benchmark import load_lidar_ptc_benchmark
     from polaris.data.specs import BenchmarkSource, TargetMetric
 
-    circuit = CircuitSpec(
-        name="lidar_ispd25",
-        benchmark_source=BenchmarkSource.LIDAR,
-        process_node="220nm SOI",
-        optical_wavelength_nm=1550.0,
-        target_metric=TargetMetric.ROUTING_SUCCESS_RATE,
-        target_value=1.0,
-    )
+    circuit = load_lidar_ptc_benchmark()
     if path is not None:
         p = Path(path)
         if p.exists():
