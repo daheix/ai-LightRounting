@@ -124,11 +124,18 @@ class EncoderConfig:
         hidden_dim: GNN 隐藏维度与栅格投影维度。
         out_dim: 融合层输出维度（全局状态向量维度）。
         num_gnn_layers: GNN 消息传递层数。
+        use_edge_gnn: 是否启用 edge-GNN（AlphaChip 风格边特征消息传递）。
+            默认 False（向后兼容）。True 时用 EdgeGraphEncoder 替代 GraphEncoder。
+            来源: Mirhoseini et al., Nature 2021, P1-1 差距修复。
+        edge_feat_dim: 边特征维度（仅 use_edge_gnn=True 时生效），默认 7
+            （[距离, 带宽, 优先级, 类型 one-hot(4)]）。
     """
 
     hidden_dim: int = 64
     out_dim: int = 128
     num_gnn_layers: int = 2
+    use_edge_gnn: bool = False
+    edge_feat_dim: int = 7
 
 
 class StateEncoder(Module):
@@ -138,6 +145,11 @@ class StateEncoder(Module):
     拼接，输出全局状态向量供 PPO 策略网络使用。
 
     参考 Basso et al. NeurIPS 2025：图特征 + 空间特征融合。
+
+    第4轮 P1-1 增强：支持 edge-GNN 模式（AlphaChip 风格边特征消息传递），
+    通过 ``EncoderConfig.use_edge_gnn=True`` 启用。启用后 GNN 编码器从
+    ``GraphEncoder``（R-GCN）切换为 ``EdgeGraphEncoder``（edge-aware MPNN），
+    使 GNN 能感知 net 的物理属性（线长/拥塞/优先级）。
     """
 
     def __init__(
@@ -148,12 +160,26 @@ class StateEncoder(Module):
     ) -> None:
         super().__init__()
         cfg = config or EncoderConfig()
-        self.gnn = GraphEncoder(
-            in_dim=node_feat_dim,
-            hidden_dim=cfg.hidden_dim,
-            out_dim=cfg.hidden_dim,
-            num_layers=cfg.num_gnn_layers,
-        )
+        self.use_edge_gnn = cfg.use_edge_gnn
+        if cfg.use_edge_gnn:
+            # edge-GNN 模式：用 EdgeGraphEncoder（AlphaChip 风格）
+            self.gnn = EdgeGraphEncoder(
+                in_dim=node_feat_dim,
+                edge_feat_dim=cfg.edge_feat_dim,
+                config=EdgeEncoderConfig(
+                    hidden_dim=cfg.hidden_dim,
+                    out_dim=cfg.hidden_dim,
+                    num_layers=cfg.num_gnn_layers,
+                ),
+            )
+        else:
+            # 默认模式：R-GCN（向后兼容）
+            self.gnn = GraphEncoder(
+                in_dim=node_feat_dim,
+                hidden_dim=cfg.hidden_dim,
+                out_dim=cfg.hidden_dim,
+                num_layers=cfg.num_gnn_layers,
+            )
         # 栅格特征展平后投影
         self.grid_proj = Sequential(
             Linear(grid_size, cfg.hidden_dim),
@@ -170,6 +196,7 @@ class StateEncoder(Module):
         node_feats: Tensor,
         edge_index: np.ndarray,
         grid_feat: Tensor,
+        edge_feats: Tensor | None = None,
     ) -> Tensor:
         """前向：GNN 编码图 + 投影栅格 + 融合。
 
@@ -177,13 +204,21 @@ class StateEncoder(Module):
             node_feats: 节点特征 ``[N, node_feat_dim]``。
             edge_index: 边索引 ``[2, E]``。
             grid_feat: 栅格特征 ``[grid_h, grid_w]``。
+            edge_feats: 边特征 ``[E, edge_feat_dim]``（仅 edge-GNN 模式需要）。
 
         Returns:
             全局状态向量 ``[out_dim]``。
         """
         from polaris.nn import cat
 
-        node_emb = self.gnn(node_feats, edge_index)  # [N, hidden]
+        if self.use_edge_gnn:
+            if edge_feats is None:
+                # edge-GNN 模式但未提供边特征，用零特征兜底
+                n_edges = edge_index.shape[1] if edge_index.size > 0 else 0
+                edge_feats = Tensor(np.zeros((n_edges, 7), dtype=np.float64))
+            node_emb = self.gnn(node_feats, edge_index, edge_feats)
+        else:
+            node_emb = self.gnn(node_feats, edge_index)  # [N, hidden]
         # 图级读出：均值池化
         graph_emb = node_emb.mean(axis=0)  # [hidden]
         # 栅格特征：行均值投影（降维）
@@ -384,8 +419,9 @@ def build_edge_features(
         # 优先级（默认 1.0，可扩展）
         feats[i, 2] = 1.0
         # 类型 one-hot（4 类：passive-passive, passive-active, active-active, other）
-        src_cat = src_dev.category if src_dev else "other"
-        dst_cat = dst_dev.category if dst_dev else "other"
+        # getattr 兼容 DeviceSpec（无 category 字段）与 Device（有 category 字段）
+        src_cat = getattr(src_dev, "category", "other") if src_dev else "other"
+        dst_cat = getattr(dst_dev, "category", "other") if dst_dev else "other"
         type_idx = _edge_type_index(src_cat, dst_cat)
         feats[i, 3 + type_idx] = 1.0
     return feats
