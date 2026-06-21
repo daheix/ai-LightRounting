@@ -254,15 +254,10 @@ done
 
 echo ""
 echo "--- 复刻品验证 ---"
-if python3 -c "from pycopy.pyCopyTorch import Tensor" 2>/dev/null; then
-    echo "  ✅ pyCopyTorch"
+if python3 -c "from pycopy.pyCopySiPANN import waveguide_s" 2>/dev/null; then
+    echo "  ✅ pyCopySiPANN"
 else
-    echo "  ❌ pyCopyTorch 验证失败"
-fi
-if python3 -c "from pycopy.pyCopySAX import cascade_circuit" 2>/dev/null; then
-    echo "  ✅ pyCopySAX"
-else
-    echo "  ❌ pyCopySAX 验证失败"
+    echo "  ❌ pyCopySiPANN 验证失败"
 fi
 
 echo ""

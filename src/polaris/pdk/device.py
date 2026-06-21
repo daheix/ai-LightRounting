@@ -99,6 +99,9 @@ class Device:
         params: 电光参数字典（含单位，如 ``{"loss_db_cm": 2.0}``）。
         source: 文献来源（每个参数须可溯源）。
         constraints: 设计约束（最小间距/弯曲半径/禁布区等）。
+        process_node: 工艺节点标识（如 "220nm SOI"/"SiN"/"GF 45CLO"/"IHP SG25H5"），
+            对齐商业 EDA 工具的工艺节点标注（Innovus/ICC2 支持 3nm-250nm 全谱）。
+            来源: PoLaRIS 商业差距分析 P1-3，对标 GF Fotonix 45CLO/Tower PH18DA/IHP SG25H5。
     """
 
     device_id: str
@@ -110,6 +113,7 @@ class Device:
     params: dict = field(default_factory=dict)
     source: Source | None = None
     constraints: dict = field(default_factory=dict)
+    process_node: str | None = None
 
     def translate(self, dx: float, dy: float) -> Device:
         """平移器件（返回新实例，端口与包围盒同步更新）。

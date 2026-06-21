@@ -28,6 +28,23 @@ from polaris.pdk.port import Direction, Port
 from polaris.pdk.source import Source
 
 # ---------------------------------------------------------------------------
+# 平台默认工艺节点标识（差距分析 P1-3，对齐商业 EDA 工艺节点标注）
+# ---------------------------------------------------------------------------
+# 来源:
+# - SiEPIC EBeam PDK: 220nm SOI, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+# - LioniX SiN: TriPleX SiN 平台, https://www.lionix-international.com/photonics/
+# - InP: InP 基集成光子平台, https://www.jeppix.eu/
+# - LNOI: 薄膜铌酸锂, https://www.nanochemistrygroup.com/lnoi
+# - CMOS photonics 节点预留（需 NDA）: GF 45CLO/Tower PH18DA/IHP SG25H5
+_PLATFORM_DEFAULT_PROCESS_NODE: dict[str, str] = {
+    "SOI": "220nm SOI",
+    "SiN": "SiN TriPleX",
+    "InP": "InP generic",
+    "LNOI": "LNOI X-cut",
+}
+
+
+# ---------------------------------------------------------------------------
 # 序列化辅助函数（Device/Port/Source/BoundingBox ↔ dict）
 # ---------------------------------------------------------------------------
 
@@ -106,7 +123,7 @@ def _device_to_dict(device: Device) -> dict[str, Any]:
     """将 Device 序列化为可 JSON/YAML 序列化的字典。
 
     包含 device_id, platform, category, name, ports, bbox, params,
-    source, constraints 全部字段。
+    source, constraints, process_node 全部字段。
     """
     return {
         "device_id": device.device_id,
@@ -118,6 +135,7 @@ def _device_to_dict(device: Device) -> dict[str, Any]:
         "params": dict(device.params),
         "source": _source_to_dict(device.source),
         "constraints": dict(device.constraints),
+        "process_node": device.process_node,
     }
 
 
@@ -133,6 +151,7 @@ def _device_from_dict(data: dict[str, Any]) -> Device:
         params=dict(data.get("params", {})),
         source=_source_from_dict(data.get("source")),
         constraints=dict(data.get("constraints", {})),
+        process_node=data.get("process_node"),
     )
 
 
@@ -244,13 +263,18 @@ class DeviceCatalog(CatalogSerializerMixin):
 
         遍历工厂字典，调用每个工厂函数生成 ``Device`` 并注册到清单。
         ``platform`` 参数标识器件所属平台，与器件自身的 ``platform`` 字段一致。
+        若器件未设置 ``process_node``，则按平台自动填充默认工艺节点标识
+        （对齐商业 EDA 工具的工艺节点标注，差距分析 P1-3）。
 
         Args:
             platform: 平台名（SOI/SiN/InP/LNOI）。
             factories: 器件名 → 工厂函数的字典（如 ``SOI_DEVICES``）。
         """
+        process_node = _PLATFORM_DEFAULT_PROCESS_NODE.get(platform)
         for factory in factories.values():
             device = factory()
+            if device.process_node is None and process_node is not None:
+                device.process_node = process_node
             self.register(device)
 
     def register_platform(self, platform: str, factories: dict[str, Callable[[], Device]]) -> None:

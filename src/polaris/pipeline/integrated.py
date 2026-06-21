@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -211,15 +212,38 @@ class _DefaultPlacer:
         return placements
 
     def _place_random(self, circuit: CircuitSpec) -> dict:
-        """随机贪心布局（独立模式，用于基线对比/无 checkpoint 场景）。"""
+        """随机贪心布局（独立模式，用于基线对比/无 checkpoint 场景）。
+
+        修复: 原实现用固定 margin=50，小画布（200×200）上大器件（30×20）必然重叠。
+        现改为网格布局：将画布划分为 N×N 网格，每个器件占一格，保证不重叠。
+        """
         import random
 
         rng = random.Random(42)
         placements = {}
-        margin = 50.0
-        for dev in circuit.devices:
-            x = rng.uniform(margin, circuit.canvas_w - dev.width_um - margin)
-            y = rng.uniform(margin, circuit.canvas_h - dev.height_um - margin)
+        n_dev = len(circuit.devices)
+        if n_dev == 0:
+            return placements
+
+        # 网格布局：计算行列数（尽量方形）
+        n_cols = int(math.ceil(math.sqrt(n_dev)))
+        n_rows = int(math.ceil(n_dev / n_cols))
+
+        # 每格尺寸（含间距）
+        cell_w = circuit.canvas_w / n_cols
+        cell_h = circuit.canvas_h / n_rows
+        min_spacing = 5.0  # 器件间最小间距 μm
+
+        for idx, dev in enumerate(circuit.devices):
+            row = idx // n_cols
+            col = idx % n_cols
+            # 器件在格内随机偏移（保留 spacing）
+            avail_w = max(cell_w - dev.width_um - min_spacing, 0)
+            avail_h = max(cell_h - dev.height_um - min_spacing, 0)
+            offset_x = rng.uniform(0, avail_w) if avail_w > 0 else 0.0
+            offset_y = rng.uniform(0, avail_h) if avail_h > 0 else 0.0
+            x = col * cell_w + min_spacing / 2 + offset_x
+            y = row * cell_h + min_spacing / 2 + offset_y
             placements[dev.name] = {"x": x, "y": y, "w": dev.width_um, "h": dev.height_um}
         return placements
 

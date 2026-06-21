@@ -28,9 +28,8 @@
 - **状态**: ✅ 已装 0.14.7（必装依赖）
 - **来源**: https://flaport.github.io/sax/
 - **安装**: `pip install sax`
-- **项目使用**: `src/polaris/sim/cascade.py` 优先用 sax，回退到纯 numpy 复刻
+- **项目使用**: `src/polaris/sim/cascade.py` 直接用 sax
 - **依赖链**: jax + jaxlib + optax + pydantic + pandas + xarray + scikit-rf（约 200-400 MB）
-- **复刻品**: `../pycopy/pyCopySAX/`（子网络增长算法，100% 纯 numpy 复刻）
 
 ### SiPANN
 
@@ -39,7 +38,7 @@
 - **来源**: https://sipann.readthedocs.io/
 - **安装**: `pip install SiPANN`
 - **项目使用**: `src/polaris/sim/models.py` 复刻 SiPANN 的 S 参数模型
-- **复刻品**: `../pycopy/pyCopySiPANN/`（10 个 S 参数模型，纯 Python 复刻）
+- **复刻品**: `../pycopy/pyCopySiPANN/`（10 个 S 参数模型，纯 Python 复刻，因 tensorflow 无 Py3.14 wheel）
 - **兼容性说明**: SiPANN 依赖 tensorflow，tensorflow 无 Python 3.14 wheel。在 Python 3.10-3.13 环境下必装。
 
 ### femwell
@@ -49,7 +48,6 @@
 - **来源**: https://helgegehring.github.io/femwell/
 - **安装**: `pip install femwell`
 - **项目使用**: FEM 模式求解器（项目未使用，预留）
-- **复刻品**: `../pycopy/pyCopyFemwell/`（预留，有效折射率法）
 
 ### meow
 
@@ -58,4 +56,3 @@
 - **来源**: https://github.com/flaport/meow
 - **安装**: `pip install meow`
 - **项目使用**: 模式求解器（项目未使用，预留）
-- **复刻品**: `../pycopy/pyCopyMeow/`（预留）
