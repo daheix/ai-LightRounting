@@ -164,6 +164,61 @@ class TestTidy3DSimulation:
         with pytest.raises(ImportError, match="Tidy3D 后端不可用"):
             run_fdtd_simulation(dev, cfg)
 
+    def test_tidy3d_runtime_error_without_api_key(self):
+        """Tidy3D 已安装但无 API key 时抛出 RuntimeError（不 fall-back）。
+
+        来源: 用户规则"公式计算等功能可以单独设计独立的接口，
+              仅供在特定条件下使用，而不是作为 fall-back 使用"
+        """
+        import os
+
+        if not is_tidy3d_available():
+            pytest.skip("Tidy3D 未安装，跳过 API key 测试")
+        # 确保无 API key
+        old_key = os.environ.pop("TIDY3D_API_KEY", None)
+        try:
+            cat = build_default_catalog()
+            dev = cat.get("strip_waveguide", platform="SOI")
+            cfg = FDTDConfig(backend=FDTDBackend.TIDY3D, n_wavelengths=5)
+            with pytest.raises(RuntimeError, match="TIDY3D_API_KEY"):
+                run_fdtd_simulation(dev, cfg)
+        finally:
+            if old_key is not None:
+                os.environ["TIDY3D_API_KEY"] = old_key
+
+
+class TestSOIWaveguideSparams:
+    """SOI 波导解析 S 参数独立接口测试。"""
+
+    def test_sparams_returns_complex(self):
+        """_compute_soi_waveguide_sparams 返回复数数组。"""
+        from polaris.sim.fdtd_simulator import _compute_soi_waveguide_sparams
+
+        wavelengths = np.linspace(1.5, 1.6, 10)
+        s21 = _compute_soi_waveguide_sparams(wavelengths, length_um=100.0)
+        assert s21.dtype == np.complex128
+        assert s21.shape == (10,)
+
+    def test_sparams_amplitude_decreases_with_length(self):
+        """S 参数幅度随波导长度增加而减小（损耗）。"""
+        from polaris.sim.fdtd_simulator import _compute_soi_waveguide_sparams
+
+        wavelengths = np.array([1.55])
+        s21_short = _compute_soi_waveguide_sparams(wavelengths, length_um=10.0)
+        s21_long = _compute_soi_waveguide_sparams(wavelengths, length_um=1000.0)
+        assert np.abs(s21_short[0]) > np.abs(s21_long[0])
+
+    def test_sparams_phase_increases_with_length(self):
+        """S 参数相位随波导长度增加而增加。"""
+        from polaris.sim.fdtd_simulator import _compute_soi_waveguide_sparams
+
+        wavelengths = np.array([1.55])
+        s21_short = _compute_soi_waveguide_sparams(wavelengths, length_um=10.0)
+        s21_long = _compute_soi_waveguide_sparams(wavelengths, length_um=1000.0)
+        phase_short = np.angle(s21_short[0])
+        phase_long = np.angle(s21_long[0])
+        assert abs(phase_long) > abs(phase_short)
+
 
 class TestFDTDIntegration:
     """FDTD 与 PoLaRIS 集成测试。"""
