@@ -172,8 +172,7 @@ class TestRolloutWorker:
             worker_id=0,
             env=env,
             agent=agent,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         assert worker.worker_id == 0
         assert worker.env is env
@@ -186,7 +185,7 @@ class TestRolloutWorker:
         env = env_factory()
         obs_dim = _infer_obs_dim(env)
         worker = RolloutWorker(
-            worker_id=0, env=env, agent=agent, obs_dim=obs_dim, action_dim=4
+            worker_id=0, env=env, agent=agent, dims=(obs_dim, 4)
         )
         worker.reset()
         assert worker._obs is not None  # noqa: SLF001
@@ -196,7 +195,7 @@ class TestRolloutWorker:
         env = env_factory()
         obs_dim = _infer_obs_dim(env)
         worker = RolloutWorker(
-            worker_id=0, env=env, agent=agent, obs_dim=obs_dim, action_dim=4
+            worker_id=0, env=env, agent=agent, dims=(obs_dim, 4)
         )
         worker.reset()
         result = worker.collect(5)
@@ -211,7 +210,7 @@ class TestRolloutWorker:
         env = env_factory()
         obs_dim = _infer_obs_dim(env)
         worker = RolloutWorker(
-            worker_id=0, env=env, agent=agent, obs_dim=obs_dim, action_dim=4
+            worker_id=0, env=env, agent=agent, dims=(obs_dim, 4)
         )
         worker.reset()
         worker.collect(5)
@@ -223,7 +222,7 @@ class TestRolloutWorker:
         env = env_factory()
         obs_dim = _infer_obs_dim(env)
         worker = RolloutWorker(
-            worker_id=0, env=env, agent=agent, obs_dim=obs_dim, action_dim=4
+            worker_id=0, env=env, agent=agent, dims=(obs_dim, 4)
         )
         # 创建另一个 agent 模拟中心 learner
         other_agent = PPOAgent(
@@ -323,8 +322,7 @@ class TestDistributedLearner:
             agent=agent,
             env_factory=env_factory,
             num_workers=2,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         learner = DistributedLearner(
             agent=agent, workers=workers, config=DistributedConfig(num_workers=2)
@@ -340,8 +338,7 @@ class TestDistributedLearner:
             agent=agent,
             env_factory=env_factory,
             num_workers=2,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         config = DistributedConfig(
             num_workers=2,
@@ -364,8 +361,7 @@ class TestDistributedLearner:
             agent=agent,
             env_factory=env_factory,
             num_workers=2,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         config = DistributedConfig(
             num_workers=2, rollout_steps_per_worker=3
@@ -382,8 +378,7 @@ class TestDistributedLearner:
             agent=agent,
             env_factory=env_factory,
             num_workers=2,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         config = DistributedConfig(
             num_workers=2, rollout_steps_per_worker=3
@@ -459,8 +454,7 @@ class TestCreateWorkers:
             agent=agent,
             env_factory=env_factory,
             num_workers=4,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         assert len(workers) == 4
         for i, w in enumerate(workers):
@@ -473,8 +467,7 @@ class TestCreateWorkers:
             agent=agent,
             env_factory=env_factory,
             num_workers=2,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         for w in workers:
             assert w._obs is not None  # noqa: SLF001
@@ -504,8 +497,7 @@ class TestCommercialGapReduction:
             agent=agent,
             env_factory=env_factory,
             num_workers=4,
-            obs_dim=obs_dim,
-            action_dim=4,
+            dims=(obs_dim, 4),
         )
         learner = DistributedLearner(
             agent=agent, workers=workers, config=DistributedConfig(num_workers=4)
