@@ -16,6 +16,7 @@
 - Area Utilization: 面积利用率
 - Congestion: 拥塞度（基于布线网格，第82轮新增）
 - Insertion Loss: 光子插入损耗（dB，第90轮新增）
+- DRV: 设计规则违规数（重叠+间距+边界，第94轮新增）
 """
 
 from __future__ import annotations
@@ -336,6 +337,86 @@ def evaluate_insertion_loss(
     return waveguide_loss + device_loss
 
 
+def evaluate_drv(
+    circuit: CircuitSpec,
+    placements: dict[str, tuple[float, float]],
+    min_spacing_um: float = 0.0,
+) -> dict[str, int]:
+    """计算设计规则违规数（DRV）。
+
+    对标 TILOS MacroPlacement DRV 评估标准与商业 EDA 工具（Innovus/ICC2）的
+    DRV 计数方法，包含三类违规：
+
+    1. **重叠违规（overlap_violations）**: 两模块包围盒相交
+    2. **间距违规（spacing_violations）**: 两模块间距 < min_spacing_um
+       （min_spacing_um=0 时退化为仅检测重叠）
+    3. **边界违规（boundary_violations）**: 模块超出画布边界
+
+    来源:
+        - TILOS MacroPlacement DRV Evaluation
+          https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+        - Cadence Innovus DRV 计数（spacing/width/area/short）
+        - DREAMPlace Overlap/Boundary 违规检测
+
+    Args:
+        circuit: 电路规格（含模块尺寸和画布尺寸）。
+        placements: 布局字典 {module_name: (cx, cy)}，中心坐标。
+        min_spacing_um: 最小间距（μm），默认 0（仅检测重叠）。
+
+    Returns:
+        DRV 统计字典:
+        - ``overlap_violations``: 重叠违规数
+        - ``spacing_violations``: 间距违规数（不含重叠）
+        - ``boundary_violations``: 边界违规数
+        - ``total``: 总 DRV 数
+    """
+    size_map = {d.name: (d.width_um, d.height_um) for d in circuit.devices}
+
+    # 1. 边界违规检测
+    boundary_violations = 0
+    boxes: list[tuple[str, float, float, float, float]] = []
+    for name, (cx, cy) in placements.items():
+        if name not in size_map:
+            continue
+        w, h = size_map[name]
+        xmin = cx - w / 2
+        ymin = cy - h / 2
+        xmax = cx + w / 2
+        ymax = cy + h / 2
+        boxes.append((name, xmin, ymin, xmax, ymax))
+        # 边界违规：模块超出画布
+        if xmin < 0 or ymin < 0 or xmax > circuit.canvas_w or ymax > circuit.canvas_h:
+            boundary_violations += 1
+
+    # 2. 重叠与间距违规检测
+    overlap_violations = 0
+    spacing_violations = 0
+    n = len(boxes)
+    for i in range(n):
+        for j in range(i + 1, n):
+            _n1, x1min, y1min, x1max, y1max = boxes[i]
+            _n2, x2min, y2min, x2max, y2max = boxes[j]
+            # 重叠判定：包围盒相交
+            if x1min < x2max and x2min < x1max and y1min < y2max and y2min < y1max:
+                overlap_violations += 1
+                continue
+            # 间距违规判定：间距 < min_spacing_um（仅在非重叠时检查）
+            if min_spacing_um <= 0:
+                continue
+            dx = max(0, max(x1min, x2min) - min(x1max, x2max))
+            dy = max(0, max(y1min, y2min) - min(y1max, y2max))
+            dist = (dx * dx + dy * dy) ** 0.5
+            if dist < min_spacing_um:
+                spacing_violations += 1
+
+    return {
+        "overlap_violations": overlap_violations,
+        "spacing_violations": spacing_violations,
+        "boundary_violations": boundary_violations,
+        "total": overlap_violations + spacing_violations + boundary_violations,
+    }
+
+
 def evaluate_benchmark(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
@@ -351,6 +432,9 @@ def evaluate_benchmark(
     第90轮扩展：集成插入损耗（Insertion Loss）评估，修复 insertion_loss_db
     达标判定（Apollo benchmark 不再静默失败）。
 
+    第94轮扩展：集成 DRV 评估，使用真正的 DRV 计数（重叠+间距+边界），
+    替代原先仅检测重叠的简化判定。DRV target_value 表示允许的最大违规数。
+
     Args:
         circuit: 电路规格（含 target_metric/target_value）。
         placements: 布局字典 {module_name: (cx, cy)}。
@@ -363,21 +447,23 @@ def evaluate_benchmark(
     util = evaluate_area_utilization(circuit, placements)
     cong = evaluate_congestion(circuit, placements)
     insertion_loss = evaluate_insertion_loss(circuit, placements)
+    drv = evaluate_drv(circuit, placements)
 
     # 达标判定：根据 target_metric 判定是否达标
     target_metric = circuit.target_metric.value
     target_value = circuit.target_value
     passed = False
     if target_metric == "hpwl":
-        passed = hpwl < target_value and overlap == 0
+        passed = hpwl < target_value and drv["total"] == 0
     elif target_metric == "drv":
-        passed = overlap == 0
+        # DRV 达标：总违规数 <= target_value（target_value=0 表示零违规）
+        passed = drv["total"] <= target_value
     elif target_metric == "routing_success_rate":
-        # 布线成功率：无重叠时视为可布线（布局合法是布线成功的前提）
-        passed = overlap == 0
+        # 布线成功率：DRV=0 时视为可布线（布局合法是布线成功的前提）
+        passed = drv["total"] == 0
     elif target_metric == "insertion_loss_db":
-        # 插入损耗达标：总损耗 < target_value 且无重叠
-        passed = insertion_loss < target_value and overlap == 0
+        # 插入损耗达标：总损耗 < target_value 且无 DRV 违规
+        passed = insertion_loss < target_value and drv["total"] == 0
 
     return BenchmarkResult(
         benchmark_name=circuit.name,
@@ -397,6 +483,10 @@ def evaluate_benchmark(
             "overflow_count": cong["overflow_count"],
             "total_overflow": cong["total_overflow"],
             "insertion_loss_db": insertion_loss,
+            "drv_total": drv["total"],
+            "drv_overlap": drv["overlap_violations"],
+            "drv_spacing": drv["spacing_violations"],
+            "drv_boundary": drv["boundary_violations"],
         },
     )
 
@@ -517,6 +607,7 @@ __all__ = [
     "evaluate_area_utilization",
     "evaluate_congestion",
     "evaluate_insertion_loss",
+    "evaluate_drv",
     "evaluate_benchmark",
     "grid_placement",
     "analytical_placement",
