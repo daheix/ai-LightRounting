@@ -281,7 +281,12 @@ class RoutingEnv(gym.Env):
         # P1-2 全局布线层（第6轮）：注入 GCell 级全局拥塞图作为额外观测通道
         if self.use_global_router:
             if self._global_congestion is None:
-                # 兜底：未跑全局布线时填零（不应发生，reset 已调用）
+                # 防御性填充：未跑全局布线时填零（不应发生，reset 已调用）
+                # 记录警告以便追踪问题，不作为正常路径
+                import logging
+                logging.getLogger(__name__).warning(
+                    "全局拥塞图为 None，使用零填充。这不应发生（reset 应已初始化）。"
+                )
                 gw = max(1, int(self.state.canvas_w / self.global_router_gcell_size_um))
                 gh = max(1, int(self.state.canvas_h / self.global_router_gcell_size_um))
                 obs["global_congestion"] = np.zeros((gh, gw), dtype=np.float32)

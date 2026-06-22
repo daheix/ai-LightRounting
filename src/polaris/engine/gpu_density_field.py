@@ -181,7 +181,7 @@ class GPUDensityField:
             # FFT 卷积（GPU 加速）
             smoothed = self._fft_convolve(self.field, kernel)
         else:
-            # 分离卷积 fallback
+            # 分离卷积（独立模式，非 fall-back，由 use_fft=False 显式选择）
             smoothed = self._separable_convolve(self.field, s)
 
         self.field = smoothed
@@ -226,7 +226,9 @@ class GPUDensityField:
         return np.asarray(result).real
 
     def _separable_convolve(self, field: np.ndarray, sigma: float) -> np.ndarray:
-        """分离卷积 fallback。
+        """分离卷积（独立模式，非 fall-back）。
+
+        由 ``config.use_fft=False`` 显式选择，适用于小规模场或无 FFT 支持的后端。
 
         Args:
             field: 输入场。
