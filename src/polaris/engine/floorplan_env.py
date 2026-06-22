@@ -241,13 +241,22 @@ class FloorplanEnv(gym.Env):
         来源:
             DREAMPlace warm-start: https://arxiv.org/abs/2004.10746
         """
-        from polaris.data.specs import CircuitSpec, DeviceSpec
+        circuit = self._build_circuit_for_warm_start()
+
+        # 生成 warm-start 布局 {name: (cx, cy)}
         from polaris.engine.analytical_placer import (
             AnalyticalPlacerConfig,
             warm_start_placement,
         )
+        cfg = placer_config or AnalyticalPlacerConfig()
+        layout = warm_start_placement(circuit, cfg)
 
-        # 从环境构建 CircuitSpec
+        self._apply_warm_start_layout(layout)
+
+    def _build_circuit_for_warm_start(self):
+        """从环境状态构建 CircuitSpec（供 warm-start 使用）。"""
+        from polaris.data.specs import CircuitSpec, DeviceSpec
+
         device_specs = []
         for inst_id in self.instance_ids:
             dev = self.devices[inst_id]
@@ -266,7 +275,7 @@ class FloorplanEnv(gym.Env):
             (c.src_instance, c.src_port, c.dst_instance, c.dst_port)
             for c in self.net.connections
         ]
-        circuit = CircuitSpec(
+        return CircuitSpec(
             name="warm_start",
             devices=device_specs,
             connections=connections,
@@ -274,11 +283,8 @@ class FloorplanEnv(gym.Env):
             canvas_h=self.state.canvas_h,
         )
 
-        # 生成 warm-start 布局 {name: (cx, cy)}
-        cfg = placer_config or AnalyticalPlacerConfig()
-        layout = warm_start_placement(circuit, cfg)
-
-        # 应用到 placements（cx,cy 中心 -> 左下角 x,y）
+    def _apply_warm_start_layout(self, layout: dict) -> None:
+        """将 warm-start 布局结果应用到环境 placements。"""
         for inst_id, (cx, cy) in layout.items():
             if inst_id not in self.devices:
                 continue

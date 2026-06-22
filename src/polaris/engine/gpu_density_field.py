@@ -137,43 +137,19 @@ class GPUDensityField:
             self.field = field
             return field
 
-        # 向量化双线性插值面积分布
-        # 每个器件在 4 个相邻网格中按双线性权重分配面积
-        # 对标 DREAMPlace TCAD 2020 Section III.B 标准算法
-        x_centers = pos[:, 0]
-        y_centers = pos[:, 1]
-
-        # 连续网格坐标（器件中心在网格中的浮点位置）
-        dx = bin_x[1] - bin_x[0]
-        dy = bin_y[1] - bin_y[0]
-        gx_cont = x_centers / dx - 0.5
-        gy_cont = y_centers / dy - 0.5
-
-        # 4 个邻域网格索引
-        x0 = np.floor(gx_cont).astype(np.int64)
-        y0 = np.floor(gy_cont).astype(np.int64)
+        # 计算双线性插值权重和邻域索引
+        x0, y0, wx0, wy0, wx1, wy1 = self._compute_bilinear_weights(
+            pos, bin_x, bin_y, gx
+        )
         x1 = x0 + 1
         y1 = y0 + 1
-
-        # 双线性权重
-        wx1 = gx_cont - x0
-        wy1 = gy_cont - y0
-        wx0 = 1.0 - wx1
-        wy0 = 1.0 - wy1
-
         areas = widths * heights
 
-        # 向量化 4 邻域分配
-        for gx_idx, wx in ((x0, wx0), (x1, wx1)):
-            for gy_idx, wy in ((y0, wy0), (y1, wy1)):
-                mask = (gx_idx >= 0) & (gx_idx < gx) & (gy_idx >= 0) & (gy_idx < gx)
-                if not np.any(mask):
-                    continue
-                np.add.at(
-                    field,
-                    (gx_idx[mask], gy_idx[mask]),
-                    areas[mask] * wx[mask] * wy[mask],
-                )
+        # 向量化 4 邻域分配（预计算加权面积）
+        self._distribute_to_bins(field, x0, y0, wx0 * wy0 * areas)
+        self._distribute_to_bins(field, x0, y1, wx0 * wy1 * areas)
+        self._distribute_to_bins(field, x1, y0, wx1 * wy0 * areas)
+        self._distribute_to_bins(field, x1, y1, wx1 * wy1 * areas)
 
         # 归一化
         bin_area = (bin_x[1] - bin_x[0]) * (bin_y[1] - bin_y[0])
@@ -182,6 +158,50 @@ class GPUDensityField:
 
         self.field = field
         return field
+
+    def _compute_bilinear_weights(
+        self, pos, bin_x, bin_y, gx
+    ):
+        """计算双线性插值的连续网格坐标和权重。
+
+        Returns:
+            (x0, y0, wx0, wy0, wx1, wy1) 元组。
+        """
+        x_centers = pos[:, 0]
+        y_centers = pos[:, 1]
+
+        dx = bin_x[1] - bin_x[0]
+        dy = bin_y[1] - bin_y[0]
+        gx_cont = x_centers / dx - 0.5
+        gy_cont = y_centers / dy - 0.5
+
+        x0 = np.floor(gx_cont).astype(np.int64)
+        y0 = np.floor(gy_cont).astype(np.int64)
+
+        wx1 = gx_cont - x0
+        wy1 = gy_cont - y0
+        wx0 = 1.0 - wx1
+        wy0 = 1.0 - wy1
+
+        return x0, y0, wx0, wy0, wx1, wy1
+
+    def _distribute_to_bins(self, field, gx_idx, gy_idx, weighted_areas):
+        """将加权面积分配到指定网格邻域。
+
+        Args:
+            field: 密度场（原地修改）。
+            gx_idx/gy_idx: 网格索引数组。
+            weighted_areas: 已乘以双线性权重的器件面积。
+        """
+        gx = self.grid_size
+        mask = (gx_idx >= 0) & (gx_idx < gx) & (gy_idx >= 0) & (gy_idx < gx)
+        if not np.any(mask):
+            return
+        np.add.at(
+            field,
+            (gx_idx[mask], gy_idx[mask]),
+            weighted_areas[mask],
+        )
 
     def smooth_gaussian(self, sigma: float | None = None) -> np.ndarray:
         """高斯平滑（FFT 卷积，GPU 加速）。
