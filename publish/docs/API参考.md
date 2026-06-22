@@ -319,6 +319,106 @@ result = calibrate(CalibrationConfig(
 | mean_error_db | float | 平均误差 (dB) |
 | all_passed | bool | 是否全部通过 |
 
+### Foundry DRC Runset（9 个 foundry，69 条规则）
+
+多 foundry DRC runset 集合，覆盖 SOI/SiN/InP/LNOI 4 大材料平台。
+
+```python
+from polaris.sim.foundry_runsets import (
+    FOUNDRY_RUNSETS,
+    get_foundry_runset,
+    list_foundry_runsets,
+    list_foundry_runsets_by_material,
+    foundry_runset_count,
+    total_drc_rules_count,
+)
+
+# 列出所有 foundry runset
+print(list_foundry_runsets())
+# ['AMF', 'CompoundTek', 'GF_Fotonix', 'HHI_InP', 'IHP', 'LIGENTEC', 'LNOI', 'LioniX_InP', 'SiEPIC_EBeam']
+
+# 按材料平台筛选
+soi_foundries = list_foundry_runsets_by_material("SOI")  # 5 个
+inp_foundries = list_foundry_runsets_by_material("InP")  # 2 个
+lnoi_foundries = list_foundry_runsets_by_material("LNOI")  # 1 个
+
+# 获取特定 foundry 的 DRC 规则
+runset = get_foundry_runset("SiEPIC_EBeam")
+print(f"Foundry: {runset.foundry_name}, 规则数: {len(runset.rules)}")
+```
+
+| 函数 | 说明 |
+|------|------|
+| `get_foundry_runset(name)` | 按 foundry 名获取 DRC runset |
+| `list_foundry_runsets()` | 列出所有 foundry runset 名（按字母排序） |
+| `list_foundry_runsets_by_material(material)` | 按材料平台筛选 foundry |
+| `foundry_runset_count()` | 返回已注册的 foundry runset 总数 |
+| `total_drc_rules_count()` | 返回所有 foundry runset 的 DRC 规则总数 |
+
+### FoundryRunset
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| foundry_name | str | Foundry 名称 |
+| process_node | str | 工艺节点 |
+| material_platform | str | 材料平台（SOI/SiN/InP/LNOI） |
+| rules | list[DRCRule] | DRC 规则列表 |
+| source_url | str | 来源 URL |
+| notes | str | 备注 |
+
+### LVS（Layout Versus Schematic）
+
+GDS 版图与原理图一致性验证。
+
+```python
+from polaris.sim.lvs import run_lvs, extract_netlist_from_gds, compare_netlists
+
+# 从 GDS 提取网表
+extracted = extract_netlist_from_gds("layout.gds")
+
+# 将 CircuitSpec 转换为参考网表
+from polaris.sim.lvs import circuit_spec_to_netlist
+reference = circuit_spec_to_netlist(circuit)
+
+# 比对网表
+report = compare_netlists(extracted, reference)
+print(f"LVS 通过: {report.is_clean()}, 不匹配数: {report.mismatch_count}")
+
+# 完整 LVS 流程
+report = run_lvs(gds_path="layout.gds", circuit=circuit)
+```
+
+### LVSReport
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| is_clean | bool | 是否无不匹配 |
+| mismatches | list[LVSMismatch] | 不匹配列表 |
+| mismatch_count | int | 不匹配总数 |
+
+### FDTD 仿真（MEEP/Tidy3D/解析法）
+
+FDTD 全波仿真，支持 MEEP（开源）、Tidy3D（云端）和解析法后端。
+
+```python
+from polaris.sim.fdtd_simulator import (
+    run_fdtd_simulation,
+    FDTDConfig,
+    FDTDBackend,
+    get_available_backends,
+)
+
+# 查看可用后端
+print(get_available_backends())  # [FDTDBackend.ANALYTICAL]（MEEP/Tidy3D 未安装时）
+
+# 运行 FDTD 仿真
+result = run_fdtd_simulation(device, FDTDConfig(
+    wavelength_um=1.55,
+    port_names=["o1", "o2"],
+))
+print(f"S 参数: {result.sparams}")
+```
+
 ## 流水线 (`polaris.pipeline`)
 
 ### IntegratedPipeline
