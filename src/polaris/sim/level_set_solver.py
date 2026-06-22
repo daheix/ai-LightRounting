@@ -137,6 +137,72 @@ def _eno_flux(phi: np.ndarray, axis: int) -> tuple[np.ndarray, np.ndarray]:
     return phi_minus, phi_plus
 
 
+@dataclass
+class WENOStencils:
+    """WENO5 5 个偏移切片（降低 _weno5_side_flux 参数个数，规则 4.1）。
+
+    Attributes:
+        v1-v5: 5 个偏移切片（按方向排列）。
+    """
+
+    v1: np.ndarray
+    v2: np.ndarray
+    v3: np.ndarray
+    v4: np.ndarray
+    v5: np.ndarray
+
+
+@dataclass(frozen=True)
+class WENOWeights:
+    """WENO5 理想权重与正则化常数。
+
+    Attributes:
+        c1, c2, c3: 理想权重。
+        eps: 光滑性正则化常数。
+    """
+
+    c1: float
+    c2: float
+    c3: float
+    eps: float
+
+
+def _weno5_side_flux(
+    stencils: WENOStencils,
+    weights: WENOWeights,
+) -> np.ndarray:
+    """计算 WENO5 单侧通量。
+
+    Args:
+        stencils: 5 个偏移切片。
+        weights: 理想权重与正则化常数。
+
+    Returns:
+        单侧 WENO5 通量。
+    """
+    v1, v2, v3, v4, v5 = stencils.v1, stencils.v2, stencils.v3, stencils.v4, stencils.v5
+    c1, c2, c3, eps = weights.c1, weights.c2, weights.c3, weights.eps
+    # 光滑性指示器
+    s1 = 13.0 / 12.0 * (v1 - 2 * v2 + v3) ** 2 + 0.25 * (v1 - 4 * v2 + 3 * v3) ** 2
+    s2 = 13.0 / 12.0 * (v2 - 2 * v3 + v4) ** 2 + 0.25 * (v2 - v4) ** 2
+    s3 = 13.0 / 12.0 * (v3 - 2 * v4 + v5) ** 2 + 0.25 * (3 * v3 - 4 * v4 + v5) ** 2
+
+    alpha1 = c1 / (eps + s1) ** 2
+    alpha2 = c2 / (eps + s2) ** 2
+    alpha3 = c3 / (eps + s3) ** 2
+    alpha_sum = alpha1 + alpha2 + alpha3
+    w1 = alpha1 / alpha_sum
+    w2 = alpha2 / alpha_sum
+    w3 = alpha3 / alpha_sum
+
+    # 3 个模板的 3 阶通量
+    p1 = v1 / 3.0 - 7.0 / 6.0 * v2 + 11.0 / 6.0 * v3
+    p2 = -v2 / 6.0 + 5.0 / 6.0 * v3 + v4 / 3.0
+    p3 = v3 / 3.0 + 5.0 / 6.0 * v4 - v5 / 6.0
+
+    return w1 * p1 + w2 * p2 + w3 * p3
+
+
 def _weno5_flux(phi: np.ndarray, axis: int) -> tuple[np.ndarray, np.ndarray]:
     """5 阶 WENO 通量（Jiang & Peng 2000）。
 
@@ -165,60 +231,26 @@ def _weno5_flux(phi: np.ndarray, axis: int) -> tuple[np.ndarray, np.ndarray]:
         slices_right.append(padded[tuple(s)])
 
     # WENO 权重（Jiang & Peng 2000）
-    eps = 1e-6
-    # 简化 5 阶 WENO：用 3 个 3 阶模板加权
-    v1 = slices_left[0]
-    v2 = slices_left[1]
-    v3 = slices_left[2]
-    v4 = slices_left[3]
-    v5 = slices_left[4]
+    weights = WENOWeights(c1=0.1, c2=0.6, c3=0.3, eps=1e-6)
 
-    # 光滑性指示器
-    s1 = 13.0 / 12.0 * (v1 - 2 * v2 + v3) ** 2 + 0.25 * (v1 - 4 * v2 + 3 * v3) ** 2
-    s2 = 13.0 / 12.0 * (v2 - 2 * v3 + v4) ** 2 + 0.25 * (v2 - v4) ** 2
-    s3 = 13.0 / 12.0 * (v3 - 2 * v4 + v5) ** 2 + 0.25 * (3 * v3 - 4 * v4 + v5) ** 2
+    # 左通量
+    phi_minus = _weno5_side_flux(
+        WENOStencils(
+            slices_left[0], slices_left[1], slices_left[2],
+            slices_left[3], slices_left[4],
+        ),
+        weights,
+    )
 
-    # 理想权重
-    c1, c2, c3 = 0.1, 0.6, 0.3
-    alpha1 = c1 / (eps + s1) ** 2
-    alpha2 = c2 / (eps + s2) ** 2
-    alpha3 = c3 / (eps + s3) ** 2
-    alpha_sum = alpha1 + alpha2 + alpha3
-    w1 = alpha1 / alpha_sum
-    w2 = alpha2 / alpha_sum
-    w3 = alpha3 / alpha_sum
-
-    # 3 个模板的 3 阶通量
-    p1 = v1 / 3.0 - 7.0 / 6.0 * v2 + 11.0 / 6.0 * v3
-    p2 = -v2 / 6.0 + 5.0 / 6.0 * v3 + v4 / 3.0
-    p3 = v3 / 3.0 + 5.0 / 6.0 * v4 - v5 / 6.0
-
-    phi_minus = w1 * p1 + w2 * p2 + w3 * p3
-
-    # 右通量（对称）
-    v1r = slices_right[4]
-    v2r = slices_right[3]
-    v3r = slices_right[2]
-    v4r = slices_right[1]
-    v5r = slices_right[0]
-
-    s1r = 13.0 / 12.0 * (v1r - 2 * v2r + v3r) ** 2 + 0.25 * (v1r - 4 * v2r + 3 * v3r) ** 2
-    s2r = 13.0 / 12.0 * (v2r - 2 * v3r + v4r) ** 2 + 0.25 * (v2r - v4r) ** 2
-    s3r = 13.0 / 12.0 * (v3r - 2 * v4r + v5r) ** 2 + 0.25 * (3 * v3r - 4 * v4r + v5r) ** 2
-
-    alpha1r = c3 / (eps + s1r) ** 2
-    alpha2r = c2 / (eps + s2r) ** 2
-    alpha3r = c1 / (eps + s3r) ** 2
-    alpha_sum_r = alpha1r + alpha2r + alpha3r
-    w1r = alpha1r / alpha_sum_r
-    w2r = alpha2r / alpha_sum_r
-    w3r = alpha3r / alpha_sum_r
-
-    p1r = v1r / 3.0 - 7.0 / 6.0 * v2r + 11.0 / 6.0 * v3r
-    p2r = -v2r / 6.0 + 5.0 / 6.0 * v3r + v4r / 3.0
-    p3r = v3r / 3.0 + 5.0 / 6.0 * v4r - v5r / 6.0
-
-    phi_plus = w1r * p1r + w2r * p2r + w3r * p3r
+    # 右通量（对称，权重反转）
+    weights_r = WENOWeights(c1=0.3, c2=0.6, c3=0.1, eps=1e-6)
+    phi_plus = _weno5_side_flux(
+        WENOStencils(
+            slices_right[4], slices_right[3], slices_right[2],
+            slices_right[1], slices_right[0],
+        ),
+        weights_r,
+    )
 
     return phi_minus, phi_plus
 

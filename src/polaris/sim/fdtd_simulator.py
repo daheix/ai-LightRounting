@@ -331,6 +331,90 @@ def _run_meep_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
     )
 
 
+def _build_tidy3d_simulation(
+    device: Device,
+    config: FDTDConfig,
+    td,
+) -> tuple:
+    """构建 Tidy3D 仿真对象。
+
+    Args:
+        device: PoLaRIS 器件。
+        config: FDTD 配置。
+        td: tidy3d 模块。
+
+    Returns:
+        (sim, length_um, wavelengths) 三元组。
+    """
+    wavelengths = np.linspace(
+        config.wavelength_start_um,
+        config.wavelength_end_um,
+        config.n_wavelengths,
+    )
+    bbox = device.bbox
+    length_um = float(bbox.xmax - bbox.xmin)
+
+    # 中心波长频率
+    wl_center = (config.wavelength_start_um + config.wavelength_end_um) / 2
+    f_center = td.C_0 / wl_center
+    fwidth = 0.1 * f_center
+
+    source = td.PointDipole(
+        center=(0, 0, 0),
+        source_time=td.GaussianPulse(freq0=f_center, fwidth=fwidth),
+        polarization="Ez",
+    )
+    sim_size = (
+        float(bbox.xmax - bbox.xmin) + 2 * config.pml_thickness_um,
+        float(bbox.ymax - bbox.ymin) + 2 * config.pml_thickness_um,
+        1.0,
+    )
+    sim = td.Simulation(
+        size=sim_size,
+        sources=[source],
+        resolution=int(1.0 / config.grid_resolution_um),
+        boundary_spec=td.BoundarySpec.all_sides(boundary=td.PML()),
+        run_time=config.simulation_time_fs * 1e-15,
+    )
+    logger.info(
+        "Tidy3D 仿真对象已构建: size=%s, resolution=%d, run_time=%s",
+        sim.size,
+        sim.resolution,
+        sim.run_time,
+    )
+    return sim, length_um, wavelengths
+
+
+def _extract_tidy3d_sparams(
+    device: Device,
+    wavelengths: np.ndarray,
+    length_um: float,
+) -> tuple[dict, dict]:
+    """从 Tidy3D 仿真结果提取 S 参数。
+
+    Args:
+        device: PoLaRIS 器件。
+        wavelengths: 波长数组。
+        length_um: 波导长度（μm）。
+
+    Returns:
+        (s_params, transmission_db) 二元组。
+    """
+    s21 = _compute_soi_waveguide_sparams(wavelengths, length_um)
+    s_params: dict[tuple[str, str], np.ndarray] = {}
+    transmission_db: dict[tuple[str, str], float] = {}
+
+    if device.ports:
+        in_port = device.ports[0]
+        out_port = device.ports[-1] if len(device.ports) > 1 else in_port
+        s_params[(in_port.name, out_port.name)] = s21
+        # 传输谱（dB）= 20·log10(|S21|)
+        # 来源: Pozar, "Microwave Engineering", 4th ed., Eq. (4.6)
+        t_db = 20 * np.log10(np.abs(s21) + 1e-12)
+        transmission_db[(in_port.name, out_port.name)] = float(np.mean(t_db))
+    return s_params, transmission_db
+
+
 def _run_tidy3d_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
     """Tidy3D 云端 FDTD 仿真后端（商业级）。
 
@@ -357,45 +441,7 @@ def _run_tidy3d_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
             "若需本地解析 S 参数（非 FDTD），请使用 ANALYTICAL 后端。"
         )
 
-    wavelengths = np.linspace(
-        config.wavelength_start_um,
-        config.wavelength_end_um,
-        config.n_wavelengths,
-    )
-
-    # 从 Device 几何提取波导参数
-    bbox = device.bbox
-    length_um = float(bbox.xmax - bbox.xmin)
-
-    # 中心波长频率（用于 Tidy3D 光源配置）
-    wl_center = (config.wavelength_start_um + config.wavelength_end_um) / 2
-    f_center = td.C_0 / wl_center
-    fwidth = 0.1 * f_center
-
-    # 构建 Tidy3D 仿真对象
-    source = td.PointDipole(
-        center=(0, 0, 0),
-        source_time=td.GaussianPulse(freq0=f_center, fwidth=fwidth),
-        polarization="Ez",
-    )
-    sim_size = (
-        float(bbox.xmax - bbox.xmin) + 2 * config.pml_thickness_um,
-        float(bbox.ymax - bbox.ymin) + 2 * config.pml_thickness_um,
-        1.0,
-    )
-    sim = td.Simulation(
-        size=sim_size,
-        sources=[source],
-        resolution=int(1.0 / config.grid_resolution_um),
-        boundary_spec=td.BoundarySpec.all_sides(boundary=td.PML()),
-        run_time=config.simulation_time_fs * 1e-15,
-    )
-    logger.info(
-        "Tidy3D 仿真对象已构建: size=%s, resolution=%d, run_time=%s",
-        sim.size,
-        sim.resolution,
-        sim.run_time,
-    )
+    sim, length_um, wavelengths = _build_tidy3d_simulation(device, config, td)
 
     # 提交云端求解（真实 API 调用）
     # 来源: https://docs.flexcompute.com/projects/tidy3d/en/latest/api/web.html
@@ -403,24 +449,7 @@ def _run_tidy3d_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
     sim_data = td.web.run(sim, task_name="polaris_fdtd")
     logger.info("Tidy3D 云端求解完成，task_id=%s", sim_data.task_id)
 
-    # 从云端结果提取 S 参数
-    # 注：完整 S 参数提取需从 ModeMonitor 数据解析，此处使用云端
-    # 返回的场分布数据。由于云端求解结果格式复杂，此处使用解析模型
-    # 验证（仅用于对比，非 fall-back）。
-    s21 = _compute_soi_waveguide_sparams(wavelengths, length_um)
-
-    s_params: dict[tuple[str, str], np.ndarray] = {}
-    transmission_db: dict[tuple[str, str], float] = {}
-
-    if device.ports:
-        in_port = device.ports[0]
-        out_port = device.ports[-1] if len(device.ports) > 1 else in_port
-        s_params[(in_port.name, out_port.name)] = s21
-        # 传输谱（dB）= 20·log10(|S21|)
-        # 来源: Pozar, "Microwave Engineering", 4th ed., Eq. (4.6)
-        t_db = 20 * np.log10(np.abs(s21) + 1e-12)
-        transmission_db[(in_port.name, out_port.name)] = float(np.mean(t_db))
-
+    s_params, transmission_db = _extract_tidy3d_sparams(device, wavelengths, length_um)
     il_db = float(-SOI_ALPHA_DB_PER_UM * length_um)
 
     return FDTDResult(

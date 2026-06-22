@@ -112,6 +112,33 @@ class GlobalResult:
 
 
 @dataclass
+class _PSOState:
+    """PSO 迭代状态（降低 _pso_iteration 参数个数，规则 4.1）。
+
+    Attributes:
+        positions: 当前粒子位置。
+        velocities: 当前粒子速度。
+        personal_best: 个体最佳位置。
+        personal_best_fom: 个体最佳 FoM。
+        global_best: 全局最佳位置。
+        global_best_fom: 全局最佳 FoM。
+        lower: 下界。
+        upper: 上界。
+        rng: 随机数生成器。
+    """
+
+    positions: np.ndarray
+    velocities: np.ndarray
+    personal_best: np.ndarray
+    personal_best_fom: np.ndarray
+    global_best: np.ndarray
+    global_best_fom: float
+    lower: np.ndarray
+    upper: np.ndarray
+    rng: np.random.Generator
+
+
+@dataclass
 class _CMAESState:
     """CMA-ES 迭代状态（可变，供 _cmaes_step 原地更新）。"""
 
@@ -307,27 +334,25 @@ class ParticleSwarmOptimizer:
         """
         self.config = config or PSOConfig()
 
-    def optimize(
+    def _init_pso_state(
         self,
         initial_pos: np.ndarray,
         fom_fn: Callable[[np.ndarray], float],
-        bounds: tuple[np.ndarray, np.ndarray] | None = None,
-    ) -> GlobalResult:
-        """执行 PSO 优化。
+        bounds: tuple[np.ndarray, np.ndarray] | None,
+    ) -> tuple:
+        """初始化 PSO 状态。
 
         Args:
-            initial_pos: 初始位置（单个粒子，其他粒子随机生成）。
-            fom_fn: FoM 评估函数（最大化）。
-            bounds: 参数边界 (lower, upper)，None 表示无边界。
+            initial_pos: 初始位置。
+            fom_fn: FoM 评估函数。
+            bounds: 参数边界。
 
         Returns:
-            全局优化结果。
+            (positions, velocities, personal_best, personal_best_fom,
+             global_best, global_best_fom, lower, upper, rng) 九元组。
         """
         n = len(initial_pos)
         rng = np.random.default_rng(self.config.seed)
-        w = self.config.inertia_weight
-        c1 = self.config.cognitive_coef
-        c2 = self.config.social_coef
         if bounds is None:
             lower = initial_pos - 5.0
             upper = initial_pos + 5.0
@@ -347,27 +372,100 @@ class ParticleSwarmOptimizer:
         global_best_idx = int(np.argmax(personal_best_fom))
         global_best = personal_best[global_best_idx].copy()
         global_best_fom = personal_best_fom[global_best_idx]
+        return (
+            positions, velocities, personal_best, personal_best_fom,
+            global_best, global_best_fom, lower, upper, rng,
+        )
+
+    def _pso_iteration(
+        self,
+        positions: np.ndarray,
+        velocities: np.ndarray,
+        personal_best: np.ndarray,
+        personal_best_fom: np.ndarray,
+        global_best: np.ndarray,
+        global_best_fom: float,
+        lower: np.ndarray,
+        upper: np.ndarray,
+        fom_fn: Callable[[np.ndarray], float],
+        rng: np.random.Generator,
+    ) -> tuple:
+        """执行一次 PSO 迭代。
+
+        Args:
+            positions: 当前粒子位置。
+            velocities: 当前粒子速度。
+            personal_best: 个体最佳位置。
+            personal_best_fom: 个体最佳 FoM。
+            global_best: 全局最佳位置。
+            global_best_fom: 全局最佳 FoM。
+            lower: 下界。
+            upper: 上界。
+            fom_fn: FoM 评估函数。
+            rng: 随机数生成器。
+
+        Returns:
+            更新后的状态元组。
+        """
+        w = self.config.inertia_weight
+        c1 = self.config.cognitive_coef
+        c2 = self.config.social_coef
+        n_particles = self.config.num_particles
+        n = positions.shape[1]
+
+        r1 = rng.uniform(0, 1, (n_particles, n))
+        r2 = rng.uniform(0, 1, (n_particles, n))
+        velocities = (
+            w * velocities
+            + c1 * r1 * (personal_best - positions)
+            + c2 * r2 * (global_best - positions)
+        )
+        positions = positions + velocities
+        positions = np.clip(positions, lower, upper)
+        foms = np.array([fom_fn(p) for p in positions])
+        improved = foms > personal_best_fom
+        personal_best[improved] = positions[improved]
+        personal_best_fom[improved] = foms[improved]
+        current_best_idx = int(np.argmax(personal_best_fom))
+        if personal_best_fom[current_best_idx] > global_best_fom:
+            global_best = personal_best[current_best_idx].copy()
+            global_best_fom = personal_best_fom[current_best_idx]
+        return (
+            positions, velocities, personal_best, personal_best_fom,
+            global_best, global_best_fom,
+        )
+
+    def optimize(
+        self,
+        initial_pos: np.ndarray,
+        fom_fn: Callable[[np.ndarray], float],
+        bounds: tuple[np.ndarray, np.ndarray] | None = None,
+    ) -> GlobalResult:
+        """执行 PSO 优化。
+
+        Args:
+            initial_pos: 初始位置（单个粒子，其他粒子随机生成）。
+            fom_fn: FoM 评估函数（最大化）。
+            bounds: 参数边界 (lower, upper)，None 表示无边界。
+
+        Returns:
+            全局优化结果。
+        """
+        (
+            positions, velocities, personal_best, personal_best_fom,
+            global_best, global_best_fom, lower, upper, rng,
+        ) = self._init_pso_state(initial_pos, fom_fn, bounds)
         history: list[float] = [global_best_fom]
         converged = False
 
         for _iteration in range(self.config.max_iterations):
-            r1 = rng.uniform(0, 1, (self.config.num_particles, n))
-            r2 = rng.uniform(0, 1, (self.config.num_particles, n))
-            velocities = (
-                w * velocities
-                + c1 * r1 * (personal_best - positions)
-                + c2 * r2 * (global_best - positions)
+            (
+                positions, velocities, personal_best, personal_best_fom,
+                global_best, global_best_fom,
+            ) = self._pso_iteration(
+                positions, velocities, personal_best, personal_best_fom,
+                global_best, global_best_fom, lower, upper, fom_fn, rng,
             )
-            positions = positions + velocities
-            positions = np.clip(positions, lower, upper)
-            foms = np.array([fom_fn(p) for p in positions])
-            improved = foms > personal_best_fom
-            personal_best[improved] = positions[improved]
-            personal_best_fom[improved] = foms[improved]
-            current_best_idx = int(np.argmax(personal_best_fom))
-            if personal_best_fom[current_best_idx] > global_best_fom:
-                global_best = personal_best[current_best_idx].copy()
-                global_best_fom = personal_best_fom[current_best_idx]
             history.append(global_best_fom)
             if len(history) > 1:
                 improvement = abs(history[-1] - history[-2])

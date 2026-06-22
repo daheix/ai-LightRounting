@@ -454,6 +454,51 @@ class GlobalRouter:
         for gx, gy in gcell_path:
             self.demand[gy, gx] = max(0.0, self.demand[gy, gx] - 1.0)
 
+    def _route_single_connection(
+        self,
+        conn_idx: int,
+        conn: NetlistConnection,
+        results: dict[int, GlobalRoute],
+        round_idx: int,
+    ) -> None:
+        """布线单个连接（含 Rip-up&Reroute 逻辑）。
+
+        Args:
+            conn_idx: 连接索引。
+            conn: 连接对象。
+            results: 布线结果字典（in-place 更新）。
+            round_idx: 当前 Rip-up&Reroute 轮次（0 为首轮）。
+        """
+        start, end = self._conn_endpoints(conn)
+        if start is None or end is None:
+            return
+        # 已布则跳过（非首轮）
+        if conn_idx in results and round_idx > 0:
+            gr = results[conn_idx]
+            overflow = sum(
+                max(0.0, self.demand[gy, gx] - self.capacity[gy, gx])
+                for gx, gy in gr.gcell_path
+            )
+            if overflow == 0:
+                return
+            # 拥塞溢出：Rip-up 重布
+            self._reduce_demand(gr.gcell_path)
+            del results[conn_idx]
+        start_gcell = self._port_to_gcell(*start)
+        goal_gcell = self._port_to_gcell(*end)
+        gcell_path = self._gcell_astar(start_gcell, goal_gcell)
+        if gcell_path is None:
+            return
+        self._update_demand(gcell_path)
+        waypoints = self._extract_waypoints(gcell_path)
+        est_len = self._path_length_um(gcell_path)
+        results[conn_idx] = GlobalRoute(
+            conn_idx=conn_idx,
+            gcell_path=gcell_path,
+            waypoints=waypoints,
+            estimated_length_um=est_len,
+        )
+
     def route(self) -> list[GlobalRoute]:
         """执行全局布线（含 RUDY 预估 + 网排序 + GCell A* + Rip-up&Reroute）。
 
@@ -468,36 +513,7 @@ class GlobalRouter:
         results: dict[int, GlobalRoute] = {}
         for _round in range(self.config.max_rip_reroute_rounds):
             for conn_idx, conn, _score in sorted_conns:
-                start, end = self._conn_endpoints(conn)
-                if start is None or end is None:
-                    continue
-                # 已布则跳过（非首轮）
-                if conn_idx in results and _round > 0:
-                    # 检查是否拥塞溢出
-                    gr = results[conn_idx]
-                    overflow = sum(
-                        max(0.0, self.demand[gy, gx] - self.capacity[gy, gx])
-                        for gx, gy in gr.gcell_path
-                    )
-                    if overflow == 0:
-                        continue
-                    # 拥塞溢出：Rip-up 重布
-                    self._reduce_demand(gr.gcell_path)
-                    del results[conn_idx]
-                start_gcell = self._port_to_gcell(*start)
-                goal_gcell = self._port_to_gcell(*end)
-                gcell_path = self._gcell_astar(start_gcell, goal_gcell)
-                if gcell_path is None:
-                    continue
-                self._update_demand(gcell_path)
-                waypoints = self._extract_waypoints(gcell_path)
-                est_len = self._path_length_um(gcell_path)
-                results[conn_idx] = GlobalRoute(
-                    conn_idx=conn_idx,
-                    gcell_path=gcell_path,
-                    waypoints=waypoints,
-                    estimated_length_um=est_len,
-                )
+                self._route_single_connection(conn_idx, conn, results, _round)
             # 检查总溢出
             total_overflow = float(np.maximum(self.demand - self.capacity, 0).sum())
             if total_overflow == 0:
