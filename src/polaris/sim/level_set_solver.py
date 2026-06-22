@@ -41,6 +41,41 @@ from enum import Enum
 import numpy as np
 
 
+@dataclass
+class FluxPair:
+    """通量对（第57轮重构，降低参数个数）。
+
+    封装 Lax-Friedrichs Hamiltonian 所需的 4 个方向通量数组，
+    使函数签名从 7 参数降至 5 参数。
+
+    Attributes:
+        x_minus: x 方向左通量。
+        x_plus: x 方向右通量。
+        y_minus: y 方向左通量。
+        y_plus: y 方向右通量。
+    """
+
+    x_minus: np.ndarray
+    x_plus: np.ndarray
+    y_minus: np.ndarray
+    y_plus: np.ndarray
+
+
+@dataclass
+class GridStep:
+    """网格步长对（第57轮重构，降低参数个数）。
+
+    封装 dx/dy 网格步长，使 evolve 等方法签名从 6 参数降至 5 参数。
+
+    Attributes:
+        dx: x 方向步长。
+        dy: y 方向步长。
+    """
+
+    dx: float = 1.0
+    dy: float = 1.0
+
+
 class HJScheme(Enum):
     """Hamilton-Jacobi 离散格式。
 
@@ -234,10 +269,7 @@ def _compute_fluxes(
 
 
 def _lax_friedrichs_hamiltonian(
-    phi_x_minus: np.ndarray,
-    phi_x_plus: np.ndarray,
-    phi_y_minus: np.ndarray,
-    phi_y_plus: np.ndarray,
+    fluxes: FluxPair,
     velocity: np.ndarray,
     dx: float,
     dy: float,
@@ -247,10 +279,7 @@ def _lax_friedrichs_hamiltonian(
     H = v * |∇φ|，用 Lax-Friedrichs 离散保证单调性。
 
     Args:
-        phi_x_minus: x 方向左通量。
-        phi_x_plus: x 方向右通量。
-        phi_y_minus: y 方向左通量。
-        phi_y_plus: y 方向右通量。
+        fluxes: 方向通量对（x_minus/x_plus/y_minus/y_plus）。
         velocity: 速度场。
         dx: x 步长。
         dy: y 步长。
@@ -259,8 +288,8 @@ def _lax_friedrichs_hamiltonian(
         数值 Hamiltonian（同形状）。
     """
     # 中心通量
-    phi_x = 0.5 * (phi_x_minus + phi_x_plus)
-    phi_y = 0.5 * (phi_y_minus + phi_y_plus)
+    phi_x = 0.5 * (fluxes.x_minus + fluxes.x_plus)
+    phi_y = 0.5 * (fluxes.y_minus + fluxes.y_plus)
     grad_mag = np.sqrt(phi_x**2 + phi_y**2)
 
     # H = v * |∇φ|
@@ -271,9 +300,10 @@ def _lax_friedrichs_hamiltonian(
     alpha_x = np.abs(velocity)
     alpha_y = np.abs(velocity)
 
-    dissipation = 0.5 * alpha_x * (phi_x_plus - phi_x_minus) / dx + 0.5 * alpha_y * (
-        phi_y_plus - phi_y_minus
-    ) / dy
+    dissipation = (
+        0.5 * alpha_x * (fluxes.x_plus - fluxes.x_minus) / dx
+        + 0.5 * alpha_y * (fluxes.y_plus - fluxes.y_minus) / dy
+    )
 
     return h_central - dissipation
 
@@ -327,7 +357,8 @@ def evolve_hj(
     dt = compute_cfl_timestep(velocity, dx, dy, cfg)
 
     fx_m, fx_p, fy_m, fy_p = _compute_fluxes(phi, cfg.scheme)
-    h = _lax_friedrichs_hamiltonian(fx_m, fx_p, fy_m, fy_p, velocity, dx, dy)
+    fluxes = FluxPair(x_minus=fx_m, x_plus=fx_p, y_minus=fy_m, y_plus=fy_p)
+    h = _lax_friedrichs_hamiltonian(fluxes, velocity, dx, dy)
 
     return phi - dt * h
 
@@ -377,8 +408,7 @@ class HJSolver:
         phi: np.ndarray,
         velocity_fn: callable,
         n_steps: int,
-        dx: float = 1.0,
-        dy: float = 1.0,
+        grid: GridStep | None = None,
     ) -> np.ndarray:
         """多步演化。
 
@@ -386,16 +416,16 @@ class HJSolver:
             phi: 初始水平集函数。
             velocity_fn: 速度场函数（输入 phi，返回 velocity）。
             n_steps: 步数。
-            dx: x 步长。
-            dy: y 步长。
+            grid: 网格步长（dx/dy），默认 1.0。
 
         Returns:
             演化后的水平集函数。
         """
+        g = grid or GridStep()
         current = phi.copy()
         for _ in range(n_steps):
             velocity = velocity_fn(current)
-            current = self.step(current, velocity, dx, dy)
+            current = self.step(current, velocity, g.dx, g.dy)
         return current
 
 
