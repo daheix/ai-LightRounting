@@ -41,6 +41,23 @@ from enum import Enum
 import numpy as np
 
 
+@dataclass
+class SBXConfig:
+    """SBX 交叉配置（第58轮重构，降低参数个数）。
+
+    封装 sbx_crossover 的配置参数，使函数签名从 6 参数降至 4 参数。
+
+    Attributes:
+        prob: 交叉概率。
+        eta: 分布指数（越大越接近父代）。
+        rng: 随机数生成器。
+    """
+
+    prob: float = 1.0
+    eta: float = 20.0
+    rng: np.random.Generator = field(default_factory=lambda: np.random.default_rng())
+
+
 class ObjectiveType(Enum):
     """目标类型。
 
@@ -290,9 +307,7 @@ def sbx_crossover(
     parent1: np.ndarray,
     parent2: np.ndarray,
     bounds: list[tuple[float, float]],
-    prob: float,
-    eta: float,
-    rng: np.random.Generator,
+    config: SBXConfig,
 ) -> tuple[np.ndarray, np.ndarray]:
     """SBX（Simulated Binary Crossover）交叉。
 
@@ -300,9 +315,7 @@ def sbx_crossover(
         parent1: 父代 1。
         parent2: 父代 2。
         bounds: 参数边界。
-        prob: 交叉概率。
-        eta: 分布指数。
-        rng: 随机数生成器。
+        config: SBX 配置（prob/eta/rng）。
 
     Returns:
         (child1, child2)。
@@ -310,8 +323,9 @@ def sbx_crossover(
     n = len(parent1)
     child1 = parent1.copy()
     child2 = parent2.copy()
+    rng = config.rng
 
-    if rng.random() > prob:
+    if rng.random() > config.prob:
         return child1, child2
 
     for i in range(n):
@@ -323,9 +337,9 @@ def sbx_crossover(
         # SBX 计算
         u = rng.random()
         if u <= 0.5:
-            beta = (2.0 * u) ** (1.0 / (eta + 1.0))
+            beta = (2.0 * u) ** (1.0 / (config.eta + 1.0))
         else:
-            beta = (1.0 / (2.0 * (1.0 - u))) ** (1.0 / (eta + 1.0))
+            beta = (1.0 / (2.0 * (1.0 - u))) ** (1.0 / (config.eta + 1.0))
 
         child1[i] = 0.5 * ((1 + beta) * parent1[i] + (1 - beta) * parent2[i])
         child2[i] = 0.5 * ((1 - beta) * parent1[i] + (1 + beta) * parent2[i])
@@ -442,13 +456,16 @@ class NSGA2Optimizer:
             parent1 = tournament_selection(population, self.rng)
             parent2 = tournament_selection(population, self.rng)
 
+            sbx_cfg = SBXConfig(
+                prob=self.config.crossover_prob,
+                eta=self.config.crossover_eta,
+                rng=self.rng,
+            )
             child1_params, child2_params = sbx_crossover(
                 parent1.params,
                 parent2.params,
                 bounds,
-                self.config.crossover_prob,
-                self.config.crossover_eta,
-                self.rng,
+                sbx_cfg,
             )
 
             child1_params = polynomial_mutation(

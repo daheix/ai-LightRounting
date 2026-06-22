@@ -48,6 +48,21 @@ from dataclasses import dataclass, field
 import numpy as np
 
 
+@dataclass
+class PointState:
+    """当前点的函数值与梯度（第58轮重构，降低参数个数）。
+
+    封装 _line_search 所需的 fom/grad，使方法签名从 6 参数降至 5 参数。
+
+    Attributes:
+        fom: 当前点函数值。
+        grad: 当前点梯度。
+    """
+
+    fom: float
+    grad: np.ndarray
+
+
 @dataclass(frozen=True)
 class LBFGSConfig:
     """L-BFGS 配置。
@@ -164,7 +179,8 @@ class LBFGSOptimizer:
             # 1. 两循环递归计算搜索方向
             direction = self._compute_direction(grad)
             # 2. 线搜索
-            alpha = self._line_search(params, direction, fom, grad, fom_fn)
+            state = PointState(fom=fom, grad=grad)
+            alpha = self._line_search(params, direction, state, fom_fn)
             # 3. 更新参数
             params_new = params + alpha * direction
             fom_new = fom_fn(params_new)
@@ -274,8 +290,7 @@ class LBFGSOptimizer:
         self,
         params: np.ndarray,
         direction: np.ndarray,
-        fom: float,
-        grad: np.ndarray,
+        state: PointState,
         fom_fn: callable,
     ) -> float:
         """线搜索满足 Wolfe 条件的步长。
@@ -287,8 +302,7 @@ class LBFGSOptimizer:
         Args:
             params: 当前参数。
             direction: 搜索方向。
-            fom: 当前 FoM。
-            grad: 当前梯度。
+            state: 当前点的 fom 和 grad。
             fom_fn: 目标函数。
 
         Returns:
@@ -296,6 +310,8 @@ class LBFGSOptimizer:
         """
         alpha = self.config.line_search_init
         c1 = self.config.wolfe_c1
+        fom = state.fom
+        grad = state.grad
         # 最大化 FoM：方向是 -H*g，∇f^T * p 应为负（下降方向）
         # Wolfe 条件（最大化版本）:
         # 1. f(x + αp) ≥ f(x) + c1 * α * g^T * p
