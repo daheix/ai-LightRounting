@@ -3,6 +3,7 @@
 测试覆盖：
 - VTraceConfig 配置
 - VTraceResult 结果
+- TrajectoryBatch 轨迹封装（第56轮重构）
 - compute_vtrace 主算法
 - ImpalaLearner IMPALA learner
 - 工厂函数
@@ -15,7 +16,9 @@ import numpy as np
 import pytest
 
 from polaris.trainer.vtrace import (
+    ImpalaBatch,
     ImpalaLearner,
+    TrajectoryBatch,
     VTraceConfig,
     VTraceResult,
     compute_vtrace,
@@ -23,6 +26,23 @@ from polaris.trainer.vtrace import (
     create_vtrace_config,
     run_vtrace,
 )
+
+
+def _make_batch(
+    values: np.ndarray,
+    rewards: np.ndarray,
+    logprobs_behavior: np.ndarray,
+    logprobs_target: np.ndarray,
+    dones: np.ndarray,
+) -> TrajectoryBatch:
+    """辅助函数：构造 TrajectoryBatch。"""
+    return TrajectoryBatch(
+        values=values,
+        rewards=rewards,
+        logprobs_behavior=logprobs_behavior,
+        logprobs_target=logprobs_target,
+        dones=dones,
+    )
 
 
 class TestVTraceConfig:
@@ -80,6 +100,33 @@ class TestVTraceResult:
         assert result.rhos[1] == 0.8
 
 
+class TestTrajectoryBatch:
+    """TrajectoryBatch 轨迹封装测试（第56轮重构）。"""
+
+    def test_valid_batch(self) -> None:
+        """合法轨迹封装。"""
+        n = 3
+        batch = _make_batch(
+            values=np.zeros(n),
+            rewards=np.zeros(n),
+            logprobs_behavior=np.zeros(n),
+            logprobs_target=np.zeros(n),
+            dones=np.zeros(n),
+        )
+        assert len(batch.values) == n
+
+    def test_mismatched_lengths(self) -> None:
+        """长度不一致应报错。"""
+        with pytest.raises(ValueError, match="长度不一致"):
+            _make_batch(
+                values=np.zeros(3),
+                rewards=np.zeros(2),
+                logprobs_behavior=np.zeros(3),
+                logprobs_target=np.zeros(3),
+                dones=np.zeros(3),
+            )
+
+
 class TestComputeVTrace:
     """V-trace 主算法测试。"""
 
@@ -89,18 +136,15 @@ class TestComputeVTrace:
         当 ρ = 1 时，V-trace 退化为标准 TD(λ)。
         """
         n = 5
-        values = np.array([1.0, 1.5, 2.0, 1.8, 1.2])
-        rewards = np.array([0.5, 0.3, -0.2, 0.1, 0.4])
         logprobs = np.log(np.full(n, 0.5))
-        dones = np.zeros(n)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
+        batch = _make_batch(
+            values=np.array([1.0, 1.5, 2.0, 1.8, 1.2]),
+            rewards=np.array([0.5, 0.3, -0.2, 0.1, 0.4]),
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
-            dones=dones,
-            last_value=1.0,
+            dones=np.zeros(n),
         )
+        result = compute_vtrace(batch, last_value=1.0)
         assert len(result.vs) == n
         assert len(result.pg_advantages) == n
         # on-policy 时 ρ = 1
@@ -110,19 +154,14 @@ class TestComputeVTrace:
     def test_off_policy_case(self) -> None:
         """off-policy 情况（行为策略 ≠ 目标策略）。"""
         n = 4
-        values = np.array([1.0, 1.5, 2.0, 1.0])
-        rewards = np.array([0.5, 0.3, -0.2, 0.1])
-        logprobs_behavior = np.log(np.array([0.5, 0.5, 0.5, 0.5]))
-        logprobs_target = np.log(np.array([0.6, 0.4, 0.7, 0.3]))
-        dones = np.zeros(n)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            last_value=1.0,
+        batch = _make_batch(
+            values=np.array([1.0, 1.5, 2.0, 1.0]),
+            rewards=np.array([0.5, 0.3, -0.2, 0.1]),
+            logprobs_behavior=np.log(np.array([0.5, 0.5, 0.5, 0.5])),
+            logprobs_target=np.log(np.array([0.6, 0.4, 0.7, 0.3])),
+            dones=np.zeros(n),
         )
+        result = compute_vtrace(batch, last_value=1.0)
         # 重要性采样系数应不为 1
         assert not np.allclose(result.rhos, 1.0)
         # ρ = π/μ = 0.6/0.5, 0.4/0.5, 0.7/0.5, 0.3/0.5
@@ -133,75 +172,59 @@ class TestComputeVTrace:
     def test_rho_truncation(self) -> None:
         """ρ 截断。"""
         n = 3
-        values = np.array([1.0, 1.0, 1.0])
-        rewards = np.array([0.0, 0.0, 0.0])
-        logprobs_behavior = np.log(np.array([0.1, 0.1, 0.1]))
-        logprobs_target = np.log(np.array([0.9, 0.9, 0.9]))
-        dones = np.zeros(n)
-        cfg = VTraceConfig(rho_bar=0.5)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            config=cfg,
+        batch = _make_batch(
+            values=np.ones(n),
+            rewards=np.zeros(n),
+            logprobs_behavior=np.log(np.array([0.1, 0.1, 0.1])),
+            logprobs_target=np.log(np.array([0.9, 0.9, 0.9])),
+            dones=np.zeros(n),
         )
+        cfg = VTraceConfig(rho_bar=0.5)
+        result = compute_vtrace(batch, config=cfg)
         # ρ = 9，截断到 0.5
         assert np.allclose(result.rhos, 0.5)
 
     def test_c_truncation(self) -> None:
         """c 截断。"""
         n = 3
-        values = np.array([1.0, 1.0, 1.0])
-        rewards = np.array([0.0, 0.0, 0.0])
-        logprobs_behavior = np.log(np.array([0.1, 0.1, 0.1]))
-        logprobs_target = np.log(np.array([0.9, 0.9, 0.9]))
-        dones = np.zeros(n)
-        cfg = VTraceConfig(c_bar=0.3)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            config=cfg,
+        batch = _make_batch(
+            values=np.ones(n),
+            rewards=np.zeros(n),
+            logprobs_behavior=np.log(np.array([0.1, 0.1, 0.1])),
+            logprobs_target=np.log(np.array([0.9, 0.9, 0.9])),
+            dones=np.zeros(n),
         )
+        cfg = VTraceConfig(c_bar=0.3)
+        result = compute_vtrace(batch, config=cfg)
         # c = 9，截断到 0.3
         assert np.allclose(result.cs, 0.3)
 
     def test_done_handling(self) -> None:
         """done 处理。"""
         n = 3
-        values = np.array([1.0, 1.5, 2.0])
-        rewards = np.array([0.5, 0.3, 1.0])
         logprobs = np.log(np.full(n, 0.5))
-        dones = np.array([0.0, 0.0, 1.0])  # 最后一步结束
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
+        batch = _make_batch(
+            values=np.array([1.0, 1.5, 2.0]),
+            rewards=np.array([0.5, 0.3, 1.0]),
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
-            dones=dones,
-            last_value=0.0,
+            dones=np.array([0.0, 0.0, 1.0]),  # 最后一步结束
         )
+        result = compute_vtrace(batch, last_value=0.0)
         # 最后一步 done=1，bootstrap 不应影响
         assert len(result.vs) == n
 
     def test_single_step(self) -> None:
         """单步情况。"""
-        values = np.array([1.0])
-        rewards = np.array([0.5])
         logprobs = np.log(np.array([0.5]))
-        dones = np.array([0.0])
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
+        batch = _make_batch(
+            values=np.array([1.0]),
+            rewards=np.array([0.5]),
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
-            dones=dones,
-            last_value=2.0,
+            dones=np.array([0.0]),
         )
+        result = compute_vtrace(batch, last_value=2.0)
         assert len(result.vs) == 1
         # v = V + ρ * (r + γ * last_V - V)
         expected = 1.0 + 1.0 * (0.5 + 0.99 * 2.0 - 1.0)
@@ -210,18 +233,15 @@ class TestComputeVTrace:
     def test_pg_advantages_sign(self) -> None:
         """策略梯度优势符号。"""
         n = 3
-        values = np.array([1.0, 1.0, 1.0])
-        rewards = np.array([1.0, 1.0, 1.0])  # 正奖励
         logprobs = np.log(np.full(n, 0.5))
-        dones = np.zeros(n)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
+        batch = _make_batch(
+            values=np.ones(n),
+            rewards=np.ones(n),  # 正奖励
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
-            dones=dones,
-            last_value=1.0,
+            dones=np.zeros(n),
         )
+        result = compute_vtrace(batch, last_value=1.0)
         # 正奖励 + 高 last_value 应产生正优势
         assert np.all(result.pg_advantages >= -0.1)
 
@@ -244,22 +264,17 @@ class TestImpalaLearner:
         def value_fn(obs: np.ndarray) -> float:
             return float(obs[0])
 
-        observations = np.array([[1.0], [1.5], [2.0]])
-        rewards = np.array([0.5, 0.3, -0.2])
-        logprobs_behavior = np.log(np.array([0.5, 0.5, 0.5]))
-        logprobs_target = np.log(np.array([0.5, 0.5, 0.5]))
-        dones = np.array([0.0, 0.0, 0.0])
-        last_observation = np.array([1.0])
+        batch = ImpalaBatch(
+            observations=np.array([[1.0], [1.5], [2.0]]),
+            rewards=np.array([0.5, 0.3, -0.2]),
+            logprobs_behavior=np.log(np.array([0.5, 0.5, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.5, 0.5])),
+            dones=np.array([0.0, 0.0, 0.0]),
+            last_observation=np.array([1.0]),
+        )
 
         learner = ImpalaLearner(value_fn)
-        result = learner.compute_targets(
-            observations=observations,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            last_observation=last_observation,
-        )
+        result = learner.compute_targets(batch)
         assert len(result.vs) == 3
         assert len(result.pg_advantages) == 3
 
@@ -269,19 +284,16 @@ class TestImpalaLearner:
         def value_fn(obs: np.ndarray) -> float:
             return float(obs[0])
 
-        observations = np.array([[1.0], [1.5]])
-        rewards = np.array([0.5, 0.3])
-        logprobs = np.log(np.array([0.5, 0.5]))
-        dones = np.array([0.0, 0.0])
+        batch = ImpalaBatch(
+            observations=np.array([[1.0], [1.5]]),
+            rewards=np.array([0.5, 0.3]),
+            logprobs_behavior=np.log(np.array([0.5, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.5])),
+            dones=np.array([0.0, 0.0]),
+        )
 
         learner = ImpalaLearner(value_fn)
-        result = learner.compute_targets(
-            observations=observations,
-            rewards=rewards,
-            logprobs_behavior=logprobs,
-            logprobs_target=logprobs,
-            dones=dones,
-        )
+        result = learner.compute_targets(batch)
         assert len(result.vs) == 2
 
 
@@ -307,17 +319,15 @@ class TestFactoryFunctions:
     def test_run_vtrace(self) -> None:
         """运行 V-trace 工厂。"""
         n = 3
-        values = np.array([1.0, 1.5, 2.0])
-        rewards = np.array([0.5, 0.3, -0.2])
         logprobs = np.log(np.full(n, 0.5))
-        dones = np.zeros(n)
-        result = run_vtrace(
-            values=values,
-            rewards=rewards,
+        batch = _make_batch(
+            values=np.array([1.0, 1.5, 2.0]),
+            rewards=np.array([0.5, 0.3, -0.2]),
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
-            dones=dones,
+            dones=np.zeros(n),
         )
+        result = run_vtrace(batch)
         assert isinstance(result, VTraceResult)
         assert len(result.vs) == n
 
@@ -332,19 +342,14 @@ class TestCommercialGapReduction:
         - V-trace 值估计
         """
         n = 5
-        values = np.array([1.0, 1.5, 2.0, 1.8, 1.2])
-        rewards = np.array([0.5, 0.3, -0.2, 0.1, 0.4])
-        logprobs_behavior = np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5]))
-        logprobs_target = np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6]))
-        dones = np.zeros(n)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            last_value=1.0,
+        batch = _make_batch(
+            values=np.array([1.0, 1.5, 2.0, 1.8, 1.2]),
+            rewards=np.array([0.5, 0.3, -0.2, 0.1, 0.4]),
+            logprobs_behavior=np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6])),
+            dones=np.zeros(n),
         )
+        result = compute_vtrace(batch, last_value=1.0)
         # 应有完整的 V-trace 输出
         assert len(result.vs) == n
         assert len(result.pg_advantages) == n
@@ -354,39 +359,30 @@ class TestCommercialGapReduction:
     def test_off_policy_correction(self) -> None:
         """off-policy 修正效果。"""
         n = 4
-        values = np.array([1.0, 1.0, 1.0, 1.0])
-        rewards = np.array([1.0, 1.0, 1.0, 1.0])
-        logprobs_behavior = np.log(np.array([0.2, 0.2, 0.2, 0.2]))
-        logprobs_target = np.log(np.array([0.8, 0.8, 0.8, 0.8]))
-        dones = np.zeros(n)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
+        batch = _make_batch(
+            values=np.ones(n),
+            rewards=np.ones(n),
+            logprobs_behavior=np.log(np.array([0.2, 0.2, 0.2, 0.2])),
+            logprobs_target=np.log(np.array([0.8, 0.8, 0.8, 0.8])),
+            dones=np.zeros(n),
         )
+        result = compute_vtrace(batch)
         # ρ = 4，截断到 1.0
         assert np.allclose(result.rhos, 1.0)
 
     def test_truncation_stability(self) -> None:
         """截断保证稳定性。"""
         n = 3
-        values = np.array([1.0, 1.0, 1.0])
-        rewards = np.array([0.0, 0.0, 0.0])
-        # 极端重要性采样系数
-        logprobs_behavior = np.log(np.array([0.01, 0.01, 0.01]))
-        logprobs_target = np.log(np.array([0.99, 0.99, 0.99]))
-        dones = np.zeros(n)
-        cfg = VTraceConfig(rho_bar=1.0, c_bar=1.0)
-        result = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            config=cfg,
+        batch = _make_batch(
+            values=np.ones(n),
+            rewards=np.zeros(n),
+            # 极端重要性采样系数
+            logprobs_behavior=np.log(np.array([0.01, 0.01, 0.01])),
+            logprobs_target=np.log(np.array([0.99, 0.99, 0.99])),
+            dones=np.zeros(n),
         )
+        cfg = VTraceConfig(rho_bar=1.0, c_bar=1.0)
+        result = compute_vtrace(batch, config=cfg)
         # 即使 ρ = 99，截断后应 ≤ 1.0
         assert np.all(result.rhos <= 1.0 + 1e-10)
         assert np.all(result.cs <= 1.0 + 1e-10)
@@ -396,51 +392,34 @@ class TestCommercialGapReduction:
     def test_lambda_control(self) -> None:
         """lambda 参数控制偏差-方差权衡。"""
         n = 5
-        values = np.array([1.0, 1.5, 2.0, 1.8, 1.2])
-        rewards = np.array([0.5, 0.3, -0.2, 0.1, 0.4])
         logprobs = np.log(np.full(n, 0.5))
-        dones = np.zeros(n)
+        batch = _make_batch(
+            values=np.array([1.0, 1.5, 2.0, 1.8, 1.2]),
+            rewards=np.array([0.5, 0.3, -0.2, 0.1, 0.4]),
+            logprobs_behavior=logprobs,
+            logprobs_target=logprobs,
+            dones=np.zeros(n),
+        )
         # λ=0（高偏差低方差）
-        cfg_0 = VTraceConfig(lambda_=0.0)
-        result_0 = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs,
-            logprobs_target=logprobs,
-            dones=dones,
-            config=cfg_0,
-        )
+        result_0 = compute_vtrace(batch, config=VTraceConfig(lambda_=0.0))
         # λ=1（低偏差高方差）
-        cfg_1 = VTraceConfig(lambda_=1.0)
-        result_1 = compute_vtrace(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs,
-            logprobs_target=logprobs,
-            dones=dones,
-            config=cfg_1,
-        )
+        result_1 = compute_vtrace(batch, config=VTraceConfig(lambda_=1.0))
         # 两种 λ 应产生不同的 V-trace 值
         assert not np.allclose(result_0.vs, result_1.vs)
 
     def test_gamma_discount(self) -> None:
         """gamma 折扣因子。"""
         n = 3
-        values = np.array([1.0, 1.0, 1.0])
-        rewards = np.array([1.0, 1.0, 1.0])
         logprobs = np.log(np.full(n, 0.5))
-        dones = np.zeros(n)
-        # γ=0（仅当前奖励）
-        cfg_0 = VTraceConfig(gamma=0.0)
-        result_0 = compute_vtrace(
-            values=values,
-            rewards=rewards,
+        batch = _make_batch(
+            values=np.ones(n),
+            rewards=np.ones(n),
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
-            dones=dones,
-            config=cfg_0,
-            last_value=10.0,
+            dones=np.zeros(n),
         )
+        # γ=0（仅当前奖励）
+        result_0 = compute_vtrace(batch, config=VTraceConfig(gamma=0.0), last_value=10.0)
         # γ=0 时 last_value 不影响（除最后一步）
         # v_t = V_t + ρ * (r_t + 0 - V_t) = V_t + ρ * (r_t - V_t)
         # 对 t < n-1，next_V 不影响
@@ -452,22 +431,17 @@ class TestCommercialGapReduction:
         def value_fn(obs: np.ndarray) -> float:
             return float(0.5 * obs[0])
 
-        observations = np.array([[1.0], [1.5], [2.0], [1.8], [1.2]])
-        rewards = np.array([0.5, 0.3, -0.2, 0.1, 0.4])
-        logprobs_behavior = np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5]))
-        logprobs_target = np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6]))
-        dones = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
-        last_observation = np.array([1.0])
+        batch = ImpalaBatch(
+            observations=np.array([[1.0], [1.5], [2.0], [1.8], [1.2]]),
+            rewards=np.array([0.5, 0.3, -0.2, 0.1, 0.4]),
+            logprobs_behavior=np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6])),
+            dones=np.array([0.0, 0.0, 0.0, 0.0, 1.0]),
+            last_observation=np.array([1.0]),
+        )
 
         learner = create_impala_learner(value_fn)
-        result = learner.compute_targets(
-            observations=observations,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            last_observation=last_observation,
-        )
+        result = learner.compute_targets(batch)
         # 应有完整的 V-trace 输出
         assert len(result.vs) == 5
         assert len(result.pg_advantages) == 5
