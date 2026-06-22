@@ -1,0 +1,95 @@
+{
+  "reports": [
+    {
+      "benchmark_name": "tilos_ariane",
+      "benchmark_source": "tilos",
+      "placement_method": "hierarchical",
+      "hpwl_um": 9046.0,
+      "overlap_count": 0,
+      "area_utilization": 0.6666666666666665,
+      "module_count": 17,
+      "connection_count": 25,
+      "target_metric": "hpwl",
+      "target_value": 50000.0,
+      "passed": true,
+      "process_node": "NanGate45",
+      "timestamp": "2026-06-22T10:12:31Z",
+      "runtime_s": 0.42337612100163824,
+      "extra": {
+        "benchmark_source": "tilos",
+        "process_node": "NanGate45"
+      }
+    },
+    {
+      "benchmark_name": "apollo_ptc",
+      "benchmark_source": "apollo",
+      "placement_method": "hierarchical",
+      "hpwl_um": 5659.0,
+      "overlap_count": 0,
+      "area_utilization": 0.6666666666666667,
+      "module_count": 12,
+      "connection_count": 13,
+      "target_metric": "insertion_loss_db",
+      "target_value": 5.0,
+      "passed": false,
+      "process_node": "220nm SOI",
+      "timestamp": "2026-06-22T10:12:31Z",
+      "runtime_s": 0.024143586000718642,
+      "extra": {
+        "benchmark_source": "apollo",
+        "process_node": "220nm SOI"
+      }
+    },
+    {
+      "benchmark_name": "apollo_onoc",
+      "benchmark_source": "apollo",
+      "placement_method": "hierarchical",
+      "hpwl_um": 12530.0,
+      "overlap_count": 0,
+      "area_utilization": 0.6666666666666665,
+      "module_count": 15,
+      "connection_count": 23,
+      "target_metric": "routing_success_rate",
+      "target_value": 0.95,
+      "passed": true,
+      "process_node": "220nm SOI",
+      "timestamp": "2026-06-22T10:12:31Z",
+      "runtime_s": 0.15436534000036772,
+      "extra": {
+        "benchmark_source": "apollo",
+        "process_node": "220nm SOI"
+      }
+    },
+    {
+      "benchmark_name": "lidar_ptc",
+      "benchmark_source": "lidar",
+      "placement_method": "hierarchical",
+      "hpwl_um": 3028.0,
+      "overlap_count": 0,
+      "area_utilization": 0.6666666666666666,
+      "module_count": 12,
+      "connection_count": 13,
+      "target_metric": "routing_success_rate",
+      "target_value": 1.0,
+      "passed": true,
+      "process_node": "220nm SOI",
+      "timestamp": "2026-06-22T10:12:31Z",
+      "runtime_s": 0.032861563999176724,
+      "extra": {
+        "benchmark_source": "lidar",
+        "process_node": "220nm SOI"
+      }
+    }
+  ],
+  "total_benchmarks": 4,
+  "passed_count": 3,
+  "pass_rate": 0.75,
+  "avg_hpwl_um": 7565.75,
+  "avg_utilization": 0.6666666666666666,
+  "total_modules": 56,
+  "total_connections": 74,
+  "total_overlaps": 0,
+  "total_runtime_s": 0.6347466110019013,
+  "avg_runtime_s": 0.15868665275047533,
+  "timestamp": "2026-06-22T10:12:31Z"
+}
