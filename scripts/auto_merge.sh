@@ -1,11 +1,11 @@
 #!/bin/bash
-# 自动合并脚本：每20分钟将 trae/solo-agent-MD19IE 合并到 main
+# 自动合并脚本：每20分钟将 trae/solo-agent-QtGqG4-ai-Light 合并到 main
 # 按标准流程：fetch → merge → push，冲突时跳过并记录日志
 # 来源: GitHub Flow https://docs.github.com/en/get-started/quickstart/github-flow
 
 set -u
 INTERVAL=1200  # 20分钟（用户规则：自动提交代码间隔）
-DEV_BRANCH="trae/solo-agent-MD19IE"
+DEV_BRANCH="trae/solo-agent-QtGqG4-ai-Light"  # 规则 1.2.1 固定名称，永久不变
 MAIN_BRANCH="main"
 LOG_FILE="/workspace/checkpoints/rl_2m/auto_merge.log"
 LOCK_FILE="/workspace/.git/index.lock"

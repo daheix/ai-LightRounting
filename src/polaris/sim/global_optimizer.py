@@ -242,7 +242,7 @@ class CMAESOptimizer:
     ) -> bool:
         """执行一次 CMA-ES 迭代，返回是否收敛。"""
         inv_sqrt_c = s.b_mat @ np.diag(1.0 / np.diag(s.d_mat)) @ s.b_mat.T
-        samples = self._sample_population(s.mean, s.sigma, s.b_mat, s.d_mat, s.lambda_, s.rng)
+        samples = self._sample_population(s)
         foms = np.array([fom_fn(sample) for sample in samples])
         sorted_idx = np.argsort(-foms)
         selected = samples[sorted_idx[: s.mu]]
@@ -278,20 +278,12 @@ class CMAESOptimizer:
             return True
         return False
 
-    def _sample_population(
-        self,
-        mean: np.ndarray,
-        sigma: float,
-        b_mat: np.ndarray,
-        d_mat: np.ndarray,
-        lambda_: int,
-        rng: np.random.Generator,
-    ) -> np.ndarray:
+    def _sample_population(self, s: _CMAESState) -> np.ndarray:
         """采样种群。"""
-        n = len(mean)
-        z = rng.standard_normal((lambda_, n))
-        y = z @ d_mat @ b_mat.T
-        return mean + sigma * y
+        n = len(s.mean)
+        z = s.rng.standard_normal((s.lambda_, n))
+        y = z @ s.d_mat @ s.b_mat.T
+        return s.mean + s.sigma * y
 
 
 class ParticleSwarmOptimizer:

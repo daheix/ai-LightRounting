@@ -45,6 +45,24 @@ from polaris.sim.multi_objective_optimizer import (
 
 
 @dataclass
+class NicheSelectionState:
+    """小生境选择可变状态（第57轮重构，降低参数个数）。
+
+    封装 _pick_from_refs / _pick_random_available 的可变参数，
+    使方法签名从 7 参数降至 5 参数（含 self）。
+
+    Attributes:
+        available: 可用个体索引列表（原地修改）。
+        niche_counts: 参考点小生境计数（原地修改）。
+        selected_indices: 已选个体索引列表（原地修改）。
+    """
+
+    available: list[int]
+    niche_counts: np.ndarray
+    selected_indices: list[int]
+
+
+@dataclass
 class NSGA3Config:
     """NSGA-III 配置。
 
@@ -356,16 +374,17 @@ class NSGA3Optimizer:
         remaining: int,
     ) -> list[Individual]:
         """按小生境计数升序选择（优先选稀疏参考点）。"""
-        selected_indices: list[int] = []
-        available = list(range(len(front)))
-        while len(selected_indices) < remaining and available:
-            min_refs = self._find_min_niche_refs(niche_counts)
-            picked = self._pick_from_refs(
-                min_refs, associations, available, niche_counts, remaining, selected_indices
-            )
+        state = NicheSelectionState(
+            available=list(range(len(front))),
+            niche_counts=niche_counts,
+            selected_indices=[],
+        )
+        while len(state.selected_indices) < remaining and state.available:
+            min_refs = self._find_min_niche_refs(state.niche_counts)
+            picked = self._pick_from_refs(min_refs, associations, remaining, state)
             if not picked:
-                self._pick_random_available(available, selected_indices, associations, niche_counts)
-        return [front[idx] for idx in selected_indices]
+                self._pick_random_available(associations, state)
+        return [front[idx] for idx in state.selected_indices]
 
     def _find_min_niche_refs(self, niche_counts: np.ndarray) -> list[int]:
         """找最小 niche count 的参考点列表。"""
@@ -383,36 +402,32 @@ class NSGA3Optimizer:
         self,
         min_refs: list[int],
         associations: np.ndarray,
-        available: list[int],
-        niche_counts: np.ndarray,
         remaining: int,
-        selected_indices: list[int],
+        state: NicheSelectionState,
     ) -> bool:
         """在最小 niche count 参考点中选一个解，返回是否成功。"""
         for ref_idx in min_refs:
-            for k in available:
+            for k in state.available:
                 if associations[k] == ref_idx:
-                    selected_indices.append(k)
-                    available.remove(k)
-                    niche_counts[ref_idx] += 1
+                    state.selected_indices.append(k)
+                    state.available.remove(k)
+                    state.niche_counts[ref_idx] += 1
                     return True
-                if len(selected_indices) >= remaining:
+                if len(state.selected_indices) >= remaining:
                     return True
         return False
 
     def _pick_random_available(
         self,
-        available: list[int],
-        selected_indices: list[int],
         associations: np.ndarray,
-        niche_counts: np.ndarray,
+        state: NicheSelectionState,
     ) -> None:
         """无解关联到最小 niche 参考点时，随机选一个可用解。"""
-        if not available:
+        if not state.available:
             return
-        k = available.pop(0)
-        selected_indices.append(k)
-        niche_counts[associations[k]] += 1
+        k = state.available.pop(0)
+        state.selected_indices.append(k)
+        state.niche_counts[associations[k]] += 1
 
     def optimize(self, n_params: int) -> NSGA3Result:
         """执行 NSGA-III 多目标优化。
