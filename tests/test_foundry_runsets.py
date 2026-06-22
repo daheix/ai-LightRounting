@@ -137,10 +137,25 @@ def test_list_foundry_runsets_by_material_sin():
     assert "LIGENTEC" in sin
 
 
+def test_list_foundry_runsets_by_material_inp():
+    """测试 InP 平台 foundry 数 >= 2。"""
+    inp = list_foundry_runsets_by_material("InP")
+    assert len(inp) >= 2
+    assert "HHI_InP" in inp
+    assert "LioniX_InP" in inp
+
+
+def test_list_foundry_runsets_by_material_lnoi():
+    """测试 LNOI 平台 foundry 数 >= 1。"""
+    lnoi = list_foundry_runsets_by_material("LNOI")
+    assert len(lnoi) >= 1
+    assert "LNOI" in lnoi
+
+
 def test_list_foundry_runsets_by_material_empty():
     """测试未知材料返回空列表。"""
-    inp = list_foundry_runsets_by_material("InP")
-    assert inp == []
+    unknown = list_foundry_runsets_by_material("Unknown")
+    assert unknown == []
 
 
 # -- 单 foundry runset 数据完整性测试 --
@@ -235,6 +250,8 @@ def test_material_platform_diversity():
     materials = {r.material_platform for r in FOUNDRY_RUNSETS.values()}
     assert "SOI" in materials
     assert "SiN" in materials
+    assert "InP" in materials
+    assert "LNOI" in materials
 
 
 def test_rule_name_prefix_consistency():
@@ -246,6 +263,9 @@ def test_rule_name_prefix_consistency():
         "GF_Fotonix": "GF_",
         "CompoundTek": "CT_",
         "LIGENTEC": "LIG_",
+        "HHI_InP": "HHI_INP_",
+        "LioniX_InP": "LIONIX_INP_",
+        "LNOI": "LNOI_",
     }
     for foundry_name, prefix in prefixes.items():
         runset = FOUNDRY_RUNSETS[foundry_name]

@@ -20,6 +20,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from polaris.sim.constraint_checker import ViolationType
+from polaris.sim.foundry_runsets_inplnoi import (
+    HHI_INP_DRC_RUNSET,
+    LIONIX_INP_DRC_RUNSET,
+    LNOI_DRC_RUNSET,
+)
 from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET, DRCCheckType, DRCRule
 
 
@@ -446,6 +451,30 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
         source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
         notes="LIGENTEC ANR SiN 平台，低损耗氮化硅",
     ),
+    "HHI_InP": FoundryRunset(
+        foundry_name="HHI",
+        process_node="InP 集成光子",
+        material_platform="InP",
+        rules=HHI_INP_DRC_RUNSET,
+        source_url="https://www.jeppix.eu/",
+        notes="HHI InP PDK（JePPIX 平台），有源器件（激光器/放大器/调制器）",
+    ),
+    "LioniX_InP": FoundryRunset(
+        foundry_name="LioniX",
+        process_node="InP 集成光子",
+        material_platform="InP",
+        rules=LIONIX_INP_DRC_RUNSET,
+        source_url="https://www.lionix-international.com/photonics/",
+        notes="LioniX InP 平台，TriPleX 波导与有源集成",
+    ),
+    "LNOI": FoundryRunset(
+        foundry_name="LNOI",
+        process_node="薄膜铌酸锂",
+        material_platform="LNOI",
+        rules=LNOI_DRC_RUNSET,
+        source_url="https://www.nanochemistrygroup.com/lnoi",
+        notes="LNOI X-cut 薄膜铌酸锂，电光调制器（Pockels 效应）",
+    ),
 }
 
 
@@ -487,8 +516,11 @@ __all__ = [
     "FOUNDRY_RUNSETS",
     "FoundryRunset",
     "GF_FOTONIX_DRC_RUNSET",
+    "HHI_INP_DRC_RUNSET",
     "IHP_DRC_RUNSET",
     "LIGENTEC_DRC_RUNSET",
+    "LIONIX_INP_DRC_RUNSET",
+    "LNOI_DRC_RUNSET",
     "foundry_runset_count",
     "get_foundry_runset",
     "list_foundry_runsets",
