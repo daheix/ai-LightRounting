@@ -89,16 +89,16 @@ def test_spacing_violations_in_reward():
     # 两个器件间距 < min_spacing_um（5.0）
     state.placements["a"] = Placement("a", dev, 0, 0)
     state.placements["b"] = Placement("b", dev, 1, 0)  # 间距 1μm < 5μm
-    from polaris.engine.floorplan_env import _count_spacing_violations
+    from polaris.engine.floorplan_geometry import count_spacing_violations
 
     placed = list(state.placements.values())
-    violations = _count_spacing_violations(placed, min_spacing=5.0)
+    violations = count_spacing_violations(placed, min_spacing=5.0)
     assert violations >= 1
 
 
 def test_spacing_no_violations():
     """F3 DRV 消除：间距足够时无违规。"""
-    from polaris.engine.floorplan_env import _count_spacing_violations
+    from polaris.engine.floorplan_geometry import count_spacing_violations
     from polaris.pdk.catalog import build_default_catalog
 
     cat = build_default_catalog()
@@ -107,7 +107,7 @@ def test_spacing_no_violations():
     state.placements["a"] = Placement("a", dev, 0, 0)
     state.placements["b"] = Placement("b", dev, 100, 100)  # 间距远 > 5μm
     placed = list(state.placements.values())
-    violations = _count_spacing_violations(placed, min_spacing=5.0)
+    violations = count_spacing_violations(placed, min_spacing=5.0)
     assert violations == 0
 
 

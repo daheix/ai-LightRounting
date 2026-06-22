@@ -12,11 +12,11 @@ import time
 
 import pytest
 
-from polaris.engine.floorplan_env import (
-    Placement,
-    _count_spacing_violations,
+from polaris.engine.floorplan_env import Placement
+from polaris.engine.floorplan_geometry import (
     _count_spacing_violations_brute_force,
     _count_spacing_violations_spatial_hash,
+    count_spacing_violations,
 )
 from polaris.pdk.catalog import build_default_catalog
 
@@ -94,7 +94,7 @@ class TestScalePerformance:
         # 2. 间距检测（空间哈希）
         t0 = time.perf_counter()
         for _ in range(10):  # 模拟 10 步
-            _count_spacing_violations(placements, min_spacing)
+            count_spacing_violations(placements, min_spacing)
         t_spacing = time.perf_counter() - t0
 
         print(
