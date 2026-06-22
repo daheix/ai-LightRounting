@@ -187,6 +187,23 @@ class DRCResult:
         return len(self.violations) == 0
 
 
+@dataclass
+class LayoutContext:
+    """KLayout 布局上下文（降低 _check_enclose 参数个数，规则 4.1）。
+
+    封装 DRC 检查所需的 Layout / Cell / dbu 三元组。
+
+    Attributes:
+        layout: KLayout Layout 对象。
+        cell: Top cell。
+        dbu: Database unit（μm）。
+    """
+
+    layout: db.Layout
+    cell: db.Cell
+    dbu: float
+
+
 class KLayoutDRCRunner:
     """KLayout DRC 引擎封装。
 
@@ -290,7 +307,7 @@ class KLayoutDRCRunner:
         if rule.check_type == DRCCheckType.NOTCH:
             return self._check_notch(region, rule, dbu)
         if rule.check_type == DRCCheckType.ENCLOSE:
-            return self._check_enclose(layout, cell, region, rule, dbu)
+            return self._check_enclose(LayoutContext(layout, cell, dbu), region, rule)
         if rule.check_type == DRCCheckType.AREA:
             return self._check_area(region, rule, dbu)
         return []
@@ -342,21 +359,18 @@ class KLayoutDRCRunner:
 
     def _check_enclose(
         self,
-        layout: db.Layout,
-        cell: db.Cell,
+        ctx: LayoutContext,
         inner_region: db.Region,
         rule: DRCRule,
-        dbu: float,
     ) -> list[Violation]:
         """包围规则检查（内层须被外层包围）。
 
         Args:
-            layout: KLayout Layout 对象。
-            cell: Top cell。
+            ctx: KLayout 布局上下文（layout / cell / dbu）。
             inner_region: 内层 Region。
             rule: DRC 规则（enclosure_layer_name 指定外层）。
-            dbu: Database unit（μm）。
         """
+        layout, cell, dbu = ctx.layout, ctx.cell, ctx.dbu
         if rule.enclosure_layer_name is None:
             return []
         outer_idx = self._get_layer_index(layout, rule.enclosure_layer_name)

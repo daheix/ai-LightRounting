@@ -574,9 +574,25 @@ def check_crosstalk(
             if not isinstance(pts2, (list, tuple)) or len(pts2) < 2:
                 continue
             violations.extend(
-                _check_pair_crosstalk(n1, pts1, n2, pts2, min_safe_gap_um, max_crosstalk_db)
+                _check_pair_crosstalk(
+                    n1, pts1, n2, pts2,
+                    CrosstalkConfig(min_safe_gap_um, max_crosstalk_db),
+                )
             )
     return violations
+
+
+@dataclass
+class CrosstalkConfig:
+    """串扰检查配置（降低 _check_pair_crosstalk 参数个数，规则 4.1）。
+
+    Attributes:
+        min_safe_gap_um: 串扰安全间距（μm）。
+        max_crosstalk_db: 最大允许串扰（dB，负值）。
+    """
+
+    min_safe_gap_um: float
+    max_crosstalk_db: float
 
 
 def _check_pair_crosstalk(
@@ -584,22 +600,25 @@ def _check_pair_crosstalk(
     pts1: list,
     n2: str,
     pts2: list,
-    min_safe_gap_um: float,
-    max_crosstalk_db: float,
+    config: CrosstalkConfig,
 ) -> list[Violation]:
     """检查两条网络的串扰（辅助函数，降低 check_crosstalk 复杂度）。
 
-    参数超过 5 个，但均为原子类型且语义清晰，拆分会降低可读性，
-    按 Google Style Guide 例外保留（来源: https://google.github.io/styleguide/pyguide）。
+    Args:
+        n1: 网络 1 ID。
+        pts1: 网络 1 路径点列表。
+        n2: 网络 2 ID。
+        pts2: 网络 2 路径点列表。
+        config: 串扰检查配置。
     """
     violations: list[Violation] = []
     min_gap = _min_path_gap(pts1, pts2)
-    if 0 < min_gap < min_safe_gap_um:
-        msg = f"网络 {n1} 与 {n2} 平行间距 {min_gap:.2f} μm 可能串扰 > {max_crosstalk_db} dB"
+    if 0 < min_gap < config.min_safe_gap_um:
+        msg = f"网络 {n1} 与 {n2} 平行间距 {min_gap:.2f} μm 可能串扰 > {config.max_crosstalk_db} dB"
         violations.append(
             Violation(
                 vtype=ViolationType.CROSSTALK,
-                severity=1.0 - min_gap / min_safe_gap_um,
+                severity=1.0 - min_gap / config.min_safe_gap_um,
                 message=msg,
                 net_id=f"{n1}::{n2}",
             )
