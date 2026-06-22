@@ -307,6 +307,10 @@ def _format_report_metrics(report: BenchmarkReport) -> list[str]:
     Returns:
         Markdown 表格行列表。
     """
+    max_cong = report.extra.get("max_congestion", 0.0)
+    avg_cong = report.extra.get("avg_congestion", 0.0)
+    ovf_count = report.extra.get("overflow_count", 0)
+    total_ovf = report.extra.get("total_overflow", 0.0)
     return [
         "## 2. 核心指标",
         "",
@@ -315,6 +319,10 @@ def _format_report_metrics(report: BenchmarkReport) -> list[str]:
         f"| HPWL (μm) | {report.hpwl_um:.2f} | {report.target_value:.2f} |",
         f"| 重叠对数 | {report.overlap_count} | 0 |",
         f"| 面积利用率 | {report.area_utilization:.4f} | — |",
+        f"| 最大拥塞比 | {max_cong:.4f} | ≤1.0 |",
+        f"| 平均拥塞比 | {avg_cong:.4f} | — |",
+        f"| 拥塞溢出网格数 | {ovf_count} | 0 |",
+        f"| 总溢出量 | {total_ovf:.4f} | 0 |",
         f"| 模块数 | {report.module_count} | — |",
         f"| 连接数 | {report.connection_count} | — |",
         f"| 运行时间 (s) | {report.runtime_s:.4f} | — |",
@@ -376,10 +384,13 @@ def _format_comparison_rows(reports: list[BenchmarkReport]) -> list[str]:
     lines = []
     for r in reports:
         passed_str = "✅" if r.passed else "❌"
+        max_cong = r.extra.get("max_congestion", 0.0)
+        ovf_count = r.extra.get("overflow_count", 0)
         lines.append(
             f"| {r.benchmark_name} | {r.benchmark_source} | {r.process_node} | "
             f"{r.placement_method} | {r.hpwl_um:.2f} | {r.overlap_count} | "
-            f"{r.area_utilization:.4f} | {r.module_count} | {r.connection_count} | "
+            f"{r.area_utilization:.4f} | {max_cong:.4f} | {ovf_count} | "
+            f"{r.module_count} | {r.connection_count} | "
             f"{r.runtime_s:.4f} | {passed_str} |"
         )
     return lines
@@ -413,8 +424,8 @@ def format_comparison_markdown(comp: ComparisonReport) -> str:
         "",
         "## 2. 各 Benchmark 详细结果",
         "",
-        "| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 模块 | 连接 | 运行时间 (s) | 达标 |",
-        "|-----------|------|------|------|-----------|------|--------|------|------|--------------|------|",
+        "| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 最大拥塞 | 溢出网格 | 模块 | 连接 | 运行时间 (s) | 达标 |",
+        "|-----------|------|------|------|-----------|------|--------|----------|----------|------|------|--------------|------|",
     ]
     lines.extend(_format_comparison_rows(comp.reports))
     lines.extend([
@@ -424,6 +435,7 @@ def format_comparison_markdown(comp: ComparisonReport) -> str:
         "- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
         "- Apollo: https://github.com/ASU-LOPE-Group/Apollo",
         "- LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355",
+        "- Congestion: Nesterenko & Hsu TCAD 2002, BoxRouter ISPD 2006",
         "",
     ])
     return "\n".join(lines)
