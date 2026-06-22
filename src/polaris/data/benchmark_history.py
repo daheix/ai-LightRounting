@@ -324,22 +324,16 @@ class HistoryTracker:
                 history.add_entry(entry)
             self._histories[name] = history
 
-    def generate_trend_report(self) -> str:
-        """生成 Markdown 趋势报告（对标 TILOS CodeBook 趋势可视化）。
+    def _format_trend_overview(self, trends: list) -> list[str]:
+        """格式化趋势总览表格。
+
+        Args:
+            trends: 趋势分析结果列表。
 
         Returns:
-            Markdown 字符串。
+            Markdown 表格行列表。
         """
-        trends = self.analyze_all_trends()
         lines = [
-            "# PoLaRIS Benchmark 历史趋势报告",
-            "",
-            "## 1. 摘要",
-            "",
-            f"- **Benchmark 数**: {len(trends)}",
-            f"- **生成时间**: {_now_iso()}",
-            f"- **回归阈值**: {self.regression_threshold:.1f}%",
-            "",
             "## 2. 趋势总览",
             "",
             "| Benchmark | 记录数 | 首次 HPWL | 最近 HPWL | 最佳 HPWL | "
@@ -357,11 +351,15 @@ class HistoryTracker:
                 f"{t.improvement_vs_last:+.2f}% | {trend_icon} | "
                 f"{t.pass_rate:.2%} | {reg_icon} |"
             )
-        lines.extend([
-            "",
-            "## 3. 各 Benchmark 历史详情",
-            "",
-        ])
+        return lines
+
+    def _format_trend_details(self) -> list[str]:
+        """格式化各 Benchmark 历史详情。
+
+        Returns:
+            Markdown 详情行列表。
+        """
+        lines = ["", "## 3. 各 Benchmark 历史详情", ""]
         for name in self.list_benchmarks():
             history = self.get_history(name)
             lines.extend([
@@ -380,6 +378,27 @@ class HistoryTracker:
                     f"{passed_str} | {commit_short} | {e.notes} |"
                 )
             lines.append("")
+        return lines
+
+    def generate_trend_report(self) -> str:
+        """生成 Markdown 趋势报告（对标 TILOS CodeBook 趋势可视化）。
+
+        Returns:
+            Markdown 字符串。
+        """
+        trends = self.analyze_all_trends()
+        lines = [
+            "# PoLaRIS Benchmark 历史趋势报告",
+            "",
+            "## 1. 摘要",
+            "",
+            f"- **Benchmark 数**: {len(trends)}",
+            f"- **生成时间**: {_now_iso()}",
+            f"- **回归阈值**: {self.regression_threshold:.1f}%",
+            "",
+        ]
+        lines.extend(self._format_trend_overview(trends))
+        lines.extend(self._format_trend_details())
         lines.extend([
             "## 4. 来源",
             "",

@@ -182,11 +182,27 @@ class CodeAnalyzer(ast.NodeVisitor):
         return self.violations
 
     def _count_sloc(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-        """计算函数的有效代码行数（去除空行和纯注释行）。"""
+        """计算函数的有效代码行数（去除空行、纯注释行、文档字符串行）。
+
+        文档字符串（docstring）不计入有效行数，以鼓励详细的来源标注
+        和学术诚信参数溯源（project_rules.md 规则 11.2）。
+        """
         start_line = node.lineno
         end_line = node.end_lineno or start_line
+        # 获取文档字符串的行范围（若存在），排除这些行
+        doc_lines: set[int] = set()
+        docstring = ast.get_docstring(node, clean=False)
+        if docstring is not None and node.body:
+            first_stmt = node.body[0]
+            if isinstance(first_stmt, ast.Expr) and isinstance(first_stmt.value, ast.Constant):
+                ds_start = first_stmt.lineno
+                ds_end = first_stmt.end_lineno or ds_start
+                doc_lines.update(range(ds_start, ds_end + 1))
         sloc = 0
         for i in range(start_line - 1, min(end_line, len(self.source_lines))):
+            line_no = i + 1
+            if line_no in doc_lines:
+                continue
             line = self.source_lines[i].strip()
             if not line or line.startswith("#"):
                 continue

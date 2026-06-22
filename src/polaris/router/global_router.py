@@ -34,6 +34,7 @@
 
 from __future__ import annotations
 
+import heapq
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -306,6 +307,74 @@ class GlobalRouter:
         scored.sort(key=lambda x: -x[2])
         return scored
 
+    @staticmethod
+    def _reconstruct_path(
+        goal: tuple[int, int],
+        came_from: dict[tuple[int, int], tuple[int, int]],
+    ) -> list[tuple[int, int]]:
+        """从 came_from 字典重建路径。
+
+        Args:
+            goal: 终点 GCell。
+            came_from: 前驱字典。
+
+        Returns:
+            GCell 路径列表。
+        """
+        path = [goal]
+        cur = goal
+        while cur in came_from:
+            cur = came_from[cur]
+            path.append(cur)
+        path.reverse()
+        return path
+
+    def _astar_neighbors(
+        self,
+        x: int,
+        y: int,
+        goal: tuple[int, int],
+    ) -> list[tuple[int, int]]:
+        """获取 A* 可扩展的邻居 GCell。
+
+        跳过越界和障碍（起止 GCell 除外）。
+
+        Args:
+            x: 当前 GCell x。
+            y: 当前 GCell y。
+            goal: 终点 GCell（允许通过障碍）。
+
+        Returns:
+            可扩展邻居列表 [(nx, ny), ...]。
+        """
+        gx, gy = goal
+        dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        neighbors: list[tuple[int, int]] = []
+        for dx, dy in dirs:
+            nx, ny = x + dx, y + dy
+            if nx < 0 or nx >= self.gw or ny < 0 or ny >= self.gh:
+                continue
+            # 障碍检查：起止 GCell 允许通过（端口必须可达）
+            if self.obstacle_mask[ny, nx] and (nx, ny) != (gx, gy):
+                continue
+            neighbors.append((nx, ny))
+        return neighbors
+
+    def _compute_gcell_step_cost(self, nx: int, ny: int) -> float:
+        """计算 GCell A* 步长代价（步长 + 拥塞惩罚）。
+
+        Args:
+            nx: 邻居 GCell x 索引。
+            ny: 邻居 GCell y 索引。
+
+        Returns:
+            步长代价。
+        """
+        step_cost = 1.0
+        overflow = max(0.0, self.demand[ny, nx] - self.capacity[ny, nx])
+        step_cost += self.config.congestion_weight * overflow
+        return step_cost
+
     def _gcell_astar(
         self,
         start_gcell: tuple[int, int],
@@ -326,21 +395,14 @@ class GlobalRouter:
         Returns:
             GCell 路径 ``[(gx, gy), ...]`` 或 None（不可达）。
         """
-        import heapq
-
         sx, sy = start_gcell
         gx, gy = goal_gcell
-        # 起点终点相同
         if (sx, sy) == (gx, gy):
             return [(sx, sy)]
-        # 4 方向
-        dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        # 优先队列: (f, g, x, y)
-        h0 = abs(sx - gx) + abs(sy - gy)
-        pq = [(h0, 0.0, sx, sy)]
-        came_from: dict[tuple[int, int], tuple[int, int]] = {}
-        g_score: dict[tuple[int, int], float] = {(sx, sy): 0.0}
-        visited: set[tuple[int, int]] = set()
+        pq = [(abs(sx - gx) + abs(sy - gy), 0.0, sx, sy)]
+        came_from: dict = {}
+        g_score: dict = {(sx, sy): 0.0}
+        visited: set = set()
 
         while pq:
             _f, g, x, y = heapq.heappop(pq)
@@ -348,26 +410,9 @@ class GlobalRouter:
                 continue
             visited.add((x, y))
             if (x, y) == (gx, gy):
-                # 重建路径
-                path = [(x, y)]
-                cur = (x, y)
-                while cur in came_from:
-                    cur = came_from[cur]
-                    path.append(cur)
-                path.reverse()
-                return path
-            for dx, dy in dirs:
-                nx, ny = x + dx, y + dy
-                if nx < 0 or nx >= self.gw or ny < 0 or ny >= self.gh:
-                    continue
-                # 障碍检查：起止 GCell 允许通过（端口必须可达）
-                if self.obstacle_mask[ny, nx] and (nx, ny) != (gx, gy):
-                    continue
-                # 代价 = 步长 + 拥塞惩罚
-                step_cost = 1.0
-                overflow = max(0.0, self.demand[ny, nx] - self.capacity[ny, nx])
-                step_cost += self.config.congestion_weight * overflow
-                ng = g + step_cost
+                return self._reconstruct_path((x, y), came_from)
+            for nx, ny in self._astar_neighbors(x, y, (gx, gy)):
+                ng = g + self._compute_gcell_step_cost(nx, ny)
                 if (nx, ny) in g_score and ng >= g_score[(nx, ny)]:
                     continue
                 g_score[(nx, ny)] = ng
@@ -418,6 +463,61 @@ class GlobalRouter:
         for gx, gy in gcell_path:
             self.demand[gy, gx] = max(0.0, self.demand[gy, gx] - 1.0)
 
+    def _check_route_overflow(self, gcell_path: list[tuple[int, int]]) -> float:
+        """计算路径拥塞溢出总量。
+
+        Args:
+            gcell_path: GCell 路径。
+
+        Returns:
+            溢出总量（demand - capacity 的正部分之和）。
+        """
+        return sum(
+            max(0.0, self.demand[gy, gx] - self.capacity[gy, gx])
+            for gx, gy in gcell_path
+        )
+
+    def _route_single_connection(
+        self,
+        conn_idx: int,
+        conn: NetlistConnection,
+        results: dict[int, GlobalRoute],
+        round_idx: int,
+    ) -> None:
+        """布线单个连接（含 Rip-up&Reroute 逻辑）。
+
+        Args:
+            conn_idx: 连接索引。
+            conn: 连接对象。
+            results: 布线结果字典（in-place 更新）。
+            round_idx: 当前 Rip-up&Reroute 轮次（0 为首轮）。
+        """
+        start, end = self._conn_endpoints(conn)
+        if start is None or end is None:
+            return
+        # 已布则跳过（非首轮）
+        if conn_idx in results and round_idx > 0:
+            gr = results[conn_idx]
+            if self._check_route_overflow(gr.gcell_path) == 0:
+                return
+            # 拥塞溢出：Rip-up 重布
+            self._reduce_demand(gr.gcell_path)
+            del results[conn_idx]
+        start_gcell = self._port_to_gcell(*start)
+        goal_gcell = self._port_to_gcell(*end)
+        gcell_path = self._gcell_astar(start_gcell, goal_gcell)
+        if gcell_path is None:
+            return
+        self._update_demand(gcell_path)
+        waypoints = self._extract_waypoints(gcell_path)
+        est_len = self._path_length_um(gcell_path)
+        results[conn_idx] = GlobalRoute(
+            conn_idx=conn_idx,
+            gcell_path=gcell_path,
+            waypoints=waypoints,
+            estimated_length_um=est_len,
+        )
+
     def route(self) -> list[GlobalRoute]:
         """执行全局布线（含 RUDY 预估 + 网排序 + GCell A* + Rip-up&Reroute）。
 
@@ -432,36 +532,7 @@ class GlobalRouter:
         results: dict[int, GlobalRoute] = {}
         for _round in range(self.config.max_rip_reroute_rounds):
             for conn_idx, conn, _score in sorted_conns:
-                start, end = self._conn_endpoints(conn)
-                if start is None or end is None:
-                    continue
-                # 已布则跳过（非首轮）
-                if conn_idx in results and _round > 0:
-                    # 检查是否拥塞溢出
-                    gr = results[conn_idx]
-                    overflow = sum(
-                        max(0.0, self.demand[gy, gx] - self.capacity[gy, gx])
-                        for gx, gy in gr.gcell_path
-                    )
-                    if overflow == 0:
-                        continue
-                    # 拥塞溢出：Rip-up 重布
-                    self._reduce_demand(gr.gcell_path)
-                    del results[conn_idx]
-                start_gcell = self._port_to_gcell(*start)
-                goal_gcell = self._port_to_gcell(*end)
-                gcell_path = self._gcell_astar(start_gcell, goal_gcell)
-                if gcell_path is None:
-                    continue
-                self._update_demand(gcell_path)
-                waypoints = self._extract_waypoints(gcell_path)
-                est_len = self._path_length_um(gcell_path)
-                results[conn_idx] = GlobalRoute(
-                    conn_idx=conn_idx,
-                    gcell_path=gcell_path,
-                    waypoints=waypoints,
-                    estimated_length_um=est_len,
-                )
+                self._route_single_connection(conn_idx, conn, results, _round)
             # 检查总溢出
             total_overflow = float(np.maximum(self.demand - self.capacity, 0).sum())
             if total_overflow == 0:

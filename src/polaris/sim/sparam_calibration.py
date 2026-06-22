@@ -186,6 +186,80 @@ def evaluate_lorentzian(
     return a / (1.0 + 1j * (wavelengths_um - wl0) / gamma)
 
 
+def _compute_calibration_errors(
+    s_complex: np.ndarray,
+    s_fitted: np.ndarray,
+    wavelengths: np.ndarray,
+    cfg: SParamCalibrationConfig,
+) -> tuple[float, float, bool]:
+    """计算校准误差（幅度/相位）与通过状态。
+
+    Args:
+        s_complex: 原始复数 S 参数。
+        s_fitted: 拟合后复数 S 参数。
+        wavelengths: 波长数组（μm）。
+        cfg: 校准配置。
+
+    Returns:
+        (magnitude_error_db, phase_error_rad, passed) 三元组。
+    """
+    ref_idx = int(np.argmin(np.abs(wavelengths - cfg.reference_wavelength_um)))
+    mag_error = float(
+        20.0 * np.log10(max(np.abs(s_complex[ref_idx]), 1e-12))
+        - 20.0 * np.log10(max(np.abs(s_fitted[ref_idx]), 1e-12))
+    )
+    phase_error = float(
+        np.angle(s_complex[ref_idx]) - np.angle(s_fitted[ref_idx])
+    )
+    passed = (
+        abs(mag_error) <= cfg.magnitude_tolerance_db
+        and abs(phase_error) <= cfg.phase_tolerance_rad
+    )
+    return mag_error, phase_error, passed
+
+
+def _calibrate_pair(
+    port_in: str,
+    port_out: str,
+    s_complex: np.ndarray,
+    wavelengths: np.ndarray,
+    cfg: SParamCalibrationConfig,
+) -> SParamPairResult:
+    """校准单个端口对的 S 参数。
+
+    Args:
+        port_in: 输入端口名。
+        port_out: 输出端口名。
+        s_complex: 复数 S 参数数组。
+        wavelengths: 波长数组（μm）。
+        cfg: 校准配置。
+
+    Returns:
+        单端口对校准结果。
+    """
+    if cfg.fit_model == "lorentzian" and len(s_complex) > 2:
+        params = fit_lorentzian(wavelengths, s_complex)
+        s_fitted = evaluate_lorentzian(wavelengths, params)
+    else:
+        params = {}
+        s_fitted = s_complex.copy()
+
+    mag_error, phase_error, passed = _compute_calibration_errors(
+        s_complex, s_fitted, wavelengths, cfg
+    )
+    return SParamPairResult(
+        port_in=port_in,
+        port_out=port_out,
+        wavelengths_um=wavelengths.copy(),
+        s_param_complex=s_complex,
+        s_param_fitted=s_fitted,
+        magnitude_error_db=mag_error,
+        phase_error_rad=phase_error,
+        fitted_params=params,
+        passed=passed,
+    )
+
+
 def calibrate_sparams_from_fdtd(
     fdtd_result: FDTDResult,
     config: SParamCalibrationConfig | None = None,
@@ -212,37 +286,8 @@ def calibrate_sparams_from_fdtd(
     pair_results: list[SParamPairResult] = []
     for (port_in, port_out), s_complex in s_params_complex.items():
         s_complex = np.asarray(s_complex)
-        if cfg.fit_model == "lorentzian" and len(s_complex) > 2:
-            params = fit_lorentzian(wavelengths, s_complex)
-            s_fitted = evaluate_lorentzian(wavelengths, params)
-        else:
-            params = {}
-            s_fitted = s_complex.copy()
-
-        ref_idx = int(np.argmin(np.abs(wavelengths - cfg.reference_wavelength_um)))
-        mag_error = float(
-            20.0 * np.log10(max(np.abs(s_complex[ref_idx]), 1e-12))
-            - 20.0 * np.log10(max(np.abs(s_fitted[ref_idx]), 1e-12))
-        )
-        phase_error = float(
-            np.angle(s_complex[ref_idx]) - np.angle(s_fitted[ref_idx])
-        )
-        passed = (
-            abs(mag_error) <= cfg.magnitude_tolerance_db
-            and abs(phase_error) <= cfg.phase_tolerance_rad
-        )
         pair_results.append(
-            SParamPairResult(
-                port_in=port_in,
-                port_out=port_out,
-                wavelengths_um=wavelengths.copy(),
-                s_param_complex=s_complex,
-                s_param_fitted=s_fitted,
-                magnitude_error_db=mag_error,
-                phase_error_rad=phase_error,
-                fitted_params=params,
-                passed=passed,
-            )
+            _calibrate_pair(port_in, port_out, s_complex, wavelengths, cfg)
         )
 
     n_passed = sum(1 for r in pair_results if r.passed)
@@ -257,6 +302,55 @@ def calibrate_sparams_from_fdtd(
         all_passed=n_passed == len(pair_results) and len(pair_results) > 0,
         reference_wavelength_um=cfg.reference_wavelength_um,
     )
+
+
+def _extract_port_order(result: SParamCalibrationResult) -> list[str]:
+    """从校准结果中提取端口顺序。
+
+    Args:
+        result: S 参数校准结果。
+
+    Returns:
+        端口名称列表（最多 2 个）。
+    """
+    ports: list[str] = []
+    for r in result.pair_results:
+        if r.port_in not in ports:
+            ports.append(r.port_in)
+        if r.port_out not in ports:
+            ports.append(r.port_out)
+    return ports[:2]
+
+
+def _format_s_param_line(
+    freq_ghz: float,
+    i: int,
+    port_order: list[str],
+    s_dict: dict[tuple[str, str], list[complex]],
+) -> str:
+    """格式化单行 Touchstone S 参数数据。
+
+    Args:
+        freq_ghz: 频率（GHz）。
+        i: 波长索引。
+        port_order: 端口顺序。
+        s_dict: S 参数字典 {(port_in, port_out): [complex values]}。
+
+    Returns:
+        Touchstone 格式单行字符串。
+    """
+    parts = [f"{freq_ghz:.6f}"]
+    for p_in in port_order:
+        for p_out in port_order:
+            s = s_dict.get((p_in, p_out))
+            if s is not None and i < len(s):
+                val = s[i]
+                parts.append(f"{val.real:.6e}")
+                parts.append(f"{val.imag:.6e}")
+            else:
+                parts.append("0.000000e+00")
+                parts.append("0.000000e+00")
+    return " ".join(parts)
 
 
 def export_touchstone(
@@ -277,13 +371,7 @@ def export_touchstone(
     if not result.pair_results:
         return "! No S-parameter data\n"
     if port_order is None:
-        ports: list[str] = []
-        for r in result.pair_results:
-            if r.port_in not in ports:
-                ports.append(r.port_in)
-            if r.port_out not in ports:
-                ports.append(r.port_out)
-        port_order = ports[:2]
+        port_order = _extract_port_order(result)
 
     wavelengths = result.pair_results[0].wavelengths_um
     s_dict = {(r.port_in, r.port_out): r.s_param_complex for r in result.pair_results}
@@ -293,18 +381,7 @@ def export_touchstone(
     for i, wl in enumerate(wavelengths):
         # c/λ, λ in μm → freq in THz → ×1000 GHz
         freq_ghz = 299.792458 / float(wl) * 1000.0
-        parts = [f"{freq_ghz:.6f}"]
-        for p_in in port_order:
-            for p_out in port_order:
-                s = s_dict.get((p_in, p_out))
-                if s is not None and i < len(s):
-                    val = s[i]
-                    parts.append(f"{val.real:.6e}")
-                    parts.append(f"{val.imag:.6e}")
-                else:
-                    parts.append("0.000000e+00")
-                    parts.append("0.000000e+00")
-        lines.append(" ".join(parts))
+        lines.append(_format_s_param_line(freq_ghz, i, port_order, s_dict))
     return "\n".join(lines) + "\n"
 
 

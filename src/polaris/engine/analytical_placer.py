@@ -73,7 +73,8 @@ class AnalyticalPlacerConfig:
         learning_rate: Adam 优化器学习率。
             来源: DREAMPlace 默认 lr=0.01（TCAD 2020）。
         max_iterations: 最大迭代次数。
-            来源: DREAMPlace 默认 1000 迭代（TCAD 2020）。
+            来源: PoLaRIS 默认 200 迭代（为加速收敛，DREAMPlace 参考值 1000，
+            Lin et al., TCAD 2020, https://arxiv.org/abs/1904.11520）。
         density_bandwidth: 密度场高斯核带宽（μm）。
             来源: DREAMPlace 默认 = 平均器件尺寸。
         convergence_threshold: 收敛阈值（HPWL 变化 < 阈值则停止）。

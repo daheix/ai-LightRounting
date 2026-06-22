@@ -43,7 +43,8 @@ class TopologyConfig:
 
     Attributes:
         grid_size: 水平集网格分辨率（Gx = Gy = grid_size）。
-            来源: Tidy3D 默认 100×100。
+            来源: PoLaRIS 默认 50×50（为加速 FDTD 仿真，Tidy3D 参考值 100×100，
+            https://docs.flexcompute.com/projects/tidy3d/en/latest/）。
         max_iterations: 最大迭代次数。
             来源: 拓扑优化默认 50 轮（每轮需 FDTD 仿真）。
         learning_rate: 水平集演化学习率。

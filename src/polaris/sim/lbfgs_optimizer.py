@@ -114,6 +114,21 @@ class LBFGSResult:
     converged: bool = False
 
 
+@dataclass
+class _LBFGSIterState:
+    """L-BFGS 迭代状态（降低 _lbfgs_iteration 参数个数，规则 4.1）。
+
+    Attributes:
+        params: 当前参数。
+        fom: 当前 FoM。
+        grad: 当前梯度。
+    """
+
+    params: np.ndarray
+    fom: float
+    grad: np.ndarray
+
+
 class LBFGSOptimizer:
     """L-BFGS 优化器（对标 lumopt/scipy L-BFGS）。
 
@@ -149,6 +164,58 @@ class LBFGSOptimizer:
         self._y_history: deque = deque(maxlen=self.config.memory_size)
         self._rho_history: deque = deque(maxlen=self.config.memory_size)
 
+    def _init_lbfgs_state(
+        self,
+        initial_params: np.ndarray,
+        fom_fn: callable,
+        grad_fn: callable,
+    ) -> tuple:
+        """初始化 L-BFGS 状态。
+
+        Args:
+            initial_params: 初始参数。
+            fom_fn: 目标函数。
+            grad_fn: 梯度函数。
+
+        Returns:
+            (params, fom, grad, fom_history, param_history, gradient_norm_history)。
+        """
+        params = np.asarray(initial_params, dtype=np.float64).copy()
+        fom = fom_fn(params)
+        grad = grad_fn(params)
+        fom_history = [fom]
+        param_history = [params.copy()]
+        gradient_norm_history = [float(np.linalg.norm(grad))]
+        return params, fom, grad, fom_history, param_history, gradient_norm_history
+
+    def _lbfgs_iteration(
+        self,
+        state: _LBFGSIterState,
+        fom_fn: callable,
+        grad_fn: callable,
+    ) -> tuple[_LBFGSIterState, float]:
+        """执行一次 L-BFGS 迭代。
+
+        Args:
+            state: L-BFGS 迭代状态。
+            fom_fn: 目标函数。
+            grad_fn: 梯度函数。
+
+        Returns:
+            (new_state, grad_norm) 新状态和梯度范数。
+        """
+        direction = self._compute_direction(state.grad)
+        point = PointState(fom=state.fom, grad=state.grad)
+        alpha = self._line_search(state.params, direction, point, fom_fn)
+        params_new = state.params + alpha * direction
+        fom_new = fom_fn(params_new)
+        grad_new = grad_fn(params_new)
+        s = params_new - state.params
+        y = grad_new - state.grad
+        self._update_history(s, y)
+        grad_norm = float(np.linalg.norm(grad_new))
+        return _LBFGSIterState(params=params_new, fom=fom_new, grad=grad_new), grad_norm
+
     def optimize(
         self,
         initial_params: np.ndarray,
@@ -165,48 +232,26 @@ class LBFGSOptimizer:
         Returns:
             LBFGSResult。
         """
-        params = np.asarray(initial_params, dtype=np.float64).copy()
-        fom = fom_fn(params)
-        grad = grad_fn(params)
-        fom_history = [fom]
-        param_history = [params.copy()]
-        gradient_norm_history = [float(np.linalg.norm(grad))]
+        params, fom, grad, fom_history, param_history, gradient_norm_history = (
+            self._init_lbfgs_state(initial_params, fom_fn, grad_fn)
+        )
+        state = _LBFGSIterState(params=params, fom=fom, grad=grad)
         converged = False
         iterations = 0
 
         for k in range(self.config.max_iterations):
             iterations = k + 1
-            # 1. 两循环递归计算搜索方向
-            direction = self._compute_direction(grad)
-            # 2. 线搜索
-            state = PointState(fom=fom, grad=grad)
-            alpha = self._line_search(params, direction, state, fom_fn)
-            # 3. 更新参数
-            params_new = params + alpha * direction
-            fom_new = fom_fn(params_new)
-            grad_new = grad_fn(params_new)
-            # 4. 更新 (s, y) 历史
-            s = params_new - params
-            y = grad_new - grad
-            self._update_history(s, y)
-            # 5. 记录
-            fom_history.append(fom_new)
-            param_history.append(params_new.copy())
-            grad_norm = float(np.linalg.norm(grad_new))
+            state, grad_norm = self._lbfgs_iteration(state, fom_fn, grad_fn)
+            fom_history.append(state.fom)
+            param_history.append(state.params.copy())
             gradient_norm_history.append(grad_norm)
-            # 6. 收敛检查
             if grad_norm < self.config.convergence_threshold:
                 converged = True
-                params = params_new
-                fom = fom_new
                 break
-            params = params_new
-            fom = fom_new
-            grad = grad_new
 
         return LBFGSResult(
-            optimal_params=params,
-            optimal_fom=fom,
+            optimal_params=state.params,
+            optimal_fom=state.fom,
             fom_history=fom_history,
             param_history=param_history,
             gradient_norm_history=gradient_norm_history,

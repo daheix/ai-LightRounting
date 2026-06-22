@@ -264,6 +264,30 @@ def run_all_benchmarks(
     return generate_comparison_report(reports)
 
 
+def _format_report_metrics(report: BenchmarkReport) -> list[str]:
+    """格式化报告核心指标表格。
+
+    Args:
+        report: BenchmarkReport。
+
+    Returns:
+        Markdown 表格行列表。
+    """
+    return [
+        "## 2. 核心指标",
+        "",
+        "| 指标 | 数值 | 目标 |",
+        "|------|------|------|",
+        f"| HPWL (μm) | {report.hpwl_um:.2f} | {report.target_value:.2f} |",
+        f"| 重叠对数 | {report.overlap_count} | 0 |",
+        f"| 面积利用率 | {report.area_utilization:.4f} | — |",
+        f"| 模块数 | {report.module_count} | — |",
+        f"| 连接数 | {report.connection_count} | — |",
+        f"| 目标指标 | {report.target_metric} | — |",
+        "",
+    ]
+
+
 def format_report_markdown(report: BenchmarkReport) -> str:
     """格式化单 benchmark 报告为 Markdown（对标 TILOS CodeBook 输出）。
 
@@ -286,23 +310,10 @@ def format_report_markdown(report: BenchmarkReport) -> str:
         f"- **评估时间**: {report.timestamp}",
         f"- **达标判定**: {passed_str}",
         "",
-        "## 2. 核心指标",
-        "",
-        "| 指标 | 数值 | 目标 |",
-        "|------|------|------|",
-        f"| HPWL (μm) | {report.hpwl_um:.2f} | {report.target_value:.2f} |",
-        f"| 重叠对数 | {report.overlap_count} | 0 |",
-        f"| 面积利用率 | {report.area_utilization:.4f} | — |",
-        f"| 模块数 | {report.module_count} | — |",
-        f"| 连接数 | {report.connection_count} | — |",
-        f"| 目标指标 | {report.target_metric} | — |",
-        "",
     ]
+    lines.extend(_format_report_metrics(report))
     if report.extra:
-        lines.extend([
-            "## 3. 额外信息",
-            "",
-        ])
+        lines.extend(["## 3. 额外信息", ""])
         for key, value in report.extra.items():
             lines.append(f"- **{key}**: {value}")
         lines.append("")
@@ -316,6 +327,26 @@ def format_report_markdown(report: BenchmarkReport) -> str:
         "",
     ])
     return "\n".join(lines)
+
+
+def _format_comparison_rows(reports: list[BenchmarkReport]) -> list[str]:
+    """格式化对比报告各 Benchmark 行。
+
+    Args:
+        reports: BenchmarkReport 列表。
+
+    Returns:
+        Markdown 表格行列表。
+    """
+    lines = []
+    for r in reports:
+        passed_str = "✅" if r.passed else "❌"
+        lines.append(
+            f"| {r.benchmark_name} | {r.benchmark_source} | {r.process_node} | "
+            f"{r.placement_method} | {r.hpwl_um:.2f} | {r.overlap_count} | "
+            f"{r.area_utilization:.4f} | {r.module_count} | {r.connection_count} | {passed_str} |"
+        )
+    return lines
 
 
 def format_comparison_markdown(comp: ComparisonReport) -> str:
@@ -346,13 +377,7 @@ def format_comparison_markdown(comp: ComparisonReport) -> str:
         "| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 模块 | 连接 | 达标 |",
         "|-----------|------|------|------|-----------|------|--------|------|------|------|",
     ]
-    for r in comp.reports:
-        passed_str = "✅" if r.passed else "❌"
-        lines.append(
-            f"| {r.benchmark_name} | {r.benchmark_source} | {r.process_node} | "
-            f"{r.placement_method} | {r.hpwl_um:.2f} | {r.overlap_count} | "
-            f"{r.area_utilization:.4f} | {r.module_count} | {r.connection_count} | {passed_str} |"
-        )
+    lines.extend(_format_comparison_rows(comp.reports))
     lines.extend([
         "",
         "## 3. 来源",
