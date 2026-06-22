@@ -1,31 +1,12 @@
 """分块布局器（Hierarchical Placement）—— P0-2 v2.0 规模扩展（第70轮）。
 
-将大规模器件布局问题分解为多个子问题：
-1. **谱聚类分块**：基于连接拓扑将器件划分为 K 个子块
-2. **块内布局**：每个子块内用解析法（DREAMPlace）布局
-3. **块间布局**：将每个子块视为超节点，用解析法布局子块中心
-4. **合并**：块内坐标 + 块中心偏移 = 最终布局
-
-## 为什么需要分块布局
-
-- 单一解析法布局器在 1000+ 器件时收敛慢（O(n²) 密度梯度计算）
-- 分块后每块规模 ≤ sqrt(n)，密度梯度计算降为 O(n)
-- 块间布局规模 = K（子块数），远小于 n
-- 总复杂度从 O(n²) 降为 O(n·sqrt(n))
-
-## 与商业工具对齐
-
-- Cadence Innovus: hierarchical placement（分块 + 块内布局）
-- Synopsys ICC2: cluster-based placement
-- DREAMPlace: 支持大规模分块布局（TCAD 2020）
+将大规模器件布局分解为子问题：谱聚类/BFS 分块 → 块内解析法 → 块间解析法 → 合并。
+总复杂度从 O(n²) 降为 O(n·sqrt(n))。
 
 来源:
-- 谱聚类: Shi & Malik, "Normalized Cuts and Image Segmentation", IEEE TPAMI 2000
-  https://www.cs.cmu.edu/~epxing/Class/10701-06f/projectrepo/yu.pdf
-- DREAMPlace 分块: Lin et al., "DREAMPlace: Deep Learning Toolkit-Enabled Drive
-  Placement", IEEE TCAD 2020, https://arxiv.org/abs/2004.10746
-- VLSI 分块布局教材: "VLSI Physical Design: From Graph Partitioning to Timing Closure"
-  https://link.springer.com/book/10.1007/978-90-481-9591-6
+- 谱聚类: Shi & Malik, IEEE TPAMI 2000 (Normalized Cuts)
+- DREAMPlace 分块: Lin et al., IEEE TCAD 2020
+- BFS 分块: Karypis & Kumar 1998 (METIS)
 """
 
 from __future__ import annotations
@@ -91,6 +72,17 @@ class _BfsContext:
     start: int
     cluster_id: int
     target_size: int
+
+
+@dataclass
+class _IntraClusterContext:
+    """块内解析法布局上下文（降低 _analytical_place_cluster 参数个数）。"""
+
+    cluster_id: int
+    names: list[str]
+    cluster_canvas: float
+    labels: np.ndarray
+    placement: dict[str, tuple[float, float]]
 
 
 class HierarchicalPlacer:
@@ -347,7 +339,10 @@ class HierarchicalPlacer:
         self,
         labels: np.ndarray,
     ) -> tuple[dict[str, tuple[float, float]], dict[int, tuple[float, float]]]:
-        """块内布局：每个子块内用网格分布放置器件。
+        """块内布局：大块用 AnalyticalPlacer，小块用网格。
+
+        优化（第71轮）: 原实现全部用网格布局，HPWL 质量差（avg=159 vs 解析法 1.0）。
+        现对大块（>4 器件）用 AnalyticalPlacer 优化 HPWL，小块保留网格（避免开销）。
 
         Args:
             labels: 谱聚类标签数组。
@@ -359,27 +354,85 @@ class HierarchicalPlacer:
         """
         final_placement: dict[str, tuple[float, float]] = {}
         cluster_centers: dict[int, tuple[float, float]] = {}
-
         for cluster_id in range(self.k):
             mask = labels == cluster_id
             if not mask.any():
                 continue
-            cluster_device_indices = np.where(mask)[0]
-            cluster_device_names = [
-                self.device_names[i] for i in cluster_device_indices
-            ]
-            n_cluster = len(cluster_device_indices)
+            indices = np.where(mask)[0]
+            names = [self.device_names[i] for i in indices]
+            n_cluster = len(indices)
             cluster_canvas = max(500.0, np.sqrt(n_cluster) * 50.0)
-            grid_n = int(np.ceil(np.sqrt(n_cluster)))
-            for i, name in enumerate(cluster_device_names):
-                row = i // grid_n
-                col = i % grid_n
-                x = (col + 0.5) * (cluster_canvas / grid_n)
-                y = (row + 0.5) * (cluster_canvas / grid_n)
-                final_placement[name] = (x, y)
+            if n_cluster <= 4:
+                self._grid_place_cluster(
+                    names, cluster_canvas, final_placement
+                )
+            else:
+                ctx = _IntraClusterContext(
+                    cluster_id=cluster_id,
+                    names=names,
+                    cluster_canvas=cluster_canvas,
+                    labels=labels,
+                    placement=final_placement,
+                )
+                self._analytical_place_cluster(ctx)
             cluster_centers[cluster_id] = (cluster_canvas / 2, cluster_canvas / 2)
-
         return final_placement, cluster_centers
+
+    def _grid_place_cluster(
+        self,
+        names: list[str],
+        cluster_canvas: float,
+        placement: dict[str, tuple[float, float]],
+    ) -> None:
+        """网格布局小块（≤4 器件，避免解析法开销）。"""
+        grid_n = int(np.ceil(np.sqrt(len(names))))
+        for i, name in enumerate(names):
+            row = i // grid_n
+            col = i % grid_n
+            x = (col + 0.5) * (cluster_canvas / grid_n)
+            y = (row + 0.5) * (cluster_canvas / grid_n)
+            placement[name] = (x, y)
+
+    def _analytical_place_cluster(self, ctx: _IntraClusterContext) -> None:
+        """用 AnalyticalPlacer 布局单个子块（>4 器件，优化 HPWL）。
+
+        来源: DREAMPlace TCAD 2020，块内解析法布局。
+        """
+        from polaris.data.specs import CircuitSpec, DeviceSpec
+
+        devices = [
+            DeviceSpec(name=name, device_type="generic") for name in ctx.names
+        ]
+        conns = self._extract_cluster_connections(ctx.cluster_id, ctx.labels)
+        sub_circuit = CircuitSpec(
+            name=f"{self.circuit.name}_cluster_{ctx.cluster_id}",
+            devices=devices,
+            connections=conns,
+            canvas_w=ctx.cluster_canvas,
+            canvas_h=ctx.cluster_canvas,
+        )
+        intra_config = self.config.analytical_config or AnalyticalPlacerConfig(
+            max_iterations=min(100, max(30, 500 // max(len(ctx.names), 1))),
+            convergence_threshold=0.5,
+        )
+        placer = AnalyticalPlacer(sub_circuit, intra_config)
+        sub_placement = placer.place()
+        for name, (x, y) in sub_placement.items():
+            ctx.placement[name] = (x, y)
+
+    def _extract_cluster_connections(
+        self, cluster_id: int, labels: np.ndarray
+    ) -> list[tuple[str, str, str, str]]:
+        """提取子块内连接（仅保留同块器件间的连接）。"""
+        conns: list[tuple[str, str, str, str]] = []
+        for src, sp, dst, dp in self.circuit.connections:
+            if src not in self.name_to_idx or dst not in self.name_to_idx:
+                continue
+            sc = int(labels[self.name_to_idx[src]])
+            dc = int(labels[self.name_to_idx[dst]])
+            if sc == cluster_id and dc == cluster_id:
+                conns.append((src, sp, dst, dp))
+        return conns
 
     def _build_super_circuit(
         self,
