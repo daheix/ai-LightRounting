@@ -433,6 +433,55 @@ def suggest_process_node_for_circuit(
     return candidates[0] if candidates else None
 
 
+# =============================================================================
+# Foundry 平台 → 结构化 ProcessNode 关联（第75轮 P1-3 深化）
+# 来源: foundry_platforms.py FOUNDRY_PLATFORMS 注册表
+# =============================================================================
+
+# Foundry 平台名 → CMOS_PROCESS_NODES 键的映射
+# 用于将 FoundryPlatform.process_node（字符串）关联到结构化 ProcessNode
+_FOUNDRY_TO_PROCESS_NODE: dict[str, str] = {
+    "AIM": "AIM_300mm_SOI",
+    "AMF": "AMF_130nm_CMOS",
+    "IHP": "IHP_SG25H5",
+    "GF_Fotonix": "GF_Fotonix_45CLO",
+    "Tower_OpenLight": "Tower_PH18DA",
+    "LioniX": "LioniX_TriPleX",
+    "HyperLight": "HyperLight_LNOI",
+}
+
+
+def get_process_node_for_foundry(foundry_name: str) -> ProcessNode | None:
+    """按 foundry 平台名查询结构化工艺节点（第75轮 P1-3 深化）。
+
+    将 FoundryPlatform.process_node（字符串）关联到 CMOS_PROCESS_NODES
+    注册表中的结构化 ProcessNode，提供 foundry 平台与 CMOS 节点的双向查询能力。
+
+    来源: foundry_platforms.py FOUNDRY_PLATFORMS 注册表（11 个 foundry 平台）。
+    当前 7 个 foundry 平台有结构化映射，4 个（CompoundTek/LIGENTEC/VTT/Tyndall）
+    暂无对应 CMOS_PROCESS_NODES 条目，返回 None。
+
+    Args:
+        foundry_name: foundry 平台名（如 ``"AMF"``、``"GF_Fotonix"``）。
+
+    Returns:
+        对应的结构化 ``ProcessNode``，无映射则 None。
+    """
+    key = _FOUNDRY_TO_PROCESS_NODE.get(foundry_name)
+    if key is None:
+        return None
+    return CMOS_PROCESS_NODES.get(key)
+
+
+def list_foundries_with_process_node() -> list[str]:
+    """列出有结构化工艺节点映射的 foundry 平台名（第75轮 P1-3 深化）。
+
+    Returns:
+        有结构化 ProcessNode 映射的 foundry 平台名列表（当前 7 个）。
+    """
+    return list(_FOUNDRY_TO_PROCESS_NODE.keys())
+
+
 __all__ = [
     "ProcessNode",
     "CMOS_PROCESS_NODES",
@@ -444,4 +493,6 @@ __all__ = [
     "cmos_process_node_count",
     "parse_process_node_string",
     "suggest_process_node_for_circuit",
+    "get_process_node_for_foundry",
+    "list_foundries_with_process_node",
 ]
