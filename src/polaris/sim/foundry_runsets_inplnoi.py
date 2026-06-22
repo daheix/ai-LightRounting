@@ -84,6 +84,15 @@ HHI_INP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.SPACING,
         description="HHI InP M1_HEATER 最小间距 3.0μm",
     ),
+    DRCRule(
+        name="HHI_INP_WG_DENSITY",
+        layer_name="WG",
+        check_type=DRCCheckType.DENSITY,
+        threshold_um=30.0,
+        max_density=70.0,
+        vtype=ViolationType.LAYER_DENSITY,
+        description="HHI InP WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
+    ),
 ]
 
 
@@ -130,6 +139,15 @@ LIONIX_INP_DRC_RUNSET: list[DRCRule] = [
         threshold_um=2.5,
         vtype=ViolationType.MIN_WIDTH,
         description="LioniX InP M1_HEATER 最小宽度 2.5μm",
+    ),
+    DRCRule(
+        name="LIONIX_INP_WG_DENSITY",
+        layer_name="WG",
+        check_type=DRCCheckType.DENSITY,
+        threshold_um=30.0,
+        max_density=70.0,
+        vtype=ViolationType.LAYER_DENSITY,
+        description="LioniX InP WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
     ),
 ]
 
@@ -202,6 +220,15 @@ LNOI_DRC_RUNSET: list[DRCRule] = [
         threshold_um=1.0,
         vtype=ViolationType.MIN_WIDTH,
         description="LNOI VIAC 接触孔最小宽度 1.0μm",
+    ),
+    DRCRule(
+        name="LNOI_WG_DENSITY",
+        layer_name="WG",
+        check_type=DRCCheckType.DENSITY,
+        threshold_um=30.0,
+        max_density=70.0,
+        vtype=ViolationType.LAYER_DENSITY,
+        description="LNOI WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
     ),
 ]
 
