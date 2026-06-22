@@ -234,8 +234,16 @@ def _extract_connections_from_proximity(
                 "波导追踪未找到连接关系。如需使用包围盒邻近关系提取连接，"
                 "请显式调用 extract_connections_by_proximity()"
             )
-    except (KeyError, RuntimeError):
-        pass
+    except (KeyError, RuntimeError) as e:
+        import logging
+        logging.getLogger(__name__).error(
+            "波导追踪连接提取失败: %s: %s。禁止 fall-back（规则 14.1）。"
+            "返回空连接列表，请检查版图设计。",
+            type(e).__name__, e
+        )
+        raise RuntimeError(
+            f"波导追踪连接提取失败: {type(e).__name__}: {e}"
+        ) from e
     return connections
 
 
