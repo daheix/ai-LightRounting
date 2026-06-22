@@ -45,6 +45,23 @@ from polaris.data.specs import CircuitSpec
 
 
 @dataclass
+class AdamState:
+    """Adam 优化器状态（第59轮重构，降低参数个数）。
+
+    封装 _adam_update 的 m/v/t 状态，使方法签名从 6 参数降至 4 参数。
+
+    Attributes:
+        m: 一阶矩估计。
+        v: 二阶矩估计。
+        t: 时间步。
+    """
+
+    m: np.ndarray
+    v: np.ndarray
+    t: int
+
+
+@dataclass
 class AnalyticalPlacerConfig:
     """解析法布局器配置（规则 4：参数分组降低函数参数数）。
 
@@ -108,12 +125,8 @@ class AnalyticalPlacer:
         self.n = len(circuit.devices)
         self.name_to_idx = {name: i for i, name in enumerate(self.device_names)}
         # 器件尺寸
-        self.widths = np.array(
-            [d.width_um for d in circuit.devices], dtype=np.float64
-        )
-        self.heights = np.array(
-            [d.height_um for d in circuit.devices], dtype=np.float64
-        )
+        self.widths = np.array([d.width_um for d in circuit.devices], dtype=np.float64)
+        self.heights = np.array([d.height_um for d in circuit.devices], dtype=np.float64)
         # 连接列表（索引化）
         self.connections = self._build_connections()
         # 画布
@@ -308,9 +321,7 @@ class AnalyticalPlacer:
         self,
         pos: np.ndarray,
         grad: np.ndarray,
-        m: np.ndarray,
-        v: np.ndarray,
-        t: int,
+        state: AdamState,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Adam 优化器更新。
 
@@ -319,14 +330,13 @@ class AnalyticalPlacer:
         Args:
             pos: 当前坐标。
             grad: 梯度。
-            m: 一阶矩估计。
-            v: 二阶矩估计。
-            t: 时间步。
+            state: Adam 状态（m/v/t）。
 
         Returns:
             ``(new_pos, new_m, new_v)``。
         """
         beta1, beta2, eps = 0.9, 0.999, 1e-8
+        m, v, t = state.m, state.v, state.t
         lr = self.config.learning_rate
         m = beta1 * m + (1 - beta1) * grad
         v = beta2 * v + (1 - beta2) * grad * grad
@@ -373,7 +383,7 @@ class AnalyticalPlacer:
             dens_grad = self._density_gradient(pos)
             # 总梯度 = HPWL 梯度 + 密度权重 * 密度梯度
             total_grad = hpwl_grad + self.config.density_weight * dens_grad
-            pos, m, v = self._adam_update(pos, total_grad, m, v, t)
+            pos, m, v = self._adam_update(pos, total_grad, AdamState(m=m, v=v, t=t))
             # 限制在画布内
             pos[:, 0] = np.clip(pos[:, 0], 0, self.canvas_w)
             pos[:, 1] = np.clip(pos[:, 1], 0, self.canvas_h)

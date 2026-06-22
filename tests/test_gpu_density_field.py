@@ -13,6 +13,7 @@ import unittest
 import numpy as np
 
 from polaris.engine.gpu_density_field import (
+    DeviceSize,
     GPUDensityConfig,
     GPUDensityField,
     create_gpu_density_field,
@@ -73,7 +74,7 @@ class TestBuild(unittest.TestCase):
         heights = np.zeros(0)
         bin_x = np.linspace(0, 1, 65)
         bin_y = np.linspace(0, 1, 65)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertEqual(field.shape, (64, 64))
         self.assertEqual(field.sum(), 0.0)
 
@@ -85,7 +86,7 @@ class TestBuild(unittest.TestCase):
         heights = np.array([0.1])
         bin_x = np.linspace(0, 1, 65)
         bin_y = np.linspace(0, 1, 65)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertEqual(field.shape, (64, 64))
         # 应有非零密度
         self.assertGreater(field.sum(), 0)
@@ -100,7 +101,7 @@ class TestBuild(unittest.TestCase):
         heights = rng.random(n) * 0.05
         bin_x = np.linspace(0, 1, 65)
         bin_y = np.linspace(0, 1, 65)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertEqual(field.shape, (64, 64))
         self.assertGreater(field.sum(), 0)
 
@@ -113,7 +114,7 @@ class TestBuild(unittest.TestCase):
         heights = np.array([0.1])
         bin_x = np.linspace(0, 1, 33)
         bin_y = np.linspace(0, 1, 33)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertEqual(field.shape, (32, 32))
 
 
@@ -257,7 +258,7 @@ class TestCommercialGapReduction(unittest.TestCase):
         heights = np.array([0.1, 0.2])
         bin_x = np.linspace(0, 1, 17)
         bin_y = np.linspace(0, 1, 17)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
 
         # 总密度应等于总面积 / bin 面积
         total_area = (0.1 * 0.1) + (0.2 * 0.2)
@@ -279,7 +280,7 @@ class TestCommercialGapReduction(unittest.TestCase):
         heights = np.array([0.1])
         bin_x = np.linspace(0, 1, 65)
         bin_y = np.linspace(0, 1, 65)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertGreater(field.sum(), 0)
 
     def test_large_scale_build(self) -> None:
@@ -295,7 +296,7 @@ class TestCommercialGapReduction(unittest.TestCase):
         heights = rng.random(n) * 0.02
         bin_x = np.linspace(0, 1, 129)
         bin_y = np.linspace(0, 1, 129)
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertEqual(field.shape, (128, 128))
         self.assertGreater(field.sum(), 0)
 
@@ -314,7 +315,7 @@ class TestCommercialGapReduction(unittest.TestCase):
         bin_y = np.linspace(0, 1, 65)
 
         # 1. build
-        field = df.build(pos, widths, heights, bin_x, bin_y)
+        field = df.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         self.assertGreater(field.sum(), 0)
 
         # 2. smooth

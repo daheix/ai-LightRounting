@@ -34,6 +34,21 @@ from polaris.engine.gpu_backend import GPUBackend, GPUConfig, create_gpu_backend
 
 
 @dataclass
+class DeviceSize:
+    """器件尺寸对（第59轮重构，降低参数个数）。
+
+    封装 widths/heights，使 build 方法签名从 6 参数降至 5 参数。
+
+    Attributes:
+        widths: 器件宽度 (n,)。
+        heights: 器件高度 (n,)。
+    """
+
+    widths: np.ndarray
+    heights: np.ndarray
+
+
+@dataclass
 class GPUDensityConfig:
     """GPU 密度场配置。
 
@@ -94,8 +109,7 @@ class GPUDensityField:
     def build(
         self,
         pos: np.ndarray,
-        widths: np.ndarray,
-        heights: np.ndarray,
+        sizes: DeviceSize,
         bin_x: np.ndarray,
         bin_y: np.ndarray,
     ) -> np.ndarray:
@@ -106,8 +120,7 @@ class GPUDensityField:
 
         Args:
             pos: 器件中心位置 (n, 2)。
-            widths: 器件宽度 (n,)。
-            heights: 器件高度 (n,)。
+            sizes: 器件尺寸（widths/heights）。
             bin_x: 网格 x 边界 (G+1,)。
             bin_y: 网格 y 边界 (G+1,)。
 
@@ -115,6 +128,8 @@ class GPUDensityField:
             密度场 (G, G)。
         """
         n = len(pos)
+        widths = sizes.widths
+        heights = sizes.heights
         gx = self.grid_size
         field = np.zeros((gx, gx))
 
@@ -225,7 +240,7 @@ class GPUDensityField:
         radius = min(radius, gx // 2)
 
         x = np.arange(-radius, radius + 1)
-        kernel_1d = np.exp(-x**2 / (2 * sigma**2))
+        kernel_1d = np.exp(-(x**2) / (2 * sigma**2))
         kernel_1d /= kernel_1d.sum() + 1e-12
 
         # 沿 x 轴卷积
@@ -322,7 +337,7 @@ class GPUDensityField:
 
         # build 基准
         t0 = time.perf_counter()
-        self.build(pos, widths, heights, bin_x, bin_y)
+        self.build(pos, DeviceSize(widths=widths, heights=heights), bin_x, bin_y)
         t_build = time.perf_counter() - t0
 
         # smooth 基准
