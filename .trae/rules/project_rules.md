@@ -1395,3 +1395,27 @@ MVP（v1.0）必须满足：
 | MEEP | https://meep.readthedocs.io/ |
 | Gymnasium | https://gymnasium.farama.org/ |
 | NetworkX | https://networkx.org/ |
+
+---
+
+## 规则 23：保活脚本（强制）
+
+### 23.1 保活脚本要求
+- 每个会话启动后，**第一件事**必须启动保活脚本，每 5 分钟 touch 一个文件，防止会话超时断开。
+- 保活脚本命令（方案2：简单 touch 文件）：
+  ```bash
+  nohup bash -c 'while true; do date >> /tmp/keepalive.log; touch /tmp/keepalive_marker; sleep 300; done' > /dev/null 2>&1 &
+  ```
+- 保活日志写入 `/tmp/keepalive.log`，标记文件为 `/tmp/keepalive_marker`。
+
+### 23.2 启动验证
+- 启动后立即向用户报告："保活脚本已启动，每 5 分钟 touch 文件一次"。
+- 验证脚本运行：`ps aux | grep keepalive` 或检查 `/tmp/keepalive.log` 是否有新写入。
+
+### 23.3 规则同步
+- 本规则必须同步添加到 `AGENTS.md`（根目录）中。
+- AGENTS.md 必须包含本规则的完整内容。
+
+### 23.4 失败处理
+- 若保活脚本启动失败，立即告警并退出（禁止 fall-back 静默继续）。
+- 若会话中途检测到保活脚本停止，立即重启。
