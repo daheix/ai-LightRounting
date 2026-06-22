@@ -162,17 +162,17 @@ def test_list_foundry_runsets_by_material_empty():
 
 
 def test_siepic_ebeam_runset_unchanged():
-    """测试 SiEPIC EBeam runset 仍是原 8 条规则（向后兼容）。"""
+    """测试 SiEPIC EBeam runset 规则数（第85轮新增 WG_DENSITY）。"""
     from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET
 
-    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 8
+    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 9
     runset = FOUNDRY_RUNSETS["SiEPIC_EBeam"]
     assert runset.rules is SIEPIC_EBEAM_DRC_RUNSET
 
 
 def test_amf_runset_rules():
-    """测试 AMF runset 规则数和阈值。"""
-    assert len(AMF_DRC_RUNSET) == 10
+    """测试 AMF runset 规则数和阈值（第86轮新增 WG_DENSITY）。"""
+    assert len(AMF_DRC_RUNSET) == 11
     # WG 最小宽度 0.4μm
     wg_width = next(r for r in AMF_DRC_RUNSET if r.name == "AMF_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.4
@@ -185,8 +185,8 @@ def test_amf_runset_rules():
 
 
 def test_ihp_runset_rules():
-    """测试 IHP runset 规则数和阈值。"""
-    assert len(IHP_DRC_RUNSET) == 11
+    """测试 IHP runset 规则数和阈值（第86轮新增 WG_DENSITY）。"""
+    assert len(IHP_DRC_RUNSET) == 12
     # IHP 包含 N/P 掺杂规则
     n_width = next(r for r in IHP_DRC_RUNSET if r.name == "IHP_N_MIN_WIDTH")
     assert n_width.threshold_um == 0.5
@@ -198,8 +198,8 @@ def test_ihp_runset_rules():
 
 
 def test_gf_fotonix_runset_rules():
-    """测试 GF Fotonix 45nm 工艺规则（更紧凑的阈值）。"""
-    assert len(GF_FOTONIX_DRC_RUNSET) == 9
+    """测试 GF Fotonix 45nm 工艺规则（更紧凑的阈值，第86轮新增 WG_DENSITY）。"""
+    assert len(GF_FOTONIX_DRC_RUNSET) == 10
     # 45nm 工艺 WG 最小宽度 0.3μm（比 180nm 工艺更小）
     wg_width = next(r for r in GF_FOTONIX_DRC_RUNSET if r.name == "GF_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.3
@@ -212,8 +212,8 @@ def test_gf_fotonix_runset_rules():
 
 
 def test_compoundtek_runset_rules():
-    """测试 CompoundTek 130nm SOI runset。"""
-    assert len(COMPOUNDTEK_DRC_RUNSET) == 6
+    """测试 CompoundTek 130nm SOI runset（第86轮新增 WG_DENSITY）。"""
+    assert len(COMPOUNDTEK_DRC_RUNSET) == 7
     wg_width = next(r for r in COMPOUNDTEK_DRC_RUNSET if r.name == "CT_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.4
     wg_space = next(r for r in COMPOUNDTEK_DRC_RUNSET if r.name == "CT_WG_MIN_SPACE")
@@ -221,8 +221,8 @@ def test_compoundtek_runset_rules():
 
 
 def test_ligentec_runset_rules():
-    """测试 LIGENTEC SiN 平台 runset。"""
-    assert len(LIGENTEC_DRC_RUNSET) == 5
+    """测试 LIGENTEC SiN 平台 runset（第86轮新增 WGN_DENSITY）。"""
+    assert len(LIGENTEC_DRC_RUNSET) == 6
     # SiN 波导最小宽度 0.8μm（比 SOI 0.4μm 更大）
     wgn_width = next(r for r in LIGENTEC_DRC_RUNSET if r.name == "LIG_WGN_MIN_WIDTH")
     assert wgn_width.threshold_um == 0.8
