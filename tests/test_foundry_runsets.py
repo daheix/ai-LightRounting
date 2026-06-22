@@ -99,7 +99,7 @@ def test_get_foundry_runset_valid():
     """测试 get_foundry_runset 返回有效 runset。"""
     runset = get_foundry_runset("AMF")
     assert runset.foundry_name == "AMF"
-    assert runset.process_node == "180nm SOI"
+    assert runset.process_node == "130nm CMOS, 220nm SOI"
     assert runset.material_platform == "SOI"
     assert len(runset.rules) > 0
 
@@ -276,6 +276,60 @@ def test_rule_name_prefix_consistency():
             assert rule.name.startswith(prefix), (
                 f"{foundry_name} 规则 {rule.name} 应以前缀 {prefix} 开头"
             )
+
+
+def test_foundry_runset_platform_consistency():
+    """测试 foundry_runset 与 foundry_platforms 的 process_node 数据一致性（第91轮新增）。
+
+    foundry_runsets.py 和 foundry_platforms.py 中的 process_node 字符串
+    应保持一致（或 foundry_runset 是 foundry_platform 的简化版）。
+    """
+    from polaris.pdk.foundry_platforms import FOUNDRY_PLATFORMS
+
+    # 共享的 foundry 名（在两个注册表中都存在）
+    shared_foundries = set(FOUNDRY_RUNSETS.keys()) & set(FOUNDRY_PLATFORMS.keys())
+    assert len(shared_foundries) >= 5  # 至少 5 个共享 foundry
+
+    for name in shared_foundries:
+        runset_pn = FOUNDRY_RUNSETS[name].process_node
+        platform_pn = FOUNDRY_PLATFORMS[name].process_node
+        # foundry_runset 的 process_node 应该是 foundry_platform 的子串或反之
+        # （foundry_runset 可能是简化版，如 "90nm SOI" vs "90nm, 220nm SOI (200mm)"）
+        assert runset_pn in platform_pn or platform_pn in runset_pn or \
+               _extract_cmos_node(runset_pn) == _extract_cmos_node(platform_pn), (
+            f"{name}: runset='{runset_pn}' vs platform='{platform_pn}' 不一致"
+        )
+
+
+def _extract_cmos_node(process_node: str) -> str | None:
+    """从 process_node 字符串提取 CMOS 节点（如 '45nm'、'130nm'、'250nm'）。"""
+    import re
+    # 匹配 "45nm" / "130nm" / "0.13μm" / "0.25μm" 等
+    m = re.search(r"(\d+(?:\.\d+)?)\s*(?:nm|μm|um)", process_node, re.IGNORECASE)
+    if m:
+        val = float(m.group(1))
+        if val < 1.0:  # μm → nm 转换
+            val = val * 1000
+        return f"{int(val)}nm"
+    return None
+
+
+def test_amf_runset_process_node_correct():
+    """AMF runset process_node 应为 130nm CMOS（第91轮修复，非 180nm）。"""
+    assert "130nm" in FOUNDRY_RUNSETS["AMF"].process_node
+    assert "180nm" not in FOUNDRY_RUNSETS["AMF"].process_node
+
+
+def test_gf_fotonix_runset_process_node_correct():
+    """GF_Fotonix runset process_node 应含 160nm Si（第91轮修复，与 foundry_platforms 一致）。"""
+    assert "160nm" in FOUNDRY_RUNSETS["GF_Fotonix"].process_node
+
+
+def test_gf_fotonix_process_node_photonic_layer_160():
+    """GF_Fotonix_45CLO 的 photonic_layer_nm 应为 160（第91轮修复，非 220）。"""
+    from polaris.pdk.process_nodes import get_process_node
+    node = get_process_node("GF_Fotonix_45CLO")
+    assert node.photonic_layer_nm == 160
 
 
 # -- GDS 实际运行测试 --

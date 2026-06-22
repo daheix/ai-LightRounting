@@ -116,7 +116,7 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "AMF": FoundryRunset(
         foundry_name="AMF",
-        process_node="180nm SOI",
+        process_node="130nm CMOS, 220nm SOI",
         material_platform="SOI",
         rules=AMF_DRC_RUNSET,
         source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
@@ -124,7 +124,7 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "IHP": FoundryRunset(
         foundry_name="IHP",
-        process_node="250nm BiCMOS SOI",
+        process_node="250nm BiCMOS, 220nm SOI",
         material_platform="SOI",
         rules=IHP_DRC_RUNSET,
         source_url="https://github.com/IHP-GmbH/IHP-Open-PDK",
@@ -132,7 +132,7 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "GF_Fotonix": FoundryRunset(
         foundry_name="GlobalFoundries",
-        process_node="45nm CMOS photonics",
+        process_node="45nm CMOS, 160nm Si",
         material_platform="SOI",
         rules=GF_FOTONIX_DRC_RUNSET,
         source_url=(

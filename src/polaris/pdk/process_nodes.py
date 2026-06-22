@@ -78,7 +78,7 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
         name="GF_Fotonix_45CLO",
         foundry="GlobalFoundries",
         cmos_node_nm=45,
-        photonic_layer_nm=220,
+        photonic_layer_nm=160,
         material_platform="SOI",
         wafer_size_mm=300,
         integration_type="monolithic",
@@ -86,7 +86,7 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
             "https://www.globalfoundries.com/technology-innovation/silicon-photonics",
             "https://europractice-ic.com/technologies/photonics/globalfoundries/",
         ],
-        notes="GF Fotonix 45CLO，45nm CMOS + 220nm SOI，单片集成光电子",
+        notes="GF Fotonix 45CLO，45nm CMOS + 160nm Si，单片集成光电子",
     ),
     "GF_Fotonix_90WG": ProcessNode(
         name="GF_Fotonix_90WG",
