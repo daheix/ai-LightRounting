@@ -28,6 +28,7 @@ from polaris.data.apollo_benchmark import (
 from polaris.data.benchmark_evaluator import (
     evaluate_benchmark,
     evaluate_hpwl,
+    evaluate_insertion_loss,
     evaluate_overlap,
     grid_placement,
 )
@@ -368,3 +369,41 @@ class TestCommercialGapReduction:
             assert isinstance(result.passed, bool)
             assert result.extra["benchmark_source"] == "apollo"
             assert result.extra["process_node"] == "220nm SOI"
+            # 第90轮新增：插入损耗应在 extra 中
+            assert "insertion_loss_db" in result.extra
+            assert result.extra["insertion_loss_db"] >= 0.0
+
+    def test_ptc_insertion_loss_evaluation(self) -> None:
+        """PTC benchmark 插入损耗评估（第90轮新增）。"""
+        circuit = load_apollo_ptc_benchmark()
+        placements = grid_placement(circuit)
+        loss = evaluate_insertion_loss(circuit, placements)
+        # 插入损耗应为非负值
+        assert loss >= 0.0
+        # 网格布局有波导长度，损耗应 > 0（除非无连接）
+        assert loss > 0.0  # PTC 有 13 条连接
+
+    def test_ptc_insertion_loss_in_benchmark_result(self) -> None:
+        """PTC benchmark evaluate_benchmark 应含插入损耗（第90轮新增）。"""
+        circuit = load_apollo_ptc_benchmark()
+        placements = grid_placement(circuit)
+        result = evaluate_benchmark(circuit, placements)
+        assert "insertion_loss_db" in result.extra
+        assert result.extra["insertion_loss_db"] > 0.0
+
+    def test_ptc_insertion_loss_target_metric_passed(self) -> None:
+        """PTC benchmark target_metric=insertion_loss_db 达标判定不再静默失败（第90轮修复）。"""
+        circuit = load_apollo_ptc_benchmark()
+        # PTC 的 target_metric 是 INSERTION_LOSS_DB
+        assert circuit.target_metric == TargetMetric.INSERTION_LOSS_DB
+        placements = grid_placement(circuit)
+        result = evaluate_benchmark(circuit, placements)
+        # 达标判定应基于 insertion_loss < target_value and overlap == 0
+        # 网格布局无重叠，passed 应取决于插入损耗是否 < target_value
+        assert isinstance(result.passed, bool)
+        # 验证 passed 逻辑正确
+        expected_passed = (
+            result.extra["insertion_loss_db"] < circuit.target_value
+            and result.overlap_count == 0
+        )
+        assert result.passed == expected_passed

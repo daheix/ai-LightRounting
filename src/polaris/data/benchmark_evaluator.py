@@ -8,12 +8,14 @@
 - Circuit Training 评估: https://github.com/google-research/circuit_training
 - HPWL 经典定义: EDA 教材半周长线长估计
 - Congestion 评估: Nesterenko & Hsu 2002 "Congestion-Aware Placement"
+- Insertion Loss: 光子电路插入损耗 = 波导损耗 + 器件损耗
 
 评估指标:
 - HPWL (Half-Perimeter Wire Length): 半周长线长，布局质量核心指标
 - Overlap Count: 重叠对数，布局合法性指标
 - Area Utilization: 面积利用率
 - Congestion: 拥塞度（基于布线网格，第82轮新增）
+- Insertion Loss: 光子插入损耗（dB，第90轮新增）
 """
 
 from __future__ import annotations
@@ -287,17 +289,67 @@ def evaluate_congestion(
     return _compute_congestion_stats(demand_h, demand_v, grid_rows, grid_cols)
 
 
+# 默认波导损耗（dB/cm），用于 INSERTION_LOSS_DB 评估
+# 来源: SOI 220nm 平台典型值 1.0 dB/cm（foundry_platforms.py GF_Fotonix/Tower）
+_DEFAULT_WAVEGUIDE_LOSS_DB_CM = 1.0
+
+
+def evaluate_insertion_loss(
+    circuit: CircuitSpec,
+    placements: dict[str, tuple[float, float]],
+    waveguide_loss_db_cm: float = _DEFAULT_WAVEGUIDE_LOSS_DB_CM,
+) -> float:
+    """计算光子电路总插入损耗（dB）。
+
+    总插入损耗 = 波导传输损耗 + 器件插入损耗
+
+    公式来源: 光子集成电路设计标准（Lumerical/Luceda 评估方法）
+    - 波导损耗 = 波导长度(μm) × 波导损耗系数(dB/cm) / 10000
+    - 器件损耗 = sum(device.params["insertion_loss_db"])
+
+    波导长度用连接两端模块的曼哈顿距离近似（与 HPWL 相同的估计方法）。
+
+    Args:
+        circuit: 电路规格（含连接列表和器件参数）。
+        placements: 布局字典 {module_name: (x, y)}。
+        waveguide_loss_db_cm: 波导损耗系数（dB/cm），默认 1.0（SOI 平台典型值）。
+
+    Returns:
+        总插入损耗（dB）。
+    """
+    # 1. 波导传输损耗
+    waveguide_loss = 0.0
+    for src, _src_port, dst, _dst_port in circuit.connections:
+        if src not in placements or dst not in placements:
+            continue
+        x1, y1 = placements[src]
+        x2, y2 = placements[dst]
+        length_um = abs(x2 - x1) + abs(y2 - y1)
+        waveguide_loss += length_um * waveguide_loss_db_cm / 10000.0  # μm → cm
+
+    # 2. 器件插入损耗
+    device_loss = 0.0
+    for dev in circuit.devices:
+        if "insertion_loss_db" in dev.params:
+            device_loss += float(dev.params["insertion_loss_db"])
+
+    return waveguide_loss + device_loss
+
+
 def evaluate_benchmark(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
 ) -> BenchmarkResult:
     """综合评估 benchmark 布局结果。
 
-    对标 TILOS MacroPlacement 评估流程：计算 HPWL/重叠/利用率/拥塞度，
+    对标 TILOS MacroPlacement 评估流程：计算 HPWL/重叠/利用率/拥塞度/插入损耗，
     根据 target_metric 判定是否达标。
 
     第82轮扩展：集成拥塞度（Congestion）评估，输出 max_congestion、
     avg_congestion、overflow_count、total_overflow 四项指标到 extra。
+
+    第90轮扩展：集成插入损耗（Insertion Loss）评估，修复 insertion_loss_db
+    达标判定（Apollo benchmark 不再静默失败）。
 
     Args:
         circuit: 电路规格（含 target_metric/target_value）。
@@ -310,8 +362,9 @@ def evaluate_benchmark(
     overlap = evaluate_overlap(circuit, placements)
     util = evaluate_area_utilization(circuit, placements)
     cong = evaluate_congestion(circuit, placements)
+    insertion_loss = evaluate_insertion_loss(circuit, placements)
 
-    # 达标判定：HPWL < target 且 无重叠
+    # 达标判定：根据 target_metric 判定是否达标
     target_metric = circuit.target_metric.value
     target_value = circuit.target_value
     passed = False
@@ -320,7 +373,11 @@ def evaluate_benchmark(
     elif target_metric == "drv":
         passed = overlap == 0
     elif target_metric == "routing_success_rate":
-        passed = 1.0 >= target_value
+        # 布线成功率：无重叠时视为可布线（布局合法是布线成功的前提）
+        passed = overlap == 0
+    elif target_metric == "insertion_loss_db":
+        # 插入损耗达标：总损耗 < target_value 且无重叠
+        passed = insertion_loss < target_value and overlap == 0
 
     return BenchmarkResult(
         benchmark_name=circuit.name,
@@ -339,6 +396,7 @@ def evaluate_benchmark(
             "avg_congestion": cong["avg_congestion"],
             "overflow_count": cong["overflow_count"],
             "total_overflow": cong["total_overflow"],
+            "insertion_loss_db": insertion_loss,
         },
     )
 
@@ -458,6 +516,7 @@ __all__ = [
     "evaluate_overlap",
     "evaluate_area_utilization",
     "evaluate_congestion",
+    "evaluate_insertion_loss",
     "evaluate_benchmark",
     "grid_placement",
     "analytical_placement",
