@@ -26,6 +26,7 @@ gdsfactory 可正常安装使用。
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from polaris.pdk.device import BoundingBox, Device
@@ -255,13 +256,27 @@ def _orientation_to_direction(orientation_deg: float) -> Direction:
     return _ORIENTATION_TO_DIRECTION.get(nearest, Direction.EAST)
 
 
+@dataclass
+class DeviceImportConfig:
+    """gdsfactory 器件导入配置（降低 gdsfactory_to_polaris_device 参数个数，规则 4.1）。
+
+    Attributes:
+        platform: 工艺平台（SOI/SiN/InP/LNOI），默认 SOI。
+        category: 器件类别（passive/active/source/detector），默认 passive。
+        name: 器件类型名（None 用 component.name）。
+        process_node: 工艺节点标识（如 "220nm SOI"）。
+    """
+
+    platform: str = "SOI"
+    category: str = "passive"
+    name: str | None = None
+    process_node: str | None = None
+
+
 def gdsfactory_to_polaris_device(
     component,
     device_id: str,
-    platform: str = "SOI",
-    category: str = "passive",
-    name: str | None = None,
-    process_node: str | None = None,
+    config: DeviceImportConfig | None = None,
 ) -> Device:
     """将 gdsfactory Component 转换为 PoLaRIS Device（第2轮 P0-3）。
 
@@ -271,10 +286,7 @@ def gdsfactory_to_polaris_device(
     Args:
         component: gdsfactory Component 对象。
         device_id: PoLaRIS 器件唯一标识。
-        platform: 工艺平台（SOI/SiN/InP/LNOI），默认 SOI。
-        category: 器件类别（passive/active/source/detector），默认 passive。
-        name: 器件类型名（None 用 component.name）。
-        process_node: 工艺节点标识（如 "220nm SOI"）。
+        config: 导入配置（None 用默认 SOI/passive）。
 
     Returns:
         PoLaRIS Device 对象。
@@ -282,6 +294,11 @@ def gdsfactory_to_polaris_device(
     来源: gdsfactory Component API
     https://gdsfactory.github.io/gdsfactory/
     """
+    cfg = config or DeviceImportConfig()
+    platform = cfg.platform
+    category = cfg.category
+    name = cfg.name
+    process_node = cfg.process_node
     # 提取端口
     ports: list[Port] = []
     # gdsfactory 8.18.0: Ports 对象支持迭代，每个元素有 name 属性
@@ -425,10 +442,12 @@ def load_gdsfactory_pdk(
                 device = gdsfactory_to_polaris_device(
                     component=component,
                     device_id=f"{pdk_name}_{name}",
-                    platform=platform,
-                    category="passive",
-                    name=name,
-                    process_node=process_node,
+                    config=DeviceImportConfig(
+                        platform=platform,
+                        category="passive",
+                        name=name,
+                        process_node=process_node,
+                    ),
                 )
                 devices[name] = device
             except Exception as e:

@@ -19,6 +19,7 @@ from __future__ import annotations
 import pytest
 
 from polaris.pdk.gdsfactory_integration import (
+    DeviceImportConfig,
     gdsfactory_to_polaris_device,
     generate_component_gds,
     generate_mzi_gds,
@@ -144,10 +145,12 @@ def test_gdsfactory_to_polaris_device_straight():
     device = gdsfactory_to_polaris_device(
         component=component,
         device_id="test_straight",
-        platform="SOI",
-        category="passive",
-        name="straight",
-        process_node="220nm SOI",
+        config=DeviceImportConfig(
+            platform="SOI",
+            category="passive",
+            name="straight",
+            process_node="220nm SOI",
+        ),
     )
     assert device.device_id == "test_straight"
     assert device.platform == "SOI"
@@ -177,8 +180,7 @@ def test_gdsfactory_to_polaris_device_ring():
     device = gdsfactory_to_polaris_device(
         component=component,
         device_id="test_ring",
-        platform="SOI",
-        category="passive",
+        config=DeviceImportConfig(platform="SOI", category="passive"),
     )
     assert device.device_id == "test_ring"
     assert len(device.ports) >= 2  # ring 至少有 2 个端口
