@@ -175,6 +175,17 @@ SIEPIC_EBEAM_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.LAYER_DENSITY,
         description="WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
     ),
+    # 第87轮新增：VIA ENCLOSURE 检查（VIAC 须被 M1_HEATER 包围）
+    # 来源: SiEPIC EBeam PDK 规格表，Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
+    DRCRule(
+        name="VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.5,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="VIAC 须被 M1_HEATER 包围 ≥0.5μm（防止接触孔开路）",
+    ),
 ]
 
 

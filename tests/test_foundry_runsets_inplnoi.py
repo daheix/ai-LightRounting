@@ -126,8 +126,8 @@ def test_lionix_inp_runset_rules():
 
 
 def test_lnoi_runset_rules():
-    """测试 LNOI runset 规则数和阈值（第86轮新增 WG_DENSITY）。"""
-    assert len(LNOI_DRC_RUNSET) == 9
+    """测试 LNOI runset 规则数和阈值（第86轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
+    assert len(LNOI_DRC_RUNSET) == 10
     # LNOI WG 最小宽度 0.8μm（薄膜铌酸锂干法刻蚀极限）
     wg_width = next(r for r in LNOI_DRC_RUNSET if r.name == "LNOI_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.8

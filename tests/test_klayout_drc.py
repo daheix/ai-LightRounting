@@ -89,9 +89,9 @@ def test_siepic_ebeam_runset_completeness():
     # 每条规则必须有 name/layer/check_type/threshold
     for rule in SIEPIC_EBEAM_DRC_RUNSET:
         assert rule.name, f"规则缺少 name: {rule}"
-        assert rule.layer_name in ("WG", "DEEPTRENCH", "SLAB150", "GE"), (
-            f"未知层: {rule.layer_name}"
-        )
+        assert rule.layer_name in (
+            "WG", "DEEPTRENCH", "SLAB150", "GE", "VIAC",
+        ), f"未知层: {rule.layer_name}"
         assert rule.threshold_um > 0, f"阈值无效: {rule}"
         assert rule.description, f"缺少描述: {rule}"
 
