@@ -231,6 +231,7 @@ class TestImpalaLearner:
 
     def test_creation(self) -> None:
         """创建 learner。"""
+
         def value_fn(obs: np.ndarray) -> float:
             return float(np.sum(obs))
 
@@ -239,11 +240,11 @@ class TestImpalaLearner:
 
     def test_compute_targets(self) -> None:
         """计算目标。"""
+
         def value_fn(obs: np.ndarray) -> float:
             return float(obs[0])
 
         observations = np.array([[1.0], [1.5], [2.0]])
-        actions = np.array([0, 1, 0])
         rewards = np.array([0.5, 0.3, -0.2])
         logprobs_behavior = np.log(np.array([0.5, 0.5, 0.5]))
         logprobs_target = np.log(np.array([0.5, 0.5, 0.5]))
@@ -253,7 +254,6 @@ class TestImpalaLearner:
         learner = ImpalaLearner(value_fn)
         result = learner.compute_targets(
             observations=observations,
-            actions=actions,
             rewards=rewards,
             logprobs_behavior=logprobs_behavior,
             logprobs_target=logprobs_target,
@@ -265,11 +265,11 @@ class TestImpalaLearner:
 
     def test_compute_targets_no_last_obs(self) -> None:
         """无 last_observation 时使用 0。"""
+
         def value_fn(obs: np.ndarray) -> float:
             return float(obs[0])
 
         observations = np.array([[1.0], [1.5]])
-        actions = np.array([0, 1])
         rewards = np.array([0.5, 0.3])
         logprobs = np.log(np.array([0.5, 0.5]))
         dones = np.array([0.0, 0.0])
@@ -277,7 +277,6 @@ class TestImpalaLearner:
         learner = ImpalaLearner(value_fn)
         result = learner.compute_targets(
             observations=observations,
-            actions=actions,
             rewards=rewards,
             logprobs_behavior=logprobs,
             logprobs_target=logprobs,
@@ -298,6 +297,7 @@ class TestFactoryFunctions:
 
     def test_create_impala_learner(self) -> None:
         """创建 IMPALA learner 工厂。"""
+
         def value_fn(obs: np.ndarray) -> float:
             return 0.0
 
@@ -448,13 +448,11 @@ class TestCommercialGapReduction:
 
     def test_end_to_end_impala(self) -> None:
         """端到端 IMPALA 流程。"""
+
         def value_fn(obs: np.ndarray) -> float:
             return float(0.5 * obs[0])
 
-        observations = np.array(
-            [[1.0], [1.5], [2.0], [1.8], [1.2]]
-        )
-        actions = np.array([0, 1, 0, 1, 0])
+        observations = np.array([[1.0], [1.5], [2.0], [1.8], [1.2]])
         rewards = np.array([0.5, 0.3, -0.2, 0.1, 0.4])
         logprobs_behavior = np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5]))
         logprobs_target = np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6]))
@@ -464,7 +462,6 @@ class TestCommercialGapReduction:
         learner = create_impala_learner(value_fn)
         result = learner.compute_targets(
             observations=observations,
-            actions=actions,
             rewards=rewards,
             logprobs_behavior=logprobs_behavior,
             logprobs_target=logprobs_target,

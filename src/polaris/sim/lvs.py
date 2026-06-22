@@ -214,71 +214,95 @@ def _extract_connections_from_proximity(
         return []
     connections: list[tuple[str, str]] = []
     try:
-        wg_layer = get_layer_tuple("WG")
-        wg_idx = _find_layer_index(layout, wg_layer[0], wg_layer[1])
-        if wg_idx is None:
-            return connections
-
-        # 1. 提取器件包围盒
-        devrec_layer = get_layer_tuple("DEVREC")
-        devrec_idx = _find_layer_index(layout, devrec_layer[0], devrec_layer[1])
-        if devrec_idx is None:
-            return connections
-
-        device_bboxes: list[tuple[str, db.Box]] = []
-        region_dev = db.Region(layout.begin_shapes(cell, devrec_idx))
-        for i, shape in enumerate(region_dev.each()):
-            if i < len(devices):
-                device_bboxes.append((devices[i], shape.bbox()))
-
+        device_bboxes = _extract_device_bboxes(layout, cell, devices)
         if len(device_bboxes) < 2:
             return connections
-
-        # 2. 提取波导路径并追踪连接
-        region_wg = db.Region(layout.begin_shapes(cell, wg_idx))
-        if region_wg.is_empty():
-            return connections
-
-        # 对每条波导路径，找其连接的器件
-        # 波导路径通常是长条形多边形，其两端连接不同器件
-        seen_connections: set[tuple[str, str]] = set()
-        for shape in region_wg.each():
-            wg_bbox = shape.bbox()
-            # 找与该波导包围盒相交的器件
-            connected_devs: list[str] = []
-            for dev_name, dev_bbox in device_bboxes:
-                # 检查波导包围盒是否与器件包围盒相交或邻近
-                if _bboxes_intersect_or_near(wg_bbox, dev_bbox, tolerance=10):
-                    connected_devs.append(dev_name)
-
-            # 如果波导连接了 2 个不同器件，记录连接
-            if len(connected_devs) >= 2:
-                for i in range(len(connected_devs)):
-                    for j in range(i + 1, len(connected_devs)):
-                        conn = tuple(sorted([connected_devs[i], connected_devs[j]]))
-                        if conn not in seen_connections:
-                            seen_connections.add(conn)
-                            connections.append(
-                                (connected_devs[i], connected_devs[j])
-                            )
-
-        # 3. 兜底：若波导追踪未找到连接，用包围盒邻近关系
-        if not connections and len(device_bboxes) >= 2:
-            for i in range(len(device_bboxes)):
-                for j in range(i + 1, len(device_bboxes)):
-                    dev1, bbox1 = device_bboxes[i]
-                    dev2, bbox2 = device_bboxes[j]
-                    if _bboxes_intersect_or_near(bbox1, bbox2, tolerance=20):
-                        connections.append((dev1, dev2))
-
+        connections = _trace_waveguide_connections(layout, cell, device_bboxes)
+        if not connections:
+            connections = _fallback_proximity_connections(device_bboxes)
     except (KeyError, RuntimeError):
         pass
     return connections
 
 
-def _bboxes_intersect_or_near(
-    bbox1: db.Box, bbox2: db.Box, tolerance: int = 10
-) -> bool:
+def _extract_device_bboxes(
+    layout: db.Layout, cell: db.Cell, devices: list[str]
+) -> list[tuple[str, db.Box]]:
+    """提取器件包围盒列表（DEVREC 层）。"""
+    devrec_layer = get_layer_tuple("DEVREC")
+    devrec_idx = _find_layer_index(layout, devrec_layer[0], devrec_layer[1])
+    if devrec_idx is None:
+        return []
+    device_bboxes: list[tuple[str, db.Box]] = []
+    region_dev = db.Region(layout.begin_shapes(cell, devrec_idx))
+    for i, shape in enumerate(region_dev.each()):
+        if i < len(devices):
+            device_bboxes.append((devices[i], shape.bbox()))
+    return device_bboxes
+
+
+def _trace_waveguide_connections(
+    layout: db.Layout, cell: db.Cell, device_bboxes: list[tuple[str, db.Box]]
+) -> list[tuple[str, str]]:
+    """通过 WG 层波导路径追踪器件连接关系。"""
+    connections: list[tuple[str, str]] = []
+    wg_layer = get_layer_tuple("WG")
+    wg_idx = _find_layer_index(layout, wg_layer[0], wg_layer[1])
+    if wg_idx is None:
+        return connections
+    region_wg = db.Region(layout.begin_shapes(cell, wg_idx))
+    if region_wg.is_empty():
+        return connections
+    seen_connections: set[tuple[str, str]] = set()
+    for shape in region_wg.each():
+        wg_bbox = shape.bbox()
+        connected_devs = _find_connected_devices(wg_bbox, device_bboxes)
+        _record_connections(connected_devs, connections, seen_connections)
+    return connections
+
+
+def _find_connected_devices(
+    wg_bbox: db.Box, device_bboxes: list[tuple[str, db.Box]], tolerance: int = 10
+) -> list[str]:
+    """找与波导包围盒相交或邻近的器件。"""
+    connected: list[str] = []
+    for dev_name, dev_bbox in device_bboxes:
+        if _bboxes_intersect_or_near(wg_bbox, dev_bbox, tolerance=tolerance):
+            connected.append(dev_name)
+    return connected
+
+
+def _record_connections(
+    connected_devs: list[str],
+    connections: list[tuple[str, str]],
+    seen: set[tuple[str, str]],
+) -> None:
+    """记录波导连接的器件对（去重）。"""
+    if len(connected_devs) < 2:
+        return
+    for i in range(len(connected_devs)):
+        for j in range(i + 1, len(connected_devs)):
+            conn = tuple(sorted([connected_devs[i], connected_devs[j]]))
+            if conn not in seen:
+                seen.add(conn)
+                connections.append((connected_devs[i], connected_devs[j]))
+
+
+def _fallback_proximity_connections(
+    device_bboxes: list[tuple[str, db.Box]],
+) -> list[tuple[str, str]]:
+    """兜底：波导追踪未找到连接时，用包围盒邻近关系。"""
+    connections: list[tuple[str, str]] = []
+    for i in range(len(device_bboxes)):
+        for j in range(i + 1, len(device_bboxes)):
+            dev1, bbox1 = device_bboxes[i]
+            dev2, bbox2 = device_bboxes[j]
+            if _bboxes_intersect_or_near(bbox1, bbox2, tolerance=20):
+                connections.append((dev1, dev2))
+    return connections
+
+
+def _bboxes_intersect_or_near(bbox1: db.Box, bbox2: db.Box, tolerance: int = 10) -> bool:
     """检查两个包围盒是否相交或邻近。
 
     Args:
