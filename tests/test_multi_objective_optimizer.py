@@ -20,6 +20,7 @@ from polaris.sim.multi_objective_optimizer import (
     Objective,
     ObjectiveType,
     ParetoResult,
+    SBXConfig,
     compute_crowding_distance,
     dominates,
     fast_non_dominated_sort,
@@ -233,7 +234,8 @@ class TestSBXCrossover(unittest.TestCase):
         p1 = np.array([0.3, 0.7])
         p2 = np.array([0.6, 0.4])
         rng = np.random.default_rng(42)
-        c1, c2 = sbx_crossover(p1, p2, bounds, 1.0, 20.0, rng)
+        cfg = SBXConfig(prob=1.0, eta=20.0, rng=rng)
+        c1, c2 = sbx_crossover(p1, p2, bounds, cfg)
         self.assertEqual(c1.shape, p1.shape)
         self.assertEqual(c2.shape, p2.shape)
 
@@ -243,8 +245,9 @@ class TestSBXCrossover(unittest.TestCase):
         p1 = np.array([0.1, 0.3, 0.5, 0.7, 0.9])
         p2 = np.array([0.2, 0.4, 0.6, 0.8, 0.95])
         rng = np.random.default_rng(42)
+        cfg = SBXConfig(prob=1.0, eta=20.0, rng=rng)
         for _ in range(20):
-            c1, c2 = sbx_crossover(p1, p2, bounds, 1.0, 20.0, rng)
+            c1, c2 = sbx_crossover(p1, p2, bounds, cfg)
             self.assertTrue(np.all(c1 >= 0))
             self.assertTrue(np.all(c1 <= 1))
             self.assertTrue(np.all(c2 >= 0))
@@ -256,7 +259,8 @@ class TestSBXCrossover(unittest.TestCase):
         p1 = np.array([0.3])
         p2 = np.array([0.7])
         rng = np.random.default_rng(42)
-        c1, c2 = sbx_crossover(p1, p2, bounds, 0.0, 20.0, rng)
+        cfg = SBXConfig(prob=0.0, eta=20.0, rng=rng)
+        c1, c2 = sbx_crossover(p1, p2, bounds, cfg)
         np.testing.assert_array_equal(c1, p1)
         np.testing.assert_array_equal(c2, p2)
 
@@ -575,12 +579,8 @@ class TestCommercialGapReduction(unittest.TestCase):
             bounds=[(0.0, 1.0)],
             seed=123,
         )
-        result1 = run_nsga2_optimization(
-            objectives, lambda p: np.array([float(p[0])]), 1, cfg
-        )
-        result2 = run_nsga2_optimization(
-            objectives, lambda p: np.array([float(p[0])]), 1, cfg
-        )
+        result1 = run_nsga2_optimization(objectives, lambda p: np.array([float(p[0])]), 1, cfg)
+        result2 = run_nsga2_optimization(objectives, lambda p: np.array([float(p[0])]), 1, cfg)
         # 固定种子应产生相同结果
         self.assertEqual(len(result1.pareto_front), len(result2.pareto_front))
 

@@ -15,6 +15,7 @@ from polaris.sim.lbfgs_optimizer import (
     LBFGSConfig,
     LBFGSOptimizer,
     LBFGSResult,
+    PointState,
     create_lbfgs_optimizer,
     run_lbfgs_optimization,
 )
@@ -91,15 +92,18 @@ class TestLBFGSOptimizer:
 
     def test_optimize_quadratic(self):
         """二次函数优化。"""
+
         # f(x) = -((x-3)^2 + (y-2)^2)（最大化 → x=3, y=2）
         def fom_fn(params):
             return -((params[0] - 3) ** 2 + (params[1] - 2) ** 2)
 
         def grad_fn(params):
-            return np.array([
-                -2 * (params[0] - 3),
-                -2 * (params[1] - 2),
-            ])
+            return np.array(
+                [
+                    -2 * (params[0] - 3),
+                    -2 * (params[1] - 2),
+                ]
+            )
 
         opt = LBFGSOptimizer(LBFGSConfig(max_iterations=50))
         result = opt.optimize(np.array([0.0, 0.0]), fom_fn, grad_fn)
@@ -109,8 +113,9 @@ class TestLBFGSOptimizer:
 
     def test_optimize_convergence(self):
         """收敛检测。"""
+
         def fom_fn(params):
-            return -params[0] ** 2
+            return -(params[0] ** 2)
 
         def grad_fn(params):
             return np.array([-2 * params[0]])
@@ -126,8 +131,9 @@ class TestLBFGSOptimizer:
 
     def test_optimize_records_history(self):
         """记录历史。"""
+
         def fom_fn(params):
-            return -params[0] ** 2
+            return -(params[0] ** 2)
 
         def grad_fn(params):
             return np.array([-2 * params[0]])
@@ -144,7 +150,7 @@ class TestLBFGSOptimizer:
         opt = LBFGSOptimizer(cfg)
 
         def fom_fn(params):
-            return -params[0] ** 2
+            return -(params[0] ** 2)
 
         def grad_fn(params):
             return np.array([-2 * params[0]])
@@ -174,8 +180,9 @@ class TestRunLBFGSOptimization:
 
     def test_run_quadratic(self):
         """运行二次函数优化。"""
+
         def fom_fn(params):
-            return -(params[0] - 1) ** 2
+            return -((params[0] - 1) ** 2)
 
         def grad_fn(params):
             return np.array([-2 * (params[0] - 1)])
@@ -185,8 +192,9 @@ class TestRunLBFGSOptimization:
 
     def test_run_with_config(self):
         """带配置运行。"""
+
         def fom_fn(params):
-            return -params[0] ** 2
+            return -(params[0] ** 2)
 
         def grad_fn(params):
             return np.array([-2 * params[0]])
@@ -225,17 +233,19 @@ class TestCommercialGapReduction:
         opt = LBFGSOptimizer(LBFGSConfig(wolfe_c1=1e-4, wolfe_c2=0.9))
 
         def fom_fn(params):
-            return -params[0] ** 2
+            return -(params[0] ** 2)
 
         direction = np.array([1.0])  # 上升方向（最大化）
         params = np.array([0.5])
         fom = fom_fn(params)
         grad = np.array([-1.0])
-        alpha = opt._line_search(params, direction, fom, grad, fom_fn)  # noqa: SLF001
+        state = PointState(fom=fom, grad=grad)
+        alpha = opt._line_search(params, direction, state, fom_fn)  # noqa: SLF001
         assert alpha > 0
 
     def test_faster_convergence_than_gradient_descent(self):
         """L-BFGS 收敛快于梯度下降。"""
+
         # Rosenbrock 函数（经典测试）
         def fom_fn(params):
             return -(100 * (params[1] - params[0] ** 2) ** 2 + (1 - params[0]) ** 2)
@@ -261,7 +271,7 @@ class TestCommercialGapReduction:
         opt = LBFGSOptimizer(cfg)
 
         def fom_fn(params):
-            return -np.sum(params ** 2)
+            return -np.sum(params**2)
 
         def grad_fn(params):
             return -2 * params

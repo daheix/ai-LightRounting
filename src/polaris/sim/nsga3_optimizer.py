@@ -37,6 +37,7 @@ from polaris.sim.multi_objective_optimizer import (
     Individual,
     Objective,
     ObjectiveType,
+    SBXConfig,
     fast_non_dominated_sort,
     polynomial_mutation,
     sbx_crossover,
@@ -296,13 +297,16 @@ class NSGA3Optimizer:
             parent1 = tournament_selection(population, self.rng)
             parent2 = tournament_selection(population, self.rng)
 
+            sbx_cfg = SBXConfig(
+                prob=self.config.crossover_prob,
+                eta=self.config.crossover_eta,
+                rng=self.rng,
+            )
             child1_params, child2_params = sbx_crossover(
                 parent1.params,
                 parent2.params,
                 bounds,
-                self.config.crossover_prob,
-                self.config.crossover_eta,
-                self.rng,
+                sbx_cfg,
             )
 
             child1_params = polynomial_mutation(
