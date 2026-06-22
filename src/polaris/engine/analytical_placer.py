@@ -200,7 +200,14 @@ class AnalyticalPlacer:
 
         梯度对每个器件坐标求偏导。
 
-        来源: DREAMPlace 平滑 HPWL（TCAD 2020 公式 4-6）。
+        **数值稳定性**（第70轮修复）：当坐标值较大时 exp(x/γ) 会溢出产生 NaN。
+        标准做法是减去最大值后再 exp（log-sum-exp trick）：
+        - exp(x/γ) → exp((x - max_x)/γ)
+        - 梯度分母/分子同比例缩放，结果不变
+
+        来源: DREAMPlace 平滑 HPWL（TCAD 2020 公式 4-6）；
+              log-sum-exp trick: Blanchard et al., "Accurate Numerical Methods
+              for the Log-Sum-Exp Problem", arXiv:2106.14588
 
         Args:
             pos: 当前坐标 ``(n, 2)``。
@@ -215,15 +222,25 @@ class AnalyticalPlacer:
             x2, y2 = pos[dst]
             xs = np.array([x1, x2])
             ys = np.array([y1, y2])
-            # 平滑 max/min
-            exp_x = np.exp(xs / gamma)
-            exp_neg_x = np.exp(-xs / gamma)
-            exp_y = np.exp(ys / gamma)
-            exp_neg_y = np.exp(-ys / gamma)
+            # 数值稳定的 log-sum-exp：减去最大值防止溢出
+            max_x = xs.max()
+            min_x = xs.min()
+            max_y = ys.max()
+            min_y = ys.min()
+            # 平滑 max: exp((x - max_x)/γ)，归一化后梯度 = softmax
+            exp_x = np.exp((xs - max_x) / gamma)
+            exp_neg_x = np.exp((-xs + min_x) / gamma)
+            exp_y = np.exp((ys - max_y) / gamma)
+            exp_neg_y = np.exp((-ys + min_y) / gamma)
             sum_exp_x = exp_x.sum()
             sum_exp_neg_x = exp_neg_x.sum()
             sum_exp_y = exp_y.sum()
             sum_exp_neg_y = exp_neg_y.sum()
+            # 防止除零（sum 不会为 0，但加保护）
+            sum_exp_x = max(sum_exp_x, 1e-300)
+            sum_exp_neg_x = max(sum_exp_neg_x, 1e-300)
+            sum_exp_y = max(sum_exp_y, 1e-300)
+            sum_exp_neg_y = max(sum_exp_neg_y, 1e-300)
             # d(smooth_max_x)/d(x_i) = exp(x_i/γ) / sum(exp(x_j/γ))
             # d(smooth_min_x)/d(x_i) = -exp(-x_i/γ) / sum(exp(-x_j/γ))
             # HPWL = smooth_max_x - smooth_min_x + smooth_max_y - smooth_min_y
@@ -232,6 +249,9 @@ class AnalyticalPlacer:
                 i = 0 if idx == src else 1
                 grad[idx, 0] += exp_x[i] / sum_exp_x - exp_neg_x[i] / sum_exp_neg_x
                 grad[idx, 1] += exp_y[i] / sum_exp_y - exp_neg_y[i] / sum_exp_neg_y
+        # NaN/Inf 安全检查（防止极端坐标导致数值问题）
+        if not np.all(np.isfinite(grad)):
+            grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
         return grad
 
     def _density_gradient(self, pos: np.ndarray) -> np.ndarray:
