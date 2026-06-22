@@ -34,6 +34,7 @@
 
 from __future__ import annotations
 
+import heapq
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -374,31 +375,6 @@ class GlobalRouter:
         step_cost += self.config.congestion_weight * overflow
         return step_cost
 
-    def _init_astar_search(
-        self,
-        start_gcell: tuple[int, int],
-        goal_gcell: tuple[int, int],
-    ) -> tuple:
-        """初始化 A* 搜索状态。
-
-        Args:
-            start_gcell: 起点 GCell。
-            goal_gcell: 终点 GCell。
-
-        Returns:
-            (pq, came_from, g_score, visited) 四元组。
-        """
-        import heapq
-
-        sx, sy = start_gcell
-        gx, gy = goal_gcell
-        h0 = abs(sx - gx) + abs(sy - gy)
-        pq = [(h0, 0.0, sx, sy)]
-        came_from: dict[tuple[int, int], tuple[int, int]] = {}
-        g_score: dict[tuple[int, int], float] = {(sx, sy): 0.0}
-        visited: set[tuple[int, int]] = set()
-        return pq, came_from, g_score, visited
-
     def _gcell_astar(
         self,
         start_gcell: tuple[int, int],
@@ -419,13 +395,14 @@ class GlobalRouter:
         Returns:
             GCell 路径 ``[(gx, gy), ...]`` 或 None（不可达）。
         """
-        import heapq
-
         sx, sy = start_gcell
         gx, gy = goal_gcell
         if (sx, sy) == (gx, gy):
             return [(sx, sy)]
-        pq, came_from, g_score, visited = self._init_astar_search(start_gcell, goal_gcell)
+        pq = [(abs(sx - gx) + abs(sy - gy), 0.0, sx, sy)]
+        came_from: dict = {}
+        g_score: dict = {(sx, sy): 0.0}
+        visited: set = set()
 
         while pq:
             _f, g, x, y = heapq.heappop(pq)
