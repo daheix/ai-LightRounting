@@ -143,19 +143,19 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "CompoundTek": FoundryRunset(
         foundry_name="CompoundTek",
-        process_node="130nm SOI",
+        process_node="90nm SOI",
         material_platform="SOI",
         rules=COMPOUNDTEK_DRC_RUNSET,
         source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
-        notes="CompoundTek 130nm SOI，通过 Luceda IPKISS 接入",
+        notes="CompoundTek 90nm SOI，通过 Luceda IPKISS 接入",
     ),
     "LIGENTEC": FoundryRunset(
         foundry_name="LIGENTEC",
-        process_node="200nm SiN",
+        process_node="800nm SiN",
         material_platform="SiN",
         rules=LIGENTEC_DRC_RUNSET,
         source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
-        notes="LIGENTEC ANR SiN 平台，低损耗氮化硅",
+        notes="LIGENTEC AN800 SiN 平台，低损耗氮化硅",
     ),
     "HHI_InP": FoundryRunset(
         foundry_name="HHI",
