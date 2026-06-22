@@ -44,6 +44,28 @@ from polaris.sim.cascade_backends import (
     cascade_klu,
     redheffer_star,
 )
+from polaris.sim.dag_scheduler import (
+    CircuitDAG,
+    cascade_parallel,
+    create_dag,
+    detect_parallel_groups,
+    flat_circuit,
+    schedule_circuit,
+)
+from polaris.sim.subnetwork_decomp import (
+    BlockTridiagonalMatrix,
+    SubnetworkCache,
+    SubnetworkDecomposition,
+    block_thomas_solve,
+    build_block_tridiagonal_from_chain,
+    cascade_adaptive,
+    decompose_circuit,
+    detect_block_tridiagonal,
+    merge_subnetworks_via_schur,
+    schur_complement,
+    select_strategy,
+    solve_subnetwork,
+)
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
@@ -190,6 +212,26 @@ __all__ = [
     "redheffer_star",
     "build_circuit_matrix",
     "CircuitMatrix",
+    # R04 子网络分解（块三对角 + Schur 补 + 自适应策略 + 增量缓存）
+    "BlockTridiagonalMatrix",
+    "SubnetworkDecomposition",
+    "SubnetworkCache",
+    "schur_complement",
+    "block_thomas_solve",
+    "detect_block_tridiagonal",
+    "build_block_tridiagonal_from_chain",
+    "decompose_circuit",
+    "solve_subnetwork",
+    "merge_subnetworks_via_schur",
+    "select_strategy",
+    "cascade_adaptive",
+    # R04 DAG 调度器（DAG 创建 + 拓扑排序 + 并行调度）
+    "CircuitDAG",
+    "create_dag",
+    "flat_circuit",
+    "detect_parallel_groups",
+    "cascade_parallel",
+    "schedule_circuit",
     # 仿真器
     "CircuitSimulator",
     "default_models",
