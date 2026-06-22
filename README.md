@@ -10,7 +10,8 @@ PoLaRIS（光弈）面向 SOI / SiN / InP / 薄膜铌酸锂（LNOI）等多工�
 - **A\* 布线引擎**：8 方向 A* + Rip-up&Reroute + 拥塞感知排序
 - **S 参数仿真**：S 参数级联 + SimLoop 反馈闭环 + 校准验证
 - **GDS 导出**：klayout.db 导出 SiEPIC 格式 GDSII/OASIS
-- **DRC 校验**：8 种违规检查（弯曲半径/间距/损耗/交叉/重叠/最小宽度/耦合间隙等）
+- **DRC 校验**：9 种违规检查 + 9 个 foundry DRC runset（69 条规则，SOI/SiN/InP/LNOI 4 大平台）
+- **LVS 验证**：GDS 网表提取 + 原理图比对（版图与原理图一致性验证）
 - **四工艺平台 PDK**：SOI / SiN / InP / LNOI 器件模型库（81 个器件，全部来源溯源）
 - **SiEPIC 集成**：GDS 网表提取 + 器件名双向映射 + gdsfactory 可选集成
 - **PPO 训练框架**：PyTorch 加速 + 离散/连续 PPO + GAE + 专家奖励塑形（ICLR'26）
@@ -114,7 +115,7 @@ workspace/
 │   ├── wheels/              # 构建 wheel 包
 │   ├── docs/                # 用户文档（用户手册/API参考/安装指南）
 │   └── examples/            # 使用示例（4 个可运行脚本）
-├── tests/               # 测试代码（770+ 测试用例）
+├── tests/               # 测试代码（2250+ 测试用例）
 ├── scripts/             # 工具脚本（训练/质量门禁/监控）
 ├── data/                # 数据（基准电路/变体数据集）
 ├── checkpoints/         # 训练检查点（.gitignore）
