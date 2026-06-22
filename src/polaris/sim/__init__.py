@@ -110,6 +110,17 @@ from polaris.sim.hierarchical_drc import (
     RowPartition,
     run_hierarchical_drc,
 )
+from polaris.sim.graph_lvs import (
+    EquivalenceHints,
+    GraphIsomorphismLVSComparer,
+    NetlistEdge,
+    NetlistNode,
+    PhotonicsLVSReport,
+    PhotonicsNetlist,
+    run_graph_lvs,
+    verify_port_orientation,
+    verify_waveguide_length,
+)
 from polaris.sim.lvs import (
     ExtractedNetlist,
     LVSMismatch,
@@ -330,4 +341,14 @@ __all__ = [
     "HierarchicalDRC",
     "RowPartition",
     "run_hierarchical_drc",
+    # R08 图同构 LVS 比对引擎（VF2 + 光子专用 LVS）
+    "EquivalenceHints",
+    "GraphIsomorphismLVSComparer",
+    "NetlistEdge",
+    "NetlistNode",
+    "PhotonicsLVSReport",
+    "PhotonicsNetlist",
+    "run_graph_lvs",
+    "verify_port_orientation",
+    "verify_waveguide_length",
 ]
