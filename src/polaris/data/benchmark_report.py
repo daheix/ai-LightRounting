@@ -115,6 +115,7 @@ class ComparisonReport:
         avg_utilization: 平均利用率。
         total_modules: 总模块数。
         total_connections: 总连接数。
+        total_overlaps: 总重叠对数（第79轮新增）。
         timestamp: 评估时间（ISO 8601）。
     """
 
@@ -126,6 +127,7 @@ class ComparisonReport:
     avg_utilization: float = 0.0
     total_modules: int = 0
     total_connections: int = 0
+    total_overlaps: int = 0
     timestamp: str = ""
 
 
@@ -211,6 +213,7 @@ def generate_comparison_report(
     avg_util = sum(r.area_utilization for r in reports) / len(reports)
     total_mod = sum(r.module_count for r in reports)
     total_conn = sum(r.connection_count for r in reports)
+    total_ovlp = sum(r.overlap_count for r in reports)
     return ComparisonReport(
         reports=list(reports),
         total_benchmarks=len(reports),
@@ -220,6 +223,7 @@ def generate_comparison_report(
         avg_utilization=avg_util,
         total_modules=total_mod,
         total_connections=total_conn,
+        total_overlaps=total_ovlp,
         timestamp=_now_iso(),
     )
 
@@ -376,6 +380,7 @@ def format_comparison_markdown(comp: ComparisonReport) -> str:
         f"- **平均利用率**: {comp.avg_utilization:.4f}",
         f"- **总模块数**: {comp.total_modules}",
         f"- **总连接数**: {comp.total_connections}",
+        f"- **总重叠对数**: {comp.total_overlaps}",
         f"- **评估时间**: {comp.timestamp}",
         "",
         "## 2. 各 Benchmark 详细结果",
