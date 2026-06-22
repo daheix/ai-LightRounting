@@ -24,6 +24,7 @@ from polaris.data.specs import (
     TargetMetric,
 )
 from polaris.engine.analytical_placer import (
+    AdamState,
     AnalyticalPlacer,
     AnalyticalPlacerConfig,
     warm_start_placement,
@@ -62,9 +63,7 @@ def star_circuit() -> CircuitSpec:
             DeviceSpec(name=f"dev_{i}", device_type="mzi", width_um=10.0, height_um=10.0)
             for i in range(5)
         ],
-        connections=[
-            ("dev_0", "out", f"dev_{i}", "in") for i in range(1, 5)
-        ],
+        connections=[("dev_0", "out", f"dev_{i}", "in") for i in range(1, 5)],
         canvas_w=200.0,
         canvas_h=200.0,
         benchmark_source=BenchmarkSource.CUSTOM,
@@ -225,7 +224,7 @@ class TestAdamUpdate:
         grad = np.ones_like(pos)
         m = np.zeros_like(pos)
         v = np.zeros_like(pos)
-        new_pos, new_m, new_v = placer._adam_update(pos, grad, m, v, 1)
+        new_pos, new_m, new_v = placer._adam_update(pos, grad, AdamState(m=m, v=v, t=1))
         assert new_pos.shape == pos.shape
         assert new_m.shape == m.shape
         assert new_v.shape == v.shape
@@ -237,7 +236,7 @@ class TestAdamUpdate:
         grad = np.ones_like(pos)  # 正梯度
         m = np.zeros_like(pos)
         v = np.zeros_like(pos)
-        new_pos, _m, _v = placer._adam_update(pos, grad, m, v, 1)
+        new_pos, _m, _v = placer._adam_update(pos, grad, AdamState(m=m, v=v, t=1))
         # 负梯度方向 → 坐标减小
         assert np.all(new_pos < pos)
 
