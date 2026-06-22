@@ -103,6 +103,19 @@ class GlobalRouterConfig:
     congestion_weight: float = 2.0
 
 
+@dataclass
+class CanvasSize:
+    """画布尺寸（降低 GlobalRouter.__init__ 参数个数，规则 4.1）。
+
+    Attributes:
+        width: 画布宽度（μm）。
+        height: 画布高度（μm）。
+    """
+
+    width: float
+    height: float
+
+
 class GlobalRouter:
     """全局布线器（Global Router）—— P1-2 差距修复。
 
@@ -130,8 +143,7 @@ class GlobalRouter:
         self,
         net: Netlist,
         placements: dict[str, Placement],
-        canvas_w: float,
-        canvas_h: float,
+        canvas: CanvasSize,
         config: GlobalRouterConfig | None = None,
     ) -> None:
         """初始化全局布线器。
@@ -139,18 +151,17 @@ class GlobalRouter:
         Args:
             net: 网表（含连接列表）。
             placements: 器件放置结果（inst_id -> Placement）。
-            canvas_w: 画布宽度（μm）。
-            canvas_h: 画布高度（μm）。
+            canvas: 画布尺寸（宽 μm × 高 μm）。
             config: 全局布线配置（None 用默认）。
         """
         self.net = net
         self.placements = placements
-        self.canvas_w = canvas_w
-        self.canvas_h = canvas_h
+        self.canvas_w = canvas.width
+        self.canvas_h = canvas.height
         self.config = config or GlobalRouterConfig()
         self.gcell_size = self.config.gcell_size_um
-        self.gw = max(1, int(canvas_w / self.gcell_size))
-        self.gh = max(1, int(canvas_h / self.gcell_size))
+        self.gw = max(1, int(self.canvas_w / self.gcell_size))
+        self.gh = max(1, int(self.canvas_h / self.gcell_size))
         # GCell 网格：capacity 和 demand
         self.capacity = np.full(
             (self.gh, self.gw), self.config.capacity_per_gcell, dtype=np.float64
@@ -469,8 +480,7 @@ class GlobalRouter:
 def run_global_routing(
     net: Netlist,
     placements: dict[str, Placement],
-    canvas_w: float,
-    canvas_h: float,
+    canvas: CanvasSize,
     config: GlobalRouterConfig | None = None,
 ) -> list[GlobalRoute]:
     """便捷函数：执行全局布线并返回结果。
@@ -478,14 +488,13 @@ def run_global_routing(
     Args:
         net: 网表。
         placements: 器件放置。
-        canvas_w: 画布宽度（μm）。
-        canvas_h: 画布高度（μm）。
+        canvas: 画布尺寸（宽 μm × 高 μm）。
         config: 全局布线配置（None 用默认）。
 
     Returns:
         全局布线结果列表。
     """
-    router = GlobalRouter(net, placements, canvas_w, canvas_h, config)
+    router = GlobalRouter(net, placements, canvas, config)
     return router.route()
 
 
@@ -493,6 +502,7 @@ __all__ = [
     "GCell",
     "GlobalRoute",
     "GlobalRouterConfig",
+    "CanvasSize",
     "GlobalRouter",
     "run_global_routing",
 ]

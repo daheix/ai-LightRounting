@@ -21,6 +21,7 @@ from polaris.engine.netlist import (
 from polaris.pdk.device import BoundingBox, Device, Port
 from polaris.pdk.port import Direction
 from polaris.router.global_router import (
+    CanvasSize,
     GCell,
     GlobalRoute,
     GlobalRouter,
@@ -152,7 +153,7 @@ class TestGlobalRouterInit:
             "d2": _make_placement(dev2, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, canvas_w=200, canvas_h=200)
+        router = GlobalRouter(net, placements, CanvasSize(200, 200))
         assert router.canvas_w == 200
         assert router.canvas_h == 200
         assert router.gcell_size == 50.0
@@ -167,7 +168,7 @@ class TestGlobalRouterInit:
         placements = {"d1": _make_placement(dev1, 0, 0)}
         net = _make_netlist([])
         cfg = GlobalRouterConfig(gcell_size_um=25.0)
-        router = GlobalRouter(net, placements, 100, 100, cfg)
+        router = GlobalRouter(net, placements, CanvasSize(100, 100), cfg)
         assert router.gcell_size == 25.0
         assert router.gw == 4  # 100 / 25
         assert router.gh == 4
@@ -177,7 +178,7 @@ class TestGlobalRouterInit:
         dev1 = _make_device("d1", 0, 0, 60, 60)  # 占据 (0,0)-(60,60)
         placements = {"d1": _make_placement(dev1, 0, 0)}
         net = _make_netlist([])
-        router = GlobalRouter(net, placements, 200, 200)
+        router = GlobalRouter(net, placements, CanvasSize(200, 200))
         # gcell_size=50, dev 占据 (0,0)-(60,60) → GCell (0,0),(1,0),(0,1),(1,1)
         assert router.obstacle_mask[0, 0]
         assert router.obstacle_mask[0, 1]
@@ -198,7 +199,7 @@ class TestGlobalRouterRouting:
             "d2": _make_placement(dev2, 200, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 300, 100)
+        router = GlobalRouter(net, placements, CanvasSize(300, 100))
         results = router.route()
         assert len(results) == 1
         gr = results[0]
@@ -212,7 +213,7 @@ class TestGlobalRouterRouting:
         dev1 = _make_device("d1", 0, 0)
         placements = {"d1": _make_placement(dev1, 0, 0)}
         net = _make_netlist([])
-        router = GlobalRouter(net, placements, 200, 200)
+        router = GlobalRouter(net, placements, CanvasSize(200, 200))
         results = router.route()
         assert results == []
 
@@ -235,7 +236,7 @@ class TestGlobalRouterRouting:
                 ("d1", "out", "d3", "in"),
             ]
         )
-        router = GlobalRouter(net, placements, 300, 300)
+        router = GlobalRouter(net, placements, CanvasSize(300, 300))
         results = router.route()
         assert len(results) == 3
 
@@ -248,7 +249,7 @@ class TestGlobalRouterRouting:
             "d2": _make_placement(dev2, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 200, 100)
+        router = GlobalRouter(net, placements, CanvasSize(200, 100))
         results = router.route()
         assert len(results) == 1
         for x, y in results[0].waypoints:
@@ -264,7 +265,7 @@ class TestGlobalRouterRouting:
             "d2": _make_placement(dev2, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 200, 100)
+        router = GlobalRouter(net, placements, CanvasSize(200, 100))
         router.route()
         cong = router.congestion_map()
         assert cong.shape == (router.gh, router.gw)
@@ -289,7 +290,7 @@ class TestGlobalRouterRouting:
             "d3": _make_placement(dev3, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 300, 200)
+        router = GlobalRouter(net, placements, CanvasSize(300, 200))
         results = router.route()
         assert len(results) == 1
         gr = results[0]
@@ -310,7 +311,7 @@ class TestGlobalRouterRouting:
             "d2": _make_placement(dev2, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 200, 100)
+        router = GlobalRouter(net, placements, CanvasSize(200, 100))
         rudy = router._estimate_rudy_congestion()
         assert rudy.shape == (router.gh, router.gw)
         assert rudy.min() >= 0.0
@@ -332,7 +333,7 @@ class TestGlobalRouterRouting:
                 ("d1", "out", "d2", "in"),  # 远
             ]
         )
-        router = GlobalRouter(net, placements, 300, 100)
+        router = GlobalRouter(net, placements, CanvasSize(300, 100))
         rudy = router._estimate_rudy_congestion()
         sorted_conns = router._sort_connections(rudy)
         # 远连接（d1->d2）应排在前（难度更高）
@@ -350,7 +351,7 @@ class TestRunGlobalRouting:
             "d2": _make_placement(dev2, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        results = run_global_routing(net, placements, 200, 100)
+        results = run_global_routing(net, placements, CanvasSize(200, 100))
         assert len(results) == 1
         assert results[0].conn_idx == 0
 
@@ -363,7 +364,7 @@ class TestRunGlobalRouting:
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
         cfg = GlobalRouterConfig(gcell_size_um=25.0)
-        results = run_global_routing(net, placements, 200, 100, cfg)
+        results = run_global_routing(net, placements, CanvasSize(200, 100), cfg)
         assert len(results) == 1
 
 
@@ -379,7 +380,7 @@ class TestGlobalRouterEdgeCases:
             "d2": _make_placement(dev2, 10, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 200, 100)
+        router = GlobalRouter(net, placements, CanvasSize(200, 100))
         results = router.route()
         assert len(results) == 1
         # 起止在同一 GCell，路径长度 >= 1
@@ -391,7 +392,7 @@ class TestGlobalRouterEdgeCases:
         placements = {"d1": _make_placement(dev1, 0, 0)}
         # d2 未放置
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 200, 100)
+        router = GlobalRouter(net, placements, CanvasSize(200, 100))
         results = router.route()
         assert len(results) == 0  # d2 未放置，连接被跳过
 
@@ -405,7 +406,7 @@ class TestGlobalRouterEdgeCases:
         }
         # d1 无 "out" 端口
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, 200, 100)
+        router = GlobalRouter(net, placements, CanvasSize(200, 100))
         results = router.route()
         assert len(results) == 0  # 端口不存在，连接被跳过
 
@@ -419,7 +420,7 @@ class TestGlobalRouterEdgeCases:
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
         # canvas=40, gcell_size=50 → gw=gh=1（最小）
-        router = GlobalRouter(net, placements, 40, 40)
+        router = GlobalRouter(net, placements, CanvasSize(40, 40))
         assert router.gw == 1
         assert router.gh == 1
         results = router.route()
