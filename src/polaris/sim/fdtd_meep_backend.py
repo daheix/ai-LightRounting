@@ -162,32 +162,26 @@ def _extract_meep_sparams(
     return s_params, transmission_db
 
 
-def run_meep_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
-    """MEEP FDTD 仿真后端（真正调用 MEEP API）。
+def _build_meep_simulation(device: Device, config: FDTDConfig, meep) -> tuple:
+    """构建 MEEP Simulation 对象并添加通量 monitor。
 
-    使用 MEEP 的 Python API 构建器件几何、设置光源、运行 FDTD 仿真、
-    通过通量 monitor 提取 S 参数。
+    Args:
+        device: PoLaRIS 器件。
+        config: FDTD 配置。
+        meep: meep 模块。
 
-    MEEP 不可用时由 _select_fdtd_backend 抛出 ImportError，本函数不 fall-back。
-    若需解析 S 参数（非 FDTD），请使用 ANALYTICAL 后端。
+    Returns:
+        (sim, flux_objects, wavelengths) 三元组。
 
     来源:
-    - MEEP Basics: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/
-    - MEEP S 参数: https://meep.readthedocs.io/en/latest/Python_Tutorials/Guided_Modes/
-    - MEEP Transmission Spectrum: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/#transmission-spectrum-around-a-waveguide-bend
+    - MEEP Simulation: https://meep.readthedocs.io/en/latest/Python_User_Interface/#simulation
     """
-    import meep
-
     wavelengths = np.linspace(
         config.wavelength_start_um,
         config.wavelength_end_um,
         config.n_wavelengths,
     )
-
-    # 从 Device 几何提取仿真参数
     bbox = device.bbox
-
-    # 构建 MEEP 仿真对象
     cell_size = meep.Vector3(
         float(bbox.xmax - bbox.xmin) + 2 * config.pml_thickness_um,
         float(bbox.ymax - bbox.ymin) + 2 * config.pml_thickness_um,
@@ -212,6 +206,26 @@ def run_meep_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
         flux_objects[name] = sim.add_flux(
             wl_center, wl_width, config.n_wavelengths, region
         )
+    return sim, flux_objects, wavelengths
+
+
+def run_meep_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
+    """MEEP FDTD 仿真后端（真正调用 MEEP API）。
+
+    使用 MEEP 的 Python API 构建器件几何、设置光源、运行 FDTD 仿真、
+    通过通量 monitor 提取 S 参数。
+
+    MEEP 不可用时由 _select_fdtd_backend 抛出 ImportError，本函数不 fall-back。
+    若需解析 S 参数（非 FDTD），请使用 ANALYTICAL 后端。
+
+    来源:
+    - MEEP Basics: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/
+    - MEEP S 参数: https://meep.readthedocs.io/en/latest/Python_Tutorials/Guided_Modes/
+    - MEEP Transmission Spectrum: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/#transmission-spectrum-around-a-waveguide-bend
+    """
+    import meep
+
+    sim, flux_objects, wavelengths = _build_meep_simulation(device, config, meep)
 
     # 运行 FDTD 仿真
     # 来源: https://meep.readthedocs.io/en/latest/Python_User_Interface/#simulation-run
