@@ -190,35 +190,31 @@ class LBFGSOptimizer:
 
     def _lbfgs_iteration(
         self,
-        params: np.ndarray,
-        fom: float,
-        grad: np.ndarray,
+        state: _LBFGSIterState,
         fom_fn: callable,
         grad_fn: callable,
-    ) -> tuple:
+    ) -> tuple[_LBFGSIterState, float]:
         """执行一次 L-BFGS 迭代。
 
         Args:
-            params: 当前参数。
-            fom: 当前 FoM。
-            grad: 当前梯度。
+            state: L-BFGS 迭代状态。
             fom_fn: 目标函数。
             grad_fn: 梯度函数。
 
         Returns:
-            (params_new, fom_new, grad_new, grad_norm, s, y)。
+            (new_state, grad_norm) 新状态和梯度范数。
         """
-        direction = self._compute_direction(grad)
-        state = PointState(fom=fom, grad=grad)
-        alpha = self._line_search(params, direction, state, fom_fn)
-        params_new = params + alpha * direction
+        direction = self._compute_direction(state.grad)
+        point = PointState(fom=state.fom, grad=state.grad)
+        alpha = self._line_search(state.params, direction, point, fom_fn)
+        params_new = state.params + alpha * direction
         fom_new = fom_fn(params_new)
         grad_new = grad_fn(params_new)
-        s = params_new - params
-        y = grad_new - grad
+        s = params_new - state.params
+        y = grad_new - state.grad
         self._update_history(s, y)
         grad_norm = float(np.linalg.norm(grad_new))
-        return params_new, fom_new, grad_new, grad_norm, s, y
+        return _LBFGSIterState(params=params_new, fom=fom_new, grad=grad_new), grad_norm
 
     def optimize(
         self,
@@ -239,24 +235,23 @@ class LBFGSOptimizer:
         params, fom, grad, fom_history, param_history, gradient_norm_history = (
             self._init_lbfgs_state(initial_params, fom_fn, grad_fn)
         )
+        state = _LBFGSIterState(params=params, fom=fom, grad=grad)
         converged = False
         iterations = 0
 
         for k in range(self.config.max_iterations):
             iterations = k + 1
-            params, fom, grad, grad_norm, _s, _y = self._lbfgs_iteration(
-                params, fom, grad, fom_fn, grad_fn
-            )
-            fom_history.append(fom)
-            param_history.append(params.copy())
+            state, grad_norm = self._lbfgs_iteration(state, fom_fn, grad_fn)
+            fom_history.append(state.fom)
+            param_history.append(state.params.copy())
             gradient_norm_history.append(grad_norm)
             if grad_norm < self.config.convergence_threshold:
                 converged = True
                 break
 
         return LBFGSResult(
-            optimal_params=params,
-            optimal_fom=fom,
+            optimal_params=state.params,
+            optimal_fom=state.fom,
             fom_history=fom_history,
             param_history=param_history,
             gradient_norm_history=gradient_norm_history,

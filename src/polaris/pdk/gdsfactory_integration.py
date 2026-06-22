@@ -273,6 +273,67 @@ class DeviceImportConfig:
     process_node: str | None = None
 
 
+def _extract_gdsfactory_ports(component) -> list[Port]:
+    """从 gdsfactory Component 提取端口列表。
+
+    gdsfactory 8.18.0: Ports 对象支持迭代，每个元素有 name 属性。
+
+    Args:
+        component: gdsfactory Component 对象。
+
+    Returns:
+        PoLaRIS Port 列表。
+    """
+    ports: list[Port] = []
+    for gf_port in component.ports:
+        port_name = getattr(gf_port, "name", "") or ""
+        orientation = getattr(gf_port, "orientation", 0) or 0
+        direction = _orientation_to_direction(orientation)
+        width = getattr(gf_port, "width", 0.5) or 0.5
+        port_type = getattr(gf_port, "port_type", "optical") or "optical"
+        center = getattr(gf_port, "center", (0, 0)) or (0, 0)
+        ports.append(
+            Port(
+                name=str(port_name),
+                x=float(center[0]),
+                y=float(center[1]),
+                direction=direction,
+                waveguide_type=str(port_type),
+                width=float(width),
+            )
+        )
+    return ports
+
+
+def _extract_gdsfactory_bbox(component) -> BoundingBox:
+    """从 gdsfactory Component 提取包围盒。
+
+    gdsfactory 8.18.0: component.bbox 是方法，调用返回 klayout Box。
+    旧版 API: bbox 是 numpy array [[xmin, ymin], [xmax, ymax]]。
+
+    Args:
+        component: gdsfactory Component 对象。
+
+    Returns:
+        PoLaRIS BoundingBox 对象。
+    """
+    if callable(component.bbox):
+        bbox_obj = component.bbox()
+        return BoundingBox(
+            xmin=float(bbox_obj.left),
+            ymin=float(bbox_obj.bottom),
+            xmax=float(bbox_obj.right),
+            ymax=float(bbox_obj.top),
+        )
+    bbox_array = component.bbox
+    return BoundingBox(
+        xmin=float(bbox_array[0, 0]),
+        ymin=float(bbox_array[0, 1]),
+        xmax=float(bbox_array[1, 0]),
+        ymax=float(bbox_array[1, 1]),
+    )
+
+
 def gdsfactory_to_polaris_device(
     component,
     device_id: str,
@@ -295,60 +356,17 @@ def gdsfactory_to_polaris_device(
     https://gdsfactory.github.io/gdsfactory/
     """
     cfg = config or DeviceImportConfig()
-    platform = cfg.platform
-    category = cfg.category
-    name = cfg.name
-    process_node = cfg.process_node
-    # 提取端口
-    ports: list[Port] = []
-    # gdsfactory 8.18.0: Ports 对象支持迭代，每个元素有 name 属性
-    for gf_port in component.ports:
-        port_name = getattr(gf_port, "name", "") or ""
-        orientation = getattr(gf_port, "orientation", 0) or 0
-        direction = _orientation_to_direction(orientation)
-        width = getattr(gf_port, "width", 0.5) or 0.5
-        port_type = getattr(gf_port, "port_type", "optical") or "optical"
-        center = getattr(gf_port, "center", (0, 0)) or (0, 0)
-        ports.append(
-            Port(
-                name=str(port_name),
-                x=float(center[0]),
-                y=float(center[1]),
-                direction=direction,
-                waveguide_type=str(port_type),
-                width=float(width),
-            )
-        )
-
-    # 提取包围盒
-    # gdsfactory 8.18.0: component.bbox 是方法，调用返回 klayout Box
-    if callable(component.bbox):
-        bbox_obj = component.bbox()
-        bbox = BoundingBox(
-            xmin=float(bbox_obj.left),
-            ymin=float(bbox_obj.bottom),
-            xmax=float(bbox_obj.right),
-            ymax=float(bbox_obj.top),
-        )
-    else:
-        # 旧版 API: bbox 是 numpy array [[xmin, ymin], [xmax, ymax]]
-        bbox_array = component.bbox
-        bbox = BoundingBox(
-            xmin=float(bbox_array[0, 0]),
-            ymin=float(bbox_array[0, 1]),
-            xmax=float(bbox_array[1, 0]),
-            ymax=float(bbox_array[1, 1]),
-        )
-
+    ports = _extract_gdsfactory_ports(component)
+    bbox = _extract_gdsfactory_bbox(component)
     return Device(
         device_id=device_id,
-        platform=platform,
-        category=category,
-        name=name or component.name,
+        platform=cfg.platform,
+        category=cfg.category,
+        name=cfg.name or component.name,
         ports=ports,
         bbox=bbox,
         params={"source": "gdsfactory", "component_name": component.name},
-        process_node=process_node,
+        process_node=cfg.process_node,
     )
 
 
@@ -383,6 +401,66 @@ def list_gdsfactory_pdks() -> list[str]:
     return pdks
 
 
+def _activate_gdsfactory_pdk(pdk_name: str):
+    """激活指定 gdsfactory PDK 并返回组件字典。
+
+    Args:
+        pdk_name: PDK 名（generic/ubcpdk）。
+
+    Returns:
+        组件字典对象，None 表示不支持。
+    """
+    if pdk_name == "generic":
+        gf.get_active_pdk()
+        return gf.components
+    if pdk_name == "ubcpdk":
+        import ubcpdk
+
+        ubcpdk.PDK.activate()
+        return ubcpdk.cells
+    return None
+
+
+def _convert_gdsfactory_components(
+    components,
+    pdk_name: str,
+    platform: str,
+    process_node: str,
+    max_components: int,
+) -> dict[str, Device]:
+    """遍历 gdsfactory 组件并转换为 PoLaRIS Device。
+
+    Args:
+        components: gdsfactory 组件字典。
+        pdk_name: PDK 名。
+        platform: 平台名。
+        process_node: 工艺节点。
+        max_components: 最大加载器件数。
+
+    Returns:
+        器件名 → Device 映射。
+    """
+    devices: dict[str, Device] = {}
+    component_names = [
+        n for n in dir(components) if not n.startswith("_") and callable(getattr(components, n))
+    ]
+    for name in sorted(component_names):
+        if len(devices) >= max_components:
+            break
+        try:
+            component = getattr(components, name)()
+            devices[name] = gdsfactory_to_polaris_device(
+                component=component,
+                device_id=f"{pdk_name}_{name}",
+                config=DeviceImportConfig(
+                    platform=platform, category="passive", name=name, process_node=process_node,
+                ),
+            )
+        except Exception as e:
+            logger.debug("跳过 gdsfactory 器件 %s: %s", name, e)
+    return devices
+
+
 def load_gdsfactory_pdk(
     pdk_name: str = "generic",
     max_components: int = 50,
@@ -407,16 +485,8 @@ def load_gdsfactory_pdk(
         return {}
 
     try:
-        # 激活指定 PDK
-        if pdk_name == "generic":
-            gf.get_active_pdk()
-            components = gf.components
-        elif pdk_name == "ubcpdk":
-            import ubcpdk
-
-            ubcpdk.PDK.activate()
-            components = ubcpdk.cells
-        else:
+        components = _activate_gdsfactory_pdk(pdk_name)
+        if components is None:
             logger.warning("不支持的 gdsfactory PDK: %s", pdk_name)
             return {}
 
@@ -427,33 +497,9 @@ def load_gdsfactory_pdk(
         }
         platform, process_node = platform_map.get(pdk_name, ("SOI", "220nm SOI"))
 
-        # 遍历组件，转换为 Device
-        devices: dict[str, Device] = {}
-        component_names = [
-            n for n in dir(components) if not n.startswith("_") and callable(getattr(components, n))
-        ]
-
-        for name in sorted(component_names):
-            if len(devices) >= max_components:
-                break
-            try:
-                component_func = getattr(components, name)
-                component = component_func()
-                device = gdsfactory_to_polaris_device(
-                    component=component,
-                    device_id=f"{pdk_name}_{name}",
-                    config=DeviceImportConfig(
-                        platform=platform,
-                        category="passive",
-                        name=name,
-                        process_node=process_node,
-                    ),
-                )
-                devices[name] = device
-            except Exception as e:
-                logger.debug("跳过 gdsfactory 器件 %s: %s", name, e)
-                continue
-
+        devices = _convert_gdsfactory_components(
+            components, pdk_name, platform, process_node, max_components
+        )
         logger.info("从 gdsfactory PDK %s 加载 %d 个器件", pdk_name, len(devices))
         return devices
     except Exception as e:

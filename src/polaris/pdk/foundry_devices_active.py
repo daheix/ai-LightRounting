@@ -27,6 +27,24 @@ from polaris.pdk.port import Direction, Port
 from polaris.pdk.source import Source
 
 
+def _get_modulator_performance(material_platform: str) -> tuple[float, float]:
+    """获取调制器性能参数（带宽/VpiL）。
+
+    LNOI 调制器带宽最高（Pockels 效应），SOI 次之（等离子色散），SiN 无调制。
+
+    Args:
+        material_platform: 材料平台（SOI/SiN/LNOI/InP）。
+
+    Returns:
+        (bandwidth_ghz, vpi_l_v_cm) 带宽和 VpiL。
+    """
+    if material_platform == "LNOI":
+        return 100.0, 2.0
+    if material_platform == "SOI":
+        return 40.0, 1.0
+    return 20.0, 2.0
+
+
 def _make_modulator(foundry: FoundryPlatform, device_id: str) -> Device:
     """创建 foundry 电光调制器器件。
 
@@ -36,16 +54,7 @@ def _make_modulator(foundry: FoundryPlatform, device_id: str) -> Device:
     width = foundry.waveguide_width_um
     mod_length = 100.0
     mod_width = 5.0
-    # LNOI 调制器带宽最高（Pockels 效应），SOI 次之（等离子色散），SiN 无调制
-    if foundry.material_platform == "LNOI":
-        bandwidth_ghz = 100.0
-        vpi_l = 2.0  # V·cm
-    elif foundry.material_platform == "SOI":
-        bandwidth_ghz = 40.0
-        vpi_l = 1.0
-    else:
-        bandwidth_ghz = 20.0
-        vpi_l = 2.0
+    bandwidth_ghz, vpi_l = _get_modulator_performance(foundry.material_platform)
     src = Source(
         title=f"{foundry.foundry} {foundry.process_node} modulator",
         authors=foundry.foundry,
