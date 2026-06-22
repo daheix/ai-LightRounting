@@ -82,8 +82,8 @@
 - [x] Task 10: 提交代码并合并到 main 分支
   - [x] SubTask 10.1: git add 相关文件
   - [x] SubTask 10.2: git commit
-  - [ ] SubTask 10.3: git checkout main && git merge
-  - [ ] SubTask 10.4: git push origin main
+  - [x] SubTask 10.3: git checkout main && git merge
+  - [x] SubTask 10.4: git push origin main
 
 # Task Dependencies
 

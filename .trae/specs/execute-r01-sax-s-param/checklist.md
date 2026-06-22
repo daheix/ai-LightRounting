@@ -75,5 +75,5 @@
 ## 代码提交
 
 - [x] git commit 完成
-- [ ] git merge main 完成
-- [ ] git push origin main 完成
+- [x] git merge main 完成
+- [x] git push origin main 完成
