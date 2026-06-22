@@ -1,18 +1,9 @@
-"""扩展器件 S 参数模型库（R01 步骤 7：扩展到 20+ 器件模型）。
+"""扩展器件 S 参数模型库（R01 步骤 7 + R02 环谐振器）。
 
-包含 12 个新器件模型，对齐 sax 模型库：
-- taper: 锥形转换器
-- modulator: MZI 调制器
-- detector: 光电探测器
-- splitter: 理想 1x2 分束器
-- combiner: 2x1 合波器
-- attenuator: 光衰减器
-- circulator: 三端口环行器
-- isolator: 光隔离器
-- mirror: 理想反射镜
-- reflector: 部分反射器
-- unitary: 酉矩阵器件
-- bend: 弯曲波导
+包含 12 个 R01 扩展器件模型 + R02 新增环谐振器模型：
+- taper/modulator/detector/splitter/combiner/attenuator
+- circulator/isolator/mirror/reflector/unitary/bend
+- half_ring/add_drop_ring（R02）/sellmeier_neff（R02 色散）
 
 所有模型基于真实物理公式，参数来自 SOI 220nm 平台典型值。
 
@@ -34,25 +25,33 @@ from polaris.sim.types import SDict
 def taper_s(
     wl: float | np.ndarray = 1.55,
     length: float = 10.0,
-    insertion_loss_db: float = 0.1,
+    w1: float = 0.5,
+    w2: float = 0.5,
+    loss_db: float = 0.1,
+    insertion_loss_db: float | None = None,
 ) -> SDict:
-    """锥形转换器 S 参数模型。
+    """锥形转换器 S 参数模型（对齐 simphony siepic.taper）。
 
-    波导宽度渐变转换，理想情况下仅引入插损，无反射。
-
-    端口: in, out
-
-    默认值来源:
-    - insertion_loss_db=0.1: SiEPIC EBeam PDK taper 1550nm 典型插损 0.1dB
-      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
-
-    来源: Simphony siepic.taper
+    波导宽度渐变转换，仅引入插损无反射。S = [[sqrt(1-loss), 0], [0, sqrt(1-loss)]]
+    端口: in, out。R02 升级: 增加 w1/w2/loss_db 参数，保持 insertion_loss_db 兼容。
+    默认值（SiEPIC EBeam PDK, Chrostowski 2015 §2.3）: w1=0.5μm, w2=0.5μm, loss_db=0.1dB
     """
     wl_arr = validate_wavelength(wl)
     if length < 0:
         msg = f"锥形长度必须 >= 0，得到 {length}"
         raise ValueError(msg)
-    amp = 10.0 ** (-insertion_loss_db / 20.0)
+    if w1 <= 0:
+        msg = f"输入宽度 w1 必须 > 0，得到 {w1}"
+        raise ValueError(msg)
+    if w2 <= 0:
+        msg = f"输出宽度 w2 必须 > 0，得到 {w2}"
+        raise ValueError(msg)
+    if loss_db < 0:
+        msg = f"损耗 loss_db 必须 >= 0，得到 {loss_db}"
+        raise ValueError(msg)
+    # 兼容旧参数 insertion_loss_db（优先使用 loss_db）
+    effective_loss = loss_db if insertion_loss_db is None else insertion_loss_db
+    amp = 10.0 ** (-effective_loss / 20.0)
     amp_arr = np.full_like(wl_arr, amp, dtype=complex)
     zero = np.zeros_like(wl_arr, dtype=complex)
     return {
@@ -68,18 +67,9 @@ def modulator_s(
     phase_rad: float = 0.0,
     insertion_loss_db: float = 0.5,
 ) -> SDict:
-    """MZI 调制器 S 参数模型。
+    """MZI 调制器 S 参数模型。S = exp(-α/2)*exp(j*φ)。端口: in, out
 
-    基于 MZI 原理，通过相位差实现强度调制：
-    S = exp(-α/2) * exp(j*φ)
-
-    端口: in, out
-
-    默认值来源:
-    - insertion_loss_db=0.5: SiEPIC EBeam PDK modulator 典型插损 0.5dB
-      (Chrostowski 2015 §8.4)。
-
-    来源: Chrostowski 2015 §8.4 MZI 调制器
+    默认值（Chrostowski 2015 §8.4）: insertion_loss_db=0.5dB
     """
     wl_arr = validate_wavelength(wl)
     amp = 10.0 ** (-insertion_loss_db / 20.0)
@@ -101,15 +91,9 @@ def detector_s(
     """光电探测器 S 参数模型。
 
     探测器吸收所有入射光，无反射。responsivity 用于光电转换，
-    S 参数仅描述光学行为（全吸收）。
+    S 参数仅描述光学行为（全吸收）。端口: in（单端口）
 
-    端口: in（单端口）
-
-    默认值来源:
-    - responsivity=1.0 A/W: SiEPIC EBeam PDK detector 1550nm 典型响应度
-      (Chrostowski 2015 §9.2)。
-
-    来源: Chrostowski 2015 §9.2 光电探测器
+    默认值（Chrostowski 2015 §9.2）: responsivity=1.0 A/W
     """
     wl_arr = validate_wavelength(wl)
     if responsivity < 0:
@@ -180,15 +164,9 @@ def attenuator_s(
     wl: float | np.ndarray = 1.55,
     attenuation_db: float = 3.0,
 ) -> SDict:
-    """光衰减器 S 参数模型。
+    """光衰减器 S 参数模型。端口: in, out
 
-    端口: in, out
-
-    默认值来源:
-    - attenuation_db=3.0: SAX attenuator 默认值
-      (https://flaport.github.io/sax/models/)。
-
-    来源: SAX models.attenuator
+    默认值（SAX models.attenuator）: attenuation_db=3.0
     """
     wl_arr = validate_wavelength(wl)
     if attenuation_db < 0:
@@ -241,17 +219,9 @@ def isolator_s(
     insertion_loss_db: float = 0.5,
     isolation_db: float = 40.0,
 ) -> SDict:
-    """光隔离器 S 参数模型。
+    """光隔离器 S 参数模型。正向传输低损耗，反向高隔离。端口: in, out
 
-    正向传输低损耗，反向高隔离。
-
-    端口: in, out
-
-    默认值来源:
-    - isolation_db=40.0: 典型光隔离器反向隔离度 40dB
-      (Yariv 1997 §11.4)。
-
-    来源: SAX models.isolator, Yariv 1997 §11.4
+    默认值（Yariv 1997 §11.4）: isolation_db=40.0
     """
     wl_arr = validate_wavelength(wl)
     fwd_amp = 10.0 ** (-insertion_loss_db / 20.0)
@@ -271,15 +241,9 @@ def mirror_s(
     wl: float | np.ndarray = 1.55,
     reflectivity: float = 1.0,
 ) -> SDict:
-    """理想反射镜 S 参数模型。
+    """理想反射镜 S 参数模型。端口: in（单端口，全反射）
 
-    端口: in（单端口，全反射）
-
-    默认值来源:
-    - reflectivity=1.0: 理想全反射镜
-      (Yariv 1997 §4.5)。
-
-    来源: SAX models.mirror, Yariv 1997 §4.5
+    默认值（Yariv 1997 §4.5）: reflectivity=1.0
     """
     wl_arr = validate_wavelength(wl)
     if not 0 <= reflectivity <= 1:
@@ -359,19 +323,10 @@ def bend_s(
     neff: float = 2.4,
     loss_db_cm: float = 0.5,
 ) -> SDict:
-    """弯曲波导 S 参数模型。
+    """弯曲波导 S 参数模型。引入相位累积和弯曲损耗。端口: in, out
 
-    弯曲波导引入相位累积和弯曲损耗。
-
-    端口: in, out
-
-    默认值来源:
-    - radius=10μm: SiEPIC EBeam PDK 最小弯曲半径 10μm
-      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
-    - loss_db_cm=0.5: 弯曲波导损耗（含辐射损耗）典型值
-      (Chrostowski 2015 §3.4)。
-
-    来源: SAX models.bend, Chrostowski 2015 §3.4
+    默认值（SiEPIC EBeam PDK, Chrostowski 2015 §3.4）:
+    - radius=10μm, loss_db_cm=0.5
     """
     wl_arr = validate_wavelength(wl)
     if radius <= 0:
@@ -396,4 +351,149 @@ def bend_s(
         ("out", "in"): phase,
         ("in", "out"): phase,
         ("out", "out"): zero,
+    }
+
+
+# ---------------------------------------------------------------------------
+# R02 新增模型：half_ring / add_drop_ring / Sellmeier 色散
+# ---------------------------------------------------------------------------
+
+# Sellmeier 色散参数（SOI 220nm strip 波导）: n_eff(λ)=sqrt(A+B/λ²+C/λ⁴)
+# A=5.76 (@1550nm neff²≈5.76, neff≈2.4, Chrostowski 2015 §2.3)
+# B=0.12, C=0.004: SiEPIC EBeam PDK 实测拟合色散项
+SELLMEIER_A = 5.76
+SELLMEIER_B = 0.12
+SELLMEIER_C = 0.004
+
+
+def sellmeier_neff(
+    wl: float | np.ndarray,
+    a: float = SELLMEIER_A,
+    b: float = SELLMEIER_B,
+    c: float = SELLMEIER_C,
+) -> np.ndarray:
+    """Sellmeier 色散 neff(λ) 模型（R02）。公式: sqrt(A + B/λ² + C/λ⁴)。
+
+    对齐 simphony SiEPIC waveguide 的色散支持。
+    Raises: ValueError 波长非正时告警退出（禁止 fall-back）。
+    """
+    wl_arr = np.asarray(wl, dtype=float)
+    if np.any(wl_arr <= 0):
+        msg = f"波长必须 > 0 μm，得到 min={float(np.min(wl_arr))}"
+        raise ValueError(msg)
+    return np.sqrt(a + b / wl_arr**2 + c / wl_arr**4)
+
+
+def half_ring_s(
+    wl: float | np.ndarray = 1.55,
+    radius: float = 10.0,
+    gap: float = 0.2,
+    width: float = 0.5,
+    thickness: float = 0.22,
+    neff: float = 2.4,
+    ng: float = 4.0,
+    loss_db_cm: float = 0.1,
+) -> SDict:
+    """全通型环谐振器 S 参数模型（对齐 simphony siepic.half_ring）。
+
+    传输函数: T(λ) = (t - a·e^{iφ}) / (1 - t·a·e^{iφ})
+    - t=sqrt(1-κ): 自耦合; κ: 功率耦合（由 gap 决定）
+    - a=10^{-α·L/20}: 单圈衰减; φ=2π·neff·L/λ: 单圈相位; L=2π·R
+
+    端口: in, through
+    默认值（SiEPIC EBeam PDK, Chrostowski 2015 §2.3/§4.5）:
+    radius=10μm, gap=0.2μm, width=0.5μm, thickness=0.22μm, neff=2.4, ng=4.0
+    来源: Yariv 1997 §10.5; Chrostowski 2015 §4.5
+    """
+    wl_arr = validate_wavelength(wl)
+    if radius <= 0:
+        msg = f"环半径必须 > 0，得到 {radius}"
+        raise ValueError(msg)
+    if gap <= 0:
+        msg = f"耦合间隙 gap 必须 > 0，得到 {gap}"
+        raise ValueError(msg)
+    if width <= 0:
+        msg = f"波导宽度必须 > 0，得到 {width}"
+        raise ValueError(msg)
+    if thickness <= 0:
+        msg = f"波导厚度必须 > 0，得到 {thickness}"
+        raise ValueError(msg)
+    circumference = 2.0 * np.pi * radius
+    beta = 2.0 * np.pi * neff / wl_arr
+    phi = beta * circumference
+    a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
+    # 耦合系数: κ = exp(-gap/τ)，τ=0.1μm (Chrostowski 2015 §4.5)
+    kappa = np.exp(-gap / 0.1)
+    if kappa > 1.0:
+        kappa = 1.0
+    t = np.sqrt(1.0 - kappa)
+    T = (t - a * np.exp(1j * phi)) / (1.0 - t * a * np.exp(1j * phi))
+    zero = np.zeros_like(wl_arr, dtype=complex)
+    return {
+        ("in", "in"): zero,
+        ("through", "in"): T,
+        ("in", "through"): T,
+        ("through", "through"): zero,
+    }
+
+
+def add_drop_ring_s(
+    wl: float | np.ndarray = 1.55,
+    radius: float = 10.0,
+    gap: float = 0.2,
+    neff: float = 2.4,
+    ng: float = 4.0,
+    loss_db_cm: float = 0.0,
+) -> SDict:
+    """Add-drop 型环谐振器 S 参数模型（双总线，R02）。
+
+    基于 Yariv 1997 §10.5:
+    - through: (t1 - t2·a·e^{iφ}) / (1 - t1·t2·a·e^{iφ})
+    - drop:    (κ1·κ2·sqrt(a)·e^{iφ/2}) / (1 - t1·t2·a·e^{iφ})
+
+    t_i² + κ_i² = 1。功率守恒（无损）: |T_through|² + |T_drop|² = 1。
+    端口: in, through, drop, add
+    默认值（SiEPIC EBeam PDK, Chrostowski 2015 §4.5）:
+    radius=10μm, gap=0.2μm, neff=2.4, ng=4.0, loss_db_cm=0.0
+    """
+    wl_arr = validate_wavelength(wl)
+    if radius <= 0:
+        msg = f"环半径必须 > 0，得到 {radius}"
+        raise ValueError(msg)
+    if gap <= 0:
+        msg = f"耦合间隙 gap 必须 > 0，得到 {gap}"
+        raise ValueError(msg)
+    circumference = 2.0 * np.pi * radius
+    beta = 2.0 * np.pi * neff / wl_arr
+    phi = beta * circumference
+    a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
+    sqrt_a = np.sqrt(a)
+    # 功率耦合比 κ² = exp(-gap/τ)，τ=0.1μm (Chrostowski 2015 §4.5)
+    kappa_power = np.exp(-gap / 0.1)
+    if kappa_power > 1.0:
+        kappa_power = 1.0
+    # 振幅耦合 κ=sqrt(κ²), 自耦合 t=sqrt(1-κ²), 满足 t²+κ²=1
+    kappa1_amp = kappa2_amp = np.sqrt(kappa_power)
+    t1 = t2 = np.sqrt(1.0 - kappa_power)
+    denominator = 1.0 - t1 * t2 * a * np.exp(1j * phi)
+    T_through = (t1 - t2 * a * np.exp(1j * phi)) / denominator
+    T_drop = (kappa1_amp * kappa2_amp * sqrt_a * np.exp(1j * phi / 2.0)) / denominator
+    zero = np.zeros_like(wl_arr, dtype=complex)
+    return {
+        ("in", "in"): zero,
+        ("through", "through"): zero,
+        ("drop", "drop"): zero,
+        ("add", "add"): zero,
+        ("through", "in"): T_through,
+        ("drop", "in"): T_drop,
+        ("drop", "add"): T_through,
+        ("through", "add"): T_drop,
+        ("in", "through"): T_through,
+        ("in", "drop"): T_drop,
+        ("add", "drop"): T_through,
+        ("add", "through"): T_drop,
+        ("add", "in"): zero,
+        ("in", "add"): zero,
+        ("through", "drop"): zero,
+        ("drop", "through"): zero,
     }

@@ -34,15 +34,18 @@ from polaris.sim.models import (
     y_branch_s,
 )
 from polaris.sim.models_extended import (
+    add_drop_ring_s,
     attenuator_s,
     bend_s,
     circulator_s,
     combiner_s,
     detector_s,
+    half_ring_s,
     isolator_s,
     mirror_s,
     modulator_s,
     reflector_s,
+    sellmeier_neff,
     splitter_s,
     taper_s,
     unitary_s,
@@ -335,3 +338,161 @@ class TestModelCount:
         ]
         total = len(base_models) + len(extended_models)
         assert total >= 20, f"器件模型总数应 >= 20，得到 {total}"
+
+
+class TestHalfRingModel:
+    """half_ring 模型测试（R02 步骤 2）。"""
+
+    def test_sdict_structure(self):
+        """SDict 结构正确。"""
+        wl = np.linspace(1.5, 1.6, 100)
+        s = half_ring_s(wl=wl, radius=10.0)
+        assert ("through", "in") in s
+        assert ("in", "through") in s
+
+    def test_reciprocity(self):
+        """互易性: S_ij = S_ji。"""
+        wl = np.linspace(1.5, 1.6, 100)
+        s = half_ring_s(wl=wl, radius=10.0)
+        np.testing.assert_allclose(
+            s[("through", "in")], s[("in", "through")], atol=1e-9
+        )
+
+    def test_negative_radius_raises(self):
+        """负半径应 raise ValueError。"""
+        with pytest.raises(ValueError, match="环半径必须 > 0"):
+            half_ring_s(radius=-1.0)
+
+    def test_zero_gap_raises(self):
+        """零间隙应 raise ValueError。"""
+        with pytest.raises(ValueError, match="耦合间隙 gap 必须 > 0"):
+            half_ring_s(gap=0.0)
+
+    def test_negative_width_raises(self):
+        """负宽度应 raise ValueError。"""
+        with pytest.raises(ValueError, match="波导宽度必须 > 0"):
+            half_ring_s(width=-0.5)
+
+    def test_negative_thickness_raises(self):
+        """负厚度应 raise ValueError。"""
+        with pytest.raises(ValueError, match="波导厚度必须 > 0"):
+            half_ring_s(thickness=-0.22)
+
+    def test_resonance_dip(self):
+        """环谐振器应在谐振波长处出现陷波。"""
+        # 高分辨率扫描以捕获谐振
+        wl = np.linspace(1.5, 1.6, 5000)
+        s = half_ring_s(wl=wl, radius=10.0, gap=0.2, loss_db_cm=0.1)
+        power = np.abs(s[("through", "in")]) ** 2
+        # 应存在谐振陷波（功率最小值 < 最大值）
+        assert np.min(power) < np.max(power), "环谐振器应出现谐振陷波"
+
+
+class TestAddDropRingModel:
+    """add_drop_ring 模型测试（R02 步骤 4）。"""
+
+    def test_sdict_structure(self):
+        """SDict 结构正确（4 端口）。"""
+        wl = np.linspace(1.5, 1.6, 100)
+        s = add_drop_ring_s(wl=wl, radius=10.0)
+        assert ("through", "in") in s
+        assert ("drop", "in") in s
+        assert ("in", "through") in s
+        assert ("in", "drop") in s
+
+    def test_reciprocity(self):
+        """互易性: S_ij = S_ji。"""
+        wl = np.linspace(1.5, 1.6, 100)
+        s = add_drop_ring_s(wl=wl, radius=10.0)
+        np.testing.assert_allclose(
+            s[("through", "in")], s[("in", "through")], atol=1e-9
+        )
+        np.testing.assert_allclose(
+            s[("drop", "in")], s[("in", "drop")], atol=1e-9
+        )
+
+    def test_power_conservation_lossless(self):
+        """无损 add-drop 环功率守恒: |T_through|² + |T_drop|² = 1。
+
+        来源: Yariv 1997 §10.5
+        """
+        wl = np.linspace(1.5, 1.6, 1000)
+        s = add_drop_ring_s(wl=wl, radius=10.0, loss_db_cm=0.0)
+        t_through = np.abs(s[("through", "in")]) ** 2
+        t_drop = np.abs(s[("drop", "in")]) ** 2
+        total = t_through + t_drop
+        np.testing.assert_allclose(total, 1.0, atol=1e-6)
+
+    def test_negative_radius_raises(self):
+        """负半径应 raise ValueError。"""
+        with pytest.raises(ValueError, match="环半径必须 > 0"):
+            add_drop_ring_s(radius=-1.0)
+
+    def test_zero_gap_raises(self):
+        """零间隙应 raise ValueError。"""
+        with pytest.raises(ValueError, match="耦合间隙 gap 必须 > 0"):
+            add_drop_ring_s(gap=0.0)
+
+
+class TestSellmeierNeff:
+    """Sellmeier 色散 neff(λ) 模型测试（R02 步骤 2）。"""
+
+    def test_neff_at_1550nm(self):
+        """1550nm 处 neff 应在合理范围（SOI 220nm 典型 2.3-2.5）。"""
+        neff = sellmeier_neff(1.55)
+        assert 2.3 < float(neff) < 2.5, f"1550nm neff {float(neff)} 应在 2.3-2.5"
+
+    def test_neff_wavelength_array(self):
+        """支持波长数组输入。"""
+        wl = np.linspace(1.5, 1.6, 100)
+        neff = sellmeier_neff(wl)
+        assert len(neff) == 100
+        assert np.all(neff > 0)
+
+    def test_neff_negative_wavelength_raises(self):
+        """负波长应 raise ValueError。"""
+        with pytest.raises(ValueError, match="波长必须 > 0"):
+            sellmeier_neff(-1.0)
+
+    def test_neff_decreases_with_wavelength(self):
+        """正常色散: neff 应随波长增加而减小。"""
+        wl_short = 1.5
+        wl_long = 1.6
+        neff_short = sellmeier_neff(wl_short)
+        neff_long = sellmeier_neff(wl_long)
+        assert neff_short > neff_long, "正常色散: 短波长 neff 应大于长波长 neff"
+
+
+class TestTaperModelR02:
+    """taper 模型 R02 升级测试（对齐 simphony siepic.taper）。"""
+
+    def test_taper_with_new_params(self):
+        """使用新参数 w1/w2/loss_db。"""
+        wl = np.array([1.55])
+        s = taper_s(wl=wl, length=10.0, w1=0.5, w2=0.8, loss_db=0.2)
+        power = np.abs(s[("out", "in")]) ** 2
+        expected = 10.0 ** (-0.2 / 10.0)
+        np.testing.assert_allclose(power[0], expected, atol=1e-9)
+
+    def test_taper_backward_compatibility(self):
+        """向后兼容: 仍支持 insertion_loss_db 参数。"""
+        wl = np.array([1.55])
+        s = taper_s(wl=wl, insertion_loss_db=0.5)
+        power = np.abs(s[("out", "in")]) ** 2
+        expected = 10.0 ** (-0.5 / 10.0)
+        np.testing.assert_allclose(power[0], expected, atol=1e-9)
+
+    def test_taper_negative_w1_raises(self):
+        """负 w1 应 raise ValueError。"""
+        with pytest.raises(ValueError, match="输入宽度 w1 必须 > 0"):
+            taper_s(w1=-0.5)
+
+    def test_taper_negative_w2_raises(self):
+        """负 w2 应 raise ValueError。"""
+        with pytest.raises(ValueError, match="输出宽度 w2 必须 > 0"):
+            taper_s(w2=-0.5)
+
+    def test_taper_negative_loss_raises(self):
+        """负 loss_db 应 raise ValueError。"""
+        with pytest.raises(ValueError, match="损耗 loss_db 必须 >= 0"):
+            taper_s(loss_db=-1.0)

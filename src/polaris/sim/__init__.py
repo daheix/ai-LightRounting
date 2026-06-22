@@ -70,15 +70,18 @@ from polaris.sim.models import (
     y_branch_s,
 )
 from polaris.sim.models_extended import (
+    add_drop_ring_s,
     attenuator_s,
     bend_s,
     circulator_s,
     combiner_s,
     detector_s,
+    half_ring_s,
     isolator_s,
     mirror_s,
     modulator_s,
     reflector_s,
+    sellmeier_neff,
     splitter_s,
     taper_s,
     unitary_s,
@@ -89,11 +92,24 @@ from polaris.sim.netlist_adapter import (
     detect_format,
     validate_netlist,
 )
+from polaris.sim.siepic_netlist import (
+    SIEPIC_PORT_MAP,
+    SIEPIC_TYPE_MAP,
+    parse_siepic_json,
+    parse_siepic_json_with_models,
+)
 from polaris.sim.simulator import (
     CircuitSimulator,
     WavelengthRange,
+    analyze_dispersion,
     default_models,
+    group_delay,
     simphony_models,
+)
+from polaris.sim.subcircuit import (
+    Connector,
+    Subcircuit,
+    Term,
 )
 from polaris.sim.touchstone import load_touchstone, save_touchstone
 from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
@@ -123,6 +139,10 @@ __all__ = [
     "crossing_s",
     "terminator_s",
     "phase_shifter_s",
+    # R02 新增 SiEPIC 模型
+    "half_ring_s",
+    "add_drop_ring_s",
+    "sellmeier_neff",
     # 扩展器件 S 参数模型（R01 步骤 7）
     "taper_s",
     "modulator_s",
@@ -157,6 +177,18 @@ __all__ = [
     "CircuitSimulator",
     "default_models",
     "simphony_models",
+    # R02 群延迟和色散分析
+    "group_delay",
+    "analyze_dispersion",
+    # R02 simphony 兼容 API
+    "Term",
+    "Connector",
+    "Subcircuit",
+    # R02 SiEPIC JSON 网表解析器
+    "parse_siepic_json",
+    "parse_siepic_json_with_models",
+    "SIEPIC_TYPE_MAP",
+    "SIEPIC_PORT_MAP",
     # KLayout DRC（第2轮 P0-1）
     "DRCCheckType",
     "DRCResult",
