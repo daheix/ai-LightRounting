@@ -480,6 +480,46 @@ class NSGA2Optimizer:
             population.append(Individual(params=params, objectives=objectives))
         return population
 
+    def _crossover_and_mutate(
+        self,
+        parent1: Individual,
+        parent2: Individual,
+        bounds: list[tuple[float, float]],
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """SBX 交叉 + 多项式变异，生成两个子代参数。
+
+        Args:
+            parent1: 父代 1。
+            parent2: 父代 2。
+            bounds: 参数边界。
+
+        Returns:
+            (child1_params, child2_params) 两个子代参数。
+        """
+        sbx_cfg = SBXConfig(
+            prob=self.config.crossover_prob,
+            eta=self.config.crossover_eta,
+            rng=self.rng,
+        )
+        child1_params, child2_params = sbx_crossover(
+            parent1.params, parent2.params, bounds, sbx_cfg
+        )
+        child1_params = polynomial_mutation(
+            child1_params,
+            bounds,
+            self.config.mutation_prob,
+            self.config.mutation_eta,
+            self.rng,
+        )
+        child2_params = polynomial_mutation(
+            child2_params,
+            bounds,
+            self.config.mutation_prob,
+            self.config.mutation_eta,
+            self.rng,
+        )
+        return child1_params, child2_params
+
     def _create_offspring(self, population: list[Individual]) -> list[Individual]:
         """创建子代。
 
@@ -496,34 +536,9 @@ class NSGA2Optimizer:
         while len(offspring) < n_offspring:
             parent1 = tournament_selection(population, self.rng)
             parent2 = tournament_selection(population, self.rng)
-
-            sbx_cfg = SBXConfig(
-                prob=self.config.crossover_prob,
-                eta=self.config.crossover_eta,
-                rng=self.rng,
+            child1_params, child2_params = self._crossover_and_mutate(
+                parent1, parent2, bounds
             )
-            child1_params, child2_params = sbx_crossover(
-                parent1.params,
-                parent2.params,
-                bounds,
-                sbx_cfg,
-            )
-
-            child1_params = polynomial_mutation(
-                child1_params,
-                bounds,
-                self.config.mutation_prob,
-                self.config.mutation_eta,
-                self.rng,
-            )
-            child2_params = polynomial_mutation(
-                child2_params,
-                bounds,
-                self.config.mutation_prob,
-                self.config.mutation_eta,
-                self.rng,
-            )
-
             obj1 = np.asarray(self.fom_fn(child1_params), dtype=float)
             obj2 = np.asarray(self.fom_fn(child2_params), dtype=float)
             offspring.append(Individual(params=child1_params, objectives=obj1))

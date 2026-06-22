@@ -138,6 +138,33 @@ class RoutingEnv(gym.Env):
 
     metadata = {"render_modes": []}
 
+    def _init_action_observation_spaces(self, config: RoutingEnvConfig) -> None:
+        """初始化动作空间和观测空间。
+
+        Args:
+            config: 路由环境配置。
+        """
+        # 动作：路径偏移 (dx, dy, detour) ∈ [-1,1]^3
+        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
+        # 观测空间：基础 + 可选全局拥塞通道
+        obs_spaces = {
+            "congestion": spaces.Box(
+                low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
+            ),
+            "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
+            "step": spaces.Box(
+                low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
+            ),
+        }
+        if self.use_global_router:
+            # 全局拥塞图通道（GCell 网格大小，与详细栅格不同）
+            gw = max(1, int(config.canvas_w / self.global_router_gcell_size_um))
+            gh = max(1, int(config.canvas_h / self.global_router_gcell_size_um))
+            obs_spaces["global_congestion"] = spaces.Box(
+                low=-1e6, high=1e6, shape=(gh, gw), dtype=np.float32
+            )
+        self.observation_space = spaces.Dict(obs_spaces)
+
     def __init__(
         self,
         net: Netlist,
@@ -173,27 +200,7 @@ class RoutingEnv(gym.Env):
         # 重复计算旋转/平移。placements 在 episode 期间不变，reset 时刷新。
         self._obstacle_bboxes: list[tuple[float, float, float, float]] = []
         self._obstacle_inst_ids: list[str] = []
-
-        # 动作：路径偏移 (dx, dy, detour) ∈ [-1,1]^3
-        self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.float32)
-        # 观测空间：基础 + 可选全局拥塞通道
-        obs_spaces = {
-            "congestion": spaces.Box(
-                low=0, high=1e6, shape=(self.grid_h, self.grid_w), dtype=np.float32
-            ),
-            "ports": spaces.Box(low=0, high=1e6, shape=(4,), dtype=np.float32),
-            "step": spaces.Box(
-                low=0, high=max(1, len(self.connections)), shape=(1,), dtype=np.float32
-            ),
-        }
-        if self.use_global_router:
-            # 全局拥塞图通道（GCell 网格大小，与详细栅格不同）
-            gw = max(1, int(config.canvas_w / self.global_router_gcell_size_um))
-            gh = max(1, int(config.canvas_h / self.global_router_gcell_size_um))
-            obs_spaces["global_congestion"] = spaces.Box(
-                low=-1e6, high=1e6, shape=(gh, gw), dtype=np.float32
-            )
-        self.observation_space = spaces.Dict(obs_spaces)
+        self._init_action_observation_spaces(config)
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)

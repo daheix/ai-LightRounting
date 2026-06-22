@@ -359,6 +359,21 @@ class GlobalRouter:
             neighbors.append((nx, ny))
         return neighbors
 
+    def _compute_gcell_step_cost(self, nx: int, ny: int) -> float:
+        """计算 GCell A* 步长代价（步长 + 拥塞惩罚）。
+
+        Args:
+            nx: 邻居 GCell x 索引。
+            ny: 邻居 GCell y 索引。
+
+        Returns:
+            步长代价。
+        """
+        step_cost = 1.0
+        overflow = max(0.0, self.demand[ny, nx] - self.capacity[ny, nx])
+        step_cost += self.config.congestion_weight * overflow
+        return step_cost
+
     def _gcell_astar(
         self,
         start_gcell: tuple[int, int],
@@ -399,11 +414,7 @@ class GlobalRouter:
             if (x, y) == (gx, gy):
                 return self._reconstruct_path((x, y), came_from)
             for nx, ny in self._astar_neighbors(x, y, (gx, gy)):
-                # 代价 = 步长 + 拥塞惩罚
-                step_cost = 1.0
-                overflow = max(0.0, self.demand[ny, nx] - self.capacity[ny, nx])
-                step_cost += self.config.congestion_weight * overflow
-                ng = g + step_cost
+                ng = g + self._compute_gcell_step_cost(nx, ny)
                 if (nx, ny) in g_score and ng >= g_score[(nx, ny)]:
                     continue
                 g_score[(nx, ny)] = ng
@@ -454,6 +465,20 @@ class GlobalRouter:
         for gx, gy in gcell_path:
             self.demand[gy, gx] = max(0.0, self.demand[gy, gx] - 1.0)
 
+    def _check_route_overflow(self, gcell_path: list[tuple[int, int]]) -> float:
+        """计算路径拥塞溢出总量。
+
+        Args:
+            gcell_path: GCell 路径。
+
+        Returns:
+            溢出总量（demand - capacity 的正部分之和）。
+        """
+        return sum(
+            max(0.0, self.demand[gy, gx] - self.capacity[gy, gx])
+            for gx, gy in gcell_path
+        )
+
     def _route_single_connection(
         self,
         conn_idx: int,
@@ -475,11 +500,7 @@ class GlobalRouter:
         # 已布则跳过（非首轮）
         if conn_idx in results and round_idx > 0:
             gr = results[conn_idx]
-            overflow = sum(
-                max(0.0, self.demand[gy, gx] - self.capacity[gy, gx])
-                for gx, gy in gr.gcell_path
-            )
-            if overflow == 0:
+            if self._check_route_overflow(gr.gcell_path) == 0:
                 return
             # 拥塞溢出：Rip-up 重布
             self._reduce_demand(gr.gcell_path)

@@ -285,6 +285,75 @@ def cmos_process_node_count() -> int:
     return len(CMOS_PROCESS_NODES)
 
 
+def _parse_cmos_node(process_node: str) -> int:
+    """从 process_node 字符串解析 CMOS 节点（nm）。
+
+    支持格式：``"45nm CMOS"`` / ``"0.13μm CMOS"`` / ``"90nm,"`` / ``"BiCMOS"``。
+
+    Args:
+        process_node: process_node 字符串。
+
+    Returns:
+        CMOS 节点（nm），无 CMOS 为 0。
+    """
+    cmos_patterns = [
+        r"(\d+(?:\.\d+)?)\s*nm\s*CMOS",
+        r"(\d+(?:\.\d+)?)\s*μm\s*CMOS",
+        r"(\d+(?:\.\d+)?)\s*um\s*CMOS",
+        r"BiCMOS",  # IHP SG25H5 标记为 BiCMOS
+        # "90nm, 220nm SOI" 格式：数字+nm+逗号 + 后续 SOI/SiN/LNOI
+        r"^(\d+)\s*nm\s*,\s*\d+\s*nm\s*(?:SOI|SiN|LNOI|Si)",
+    ]
+    for pattern in cmos_patterns:
+        m = re.search(pattern, process_node, re.IGNORECASE)
+        if m:
+            if pattern == "BiCMOS":
+                # BiCMOS 默认 250nm（IHP SG25H5）
+                return 250
+            val = float(m.group(1))
+            # μm → nm 转换
+            if "μm" in pattern or "um" in pattern:
+                val = val * 1000
+            return int(val)
+    return 0
+
+
+def _parse_photonic_layer(process_node: str) -> int:
+    """从 process_node 字符串解析光子层厚度（nm）。
+
+    支持格式：``"220nm SOI"`` / ``"800nm SiN"`` / ``"600nm LNOI"``。
+
+    Args:
+        process_node: process_node 字符串。
+
+    Returns:
+        光子层厚度（nm），无光子层为 0。
+    """
+    photonic_match = re.search(
+        r"(\d+)\s*nm\s*(?:SOI|SiN|LNOI|Si)", process_node, re.IGNORECASE
+    )
+    if photonic_match:
+        return int(photonic_match.group(1))
+    return 0
+
+
+def _parse_wafer_size(process_node: str) -> int:
+    """从 process_node 字符串解析晶圆直径（mm）。
+
+    支持格式：``"(300mm)"`` / ``"(200mm)"`` / ``"(150mm)"`` / ``"(100mm)"``。
+
+    Args:
+        process_node: process_node 字符串。
+
+    Returns:
+        晶圆直径（mm），无信息为 0。
+    """
+    wafer_match = re.search(r"\((\d+)\s*mm\)", process_node, re.IGNORECASE)
+    if wafer_match:
+        return int(wafer_match.group(1))
+    return 0
+
+
 def parse_process_node_string(process_node: str) -> dict:
     """从 process_node 字符串解析 CMOS 节点信息。
 
@@ -305,47 +374,15 @@ def parse_process_node_string(process_node: str) -> dict:
         - ``wafer_size_mm``: 晶圆直径（mm），无信息为 0
         - ``has_cmos``: 是否含 CMOS
     """
-    result = {
-        "cmos_node_nm": 0,
-        "photonic_layer_nm": 0,
-        "wafer_size_mm": 0,
-        "has_cmos": False,
+    cmos_node_nm = _parse_cmos_node(process_node)
+    photonic_layer_nm = _parse_photonic_layer(process_node)
+    wafer_size_mm = _parse_wafer_size(process_node)
+    return {
+        "cmos_node_nm": cmos_node_nm,
+        "photonic_layer_nm": photonic_layer_nm,
+        "wafer_size_mm": wafer_size_mm,
+        "has_cmos": cmos_node_nm > 0,
     }
-    # 解析 CMOS 节点（支持 nm/μm）
-    # 匹配 "45nm CMOS" / "0.13μm CMOS" / "90nm," / "45nm CMOS,"
-    cmos_patterns = [
-        r"(\d+(?:\.\d+)?)\s*nm\s*CMOS",
-        r"(\d+(?:\.\d+)?)\s*μm\s*CMOS",
-        r"(\d+(?:\.\d+)?)\s*um\s*CMOS",
-        r"BiCMOS",  # IHP SG25H5 标记为 BiCMOS
-        # "90nm, 220nm SOI" 格式：数字+nm+逗号 + 后续 SOI/SiN/LNOI
-        r"^(\d+)\s*nm\s*,\s*\d+\s*nm\s*(?:SOI|SiN|LNOI|Si)",
-    ]
-    for pattern in cmos_patterns:
-        m = re.search(pattern, process_node, re.IGNORECASE)
-        if m:
-            if pattern == "BiCMOS":
-                # BiCMOS 默认 250nm（IHP SG25H5）
-                result["cmos_node_nm"] = 250
-            else:
-                val = float(m.group(1))
-                # μm → nm 转换
-                if "μm" in pattern or "um" in pattern:
-                    val = val * 1000
-                result["cmos_node_nm"] = int(val)
-            result["has_cmos"] = True
-            break
-    # 解析光子层（220nm SOI / 800nm SiN / 600nm LNOI）
-    photonic_match = re.search(
-        r"(\d+)\s*nm\s*(?:SOI|SiN|LNOI|Si)", process_node, re.IGNORECASE
-    )
-    if photonic_match:
-        result["photonic_layer_nm"] = int(photonic_match.group(1))
-    # 解析晶圆直径（300mm/200mm/150mm/100mm）
-    wafer_match = re.search(r"\((\d+)\s*mm\)", process_node, re.IGNORECASE)
-    if wafer_match:
-        result["wafer_size_mm"] = int(wafer_match.group(1))
-    return result
 
 
 def suggest_process_node_for_circuit(

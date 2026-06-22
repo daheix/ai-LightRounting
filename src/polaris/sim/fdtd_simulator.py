@@ -165,6 +165,42 @@ def get_available_backends() -> list[FDTDBackend]:
     return backends
 
 
+def _select_fdtd_backend(device: Device, config: FDTDConfig) -> FDTDResult:
+    """根据配置选择并执行 FDTD 后端仿真。
+
+    Args:
+        device: 待仿真器件。
+        config: 仿真配置。
+
+    Returns:
+        FDTD 仿真结果。
+
+    Raises:
+        ImportError: 指定后端不可用。
+        ValueError: 不支持的后端。
+    """
+    if config.backend == FDTDBackend.MEEP:
+        if not is_meep_available():
+            raise ImportError(
+                "MEEP 后端不可用：未安装 meep。"
+                "安装方式: pip install meep（需要 Python 3.10-3.13，"
+                "Python 3.14 暂不支持）。"
+                "来源: https://meep.readthedocs.io/en/latest/Installation/"
+            )
+        return _run_meep_simulation(device, config)
+    if config.backend == FDTDBackend.TIDY3D:
+        if not is_tidy3d_available():
+            raise ImportError(
+                "Tidy3D 后端不可用：未安装 tidy3d。"
+                "安装方式: pip install tidy3d。"
+                "需要 API key: https://www.flexcompute.com/tidy3d/"
+            )
+        return _run_tidy3d_simulation(device, config)
+    if config.backend == FDTDBackend.ANALYTICAL:
+        return _run_analytical_simulation(device, config)
+    raise ValueError(f"不支持的 FDTD 后端: {config.backend}")
+
+
 def run_fdtd_simulation(
     device: Device,
     config: FDTDConfig | None = None,
@@ -195,29 +231,7 @@ def run_fdtd_simulation(
         config = FDTDConfig()
 
     t0 = time.perf_counter()
-
-    if config.backend == FDTDBackend.MEEP:
-        if not is_meep_available():
-            raise ImportError(
-                "MEEP 后端不可用：未安装 meep。"
-                "安装方式: pip install meep（需要 Python 3.10-3.13，"
-                "Python 3.14 暂不支持）。"
-                "来源: https://meep.readthedocs.io/en/latest/Installation/"
-            )
-        result = _run_meep_simulation(device, config)
-    elif config.backend == FDTDBackend.TIDY3D:
-        if not is_tidy3d_available():
-            raise ImportError(
-                "Tidy3D 后端不可用：未安装 tidy3d。"
-                "安装方式: pip install tidy3d。"
-                "需要 API key: https://www.flexcompute.com/tidy3d/"
-            )
-        result = _run_tidy3d_simulation(device, config)
-    elif config.backend == FDTDBackend.ANALYTICAL:
-        result = _run_analytical_simulation(device, config)
-    else:
-        raise ValueError(f"不支持的 FDTD 后端: {config.backend}")
-
+    result = _select_fdtd_backend(device, config)
     result.simulation_time_s = time.perf_counter() - t0
     return result
 
@@ -331,6 +345,26 @@ def _run_meep_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
     )
 
 
+def _build_tidy3d_source(td, config: FDTDConfig):
+    """构建 Tidy3D 点偶极子光源。
+
+    Args:
+        td: tidy3d 模块。
+        config: FDTD 配置。
+
+    Returns:
+        Tidy3D PointDipole 光源对象。
+    """
+    wl_center = (config.wavelength_start_um + config.wavelength_end_um) / 2
+    f_center = td.C_0 / wl_center
+    fwidth = 0.1 * f_center
+    return td.PointDipole(
+        center=(0, 0, 0),
+        source_time=td.GaussianPulse(freq0=f_center, fwidth=fwidth),
+        polarization="Ez",
+    )
+
+
 def _build_tidy3d_simulation(
     device: Device,
     config: FDTDConfig,
@@ -353,17 +387,7 @@ def _build_tidy3d_simulation(
     )
     bbox = device.bbox
     length_um = float(bbox.xmax - bbox.xmin)
-
-    # 中心波长频率
-    wl_center = (config.wavelength_start_um + config.wavelength_end_um) / 2
-    f_center = td.C_0 / wl_center
-    fwidth = 0.1 * f_center
-
-    source = td.PointDipole(
-        center=(0, 0, 0),
-        source_time=td.GaussianPulse(freq0=f_center, fwidth=fwidth),
-        polarization="Ez",
-    )
+    source = _build_tidy3d_source(td, config)
     sim_size = (
         float(bbox.xmax - bbox.xmin) + 2 * config.pml_thickness_um,
         float(bbox.ymax - bbox.ymin) + 2 * config.pml_thickness_um,

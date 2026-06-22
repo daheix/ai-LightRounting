@@ -114,6 +114,21 @@ class LBFGSResult:
     converged: bool = False
 
 
+@dataclass
+class _LBFGSIterState:
+    """L-BFGS 迭代状态（降低 _lbfgs_iteration 参数个数，规则 4.1）。
+
+    Attributes:
+        params: 当前参数。
+        fom: 当前 FoM。
+        grad: 当前梯度。
+    """
+
+    params: np.ndarray
+    fom: float
+    grad: np.ndarray
+
+
 class LBFGSOptimizer:
     """L-BFGS 优化器（对标 lumopt/scipy L-BFGS）。
 

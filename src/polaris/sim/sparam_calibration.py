@@ -186,6 +186,38 @@ def evaluate_lorentzian(
     return a / (1.0 + 1j * (wavelengths_um - wl0) / gamma)
 
 
+def _compute_calibration_errors(
+    s_complex: np.ndarray,
+    s_fitted: np.ndarray,
+    wavelengths: np.ndarray,
+    cfg: SParamCalibrationConfig,
+) -> tuple[float, float, bool]:
+    """计算校准误差（幅度/相位）与通过状态。
+
+    Args:
+        s_complex: 原始复数 S 参数。
+        s_fitted: 拟合后复数 S 参数。
+        wavelengths: 波长数组（μm）。
+        cfg: 校准配置。
+
+    Returns:
+        (magnitude_error_db, phase_error_rad, passed) 三元组。
+    """
+    ref_idx = int(np.argmin(np.abs(wavelengths - cfg.reference_wavelength_um)))
+    mag_error = float(
+        20.0 * np.log10(max(np.abs(s_complex[ref_idx]), 1e-12))
+        - 20.0 * np.log10(max(np.abs(s_fitted[ref_idx]), 1e-12))
+    )
+    phase_error = float(
+        np.angle(s_complex[ref_idx]) - np.angle(s_fitted[ref_idx])
+    )
+    passed = (
+        abs(mag_error) <= cfg.magnitude_tolerance_db
+        and abs(phase_error) <= cfg.phase_tolerance_rad
+    )
+    return mag_error, phase_error, passed
+
+
 def _calibrate_pair(
     port_in: str,
     port_out: str,
@@ -212,17 +244,8 @@ def _calibrate_pair(
         params = {}
         s_fitted = s_complex.copy()
 
-    ref_idx = int(np.argmin(np.abs(wavelengths - cfg.reference_wavelength_um)))
-    mag_error = float(
-        20.0 * np.log10(max(np.abs(s_complex[ref_idx]), 1e-12))
-        - 20.0 * np.log10(max(np.abs(s_fitted[ref_idx]), 1e-12))
-    )
-    phase_error = float(
-        np.angle(s_complex[ref_idx]) - np.angle(s_fitted[ref_idx])
-    )
-    passed = (
-        abs(mag_error) <= cfg.magnitude_tolerance_db
-        and abs(phase_error) <= cfg.phase_tolerance_rad
+    mag_error, phase_error, passed = _compute_calibration_errors(
+        s_complex, s_fitted, wavelengths, cfg
     )
     return SParamPairResult(
         port_in=port_in,
