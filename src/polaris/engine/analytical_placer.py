@@ -83,6 +83,10 @@ class AnalyticalPlacerConfig:
             默认 0.0（关闭），典型值 1.0e-4 ~ 1.0e-2。
         congestion_grid_size: 拥塞评估网格大小（第83轮新增）。
             来源: TILOS 标准 16×16，默认 16。
+        congestion_aware_legalization: 是否启用拥塞感知合法化（第84轮新增）。
+            来源: Dollas & Betz "Congestion-Aware Legalization" FCCM 2018，
+            默认 False。当 True 时，合法化阶段在多行可选时选择拥塞度
+            最低的行，避免合法化步骤覆盖连续优化的拥塞感知效果。
     """
 
     gamma: float = 4.0
@@ -93,6 +97,7 @@ class AnalyticalPlacerConfig:
     convergence_threshold: float = 1.0
     congestion_weight: float = 0.0
     congestion_grid_size: int = 16
+    congestion_aware_legalization: bool = False
 
 
 class AnalyticalPlacer:
@@ -490,14 +495,15 @@ class AnalyticalPlacer:
         """合法化布局：消除重叠（自适应行高 FFDH）。
 
         DREAMPlace 标准流程：解析法连续优化 → 合法化。
-        按高度降序排序（FFDH 标准），逐模块尝试放入已有行（行高足够且有
-        水平空间），放不下则开新行。行高 = 该行首模块高度 × 1.1。
-        按高度降序可最大化空间利用率（FFDH 渐近比 1.7×OPT，
-        Coffman et al. 1980），确保模块在画布内。
+        第84轮：合法化代码拆分到 polaris.engine.legalization 模块。
+
+        第84轮扩展：当 ``congestion_aware_legalization=True`` 时，在多行
+        可选时选择拥塞度最低的行，避免合法化覆盖连续优化的拥塞感知效果。
 
         来源:
             DREAMPlace Legalization (TCAD 2020 Section III.C)
             FFDH: Coffman et al. SIAM J. Comput. 9(4), 1980
+            拥塞感知合法化: Dollas & Betz FCCM 2018
 
         Args:
             pos: 连续坐标 ``(n, 2)``。
@@ -505,36 +511,21 @@ class AnalyticalPlacer:
         Returns:
             合法化后的布局字典 ``{name: (cx, cy)}``，保证无重叠且在画布内。
         """
-        if self.n == 0:
-            return {}
-        # 按高度降序排序（FFDH 标准），高度相同时按 y 坐标保持拓扑局部性
-        order = sorted(
-            range(self.n),
-            key=lambda i: (-float(self.heights[i]), pos[i, 1]),
+        from polaris.engine.legalization import LegalizationContext, legalize_placement
+
+        ctx = LegalizationContext(
+            widths=self.widths,
+            heights=self.heights,
+            device_names=self.device_names,
+            connections=self.connections,
+            canvas_w=self.canvas_w,
+            canvas_h=self.canvas_h,
         )
-        placements: dict[str, tuple[float, float]] = {}
-        rows: list[list[float]] = []  # [y_start, row_height, x_cursor]
-        for i in order:
-            w = float(self.widths[i])
-            h = float(self.heights[i])
-            placed = False
-            for r in range(len(rows)):
-                ys, rh, xc = rows[r]
-                if rh >= h * 1.1 and xc + w <= self.canvas_w:
-                    cx = xc + w / 2
-                    cy = ys + rh / 2
-                    placements[self.device_names[i]] = (cx, cy)
-                    rows[r][2] = xc + w
-                    placed = True
-                    break
-            if not placed:
-                new_h = h * 1.1
-                ys = rows[-1][0] + rows[-1][1] if rows else 0.0
-                cx = w / 2
-                cy = ys + new_h / 2
-                placements[self.device_names[i]] = (cx, cy)
-                rows.append([ys, new_h, w])
-        return placements
+        return legalize_placement(
+            pos=pos,
+            ctx=ctx,
+            congestion_aware=self.config.congestion_aware_legalization,
+        )
 
     def place(self) -> dict[str, tuple[float, float]]:
         """执行解析法布局（DREAMPlace warm-start + 合法化）。
@@ -543,6 +534,10 @@ class AnalyticalPlacer:
 
         第83轮扩展：当 ``congestion_weight > 0`` 时，在梯度下降中加入
         拥塞惩罚项，对标 Nesterenko & Hsu TCAD 2002 拥塞感知布局。
+
+        第84轮扩展：当 ``congestion_aware_legalization=True`` 时，合法化
+        阶段在多行可选时选择拥塞度最低的行，避免合法化覆盖连续优化的
+        拥塞感知效果（对标 Dollas & Betz FCCM 2018）。
 
         Returns:
             布局字典 ``{name: (cx, cy)}``，中心坐标，无重叠。
