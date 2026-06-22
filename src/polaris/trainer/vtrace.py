@@ -111,25 +111,19 @@ def compute_vtrace(
     cs = np.minimum(cs, cfg.c_bar)
     vs = np.zeros(n)
     vs[-1] = values[-1] + rhos[-1] * (
-        rewards[-1]
-        + cfg.gamma * (1 - dones[-1]) * last_value
-        - values[-1]
+        rewards[-1] + cfg.gamma * (1 - dones[-1]) * last_value - values[-1]
     )
     for t in range(n - 2, -1, -1):
-        delta = rhos[t] * (
-            rewards[t]
-            + cfg.gamma * (1 - dones[t]) * values[t + 1]
-            - values[t]
+        delta = rhos[t] * (rewards[t] + cfg.gamma * (1 - dones[t]) * values[t + 1] - values[t])
+        vs[t] = (
+            values[t]
+            + delta
+            + (cfg.gamma * cfg.lambda_ * cs[t] * (1 - dones[t])) * (vs[t + 1] - values[t + 1])
         )
-        vs[t] = values[t] + delta + (
-            cfg.gamma * cfg.lambda_ * cs[t] * (1 - dones[t])
-        ) * (vs[t + 1] - values[t + 1])
     pg_advantages = np.zeros(n)
     for t in range(n):
         next_v = vs[t + 1] if t + 1 < n else last_value
-        pg_advantages[t] = rhos[t] * (
-            rewards[t] + cfg.gamma * (1 - dones[t]) * next_v - values[t]
-        )
+        pg_advantages[t] = rhos[t] * (rewards[t] + cfg.gamma * (1 - dones[t]) * next_v - values[t])
     return VTraceResult(
         vs=vs,
         pg_advantages=pg_advantages,
@@ -164,7 +158,6 @@ class ImpalaLearner:
     def compute_targets(
         self,
         observations: np.ndarray,
-        actions: np.ndarray,
         rewards: np.ndarray,
         logprobs_behavior: np.ndarray,
         logprobs_target: np.ndarray,
@@ -175,7 +168,6 @@ class ImpalaLearner:
 
         Args:
             observations: 观测序列（n_steps, obs_dim）。
-            actions: 动作序列（n_steps,）。
             rewards: 奖励序列（n_steps,）。
             logprobs_behavior: 行为策略 log 概率。
             logprobs_target: 目标策略 log 概率。
@@ -185,14 +177,8 @@ class ImpalaLearner:
         Returns:
             V-trace 计算结果。
         """
-        values = np.array(
-            [self.value_fn(obs) for obs in observations]
-        )
-        last_value = (
-            self.value_fn(last_observation)
-            if last_observation is not None
-            else 0.0
-        )
+        values = np.array([self.value_fn(obs) for obs in observations])
+        last_value = self.value_fn(last_observation) if last_observation is not None else 0.0
         return compute_vtrace(
             values=values,
             rewards=rewards,

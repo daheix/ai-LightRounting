@@ -28,7 +28,8 @@ NSGA-II 流程：
 
 来源:
 - Deb et al. "A Fast and Elitist Multiobjective Genetic Algorithm: NSGA-II" 2002
-- Deb & Jain "An Evolutionary Many-Objective Optimization Algorithm Using Reference-Point-Based Nondominated Sorting Approach, Part I" 2014（NSGA-III）
+- Deb & Jain "An Evolutionary Many-Objective Optimization Algorithm Using
+  Reference-Point-Based Nondominated Sorting Approach, Part I" 2014（NSGA-III）
 - Tidy3D 多目标优化: https://docs.flexcompute.com/projects/tidy3d/en/latest/
 """
 
@@ -225,9 +226,7 @@ def fast_non_dominated_sort(
     return [f for f in fronts if f]
 
 
-def compute_crowding_distance(
-    front: list[Individual], objectives: list[Objective]
-) -> None:
+def compute_crowding_distance(front: list[Individual], objectives: list[Objective]) -> None:
     """计算拥挤距离（Deb 2002）。
 
     拥挤距离越大，解越孤立（保持多样性）。
@@ -262,9 +261,7 @@ def compute_crowding_distance(
             ) / (obj_max - obj_min)
 
 
-def tournament_selection(
-    population: list[Individual], rng: np.random.Generator
-) -> Individual:
+def tournament_selection(population: list[Individual], rng: np.random.Generator) -> Individual:
     """锦标赛选择（二元锦标赛）。
 
     规则：
@@ -423,9 +420,7 @@ class NSGA2Optimizer:
         bounds = self.config.bounds or [(0.0, 1.0)] * n_params
         population: list[Individual] = []
         for _ in range(self.config.population_size):
-            params = np.array(
-                [self.rng.uniform(lo, hi) for lo, hi in bounds]
-            )
+            params = np.array([self.rng.uniform(lo, hi) for lo, hi in bounds])
             objectives = np.asarray(self.fom_fn(params), dtype=float)
             population.append(Individual(params=params, objectives=objectives))
         return population
@@ -479,9 +474,7 @@ class NSGA2Optimizer:
 
         return offspring
 
-    def _select_next_generation(
-        self, combined: list[Individual]
-    ) -> list[Individual]:
+    def _select_next_generation(self, combined: list[Individual]) -> list[Individual]:
         """选择下一代（精英保留）。
 
         Args:
@@ -578,9 +571,7 @@ def run_nsga2_optimization(
     return optimizer.optimize(n_params)
 
 
-def weighted_sum_aggregation(
-    objectives_values: np.ndarray, objectives: list[Objective]
-) -> float:
+def weighted_sum_aggregation(objectives_values: np.ndarray, objectives: list[Objective]) -> float:
     """加权求和聚合多目标为单目标。
 
     用于将多目标转换为单目标（对照用）。

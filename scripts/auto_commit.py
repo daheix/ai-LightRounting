@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""20 分钟自动提交代码后台脚本。
+"""6 分钟自动提交代码后台脚本（用户规则：6分钟自动提交）。
 
-每 20 分钟检查一次工作区：
+每 6 分钟检查一次工作区：
 1. 若有代码更新或新文件，自动提交到当前开发分支
 2. 合并到 main 分支
 3. 推送到远端 main 和开发分支
@@ -19,7 +19,7 @@ import subprocess
 import time
 from pathlib import Path
 
-INTERVAL_SECONDS = 20 * 60  # 20 分钟
+INTERVAL_SECONDS = 6 * 60  # 6 分钟（用户规则）
 REPO_DIR = Path(__file__).resolve().parent.parent
 DEV_BRANCH = "trae/solo-agent-MD19IE"
 MAIN_BRANCH = "main"
@@ -86,7 +86,7 @@ def auto_commit_once() -> None:
 
 
 def main() -> None:
-    """主循环：每 20 分钟自动提交一次。"""
+    """主循环：每 6 分钟自动提交一次（用户规则）。"""
     print(f"[{time.strftime('%H:%M:%S')}] 自动提交后台脚本已启动")
     print(f"  仓库: {REPO_DIR}")
     print(f"  开发分支: {DEV_BRANCH}")

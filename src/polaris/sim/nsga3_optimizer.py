@@ -126,9 +126,7 @@ def generate_reference_points(n_objectives: int, n_divisions: int = 4) -> np.nda
     return points
 
 
-def normalize_objectives(
-    population: list[Individual], objectives: list[Objective]
-) -> np.ndarray:
+def normalize_objectives(population: list[Individual], objectives: list[Objective]) -> np.ndarray:
     """归一化目标值到 [0, 1]。
 
     NSGA-III 需要将目标归一化后才能与参考点比较。
@@ -182,9 +180,7 @@ def associate_to_reference_points(
         # 计算到每个参考点的垂直距离
         obj = normalized_objs[i]
         # 参考点方向上的投影
-        _ = reference_points / (
-            np.linalg.norm(reference_points, axis=1, keepdims=True) + 1e-12
-        )
+        _ = reference_points / (np.linalg.norm(reference_points, axis=1, keepdims=True) + 1e-12)
         # 原点到解的方向
         _ = np.linalg.norm(obj) + 1e-12
 
@@ -314,9 +310,7 @@ class NSGA3Optimizer:
 
         return offspring
 
-    def _select_next_generation(
-        self, combined: list[Individual]
-    ) -> list[Individual]:
+    def _select_next_generation(self, combined: list[Individual]) -> list[Individual]:
         """NSGA-III 精英选择（参考点关联 + 小生境保留）。"""
         fronts = fast_non_dominated_sort(combined, self.objectives)
         next_pop: list[Individual] = []
@@ -325,72 +319,100 @@ class NSGA3Optimizer:
             if len(next_pop) + len(front) <= self.config.population_size:
                 next_pop.extend(front)
             else:
-                # NSGA-III: 用参考点关联选择
                 remaining = self.config.population_size - len(next_pop)
                 if remaining <= 0:
                     break
-
-                # 归一化当前前沿
-                front_normalized = normalize_objectives(front, self.objectives)
-
-                # 关联到参考点
-                associations, _ = associate_to_reference_points(
-                    front_normalized, self.reference_points
-                )
-
-                # 计算已选种群的小生境计数
-                if next_pop:
-                    next_normalized = normalize_objectives(next_pop, self.objectives)
-                    next_assoc, _ = associate_to_reference_points(
-                        next_normalized, self.reference_points
-                    )
-                    niche_counts = compute_niche_counts(
-                        next_assoc, len(self.reference_points)
-                    )
-                else:
-                    niche_counts = np.zeros(len(self.reference_points), dtype=int)
-
-                # 按小生境计数升序选择（优先选稀疏参考点）
-                selected_indices: list[int] = []
-                available = list(range(len(front)))
-                while len(selected_indices) < remaining and available:
-                    # 找最小 niche count 的参考点
-                    min_count = float("inf")
-                    min_refs = []
-                    for j in range(len(self.reference_points)):
-                        if niche_counts[j] < min_count:
-                            min_count = niche_counts[j]
-                            min_refs = [j]
-                        elif niche_counts[j] == min_count:
-                            min_refs.append(j)
-
-                    # 在最小 niche count 的参考点中选一个解
-                    found = False
-                    for ref_idx in min_refs:
-                        for k in available:
-                            if associations[k] == ref_idx:
-                                selected_indices.append(k)
-                                available.remove(k)
-                                niche_counts[ref_idx] += 1
-                                found = True
-                                break
-                        if found:
-                            break
-                        if len(selected_indices) >= remaining:
-                            break
-
-                    if not found:
-                        # 无解关联到最小 niche 参考点，随机选
-                        if available:
-                            k = available.pop(0)
-                            selected_indices.append(k)
-                            niche_counts[associations[k]] += 1
-
-                for idx in selected_indices:
-                    next_pop.append(front[idx])
+                selected = self._select_from_front(front, next_pop, remaining)
+                next_pop.extend(selected)
                 break
 
         return next_pop
+
+    def _select_from_front(
+        self,
+        front: list[Individual],
+        next_pop: list[Individual],
+        remaining: int,
+    ) -> list[Individual]:
+        """从单个前沿中按 NSGA-III 参考点小生境选择个体。"""
+        front_normalized = normalize_objectives(front, self.objectives)
+        associations, _ = associate_to_reference_points(front_normalized, self.reference_points)
+        niche_counts = self._compute_next_pop_niche_counts(next_pop)
+        return self._niche_select(front, associations, niche_counts, remaining)
+
+    def _compute_next_pop_niche_counts(self, next_pop: list[Individual]) -> np.ndarray:
+        """计算已选种群的小生境计数。"""
+        if not next_pop:
+            return np.zeros(len(self.reference_points), dtype=int)
+        next_normalized = normalize_objectives(next_pop, self.objectives)
+        next_assoc, _ = associate_to_reference_points(next_normalized, self.reference_points)
+        return compute_niche_counts(next_assoc, len(self.reference_points))
+
+    def _niche_select(
+        self,
+        front: list[Individual],
+        associations: np.ndarray,
+        niche_counts: np.ndarray,
+        remaining: int,
+    ) -> list[Individual]:
+        """按小生境计数升序选择（优先选稀疏参考点）。"""
+        selected_indices: list[int] = []
+        available = list(range(len(front)))
+        while len(selected_indices) < remaining and available:
+            min_refs = self._find_min_niche_refs(niche_counts)
+            picked = self._pick_from_refs(
+                min_refs, associations, available, niche_counts, remaining, selected_indices
+            )
+            if not picked:
+                self._pick_random_available(available, selected_indices, associations, niche_counts)
+        return [front[idx] for idx in selected_indices]
+
+    def _find_min_niche_refs(self, niche_counts: np.ndarray) -> list[int]:
+        """找最小 niche count 的参考点列表。"""
+        min_count = float("inf")
+        min_refs: list[int] = []
+        for j in range(len(self.reference_points)):
+            if niche_counts[j] < min_count:
+                min_count = niche_counts[j]
+                min_refs = [j]
+            elif niche_counts[j] == min_count:
+                min_refs.append(j)
+        return min_refs
+
+    def _pick_from_refs(
+        self,
+        min_refs: list[int],
+        associations: np.ndarray,
+        available: list[int],
+        niche_counts: np.ndarray,
+        remaining: int,
+        selected_indices: list[int],
+    ) -> bool:
+        """在最小 niche count 参考点中选一个解，返回是否成功。"""
+        for ref_idx in min_refs:
+            for k in available:
+                if associations[k] == ref_idx:
+                    selected_indices.append(k)
+                    available.remove(k)
+                    niche_counts[ref_idx] += 1
+                    return True
+                if len(selected_indices) >= remaining:
+                    return True
+        return False
+
+    def _pick_random_available(
+        self,
+        available: list[int],
+        selected_indices: list[int],
+        associations: np.ndarray,
+        niche_counts: np.ndarray,
+    ) -> None:
+        """无解关联到最小 niche 参考点时，随机选一个可用解。"""
+        if not available:
+            return
+        k = available.pop(0)
+        selected_indices.append(k)
+        niche_counts[associations[k]] += 1
 
     def optimize(self, n_params: int) -> NSGA3Result:
         """执行 NSGA-III 多目标优化。

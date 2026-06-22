@@ -47,9 +47,7 @@ def compute_normal_vector(phi: np.ndarray) -> np.ndarray:
     return np.stack([nx, ny], axis=-1)
 
 
-def compute_curvature(
-    phi: np.ndarray, dx: float = 1.0, dy: float = 1.0
-) -> np.ndarray:
+def compute_curvature(phi: np.ndarray, dx: float = 1.0, dy: float = 1.0) -> np.ndarray:
     """计算水平集曲率场。
 
     κ = ∇·(∇φ / |∇φ|)
@@ -140,9 +138,7 @@ def _solve_quadratic(a: float, b: float, c: float) -> float:
     return (-b + np.sqrt(discriminant)) / (2 * a)
 
 
-def _eikonal_solve(
-    t_x: float, t_y: float, dx: float, dy: float
-) -> float:
+def _eikonal_solve(t_x: float, t_y: float, dx: float, dy: float) -> float:
     """Eikonal 方程单点求解。
 
     |∇T| = 1，离散化为：
@@ -201,53 +197,89 @@ def fast_marching_sdf(phi: np.ndarray, config: FastMarchingConfig | None = None)
     cfg = config or FastMarchingConfig()
     gx, gy = phi.shape
     sign = np.sign(phi)
-
-    # T 场：到边界的距离
     t = np.full((gx, gy), np.inf)
-    # 已知标记
     known = np.zeros((gx, gy), dtype=bool)
-    # Narrow band 堆：(T, i, j)
-    heap: list[tuple[float, int, int]] = []
 
-    # 1. 找零等高线穿越点（符号变化处）
+    _detect_zero_contour(phi, sign, t, cfg)
+    heap = _init_narrow_band(t, known)
+    _march_expand(t, known, heap, gx, gy, cfg)
+
+    return sign * t
+
+
+def _detect_zero_contour(
+    phi: np.ndarray,
+    sign: np.ndarray,
+    t: np.ndarray,
+    cfg: FastMarchingConfig,
+) -> None:
+    """检测零等高线穿越点并初始化 T 值（原地更新 t）。"""
+    gx, gy = phi.shape
     for i in range(gx):
         for j in range(gy):
-            # 检查 4 邻居是否有符号变化
-            neighbors = []
-            if i > 0:
-                neighbors.append((i - 1, j))
-            if i < gx - 1:
-                neighbors.append((i + 1, j))
-            if j > 0:
-                neighbors.append((i, j - 1))
-            if j < gy - 1:
-                neighbors.append((i, j + 1))
+            neighbors = _get_neighbors(i, j, gx, gy)
+            _update_zero_crossing(phi, sign, t, i, j, neighbors, cfg)
 
-            for ni, nj in neighbors:
-                if sign[i, j] * sign[ni, nj] < 0:
-                    # 线性插值估计零等高线距离
-                    denom = abs(phi[i, j]) + abs(phi[ni, nj])
-                    if denom < 1e-12:
-                        dist = 0.0
-                    else:
-                        dist = abs(phi[i, j]) / denom
-                    if cfg.dx == cfg.dy:
-                        step = cfg.dx
-                    else:
-                        step = cfg.dx if ni != i else cfg.dy
-                    t_val = dist * step
-                    if t_val < t[i, j]:
-                        t[i, j] = t_val
-                    break
 
-    # 2. 初始化堆：所有 T < inf 的点
+def _get_neighbors(i: int, j: int, gx: int, gy: int) -> list[tuple[int, int]]:
+    """获取 4 邻居坐标列表。"""
+    neighbors: list[tuple[int, int]] = []
+    if i > 0:
+        neighbors.append((i - 1, j))
+    if i < gx - 1:
+        neighbors.append((i + 1, j))
+    if j > 0:
+        neighbors.append((i, j - 1))
+    if j < gy - 1:
+        neighbors.append((i, j + 1))
+    return neighbors
+
+
+def _update_zero_crossing(
+    phi: np.ndarray,
+    sign: np.ndarray,
+    t: np.ndarray,
+    i: int,
+    j: int,
+    neighbors: list[tuple[int, int]],
+    cfg: FastMarchingConfig,
+) -> None:
+    """检查邻居是否有符号变化，更新零等高线距离。"""
+    for ni, nj in neighbors:
+        if sign[i, j] * sign[ni, nj] < 0:
+            denom = abs(phi[i, j]) + abs(phi[ni, nj])
+            if denom < 1e-12:
+                dist = 0.0
+            else:
+                dist = abs(phi[i, j]) / denom
+            step = cfg.dx if cfg.dx == cfg.dy or ni != i else cfg.dy
+            t_val = dist * step
+            if t_val < t[i, j]:
+                t[i, j] = t_val
+            break
+
+
+def _init_narrow_band(t: np.ndarray, known: np.ndarray) -> list[tuple[float, int, int]]:
+    """初始化 narrow band 堆：所有 T < inf 的点标记为已知并入堆。"""
+    gx, gy = t.shape
+    heap: list[tuple[float, int, int]] = []
     for i in range(gx):
         for j in range(gy):
             if not np.isinf(t[i, j]):
                 known[i, j] = True
                 heapq.heappush(heap, (float(t[i, j]), i, j))
+    return heap
 
-    # 3. Fast Marching 扩展
+
+def _march_expand(
+    t: np.ndarray,
+    known: np.ndarray,
+    heap: list[tuple[float, int, int]],
+    gx: int,
+    gy: int,
+    cfg: FastMarchingConfig,
+) -> None:
+    """Fast Marching 扩展：按 T 值升序弹出并更新邻居。"""
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     iterations = 0
     while heap and iterations < cfg.max_iterations:
@@ -255,34 +287,43 @@ def fast_marching_sdf(phi: np.ndarray, config: FastMarchingConfig | None = None)
         t_val, i, j = heapq.heappop(heap)
         if t_val > t[i, j]:
             continue
-
         for di, dj in directions:
             ni, nj = i + di, j + dj
-            if ni < 0 or ni >= gx or nj < 0 or nj >= gy:
+            if _is_out_of_bounds(ni, nj, gx, gy) or known[ni, nj]:
                 continue
-            if known[ni, nj]:
-                continue
-
-            # 收集已知邻居的 T 值
-            t_x = float("inf")
-            t_y = float("inf")
-            if ni > 0 and known[ni - 1, nj]:
-                t_x = min(t_x, t[ni - 1, nj])
-            if ni < gx - 1 and known[ni + 1, nj]:
-                t_x = min(t_x, t[ni + 1, nj])
-            if nj > 0 and known[ni, nj - 1]:
-                t_y = min(t_y, t[ni, nj - 1])
-            if nj < gy - 1 and known[ni, nj + 1]:
-                t_y = min(t_y, t[ni, nj + 1])
-
-            new_t = _eikonal_solve(t_x, t_y, cfg.dx, cfg.dy)
+            new_t = _compute_neighbor_t(t, known, ni, nj, gx, gy, cfg)
             if new_t < t[ni, nj]:
                 t[ni, nj] = new_t
                 known[ni, nj] = True
                 heapq.heappush(heap, (float(new_t), ni, nj))
 
-    # 4. 恢复符号
-    return sign * t
+
+def _is_out_of_bounds(ni: int, nj: int, gx: int, gy: int) -> bool:
+    """检查坐标是否越界。"""
+    return ni < 0 or ni >= gx or nj < 0 or nj >= gy
+
+
+def _compute_neighbor_t(
+    t: np.ndarray,
+    known: np.ndarray,
+    ni: int,
+    nj: int,
+    gx: int,
+    gy: int,
+    cfg: FastMarchingConfig,
+) -> float:
+    """收集已知邻居的 T 值并求解 Eikonal 方程。"""
+    t_x = float("inf")
+    t_y = float("inf")
+    if ni > 0 and known[ni - 1, nj]:
+        t_x = min(t_x, t[ni - 1, nj])
+    if ni < gx - 1 and known[ni + 1, nj]:
+        t_x = min(t_x, t[ni + 1, nj])
+    if nj > 0 and known[ni, nj - 1]:
+        t_y = min(t_y, t[ni, nj - 1])
+    if nj < gy - 1 and known[ni, nj + 1]:
+        t_y = min(t_y, t[ni, nj + 1])
+    return _eikonal_solve(t_x, t_y, cfg.dx, cfg.dy)
 
 
 def reinitialize_sdf(phi: np.ndarray, n_iters: int = 5) -> np.ndarray:

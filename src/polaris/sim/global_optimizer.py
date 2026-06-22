@@ -111,6 +111,35 @@ class GlobalResult:
     method: str = ""
 
 
+@dataclass
+class _CMAESState:
+    """CMA-ES 迭代状态（可变，供 _cmaes_step 原地更新）。"""
+
+    n: int
+    rng: np.random.Generator
+    lambda_: int
+    mu: int
+    weights: np.ndarray
+    mueff: float
+    mean: np.ndarray
+    sigma: float
+    c_c: float
+    c_s: float
+    c_1: float
+    c_mu: float
+    d_s: float
+    p_c: np.ndarray
+    p_s: np.ndarray
+    b_mat: np.ndarray
+    d_mat: np.ndarray
+    c_mat: np.ndarray
+    chi_n: float
+    history: list[float]
+    best_fom: float
+    best_params: np.ndarray
+    converged: bool
+
+
 class CMAESOptimizer:
     """CMA-ES 协方差矩阵自适应进化策略。
 
@@ -146,6 +175,22 @@ class CMAESOptimizer:
         Returns:
             全局优化结果。
         """
+        state = self._init_cmaes_state(initial_mean)
+        for iteration in range(self.config.max_iterations):
+            done = self._cmaes_step(iteration, state, fom_fn)
+            if done:
+                break
+        return GlobalResult(
+            optimal_params=state.best_params,
+            optimal_fom=state.best_fom,
+            fom_history=state.history,
+            iterations=len(state.history),
+            converged=state.converged,
+            method="CMA-ES",
+        )
+
+    def _init_cmaes_state(self, initial_mean: np.ndarray) -> _CMAESState:
+        """初始化 CMA-ES 状态（协方差/步长/进化路径）。"""
         n = len(initial_mean)
         rng = np.random.default_rng(self.config.seed)
         lambda_ = (
@@ -156,10 +201,7 @@ class CMAESOptimizer:
         mu = lambda_ // 2
         weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
         weights = weights / weights.sum()
-        mueff = 1.0 / float(np.sum(weights ** 2))
-
-        mean = initial_mean.copy()
-        sigma = self.config.initial_std
+        mueff = 1.0 / float(np.sum(weights**2))
         c_c = (4 + mueff / n) / (n + 4 + 2 * mueff / n)
         c_s = (mueff + 2) / (n + mueff + 5)
         c_1 = 2 / ((n + 1.3) ** 2 + mueff)
@@ -168,75 +210,73 @@ class CMAESOptimizer:
             2 * (mueff - 2 + 1 / mueff) / ((n + 2) ** 2 + mueff),
         )
         d_s = 1 + 2 * max(0, np.sqrt((mueff - 1) / (n + 1)) - 1) + c_s
-        p_c = np.zeros(n)
-        p_s = np.zeros(n)
-        b_mat = np.eye(n)
-        d_mat = np.eye(n)
-        c_mat = b_mat @ d_mat @ b_mat.T
-        chi_n = np.sqrt(n) * (1 - 1 / (4 * n) + 1 / (21 * n ** 2))
-
-        history: list[float] = []
-        best_fom = -float("inf")
-        best_params = initial_mean.copy()
-        converged = False
-
-        for iteration in range(self.config.max_iterations):
-            inv_sqrt_c = b_mat @ np.diag(1.0 / np.diag(d_mat)) @ b_mat.T
-            samples = self._sample_population(
-                mean, sigma, b_mat, d_mat, lambda_, rng
-            )
-            foms = np.array([fom_fn(s) for s in samples])
-            sorted_idx = np.argsort(-foms)
-            selected = samples[sorted_idx[:mu]]
-            selected_weights = weights
-            new_mean = np.sum(
-                selected * selected_weights[:, np.newaxis], axis=0
-            )
-            y_w = (new_mean - mean) / sigma
-            p_s = (1 - c_s) * p_s + np.sqrt(
-                c_s * (2 - c_s) * mueff
-            ) * inv_sqrt_c @ y_w
-            h_sig = (
-                float(np.linalg.norm(p_s))
-                / np.sqrt(1 - (1 - c_s) ** (2 * (iteration + 1)))
-                < (1.4 + 2 / (n + 1)) * chi_n
-            )
-            p_c = (1 - c_c) * p_c + h_sig * np.sqrt(
-                c_c * (2 - c_c) * mueff
-            ) * y_w
-            delta_h = (1 - h_sig) * c_c * (2 - c_c)
-            c_mat = (1 - c_1 - c_mu) * c_mat + c_1 * (
-                np.outer(p_c, p_c) + delta_h * c_mat
-            )
-            for i in range(mu):
-                yi = (selected[i] - mean) / sigma
-                c_mat += c_mu * selected_weights[i] * np.outer(yi, yi)
-            c_mat = (c_mat + c_mat.T) / 2
-            eigvals, eigvecs = np.linalg.eigh(c_mat)
-            eigvals = np.maximum(eigvals, 1e-20)
-            b_mat = eigvecs
-            d_mat = np.diag(np.sqrt(eigvals))
-            sigma = sigma * np.exp(
-                (c_s / d_s) * (np.linalg.norm(p_s) / chi_n - 1)
-            )
-            sigma = min(sigma, 1e10)
-            mean = new_mean
-            if foms[sorted_idx[0]] > best_fom:
-                best_fom = foms[sorted_idx[0]]
-                best_params = samples[sorted_idx[0]].copy()
-            history.append(best_fom)
-            if sigma < self.config.convergence_threshold:
-                converged = True
-                break
-
-        return GlobalResult(
-            optimal_params=best_params,
-            optimal_fom=best_fom,
-            fom_history=history,
-            iterations=len(history),
-            converged=converged,
-            method="CMA-ES",
+        chi_n = np.sqrt(n) * (1 - 1 / (4 * n) + 1 / (21 * n**2))
+        return _CMAESState(
+            n=n,
+            rng=rng,
+            lambda_=lambda_,
+            mu=mu,
+            weights=weights,
+            mueff=mueff,
+            mean=initial_mean.copy(),
+            sigma=self.config.initial_std,
+            c_c=c_c,
+            c_s=c_s,
+            c_1=c_1,
+            c_mu=c_mu,
+            d_s=d_s,
+            p_c=np.zeros(n),
+            p_s=np.zeros(n),
+            b_mat=np.eye(n),
+            d_mat=np.eye(n),
+            c_mat=np.eye(n),
+            chi_n=chi_n,
+            history=[],
+            best_fom=-float("inf"),
+            best_params=initial_mean.copy(),
+            converged=False,
         )
+
+    def _cmaes_step(
+        self, iteration: int, s: _CMAESState, fom_fn: Callable[[np.ndarray], float]
+    ) -> bool:
+        """执行一次 CMA-ES 迭代，返回是否收敛。"""
+        inv_sqrt_c = s.b_mat @ np.diag(1.0 / np.diag(s.d_mat)) @ s.b_mat.T
+        samples = self._sample_population(s.mean, s.sigma, s.b_mat, s.d_mat, s.lambda_, s.rng)
+        foms = np.array([fom_fn(sample) for sample in samples])
+        sorted_idx = np.argsort(-foms)
+        selected = samples[sorted_idx[: s.mu]]
+        new_mean = np.sum(selected * s.weights[:, np.newaxis], axis=0)
+        y_w = (new_mean - s.mean) / s.sigma
+        s.p_s = (1 - s.c_s) * s.p_s + np.sqrt(s.c_s * (2 - s.c_s) * s.mueff) * inv_sqrt_c @ y_w
+        h_sig = (
+            float(np.linalg.norm(s.p_s)) / np.sqrt(1 - (1 - s.c_s) ** (2 * (iteration + 1)))
+            < (1.4 + 2 / (s.n + 1)) * s.chi_n
+        )
+        s.p_c = (1 - s.c_c) * s.p_c + h_sig * np.sqrt(s.c_c * (2 - s.c_c) * s.mueff) * y_w
+        delta_h = (1 - h_sig) * s.c_c * (2 - s.c_c)
+        s.c_mat = (1 - s.c_1 - s.c_mu) * s.c_mat + s.c_1 * (
+            np.outer(s.p_c, s.p_c) + delta_h * s.c_mat
+        )
+        for i in range(s.mu):
+            yi = (selected[i] - s.mean) / s.sigma
+            s.c_mat += s.c_mu * s.weights[i] * np.outer(yi, yi)
+        s.c_mat = (s.c_mat + s.c_mat.T) / 2
+        eigvals, eigvecs = np.linalg.eigh(s.c_mat)
+        eigvals = np.maximum(eigvals, 1e-20)
+        s.b_mat = eigvecs
+        s.d_mat = np.diag(np.sqrt(eigvals))
+        s.sigma = s.sigma * np.exp((s.c_s / s.d_s) * (np.linalg.norm(s.p_s) / s.chi_n - 1))
+        s.sigma = min(s.sigma, 1e10)
+        s.mean = new_mean
+        if foms[sorted_idx[0]] > s.best_fom:
+            s.best_fom = foms[sorted_idx[0]]
+            s.best_params = samples[sorted_idx[0]].copy()
+        s.history.append(s.best_fom)
+        if s.sigma < self.config.convergence_threshold:
+            s.converged = True
+            return True
+        return False
 
     def _sample_population(
         self,
@@ -311,9 +351,7 @@ class ParticleSwarmOptimizer:
             (self.config.num_particles, n),
         )
         personal_best = positions.copy()
-        personal_best_fom = np.array(
-            [fom_fn(p) for p in positions]
-        )
+        personal_best_fom = np.array([fom_fn(p) for p in positions])
         global_best_idx = int(np.argmax(personal_best_fom))
         global_best = personal_best[global_best_idx].copy()
         global_best_fom = personal_best_fom[global_best_idx]
