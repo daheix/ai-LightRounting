@@ -232,8 +232,12 @@ def run_all_benchmarks(
     对标 TILOS MacroPlacement 全 benchmark 回归测试：
     加载全部公开 benchmark，使用指定布局方法评估，生成对比报告。
 
+    第76轮 P1-5 扩展：支持 grid/analytical/hierarchical 三种布局方法，
+    量化对比不同布局算法的 HPWL/重叠/利用率。
+
     Args:
-        placement_method: 布局方法名（默认 ``grid``）。
+        placement_method: 布局方法名（``grid``/``analytical``/``hierarchical``，
+            默认 ``grid``）。
 
     Returns:
         ComparisonReport，含全部 benchmark 评估结果。
@@ -242,7 +246,9 @@ def run_all_benchmarks(
         TILOS 全 benchmark: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
         Apollo: https://github.com/ASU-LOPE-Group/Apollo
         LiDAR: https://github.com/ScopeX-ASU/LiDAR
+        DREAMPlace: https://arxiv.org/abs/2004.10746
     """
+    from polaris.data.benchmark_evaluator import placement_by_method
     from polaris.data.data_loader import (
         load_apollo_onoc,
         load_apollo_ptc,
@@ -258,7 +264,7 @@ def run_all_benchmarks(
     ]
     reports: list[BenchmarkReport] = []
     for circuit in circuits:
-        placements = grid_placement(circuit)
+        placements = placement_by_method(circuit, placement_method)
         report = generate_report(circuit, placements, placement_method)
         reports.append(report)
     return generate_comparison_report(reports)
