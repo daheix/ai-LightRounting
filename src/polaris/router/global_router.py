@@ -1,35 +1,13 @@
-"""全局布线器（Global Router）—— P1-2 差距修复（第5轮）。
+"""全局布线器（Global Router）—— P1-2 差距修复。
 
-实现 Global-Detail 分层布线的全局层：在粗网格（GCell）上做拥塞预估、
-网排序、全局路径分配，为详细布线（A*）提供途经点（waypoints）引导。
-
-与商业工具对齐：
-- Cadence Innovus New PRO：全局-详细分层布线
-- Synopsys ICC2 Zroute：拥塞感知全局布线 + ML DRC 闭合
-- LiDAR 2.0 (ISPD 2025)：分层曲线波导布线
-  来源: https://arxiv.org/html/2505.17239v2
-
-架构（对齐经典 EDA 全局布线流程）::
-
-    Netlist + Placements
-        ↓
-    1. GCell 网格构建（粗网格，gcell_size = grid_size * N）
-        ↓
-    2. RUDY 拥塞预估（DREAMPlace DAC 2020）
-        来源: https://arxiv.org/abs/2004.10746
-        ↓
-    3. 网排序（拥塞感知，难网优先）
-        ↓
-    4. 全局路径分配（GCell 级 A*，途经点提取）
-        ↓
-    5. 输出 waypoints 供详细布线（GridRouter）引导
+实现 Global-Detail 分层布线的全局层：GCell 粗网格 + RUDY 拥塞预估 +
+Pattern Routing（L/Z-shape）+ GCell A* + Rip-up&Reroute。
 
 来源:
 - DREAMPlace RUDY: https://arxiv.org/abs/2004.10746
 - LiDAR 2.0 分层布线: https://arxiv.org/html/2505.17239v2
-- Cadence Innovus 全局-详细分层: https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
-- 经典全局布线教材: "VLSI Physical Design: From Graph Partitioning to Timing Closure"
-  https://link.springer.com/book/10.1007/978-90-481-9591-6
+- FastGR Pattern Routing: IJCAI 2023
+- Cadence Innovus 全局-详细分层
 """
 
 from __future__ import annotations
@@ -120,24 +98,13 @@ class CanvasSize:
 class GlobalRouter:
     """全局布线器（Global Router）—— P1-2 差距修复。
 
-    在 GCell 粗网格上做拥塞预估、网排序、全局路径分配，输出途经点
-    供详细布线（GridRouter）引导。对齐 Cadence Innovus / Synopsys ICC2
-    的全局-详细分层布线架构。
-
-    算法流程::
-
-        1. 构建 GCell 网格（gcell_size_um × gcell_size_um）
-        2. RUDY 拥塞预估（对每条连接的 bounding box 均匀分配需求）
-        3. 网排序（拥塞感知，难网优先：曼哈顿距离 + 障碍密度降序）
-        4. GCell 级 A*（代价 = 长度 + congestion_weight * 拥塞溢出）
-        5. Rip-up & Reroute（拥塞溢出时移除冲突路径重布）
-        6. 提取途经点（每个 GCell 中心 → waypoints）
+    在 GCell 粗网格上做拥塞预估、网排序、Pattern Routing + GCell A*，
+    输出途经点供详细布线引导。对齐 Cadence Innovus / Synopsys ICC2。
 
     来源:
     - DREAMPlace RUDY: https://arxiv.org/abs/2004.10746
     - LiDAR 2.0 分层布线: https://arxiv.org/html/2505.17239v2
-    - Cadence Innovus 全局-详细分层
-      https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
+    - FastGR Pattern Routing: IJCAI 2023
     """
 
     def __init__(
@@ -484,28 +451,22 @@ class GlobalRouter:
         results: dict[int, GlobalRoute],
         round_idx: int,
     ) -> None:
-        """布线单个连接（含 Rip-up&Reroute 逻辑）。
-
-        Args:
-            conn_idx: 连接索引。
-            conn: 连接对象。
-            results: 布线结果字典（in-place 更新）。
-            round_idx: 当前 Rip-up&Reroute 轮次（0 为首轮）。
-        """
+        """布线单个连接（Pattern Routing 优先 + A* 兜底 + Rip-up&Reroute）。"""
         start, end = self._conn_endpoints(conn)
         if start is None or end is None:
             return
-        # 已布则跳过（非首轮）
         if conn_idx in results and round_idx > 0:
             gr = results[conn_idx]
             if self._check_route_overflow(gr.gcell_path) == 0:
                 return
-            # 拥塞溢出：Rip-up 重布
             self._reduce_demand(gr.gcell_path)
             del results[conn_idx]
         start_gcell = self._port_to_gcell(*start)
         goal_gcell = self._port_to_gcell(*end)
-        gcell_path = self._gcell_astar(start_gcell, goal_gcell)
+        # 优先尝试 Pattern Routing（L-shape → Z-shape），失败再 A*
+        gcell_path = _pattern_route(start_gcell, goal_gcell, self.demand, self.capacity)
+        if gcell_path is None:
+            gcell_path = self._gcell_astar(start_gcell, goal_gcell)
         if gcell_path is None:
             return
         self._update_demand(gcell_path)
@@ -567,6 +528,80 @@ def run_global_routing(
     """
     router = GlobalRouter(net, placements, canvas, config)
     return router.route()
+
+
+def _pattern_route(
+    start: tuple[int, int],
+    goal: tuple[int, int],
+    demand: np.ndarray,
+    capacity: np.ndarray,
+) -> list[tuple[int, int]] | None:
+    """Pattern Routing：L-shape → Z-shape 快速布线（来源: FastGR IJCAI 2023）。"""
+    n_gx, n_gy = demand.shape
+    for path in _gen_l_shape_paths(start, goal):
+        if _path_valid_and_ok(path, demand, capacity, n_gx, n_gy):
+            return path
+    for path in _gen_z_shape_paths(start, goal):
+        if _path_valid_and_ok(path, demand, capacity, n_gx, n_gy):
+            return path
+    return None
+
+
+def _gen_l_shape_paths(start: tuple[int, int], goal: tuple[int, int]) -> list[list[tuple[int, int]]]:
+    """生成 L-shape 路径候选（单弯，两种方向）。"""
+    sx, sy = start
+    gx, gy = goal
+    return [_fill_path([(sx, sy), (gx, sy), (gx, gy)]),
+            _fill_path([(sx, sy), (sx, gy), (gx, gy)])]
+
+
+def _gen_z_shape_paths(start: tuple[int, int], goal: tuple[int, int]) -> list[list[tuple[int, int]]]:
+    """生成 Z-shape 路径候选（双弯，中点分割）。"""
+    sx, sy = start
+    gx, gy = goal
+    mx, my = (sx + gx) // 2, (sy + gy) // 2
+    return [_fill_path([(sx, sy), (mx, sy), (mx, gy), (gx, gy)]),
+            _fill_path([(sx, sy), (sx, my), (gx, my), (gx, gy)])]
+
+
+def _fill_path(corners: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """用线性插值填充拐角点之间的 GCell 序列。"""
+    full: list[tuple[int, int]] = []
+    for i in range(len(corners) - 1):
+        _fill_segment(full, corners[i][0], corners[i][1], corners[i+1][0], corners[i+1][1])
+    if full and full[-1] != corners[-1]:
+        full.append(corners[-1])
+    elif not full:
+        full = list(corners)
+    return full
+
+
+def _fill_segment(
+    full: list[tuple[int, int]],
+    x1: int, y1: int, x2: int, y2: int,
+) -> None:
+    """填充单段路径（水平或垂直）到 full。"""
+    if x1 == x2:
+        for y in range(y1, y2, 1 if y2 > y1 else -1):
+            if not full or full[-1] != (x1, y):
+                full.append((x1, y))
+    else:
+        for x in range(x1, x2, 1 if x2 > x1 else -1):
+            if not full or full[-1] != (x, y1):
+                full.append((x, y1))
+
+
+def _path_valid_and_ok(
+    path: list[tuple[int, int]], demand: np.ndarray, capacity: np.ndarray,
+    n_gx: int, n_gy: int,
+) -> bool:
+    """检查路径是否在边界内且无拥塞溢出。"""
+    for gx, gy in path:
+        if not (0 <= gx < n_gx and 0 <= gy < n_gy):
+            return False
+        if demand[gx, gy] + 1.0 > capacity[gx, gy]:
+            return False
+    return True
 
 
 __all__ = [
