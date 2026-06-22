@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import numpy as np
 
-from polaris.engine.floorplan_env import (
-    Placement,
-    _count_spacing_violations,
+from polaris.engine.floorplan_env import Placement
+from polaris.engine.floorplan_geometry import (
     _count_spacing_violations_brute_force,
+    count_spacing_violations,
 )
 from polaris.pdk.catalog import build_default_catalog
 
@@ -38,7 +38,7 @@ class TestSpacingViolationsSpatialHash:
             Placement(f"d{i}", dev, x=i * 3.0, y=0.0) for i in range(10)
         ]
         # 间距 3μm < 5μm，相邻器件应违规
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         assert result == brute
         assert result >= 1
@@ -51,7 +51,7 @@ class TestSpacingViolationsSpatialHash:
         placements = [
             Placement(f"d{i}", dev, x=i * 3.0, y=0.0) for i in range(50)
         ]
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         assert result == brute, f"空间哈希 {result} != 暴力 {brute}"
 
@@ -63,7 +63,7 @@ class TestSpacingViolationsSpatialHash:
         placements = [
             Placement(f"d{i}", dev, x=i * 100.0, y=0.0) for i in range(60)
         ]
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         assert result == 0
 
     def test_all_violations_large_scale(self):
@@ -72,7 +72,7 @@ class TestSpacingViolationsSpatialHash:
         dev = cat.get("strip_waveguide", platform="SOI")
         # 全部重叠在原点
         placements = [Placement(f"d{i}", dev, x=0.0, y=0.0) for i in range(60)]
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         # C(60,2) = 1770 对全部违规
         assert result == brute == 1770
@@ -90,7 +90,7 @@ class TestSpacingViolationsSpatialHash:
                 )
                 idx += 1
         # 64 器件，间距 4μm < 5μm
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         assert result == brute
 
@@ -104,7 +104,7 @@ class TestSpacingViolationsSpatialHash:
             x = float(rng.uniform(0, 2000))
             y = float(rng.uniform(0, 2000))
             placements.append(Placement(f"d{i}", dev, x=x, y=y))
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         assert result == brute, f"随机布局不一致: 空间哈希 {result} != 暴力 {brute}"
 
@@ -324,7 +324,7 @@ class TestScale500Devices:
                 idx += 1
         assert len(placements) == 500
         # 空间哈希应与暴力一致
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         assert result == brute
 
@@ -338,7 +338,7 @@ class TestScale500Devices:
             x = float(rng.uniform(0, 5000))
             y = float(rng.uniform(0, 5000))
             placements.append(Placement(f"d{i}", dev, x=x, y=y))
-        result = _count_spacing_violations(placements, min_spacing=5.0)
+        result = count_spacing_violations(placements, min_spacing=5.0)
         brute = _count_spacing_violations_brute_force(placements, 5.0)
         assert result == brute, f"500 器件随机布局不一致: {result} != {brute}"
 
