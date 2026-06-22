@@ -38,11 +38,8 @@ class HierarchicalPlacerConfig:
         analytical_config: 块内/块间解析法布局配置。
         random_seed: 随机种子（谱聚类初始化）。
 
-    默认值来源:
-    - n_clusters=None: 自动 sqrt(n)，来自谱聚类最优分块数经验值
-      (Shi & Malik 2000, IEEE TPAMI)
-    - max_cluster_size=500: 单块规模上限，确保块内解析法快速收敛
-      (DREAMPlace TCAD 2020，500 器件内 200 迭代收敛)
+    默认值来源: Shi & Malik 2000 (sqrt(n) 最优分块数),
+    DREAMPlace TCAD 2020 (500 器件内 200 迭代收敛)。
     """
 
     n_clusters: int | None = None
@@ -88,17 +85,8 @@ class _IntraClusterContext:
 class HierarchicalPlacer:
     """分块布局器（P0-2 v2.0 规模扩展）。
 
-    将大规模器件布局分解为子块，每块内用解析法布局，块间用解析法布局。
-
-    算法流程::
-
-        1. 谱聚类分块（基于连接拓扑）
-        2. 块内布局（每块用 AnalyticalPlacer）
-        3. 块间布局（子块中心用 AnalyticalPlacer）
-        4. 合并（块内坐标 + 块中心偏移）
-
-    来源:
-        Shi & Malik 2000, DREAMPlace TCAD 2020
+    算法流程: 1.谱聚类分块 → 2.块内 AnalyticalPlacer → 3.块间 AnalyticalPlacer → 4.合并。
+    来源: Shi & Malik 2000, DREAMPlace TCAD 2020。
     """
 
     def __init__(
