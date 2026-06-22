@@ -222,6 +222,75 @@ def grid_placement(
     return placements
 
 
+def analytical_placement(circuit: CircuitSpec) -> dict[str, tuple[float, float]]:
+    """解析法布局（DREAMPlace 风格，第76轮 P1-5 扩展）。
+
+    使用 AnalyticalPlacer（log-sum-exp 平滑 HPWL + 密度惩罚 + Adam 优化）
+    生成连续坐标布局，作为 grid 布局的高级对照基准。
+
+    来源: DREAMPlace DAC 2019/TCAD 2020, arxiv:2004.10746
+
+    Args:
+        circuit: 电路规格。
+
+    Returns:
+        布局字典 {module_name: (cx, cy)}，中心坐标。
+    """
+    from polaris.engine.analytical_placer import AnalyticalPlacer
+
+    placer = AnalyticalPlacer(circuit)
+    return placer.place()
+
+
+def hierarchical_placement(circuit: CircuitSpec) -> dict[str, tuple[float, float]]:
+    """分块布局（谱聚类 + 块内解析法，第76轮 P1-5 扩展）。
+
+    使用 HierarchicalPlacer（谱聚类分块 + 块内 AnalyticalPlacer + 块间布局）
+    生成大规模布局，适用于 1000+ 器件规模。
+
+    来源: Shi & Malik 2000 Normalized Cuts, DREAMPlace TCAD 2020
+
+    Args:
+        circuit: 电路规格。
+
+    Returns:
+        布局字典 {module_name: (cx, cy)}，中心坐标。
+    """
+    from polaris.engine.hierarchical_placer import HierarchicalPlacer
+
+    placer = HierarchicalPlacer(circuit)
+    return placer.place()
+
+
+def placement_by_method(
+    circuit: CircuitSpec, method: str
+) -> dict[str, tuple[float, float]]:
+    """按方法名分发布局（第76轮 P1-5 扩展）。
+
+    支持 grid/analytical/hierarchical 三种布局方法，用于 benchmark 评估时
+    量化对比不同布局算法的质量（HPWL/重叠/利用率）。
+
+    Args:
+        circuit: 电路规格。
+        method: 布局方法名（``grid``/``analytical``/``hierarchical``）。
+
+    Returns:
+        布局字典 {module_name: (cx, cy)}。
+
+    Raises:
+        ValueError: 未知的布局方法名。
+    """
+    if method == "grid":
+        return grid_placement(circuit)
+    if method == "analytical":
+        return analytical_placement(circuit)
+    if method == "hierarchical":
+        return hierarchical_placement(circuit)
+    raise ValueError(
+        f"未知布局方法 '{method}'，支持: grid/analytical/hierarchical"
+    )
+
+
 __all__ = [
     "BenchmarkResult",
     "evaluate_hpwl",
@@ -229,4 +298,7 @@ __all__ = [
     "evaluate_area_utilization",
     "evaluate_benchmark",
     "grid_placement",
+    "analytical_placement",
+    "hierarchical_placement",
+    "placement_by_method",
 ]
