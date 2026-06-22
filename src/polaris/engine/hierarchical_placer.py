@@ -412,13 +412,22 @@ class HierarchicalPlacer:
             canvas_h=ctx.cluster_canvas,
         )
         intra_config = self.config.analytical_config or AnalyticalPlacerConfig(
-            max_iterations=min(100, max(30, 500 // max(len(ctx.names), 1))),
+            max_iterations=self._adaptive_iterations(len(ctx.names)),
             convergence_threshold=0.5,
         )
         placer = AnalyticalPlacer(sub_circuit, intra_config)
         sub_placement = placer.place()
         for name, (x, y) in sub_placement.items():
             ctx.placement[name] = (x, y)
+
+    @staticmethod
+    def _adaptive_iterations(n_cluster: int) -> int:
+        """根据子块规模自适应调整迭代数（来源: DREAMPlace TCAD 2020）。"""
+        if n_cluster <= 10:
+            return 10
+        if n_cluster <= 30:
+            return 15
+        return 20
 
     def _extract_cluster_connections(
         self, cluster_id: int, labels: np.ndarray
