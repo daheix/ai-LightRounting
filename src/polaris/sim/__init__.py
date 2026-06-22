@@ -28,6 +28,12 @@
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 """
 
+from polaris.sim.backend_selector import (
+    StabilityReport,
+    compute_condition_number,
+    diagnose_stability,
+    select_backend,
+)
 from polaris.sim.cascade import cascade_circuit
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
@@ -48,7 +54,9 @@ from polaris.sim.lvs import (
     run_lvs,
 )
 from polaris.sim.models import (
+    CouplerParams,
     RingParams,
+    WaveguideParams,
     crossing_s,
     directional_coupler_s,
     grating_coupler_s,
@@ -57,8 +65,29 @@ from polaris.sim.models import (
     phase_shifter_s,
     ring_resonator_s,
     terminator_s,
+    validate_wavelength,
     waveguide_s,
     y_branch_s,
+)
+from polaris.sim.models_extended import (
+    attenuator_s,
+    bend_s,
+    circulator_s,
+    combiner_s,
+    detector_s,
+    isolator_s,
+    mirror_s,
+    modulator_s,
+    reflector_s,
+    splitter_s,
+    taper_s,
+    unitary_s,
+)
+from polaris.sim.netlist_adapter import (
+    PolarNetlist,
+    adapt_netlist,
+    detect_format,
+    validate_netlist,
 )
 from polaris.sim.simulator import (
     CircuitSimulator,
@@ -67,14 +96,21 @@ from polaris.sim.simulator import (
     simphony_models,
 )
 from polaris.sim.touchstone import load_touchstone, save_touchstone
-from polaris.sim.types import ModelFunc, SDict
+from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
 
 __all__ = [
     # 类型
     "SDict",
     "ModelFunc",
+    # 双后端支持（R01 创新点）
+    "set_backend",
+    "get_backend",
+    "get_xp",
+    "asarray",
     # 参数集合（规则 4：降低函数参数个数）
     "RingParams",
+    "WaveguideParams",
+    "CouplerParams",
     "WavelengthRange",
     # 基础器件 S 参数模型
     "waveguide_s",
@@ -87,6 +123,31 @@ __all__ = [
     "crossing_s",
     "terminator_s",
     "phase_shifter_s",
+    # 扩展器件 S 参数模型（R01 步骤 7）
+    "taper_s",
+    "modulator_s",
+    "detector_s",
+    "splitter_s",
+    "combiner_s",
+    "attenuator_s",
+    "circulator_s",
+    "isolator_s",
+    "mirror_s",
+    "reflector_s",
+    "unitary_s",
+    "bend_s",
+    # 参数 schema 验证（R01 创新点 2）
+    "validate_wavelength",
+    # 双后端自动切换（R01 创新点 1）
+    "compute_condition_number",
+    "select_backend",
+    "diagnose_stability",
+    "StabilityReport",
+    # 网表格式自动适配器（R01 创新点 3）
+    "PolarNetlist",
+    "adapt_netlist",
+    "detect_format",
+    "validate_netlist",
     # Touchstone 文件
     "load_touchstone",
     "save_touchstone",
