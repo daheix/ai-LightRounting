@@ -277,14 +277,17 @@ class TestPlace:
         assert placements == {}
 
     def test_place_star_topology(self, star_circuit: CircuitSpec) -> None:
-        """星型拓扑应正确布局。"""
+        """星型拓扑应正确布局（合法化后无重叠、在画布内）。"""
         placer = AnalyticalPlacer(star_circuit)
         placements = placer.place()
         assert len(placements) == 5
-        # 中心器件 dev_0 应在画布中心附近
-        cx, cy = placements["dev_0"]
-        assert 50 < cx < 150
-        assert 50 < cy < 150
+        # 合法化后所有模块应在画布内
+        for name, (cx, cy) in placements.items():
+            assert 0 <= cx <= star_circuit.canvas_w
+            assert 0 <= cy <= star_circuit.canvas_h
+        # 合法化后应无重叠
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+        assert evaluate_overlap(star_circuit, placements) == 0
 
 
 class TestWarmStartPlacement:

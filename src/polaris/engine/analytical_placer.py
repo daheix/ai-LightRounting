@@ -366,30 +366,57 @@ class AnalyticalPlacer:
         new_pos = pos - lr * m_hat / (np.sqrt(v_hat) + eps)
         return new_pos, m, v
 
-    def _discretize(self, pos: np.ndarray) -> dict[str, tuple[float, float]]:
-        """将连续坐标离散化到布局字典。
+    def _legalize(self, pos: np.ndarray) -> dict[str, tuple[float, float]]:
+        """合法化布局：消除重叠（自适应行高 FFDH）。
 
-        保留小数（不强制网格对齐），供 RL 微调。
-        限制在画布内。
+        DREAMPlace 标准流程：解析法连续优化 → 合法化。
+        按 (y, x) 排序，逐模块尝试放入已有行（行高足够且有水平空间），
+        放不下则开新行。行高 = 该行首模块高度 × 1.1（自适应，非全局最大）。
+
+        来源:
+            DREAMPlace Legalization (TCAD 2020 Section III.C)
+            FFDH: Coffman et al. SIAM J. Comput. 1980
 
         Args:
             pos: 连续坐标 ``(n, 2)``。
 
         Returns:
-            布局字典 ``{name: (cx, cy)}``。
+            合法化后的布局字典 ``{name: (cx, cy)}``，保证无重叠。
         """
+        if self.n == 0:
+            return {}
+        order = sorted(range(self.n), key=lambda i: (pos[i, 1], pos[i, 0]))
         placements: dict[str, tuple[float, float]] = {}
-        for i, name in enumerate(self.device_names):
-            x = float(np.clip(pos[i, 0], 0, self.canvas_w))
-            y = float(np.clip(pos[i, 1], 0, self.canvas_h))
-            placements[name] = (x, y)
+        rows: list[list[float]] = []  # [y_start, row_height, x_cursor]
+        for i in order:
+            w = float(self.widths[i])
+            h = float(self.heights[i])
+            placed = False
+            for r in range(len(rows)):
+                ys, rh, xc = rows[r]
+                if rh >= h * 1.1 and xc + w <= self.canvas_w:
+                    cx = xc + w / 2
+                    cy = ys + rh / 2
+                    placements[self.device_names[i]] = (cx, cy)
+                    rows[r][2] = xc + w
+                    placed = True
+                    break
+            if not placed:
+                new_h = h * 1.1
+                ys = rows[-1][0] + rows[-1][1] if rows else 0.0
+                cx = w / 2
+                cy = ys + new_h / 2
+                placements[self.device_names[i]] = (cx, cy)
+                rows.append([ys, new_h, w])
         return placements
 
     def place(self) -> dict[str, tuple[float, float]]:
-        """执行解析法布局（DREAMPlace warm-start）。
+        """执行解析法布局（DREAMPlace warm-start + 合法化）。
+
+        流程: 1.初始布局 → 2.梯度下降优化 → 3.合法化（消除重叠）。
 
         Returns:
-            布局字典 ``{name: (cx, cy)}``，中心坐标。
+            布局字典 ``{name: (cx, cy)}``，中心坐标，无重叠。
         """
         if self.n == 0:
             return {}
@@ -402,20 +429,17 @@ class AnalyticalPlacer:
         for t in range(1, self.config.max_iterations + 1):
             hpwl_grad = self._smooth_hpwl_gradient(pos)
             dens_grad = self._density_gradient(pos)
-            # 总梯度 = HPWL 梯度 + 密度权重 * 密度梯度
             total_grad = hpwl_grad + self.config.density_weight * dens_grad
             pos, m, v = self._adam_update(pos, total_grad, AdamState(m=m, v=v, t=t))
-            # 限制在画布内
             pos[:, 0] = np.clip(pos[:, 0], 0, self.canvas_w)
             pos[:, 1] = np.clip(pos[:, 1], 0, self.canvas_h)
-            # 收敛检查（每 10 轮）
             if t % 10 == 0:
                 cur_hpwl = self._compute_hpwl(pos)
                 if abs(prev_hpwl - cur_hpwl) < self.config.convergence_threshold:
                     break
                 prev_hpwl = cur_hpwl
-        # 3. 离散化
-        return self._discretize(pos)
+        # 3. 合法化（消除重叠，DREAMPlace 标准流程）
+        return self._legalize(pos)
 
     def _compute_hpwl(self, pos: np.ndarray) -> float:
         """计算当前布局的 HPWL（真实，非平滑）。
