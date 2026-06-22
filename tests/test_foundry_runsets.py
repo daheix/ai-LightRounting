@@ -162,10 +162,10 @@ def test_list_foundry_runsets_by_material_empty():
 
 
 def test_siepic_ebeam_runset_unchanged():
-    """测试 SiEPIC EBeam runset 规则数（第85轮新增 WG_DENSITY）。"""
+    """测试 SiEPIC EBeam runset 规则数（第85轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
     from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET
 
-    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 9
+    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 10
     runset = FOUNDRY_RUNSETS["SiEPIC_EBeam"]
     assert runset.rules is SIEPIC_EBEAM_DRC_RUNSET
 
@@ -185,8 +185,8 @@ def test_amf_runset_rules():
 
 
 def test_ihp_runset_rules():
-    """测试 IHP runset 规则数和阈值（第86轮新增 WG_DENSITY）。"""
-    assert len(IHP_DRC_RUNSET) == 12
+    """测试 IHP runset 规则数和阈值（第86轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
+    assert len(IHP_DRC_RUNSET) == 13
     # IHP 包含 N/P 掺杂规则
     n_width = next(r for r in IHP_DRC_RUNSET if r.name == "IHP_N_MIN_WIDTH")
     assert n_width.threshold_um == 0.5
@@ -198,8 +198,8 @@ def test_ihp_runset_rules():
 
 
 def test_gf_fotonix_runset_rules():
-    """测试 GF Fotonix 45nm 工艺规则（更紧凑的阈值，第86轮新增 WG_DENSITY）。"""
-    assert len(GF_FOTONIX_DRC_RUNSET) == 10
+    """测试 GF Fotonix 45nm 工艺规则（第86轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
+    assert len(GF_FOTONIX_DRC_RUNSET) == 11
     # 45nm 工艺 WG 最小宽度 0.3μm（比 180nm 工艺更小）
     wg_width = next(r for r in GF_FOTONIX_DRC_RUNSET if r.name == "GF_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.3

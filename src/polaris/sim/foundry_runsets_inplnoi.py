@@ -230,6 +230,15 @@ LNOI_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.LAYER_DENSITY,
         description="LNOI WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
     ),
+    DRCRule(
+        name="LNOI_VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.5,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="LNOI VIAC 须被 M1_HEATER 包围 ≥0.5μm（LNOI 电极工艺）",
+    ),
 ]
 
 

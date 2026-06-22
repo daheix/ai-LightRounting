@@ -217,6 +217,15 @@ IHP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.LAYER_DENSITY,
         description="IHP WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
     ),
+    DRCRule(
+        name="IHP_VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.3,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="IHP VIAC 须被 M1_HEATER 包围 ≥0.3μm（250nm BiCMOS 工艺）",
+    ),
 ]
 
 
@@ -303,6 +312,15 @@ GF_FOTONIX_DRC_RUNSET: list[DRCRule] = [
         max_density=70.0,
         vtype=ViolationType.LAYER_DENSITY,
         description="GF WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
+    ),
+    DRCRule(
+        name="GF_VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.2,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="GF VIAC 须被 M1_HEATER 包围 ≥0.2μm（45nm CMOS 工艺）",
     ),
 ]
 
