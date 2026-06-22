@@ -114,6 +114,23 @@ AMF_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.LAYER_DENSITY,
         description="AMF WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
     ),
+    DRCRule(
+        name="AMF_VIAC_MIN_WIDTH",
+        layer_name="VIAC",
+        check_type=DRCCheckType.WIDTH,
+        threshold_um=0.8,
+        vtype=ViolationType.MIN_WIDTH,
+        description="AMF VIAC 接触孔最小宽度 0.8μm（180nm SOI 工艺）",
+    ),
+    DRCRule(
+        name="AMF_VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.4,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="AMF VIAC 须被 M1_HEATER 包围 ≥0.4μm（180nm SOI 工艺）",
+    ),
 ]
 
 
@@ -384,6 +401,23 @@ COMPOUNDTEK_DRC_RUNSET: list[DRCRule] = [
         max_density=70.0,
         vtype=ViolationType.LAYER_DENSITY,
         description="CompoundTek WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
+    ),
+    DRCRule(
+        name="CT_VIAC_MIN_WIDTH",
+        layer_name="VIAC",
+        check_type=DRCCheckType.WIDTH,
+        threshold_um=0.8,
+        vtype=ViolationType.MIN_WIDTH,
+        description="CompoundTek VIAC 接触孔最小宽度 0.8μm（130nm SOI 工艺）",
+    ),
+    DRCRule(
+        name="CT_VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.4,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="CompoundTek VIAC 须被 M1_HEATER 包围 ≥0.4μm（130nm SOI 工艺）",
     ),
 ]
 

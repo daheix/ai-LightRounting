@@ -171,8 +171,8 @@ def test_siepic_ebeam_runset_unchanged():
 
 
 def test_amf_runset_rules():
-    """测试 AMF runset 规则数和阈值（第86轮新增 WG_DENSITY）。"""
-    assert len(AMF_DRC_RUNSET) == 11
+    """测试 AMF runset 规则数和阈值（第88轮新增 VIAC WIDTH + VIA ENCLOSURE）。"""
+    assert len(AMF_DRC_RUNSET) == 13
     # WG 最小宽度 0.4μm
     wg_width = next(r for r in AMF_DRC_RUNSET if r.name == "AMF_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.4
@@ -212,8 +212,8 @@ def test_gf_fotonix_runset_rules():
 
 
 def test_compoundtek_runset_rules():
-    """测试 CompoundTek 130nm SOI runset（第86轮新增 WG_DENSITY）。"""
-    assert len(COMPOUNDTEK_DRC_RUNSET) == 7
+    """测试 CompoundTek 130nm SOI runset（第88轮新增 VIAC WIDTH + VIA ENCLOSURE）。"""
+    assert len(COMPOUNDTEK_DRC_RUNSET) == 9
     wg_width = next(r for r in COMPOUNDTEK_DRC_RUNSET if r.name == "CT_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.4
     wg_space = next(r for r in COMPOUNDTEK_DRC_RUNSET if r.name == "CT_WG_MIN_SPACE")
