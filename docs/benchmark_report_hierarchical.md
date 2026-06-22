@@ -5,21 +5,21 @@
 - **Benchmark 总数**: 4
 - **达标数**: 3
 - **达标率**: 75.00%
-- **平均 HPWL**: 6609.38 μm
+- **平均 HPWL**: 7365.12 μm
 - **平均利用率**: 0.6667
 - **总模块数**: 56
 - **总连接数**: 74
 - **总重叠对数**: 0
-- **评估时间**: 2026-06-22T09:55:52Z
+- **评估时间**: 2026-06-22T10:04:12Z
 
 ## 2. 各 Benchmark 详细结果
 
 | Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 模块 | 连接 | 达标 |
 |-----------|------|------|------|-----------|------|--------|------|------|------|
-| tilos_ariane | tilos | NanGate45 | hierarchical | 7697.00 | 0 | 0.6667 | 17 | 25 | ✅ |
-| apollo_ptc | apollo | 220nm SOI | hierarchical | 5366.00 | 0 | 0.6667 | 12 | 13 | ❌ |
-| apollo_onoc | apollo | 220nm SOI | hierarchical | 10000.50 | 0 | 0.6667 | 15 | 23 | ✅ |
-| lidar_ptc | lidar | 220nm SOI | hierarchical | 3374.00 | 0 | 0.6667 | 12 | 13 | ✅ |
+| tilos_ariane | tilos | NanGate45 | hierarchical | 8692.50 | 0 | 0.6667 | 17 | 25 | ✅ |
+| apollo_ptc | apollo | 220nm SOI | hierarchical | 5659.00 | 0 | 0.6667 | 12 | 13 | ❌ |
+| apollo_onoc | apollo | 220nm SOI | hierarchical | 12425.00 | 0 | 0.6667 | 15 | 23 | ✅ |
+| lidar_ptc | lidar | 220nm SOI | hierarchical | 2684.00 | 0 | 0.6667 | 12 | 13 | ✅ |
 
 ## 3. 来源
 

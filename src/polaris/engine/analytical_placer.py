@@ -370,22 +370,28 @@ class AnalyticalPlacer:
         """合法化布局：消除重叠（自适应行高 FFDH）。
 
         DREAMPlace 标准流程：解析法连续优化 → 合法化。
-        按 (y, x) 排序，逐模块尝试放入已有行（行高足够且有水平空间），
-        放不下则开新行。行高 = 该行首模块高度 × 1.1（自适应，非全局最大）。
+        按高度降序排序（FFDH 标准），逐模块尝试放入已有行（行高足够且有
+        水平空间），放不下则开新行。行高 = 该行首模块高度 × 1.1。
+        按高度降序可最大化空间利用率（FFDH 渐近比 1.7×OPT，
+        Coffman et al. 1980），确保模块在画布内。
 
         来源:
             DREAMPlace Legalization (TCAD 2020 Section III.C)
-            FFDH: Coffman et al. SIAM J. Comput. 1980
+            FFDH: Coffman et al. SIAM J. Comput. 9(4), 1980
 
         Args:
             pos: 连续坐标 ``(n, 2)``。
 
         Returns:
-            合法化后的布局字典 ``{name: (cx, cy)}``，保证无重叠。
+            合法化后的布局字典 ``{name: (cx, cy)}``，保证无重叠且在画布内。
         """
         if self.n == 0:
             return {}
-        order = sorted(range(self.n), key=lambda i: (pos[i, 1], pos[i, 0]))
+        # 按高度降序排序（FFDH 标准），高度相同时按 y 坐标保持拓扑局部性
+        order = sorted(
+            range(self.n),
+            key=lambda i: (-float(self.heights[i]), pos[i, 1]),
+        )
         placements: dict[str, tuple[float, float]] = {}
         rows: list[list[float]] = []  # [y_start, row_height, x_cursor]
         for i in order:
