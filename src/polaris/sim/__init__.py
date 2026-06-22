@@ -102,6 +102,14 @@ from polaris.sim.klayout_drc import (
     KLayoutDRCRunner,
     run_klayout_drc,
 )
+from polaris.sim.hierarchical_drc import (
+    BVH,
+    BVHNode,
+    DRCViolation,
+    HierarchicalDRC,
+    RowPartition,
+    run_hierarchical_drc,
+)
 from polaris.sim.lvs import (
     ExtractedNetlist,
     LVSMismatch,
@@ -315,4 +323,11 @@ __all__ = [
     "compare_netlists",
     "extract_netlist_from_gds",
     "run_lvs",
+    # R07 层次化 DRC 引擎（BVH + 自适应行分块，OpenDRC 算法）
+    "BVH",
+    "BVHNode",
+    "DRCViolation",
+    "HierarchicalDRC",
+    "RowPartition",
+    "run_hierarchical_drc",
 ]

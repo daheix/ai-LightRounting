@@ -174,15 +174,24 @@ class TestHierarchicalDRC:
         assert len(violations) == 0
 
     def test_drc_density_check(self):
-        """测试 density 检查。"""
-        # 创建低密度版图
-        polygons = {"WG": [np.array([[0, 0], [1, 0], [1, 1], [0, 1]])]}
+        """测试 density 检查。
+
+        公式: ρ=ΣA_i/A_total×100%（Banerjee 2024; SiEPIC）。
+        构造两个相距很远的小多边形，合并 bbox 很大但总面积很小，
+        密度 ≈ 0.02% < 30% 阈值，应触发低密度违规。
+        """
+        # 两个 1×1μm 小多边形，相距 100μm，合并 bbox=101×101=10201μm²
+        # total_area=2μm², density=2/10201×100%≈0.0196% < 30%
+        polygons = {"WG": [
+            np.array([[0, 0], [1, 0], [1, 1], [0, 1]]),
+            np.array([[100, 100], [101, 100], [101, 101], [100, 101]]),
+        ]}
         rules = [_make_rule(
             name="WG_MIN_DENSITY", check_type=DRCCheckType.DENSITY, threshold=30.0
         )]
         engine = HierarchicalDRC(rules)
         violations = engine.check(polygons)
-        # 密度很低，应有违规
+        # 密度 ≈ 0.02% < 30%，应有违规
         assert len(violations) > 0
 
 
