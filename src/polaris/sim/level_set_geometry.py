@@ -200,16 +200,15 @@ def fast_marching_sdf(phi: np.ndarray, config: FastMarchingConfig | None = None)
     t = np.full((gx, gy), np.inf)
     known = np.zeros((gx, gy), dtype=bool)
 
-    _detect_zero_contour(phi, sign, t, cfg)
+    _detect_zero_contour(phi, t, cfg)
     heap = _init_narrow_band(t, known)
-    _march_expand(t, known, heap, gx, gy, cfg)
+    _march_expand(t, known, heap, cfg)
 
     return sign * t
 
 
 def _detect_zero_contour(
     phi: np.ndarray,
-    sign: np.ndarray,
     t: np.ndarray,
     cfg: FastMarchingConfig,
 ) -> None:
@@ -217,8 +216,31 @@ def _detect_zero_contour(
     gx, gy = phi.shape
     for i in range(gx):
         for j in range(gy):
-            neighbors = _get_neighbors(i, j, gx, gy)
-            _update_zero_crossing(phi, sign, t, i, j, neighbors, cfg)
+            _update_zero_crossing(phi, t, i, j, cfg)
+
+
+def _update_zero_crossing(
+    phi: np.ndarray,
+    t: np.ndarray,
+    i: int,
+    j: int,
+    cfg: FastMarchingConfig,
+) -> None:
+    """检查 4 邻居是否有符号变化，更新零等高线距离。
+
+    用 phi[i,j] * phi[ni,nj] < 0 判断符号变化，避免传入 sign 数组。
+    gx, gy 从 phi.shape 获取，避免参数过多。
+    """
+    gx, gy = phi.shape
+    for ni, nj in _get_neighbors(i, j, gx, gy):
+        if phi[i, j] * phi[ni, nj] < 0:
+            denom = abs(phi[i, j]) + abs(phi[ni, nj])
+            dist = 0.0 if denom < 1e-12 else abs(phi[i, j]) / denom
+            step = cfg.dx if cfg.dx == cfg.dy or ni != i else cfg.dy
+            t_val = dist * step
+            if t_val < t[i, j]:
+                t[i, j] = t_val
+            break
 
 
 def _get_neighbors(i: int, j: int, gx: int, gy: int) -> list[tuple[int, int]]:
@@ -233,30 +255,6 @@ def _get_neighbors(i: int, j: int, gx: int, gy: int) -> list[tuple[int, int]]:
     if j < gy - 1:
         neighbors.append((i, j + 1))
     return neighbors
-
-
-def _update_zero_crossing(
-    phi: np.ndarray,
-    sign: np.ndarray,
-    t: np.ndarray,
-    i: int,
-    j: int,
-    neighbors: list[tuple[int, int]],
-    cfg: FastMarchingConfig,
-) -> None:
-    """检查邻居是否有符号变化，更新零等高线距离。"""
-    for ni, nj in neighbors:
-        if sign[i, j] * sign[ni, nj] < 0:
-            denom = abs(phi[i, j]) + abs(phi[ni, nj])
-            if denom < 1e-12:
-                dist = 0.0
-            else:
-                dist = abs(phi[i, j]) / denom
-            step = cfg.dx if cfg.dx == cfg.dy or ni != i else cfg.dy
-            t_val = dist * step
-            if t_val < t[i, j]:
-                t[i, j] = t_val
-            break
 
 
 def _init_narrow_band(t: np.ndarray, known: np.ndarray) -> list[tuple[float, int, int]]:
@@ -275,11 +273,10 @@ def _march_expand(
     t: np.ndarray,
     known: np.ndarray,
     heap: list[tuple[float, int, int]],
-    gx: int,
-    gy: int,
     cfg: FastMarchingConfig,
 ) -> None:
     """Fast Marching 扩展：按 T 值升序弹出并更新邻居。"""
+    gx, gy = t.shape
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
     iterations = 0
     while heap and iterations < cfg.max_iterations:
@@ -291,7 +288,7 @@ def _march_expand(
             ni, nj = i + di, j + dj
             if _is_out_of_bounds(ni, nj, gx, gy) or known[ni, nj]:
                 continue
-            new_t = _compute_neighbor_t(t, known, ni, nj, gx, gy, cfg)
+            new_t = _compute_neighbor_t(t, known, ni, nj, cfg)
             if new_t < t[ni, nj]:
                 t[ni, nj] = new_t
                 known[ni, nj] = True
@@ -308,11 +305,10 @@ def _compute_neighbor_t(
     known: np.ndarray,
     ni: int,
     nj: int,
-    gx: int,
-    gy: int,
     cfg: FastMarchingConfig,
 ) -> float:
     """收集已知邻居的 T 值并求解 Eikonal 方程。"""
+    gx, gy = t.shape
     t_x = float("inf")
     t_y = float("inf")
     if ni > 0 and known[ni - 1, nj]:

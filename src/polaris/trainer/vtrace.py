@@ -6,6 +6,7 @@
 
 - ``VTraceConfig``：V-trace 配置
 - ``VTraceResult``：V-trace 计算结果
+- ``TrajectoryBatch``：轨迹数据封装（第56轮重构，降低参数个数）
 - ``compute_vtrace``：V-trace 主算法
 - ``ImpalaLearner``：IMPALA 风格 learner
 
@@ -70,12 +71,104 @@ class VTraceResult:
     cs: np.ndarray = field(default_factory=lambda: np.array([]))
 
 
+@dataclass
+class TrajectoryBatch:
+    """轨迹数据封装（第56轮重构）。
+
+    将 V-trace 所需的 5 个等长轨迹数组合并为一个数据类，
+    使函数签名从 7 参数降至 3 参数，符合质量门禁上限 5。
+
+    Attributes:
+        values: 状态值估计 V(s_t)（n_steps,）。
+        rewards: 奖励 r_t（n_steps,）。
+        logprobs_behavior: 行为策略 log π_μ(a|s)（n_steps,）。
+        logprobs_target: 目标策略 log π_θ(a|s)（n_steps,）。
+        dones: episode 结束标志（n_steps,）。
+    """
+
+    values: np.ndarray
+    rewards: np.ndarray
+    logprobs_behavior: np.ndarray
+    logprobs_target: np.ndarray
+    dones: np.ndarray
+
+    def __post_init__(self) -> None:
+        """校验轨迹长度一致。"""
+        n = len(self.values)
+        if not (
+            len(self.rewards) == n
+            and len(self.logprobs_behavior) == n
+            and len(self.logprobs_target) == n
+            and len(self.dones) == n
+        ):
+            raise ValueError("轨迹数组长度不一致")
+
+
+def _compute_truncated_ratios(
+    batch: TrajectoryBatch, cfg: VTraceConfig
+) -> tuple[np.ndarray, np.ndarray]:
+    """计算截断重要性采样系数 ρ̄_t 和 c̄_t。
+
+    ρ_t = exp(log π_θ - log π_μ)
+    ρ̄_t = min(ρ_t, ρ̄)
+    c̄_t = min(ρ_t, c̄)
+    """
+    log_ratio = batch.logprobs_target - batch.logprobs_behavior
+    rhos = np.exp(log_ratio)
+    cs = np.exp(log_ratio)
+    rhos = np.minimum(rhos, cfg.rho_bar)
+    cs = np.minimum(cs, cfg.c_bar)
+    return rhos, cs
+
+
+def _compute_vs_values(
+    batch: TrajectoryBatch,
+    rhos: np.ndarray,
+    cs: np.ndarray,
+    last_value: float,
+    cfg: VTraceConfig,
+) -> np.ndarray:
+    """计算 V-trace 值估计 v_s（后向递推）。"""
+    n = len(batch.values)
+    vs = np.zeros(n)
+    vs[-1] = batch.values[-1] + rhos[-1] * (
+        batch.rewards[-1] + cfg.gamma * (1 - batch.dones[-1]) * last_value - batch.values[-1]
+    )
+    for t in range(n - 2, -1, -1):
+        delta = rhos[t] * (
+            batch.rewards[t]
+            + cfg.gamma * (1 - batch.dones[t]) * batch.values[t + 1]
+            - batch.values[t]
+        )
+        vs[t] = (
+            batch.values[t]
+            + delta
+            + (cfg.gamma * cfg.lambda_ * cs[t] * (1 - batch.dones[t]))
+            * (vs[t + 1] - batch.values[t + 1])
+        )
+    return vs
+
+
+def _compute_pg_advantages(
+    batch: TrajectoryBatch,
+    rhos: np.ndarray,
+    vs: np.ndarray,
+    last_value: float,
+    cfg: VTraceConfig,
+) -> np.ndarray:
+    """计算策略梯度优势 A_t = ρ̄_t (r_t + γ v_{t+1} - V(x_t))。"""
+    n = len(batch.values)
+    pg_advantages = np.zeros(n)
+    for t in range(n):
+        next_v = vs[t + 1] if t + 1 < n else last_value
+        pg_advantages[t] = rhos[t] * (
+            batch.rewards[t] + cfg.gamma * (1 - batch.dones[t]) * next_v - batch.values[t]
+        )
+    return pg_advantages
+
+
 def compute_vtrace(
-    values: np.ndarray,
-    rewards: np.ndarray,
-    logprobs_behavior: np.ndarray,
-    logprobs_target: np.ndarray,
-    dones: np.ndarray,
+    batch: TrajectoryBatch,
     last_value: float = 0.0,
     config: VTraceConfig | None = None,
 ) -> VTraceResult:
@@ -89,11 +182,7 @@ def compute_vtrace(
     4. 策略梯度优势：A_t = ρ_̄t (r_t + γ v_{t+1} - V(x_t))
 
     Args:
-        values: 状态值估计 V(s_t)（n_steps,）。
-        rewards: 奖励 r_t（n_steps,）。
-        logprobs_behavior: 行为策略 log π_μ(a|s)（n_steps,）。
-        logprobs_target: 目标策略 log π_θ(a|s)（n_steps,）。
-        dones: episode 结束标志（n_steps,）。
+        batch: 轨迹数据封装（values/rewards/logprobs/dones）。
         last_value: 最后一个状态的 bootstrap 值。
         config: V-trace 配置。
 
@@ -101,29 +190,9 @@ def compute_vtrace(
         V-trace 计算结果。
     """
     cfg = config or VTraceConfig()
-    n = len(values)
-    rhos = np.zeros(n)
-    cs = np.zeros(n)
-    log_ratio = logprobs_target - logprobs_behavior
-    rhos = np.exp(log_ratio)
-    cs = np.exp(log_ratio)
-    rhos = np.minimum(rhos, cfg.rho_bar)
-    cs = np.minimum(cs, cfg.c_bar)
-    vs = np.zeros(n)
-    vs[-1] = values[-1] + rhos[-1] * (
-        rewards[-1] + cfg.gamma * (1 - dones[-1]) * last_value - values[-1]
-    )
-    for t in range(n - 2, -1, -1):
-        delta = rhos[t] * (rewards[t] + cfg.gamma * (1 - dones[t]) * values[t + 1] - values[t])
-        vs[t] = (
-            values[t]
-            + delta
-            + (cfg.gamma * cfg.lambda_ * cs[t] * (1 - dones[t])) * (vs[t + 1] - values[t + 1])
-        )
-    pg_advantages = np.zeros(n)
-    for t in range(n):
-        next_v = vs[t + 1] if t + 1 < n else last_value
-        pg_advantages[t] = rhos[t] * (rewards[t] + cfg.gamma * (1 - dones[t]) * next_v - values[t])
+    rhos, cs = _compute_truncated_ratios(batch, cfg)
+    vs = _compute_vs_values(batch, rhos, cs, last_value, cfg)
+    pg_advantages = _compute_pg_advantages(batch, rhos, vs, last_value, cfg)
     return VTraceResult(
         vs=vs,
         pg_advantages=pg_advantages,
@@ -179,15 +248,14 @@ class ImpalaLearner:
         """
         values = np.array([self.value_fn(obs) for obs in observations])
         last_value = self.value_fn(last_observation) if last_observation is not None else 0.0
-        return compute_vtrace(
+        batch = TrajectoryBatch(
             values=values,
             rewards=rewards,
             logprobs_behavior=logprobs_behavior,
             logprobs_target=logprobs_target,
             dones=dones,
-            last_value=last_value,
-            config=self.config,
         )
+        return compute_vtrace(batch, last_value, self.config)
 
 
 def create_vtrace_config(
@@ -214,21 +282,9 @@ def create_impala_learner(
 
 
 def run_vtrace(
-    values: np.ndarray,
-    rewards: np.ndarray,
-    logprobs_behavior: np.ndarray,
-    logprobs_target: np.ndarray,
-    dones: np.ndarray,
+    batch: TrajectoryBatch,
     last_value: float = 0.0,
     config: VTraceConfig | None = None,
 ) -> VTraceResult:
     """工厂函数：运行 V-trace 计算。"""
-    return compute_vtrace(
-        values=values,
-        rewards=rewards,
-        logprobs_behavior=logprobs_behavior,
-        logprobs_target=logprobs_target,
-        dones=dones,
-        last_value=last_value,
-        config=config,
-    )
+    return compute_vtrace(batch, last_value, config)
