@@ -138,20 +138,42 @@ class GPUDensityField:
             return field
 
         # 向量化双线性插值面积分布
-        # 每个器件在 4 个相邻网格中分配面积
+        # 每个器件在 4 个相邻网格中按双线性权重分配面积
+        # 对标 DREAMPlace TCAD 2020 Section III.B 标准算法
         x_centers = pos[:, 0]
         y_centers = pos[:, 1]
 
-        # 找到每个器件所在的网格索引
-        ix = np.searchsorted(bin_x[1:], x_centers, side="right")
-        iy = np.searchsorted(bin_y[1:], y_centers, side="right")
-        ix = np.clip(ix, 0, gx - 1)
-        iy = np.clip(iy, 0, gx - 1)
+        # 连续网格坐标（器件中心在网格中的浮点位置）
+        dx = bin_x[1] - bin_x[0]
+        dy = bin_y[1] - bin_y[0]
+        gx_cont = x_centers / dx - 0.5
+        gy_cont = y_centers / dy - 0.5
 
-        # 简化：每个器件的面积全部分配到中心所在网格
-        # （完整双线性插值需要 4 邻域分配，这里用简化版保证数值稳定）
+        # 4 个邻域网格索引
+        x0 = np.floor(gx_cont).astype(np.int64)
+        y0 = np.floor(gy_cont).astype(np.int64)
+        x1 = x0 + 1
+        y1 = y0 + 1
+
+        # 双线性权重
+        wx1 = gx_cont - x0
+        wy1 = gy_cont - y0
+        wx0 = 1.0 - wx1
+        wy0 = 1.0 - wy1
+
         areas = widths * heights
-        np.add.at(field, (ix, iy), areas)
+
+        # 向量化 4 邻域分配
+        for gx_idx, wx in ((x0, wx0), (x1, wx1)):
+            for gy_idx, wy in ((y0, wy0), (y1, wy1)):
+                mask = (gx_idx >= 0) & (gx_idx < gx) & (gy_idx >= 0) & (gy_idx < gx)
+                if not np.any(mask):
+                    continue
+                np.add.at(
+                    field,
+                    (gx_idx[mask], gy_idx[mask]),
+                    areas[mask] * wx[mask] * wy[mask],
+                )
 
         # 归一化
         bin_area = (bin_x[1] - bin_x[0]) * (bin_y[1] - bin_y[0])
