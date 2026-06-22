@@ -35,6 +35,15 @@ from polaris.sim.backend_selector import (
     select_backend,
 )
 from polaris.sim.cascade import cascade_circuit
+from polaris.sim.cascade_backends import (
+    CircuitMatrix,
+    build_circuit_matrix,
+    cascade_additive,
+    cascade_auto,
+    cascade_forward_only,
+    cascade_klu,
+    redheffer_star,
+)
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
@@ -173,6 +182,14 @@ __all__ = [
     "save_touchstone",
     # 级联器
     "cascade_circuit",
+    # R03 级联后端集合（KLU + Redheffer 星积 + Additive + Forward-only + auto）
+    "cascade_klu",
+    "cascade_auto",
+    "cascade_additive",
+    "cascade_forward_only",
+    "redheffer_star",
+    "build_circuit_matrix",
+    "CircuitMatrix",
     # 仿真器
     "CircuitSimulator",
     "default_models",

@@ -242,14 +242,46 @@ def _merge_subnetworks(
     del subnetworks[inst1_name]
     del subnetworks[inst2_name]
 
-    # 更新剩余连接中的实例名
+    # 更新剩余连接中的实例名（R03 修复：精确端口引用解析，避免子串误替换）
+    # 旧实现使用 str.replace 可能误替换子串（如 mzi1 替换 mzi10）
+    # 新实现使用精确的 "instance.port" 分割和重组
     new_connections = []
     for c in connections:
-        c0 = c[0].replace(inst1_name, new_name).replace(inst2_name, new_name)
-        c1 = c[1].replace(inst1_name, new_name).replace(inst2_name, new_name)
+        c0 = _replace_instance_name(c[0], inst1_name, inst2_name, new_name)
+        c1 = _replace_instance_name(c[1], inst1_name, inst2_name, new_name)
         if c0.split(".")[0] != c1.split(".")[0]:  # 跳过已合并的
             new_connections.append((c0, c1))
     return new_connections
+
+
+def _replace_instance_name(
+    ref: str,
+    old_name1: str,
+    old_name2: str,
+    new_name: str,
+) -> str:
+    """精确替换端口引用中的实例名（R03 修复 bug）。
+
+    旧实现 str.replace(inst1_name, new_name) 可能误替换子串，
+    例如 inst1_name="mzi1" 会误替换 "mzi10" 中的 "mzi1"。
+    新实现使用精确分割 "instance.port" 仅替换完全匹配的实例名。
+
+    Args:
+        ref: 端口引用 "instance.port"。
+        old_name1: 要替换的实例名1。
+        old_name2: 要替换的实例名2。
+        new_name: 替换后的新实例名。
+
+    Returns:
+        替换后的端口引用。
+    """
+    parts = ref.split(".", 1)
+    if len(parts) == 2:
+        inst, port = parts
+        if inst == old_name1 or inst == old_name2:
+            return f"{new_name}.{port}"
+        return ref
+    return ref
 
 
 def _rename_ports(final_s: SDict, ports: dict[str, str]) -> SDict:
