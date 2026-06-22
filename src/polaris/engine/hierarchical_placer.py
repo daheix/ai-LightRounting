@@ -216,6 +216,76 @@ class HierarchicalPlacer:
                     centers[j] = X[mask].mean(axis=0)
         return labels
 
+    def _place_intra_cluster(
+        self,
+        labels: np.ndarray,
+    ) -> tuple[dict[str, tuple[float, float]], dict[int, tuple[float, float]]]:
+        """块内布局：每个子块内用网格分布放置器件。
+
+        Args:
+            labels: 谱聚类标签数组。
+
+        Returns:
+            (final_placement, cluster_centers) 二元组。
+            - final_placement: {name: (local_x, local_y)} 块内局部坐标
+            - cluster_centers: {cluster_id: (cx, cy)} 子块中心
+        """
+        final_placement: dict[str, tuple[float, float]] = {}
+        cluster_centers: dict[int, tuple[float, float]] = {}
+
+        for cluster_id in range(self.k):
+            mask = labels == cluster_id
+            if not mask.any():
+                continue
+            cluster_device_indices = np.where(mask)[0]
+            cluster_device_names = [
+                self.device_names[i] for i in cluster_device_indices
+            ]
+            n_cluster = len(cluster_device_indices)
+            cluster_canvas = max(500.0, np.sqrt(n_cluster) * 50.0)
+            grid_n = int(np.ceil(np.sqrt(n_cluster)))
+            for i, name in enumerate(cluster_device_names):
+                row = i // grid_n
+                col = i % grid_n
+                x = (col + 0.5) * (cluster_canvas / grid_n)
+                y = (row + 0.5) * (cluster_canvas / grid_n)
+                final_placement[name] = (x, y)
+            cluster_centers[cluster_id] = (cluster_canvas / 2, cluster_canvas / 2)
+
+        return final_placement, cluster_centers
+
+    def _place_inter_cluster(
+        self,
+        placement: dict[str, tuple[float, float]],
+        cluster_centers: dict[int, tuple[float, float]],
+        labels: np.ndarray,
+    ) -> dict[str, tuple[float, float]]:
+        """块间布局：将子块中心分布到主画布，合并块内坐标。
+
+        Args:
+            placement: 块内局部坐标字典。
+            cluster_centers: 子块中心字典。
+            labels: 谱聚类标签数组。
+
+        Returns:
+            合并后的全局坐标字典 {name: (global_x, global_y)}。
+        """
+        k_grid = int(np.ceil(np.sqrt(self.k)))
+        for cluster_id, (local_cx, local_cy) in cluster_centers.items():
+            row = cluster_id // k_grid
+            col = cluster_id % k_grid
+            block_offset_x = col * 500.0
+            block_offset_y = row * 500.0
+            mask = labels == cluster_id
+            for i in np.where(mask)[0]:
+                name = self.device_names[i]
+                local_x, local_y = placement[name]
+                placement[name] = (
+                    local_x + block_offset_x,
+                    local_y + block_offset_y,
+                )
+        return placement
+
     def place(self) -> dict[str, tuple[float, float]]:
         """执行分块布局。
 
@@ -230,60 +300,10 @@ class HierarchicalPlacer:
         labels = self._spectral_clustering()
 
         # 2. 块内布局
-        cluster_centers: dict[int, tuple[float, float]] = {}
-        final_placement: dict[str, tuple[float, float]] = {}
+        placement, cluster_centers = self._place_intra_cluster(labels)
 
-        # 为每个子块创建子电路并布局
-        for cluster_id in range(self.k):
-            mask = labels == cluster_id
-            if not mask.any():
-                continue
-            cluster_device_indices = np.where(mask)[0]
-            # 子块内器件名
-            cluster_device_names = [self.device_names[i] for i in cluster_device_indices]
-            # 子块内连接（仅保留块内连接）
-            cluster_connections = [
-                (src, dst) for src, dst in self.connections
-                if labels[src] == cluster_id and labels[dst] == cluster_id
-            ]
-            # 子块布局：用解析法（简化版，直接用网格分布）
-            # 子块画布尺寸 = sqrt(n_cluster) * 平均器件尺寸
-            n_cluster = len(cluster_device_indices)
-            cluster_canvas = max(500.0, np.sqrt(n_cluster) * 50.0)
-            # 网格分布
-            grid_n = int(np.ceil(np.sqrt(n_cluster)))
-            for i, name in enumerate(cluster_device_names):
-                row = i // grid_n
-                col = i % grid_n
-                x = (col + 0.5) * (cluster_canvas / grid_n)
-                y = (row + 0.5) * (cluster_canvas / grid_n)
-                final_placement[name] = (x, y)
-            # 子块中心（用于块间布局）
-            cluster_centers[cluster_id] = (
-                cluster_canvas / 2,
-                cluster_canvas / 2,
-            )
-
-        # 3. 块间布局：将子块中心分布到主画布
-        # 主画布网格分布子块
-        k_grid = int(np.ceil(np.sqrt(self.k)))
-        main_canvas = max(1000.0, k_grid * 500.0)
-        for cluster_id, (local_cx, local_cy) in cluster_centers.items():
-            row = cluster_id // k_grid
-            col = cluster_id % k_grid
-            block_offset_x = col * 500.0
-            block_offset_y = row * 500.0
-            # 4. 合并：块内坐标 + 块中心偏移
-            mask = labels == cluster_id
-            for i in np.where(mask)[0]:
-                name = self.device_names[i]
-                local_x, local_y = final_placement[name]
-                final_placement[name] = (
-                    local_x + block_offset_x,
-                    local_y + block_offset_y,
-                )
-
-        return final_placement
+        # 3. 块间布局 + 合并
+        return self._place_inter_cluster(placement, cluster_centers, labels)
 
 
 def hierarchical_placement(
