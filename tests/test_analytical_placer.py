@@ -277,14 +277,17 @@ class TestPlace:
         assert placements == {}
 
     def test_place_star_topology(self, star_circuit: CircuitSpec) -> None:
-        """星型拓扑应正确布局。"""
+        """星型拓扑应正确布局（合法化后无重叠、在画布内）。"""
         placer = AnalyticalPlacer(star_circuit)
         placements = placer.place()
         assert len(placements) == 5
-        # 中心器件 dev_0 应在画布中心附近
-        cx, cy = placements["dev_0"]
-        assert 50 < cx < 150
-        assert 50 < cy < 150
+        # 合法化后所有模块应在画布内
+        for name, (cx, cy) in placements.items():
+            assert 0 <= cx <= star_circuit.canvas_w
+            assert 0 <= cy <= star_circuit.canvas_h
+        # 合法化后应无重叠
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+        assert evaluate_overlap(star_circuit, placements) == 0
 
 
 class TestWarmStartPlacement:
@@ -465,3 +468,81 @@ class TestCommercialGapReduction:
             hpwl = evaluate_hpwl(circuit, placements)
             assert np.isfinite(hpwl), f"{circuit.name} HPWL 非有限"
             assert hpwl > 0, f"{circuit.name} HPWL 非正"
+
+
+class TestLegalization:
+    """合法化（Legalization）测试（第79轮 FFDH 算法）。
+
+    验证 AnalyticalPlacer.place() 输出的布局无重叠、在画布内。
+    来源: DREAMPlace TCAD 2020 Section III.C, FFDH (Coffman et al. 1980)
+    """
+
+    def test_no_overlap_simple(self, simple_circuit: CircuitSpec) -> None:
+        """简单电路合法化后应无重叠。"""
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+
+        placements = warm_start_placement(simple_circuit)
+        assert evaluate_overlap(simple_circuit, placements) == 0
+
+    def test_no_overlap_all_benchmarks(self) -> None:
+        """全部公开 benchmark 合法化后应无重叠。"""
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+        from polaris.data.data_loader import (
+            load_apollo_onoc,
+            load_apollo_ptc,
+            load_lidar_benchmark,
+            load_tilos_ariane,
+        )
+
+        cfg = AnalyticalPlacerConfig(max_iterations=20)
+        for loader in [
+            load_tilos_ariane,
+            load_apollo_ptc,
+            load_apollo_onoc,
+            load_lidar_benchmark,
+        ]:
+            circuit = loader()
+            placements = warm_start_placement(circuit, cfg)
+            overlaps = evaluate_overlap(circuit, placements)
+            assert overlaps == 0, f"{circuit.name} 合法化后仍有 {overlaps} 对重叠"
+
+    def test_all_modules_in_canvas(self) -> None:
+        """合法化后所有模块应在画布内。"""
+        from polaris.data.data_loader import load_tilos_ariane
+
+        circuit = load_tilos_ariane()
+        placements = warm_start_placement(circuit)
+        for name, (cx, cy) in placements.items():
+            assert 0 <= cx <= circuit.canvas_w, f"{name} x={cx} 超出画布"
+            assert 0 <= cy <= circuit.canvas_h, f"{name} y={cy} 超出画布"
+
+    def test_legalize_mixed_sizes(self) -> None:
+        """模块尺寸差异大时合法化应无重叠。"""
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+
+        circuit = CircuitSpec(
+            name="test_mixed",
+            devices=[
+                DeviceSpec(name="big", device_type="mzi", width_um=400.0, height_um=400.0),
+                DeviceSpec(name="small_0", device_type="waveguide", width_um=20.0, height_um=10.0),
+                DeviceSpec(name="small_1", device_type="waveguide", width_um=30.0, height_um=20.0),
+                DeviceSpec(name="small_2", device_type="waveguide", width_um=25.0, height_um=15.0),
+            ],
+            connections=[
+                ("big", "out", "small_0", "in"),
+                ("small_0", "out", "small_1", "in"),
+                ("small_1", "out", "small_2", "in"),
+            ],
+            canvas_w=628.0,
+            canvas_h=628.0,
+        )
+        placements = warm_start_placement(circuit)
+        assert evaluate_overlap(circuit, placements) == 0
+
+    def test_legalize_preserves_module_count(self) -> None:
+        """合法化不应丢失模块。"""
+        from polaris.data.data_loader import load_apollo_onoc
+
+        circuit = load_apollo_onoc()
+        placements = warm_start_placement(circuit)
+        assert len(placements) == len(circuit.devices)

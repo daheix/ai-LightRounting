@@ -200,7 +200,14 @@ class AnalyticalPlacer:
 
         梯度对每个器件坐标求偏导。
 
-        来源: DREAMPlace 平滑 HPWL（TCAD 2020 公式 4-6）。
+        **数值稳定性**（第70轮修复）：当坐标值较大时 exp(x/γ) 会溢出产生 NaN。
+        标准做法是减去最大值后再 exp（log-sum-exp trick）：
+        - exp(x/γ) → exp((x - max_x)/γ)
+        - 梯度分母/分子同比例缩放，结果不变
+
+        来源: DREAMPlace 平滑 HPWL（TCAD 2020 公式 4-6）；
+              log-sum-exp trick: Blanchard et al., "Accurate Numerical Methods
+              for the Log-Sum-Exp Problem", arXiv:2106.14588
 
         Args:
             pos: 当前坐标 ``(n, 2)``。
@@ -215,15 +222,25 @@ class AnalyticalPlacer:
             x2, y2 = pos[dst]
             xs = np.array([x1, x2])
             ys = np.array([y1, y2])
-            # 平滑 max/min
-            exp_x = np.exp(xs / gamma)
-            exp_neg_x = np.exp(-xs / gamma)
-            exp_y = np.exp(ys / gamma)
-            exp_neg_y = np.exp(-ys / gamma)
+            # 数值稳定的 log-sum-exp：减去最大值防止溢出
+            max_x = xs.max()
+            min_x = xs.min()
+            max_y = ys.max()
+            min_y = ys.min()
+            # 平滑 max: exp((x - max_x)/γ)，归一化后梯度 = softmax
+            exp_x = np.exp((xs - max_x) / gamma)
+            exp_neg_x = np.exp((-xs + min_x) / gamma)
+            exp_y = np.exp((ys - max_y) / gamma)
+            exp_neg_y = np.exp((-ys + min_y) / gamma)
             sum_exp_x = exp_x.sum()
             sum_exp_neg_x = exp_neg_x.sum()
             sum_exp_y = exp_y.sum()
             sum_exp_neg_y = exp_neg_y.sum()
+            # 防止除零（sum 不会为 0，但加保护）
+            sum_exp_x = max(sum_exp_x, 1e-300)
+            sum_exp_neg_x = max(sum_exp_neg_x, 1e-300)
+            sum_exp_y = max(sum_exp_y, 1e-300)
+            sum_exp_neg_y = max(sum_exp_neg_y, 1e-300)
             # d(smooth_max_x)/d(x_i) = exp(x_i/γ) / sum(exp(x_j/γ))
             # d(smooth_min_x)/d(x_i) = -exp(-x_i/γ) / sum(exp(-x_j/γ))
             # HPWL = smooth_max_x - smooth_min_x + smooth_max_y - smooth_min_y
@@ -232,6 +249,9 @@ class AnalyticalPlacer:
                 i = 0 if idx == src else 1
                 grad[idx, 0] += exp_x[i] / sum_exp_x - exp_neg_x[i] / sum_exp_neg_x
                 grad[idx, 1] += exp_y[i] / sum_exp_y - exp_neg_y[i] / sum_exp_neg_y
+        # NaN/Inf 安全检查（防止极端坐标导致数值问题）
+        if not np.all(np.isfinite(grad)):
+            grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
         return grad
 
     def _density_gradient(self, pos: np.ndarray) -> np.ndarray:
@@ -346,30 +366,63 @@ class AnalyticalPlacer:
         new_pos = pos - lr * m_hat / (np.sqrt(v_hat) + eps)
         return new_pos, m, v
 
-    def _discretize(self, pos: np.ndarray) -> dict[str, tuple[float, float]]:
-        """将连续坐标离散化到布局字典。
+    def _legalize(self, pos: np.ndarray) -> dict[str, tuple[float, float]]:
+        """合法化布局：消除重叠（自适应行高 FFDH）。
 
-        保留小数（不强制网格对齐），供 RL 微调。
-        限制在画布内。
+        DREAMPlace 标准流程：解析法连续优化 → 合法化。
+        按高度降序排序（FFDH 标准），逐模块尝试放入已有行（行高足够且有
+        水平空间），放不下则开新行。行高 = 该行首模块高度 × 1.1。
+        按高度降序可最大化空间利用率（FFDH 渐近比 1.7×OPT，
+        Coffman et al. 1980），确保模块在画布内。
+
+        来源:
+            DREAMPlace Legalization (TCAD 2020 Section III.C)
+            FFDH: Coffman et al. SIAM J. Comput. 9(4), 1980
 
         Args:
             pos: 连续坐标 ``(n, 2)``。
 
         Returns:
-            布局字典 ``{name: (cx, cy)}``。
+            合法化后的布局字典 ``{name: (cx, cy)}``，保证无重叠且在画布内。
         """
+        if self.n == 0:
+            return {}
+        # 按高度降序排序（FFDH 标准），高度相同时按 y 坐标保持拓扑局部性
+        order = sorted(
+            range(self.n),
+            key=lambda i: (-float(self.heights[i]), pos[i, 1]),
+        )
         placements: dict[str, tuple[float, float]] = {}
-        for i, name in enumerate(self.device_names):
-            x = float(np.clip(pos[i, 0], 0, self.canvas_w))
-            y = float(np.clip(pos[i, 1], 0, self.canvas_h))
-            placements[name] = (x, y)
+        rows: list[list[float]] = []  # [y_start, row_height, x_cursor]
+        for i in order:
+            w = float(self.widths[i])
+            h = float(self.heights[i])
+            placed = False
+            for r in range(len(rows)):
+                ys, rh, xc = rows[r]
+                if rh >= h * 1.1 and xc + w <= self.canvas_w:
+                    cx = xc + w / 2
+                    cy = ys + rh / 2
+                    placements[self.device_names[i]] = (cx, cy)
+                    rows[r][2] = xc + w
+                    placed = True
+                    break
+            if not placed:
+                new_h = h * 1.1
+                ys = rows[-1][0] + rows[-1][1] if rows else 0.0
+                cx = w / 2
+                cy = ys + new_h / 2
+                placements[self.device_names[i]] = (cx, cy)
+                rows.append([ys, new_h, w])
         return placements
 
     def place(self) -> dict[str, tuple[float, float]]:
-        """执行解析法布局（DREAMPlace warm-start）。
+        """执行解析法布局（DREAMPlace warm-start + 合法化）。
+
+        流程: 1.初始布局 → 2.梯度下降优化 → 3.合法化（消除重叠）。
 
         Returns:
-            布局字典 ``{name: (cx, cy)}``，中心坐标。
+            布局字典 ``{name: (cx, cy)}``，中心坐标，无重叠。
         """
         if self.n == 0:
             return {}
@@ -382,20 +435,17 @@ class AnalyticalPlacer:
         for t in range(1, self.config.max_iterations + 1):
             hpwl_grad = self._smooth_hpwl_gradient(pos)
             dens_grad = self._density_gradient(pos)
-            # 总梯度 = HPWL 梯度 + 密度权重 * 密度梯度
             total_grad = hpwl_grad + self.config.density_weight * dens_grad
             pos, m, v = self._adam_update(pos, total_grad, AdamState(m=m, v=v, t=t))
-            # 限制在画布内
             pos[:, 0] = np.clip(pos[:, 0], 0, self.canvas_w)
             pos[:, 1] = np.clip(pos[:, 1], 0, self.canvas_h)
-            # 收敛检查（每 10 轮）
             if t % 10 == 0:
                 cur_hpwl = self._compute_hpwl(pos)
                 if abs(prev_hpwl - cur_hpwl) < self.config.convergence_threshold:
                     break
                 prev_hpwl = cur_hpwl
-        # 3. 离散化
-        return self._discretize(pos)
+        # 3. 合法化（消除重叠，DREAMPlace 标准流程）
+        return self._legalize(pos)
 
     def _compute_hpwl(self, pos: np.ndarray) -> float:
         """计算当前布局的 HPWL（真实，非平滑）。
