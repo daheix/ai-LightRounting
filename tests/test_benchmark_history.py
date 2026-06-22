@@ -19,6 +19,7 @@ from polaris.data.benchmark_history import (
     BenchmarkHistory,
     HistoryEntry,
     HistoryTracker,
+    RecordMeta,
     TrendAnalysis,
     _detect_regression,
     _detect_trend,
@@ -242,8 +243,7 @@ class TestHistoryTracker:
         tracker = HistoryTracker()
         entry = tracker.add_record(
             _make_report(),
-            run_id="custom_id",
-            timestamp="2026-01-01T00:00:00Z",
+            meta=RecordMeta(run_id="custom_id", timestamp="2026-01-01T00:00:00Z"),
         )
         assert entry.run_id == "custom_id"
         assert entry.timestamp == "2026-01-01T00:00:00Z"
@@ -275,9 +275,9 @@ class TestAnalyzeTrend:
     def test_improving_trend(self) -> None:
         """HPWL 持续下降应判定为 improving。"""
         tracker = HistoryTracker()
-        tracker.add_record(_make_report(hpwl=100.0), timestamp="2026-06-01T00:00:00Z")
-        tracker.add_record(_make_report(hpwl=80.0), timestamp="2026-06-02T00:00:00Z")
-        tracker.add_record(_make_report(hpwl=60.0), timestamp="2026-06-03T00:00:00Z")
+        tracker.add_record(_make_report(hpwl=100.0), meta=RecordMeta(timestamp="2026-06-01T00:00:00Z"))
+        tracker.add_record(_make_report(hpwl=80.0), meta=RecordMeta(timestamp="2026-06-02T00:00:00Z"))
+        tracker.add_record(_make_report(hpwl=60.0), meta=RecordMeta(timestamp="2026-06-03T00:00:00Z"))
         trend = tracker.analyze_trend("test_bench")
         assert trend is not None
         assert trend.trend_direction == "improving"
@@ -289,9 +289,9 @@ class TestAnalyzeTrend:
     def test_regarding_trend_with_regression(self) -> None:
         """HPWL 恶化应判定为 regarding 并检测到回归。"""
         tracker = HistoryTracker()
-        tracker.add_record(_make_report(hpwl=60.0), timestamp="2026-06-01T00:00:00Z")
-        tracker.add_record(_make_report(hpwl=80.0), timestamp="2026-06-02T00:00:00Z")
-        tracker.add_record(_make_report(hpwl=100.0), timestamp="2026-06-03T00:00:00Z")
+        tracker.add_record(_make_report(hpwl=60.0), meta=RecordMeta(timestamp="2026-06-01T00:00:00Z"))
+        tracker.add_record(_make_report(hpwl=80.0), meta=RecordMeta(timestamp="2026-06-02T00:00:00Z"))
+        tracker.add_record(_make_report(hpwl=100.0), meta=RecordMeta(timestamp="2026-06-03T00:00:00Z"))
         trend = tracker.analyze_trend("test_bench")
         assert trend is not None
         assert trend.trend_direction == "regarding"
@@ -329,13 +329,13 @@ class TestPersistence:
             _make_report(name="bench_a", hpwl=100.0),
             commit_hash="abc12345",
             notes="baseline",
-            timestamp="2026-06-01T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-01T00:00:00Z"),
         )
         tracker.add_record(
             _make_report(name="bench_a", hpwl=80.0),
             commit_hash="def67890",
             notes="v2.0.0",
-            timestamp="2026-06-02T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-02T00:00:00Z"),
         )
         path = tmp_path / "history.json"
         tracker.save(path)
@@ -394,13 +394,13 @@ class TestTrendReport:
             _make_report(name="bench_a", hpwl=100.0),
             commit_hash="abc12345",
             notes="baseline",
-            timestamp="2026-06-01T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-01T00:00:00Z"),
         )
         tracker.add_record(
             _make_report(name="bench_a", hpwl=80.0),
             commit_hash="def67890",
             notes="v2.0.0",
-            timestamp="2026-06-02T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-02T00:00:00Z"),
         )
         report = tracker.generate_trend_report()
         assert "bench_a" in report
@@ -457,19 +457,19 @@ class TestCommercialGapReduction:
             _make_report(name="tilos_ariane", hpwl=5000.0),
             commit_hash="c1",
             notes="v1.0.0 grid baseline",
-            timestamp="2026-06-01T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-01T00:00:00Z"),
         )
         tracker.add_record(
             _make_report(name="tilos_ariane", hpwl=4000.0, method="rl_ppo"),
             commit_hash="c2",
             notes="v1.1.0 RL PPO",
-            timestamp="2026-06-02T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-02T00:00:00Z"),
         )
         tracker.add_record(
             _make_report(name="tilos_ariane", hpwl=3500.0, method="rl_gnn"),
             commit_hash="c3",
             notes="v2.0.0 RL GNN warm-start",
-            timestamp="2026-06-03T00:00:00Z",
+            meta=RecordMeta(timestamp="2026-06-03T00:00:00Z"),
         )
         # 分析趋势
         trend = tracker.analyze_trend("tilos_ariane")
@@ -495,9 +495,9 @@ class TestCommercialGapReduction:
     def test_regression_detection_workflow(self) -> None:
         """回归检测工作流：先改进后恶化应触发回归告警。"""
         tracker = HistoryTracker(regression_threshold=5.0)
-        tracker.add_record(_make_report(hpwl=100.0), timestamp="2026-06-01T00:00:00Z")
-        tracker.add_record(_make_report(hpwl=80.0), timestamp="2026-06-02T00:00:00Z")
-        tracker.add_record(_make_report(hpwl=90.0), timestamp="2026-06-03T00:00:00Z")
+        tracker.add_record(_make_report(hpwl=100.0), meta=RecordMeta(timestamp="2026-06-01T00:00:00Z"))
+        tracker.add_record(_make_report(hpwl=80.0), meta=RecordMeta(timestamp="2026-06-02T00:00:00Z"))
+        tracker.add_record(_make_report(hpwl=90.0), meta=RecordMeta(timestamp="2026-06-03T00:00:00Z"))
         trend = tracker.analyze_trend("test_bench")
         assert trend is not None
         # 最近 90 vs 最佳 80，恶化 12.5% > 5% 阈值
@@ -537,7 +537,7 @@ class TestCommercialGapReduction:
                 _make_report(hpwl=hpwl),
                 commit_hash=f"c{i}",
                 notes=f"run {i}",
-                timestamp=f"2026-06-0{i + 1}T00:00:00Z",
+                meta=RecordMeta(timestamp=f"2026-06-0{i + 1}T00:00:00Z"),
             )
         # CodeBook 核心能力 2: 趋势分析
         trend = tracker.analyze_trend("test_bench")

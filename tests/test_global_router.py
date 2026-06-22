@@ -21,6 +21,7 @@ from polaris.engine.netlist import (
 from polaris.pdk.device import BoundingBox, Device, Port
 from polaris.pdk.port import Direction
 from polaris.router.global_router import (
+    CanvasSize,
     GCell,
     GlobalRoute,
     GlobalRouter,
@@ -152,7 +153,7 @@ class TestGlobalRouterInit:
             "d2": _make_placement(dev2, 100, 0),
         }
         net = _make_netlist([("d1", "out", "d2", "in")])
-        router = GlobalRouter(net, placements, canvas_w=200, canvas_h=200)
+        router = GlobalRouter(net, placements, CanvasSize(200, 200))
         assert router.canvas_w == 200
         assert router.canvas_h == 200
         assert router.gcell_size == 50.0
@@ -167,7 +168,7 @@ class TestGlobalRouterInit:
         placements = {"d1": _make_placement(dev1, 0, 0)}
         net = _make_netlist([])
         cfg = GlobalRouterConfig(gcell_size_um=25.0)
-        router = GlobalRouter(net, placements, 100, 100, cfg)
+        router = GlobalRouter(net, placements, CanvasSize(100, 100), cfg)
         assert router.gcell_size == 25.0
         assert router.gw == 4  # 100 / 25
         assert router.gh == 4

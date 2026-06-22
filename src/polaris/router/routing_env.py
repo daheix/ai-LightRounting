@@ -21,6 +21,7 @@ from gymnasium import spaces
 from polaris.engine.floorplan_env import Placement
 from polaris.engine.netlist import Netlist
 from polaris.router.global_router import (
+    CanvasSize,
     GlobalRouter,
     GlobalRouterConfig,
 )
@@ -226,8 +227,7 @@ class RoutingEnv(gym.Env):
         router = GlobalRouter(
             net=self.net,
             placements=self.placements,
-            canvas_w=self.state.canvas_w,
-            canvas_h=self.state.canvas_h,
+            canvas=CanvasSize(width=self.state.canvas_w, height=self.state.canvas_h),
             config=gr_config,
         )
         self._global_routes = router.route()

@@ -63,6 +63,21 @@ def _now_iso() -> str:
 
 
 @dataclass(frozen=True)
+class RecordMeta:
+    """评估记录元数据（降低 add_record 参数个数，规则 4.1）。
+
+    封装 run_id 和 timestamp 两个可选元数据字段。
+
+    Attributes:
+        run_id: 运行 ID（None 自动生成 UUID）。
+        timestamp: 评估时间（None 用当前 UTC）。
+    """
+
+    run_id: str | None = None
+    timestamp: str | None = None
+
+
+@dataclass(frozen=True)
 class HistoryEntry:
     """单次评估历史记录。
 
@@ -163,8 +178,7 @@ class HistoryTracker:
         report: BenchmarkReport,
         commit_hash: str = "",
         notes: str = "",
-        run_id: str | None = None,
-        timestamp: str | None = None,
+        meta: RecordMeta | None = None,
     ) -> HistoryEntry:
         """记录单次评估。
 
@@ -172,15 +186,15 @@ class HistoryTracker:
             report: BenchmarkReport。
             commit_hash: Git commit hash（可选）。
             notes: 备注（如版本号）。
-            run_id: 运行 ID（默认自动生成 UUID）。
-            timestamp: 评估时间（默认当前 UTC）。
+            meta: 元数据（run_id / timestamp，None 自动生成）。
 
         Returns:
             创建的 HistoryEntry。
         """
+        m = meta or RecordMeta()
         entry = HistoryEntry(
-            run_id=run_id or str(uuid.uuid4()),
-            timestamp=timestamp or _now_iso(),
+            run_id=m.run_id or str(uuid.uuid4()),
+            timestamp=m.timestamp or _now_iso(),
             report=report,
             commit_hash=commit_hash,
             notes=notes,
