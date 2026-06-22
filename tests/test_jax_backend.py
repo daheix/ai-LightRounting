@@ -61,7 +61,7 @@ class TestWaveguideSJAX:
         assert ("in", "in") in sdict
         assert ("out", "in") in sdict
         # S11 = 0（无反射）
-        assert np.isclose(float(sdict[("in", "in")][0]), 0.0)
+        assert np.isclose(complex(sdict[("in", "in")][0]), 0.0)
         # |S21| = 1（无损）
         assert np.isclose(float(np.abs(sdict[("out", "in")][0])), 1.0)
 
