@@ -138,6 +138,27 @@ class _PSOState:
     rng: np.random.Generator
 
 
+@dataclass(frozen=True)
+class _CMAESConstants:
+    """CMA-ES 算法常量（降低 _init_cmaes_state 函数行数，规则 4.2）。
+
+    Attributes:
+        c_c: 协方差路径学习率。
+        c_s: 步长路径学习率。
+        c_1: rank-1 更新学习率。
+        c_mu: rank-μ 更新学习率。
+        d_s: 步长阻尼系数。
+        chi_n: E||N(0,I)|| 期望值。
+    """
+
+    c_c: float
+    c_s: float
+    c_1: float
+    c_mu: float
+    d_s: float
+    chi_n: float
+
+
 @dataclass
 class _CMAESState:
     """CMA-ES 迭代状态（可变，供 _cmaes_step 原地更新）。"""
@@ -216,6 +237,27 @@ class CMAESOptimizer:
             method="CMA-ES",
         )
 
+    def _compute_cmaes_constants(self, n: int, mueff: float) -> _CMAESConstants:
+        """计算 CMA-ES 算法常量（学习率/阻尼/期望范数）。
+
+        Args:
+            n: 问题维度。
+            mueff: 有效选择质量。
+
+        Returns:
+            CMA-ES 常量数据类。
+        """
+        c_c = (4 + mueff / n) / (n + 4 + 2 * mueff / n)
+        c_s = (mueff + 2) / (n + mueff + 5)
+        c_1 = 2 / ((n + 1.3) ** 2 + mueff)
+        c_mu = min(
+            1 - c_1,
+            2 * (mueff - 2 + 1 / mueff) / ((n + 2) ** 2 + mueff),
+        )
+        d_s = 1 + 2 * max(0, np.sqrt((mueff - 1) / (n + 1)) - 1) + c_s
+        chi_n = np.sqrt(n) * (1 - 1 / (4 * n) + 1 / (21 * n**2))
+        return _CMAESConstants(c_c=c_c, c_s=c_s, c_1=c_1, c_mu=c_mu, d_s=d_s, chi_n=chi_n)
+
     def _init_cmaes_state(self, initial_mean: np.ndarray) -> _CMAESState:
         """初始化 CMA-ES 状态（协方差/步长/进化路径）。"""
         n = len(initial_mean)
@@ -229,15 +271,7 @@ class CMAESOptimizer:
         weights = np.log(mu + 0.5) - np.log(np.arange(1, mu + 1))
         weights = weights / weights.sum()
         mueff = 1.0 / float(np.sum(weights**2))
-        c_c = (4 + mueff / n) / (n + 4 + 2 * mueff / n)
-        c_s = (mueff + 2) / (n + mueff + 5)
-        c_1 = 2 / ((n + 1.3) ** 2 + mueff)
-        c_mu = min(
-            1 - c_1,
-            2 * (mueff - 2 + 1 / mueff) / ((n + 2) ** 2 + mueff),
-        )
-        d_s = 1 + 2 * max(0, np.sqrt((mueff - 1) / (n + 1)) - 1) + c_s
-        chi_n = np.sqrt(n) * (1 - 1 / (4 * n) + 1 / (21 * n**2))
+        consts = self._compute_cmaes_constants(n, mueff)
         return _CMAESState(
             n=n,
             rng=rng,
@@ -247,17 +281,17 @@ class CMAESOptimizer:
             mueff=mueff,
             mean=initial_mean.copy(),
             sigma=self.config.initial_std,
-            c_c=c_c,
-            c_s=c_s,
-            c_1=c_1,
-            c_mu=c_mu,
-            d_s=d_s,
+            c_c=consts.c_c,
+            c_s=consts.c_s,
+            c_1=consts.c_1,
+            c_mu=consts.c_mu,
+            d_s=consts.d_s,
             p_c=np.zeros(n),
             p_s=np.zeros(n),
             b_mat=np.eye(n),
             d_mat=np.eye(n),
             c_mat=np.eye(n),
-            chi_n=chi_n,
+            chi_n=consts.chi_n,
             history=[],
             best_fom=-float("inf"),
             best_params=initial_mean.copy(),
@@ -334,30 +368,43 @@ class ParticleSwarmOptimizer:
         """
         self.config = config or PSOConfig()
 
-    def _init_pso_state(
+    def _init_pso_bounds(
         self,
         initial_pos: np.ndarray,
-        fom_fn: Callable[[np.ndarray], float],
         bounds: tuple[np.ndarray, np.ndarray] | None,
-    ) -> tuple:
-        """初始化 PSO 状态。
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """初始化 PSO 参数边界。
 
         Args:
             initial_pos: 初始位置。
-            fom_fn: FoM 评估函数。
-            bounds: 参数边界。
+            bounds: 参数边界，None 表示自动。
 
         Returns:
-            (positions, velocities, personal_best, personal_best_fom,
-             global_best, global_best_fom, lower, upper, rng) 九元组。
+            (lower, upper) 上下界。
+        """
+        if bounds is None:
+            return initial_pos - 5.0, initial_pos + 5.0
+        return bounds
+
+    def _init_pso_particles(
+        self,
+        initial_pos: np.ndarray,
+        lower: np.ndarray,
+        upper: np.ndarray,
+        rng: np.random.Generator,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """初始化 PSO 粒子位置和速度。
+
+        Args:
+            initial_pos: 初始位置（第一个粒子）。
+            lower: 下界。
+            upper: 上界。
+            rng: 随机数生成器。
+
+        Returns:
+            (positions, velocities) 粒子位置和速度。
         """
         n = len(initial_pos)
-        rng = np.random.default_rng(self.config.seed)
-        if bounds is None:
-            lower = initial_pos - 5.0
-            upper = initial_pos + 5.0
-        else:
-            lower, upper = bounds
         positions = np.zeros((self.config.num_particles, n))
         positions[0] = initial_pos
         for i in range(1, self.config.num_particles):
@@ -367,72 +414,126 @@ class ParticleSwarmOptimizer:
             np.abs(upper - lower),
             (self.config.num_particles, n),
         )
+        return positions, velocities
+
+    def _init_pso_state(
+        self,
+        initial_pos: np.ndarray,
+        fom_fn: Callable[[np.ndarray], float],
+        bounds: tuple[np.ndarray, np.ndarray] | None,
+    ) -> _PSOState:
+        """初始化 PSO 状态。
+
+        Args:
+            initial_pos: 初始位置。
+            fom_fn: FoM 评估函数。
+            bounds: 参数边界。
+
+        Returns:
+            PSO 迭代状态对象。
+        """
+        rng = np.random.default_rng(self.config.seed)
+        lower, upper = self._init_pso_bounds(initial_pos, bounds)
+        positions, velocities = self._init_pso_particles(initial_pos, lower, upper, rng)
         personal_best = positions.copy()
         personal_best_fom = np.array([fom_fn(p) for p in positions])
         global_best_idx = int(np.argmax(personal_best_fom))
         global_best = personal_best[global_best_idx].copy()
         global_best_fom = personal_best_fom[global_best_idx]
-        return (
-            positions, velocities, personal_best, personal_best_fom,
-            global_best, global_best_fom, lower, upper, rng,
+        return _PSOState(
+            positions=positions,
+            velocities=velocities,
+            personal_best=personal_best,
+            personal_best_fom=personal_best_fom,
+            global_best=global_best,
+            global_best_fom=float(global_best_fom),
+            lower=lower,
+            upper=upper,
+            rng=rng,
         )
 
-    def _pso_iteration(
-        self,
-        positions: np.ndarray,
-        velocities: np.ndarray,
-        personal_best: np.ndarray,
-        personal_best_fom: np.ndarray,
-        global_best: np.ndarray,
-        global_best_fom: float,
-        lower: np.ndarray,
-        upper: np.ndarray,
-        fom_fn: Callable[[np.ndarray], float],
-        rng: np.random.Generator,
-    ) -> tuple:
-        """执行一次 PSO 迭代。
+    def _compute_pso_velocities(self, state: _PSOState) -> np.ndarray:
+        """计算 PSO 粒子新速度。
 
         Args:
-            positions: 当前粒子位置。
-            velocities: 当前粒子速度。
-            personal_best: 个体最佳位置。
-            personal_best_fom: 个体最佳 FoM。
-            global_best: 全局最佳位置。
-            global_best_fom: 全局最佳 FoM。
-            lower: 下界。
-            upper: 上界。
-            fom_fn: FoM 评估函数。
-            rng: 随机数生成器。
+            state: PSO 迭代状态。
 
         Returns:
-            更新后的状态元组。
+            新速度数组。
         """
         w = self.config.inertia_weight
         c1 = self.config.cognitive_coef
         c2 = self.config.social_coef
         n_particles = self.config.num_particles
-        n = positions.shape[1]
-
-        r1 = rng.uniform(0, 1, (n_particles, n))
-        r2 = rng.uniform(0, 1, (n_particles, n))
-        velocities = (
-            w * velocities
-            + c1 * r1 * (personal_best - positions)
-            + c2 * r2 * (global_best - positions)
+        n = state.positions.shape[1]
+        r1 = state.rng.uniform(0, 1, (n_particles, n))
+        r2 = state.rng.uniform(0, 1, (n_particles, n))
+        return (
+            w * state.velocities
+            + c1 * r1 * (state.personal_best - state.positions)
+            + c2 * r2 * (state.global_best - state.positions)
         )
-        positions = positions + velocities
-        positions = np.clip(positions, lower, upper)
-        foms = np.array([fom_fn(p) for p in positions])
-        improved = foms > personal_best_fom
+
+    def _update_pso_bests(
+        self,
+        state: _PSOState,
+        positions: np.ndarray,
+        foms: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, float]:
+        """更新 PSO 个体最佳和全局最佳。
+
+        Args:
+            state: PSO 迭代状态。
+            positions: 新粒子位置。
+            foms: 新粒子 FoM。
+
+        Returns:
+            (personal_best, personal_best_fom, global_best, global_best_fom)。
+        """
+        improved = foms > state.personal_best_fom
+        personal_best = state.personal_best.copy()
+        personal_best_fom = state.personal_best_fom.copy()
         personal_best[improved] = positions[improved]
         personal_best_fom[improved] = foms[improved]
         current_best_idx = int(np.argmax(personal_best_fom))
+        global_best = state.global_best
+        global_best_fom = state.global_best_fom
         if personal_best_fom[current_best_idx] > global_best_fom:
             global_best = personal_best[current_best_idx].copy()
             global_best_fom = personal_best_fom[current_best_idx]
-        return (
-            positions, velocities, personal_best, personal_best_fom,
-            global_best, global_best_fom,
+        return personal_best, personal_best_fom, global_best, float(global_best_fom)
+
+    def _pso_iteration(
+        self,
+        state: _PSOState,
+        fom_fn: Callable[[np.ndarray], float],
+    ) -> _PSOState:
+        """执行一次 PSO 迭代。
+
+        Args:
+            state: PSO 迭代状态。
+            fom_fn: FoM 评估函数。
+
+        Returns:
+            更新后的 PSO 状态对象。
+        """
+        velocities = self._compute_pso_velocities(state)
+        positions = state.positions + velocities
+        positions = np.clip(positions, state.lower, state.upper)
+        foms = np.array([fom_fn(p) for p in positions])
+        personal_best, personal_best_fom, global_best, global_best_fom = (
+            self._update_pso_bests(state, positions, foms)
+        )
+        return _PSOState(
+            positions=positions,
+            velocities=velocities,
+            personal_best=personal_best,
+            personal_best_fom=personal_best_fom,
+            global_best=global_best,
+            global_best_fom=global_best_fom,
+            lower=state.lower,
+            upper=state.upper,
+            rng=state.rng,
         )
 
     def optimize(
@@ -451,22 +552,13 @@ class ParticleSwarmOptimizer:
         Returns:
             全局优化结果。
         """
-        (
-            positions, velocities, personal_best, personal_best_fom,
-            global_best, global_best_fom, lower, upper, rng,
-        ) = self._init_pso_state(initial_pos, fom_fn, bounds)
-        history: list[float] = [global_best_fom]
+        state = self._init_pso_state(initial_pos, fom_fn, bounds)
+        history: list[float] = [state.global_best_fom]
         converged = False
 
         for _iteration in range(self.config.max_iterations):
-            (
-                positions, velocities, personal_best, personal_best_fom,
-                global_best, global_best_fom,
-            ) = self._pso_iteration(
-                positions, velocities, personal_best, personal_best_fom,
-                global_best, global_best_fom, lower, upper, fom_fn, rng,
-            )
-            history.append(global_best_fom)
+            state = self._pso_iteration(state, fom_fn)
+            history.append(state.global_best_fom)
             if len(history) > 1:
                 improvement = abs(history[-1] - history[-2])
                 if improvement < self.config.convergence_threshold:
@@ -474,8 +566,8 @@ class ParticleSwarmOptimizer:
                     break
 
         return GlobalResult(
-            optimal_params=global_best,
-            optimal_fom=global_best_fom,
+            optimal_params=state.global_best,
+            optimal_fom=state.global_best_fom,
             fom_history=history,
             iterations=len(history),
             converged=converged,
