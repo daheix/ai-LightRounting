@@ -216,11 +216,55 @@ class HierarchicalPlacer:
                     centers[j] = X[mask].mean(axis=0)
         return labels
 
+    def _build_cluster_subcircuit(
+        self,
+        cluster_id: int,
+        device_indices: np.ndarray,
+    ) -> CircuitSpec:
+        """构建子块子电路（供 AnalyticalPlacer 使用）。
+
+        Args:
+            cluster_id: 子块编号。
+            device_indices: 子块内器件索引数组。
+
+        Returns:
+            子电路规格（含子块内器件与连接）。
+        """
+        from polaris.data.specs import CircuitSpec
+
+        idx_set = set(int(i) for i in device_indices)
+        idx_to_local = {int(i): j for j, i in enumerate(device_indices)}
+        sub_devices = [self.circuit.devices[int(i)] for i in device_indices]
+        # 子块内连接（两端都在子块内）
+        sub_connections: list[tuple[str, str, str, str]] = []
+        for src, _sp, dst, _dp in self.circuit.connections:
+            if src in self.name_to_idx and dst in self.name_to_idx:
+                s_idx = self.name_to_idx[src]
+                d_idx = self.name_to_idx[dst]
+                if s_idx in idx_set and d_idx in idx_set:
+                    sub_connections.append((src, _sp, dst, _dp))
+        # 子块画布大小（按器件数自适应）
+        n_cluster = len(device_indices)
+        canvas = max(500.0, np.sqrt(n_cluster) * 80.0)
+        return CircuitSpec(
+            name=f"{self.circuit.name}_cluster{cluster_id}",
+            devices=sub_devices,
+            connections=sub_connections,
+            canvas_w=canvas,
+            canvas_h=canvas,
+            benchmark_source=self.circuit.benchmark_source,
+            process_node=self.circuit.process_node,
+            optical_wavelength_nm=self.circuit.optical_wavelength_nm,
+        )
+
     def _place_intra_cluster(
         self,
         labels: np.ndarray,
     ) -> tuple[dict[str, tuple[float, float]], dict[int, tuple[float, float]]]:
-        """块内布局：每个子块内用网格分布放置器件。
+        """块内布局：每个子块用 AnalyticalPlacer 解析法布局。
+
+        修复第70轮：原实现用简单网格布局（功能做一半），现真正调用 AnalyticalPlacer，
+        对齐 docstring 声明与 DREAMPlace 分块布局标准流程。
 
         Args:
             labels: 谱聚类标签数组。
@@ -228,29 +272,45 @@ class HierarchicalPlacer:
         Returns:
             (final_placement, cluster_centers) 二元组。
             - final_placement: {name: (local_x, local_y)} 块内局部坐标
-            - cluster_centers: {cluster_id: (cx, cy)} 子块中心
+            - cluster_centers: {cluster_id: (cx, cy)} 子块画布中心
         """
         final_placement: dict[str, tuple[float, float]] = {}
         cluster_centers: dict[int, tuple[float, float]] = {}
+        intra_config = self.config.analytical_config or AnalyticalPlacerConfig(
+            max_iterations=100,  # 块内迭代数减少（块规模小）
+            convergence_threshold=0.5,
+        )
 
         for cluster_id in range(self.k):
             mask = labels == cluster_id
             if not mask.any():
                 continue
             cluster_device_indices = np.where(mask)[0]
-            cluster_device_names = [
-                self.device_names[i] for i in cluster_device_indices
-            ]
             n_cluster = len(cluster_device_indices)
-            cluster_canvas = max(500.0, np.sqrt(n_cluster) * 50.0)
-            grid_n = int(np.ceil(np.sqrt(n_cluster)))
-            for i, name in enumerate(cluster_device_names):
-                row = i // grid_n
-                col = i % grid_n
-                x = (col + 0.5) * (cluster_canvas / grid_n)
-                y = (row + 0.5) * (cluster_canvas / grid_n)
-                final_placement[name] = (x, y)
-            cluster_centers[cluster_id] = (cluster_canvas / 2, cluster_canvas / 2)
+            # 小块（<=4 器件）直接网格，避免解析法开销
+            if n_cluster <= 4:
+                grid_n = int(np.ceil(np.sqrt(n_cluster)))
+                canvas = max(200.0, np.sqrt(n_cluster) * 80.0)
+                for i, idx in enumerate(cluster_device_indices):
+                    name = self.device_names[int(idx)]
+                    row = i // grid_n
+                    col = i % grid_n
+                    x = (col + 0.5) * (canvas / grid_n)
+                    y = (row + 0.5) * (canvas / grid_n)
+                    final_placement[name] = (x, y)
+                cluster_centers[cluster_id] = (canvas / 2, canvas / 2)
+                continue
+            # 构建子电路并用 AnalyticalPlacer 布局
+            sub_circuit = self._build_cluster_subcircuit(
+                cluster_id, cluster_device_indices
+            )
+            placer = AnalyticalPlacer(sub_circuit, intra_config)
+            sub_placement = placer.place()
+            final_placement.update(sub_placement)
+            cluster_centers[cluster_id] = (
+                sub_circuit.canvas_w / 2,
+                sub_circuit.canvas_h / 2,
+            )
 
         return final_placement, cluster_centers
 
@@ -260,25 +320,88 @@ class HierarchicalPlacer:
         cluster_centers: dict[int, tuple[float, float]],
         labels: np.ndarray,
     ) -> dict[str, tuple[float, float]]:
-        """块间布局：将子块中心分布到主画布，合并块内坐标。
+        """块间布局：用解析法放置子块中心，合并块内坐标。
+
+        修复第70轮：原实现用固定 500μm 网格偏移（功能做一半），
+        现构建子块级超图并用 AnalyticalPlacer 放置子块中心，
+        对齐 docstring 声明与 DREAMPlace 分块布局标准流程。
 
         Args:
             placement: 块内局部坐标字典。
-            cluster_centers: 子块中心字典。
+            cluster_centers: 子块画布中心字典。
             labels: 谱聚类标签数组。
 
         Returns:
             合并后的全局坐标字典 {name: (global_x, global_y)}。
         """
-        k_grid = int(np.ceil(np.sqrt(self.k)))
+        from polaris.data.specs import CircuitSpec, DeviceSpec
+
+        k = len(cluster_centers)
+        cluster_ids = sorted(cluster_centers.keys())
+        cluster_id_to_idx = {cid: i for i, cid in enumerate(cluster_ids)}
+        # 构建子块级超图：每个子块 = 一个超节点
+        super_devices: list[DeviceSpec] = []
+        for cid in cluster_ids:
+            cx, cy = cluster_centers[cid]
+            super_devices.append(
+                DeviceSpec(
+                    name=f"cluster_{cid}",
+                    device_type="cluster",
+                    width_um=cx * 2,
+                    height_um=cy * 2,
+                )
+            )
+        # 超边：子块间连接（每对有连接的子块建一条超边）
+        inter_cluster_pairs: set[tuple[int, int]] = set()
+        for src, _sp, dst, _dp in self.circuit.connections:
+            if src in self.name_to_idx and dst in self.name_to_idx:
+                s_idx = self.name_to_idx[src]
+                d_idx = self.name_to_idx[dst]
+                s_cluster = int(labels[s_idx])
+                d_cluster = int(labels[d_idx])
+                if s_cluster != d_cluster:
+                    inter_cluster_pairs.add(
+                        (min(s_cluster, d_cluster), max(s_cluster, d_cluster))
+                    )
+        super_connections: list[tuple[str, str, str, str]] = [
+            (f"cluster_{c1}", "out", f"cluster_{c2}", "in")
+            for c1, c2 in inter_cluster_pairs
+            if c1 in cluster_id_to_idx and c2 in cluster_id_to_idx
+        ]
+        # 主画布大小（按子块数自适应）
+        main_canvas = max(2000.0, np.sqrt(k) * 800.0)
+        super_circuit = CircuitSpec(
+            name=f"{self.circuit.name}_super",
+            devices=super_devices,
+            connections=super_connections,
+            canvas_w=main_canvas,
+            canvas_h=main_canvas,
+        )
+        # 用 AnalyticalPlacer 放置子块中心
+        inter_config = self.config.analytical_config or AnalyticalPlacerConfig(
+            max_iterations=150,
+            convergence_threshold=1.0,
+        )
+        inter_placer = AnalyticalPlacer(super_circuit, inter_config)
+        super_placement = inter_placer.place()
+        # 合并：块内局部坐标 + 子块中心偏移
+        k_grid = int(np.ceil(np.sqrt(k)))
         for cluster_id, (local_cx, local_cy) in cluster_centers.items():
-            row = cluster_id // k_grid
-            col = cluster_id % k_grid
-            block_offset_x = col * 500.0
-            block_offset_y = row * 500.0
+            super_name = f"cluster_{cluster_id}"
+            if super_name in super_placement:
+                block_cx, block_cy = super_placement[super_name]
+                block_offset_x = block_cx - local_cx
+                block_offset_y = block_cy - local_cy
+            else:
+                # 无连接的孤立子块：网格兜底
+                idx = cluster_id_to_idx.get(cluster_id, 0)
+                row = idx // k_grid
+                col = idx % k_grid
+                block_offset_x = col * (main_canvas / k_grid)
+                block_offset_y = row * (main_canvas / k_grid)
             mask = labels == cluster_id
             for i in np.where(mask)[0]:
-                name = self.device_names[i]
+                name = self.device_names[int(i)]
                 local_x, local_y = placement[name]
                 placement[name] = (
                     local_x + block_offset_x,
