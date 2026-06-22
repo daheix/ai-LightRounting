@@ -53,6 +53,7 @@ TILOS 评估流程（来源: https://github.com/TILOS-AI-CAD-Institute/MacroPlac
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -83,6 +84,7 @@ class BenchmarkReport:
         passed: 是否达标。
         process_node: 工艺节点。
         timestamp: 评估时间（ISO 8601）。
+        runtime_s: 布局运行时间（秒，第81轮新增，对标 TILOS 评估运行时间统计）。
         extra: 额外信息（如 curvy_challenge_count 等）。
     """
 
@@ -99,6 +101,7 @@ class BenchmarkReport:
     passed: bool
     process_node: str
     timestamp: str = ""
+    runtime_s: float = 0.0
     extra: dict = field(default_factory=dict)
 
 
@@ -116,6 +119,8 @@ class ComparisonReport:
         total_modules: 总模块数。
         total_connections: 总连接数。
         total_overlaps: 总重叠对数（第79轮新增）。
+        total_runtime_s: 总运行时间（秒，第81轮新增）。
+        avg_runtime_s: 平均运行时间（秒，第81轮新增）。
         timestamp: 评估时间（ISO 8601）。
     """
 
@@ -128,6 +133,8 @@ class ComparisonReport:
     total_modules: int = 0
     total_connections: int = 0
     total_overlaps: int = 0
+    total_runtime_s: float = 0.0
+    avg_runtime_s: float = 0.0
     timestamp: str = ""
 
 
@@ -140,6 +147,7 @@ def generate_report(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
     placement_method: str = "grid",
+    runtime_s: float = 0.0,
 ) -> BenchmarkReport:
     """生成单 benchmark 评估报告。
 
@@ -150,6 +158,7 @@ def generate_report(
         circuit: 电路规格（含 target_metric/target_value）。
         placements: 布局字典 {module_name: (cx, cy)}。
         placement_method: 布局方法名（默认 ``grid``）。
+        runtime_s: 布局运行时间（秒，默认 0.0）。
 
     Returns:
         BenchmarkReport，含全部指标与达标判定。
@@ -172,6 +181,7 @@ def generate_report(
         passed=result.passed,
         process_node=result.extra.get("process_node", ""),
         timestamp=_now_iso(),
+        runtime_s=runtime_s,
         extra=dict(result.extra),
     )
 
@@ -214,6 +224,8 @@ def generate_comparison_report(
     total_mod = sum(r.module_count for r in reports)
     total_conn = sum(r.connection_count for r in reports)
     total_ovlp = sum(r.overlap_count for r in reports)
+    total_rt = sum(r.runtime_s for r in reports)
+    avg_rt = total_rt / len(reports)
     return ComparisonReport(
         reports=list(reports),
         total_benchmarks=len(reports),
@@ -224,6 +236,8 @@ def generate_comparison_report(
         total_modules=total_mod,
         total_connections=total_conn,
         total_overlaps=total_ovlp,
+        total_runtime_s=total_rt,
+        avg_runtime_s=avg_rt,
         timestamp=_now_iso(),
     )
 
@@ -238,6 +252,9 @@ def run_all_benchmarks(
 
     第76轮 P1-5 扩展：支持 grid/analytical/hierarchical 三种布局方法，
     量化对比不同布局算法的 HPWL/重叠/利用率。
+
+    第81轮 P1-5 扩展：添加 ``time.perf_counter()`` 计时，记录每个 benchmark
+    的布局运行时间，用于对标 TILOS 评估运行时间统计与商业产品可扩展性对比。
 
     Args:
         placement_method: 布局方法名（``grid``/``analytical``/``hierarchical``，
@@ -268,8 +285,15 @@ def run_all_benchmarks(
     ]
     reports: list[BenchmarkReport] = []
     for circuit in circuits:
+        t_start = time.perf_counter()
         placements = placement_by_method(circuit, placement_method)
-        report = generate_report(circuit, placements, placement_method)
+        runtime_s = time.perf_counter() - t_start
+        report = generate_report(
+            circuit,
+            placements,
+            placement_method,
+            runtime_s=runtime_s,
+        )
         reports.append(report)
     return generate_comparison_report(reports)
 
@@ -293,6 +317,7 @@ def _format_report_metrics(report: BenchmarkReport) -> list[str]:
         f"| 面积利用率 | {report.area_utilization:.4f} | — |",
         f"| 模块数 | {report.module_count} | — |",
         f"| 连接数 | {report.connection_count} | — |",
+        f"| 运行时间 (s) | {report.runtime_s:.4f} | — |",
         f"| 目标指标 | {report.target_metric} | — |",
         "",
     ]
@@ -354,7 +379,8 @@ def _format_comparison_rows(reports: list[BenchmarkReport]) -> list[str]:
         lines.append(
             f"| {r.benchmark_name} | {r.benchmark_source} | {r.process_node} | "
             f"{r.placement_method} | {r.hpwl_um:.2f} | {r.overlap_count} | "
-            f"{r.area_utilization:.4f} | {r.module_count} | {r.connection_count} | {passed_str} |"
+            f"{r.area_utilization:.4f} | {r.module_count} | {r.connection_count} | "
+            f"{r.runtime_s:.4f} | {passed_str} |"
         )
     return lines
 
@@ -381,12 +407,14 @@ def format_comparison_markdown(comp: ComparisonReport) -> str:
         f"- **总模块数**: {comp.total_modules}",
         f"- **总连接数**: {comp.total_connections}",
         f"- **总重叠对数**: {comp.total_overlaps}",
+        f"- **总运行时间**: {comp.total_runtime_s:.4f} s",
+        f"- **平均运行时间**: {comp.avg_runtime_s:.4f} s",
         f"- **评估时间**: {comp.timestamp}",
         "",
         "## 2. 各 Benchmark 详细结果",
         "",
-        "| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 模块 | 连接 | 达标 |",
-        "|-----------|------|------|------|-----------|------|--------|------|------|------|",
+        "| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 模块 | 连接 | 运行时间 (s) | 达标 |",
+        "|-----------|------|------|------|-----------|------|--------|------|------|--------------|------|",
     ]
     lines.extend(_format_comparison_rows(comp.reports))
     lines.extend([
