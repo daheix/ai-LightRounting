@@ -70,8 +70,8 @@ class TestCmosProcessNodesRegistry:
         assert len(CMOS_PROCESS_NODES) > 0
 
     def test_registry_count(self) -> None:
-        """应有 9 个公开工艺节点。"""
-        assert cmos_process_node_count() == 9
+        """应有 13 个公开工艺节点（第89轮新增 4 个）。"""
+        assert cmos_process_node_count() == 13
 
     def test_gf_fotonix_45clo_exists(self) -> None:
         """应含 GF Fotonix 45CLO（45nm CMOS photonics）。"""
@@ -159,9 +159,9 @@ class TestListProcessNodes:
     """list_process_nodes 函数测试。"""
 
     def test_list_all(self) -> None:
-        """list_process_nodes 应返回全部节点名。"""
+        """list_process_nodes 应返回全部节点名（第89轮 13 个）。"""
         names = list_process_nodes()
-        assert len(names) == 9
+        assert len(names) == 13
         assert "GF_Fotonix_45CLO" in names
 
     def test_list_by_cmos_node_45(self) -> None:
@@ -170,12 +170,16 @@ class TestListProcessNodes:
         assert "GF_Fotonix_45CLO" in names
 
     def test_list_by_cmos_node_0(self) -> None:
-        """按 0nm（纯光子）筛选应返回 3 个平台。"""
+        """按 0nm（纯光子）筛选应返回 6 个平台（第89轮新增 3 个）。"""
         names = list_process_nodes_by_cmos_node(0)
         assert "AIM_300mm_SOI" in names
         assert "LioniX_TriPleX" in names
         assert "HyperLight_LNOI" in names
-        assert len(names) == 3
+        # 第89轮新增
+        assert "LIGENTEC_AN800_SiN" in names
+        assert "VTT_ThickSOI" in names
+        assert "Tyndall_InP_SOI_Hybrid" in names
+        assert len(names) == 6
 
     def test_list_by_foundry_gf(self) -> None:
         """按 GlobalFoundries 筛选应返回 2 个节点。"""
@@ -427,19 +431,60 @@ class TestFoundryProcessNodeAssociation:
             assert node.cmos_node_nm == 0  # 纯光子平台
 
     def test_get_process_node_for_unknown_foundry_returns_none(self) -> None:
-        """未映射的 foundry 应返回 None（CompoundTek/LIGENTEC/VTT/Tyndall 暂无映射）。"""
-        for unknown in ["CompoundTek", "LIGENTEC", "VTT", "Tyndall", "UnknownFoundry"]:
-            assert get_process_node_for_foundry(unknown) is None
+        """未映射的 foundry 应返回 None（第89轮全量映射后仅 UnknownFoundry 返回 None）。"""
+        # 第89轮已全量映射 11/11 foundry，仅未知 foundry 返回 None
+        assert get_process_node_for_foundry("UnknownFoundry") is None
+
+    def test_get_process_node_for_foundry_compoundtek(self) -> None:
+        """CompoundTek foundry 应映射到 CompoundTek_90nm_SOI 结构化节点（第89轮新增）。"""
+        node = get_process_node_for_foundry("CompoundTek")
+        assert node is not None
+        assert node.name == "CompoundTek_90nm_SOI"
+        assert node.cmos_node_nm == 90
+        assert node.foundry == "CompoundTek"
+        assert node.material_platform == "SOI"
+
+    def test_get_process_node_for_foundry_ligentec(self) -> None:
+        """LIGENTEC foundry 应映射到 LIGENTEC_AN800_SiN 结构化节点（第89轮新增）。"""
+        node = get_process_node_for_foundry("LIGENTEC")
+        assert node is not None
+        assert node.name == "LIGENTEC_AN800_SiN"
+        assert node.cmos_node_nm == 0  # 纯光子平台
+        assert node.material_platform == "SiN"
+        assert node.photonic_layer_nm == 800
+
+    def test_get_process_node_for_foundry_vtt(self) -> None:
+        """VTT foundry 应映射到 VTT_ThickSOI 结构化节点（第89轮新增）。"""
+        node = get_process_node_for_foundry("VTT")
+        assert node is not None
+        assert node.name == "VTT_ThickSOI"
+        assert node.cmos_node_nm == 0  # 纯光子平台
+        assert node.material_platform == "ThickSOI"
+        assert node.photonic_layer_nm == 3000  # 3μm
+
+    def test_get_process_node_for_foundry_tyndall(self) -> None:
+        """Tyndall foundry 应映射到 Tyndall_InP_SOI_Hybrid 结构化节点（第89轮新增）。"""
+        node = get_process_node_for_foundry("Tyndall")
+        assert node is not None
+        assert node.name == "Tyndall_InP_SOI_Hybrid"
+        assert node.cmos_node_nm == 0  # 纯光子平台
+        assert node.material_platform == "Hybrid"
+        assert node.integration_type == "heterogeneous"
 
     def test_list_foundries_with_process_node(self) -> None:
-        """应列出 7 个有结构化映射的 foundry 平台。"""
+        """应列出 11 个有结构化映射的 foundry 平台（第89轮全量映射）。"""
         foundries = list_foundries_with_process_node()
-        assert len(foundries) == 7
+        assert len(foundries) == 11
         # 应包含主要 CMOS photonics foundry
         assert "AMF" in foundries
         assert "GF_Fotonix" in foundries
         assert "IHP" in foundries
         assert "Tower_OpenLight" in foundries
+        # 第89轮新增的 4 个 foundry
+        assert "CompoundTek" in foundries
+        assert "LIGENTEC" in foundries
+        assert "VTT" in foundries
+        assert "Tyndall" in foundries
 
     def test_foundry_to_process_node_consistency(self) -> None:
         """所有 foundry 映射的 ProcessNode 应存在于 CMOS_PROCESS_NODES 注册表。"""
