@@ -27,6 +27,18 @@ class RingParams:
 
     来源:
     - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
+    - Simphony SiEPIC ring_resonator: https://simphonyphotonics.readthedocs.io/
+    - Chrostowski, "Silicon Photonics Design", Cambridge 2015, §4.5
+
+    默认值来源:
+    - neff=2.4: SiEPIC EBeam PDK strip waveguide 1550nm 有效折射率典型值
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - ng=4.0: SiEPIC EBeam PDK strip waveguide 1550nm 群折射率典型值
+      (Chrostowski 2015 §2.3)。
+    - coupling=0.01: 全通环弱耦合典型值，用于窄带陷波
+      (SiPANN ring_resonator 默认)。
+    - loss_db_cm=0.0: 默认无损，由 ring_resonator_s 内部按 PDK 典型值补全
+      (SiEPIC EBeam PDK strip waveguide 0.1-3.0 dB/cm)。
     """
 
     neff: float = 2.4
@@ -48,6 +60,17 @@ def waveguide_s(
     - 相位: phi = 2*pi*neff*L/wl
     - 损耗: alpha = -loss_db_cm * L / (10*4.343) (转换为振幅衰减)
     - 群折射率 ng 用于色散计算
+
+    默认值来源:
+    - wl=1.55μm: C 波段中心波长 (ITU-T G.694.1 DWDM 标准)。
+    - length=100μm: SiEPIC EBeam PDK 波导典型长度
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - neff=2.4: SiEPIC EBeam PDK strip waveguide 1550nm 有效折射率典型值
+      (Chrostowski 2015 §2.3)。
+    - ng=4.0: SiEPIC EBeam PDK strip waveguide 1550nm 群折射率典型值
+      (Chrostowski 2015 §2.3)。
+    - loss_db_cm=0.0: 默认无损，调用方按场景设置
+      (SiEPIC EBeam PDK strip waveguide 0.1-3.0 dB/cm)。
 
     来源:
     - Simphony waveguide 模型: https://simphonyphotonics.readthedocs.io/
@@ -79,6 +102,11 @@ def y_branch_s(
     加上插损后实际功率略低于 50%。
 
     端口: port_1（合束/分束端）, port_2, port_3（两个分支端）
+
+    默认值来源:
+    - insertion_loss_db=0.3: SiEPIC EBeam PDK y_branch 1550nm 典型插损 0.3dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      Simphony SiEPIC y_branch 默认值)。
 
     来源:
     - Simphony siepic.y_branch: https://simphonyphotonics.readthedocs.io/
@@ -114,6 +142,14 @@ def directional_coupler_s(
     简化模型：coupling 为功率耦合比（0~1），转换为振幅。
 
     端口: in1, in2, out1, out2（交叉耦合 out2←in1, out1←in2）
+
+    默认值来源:
+    - coupling=0.5: 3dB 分束典型值 (50:50 分光比)
+      (SiPANN directional_coupler 默认)。
+    - length=10μm: SiEPIC EBeam PDK 定向耦合器耦合区典型长度
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - gap=0.2μm: SiEPIC EBeam PDK 定向耦合器 gap 200nm
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
 
     来源:
     - SiPANN directional_coupler: https://sipann.readthedocs.io/en/latest/models.html
@@ -157,9 +193,17 @@ def ring_resonator_s(
     t=直通振幅, a=环内损耗, phi=环周相位。无损时传输恒为 1，
     谐振陷波仅在环内有损耗时出现。端口: in/through/drop（全通型无 drop）。
 
+    默认值来源:
+    - radius=10μm: SiEPIC EBeam PDK ring_resonator 默认半径 10μm
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - 默认损耗 0.1 dB/cm: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗
+      典型值 0.1-3.0 dB/cm，取下限用于显示谐振陷波
+      (Chrostowski 2015 §6.4)。
+
     来源:
     - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
     - Lorentzian 谐振模型: 标准光子学教材
+      (Yariv, "Optical Electronics in Modern Communications", Oxford 1997, §10.5)
 
     Args:
         wl: 波长（μm）或波长数组。
@@ -210,6 +254,11 @@ def mmi_1x2_s(
 
     端口: in, out1, out2
 
+    默认值来源:
+    - insertion_loss_db=0.4: SiEPIC EBeam PDK mmi1x2 1550nm 典型插损 0.4dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      gdsfactory mmi1x2 默认插损)。
+
     来源:
     - gdsfactory mmi1x2: https://gdsfactory.github.io/gdsfactory/
     - Simphony SiEPIC MMI 模型
@@ -238,6 +287,11 @@ def mmi_2x2_s(
     """MMI 2x2 S 参数模型（2进2出分束器/合束器）。
 
     端口: in1, in2, out1, out2
+
+    默认值来源:
+    - insertion_loss_db=0.5: SiEPIC EBeam PDK mmi2x2 1550nm 典型插损 0.5dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      gdsfactory mmi2x2 默认插损)。
 
     来源:
     - gdsfactory mmi2x2: https://gdsfactory.github.io/gdsfactory/
@@ -279,6 +333,14 @@ def grating_coupler_s(
 
     端口: fiber（光纤端）, waveguide（波导端）
 
+    默认值来源:
+    - peak_wl=1.55μm: C 波段中心波长 (ITU-T G.694.1)。
+    - bandwidth_3db=0.04μm: SiEPIC EBeam PDK grating_coupler 3dB 带宽 40nm
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - insertion_loss_db=1.9: SiEPIC EBeam PDK grating_coupler 1550nm 典型插损
+      1.5-2.5 dB，取中值 1.9dB
+      (Chrostowski 2015 §7.3)。
+
     来源:
     - Simphony siepic.grating_coupler: https://simphonyphotonics.readthedocs.io/
     - gdsfactory grating_coupler: https://gdsfactory.github.io/gdsfactory/
@@ -304,6 +366,11 @@ def crossing_s(
     """波导交叉 S 参数模型。
 
     端口: in1, in2, out1, out2（直通无交叉耦合）
+
+    默认值来源:
+    - insertion_loss_db=0.3: SiEPIC EBeam PDK crossing 1550nm 典型插损 0.3dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      gdsfactory crossing 默认插损)。
 
     来源: gdsfactory crossing
     """
@@ -335,6 +402,11 @@ def terminator_s(
 
     端口: in（单端口）
 
+    默认值来源:
+    - reflection_db=-40: SiEPIC EBeam PDK terminator 1550nm 典型反射 -40dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      Simphony SiEPIC terminator 默认值)。
+
     来源: Simphony siepic.terminator
     """
     wl = np.asarray(wl, dtype=float)
@@ -353,6 +425,12 @@ def phase_shifter_s(
     通过加热改变波导有效折射率，引入可调相位。
 
     端口: in, out
+
+    默认值来源:
+    - phase_rad=0.0: 默认无相移（待调用方设置）
+      (gdsfactory phase_shifter 默认)。
+    - insertion_loss_db=0.0: 默认无损（待调用方按 PDK 设置）
+      (SiEPIC EBeam PDK heater 典型插损 0.1-0.5 dB)。
 
     来源: gdsfactory phase_shifter
     """

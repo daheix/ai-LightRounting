@@ -48,7 +48,11 @@ class RipRerouteConfig:
     max_iterations: int = 3
     allow_diagonal: bool = True
     congestion_weight: float = 1.0
-    loss_db_cm: float = 2.0
+    # 默认 3.0 dB/cm: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗典型值
+    # (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+    #  Chrostowski 2015 §6.4)。与 waveguide_router._PLATFORM_LOSS_DB_CM["SOI"]=3.0
+    #  和 pipeline/_converters.py soi_loss_db_cm=3.0 保持一致
+    loss_db_cm: float = 3.0
 
 
 @dataclass

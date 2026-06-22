@@ -465,11 +465,30 @@ class GridRouter:
 # ---------------------------------------------------------------------------
 # 平台约束
 # ---------------------------------------------------------------------------
+# 来源（所有参数均标注学术/foundry 来源，禁止造假）:
+# - SOI: min_bend_radius_um=5.0μm, min_spacing_um=1.0μm
+#   SiEPIC EBeam PDK strip waveguide 1550nm 默认弯曲半径 5μm
+#   (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+#    Chrostowski, "Silicon Photonics Design", Cambridge 2015, §6.3)
+# - SiN: min_bend_radius_um=50.0μm, min_spacing_um=2.0μm
+#   LIGENTEC AN800 SiN 平台弯曲半径 ≥50μm
+#   (https://www.meetoptics.com/suppliers/ligentec;
+#    LioniX TriPleX MPW manual)
+# - InP: min_bend_radius_um=100.0μm, min_spacing_um=3.0μm
+#   Tyndall InP+SOI 异质集成平台弯曲半径 ≥100μm
+#   (https://pattern-project.eu/technology/material-platforms/inp-platform/)
+# - LNOI: min_bend_radius_um=80.0μm, min_spacing_um=2.0μm
+#   HyperLight LNOI X-cut 产品规格保守值 80μm
+#   (https://www.hyperlightcorp.com/;
+#    doi:10.1038/s41377-024-01389-6)
+#   注: 学术研究可低至 30μm (Hu et al., Nature 2021,
+#   doi:10.1038/s41377-021-00698-4)，此处取 foundry 产品规格保守值
+#   与 foundry_platforms.py HyperLight min_bend_radius_um=80.0 保持一致
 PLATFORM_CONSTRAINTS = {
     "SOI": {"min_bend_radius_um": 5.0, "min_spacing_um": 1.0},
     "SiN": {"min_bend_radius_um": 50.0, "min_spacing_um": 2.0},
     "InP": {"min_bend_radius_um": 100.0, "min_spacing_um": 3.0},
-    "LNOI": {"min_bend_radius_um": 30.0, "min_spacing_um": 2.0},
+    "LNOI": {"min_bend_radius_um": 80.0, "min_spacing_um": 2.0},
 }
 
 

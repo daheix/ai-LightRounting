@@ -107,9 +107,20 @@ def _matches_bend(name: str) -> bool:
 
 
 def _bend_smodel(params: dict, wl_arr: np.ndarray) -> SDict:
-    """弯曲波导 S 参数模型（按 90 度弧长等效为波导）。"""
+    """弯曲波导 S 参数模型（按 90 度弧长等效为波导）。
+
+    默认值来源:
+    - neff=2.4: SiEPIC EBeam PDK strip waveguide 1550nm 有效折射率典型值
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - loss_db_cm=3.0: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗典型值
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+       Chrostowski 2015 §6.4)。与 waveguide_router._PLATFORM_LOSS_DB_CM["SOI"]=3.0
+      和 pipeline/_converters.py soi_loss_db_cm=3.0 保持一致。
+    - radius_um=5.0: SiEPIC EBeam PDK bend_euler 默认半径
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    """
     neff = float(params.get("neff", 2.4))
-    loss_db_cm = float(params.get("loss_db_cm", 2.0))
+    loss_db_cm = float(params.get("loss_db_cm", 3.0))
     radius = float(params.get("radius_um", 5.0))
     length = 2.0 * np.pi * radius / 4.0  # 90度弯曲弧长
     return waveguide_s(wl=wl_arr, length=length, neff=neff, loss_db_cm=loss_db_cm)
@@ -148,12 +159,22 @@ def _matches_ring_resonator(name: str) -> bool:
 
 
 def _ring_resonator_smodel(params: dict, wl_arr: np.ndarray) -> SDict:
-    """环谐振器 S 参数模型。"""
+    """环谐振器 S 参数模型。
+
+    默认值来源:
+    - radius_um=10.0: SiEPIC EBeam PDK ring_resonator 默认半径
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - neff=2.4: SiEPIC EBeam PDK strip waveguide 1550nm 有效折射率典型值。
+    - coupling=0.01: 全通环弱耦合典型值 (SiPANN ring_resonator 默认)。
+    - loss_db_cm=3.0: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗典型值
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。与 _bend_smodel 和
+      waveguide_router._PLATFORM_LOSS_DB_CM["SOI"]=3.0 保持一致。
+    """
     radius = float(params.get("radius_um", 10.0))
     ring_params = RingParams(
         neff=float(params.get("neff", 2.4)),
         coupling=float(params.get("coupling", 0.01)),
-        loss_db_cm=float(params.get("loss_db_cm", 2.0)),
+        loss_db_cm=float(params.get("loss_db_cm", 3.0)),
     )
     return ring_resonator_s(wl=wl_arr, radius=radius, params=ring_params)
 
