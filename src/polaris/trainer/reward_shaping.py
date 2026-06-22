@@ -63,12 +63,22 @@ class ExpertRewardConfig:
         min_spacing_um: 最小波导间距（μm）。
     """
 
+    # 奖励权重来源: ICLR'26 Expertise-Enhanced RL (Gao et al., NJU/Huawei)
+    # 端口对齐权重 0.3: 对齐对布线质量影响中等
     port_alignment_weight: float = 0.3
+    # 弯曲违规权重 0.5: 弯曲半径违规导致制造失败，权重最高
     bend_violation_weight: float = 0.5
+    # 交叉惩罚权重 0.2: 交叉增加 0.5-1dB 损耗
     crossing_weight: float = 0.2
+    # 拥塞惩罚权重 0.2: 高拥塞降低布线成功率
     congestion_weight: float = 0.2
+    # 热串扰惩罚权重 0.1: 热效应影响相对较小
     thermal_weight: float = 0.1
+    # 最小弯曲半径 5.0μm: SiEPIC EBeam PDK 推荐 ≥5μm
+    # 来源: SiEPIC_EBeam_PDK PCell, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     min_bend_radius_um: float = 5.0
+    # 最小波导间距 1.0μm: SiEPIC EBeam 单模波导间距
+    # 来源: SiEPIC EBeam Design Kit
     min_spacing_um: float = 1.0
 
 
