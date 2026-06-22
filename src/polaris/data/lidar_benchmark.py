@@ -45,6 +45,8 @@ class LiDARDevice:
         category: 类别（active/passive/coupler/curvy）。
         curvy_challenge: 是否为曲线布线挑战器件。
         description: 功能描述。
+        insertion_loss_db: 片上插入损耗（dB），用于 INSERTION_LOSS_DB 评估。
+            来源: SOI 220nm 平台典型器件损耗文献值（同 apollo_benchmark.py）。
     """
 
     name: str
@@ -54,11 +56,13 @@ class LiDARDevice:
     category: str
     curvy_challenge: bool
     description: str
+    insertion_loss_db: float = 0.0
 
 
 # ─── LiDAR PTC 子集器件库（曲线布线挑战版） ───
 # 来源: LiDAR 论文 PTC benchmark + curvy waveguide 挑战
 # https://dl.acm.org/doi/10.1145/3698364.3705355
+# insertion_loss_db 来源: SOI 220nm 平台典型器件损耗文献值（同 apollo_benchmark.py）
 LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
     "lidar_gc_in": LiDARDevice(
         name="lidar_gc_in",
@@ -68,6 +72,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="coupler",
         curvy_challenge=False,
         description="LiDAR 输入光栅耦合器",
+        insertion_loss_db=1.5,
     ),
     "lidar_mzi_00": LiDARDevice(
         name="lidar_mzi_00",
@@ -77,6 +82,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=True,
         description="LiDAR MZI 单元 (0,0) - 曲线臂挑战",
+        insertion_loss_db=0.5,
     ),
     "lidar_mzi_01": LiDARDevice(
         name="lidar_mzi_01",
@@ -86,6 +92,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=True,
         description="LiDAR MZI 单元 (0,1) - 曲线臂挑战",
+        insertion_loss_db=0.5,
     ),
     "lidar_mzi_10": LiDARDevice(
         name="lidar_mzi_10",
@@ -95,6 +102,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=True,
         description="LiDAR MZI 单元 (1,0) - 曲线臂挑战",
+        insertion_loss_db=0.5,
     ),
     "lidar_mzi_11": LiDARDevice(
         name="lidar_mzi_11",
@@ -104,6 +112,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=True,
         description="LiDAR MZI 单元 (1,1) - 曲线臂挑战",
+        insertion_loss_db=0.5,
     ),
     "lidar_modulator": LiDARDevice(
         name="lidar_modulator",
@@ -113,6 +122,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=False,
         description="LiDAR 输入调制器",
+        insertion_loss_db=0.5,
     ),
     "lidar_detector": LiDARDevice(
         name="lidar_detector",
@@ -122,6 +132,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=False,
         description="LiDAR 输出探测器",
+        insertion_loss_db=0.5,
     ),
     "lidar_gc_out": LiDARDevice(
         name="lidar_gc_out",
@@ -131,6 +142,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="coupler",
         curvy_challenge=False,
         description="LiDAR 输出光栅耦合器",
+        insertion_loss_db=1.5,
     ),
     "lidar_curvy_wg_1": LiDARDevice(
         name="lidar_curvy_wg_1",
@@ -140,6 +152,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 曲线波导 1（S 弯）",
+        insertion_loss_db=0.0,
     ),
     "lidar_curvy_wg_2": LiDARDevice(
         name="lidar_curvy_wg_2",
@@ -149,6 +162,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 曲线波导 2（U 弯）",
+        insertion_loss_db=0.0,
     ),
     "lidar_curvy_wg_3": LiDARDevice(
         name="lidar_curvy_wg_3",
@@ -158,6 +172,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 曲线波导 3（对角弯）",
+        insertion_loss_db=0.0,
     ),
     "lidar_crossing": LiDARDevice(
         name="lidar_crossing",
@@ -167,6 +182,7 @@ LIDAR_PTC_DEVICES: dict[str, LiDARDevice] = {
         category="passive",
         curvy_challenge=False,
         description="LiDAR 波导交叉",
+        insertion_loss_db=0.2,
     ),
 }
 
@@ -195,6 +211,7 @@ LIDAR_PTC_CONNECTIONS: list[tuple[str, str, str, str]] = [
 
 # ─── LiDAR oNoC 子集器件库（曲线布线挑战版） ───
 # 来源: LiDAR 论文 oNoC benchmark
+# insertion_loss_db 来源: SOI 220nm 平台典型器件损耗文献值（同 apollo_benchmark.py）
 LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
     "lidar_router": LiDARDevice(
         name="lidar_router",
@@ -204,6 +221,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="passive",
         curvy_challenge=False,
         description="LiDAR 中心光路由器",
+        insertion_loss_db=0.5,
     ),
     "lidar_node_0": LiDARDevice(
         name="lidar_node_0",
@@ -213,6 +231,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=False,
         description="LiDAR 节点 0 调制器",
+        insertion_loss_db=0.5,
     ),
     "lidar_node_1": LiDARDevice(
         name="lidar_node_1",
@@ -222,6 +241,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=False,
         description="LiDAR 节点 1 调制器",
+        insertion_loss_db=0.5,
     ),
     "lidar_node_2": LiDARDevice(
         name="lidar_node_2",
@@ -231,6 +251,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=False,
         description="LiDAR 节点 2 调制器",
+        insertion_loss_db=0.5,
     ),
     "lidar_node_3": LiDARDevice(
         name="lidar_node_3",
@@ -240,6 +261,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="active",
         curvy_challenge=False,
         description="LiDAR 节点 3 调制器",
+        insertion_loss_db=0.5,
     ),
     "lidar_ring_wg": LiDARDevice(
         name="lidar_ring_wg",
@@ -249,6 +271,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 环形波导总线（曲线挑战）",
+        insertion_loss_db=0.0,
     ),
     "lidar_curvy_link_0": LiDARDevice(
         name="lidar_curvy_link_0",
@@ -258,6 +281,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 节点 0 曲线链路",
+        insertion_loss_db=0.0,
     ),
     "lidar_curvy_link_1": LiDARDevice(
         name="lidar_curvy_link_1",
@@ -267,6 +291,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 节点 1 曲线链路",
+        insertion_loss_db=0.0,
     ),
     "lidar_curvy_link_2": LiDARDevice(
         name="lidar_curvy_link_2",
@@ -276,6 +301,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 节点 2 曲线链路",
+        insertion_loss_db=0.0,
     ),
     "lidar_curvy_link_3": LiDARDevice(
         name="lidar_curvy_link_3",
@@ -285,6 +311,7 @@ LIDAR_ONOC_DEVICES: dict[str, LiDARDevice] = {
         category="curvy",
         curvy_challenge=True,
         description="LiDAR 节点 3 曲线链路",
+        insertion_loss_db=0.0,
     ),
 }
 
@@ -317,7 +344,7 @@ LIDAR_ONOC_CONNECTIONS: list[tuple[str, str, str, str]] = [
 
 
 def _lidar_to_device_spec(dev: LiDARDevice) -> DeviceSpec:
-    """将 LiDARDevice 转为 DeviceSpec（含 in/out 标准端口）。"""
+    """将 LiDARDevice 转为 DeviceSpec（含 in/out 标准端口 + insertion_loss_db）。"""
     return DeviceSpec(
         name=dev.name,
         device_type=dev.device_type,
@@ -332,6 +359,7 @@ def _lidar_to_device_spec(dev: LiDARDevice) -> DeviceSpec:
             "description": dev.description,
             "benchmark": "lidar",
             "curvy_challenge": dev.curvy_challenge,
+            "insertion_loss_db": dev.insertion_loss_db,
         },
         process_node="220nm SOI",
     )
