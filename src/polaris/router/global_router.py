@@ -306,6 +306,59 @@ class GlobalRouter:
         scored.sort(key=lambda x: -x[2])
         return scored
 
+    @staticmethod
+    def _reconstruct_path(
+        goal: tuple[int, int],
+        came_from: dict[tuple[int, int], tuple[int, int]],
+    ) -> list[tuple[int, int]]:
+        """从 came_from 字典重建路径。
+
+        Args:
+            goal: 终点 GCell。
+            came_from: 前驱字典。
+
+        Returns:
+            GCell 路径列表。
+        """
+        path = [goal]
+        cur = goal
+        while cur in came_from:
+            cur = came_from[cur]
+            path.append(cur)
+        path.reverse()
+        return path
+
+    def _astar_neighbors(
+        self,
+        x: int,
+        y: int,
+        goal: tuple[int, int],
+    ) -> list[tuple[int, int]]:
+        """获取 A* 可扩展的邻居 GCell。
+
+        跳过越界和障碍（起止 GCell 除外）。
+
+        Args:
+            x: 当前 GCell x。
+            y: 当前 GCell y。
+            goal: 终点 GCell（允许通过障碍）。
+
+        Returns:
+            可扩展邻居列表 [(nx, ny), ...]。
+        """
+        gx, gy = goal
+        dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        neighbors: list[tuple[int, int]] = []
+        for dx, dy in dirs:
+            nx, ny = x + dx, y + dy
+            if nx < 0 or nx >= self.gw or ny < 0 or ny >= self.gh:
+                continue
+            # 障碍检查：起止 GCell 允许通过（端口必须可达）
+            if self.obstacle_mask[ny, nx] and (nx, ny) != (gx, gy):
+                continue
+            neighbors.append((nx, ny))
+        return neighbors
+
     def _gcell_astar(
         self,
         start_gcell: tuple[int, int],
@@ -330,12 +383,8 @@ class GlobalRouter:
 
         sx, sy = start_gcell
         gx, gy = goal_gcell
-        # 起点终点相同
         if (sx, sy) == (gx, gy):
             return [(sx, sy)]
-        # 4 方向
-        dirs = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-        # 优先队列: (f, g, x, y)
         h0 = abs(sx - gx) + abs(sy - gy)
         pq = [(h0, 0.0, sx, sy)]
         came_from: dict[tuple[int, int], tuple[int, int]] = {}
@@ -348,21 +397,8 @@ class GlobalRouter:
                 continue
             visited.add((x, y))
             if (x, y) == (gx, gy):
-                # 重建路径
-                path = [(x, y)]
-                cur = (x, y)
-                while cur in came_from:
-                    cur = came_from[cur]
-                    path.append(cur)
-                path.reverse()
-                return path
-            for dx, dy in dirs:
-                nx, ny = x + dx, y + dy
-                if nx < 0 or nx >= self.gw or ny < 0 or ny >= self.gh:
-                    continue
-                # 障碍检查：起止 GCell 允许通过（端口必须可达）
-                if self.obstacle_mask[ny, nx] and (nx, ny) != (gx, gy):
-                    continue
+                return self._reconstruct_path((x, y), came_from)
+            for nx, ny in self._astar_neighbors(x, y, (gx, gy)):
                 # 代价 = 步长 + 拥塞惩罚
                 step_cost = 1.0
                 overflow = max(0.0, self.demand[ny, nx] - self.capacity[ny, nx])

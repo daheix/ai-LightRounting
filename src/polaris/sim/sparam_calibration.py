@@ -186,6 +186,57 @@ def evaluate_lorentzian(
     return a / (1.0 + 1j * (wavelengths_um - wl0) / gamma)
 
 
+def _calibrate_pair(
+    port_in: str,
+    port_out: str,
+    s_complex: np.ndarray,
+    wavelengths: np.ndarray,
+    cfg: SParamCalibrationConfig,
+) -> SParamPairResult:
+    """校准单个端口对的 S 参数。
+
+    Args:
+        port_in: 输入端口名。
+        port_out: 输出端口名。
+        s_complex: 复数 S 参数数组。
+        wavelengths: 波长数组（μm）。
+        cfg: 校准配置。
+
+    Returns:
+        单端口对校准结果。
+    """
+    if cfg.fit_model == "lorentzian" and len(s_complex) > 2:
+        params = fit_lorentzian(wavelengths, s_complex)
+        s_fitted = evaluate_lorentzian(wavelengths, params)
+    else:
+        params = {}
+        s_fitted = s_complex.copy()
+
+    ref_idx = int(np.argmin(np.abs(wavelengths - cfg.reference_wavelength_um)))
+    mag_error = float(
+        20.0 * np.log10(max(np.abs(s_complex[ref_idx]), 1e-12))
+        - 20.0 * np.log10(max(np.abs(s_fitted[ref_idx]), 1e-12))
+    )
+    phase_error = float(
+        np.angle(s_complex[ref_idx]) - np.angle(s_fitted[ref_idx])
+    )
+    passed = (
+        abs(mag_error) <= cfg.magnitude_tolerance_db
+        and abs(phase_error) <= cfg.phase_tolerance_rad
+    )
+    return SParamPairResult(
+        port_in=port_in,
+        port_out=port_out,
+        wavelengths_um=wavelengths.copy(),
+        s_param_complex=s_complex,
+        s_param_fitted=s_fitted,
+        magnitude_error_db=mag_error,
+        phase_error_rad=phase_error,
+        fitted_params=params,
+        passed=passed,
+    )
+
+
 def calibrate_sparams_from_fdtd(
     fdtd_result: FDTDResult,
     config: SParamCalibrationConfig | None = None,
@@ -212,37 +263,8 @@ def calibrate_sparams_from_fdtd(
     pair_results: list[SParamPairResult] = []
     for (port_in, port_out), s_complex in s_params_complex.items():
         s_complex = np.asarray(s_complex)
-        if cfg.fit_model == "lorentzian" and len(s_complex) > 2:
-            params = fit_lorentzian(wavelengths, s_complex)
-            s_fitted = evaluate_lorentzian(wavelengths, params)
-        else:
-            params = {}
-            s_fitted = s_complex.copy()
-
-        ref_idx = int(np.argmin(np.abs(wavelengths - cfg.reference_wavelength_um)))
-        mag_error = float(
-            20.0 * np.log10(max(np.abs(s_complex[ref_idx]), 1e-12))
-            - 20.0 * np.log10(max(np.abs(s_fitted[ref_idx]), 1e-12))
-        )
-        phase_error = float(
-            np.angle(s_complex[ref_idx]) - np.angle(s_fitted[ref_idx])
-        )
-        passed = (
-            abs(mag_error) <= cfg.magnitude_tolerance_db
-            and abs(phase_error) <= cfg.phase_tolerance_rad
-        )
         pair_results.append(
-            SParamPairResult(
-                port_in=port_in,
-                port_out=port_out,
-                wavelengths_um=wavelengths.copy(),
-                s_param_complex=s_complex,
-                s_param_fitted=s_fitted,
-                magnitude_error_db=mag_error,
-                phase_error_rad=phase_error,
-                fitted_params=params,
-                passed=passed,
-            )
+            _calibrate_pair(port_in, port_out, s_complex, wavelengths, cfg)
         )
 
     n_passed = sum(1 for r in pair_results if r.passed)
