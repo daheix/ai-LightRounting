@@ -219,7 +219,13 @@ def _extract_connections_from_proximity(
             return connections
         connections = _trace_waveguide_connections(layout, cell, device_bboxes)
         if not connections:
-            connections = _fallback_proximity_connections(device_bboxes)
+            # 波导追踪未找到连接，记录警告（不自动 fall-back）
+            # 用户可显式调用 extract_connections_by_proximity 使用邻近关系
+            import logging
+            logging.getLogger(__name__).warning(
+                "波导追踪未找到连接关系。如需使用包围盒邻近关系提取连接，"
+                "请显式调用 extract_connections_by_proximity()"
+            )
     except (KeyError, RuntimeError):
         pass
     return connections
@@ -288,16 +294,29 @@ def _record_connections(
                 connections.append((connected_devs[i], connected_devs[j]))
 
 
-def _fallback_proximity_connections(
+def extract_connections_by_proximity(
     device_bboxes: list[tuple[str, db.Box]],
+    tolerance: int = 20,
 ) -> list[tuple[str, str]]:
-    """兜底：波导追踪未找到连接时，用包围盒邻近关系。"""
+    """通过包围盒邻近关系提取器件连接（独立接口，非 fall-back）。
+
+    当 GDS 无 WG 层或波导追踪不适用时，可显式调用此函数用包围盒邻近
+    关系提取连接。这是一个独立的连接提取策略，供特定条件下使用，
+    不作为波导追踪的 fall-back。
+
+    Args:
+        device_bboxes: 器件包围盒列表 [(device_name, bbox)]。
+        tolerance: 邻近容差（dbu 单位，默认 20）。
+
+    Returns:
+        连接列表 [(dev1, dev2)]。
+    """
     connections: list[tuple[str, str]] = []
     for i in range(len(device_bboxes)):
         for j in range(i + 1, len(device_bboxes)):
             dev1, bbox1 = device_bboxes[i]
             dev2, bbox2 = device_bboxes[j]
-            if _bboxes_intersect_or_near(bbox1, bbox2, tolerance=20):
+            if _bboxes_intersect_or_near(bbox1, bbox2, tolerance=tolerance):
                 connections.append((dev1, dev2))
     return connections
 
@@ -355,6 +374,78 @@ def circuit_spec_to_netlist(circuit: CircuitSpec) -> ExtractedNetlist:
     return ExtractedNetlist(devices=devices, connections=connections)
 
 
+def _compare_devices(
+    reference: ExtractedNetlist,
+    extracted: ExtractedNetlist,
+) -> list[LVSMismatch]:
+    """比对参考网表与提取网表的器件。
+
+    Args:
+        reference: 参考网表。
+        extracted: 提取网表。
+
+    Returns:
+        器件不匹配列表。
+    """
+    mismatches: list[LVSMismatch] = []
+    ref_devices = set(reference.devices)
+    ext_devices = set(extracted.devices)
+
+    for dev in ref_devices - ext_devices:
+        mismatches.append(
+            LVSMismatch(
+                mtype=LVSMismatchType.MISSING_DEVICE,
+                message=f"参考网表有器件 '{dev}' 但版图未提取到",
+                device_name=dev,
+            )
+        )
+    for dev in ext_devices - ref_devices:
+        mismatches.append(
+            LVSMismatch(
+                mtype=LVSMismatchType.EXTRA_DEVICE,
+                message=f"版图提取到器件 '{dev}' 但参考网表无",
+                device_name=dev,
+            )
+        )
+    return mismatches
+
+
+def _compare_connections(
+    reference: ExtractedNetlist,
+    extracted: ExtractedNetlist,
+) -> list[LVSMismatch]:
+    """比对参考网表与提取网表的连接。
+
+    Args:
+        reference: 参考网表。
+        extracted: 提取网表。
+
+    Returns:
+        连接不匹配列表。
+    """
+    mismatches: list[LVSMismatch] = []
+    ref_connections = set(reference.connections)
+    ext_connections = set(extracted.connections)
+
+    for conn in ref_connections - ext_connections:
+        mismatches.append(
+            LVSMismatch(
+                mtype=LVSMismatchType.MISSING_CONNECTION,
+                message=f"参考网表有连接 {conn} 但版图未提取到",
+                net_name=f"{conn[0]}-{conn[1]}",
+            )
+        )
+    for conn in ext_connections - ref_connections:
+        mismatches.append(
+            LVSMismatch(
+                mtype=LVSMismatchType.EXTRA_CONNECTION,
+                message=f"版图提取到连接 {conn} 但参考网表无",
+                net_name=f"{conn[0]}-{conn[1]}",
+            )
+        )
+    return mismatches
+
+
 def compare_netlists(
     reference: ExtractedNetlist,
     extracted: ExtractedNetlist,
@@ -371,55 +462,8 @@ def compare_netlists(
     来源: KLayout LVS 比对算法
     https://www.klayout.org/doc-qt5/manual/lvs.html
     """
-    mismatches: list[LVSMismatch] = []
-
-    # 器件比对
-    ref_devices = set(reference.devices)
-    ext_devices = set(extracted.devices)
-
-    # 参考有但版图无的器件
-    for dev in ref_devices - ext_devices:
-        mismatches.append(
-            LVSMismatch(
-                mtype=LVSMismatchType.MISSING_DEVICE,
-                message=f"参考网表有器件 '{dev}' 但版图未提取到",
-                device_name=dev,
-            )
-        )
-
-    # 版图有但参考无的器件
-    for dev in ext_devices - ref_devices:
-        mismatches.append(
-            LVSMismatch(
-                mtype=LVSMismatchType.EXTRA_DEVICE,
-                message=f"版图提取到器件 '{dev}' 但参考网表无",
-                device_name=dev,
-            )
-        )
-
-    # 连接比对
-    ref_connections = set(reference.connections)
-    ext_connections = set(extracted.connections)
-
-    # 参考有但版图无的连接
-    for conn in ref_connections - ext_connections:
-        mismatches.append(
-            LVSMismatch(
-                mtype=LVSMismatchType.MISSING_CONNECTION,
-                message=f"参考网表有连接 {conn} 但版图未提取到",
-                net_name=f"{conn[0]}-{conn[1]}",
-            )
-        )
-
-    # 版图有但参考无的连接
-    for conn in ext_connections - ref_connections:
-        mismatches.append(
-            LVSMismatch(
-                mtype=LVSMismatchType.EXTRA_CONNECTION,
-                message=f"版图提取到连接 {conn} 但参考网表无",
-                net_name=f"{conn[0]}-{conn[1]}",
-            )
-        )
+    mismatches = _compare_devices(reference, extracted)
+    mismatches.extend(_compare_connections(reference, extracted))
 
     return LVSReport(
         is_match=len(mismatches) == 0,
@@ -461,6 +505,7 @@ __all__ = [
     "LVSReport",
     "circuit_spec_to_netlist",
     "compare_netlists",
+    "extract_connections_by_proximity",
     "extract_netlist_from_gds",
     "run_lvs",
 ]
