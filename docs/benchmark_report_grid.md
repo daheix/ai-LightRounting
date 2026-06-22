@@ -12,19 +12,20 @@
 - **总重叠对数**: 0
 - **总运行时间**: 0.0005 s
 - **平均运行时间**: 0.0001 s
-- **评估时间**: 2026-06-22T10:12:30Z
+- **评估时间**: 2026-06-22T10:25:13Z
 
 ## 2. 各 Benchmark 详细结果
 
-| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 模块 | 连接 | 运行时间 (s) | 达标 |
-|-----------|------|------|------|-----------|------|--------|------|------|--------------|------|
-| tilos_ariane | tilos | NanGate45 | grid | 14707.00 | 0 | 0.6667 | 17 | 25 | 0.0005 | ✅ |
-| apollo_ptc | apollo | 220nm SOI | grid | 11440.00 | 0 | 0.6667 | 12 | 13 | 0.0000 | ❌ |
-| apollo_onoc | apollo | 220nm SOI | grid | 33550.00 | 0 | 0.6667 | 15 | 23 | 0.0000 | ✅ |
-| lidar_ptc | lidar | 220nm SOI | grid | 5470.05 | 0 | 0.6667 | 12 | 13 | 0.0000 | ✅ |
+| Benchmark | 来源 | 工艺 | 方法 | HPWL (μm) | 重叠 | 利用率 | 最大拥塞 | 溢出网格 | 模块 | 连接 | 运行时间 (s) | 达标 |
+|-----------|------|------|------|-----------|------|--------|----------|----------|------|------|--------------|------|
+| tilos_ariane | tilos | NanGate45 | grid | 14707.00 | 0 | 0.6667 | 6.3370 | 70 | 17 | 25 | 0.0004 | ✅ |
+| apollo_ptc | apollo | 220nm SOI | grid | 11440.00 | 0 | 0.6667 | 1.4545 | 11 | 12 | 13 | 0.0000 | ❌ |
+| apollo_onoc | apollo | 220nm SOI | grid | 33550.00 | 0 | 0.6667 | 3.2727 | 121 | 15 | 23 | 0.0000 | ✅ |
+| lidar_ptc | lidar | 220nm SOI | grid | 5470.05 | 0 | 0.6667 | 4.0271 | 24 | 12 | 13 | 0.0000 | ✅ |
 
 ## 3. 来源
 
 - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
 - Apollo: https://github.com/ASU-LOPE-Group/Apollo
 - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
+- Congestion: Nesterenko & Hsu TCAD 2002, BoxRouter ISPD 2006

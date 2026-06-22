@@ -135,6 +135,98 @@ def evaluate_area_utilization(
     return used / total if total > 0 else 0.0
 
 
+def _build_demand_grid(
+    circuit: CircuitSpec,
+    placements: dict[str, tuple[float, float]],
+    grid_rows: int,
+    grid_cols: int,
+    cell_size: tuple[float, float],
+) -> tuple[list[list[float]], list[list[float]]]:
+    """构建布线需求网格（第82轮内部辅助函数）。
+
+    对每条连接，用 LRT 模型将布线需求均匀分布到 bounding box 经过的网格。
+    水平需求记录到 demand_h，垂直需求记录到 demand_v。
+
+    来源: Westra et al., "BoxRouter", ISPD 2006（LRT 模型）
+
+    Args:
+        circuit: 电路规格（含连接列表）。
+        placements: 布局字典。
+        grid_rows: 网格行数。
+        grid_cols: 网格列数。
+        cell_size: (cell_w, cell_h) 网格单元宽高。
+
+    Returns:
+        (demand_h, demand_v) 两个 grid_rows × grid_cols 的需求矩阵。
+    """
+    cell_w, cell_h = cell_size
+    demand_h = [[0.0] * grid_cols for _ in range(grid_rows)]
+    demand_v = [[0.0] * grid_cols for _ in range(grid_rows)]
+
+    for src, _src_port, dst, _dst_port in circuit.connections:
+        if src not in placements or dst not in placements:
+            continue
+        x1, y1 = placements[src]
+        x2, y2 = placements[dst]
+        xmin, xmax = min(x1, x2), max(x1, x2)
+        ymin, ymax = min(y1, y2), max(y1, y2)
+        col_min = max(0, int(xmin / cell_w))
+        col_max = min(grid_cols - 1, int(xmax / cell_w))
+        row_min = max(0, int(ymin / cell_h))
+        row_max = min(grid_rows - 1, int(ymax / cell_h))
+        n_h_cells = max(1, col_max - col_min + 1)
+        n_v_cells = max(1, row_max - row_min + 1)
+        h_demand = 1.0 / n_h_cells
+        v_demand = 1.0 / n_v_cells
+        for r in range(row_min, row_max + 1):
+            for c in range(col_min, col_max + 1):
+                demand_h[r][c] += h_demand
+                demand_v[r][c] += v_demand
+    return demand_h, demand_v
+
+
+def _compute_congestion_stats(
+    demand_h: list[list[float]],
+    demand_v: list[list[float]],
+    grid_rows: int,
+    grid_cols: int,
+    capacity: float = 1.0,
+) -> dict[str, float]:
+    """从需求网格计算拥塞度统计（第82轮内部辅助函数）。
+
+    Args:
+        demand_h: 水平需求矩阵。
+        demand_v: 垂直需求矩阵。
+        grid_rows: 网格行数。
+        grid_cols: 网格列数。
+        capacity: 每个网格的容量（默认 1.0）。
+
+    Returns:
+        拥塞度统计字典（max/avg/overflow_count/total_overflow）。
+    """
+    max_cong = 0.0
+    total_cong = 0.0
+    overflow_count = 0
+    total_overflow = 0.0
+    n_cells = grid_rows * grid_cols
+    for r in range(grid_rows):
+        for c in range(grid_cols):
+            demand = demand_h[r][c] + demand_v[r][c]
+            cong = demand / capacity
+            if cong > max_cong:
+                max_cong = cong
+            total_cong += cong
+            if demand > capacity:
+                overflow_count += 1
+                total_overflow += demand - capacity
+    return {
+        "max_congestion": max_cong,
+        "avg_congestion": total_cong / n_cells if n_cells > 0 else 0.0,
+        "overflow_count": overflow_count,
+        "total_overflow": total_overflow,
+    }
+
+
 def evaluate_congestion(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
@@ -189,60 +281,10 @@ def evaluate_congestion(
     if cell_w <= 0 or cell_h <= 0:
         return empty
 
-    # demand 网格（水平 + 垂直分开统计）
-    demand_h = [[0.0] * grid_cols for _ in range(grid_rows)]
-    demand_v = [[0.0] * grid_cols for _ in range(grid_rows)]
-
-    for src, _src_port, dst, _dst_port in circuit.connections:
-        if src not in placements or dst not in placements:
-            continue
-        x1, y1 = placements[src]
-        x2, y2 = placements[dst]
-        # bounding box
-        xmin, xmax = min(x1, x2), max(x1, x2)
-        ymin, ymax = min(y1, y2), max(y1, y2)
-        # 转换为网格索引
-        col_min = max(0, int(xmin / cell_w))
-        col_max = min(grid_cols - 1, int(xmax / cell_w))
-        row_min = max(0, int(ymin / cell_h))
-        row_max = min(grid_rows - 1, int(ymax / cell_h))
-        # LRT: 水平需求均匀分布在 bounding box 行
-        # 垂直需求均匀分布在 bounding box 列
-        n_h_cells = max(1, col_max - col_min + 1)
-        n_v_cells = max(1, row_max - row_min + 1)
-        h_demand = 1.0 / n_h_cells  # 水平布线需求
-        v_demand = 1.0 / n_v_cells  # 垂直布线需求
-        for r in range(row_min, row_max + 1):
-            for c in range(col_min, col_max + 1):
-                demand_h[r][c] += h_demand
-                demand_v[r][c] += v_demand
-
-    # 容量：每个网格的容量 = 1.0（简化模型）
-    # TILOS 标准容量 = 网格周长 / 平均线宽，这里简化为 1.0
-    capacity = 1.0
-
-    max_cong = 0.0
-    total_cong = 0.0
-    overflow_count = 0
-    total_overflow = 0.0
-    n_cells = grid_rows * grid_cols
-    for r in range(grid_rows):
-        for c in range(grid_cols):
-            demand = demand_h[r][c] + demand_v[r][c]
-            cong = demand / capacity
-            if cong > max_cong:
-                max_cong = cong
-            total_cong += cong
-            if demand > capacity:
-                overflow_count += 1
-                total_overflow += demand - capacity
-
-    return {
-        "max_congestion": max_cong,
-        "avg_congestion": total_cong / n_cells if n_cells > 0 else 0.0,
-        "overflow_count": overflow_count,
-        "total_overflow": total_overflow,
-    }
+    demand_h, demand_v = _build_demand_grid(
+        circuit, placements, grid_rows, grid_cols, (cell_w, cell_h)
+    )
+    return _compute_congestion_stats(demand_h, demand_v, grid_rows, grid_cols)
 
 
 def evaluate_benchmark(

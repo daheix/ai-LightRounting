@@ -13,11 +13,15 @@
       "target_value": 50000.0,
       "passed": true,
       "process_node": "NanGate45",
-      "timestamp": "2026-06-22T10:12:30Z",
-      "runtime_s": 0.00046908599688322283,
+      "timestamp": "2026-06-22T10:25:13Z",
+      "runtime_s": 0.0004216490015096497,
       "extra": {
         "benchmark_source": "tilos",
-        "process_node": "NanGate45"
+        "process_node": "NanGate45",
+        "max_congestion": 6.336996336996336,
+        "avg_congestion": 0.945312500000001,
+        "overflow_count": 70,
+        "total_overflow": 93.64331501831505
       }
     },
     {
@@ -33,11 +37,15 @@
       "target_value": 5.0,
       "passed": false,
       "process_node": "220nm SOI",
-      "timestamp": "2026-06-22T10:12:30Z",
-      "runtime_s": 1.5007997717475519e-05,
+      "timestamp": "2026-06-22T10:25:13Z",
+      "runtime_s": 1.5253001038217917e-05,
       "extra": {
         "benchmark_source": "apollo",
-        "process_node": "220nm SOI"
+        "process_node": "220nm SOI",
+        "max_congestion": 1.4545454545454544,
+        "avg_congestion": 0.21875000000000078,
+        "overflow_count": 11,
+        "total_overflow": 4.9999999999999964
       }
     },
     {
@@ -53,11 +61,15 @@
       "target_value": 0.95,
       "passed": true,
       "process_node": "220nm SOI",
-      "timestamp": "2026-06-22T10:12:30Z",
-      "runtime_s": 9.405001037521288e-06,
+      "timestamp": "2026-06-22T10:25:13Z",
+      "runtime_s": 1.2127999070798978e-05,
       "extra": {
         "benchmark_source": "apollo",
-        "process_node": "220nm SOI"
+        "process_node": "220nm SOI",
+        "max_congestion": 3.2727272727272725,
+        "avg_congestion": 0.6093750000000011,
+        "overflow_count": 121,
+        "total_overflow": 35.000000000000014
       }
     },
     {
@@ -73,11 +85,15 @@
       "target_value": 1.0,
       "passed": true,
       "process_node": "220nm SOI",
-      "timestamp": "2026-06-22T10:12:30Z",
-      "runtime_s": 7.720002031419426e-06,
+      "timestamp": "2026-06-22T10:25:13Z",
+      "runtime_s": 8.692000847076997e-06,
       "extra": {
         "benchmark_source": "lidar",
-        "process_node": "220nm SOI"
+        "process_node": "220nm SOI",
+        "max_congestion": 4.027056277056277,
+        "avg_congestion": 0.5429687499999991,
+        "overflow_count": 24,
+        "total_overflow": 28.392857142857164
       }
     }
   ],
@@ -89,7 +105,7 @@
   "total_modules": 56,
   "total_connections": 74,
   "total_overlaps": 0,
-  "total_runtime_s": 0.0005012189976696391,
-  "avg_runtime_s": 0.00012530474941740977,
-  "timestamp": "2026-06-22T10:12:30Z"
+  "total_runtime_s": 0.00045772200246574357,
+  "avg_runtime_s": 0.00011443050061643589,
+  "timestamp": "2026-06-22T10:25:13Z"
 }
