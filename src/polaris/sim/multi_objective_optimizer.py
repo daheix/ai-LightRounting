@@ -189,26 +189,24 @@ def dominates(a: np.ndarray, b: np.ndarray, objectives: list[Objective]) -> bool
     return better_in_one
 
 
-def fast_non_dominated_sort(
-    population: list[Individual], objectives: list[Objective]
-) -> list[list[Individual]]:
-    """快速非支配排序（Deb 2002）。
-
-    将种群分层：F1（最优前沿）、F2（次优）、...
+def _compute_dominance_relations(
+    population: list[Individual],
+    objectives: list[Objective],
+) -> tuple[list[int], list[list[int]]]:
+    """计算种群中所有个体对的支配关系。
 
     Args:
         population: 种群。
         objectives: 目标定义。
 
     Returns:
-        分层列表 [F1, F2, ...]。
+        (domination_count, dominated_set)：
+        - domination_count[i] = 个体 i 被支配的次数
+        - dominated_set[i] = 个体 i 支配的个体索引列表
     """
     n = len(population)
-    # 用 id 建立索引，避免 == 比较数组
-    id_to_idx = {id(ind): i for i, ind in enumerate(population)}
-    domination_count = [0] * n  # 被 a 支配的解数
-    dominated_set: list[list[int]] = [[] for _ in range(n)]  # a 支配的解索引
-    fronts: list[list[Individual]] = [[]]
+    domination_count = [0] * n
+    dominated_set: list[list[int]] = [[] for _ in range(n)]
 
     for i in range(n):
         for j in range(i + 1, n):
@@ -218,6 +216,28 @@ def fast_non_dominated_sort(
             elif dominates(population[j].objectives, population[i].objectives, objectives):
                 dominated_set[j].append(i)
                 domination_count[i] += 1
+
+    return domination_count, dominated_set
+
+
+def _build_fronts(
+    population: list[Individual],
+    domination_count: list[int],
+    dominated_set: list[list[int]],
+) -> list[list[Individual]]:
+    """从支配关系构建 Pareto 前沿分层。
+
+    Args:
+        population: 种群。
+        domination_count: 每个个体被支配的次数。
+        dominated_set: 每个个体支配的个体索引列表。
+
+    Returns:
+        分层列表 [F1, F2, ...]。
+    """
+    n = len(population)
+    id_to_idx = {id(ind): i for i, ind in enumerate(population)}
+    fronts: list[list[Individual]] = [[]]
 
     # 第一层：支配计数为 0 的解
     for i in range(n):
@@ -241,6 +261,27 @@ def fast_non_dominated_sort(
 
     # 移除空层
     return [f for f in fronts if f]
+
+
+def fast_non_dominated_sort(
+    population: list[Individual], objectives: list[Objective]
+) -> list[list[Individual]]:
+    """快速非支配排序（Deb 2002）。
+
+    将种群分层：F1（最优前沿）、F2（次优）、...
+
+    Args:
+        population: 种群。
+        objectives: 目标定义。
+
+    Returns:
+        分层列表 [F1, F2, ...]。
+
+    来源: Deb et al., "A Fast and Elitist Multiobjective Genetic Algorithm:
+        NSGA-II", IEEE TEVC 2002, https://ieeexplore.ieee.org/document/996017
+    """
+    domination_count, dominated_set = _compute_dominance_relations(population, objectives)
+    return _build_fronts(population, domination_count, dominated_set)
 
 
 def compute_crowding_distance(front: list[Individual], objectives: list[Objective]) -> None:

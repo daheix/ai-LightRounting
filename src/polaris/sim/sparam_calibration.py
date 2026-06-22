@@ -259,6 +259,55 @@ def calibrate_sparams_from_fdtd(
     )
 
 
+def _extract_port_order(result: SParamCalibrationResult) -> list[str]:
+    """从校准结果中提取端口顺序。
+
+    Args:
+        result: S 参数校准结果。
+
+    Returns:
+        端口名称列表（最多 2 个）。
+    """
+    ports: list[str] = []
+    for r in result.pair_results:
+        if r.port_in not in ports:
+            ports.append(r.port_in)
+        if r.port_out not in ports:
+            ports.append(r.port_out)
+    return ports[:2]
+
+
+def _format_s_param_line(
+    freq_ghz: float,
+    i: int,
+    port_order: list[str],
+    s_dict: dict[tuple[str, str], list[complex]],
+) -> str:
+    """格式化单行 Touchstone S 参数数据。
+
+    Args:
+        freq_ghz: 频率（GHz）。
+        i: 波长索引。
+        port_order: 端口顺序。
+        s_dict: S 参数字典 {(port_in, port_out): [complex values]}。
+
+    Returns:
+        Touchstone 格式单行字符串。
+    """
+    parts = [f"{freq_ghz:.6f}"]
+    for p_in in port_order:
+        for p_out in port_order:
+            s = s_dict.get((p_in, p_out))
+            if s is not None and i < len(s):
+                val = s[i]
+                parts.append(f"{val.real:.6e}")
+                parts.append(f"{val.imag:.6e}")
+            else:
+                parts.append("0.000000e+00")
+                parts.append("0.000000e+00")
+    return " ".join(parts)
+
+
 def export_touchstone(
     result: SParamCalibrationResult,
     port_order: list[str] | None = None,
@@ -277,13 +326,7 @@ def export_touchstone(
     if not result.pair_results:
         return "! No S-parameter data\n"
     if port_order is None:
-        ports: list[str] = []
-        for r in result.pair_results:
-            if r.port_in not in ports:
-                ports.append(r.port_in)
-            if r.port_out not in ports:
-                ports.append(r.port_out)
-        port_order = ports[:2]
+        port_order = _extract_port_order(result)
 
     wavelengths = result.pair_results[0].wavelengths_um
     s_dict = {(r.port_in, r.port_out): r.s_param_complex for r in result.pair_results}
@@ -293,18 +336,7 @@ def export_touchstone(
     for i, wl in enumerate(wavelengths):
         # c/λ, λ in μm → freq in THz → ×1000 GHz
         freq_ghz = 299.792458 / float(wl) * 1000.0
-        parts = [f"{freq_ghz:.6f}"]
-        for p_in in port_order:
-            for p_out in port_order:
-                s = s_dict.get((p_in, p_out))
-                if s is not None and i < len(s):
-                    val = s[i]
-                    parts.append(f"{val.real:.6e}")
-                    parts.append(f"{val.imag:.6e}")
-                else:
-                    parts.append("0.000000e+00")
-                    parts.append("0.000000e+00")
-        lines.append(" ".join(parts))
+        lines.append(_format_s_param_line(freq_ghz, i, port_order, s_dict))
     return "\n".join(lines) + "\n"
 
 
