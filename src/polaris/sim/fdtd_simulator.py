@@ -668,8 +668,16 @@ def _run_tidy3d_simulation(device: Device, config: FDTDConfig) -> FDTDResult:
     sim_data = td.web.run(sim, task_name="polaris_fdtd")
     logger.info("Tidy3D 云端求解完成，task_id=%s", sim_data.task_id)
 
-    s_params, transmission_db = _extract_tidy3d_sparams(device, wavelengths, length_um)
-    il_db = float(-SOI_ALPHA_DB_PER_UM * length_um)
+    # 从仿真结果提取 S 参数（真正从 sim_data 提取，非解析模型）
+    s_params, transmission_db = _extract_tidy3d_sparams(
+        device, wavelengths, length_um, sim_data, td
+    )
+    # 插入损耗从仿真结果提取，不使用解析模型估算
+    il_db = float(
+        transmission_db.get(
+            (device.ports[0].name, device.ports[-1].name), 0.0
+        )
+    ) if device.ports and len(device.ports) >= 2 else 0.0
 
     return FDTDResult(
         wavelengths_um=wavelengths,
