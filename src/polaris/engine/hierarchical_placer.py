@@ -289,9 +289,17 @@ class HierarchicalPlacer:
             U_normalized = eigenvectors / norms_safe
             # K-means 聚类
             labels = self._kmeans(U_normalized, self.k, rng)
-        except (RuntimeError, ValueError):
-            # ARPACK 收敛失败时退化为均匀分块（非 fall-back，是异常处理）
-            labels = np.array([i % self.k for i in range(self.n)])
+        except (RuntimeError, ValueError) as e:
+            # ARPACK 收敛失败时退化为 BFS 分块（拓扑感知，非均匀分块假数据）
+            # 来源: Karypis & Kumar 1998 METIS BFS 思想
+            import warnings
+            warnings.warn(
+                f"ARPACK 谱聚类收敛失败（{e}），退化为 BFS 拓扑分块。"
+                f"布局结果可能次优，建议检查连接拓扑或减小分块数 k={self.k}。",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            labels = self._bfs_clustering()
         return labels
 
     def _kmeans(
