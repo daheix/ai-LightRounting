@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from polaris.trainer.vtrace import (
+    ImpalaBatch,
     ImpalaLearner,
     TrajectoryBatch,
     VTraceConfig,
@@ -263,22 +264,17 @@ class TestImpalaLearner:
         def value_fn(obs: np.ndarray) -> float:
             return float(obs[0])
 
-        observations = np.array([[1.0], [1.5], [2.0]])
-        rewards = np.array([0.5, 0.3, -0.2])
-        logprobs_behavior = np.log(np.array([0.5, 0.5, 0.5]))
-        logprobs_target = np.log(np.array([0.5, 0.5, 0.5]))
-        dones = np.array([0.0, 0.0, 0.0])
-        last_observation = np.array([1.0])
+        batch = ImpalaBatch(
+            observations=np.array([[1.0], [1.5], [2.0]]),
+            rewards=np.array([0.5, 0.3, -0.2]),
+            logprobs_behavior=np.log(np.array([0.5, 0.5, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.5, 0.5])),
+            dones=np.array([0.0, 0.0, 0.0]),
+            last_observation=np.array([1.0]),
+        )
 
         learner = ImpalaLearner(value_fn)
-        result = learner.compute_targets(
-            observations=observations,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            last_observation=last_observation,
-        )
+        result = learner.compute_targets(batch)
         assert len(result.vs) == 3
         assert len(result.pg_advantages) == 3
 
@@ -288,19 +284,16 @@ class TestImpalaLearner:
         def value_fn(obs: np.ndarray) -> float:
             return float(obs[0])
 
-        observations = np.array([[1.0], [1.5]])
-        rewards = np.array([0.5, 0.3])
-        logprobs = np.log(np.array([0.5, 0.5]))
-        dones = np.array([0.0, 0.0])
+        batch = ImpalaBatch(
+            observations=np.array([[1.0], [1.5]]),
+            rewards=np.array([0.5, 0.3]),
+            logprobs_behavior=np.log(np.array([0.5, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.5])),
+            dones=np.array([0.0, 0.0]),
+        )
 
         learner = ImpalaLearner(value_fn)
-        result = learner.compute_targets(
-            observations=observations,
-            rewards=rewards,
-            logprobs_behavior=logprobs,
-            logprobs_target=logprobs,
-            dones=dones,
-        )
+        result = learner.compute_targets(batch)
         assert len(result.vs) == 2
 
 
@@ -438,22 +431,17 @@ class TestCommercialGapReduction:
         def value_fn(obs: np.ndarray) -> float:
             return float(0.5 * obs[0])
 
-        observations = np.array([[1.0], [1.5], [2.0], [1.8], [1.2]])
-        rewards = np.array([0.5, 0.3, -0.2, 0.1, 0.4])
-        logprobs_behavior = np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5]))
-        logprobs_target = np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6]))
-        dones = np.array([0.0, 0.0, 0.0, 0.0, 1.0])
-        last_observation = np.array([1.0])
+        batch = ImpalaBatch(
+            observations=np.array([[1.0], [1.5], [2.0], [1.8], [1.2]]),
+            rewards=np.array([0.5, 0.3, -0.2, 0.1, 0.4]),
+            logprobs_behavior=np.log(np.array([0.4, 0.5, 0.3, 0.6, 0.5])),
+            logprobs_target=np.log(np.array([0.5, 0.4, 0.4, 0.5, 0.6])),
+            dones=np.array([0.0, 0.0, 0.0, 0.0, 1.0]),
+            last_observation=np.array([1.0]),
+        )
 
         learner = create_impala_learner(value_fn)
-        result = learner.compute_targets(
-            observations=observations,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
-            last_observation=last_observation,
-        )
+        result = learner.compute_targets(batch)
         # 应有完整的 V-trace 输出
         assert len(result.vs) == 5
         assert len(result.pg_advantages) == 5

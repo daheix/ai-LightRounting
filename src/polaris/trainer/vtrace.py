@@ -104,6 +104,30 @@ class TrajectoryBatch:
             raise ValueError("轨迹数组长度不一致")
 
 
+@dataclass
+class ImpalaBatch:
+    """IMPALA learner 输入批量数据（第56轮重构）。
+
+    封装 compute_targets 所需的观测序列与轨迹数据，
+    使方法签名从 7 参数降至 2 参数（含 self）。
+
+    Attributes:
+        observations: 观测序列（n_steps, obs_dim）。
+        rewards: 奖励序列（n_steps,）。
+        logprobs_behavior: 行为策略 log 概率（n_steps,）。
+        logprobs_target: 目标策略 log 概率（n_steps,）。
+        dones: episode 结束标志（n_steps,）。
+        last_observation: 最后一个观测（用于 bootstrap，可选）。
+    """
+
+    observations: np.ndarray
+    rewards: np.ndarray
+    logprobs_behavior: np.ndarray
+    logprobs_target: np.ndarray
+    dones: np.ndarray
+    last_observation: np.ndarray | None = None
+
+
 def _compute_truncated_ratios(
     batch: TrajectoryBatch, cfg: VTraceConfig
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -224,38 +248,29 @@ class ImpalaLearner:
         self.value_fn = value_fn
         self.config = config or VTraceConfig()
 
-    def compute_targets(
-        self,
-        observations: np.ndarray,
-        rewards: np.ndarray,
-        logprobs_behavior: np.ndarray,
-        logprobs_target: np.ndarray,
-        dones: np.ndarray,
-        last_observation: np.ndarray | None = None,
-    ) -> VTraceResult:
+    def compute_targets(self, batch: ImpalaBatch) -> VTraceResult:
         """计算 V-trace 目标。
 
         Args:
-            observations: 观测序列（n_steps, obs_dim）。
-            rewards: 奖励序列（n_steps,）。
-            logprobs_behavior: 行为策略 log 概率。
-            logprobs_target: 目标策略 log 概率。
-            dones: episode 结束标志。
-            last_observation: 最后一个观测（用于 bootstrap）。
+            batch: IMPALA 输入批量数据（observations/rewards/logprobs/dones/last_obs）。
 
         Returns:
             V-trace 计算结果。
         """
-        values = np.array([self.value_fn(obs) for obs in observations])
-        last_value = self.value_fn(last_observation) if last_observation is not None else 0.0
-        batch = TrajectoryBatch(
-            values=values,
-            rewards=rewards,
-            logprobs_behavior=logprobs_behavior,
-            logprobs_target=logprobs_target,
-            dones=dones,
+        values = np.array([self.value_fn(obs) for obs in batch.observations])
+        last_value = (
+            self.value_fn(batch.last_observation)
+            if batch.last_observation is not None
+            else 0.0
         )
-        return compute_vtrace(batch, last_value, self.config)
+        traj = TrajectoryBatch(
+            values=values,
+            rewards=batch.rewards,
+            logprobs_behavior=batch.logprobs_behavior,
+            logprobs_target=batch.logprobs_target,
+            dones=batch.dones,
+        )
+        return compute_vtrace(traj, last_value, self.config)
 
 
 def create_vtrace_config(
