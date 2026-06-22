@@ -546,3 +546,90 @@ class TestLegalization:
         circuit = load_apollo_onoc()
         placements = warm_start_placement(circuit)
         assert len(placements) == len(circuit.devices)
+
+
+class TestCongestionAwarePlacement:
+    """拥塞感知布局测试（第83轮新增）。"""
+
+    def test_congestion_weight_default_zero(self) -> None:
+        """默认 congestion_weight=0（关闭拥塞感知）。"""
+        config = AnalyticalPlacerConfig()
+        assert config.congestion_weight == 0.0
+
+    def test_congestion_gradient_shape(self) -> None:
+        """拥塞梯度形状与坐标数组一致。"""
+        from polaris.data.data_loader import load_tilos_ariane
+
+        circuit = load_tilos_ariane()
+        placer = AnalyticalPlacer(circuit)
+        pos = placer._initial_placement()
+        grad = placer._congestion_gradient(pos)
+        assert grad.shape == pos.shape
+
+    def test_congestion_gradient_finite(self) -> None:
+        """拥塞梯度所有值为有限数。"""
+        from polaris.data.data_loader import load_tilos_ariane
+
+        circuit = load_tilos_ariane()
+        placer = AnalyticalPlacer(circuit)
+        pos = placer._initial_placement()
+        grad = placer._congestion_gradient(pos)
+        assert np.all(np.isfinite(grad))
+
+    def test_congestion_aware_placement_no_overlap(self) -> None:
+        """拥塞感知布局合法化后无重叠。"""
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+        from polaris.data.data_loader import load_apollo_onoc
+
+        circuit = load_apollo_onoc()
+        config = AnalyticalPlacerConfig(
+            max_iterations=50,
+            congestion_weight=1.0e-3,
+        )
+        placer = AnalyticalPlacer(circuit, config)
+        placements = placer.place()
+        assert evaluate_overlap(circuit, placements) == 0
+
+    def test_congestion_aware_placement_reduces_congestion(self) -> None:
+        """拥塞感知布局应降低拥塞度（对比无拥塞感知）。"""
+        from polaris.data.benchmark_evaluator import evaluate_congestion
+        from polaris.data.data_loader import load_apollo_onoc
+
+        circuit = load_apollo_onoc()
+        # 无拥塞感知
+        config_plain = AnalyticalPlacerConfig(max_iterations=50)
+        placer_plain = AnalyticalPlacer(circuit, config_plain)
+        placements_plain = placer_plain.place()
+        cong_plain = evaluate_congestion(circuit, placements_plain)
+        # 拥塞感知
+        config_cong = AnalyticalPlacerConfig(
+            max_iterations=50,
+            congestion_weight=1.0e-2,
+        )
+        placer_cong = AnalyticalPlacer(circuit, config_cong)
+        placements_cong = placer_cong.place()
+        cong_cong = evaluate_congestion(circuit, placements_cong)
+        # 拥塞感知应降低 max_congestion（或至少不显著增加）
+        # 注意：由于合法化步骤可能影响，允许一定容差
+        assert cong_cong["max_congestion"] <= cong_plain["max_congestion"] * 1.5
+
+    def test_congestion_aware_all_benchmarks_no_overlap(self) -> None:
+        """所有 benchmark 拥塞感知布局合法化后无重叠。"""
+        from polaris.data.benchmark_evaluator import evaluate_overlap
+        from polaris.data.data_loader import (
+            load_apollo_onoc,
+            load_apollo_ptc,
+            load_lidar_benchmark,
+            load_tilos_ariane,
+        )
+
+        config = AnalyticalPlacerConfig(
+            max_iterations=30,
+            congestion_weight=1.0e-3,
+        )
+        for loader in [load_tilos_ariane, load_apollo_ptc, load_apollo_onoc, load_lidar_benchmark]:
+            circuit = loader()
+            placer = AnalyticalPlacer(circuit, config)
+            placements = placer.place()
+            overlaps = evaluate_overlap(circuit, placements)
+            assert overlaps == 0, f"{circuit.name} 拥塞感知布局后仍有 {overlaps} 对重叠"

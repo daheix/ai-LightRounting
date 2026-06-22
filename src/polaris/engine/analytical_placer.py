@@ -78,6 +78,11 @@ class AnalyticalPlacerConfig:
         density_bandwidth: 密度场高斯核带宽（μm）。
             来源: DREAMPlace 默认 = 平均器件尺寸。
         convergence_threshold: 收敛阈值（HPWL 变化 < 阈值则停止）。
+        congestion_weight: 拥塞惩罚权重（第83轮新增，越大越强制降低拥塞）。
+            来源: Nesterenko & Hsu "Congestion-Aware Placement" TCAD 2002，
+            默认 0.0（关闭），典型值 1.0e-4 ~ 1.0e-2。
+        congestion_grid_size: 拥塞评估网格大小（第83轮新增）。
+            来源: TILOS 标准 16×16，默认 16。
     """
 
     gamma: float = 4.0
@@ -86,6 +91,8 @@ class AnalyticalPlacerConfig:
     max_iterations: int = 200
     density_bandwidth: float = 10.0
     convergence_threshold: float = 1.0
+    congestion_weight: float = 0.0
+    congestion_grid_size: int = 16
 
 
 class AnalyticalPlacer:
@@ -338,6 +345,119 @@ class AnalyticalPlacer:
         field.smooth_gaussian(bw)
         return field.gradient_at(pos)
 
+    def _build_congestion_demand(
+        self,
+        pos: np.ndarray,
+        grid_size: int,
+        cell_w: float,
+        cell_h: float,
+    ) -> np.ndarray:
+        """构建拥塞需求网格（第83轮内部辅助函数）。
+
+        用 LRT 模型将每条连接的布线需求均匀分布到 bounding box 经过的网格。
+
+        来源: Westra et al., "BoxRouter", ISPD 2006（LRT 模型）
+
+        Args:
+            pos: 当前坐标 ``(n, 2)``。
+            grid_size: 网格大小（行=列）。
+            cell_w: 网格单元宽度。
+            cell_h: 网格单元高度。
+
+        Returns:
+            demand 网格 ``(grid_size, grid_size)``。
+        """
+        demand = np.zeros((grid_size, grid_size), dtype=np.float64)
+        for src, dst in self.connections:
+            x1, y1 = pos[src]
+            x2, y2 = pos[dst]
+            xmin, xmax = min(x1, x2), max(x1, x2)
+            ymin, ymax = min(y1, y2), max(y1, y2)
+            col_min = max(0, int(xmin / cell_w))
+            col_max = min(grid_size - 1, int(xmax / cell_w))
+            row_min = max(0, int(ymin / cell_h))
+            row_max = min(grid_size - 1, int(ymax / cell_h))
+            n_cells = max(1, (col_max - col_min + 1) * (row_max - row_min + 1))
+            demand_per_cell = 1.0 / n_cells
+            for r in range(row_min, row_max + 1):
+                for c in range(col_min, col_max + 1):
+                    demand[r, c] += demand_per_cell
+        return demand
+
+    def _demand_to_gradient(
+        self,
+        demand: np.ndarray,
+        pos: np.ndarray,
+        grid_size: int,
+        cell_size: tuple[float, float],
+    ) -> np.ndarray:
+        """从需求网格计算器件梯度（第83轮内部辅助函数）。
+
+        对每个器件，用中心差分计算其所在网格的拥塞度梯度，
+        梯度方向 = 拥塞度的负梯度（向低拥塞方向移动）。
+
+        Args:
+            demand: 需求网格 ``(grid_size, grid_size)``。
+            pos: 当前坐标 ``(n, 2)``。
+            grid_size: 网格大小。
+            cell_size: (cell_w, cell_h) 网格单元宽高。
+
+        Returns:
+            拥塞梯度 ``(n, 2)``。
+        """
+        cell_w, cell_h = cell_size
+        grad = np.zeros_like(pos)
+        for i in range(self.n):
+            x, y = pos[i]
+            col = max(0, min(grid_size - 1, int(x / cell_w)))
+            row = max(0, min(grid_size - 1, int(y / cell_h)))
+            left = demand[row, col - 1] if col > 0 else demand[row, col]
+            right = demand[row, col + 1] if col < grid_size - 1 else demand[row, col]
+            up = demand[row - 1, col] if row > 0 else demand[row, col]
+            down = demand[row + 1, col] if row < grid_size - 1 else demand[row, col]
+            grad[i, 0] = (left - right) / (2 * cell_w) if cell_w > 0 else 0.0
+            grad[i, 1] = (up - down) / (2 * cell_h) if cell_h > 0 else 0.0
+        return grad
+
+    def _congestion_gradient(self, pos: np.ndarray) -> np.ndarray:
+        """计算拥塞惩罚梯度（第83轮新增）。
+
+        对标 Nesterenko & Hsu "Congestion-Aware Placement" TCAD 2002：
+        1. 将画布划分为 G×G 网格
+        2. 用 LRT 模型计算每个网格的布线需求（demand）
+        3. 对高需求网格中的器件，施加排斥力（向低需求网格扩散）
+        4. 梯度方向 = 从高拥塞网格指向低拥塞网格
+
+        简化模型：对每个器件，计算其所在网格的拥塞度，
+        拥塞度越高，排斥力越大（与密度梯度类似的扩散机制）。
+
+        来源:
+            - Nesterenko & Hsu, "Congestion-Aware Placement", TCAD 2002
+            - Westra et al., "BoxRouter", ISPD 2006（LRT 模型）
+            - TILOS MacroPlacement Congestion Evaluation
+
+        Args:
+            pos: 当前坐标 ``(n, 2)``。
+
+        Returns:
+            拥塞梯度 ``(n, 2)``。
+        """
+        if self.n == 0 or self.canvas_w <= 0 or self.canvas_h <= 0:
+            return np.zeros_like(pos)
+
+        grid_size = self.config.congestion_grid_size
+        cell_w = self.canvas_w / grid_size
+        cell_h = self.canvas_h / grid_size
+        if cell_w <= 0 or cell_h <= 0:
+            return np.zeros_like(pos)
+
+        demand = self._build_congestion_demand(pos, grid_size, cell_w, cell_h)
+        grad = self._demand_to_gradient(demand, pos, grid_size, (cell_w, cell_h))
+
+        if not np.all(np.isfinite(grad)):
+            grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
+        return grad
+
     def _adam_update(
         self,
         pos: np.ndarray,
@@ -421,6 +541,9 @@ class AnalyticalPlacer:
 
         流程: 1.初始布局 → 2.梯度下降优化 → 3.合法化（消除重叠）。
 
+        第83轮扩展：当 ``congestion_weight > 0`` 时，在梯度下降中加入
+        拥塞惩罚项，对标 Nesterenko & Hsu TCAD 2002 拥塞感知布局。
+
         Returns:
             布局字典 ``{name: (cx, cy)}``，中心坐标，无重叠。
         """
@@ -436,6 +559,10 @@ class AnalyticalPlacer:
             hpwl_grad = self._smooth_hpwl_gradient(pos)
             dens_grad = self._density_gradient(pos)
             total_grad = hpwl_grad + self.config.density_weight * dens_grad
+            # 第83轮：拥塞感知布局，拥塞惩罚项
+            if self.config.congestion_weight > 0:
+                cong_grad = self._congestion_gradient(pos)
+                total_grad = total_grad + self.config.congestion_weight * cong_grad
             pos, m, v = self._adam_update(pos, total_grad, AdamState(m=m, v=v, t=t))
             pos[:, 0] = np.clip(pos[:, 0], 0, self.canvas_w)
             pos[:, 1] = np.clip(pos[:, 1], 0, self.canvas_h)
