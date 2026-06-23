@@ -317,10 +317,9 @@ def _run_spice_cosimulation(
             "(Ho et al. IEEE ISCAS 1974, 改进节点分析法)"
         )
         # 生成 PAM4 信号用于电路激励
-        pam4_signal = generate_pam4_signal(
+        _t_pam4, pam4_signal = generate_pam4_signal(
             n_symbols=2000,
             samples_per_symbol=32,
-            noise_std=0.08,
             seed=88,
         )
         # 构建光电联合链路电路模型
