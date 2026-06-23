@@ -56,12 +56,13 @@ from stages import (  # noqa: E402
     stage7_gds_export,
     stage8_opto_electrical,
     stage9_quantum_photonics,
+    stage10_adjoint_inverse_design,
 )
 
 # 输出子目录列表
 _OUTPUT_SUBDIRS = ["logs", "gds", "verilog_a", "spice", "reports"]
 
-# 9 阶段定义: (阶段 ID, 阶段名称, 阶段模块)
+# 10 阶段定义: (阶段 ID, 阶段名称, 阶段模块)
 STAGES: list[tuple[int, str, Any]] = [
     (1, "PDK 器件目录展示", stage1_pdk_catalog),
     (2, "电路规格定义", stage2_circuit_spec),
@@ -72,6 +73,7 @@ STAGES: list[tuple[int, str, Any]] = [
     (7, "GDS 导出", stage7_gds_export),
     (8, "光电协同", stage8_opto_electrical),
     (9, "量子光子验证", stage9_quantum_photonics),
+    (10, "Adjoint 逆向设计", stage10_adjoint_inverse_design),
 ]
 
 
@@ -181,9 +183,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--stage",
         type=int,
-        choices=range(1, 10),
+        choices=range(1, 11),
         default=None,
-        help="仅运行指定阶段（1-9），不指定则运行全部 9 阶段",
+        help="仅运行指定阶段（1-10），不指定则运行全部 10 阶段",
     )
     parser.add_argument(
         "--output-dir",

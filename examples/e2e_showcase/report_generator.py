@@ -36,6 +36,7 @@ _STAGE_NAMES = {
     7: "GDS 导出",
     8: "光电协同",
     9: "量子光子验证",
+    10: "Adjoint 逆向设计",
 }
 
 # 产物子目录列表（与 run_showcase.py 的 _OUTPUT_SUBDIRS 一致）
@@ -274,6 +275,23 @@ def _extract_stage_metrics(
             cp = klm.get("cnot_success_prob")
             if cp is not None:
                 metrics.append(("klm_cnot_success_prob", cp, "-"))
+
+    elif stage_id == 10:
+        method = outputs.get("method")
+        if method:
+            metrics.append(("method", method[:40] + "..." if len(method) > 40 else method, "-"))
+        iw = outputs.get("initial_width_nm")
+        if iw is not None:
+            metrics.append(("initial_width_nm", round(iw, 2), "nm"))
+        ow = outputs.get("optimal_width_nm")
+        if ow is not None:
+            metrics.append(("optimal_width_nm", round(ow, 2), "nm"))
+        imp = outputs.get("improvement_db")
+        if imp is not None:
+            metrics.append(("improvement_db", round(imp, 2), "dB"))
+        conv = outputs.get("converged")
+        if conv is not None:
+            metrics.append(("converged", conv, "-"))
 
     return metrics
 
