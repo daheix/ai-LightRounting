@@ -238,6 +238,14 @@ from polaris.sim.time_domain_circuit import (
     TimeDomainCircuitSimulator,
     YeeGrid,
 )
+from polaris.sim.tidy3d_integration import (
+    FDTDCrossValidator,
+    GPUFDTDConfig,
+    GPUFDTDEngine,
+    Tidy3DAdapter,
+    Tidy3DAsyncRunner,
+    Tidy3DConfig,
+)
 from polaris.sim.touchstone import load_touchstone, save_touchstone
 from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
 
@@ -428,6 +436,13 @@ __all__ = [
     "PMLBoundary",
     "TimeDomainCircuitSimulator",
     "YeeGrid",
+    # R27+R28 Tidy3D 云 API 集成 + GPU FDTD 对齐
+    "Tidy3DConfig",
+    "Tidy3DAdapter",
+    "Tidy3DAsyncRunner",
+    "GPUFDTDConfig",
+    "GPUFDTDEngine",
+    "FDTDCrossValidator",
     # R17 layout-aware 仿真（ElasticConnector + ParasiticExtractor + LayoutCircuitFeedback）
     "BBPlacement",
     "ElasticConnector",
