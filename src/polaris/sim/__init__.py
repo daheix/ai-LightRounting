@@ -216,6 +216,13 @@ from polaris.sim.time_domain_circuit import (
     TimeDomainCircuitSimulator,
     YeeGrid,
 )
+from polaris.sim.layout_aware import (
+    BBPlacement,
+    ElasticConnector,
+    LayoutAwareSimulator,
+    LayoutCircuitFeedback,
+    ParasiticExtractor,
+)
 
 __all__ = [
     # 类型
@@ -398,4 +405,10 @@ __all__ = [
     "PMLBoundary",
     "TimeDomainCircuitSimulator",
     "YeeGrid",
+    # R17 layout-aware 仿真（ElasticConnector + ParasiticExtractor + LayoutCircuitFeedback）
+    "BBPlacement",
+    "ElasticConnector",
+    "LayoutAwareSimulator",
+    "LayoutCircuitFeedback",
+    "ParasiticExtractor",
 ]
