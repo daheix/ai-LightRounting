@@ -7,6 +7,7 @@
         models.py          — 基础器件 S 参数模型（规则3复刻 SiPANN）
         touchstone.py      — Touchstone .s2p/.snp 文件加载/保存
         cascade.py         — S 参数级联器（子网络增长算法，规则3复刻 SAX）
+        caphe_backend.py   — R26 CAPHE 电路仿真器对齐（节点抽象+频域消去+时域ODE）
         simulator.py       — CircuitSimulator 电路级频率域仿真器
         device_models.py   — 51 器件到 S 参数模型映射
         constraint_checker.py — 约束检查器（16 项 DRC 规则）
@@ -51,6 +52,13 @@ from polaris.sim.building_block import (
     VirtualExperiment,
     s_to_t,
     t_to_s,
+)
+from polaris.sim.caphe_backend import (
+    CAPHEBackend,
+    CAPHENetwork,
+    CAPHENode,
+    CAPHEFrequencySolver,
+    CAPHETimeDomainSolver,
 )
 from polaris.sim.cascade import cascade_circuit
 from polaris.sim.cascade_backends import (
@@ -400,6 +408,12 @@ __all__ = [
     "VirtualExperiment",
     "s_to_t",
     "t_to_s",
+    # R26 Luceda IPKISS CAPHE 电路仿真器对齐（节点抽象+频域消去+时域ODE）
+    "CAPHEBackend",
+    "CAPHENetwork",
+    "CAPHENode",
+    "CAPHEFrequencySolver",
+    "CAPHETimeDomainSolver",
     # R14 VPIphotonics 系统级仿真（SFG + TLLM + Hybrid + Link + BER）
     "BerEvaluator",
     "HybridSimulator",
