@@ -245,6 +245,9 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
 
         for stage_id, stage_name, stage_module in stages:
             with StageLogger(stage_id, stage_name, out_dir) as sl:
+                # 记录输入参数（修复 P0: inputs 字段始终为空）
+                sl.log_input("output_dir", str(out_dir))
+                sl.log_input("stage_module", stage_module.__name__)
                 result = stage_module.run(out_dir)
                 if result:
                     for key, value in result.items():

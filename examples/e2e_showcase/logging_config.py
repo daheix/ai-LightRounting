@@ -11,7 +11,12 @@
 JSONL 日志格式：
     {"stage_id": int, "stage_name": str, "status": "running"|"done"|"failed",
      "start_time": str, "end_time": str, "duration_s": float,
-     "inputs": dict, "outputs": dict, "error": str|null}
+     "inputs": dict, "outputs": dict, "events": list[dict],
+     "error": str|null}
+
+events 字段：记录阶段执行过程中的 info/warn 中间日志，每条事件含
+level（"info"|"warning"）、time（UTC ISO 字符串）、msg（消息文本）。
+error 字段：失败时含完整 traceback 堆栈字符串。
 
 来源:
 - ANSI 转义码: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -22,7 +27,9 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -33,6 +40,9 @@ _COLOR_YELLOW = "\033[33m"
 _COLOR_RED = "\033[31m"
 _COLOR_BLUE = "\033[34m"
 _COLOR_RESET = "\033[0m"
+
+# ANSI 颜色码清理正则（用于 events 字段去除颜色码，保持 JSONL 纯文本）
+_ANSI_ESCAPE_RE = re.compile(r"\033\[[0-9;]*m")
 
 # JSONL 日志文件名
 _JSONL_FILENAME = "showcase.jsonl"
@@ -71,6 +81,39 @@ def setup_logging(output_dir: Path) -> logging.Logger:
     return logger
 
 
+class _EventCaptureHandler(logging.Handler):
+    """捕获日志记录到 StageLogger 的 events 列表。
+
+    安装在 e2e_showcase 日志器上，使阶段模块通过 _logger.info/warning
+    输出的中间日志也能被结构化捕获到 JSONL 的 events 字段。
+    """
+
+    def __init__(self, stage_logger: "StageLogger") -> None:
+        super().__init__(level=logging.INFO)
+        self._stage_logger = stage_logger
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            # 去除 ANSI 颜色码，保持 events 字段纯文本
+            msg = _ANSI_ESCAPE_RE.sub("", record.getMessage())
+            # 仅捕获 INFO 和 WARNING 级别（ERROR 由 __exit__ 处理）
+            if record.levelno == logging.INFO:
+                self._stage_logger._events.append({
+                    "level": "info",
+                    "time": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+                    "msg": msg,
+                })
+            elif record.levelno == logging.WARNING:
+                self._stage_logger._events.append({
+                    "level": "warning",
+                    "time": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+                    "msg": msg,
+                })
+        except Exception:
+            # 日志捕获不能影响主流程
+            pass
+
+
 class StageLogger:
     """阶段日志记录器，作为上下文管理器包裹单个阶段执行。
 
@@ -100,15 +143,20 @@ class StageLogger:
         self._start_str: str = ""
         self._inputs: dict[str, Any] = {}
         self._outputs: dict[str, Any] = {}
+        self._events: list[dict] = []
         self._error: str | None = None
+        self._capture_handler: _EventCaptureHandler | None = None
 
-    def __enter__(self) -> StageLogger:
-        """进入阶段：记录开始时间，打印绿色阶段头。"""
+    def __enter__(self) -> "StageLogger":
+        """进入阶段：记录开始时间，打印绿色阶段头，安装事件捕获 handler。"""
         self._start_time = time.time()
         self._start_str = datetime.now(timezone.utc).isoformat()
         bar = "=" * 60
         header = f"{bar}\n阶段 {self.stage_id}: {self.stage_name} — 开始\n{bar}"
         self._logger.info("%s%s%s", _COLOR_GREEN, header, _COLOR_RESET)
+        # 安装事件捕获 handler，使阶段模块的 _logger.info/warning 被记录到 events
+        self._capture_handler = _EventCaptureHandler(self)
+        self._logger.addHandler(self._capture_handler)
         return self
 
     def __exit__(self, exc_type: type | None, exc_val: BaseException | None, exc_tb: Any) -> bool:
@@ -122,16 +170,22 @@ class StageLogger:
         Returns:
             False，不抑制异常（规则 14.1：错误必须 raise）。
         """
+        # 先移除捕获 handler，避免 __exit__ 自身的日志被重复捕获
+        if self._capture_handler is not None:
+            self._logger.removeHandler(self._capture_handler)
+            self._capture_handler = None
+
         end_time = time.time()
         end_str = datetime.now(timezone.utc).isoformat()
         duration = end_time - self._start_time
 
         if exc_type is not None:
             status = "failed"
-            self._error = f"{exc_type.__name__}: {exc_val}"
+            tb_str = "".join(traceback.format_exception(exc_type, exc_val, exc_tb))
+            self._error = f"{exc_type.__name__}: {exc_val}\n\nTraceback:\n{tb_str}"
             footer = (
                 f"阶段 {self.stage_id}: {self.stage_name} — 失败 ({duration:.2f}s)\n"
-                f"错误: {self._error}"
+                f"错误: {exc_type.__name__}: {exc_val}"
             )
             self._logger.error("%s%s%s", _COLOR_RED, footer, _COLOR_RESET)
         else:
@@ -159,6 +213,7 @@ class StageLogger:
             "duration_s": round(duration, 4),
             "inputs": self._inputs,
             "outputs": self._outputs,
+            "events": self._events,
             "error": self._error,
         }
         jsonl_path = self.output_dir / "logs" / _JSONL_FILENAME
@@ -186,17 +241,27 @@ class StageLogger:
         self._logger.info("%s  [输出] %s: %s%s", _COLOR_YELLOW, key, value, _COLOR_RESET)
 
     def info(self, msg: str) -> None:
-        """普通信息日志（黄色，进行中）。
+        """普通信息日志（黄色，进行中），同时记录到 events。
 
         Args:
             msg: 信息消息。
         """
+        self._events.append({
+            "level": "info",
+            "time": datetime.now(timezone.utc).isoformat(),
+            "msg": msg,
+        })
         self._logger.info("%s  %s%s", _COLOR_YELLOW, msg, _COLOR_RESET)
 
     def warn(self, msg: str) -> None:
-        """警告日志（黄色，进行中）。
+        """警告日志（黄色，进行中），同时记录到 events。
 
         Args:
             msg: 警告消息。
         """
+        self._events.append({
+            "level": "warning",
+            "time": datetime.now(timezone.utc).isoformat(),
+            "msg": msg,
+        })
         self._logger.warning("%s  [警告] %s%s", _COLOR_YELLOW, msg, _COLOR_RESET)
