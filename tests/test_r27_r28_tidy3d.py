@@ -24,10 +24,12 @@ import pytest
 
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
-from polaris.sim.tidy3d_integration import (
+from polaris.sim.fdtd_gpu_engine import (
     FDTDCrossValidator,
     GPUFDTDConfig,
     GPUFDTDEngine,
+)
+from polaris.sim.tidy3d_integration import (
     Tidy3DAdapter,
     Tidy3DAsyncRunner,
     Tidy3DConfig,

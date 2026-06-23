@@ -55,9 +55,9 @@ from polaris.sim.building_block import (
 )
 from polaris.sim.caphe_backend import (
     CAPHEBackend,
+    CAPHEFrequencySolver,
     CAPHENetwork,
     CAPHENode,
-    CAPHEFrequencySolver,
     CAPHETimeDomainSolver,
 )
 from polaris.sim.cascade import cascade_circuit
@@ -86,6 +86,11 @@ from polaris.sim.eqdrc import (
     EqDRCViolation,
     FoundryDRCCertifier,
     FoundryDRCRunset,
+)
+from polaris.sim.fdtd_gpu_engine import (
+    FDTDCrossValidator,
+    GPUFDTDConfig,
+    GPUFDTDEngine,
 )
 from polaris.sim.graph_lvs import (
     EquivalenceHints,
@@ -231,20 +236,17 @@ from polaris.sim.system_level import (
     TLLMLaser,
     to_time_domain,
 )
+from polaris.sim.tidy3d_integration import (
+    Tidy3DAdapter,
+    Tidy3DAsyncRunner,
+    Tidy3DConfig,
+)
 from polaris.sim.time_domain_circuit import (
     FDTDSimulator,
     NonlinearModel,
     PMLBoundary,
     TimeDomainCircuitSimulator,
     YeeGrid,
-)
-from polaris.sim.tidy3d_integration import (
-    FDTDCrossValidator,
-    GPUFDTDConfig,
-    GPUFDTDEngine,
-    Tidy3DAdapter,
-    Tidy3DAsyncRunner,
-    Tidy3DConfig,
 )
 from polaris.sim.touchstone import load_touchstone, save_touchstone
 from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
