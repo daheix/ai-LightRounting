@@ -144,6 +144,7 @@ class GedneyPML:
         n_layers: int = 8,
         sigma_ratio: float = 1.0,
         m: int = 3,
+        eps_r_bg: float | None = None,
     ) -> None:
         """初始化 Gedney PML。
 
@@ -152,6 +153,10 @@ class GedneyPML:
             n_layers: PML 层数（每侧）。
             sigma_ratio: σ 比例系数。
             m: σ 梯度幂指数（Gedney 1996 建议 m=3）。
+            eps_r_bg: PML 背景相对介电常数。None 时取 grid.epsilon_r 的最大值。
+                R2 修复: 当 epsilon_r 空间变化（如波导）时，必须指定为背景值
+                （如硅 eps_si），避免 PML 区域 cb = cb_pml * eps_r_bg / epsilon_r
+                在 epsilon_r < eps_r_bg 时被放大导致数值不稳定（Gedney 1996 §III）。
         """
         if n_layers < 0:
             raise ValueError(f"n_layers 必须 >= 0，实际 {n_layers}")
@@ -164,6 +169,11 @@ class GedneyPML:
         self.n_layers = n_layers
         self.sigma_ratio = sigma_ratio
         self.m = m
+        if eps_r_bg is None:
+            eps_r_bg = float(jnp.max(grid.epsilon_r)) if grid.epsilon_r is not None else 1.0
+        if eps_r_bg <= 0:
+            raise ValueError(f"eps_r_bg 必须 > 0，实际 {eps_r_bg}")
+        self.eps_r_bg = eps_r_bg
 
     def _build_sigma_profile(self, n: int, dx: float, axis: str) -> jnp.ndarray:
         """构建 σ 梯度剖面。
@@ -173,7 +183,7 @@ class GedneyPML:
         """
         if self.n_layers == 0:
             return jnp.zeros(n)
-        eps_r_bg = float(jnp.max(self.grid.epsilon_r)) if self.grid.epsilon_r is not None else 1.0
+        eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max），避免 cb 放大
         sigma_max = (self.m + 1) / (150.0 * jnp.pi * dx * jnp.sqrt(eps_r_bg))
         sigma_max = sigma_max * self.sigma_ratio
         idx = jnp.arange(self.n_layers, dtype=jnp.float32)
@@ -196,7 +206,7 @@ class GedneyPML:
         """
         if dt <= 0:
             raise ValueError(f"dt 必须 > 0，实际 {dt}")
-        eps_r_bg = float(jnp.max(self.grid.epsilon_r)) if self.grid.epsilon_r is not None else 1.0
+        eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max）
         eps = EPS0 * eps_r_bg
         sigma_x = self._build_sigma_profile(self.grid.nx, self.grid.dx, "x")
         sigma_y = self._build_sigma_profile(self.grid.ny, self.grid.dy, "y")
@@ -371,6 +381,7 @@ class DifferentiableFDTD:
         grid: YeeGrid3D,
         pml: GedneyPML | None = None,
         dt: float | None = None,
+        eps_r_bg: float | None = None,
     ) -> None:
         """初始化可微分 FDTD 内核。
 
@@ -378,12 +389,20 @@ class DifferentiableFDTD:
             grid: 3D Yee 网格。
             pml: PML 边界（可选，None 表示无 PML）。
             dt: 时间步长（None 时自动按 CFL 计算）。
+            eps_r_bg: 背景相对介电常数（用于 PML 系数与 cb 计算）。
+                R2 修复: 当 epsilon_r 空间变化时，必须指定为背景值（如硅 eps_si），
+                避免 PML 区域 cb 被放大导致数值不稳定（Gedney 1996 §III）。
+                None 时取 grid.epsilon_r 最大值（向后兼容）。
         """
         self.grid = grid
         self.pml = pml
+        if eps_r_bg is None:
+            eps_r_bg = float(jnp.max(grid.epsilon_r)) if grid.epsilon_r is not None else SOI_EPS_R_SI
+        if eps_r_bg <= 0:
+            raise ValueError(f"eps_r_bg 必须 > 0，实际 {eps_r_bg}")
+        self.eps_r_bg = eps_r_bg
         if dt is None:
-            eps_max = float(jnp.max(grid.epsilon_r)) if grid.epsilon_r is not None else SOI_EPS_R_SI
-            dt = grid.cfl_timestep(eps_max)
+            dt = grid.cfl_timestep(eps_r_bg)
         if dt <= 0:
             raise ValueError(f"dt 必须 > 0，实际 {dt}")
         self.dt = dt
@@ -398,7 +417,7 @@ class DifferentiableFDTD:
         Db = (Δt/μ) / (1 + σ*Δt/2μ)        磁场驱动
         """
         shape = (self.grid.nx, self.grid.ny, self.grid.nz)
-        eps_r_bg = float(jnp.max(self.grid.epsilon_r)) if self.grid.epsilon_r is not None else 1.0
+        eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max），避免 cb 放大
         if self.pml is not None:
             (ca_x, cb_x, ca_y, cb_y, ca_z, cb_z) = self.pml.damping_coefficients(self.dt)
             # 三轴 PML 系数合并（取最大阻尼）
@@ -492,14 +511,15 @@ class DifferentiableFDTD:
         """
         shape = (self.grid.nx, self.grid.ny, self.grid.nz)
         eps = EPS0 * jnp.asarray(epsilon_r)
-        eps_r_bg = float(jnp.max(self.grid.epsilon_r)) if self.grid.epsilon_r is not None else 1.0
+        eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max），避免 PML 区域 cb 放大
         # 在 run 内重新计算 Ca/Cb/Da/Db（使 jax.grad 能追踪 epsilon_r 梯度）
         if self.pml is not None:
             (ca_x, cb_x, ca_y, cb_y, ca_z, cb_z) = self.pml.damping_coefficients(self.dt)
             ca_pml = jnp.minimum(jnp.minimum(ca_x, ca_y), ca_z) * jnp.ones(shape)
             cb_pml = jnp.minimum(jnp.minimum(cb_x, cb_y), cb_z) * jnp.ones(shape)
             # Cb: PML 系数已含 1/eps_bg，乘 eps_bg/epsilon_r 得到 1/epsilon_r
-            # 非 PML 区域: cb = dt/(EPS0*eps_r_bg) * eps_r_bg/epsilon_r = dt/(EPS0*epsilon_r) ✓
+            # R2 修复: eps_r_bg = 背景值（如 eps_si），PML 区域 epsilon_r ≈ eps_r_bg，
+            # cb ≈ cb_pml（不放大）；波导区域 epsilon_r > eps_r_bg，cb < cb_pml（缩小，稳定）
             cb = cb_pml * eps_r_bg / jnp.asarray(epsilon_r)
             ca = ca_pml
             # 磁场 PML 阻尼（阻抗匹配: σ_m/μ = σ/ε，Gedney 1996 IEEE TAP）

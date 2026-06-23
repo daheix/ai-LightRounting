@@ -229,9 +229,10 @@ def _run_adjoint_optimization() -> dict:
 
     # R2: 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
     # R1 时因无 PML 被迫限制折射率差（20% 调制），R2 启用 PML 后可用真实硅/二氧化硅折射率差
-    pml = GedneyPML(grid, n_layers=_PML_N_LAYERS)
-    fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt)
-    _logger.info("PML 吸收边界: %d 层（Gedney 1996 IEEE TAP）", _PML_N_LAYERS)
+    # R2 修复: 指定 eps_r_bg=_EPS_R_SI（硅背景），避免 PML 区域 cb 被放大（Gedney 1996 §III）
+    pml = GedneyPML(grid, n_layers=_PML_N_LAYERS, eps_r_bg=_EPS_R_SI)
+    fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=_EPS_R_SI)
+    _logger.info("PML 吸收边界: %d 层（Gedney 1996 IEEE TAP）, eps_r_bg=%.3f", _PML_N_LAYERS, _EPS_R_SI)
 
     # 源/监视器位置（R2: z=3 在 PML 外，PML z=[0:2] 和 [6:8]）
     source_pos = (3, ny // 2, 3)
