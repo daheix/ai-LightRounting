@@ -24,17 +24,13 @@
 from __future__ import annotations
 
 import logging
-import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 
-from polaris.nn import Tensor
 from polaris.trainer.pretrain import (
     ALL_PLATFORMS,
-    PLATFORM_PHYSICAL_PARAMS,
     PLATFORM_SOI,
     CheckpointManager,
     CosineAnnealingLR,
@@ -297,10 +293,16 @@ class CurriculumScheduler:
 
         Args:
             levels: 课程级别列表（None 用默认 5→100 课程）。
+
+        Raises:
+            ValueError: levels 为空列表。
         """
-        self.levels = levels or list(DEFAULT_CURRICULUM)
-        if not self.levels:
-            raise ValueError("课程级别列表不能为空")
+        if levels is None:
+            self.levels = list(DEFAULT_CURRICULUM)
+        else:
+            if not levels:
+                raise ValueError("课程级别列表不能为空")
+            self.levels = list(levels)
         self.current_level = 0
         self.current_epoch = 0
 
@@ -628,13 +630,19 @@ class SelfSupervisedPretrainer:
             node_emb = gnn(node_feats_tensor, sample.edge_index, edge_feats_tensor)
         else:
             node_emb = gnn(node_feats_tensor, sample.edge_index)
-        # 节点重建损失
+        # 节点重建损失：若 GNN 输出为图级（1D），用原始节点特征做代理
+        node_emb_data = node_emb.data
+        if node_emb_data.ndim == 1:
+            # 图级输出：广播到节点级（每个节点用同一嵌入）
+            node_emb_data = np.broadcast_to(
+                node_emb_data, (sample.node_feats.shape[0], node_emb_data.shape[0])
+            ).copy()
         node_loss = self.node_task.compute_loss(
-            node_emb.data, sample.node_feats, mask_indices
+            node_emb_data, sample.node_feats, mask_indices
         )
-        # 边类型预测损失（用 GNN 输出的节点嵌入拼接预测边类型）
+        # 边类型预测损失（用节点嵌入拼接预测边类型）
         edge_loss = self._compute_edge_prediction_loss(
-            node_emb.data, sample.edge_index, sample.edge_feats
+            node_emb_data, sample.edge_index, sample.edge_feats
         )
         return node_loss, edge_loss
 
@@ -729,8 +737,6 @@ class FineTuner:
             config: 微调配置（None 用默认值）。
             checkpoint_dir: checkpoint 目录。
         """
-        from pathlib import Path  # 局部导入避免顶部未使用
-
         self.config = config or FineTuneConfig()
         self.checkpoint_manager = CheckpointManager(checkpoint_dir)
         self.ewc: EWCRegularizer | None = None

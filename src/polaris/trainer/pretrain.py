@@ -36,7 +36,7 @@ import json
 import logging
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -47,7 +47,6 @@ from polaris.data.variant_generator import (
     _scale_random_circuit,
     _scale_splitter_tree,
     _scale_switch_chain,
-    make_device_with_params,
 )
 
 logger = logging.getLogger(__name__)
@@ -274,10 +273,13 @@ class PretrainDataset:
             电路规格。
         """
         if template == "mzi_lattice":
-            stages = max(1, n_devices // 2)
+            # mzi_lattice 器件数 = 2*stages + 2（gc_in + gc_out + stages*(dc+wg)）
+            stages = max(1, (n_devices - 2) // 2)
             return _scale_mzi_lattice(stages)
         if template == "splitter_tree":
-            levels = max(1, int(math.log2(max(2, n_devices))))
+            # splitter_tree 总器件数 ≈ 2^(levels+1)，限制 levels 使器件数在 [5, n_devices]
+            # levels=2 → 10 器件（最小满足 §7.1 的 5 节点要求）
+            levels = max(2, int(math.log2(max(4, n_devices // 2))))
             return _scale_splitter_tree(levels)
         if template == "switch_chain":
             return _scale_switch_chain(max(1, n_devices - 2))
@@ -521,7 +523,7 @@ class DataAugmentor:
             镜像后的样本。
         """
         flipped = self._copy_sample(sample, "hflip")
-        for dev_name, place in flipped.placements.items():
+        for _dev_name, place in flipped.placements.items():
             place["x"] = self.canvas_w - place.get("x", 0)
         # 边特征中的距离保持不变（镜像不改变距离）
         return flipped
@@ -544,7 +546,7 @@ class DataAugmentor:
         rotated = self._copy_sample(sample, f"rot{angle_deg}")
         if angle_deg == 0:
             return rotated
-        for dev_name, place in rotated.placements.items():
+        for _dev_name, place in rotated.placements.items():
             x, y = place.get("x", 0), place.get("y", 0)
             if angle_deg == 90:
                 new_x, new_y = -y, x
