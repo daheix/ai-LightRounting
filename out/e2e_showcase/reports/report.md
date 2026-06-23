@@ -1,6 +1,6 @@
 # PoLaRIS 端到端 Demo Showcase 汇总报告
 
-生成时间: 2026-06-23 17:16:49 UTC
+生成时间: 2026-06-23 17:22:58 UTC
 
 ## 阶段执行状态
 
@@ -48,6 +48,7 @@
 | 10 | Adjoint 逆向设计 | done | 25.92 | — |
 | 10 | Adjoint 逆向设计 | done | 24.89 | — |
 | 10 | Adjoint 逆向设计 | done | 25.96 | — |
+| 10 | Adjoint 逆向设计 | done | 26.08 | — |
 
 ## 关键指标汇总
 
@@ -84,6 +85,11 @@
 | 10 | optimal_width_nm | 1000.0 | nm |
 | 10 | improvement_db | 14.72 | dB |
 | 10 | converged | true | - |
+| 10 | method | JAX jax.grad 自动微分（*创新*，替代 lumopt 手动伴随方程） | - |
+| 10 | initial_width_nm | 400.0 | nm |
+| 10 | optimal_width_nm | nan | nm |
+| 10 | improvement_db | nan | dB |
+| 10 | converged | false | - |
 | 10 | method | JAX jax.grad 自动微分（*创新*，替代 lumopt 手动伴随方程） | - |
 | 10 | initial_width_nm | 400.0 | nm |
 | 10 | optimal_width_nm | nan | nm |
@@ -145,13 +151,14 @@
 阶段 10 [Adjoint 逆向设计    ] ███ (25.92s)
 阶段 10 [Adjoint 逆向设计    ] ███ (24.89s)
 阶段 10 [Adjoint 逆向设计    ] ███ (25.96s)
+阶段 10 [Adjoint 逆向设计    ] ███ (26.08s)
 ```
 
 ## 产物文件清单
 
 | 文件 | 大小 | 路径 |
 |------|------|------|
-| showcase.jsonl | 244.9 KB | logs/showcase.jsonl |
+| showcase.jsonl | 251.2 KB | logs/showcase.jsonl |
 | Clements_4x4.gds | 158.6 KB | gds/Clements_4x4.gds |
 | MZI.gds | 18.3 KB | gds/MZI.gds |
 | Quantum_BosonSampling.gds | 78.1 KB | gds/Quantum_BosonSampling.gds |
@@ -173,14 +180,14 @@
 | mzi_s_param.csv | 6.4 KB | reports/mzi_s_param.csv |
 | pam4_eye.json | 288.3 KB | reports/pam4_eye.json |
 | pam4_eye_optoelectronic.json | 288.4 KB | reports/pam4_eye_optoelectronic.json |
-| report.md | 8.4 KB | reports/report.md |
+| report.md | 8.7 KB | reports/report.md |
 
 ## 汇总
 
-- 总阶段数: 42
-- 成功: 42
+- 总阶段数: 43
+- 成功: 43
 - 失败: 0
-- 总耗时: 364.48s
+- 总耗时: 390.57s
 
 ## 学术诚信声明
 
