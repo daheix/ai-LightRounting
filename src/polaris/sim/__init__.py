@@ -54,10 +54,12 @@ from polaris.sim.building_block import (
     t_to_s,
 )
 from polaris.sim.caphe_backend import (
-    CAPHEBackend,
+    CAPHEFrequencySolver,
     CAPHENetwork,
     CAPHENode,
-    CAPHEFrequencySolver,
+)
+from polaris.sim.caphe_time_domain import (
+    CAPHEBackend,
     CAPHETimeDomainSolver,
 )
 from polaris.sim.cascade import cascade_circuit
@@ -238,10 +240,20 @@ from polaris.sim.time_domain_circuit import (
     TimeDomainCircuitSimulator,
     YeeGrid,
 )
-from polaris.sim.tidy3d_integration import (
+from polaris.sim.fdtd_gpu_engine import (
     FDTDCrossValidator,
     GPUFDTDConfig,
     GPUFDTDEngine,
+)
+from polaris.sim.fdtd_jax_backend import (
+    DifferentiableFDTD,
+    FDEModeSolver,
+    GedneyPML,
+    JAXFDTDEngine,
+    SParamExtractor,
+    YeeGrid3D,
+)
+from polaris.sim.tidy3d_integration import (
     Tidy3DAdapter,
     Tidy3DAsyncRunner,
     Tidy3DConfig,
@@ -443,6 +455,13 @@ __all__ = [
     "GPUFDTDConfig",
     "GPUFDTDEngine",
     "FDTDCrossValidator",
+    # R31 Lumerical FDTD 3D 全波对齐（JAX 可微分内核）
+    "YeeGrid3D",
+    "GedneyPML",
+    "FDEModeSolver",
+    "SParamExtractor",
+    "DifferentiableFDTD",
+    "JAXFDTDEngine",
     # R17 layout-aware 仿真（ElasticConnector + ParasiticExtractor + LayoutCircuitFeedback）
     "BBPlacement",
     "ElasticConnector",

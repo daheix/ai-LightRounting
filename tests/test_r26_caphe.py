@@ -25,10 +25,12 @@ import numpy as np
 import pytest
 
 from polaris.sim.caphe_backend import (
-    CAPHEBackend,
+    CAPHEFrequencySolver,
     CAPHENetwork,
     CAPHENode,
-    CAPHEFrequencySolver,
+)
+from polaris.sim.caphe_time_domain import (
+    CAPHEBackend,
     CAPHETimeDomainSolver,
 )
 from polaris.sim.cascade import cascade_circuit
