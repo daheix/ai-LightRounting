@@ -56,6 +56,15 @@ from polaris.pdk.pcell import (
     clear_pcell_cache,
     polaris_cell,
 )
+from polaris.pdk.vpi_pdk import (
+    PDAflowExporter,
+    VPIBuildingBlock,
+    VPIPDKRegistry,
+    VPIToolkitPDK,
+    build_hhi_pdk,
+    build_ligentec_pdk,
+    build_lionix_pdk,
+)
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.sin import SIN_DEVICES
 from polaris.pdk.soi import SOI_DEVICES
@@ -103,4 +112,12 @@ __all__ = [
     "parse_pic_yaml",
     "polaris_cell",
     "polaris_to_gdsfactory_component",
+    # R15 VPIphotonics PDK 对齐（VPIToolkitPDK + PDAflow + 3 foundry PDK）
+    "PDAflowExporter",
+    "VPIBuildingBlock",
+    "VPIPDKRegistry",
+    "VPIToolkitPDK",
+    "build_hhi_pdk",
+    "build_ligentec_pdk",
+    "build_lionix_pdk",
 ]
