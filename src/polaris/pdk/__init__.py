@@ -54,6 +54,16 @@ from polaris.pdk.layer_map import (
     get_layer_tuple,
 )
 from polaris.pdk.lnoi import LNOI_DEVICES
+from polaris.pdk.optodesigner import (
+    DesignIntent,
+    DesignIntentEngine,
+    FlexConnector,
+    HierarchyDesign,
+    PDAflowInterop,
+    PyCell,
+    PyCellFactory,
+    TechnologyRule,
+)
 from polaris.pdk.pcell import (
     PCellCache,
     PCellMultiView,
@@ -132,6 +142,15 @@ __all__ = [
     "build_lionix_pdk",
     # R19 L-Edit GPIC iPDK 对齐（GPICPDK + 15 BB + SPICE + PDAflow）
     "build_gpic_pdk",
+    # R20 Synopsys OptoDesigner 版图驱动设计对齐
+    "DesignIntent",
+    "DesignIntentEngine",
+    "FlexConnector",
+    "HierarchyDesign",
+    "PDAflowInterop",
+    "PyCell",
+    "PyCellFactory",
+    "TechnologyRule",
 ]
 
 
