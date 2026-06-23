@@ -10,6 +10,10 @@
 R09 路标：重导出 gdsfactory PDK 桥接模块（``gdsfactory_pdk_bridge``）的
 公开符号，包括 PDK 注册表、LayerStack/CrossSection 转换、YAML 解析、
 PolarisPDKRegistry、反向转换、版本兼容检测。
+
+R11 路标：重导出版图参数化代码驱动模块（``pcell``）的公开符号，包括
+``@polaris_cell`` 装饰器、``PCellMultiView`` 多视图 PCell、``TransformMatrix``
+仿射变换引擎、``ai_generate_pcell`` AI 辅助生成。
 """
 
 from polaris.pdk.catalog import DeviceCatalog, default_catalog
@@ -44,17 +48,12 @@ from polaris.pdk.layer_map import (
     get_layer_tuple,
 )
 from polaris.pdk.lnoi import LNOI_DEVICES
-from polaris.pdk.pcell_engine import (
-    BezierTransform,
-    CircuitView,
-    LayoutView,
-    NetlistView,
-    PCell,
+from polaris.pdk.pcell import (
     PCellCache,
-    Reference,
-    Transform2D,
+    PCellMultiView,
+    TransformMatrix,
     ai_generate_pcell,
-    bezier_transform,
+    clear_pcell_cache,
     polaris_cell,
 )
 from polaris.pdk.port import Direction, Port
@@ -63,9 +62,7 @@ from polaris.pdk.soi import SOI_DEVICES
 from polaris.pdk.source import Source
 
 __all__ = [
-    "BezierTransform",
     "BoundingBox",
-    "CircuitView",
     "Device",
     "DeviceCatalog",
     "Direction",
@@ -73,10 +70,8 @@ __all__ = [
     "GDSLayer",
     "INP_DEVICES",
     "LNOI_DEVICES",
-    "LayoutView",
-    "NetlistView",
-    "PCell",
     "PCellCache",
+    "PCellMultiView",
     "PDKConflict",
     "PDKInfo",
     "POLARIS_CATEGORY_LAYER_MAP",
@@ -92,15 +87,14 @@ __all__ = [
     "PolarisPDKRegistry",
     "PolarisSection",
     "Port",
-    "Reference",
     "SIN_DEVICES",
     "SOI_DEVICES",
     "Source",
-    "Transform2D",
+    "TransformMatrix",
     "VersionCompatibility",
     "ai_generate_pcell",
-    "bezier_transform",
     "check_gdsfactory_version_compatibility",
+    "clear_pcell_cache",
     "convert_crosssection",
     "convert_layerstack",
     "default_catalog",
