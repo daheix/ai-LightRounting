@@ -119,10 +119,15 @@ def test_convert_funcs_raise_import_error():
 
 @pytest.mark.skipif(not _HAS_GDSFACTORY, reason="gdsfactory 未安装")
 def test_convert_layerstack_real():
-    """gdsfactory 可用时转换真实 LayerStack。"""
+    """gdsfactory 可用时转换真实 LayerStack。
+
+    gdsfactory 9.44.0 API: 需先激活 PDK，再用 pdk.get_layer_stack()。
+    """
     import gdsfactory as gf
 
-    result = convert_layerstack(gf.get_layer_stack())
+    gf.gpdk.PDK.activate()
+    pdk = gf.get_active_pdk()
+    result = convert_layerstack(pdk.get_layer_stack())
     assert isinstance(result, PolarisLayerStack) and len(result.levels) > 0
 
 

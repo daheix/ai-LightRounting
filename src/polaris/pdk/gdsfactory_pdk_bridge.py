@@ -140,13 +140,20 @@ def _ensure_gdsfactory_available() -> None:
 
 
 def convert_layerstack(gf_layerstack: Any) -> PolarisLayerStack:
-    """转换 gdsfactory LayerStack 为 PolarisLayerStack。Raises: ImportError/ValueError。来源: https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/technology/layer_stack.py"""
+    """转换 gdsfactory LayerStack 为 PolarisLayerStack。Raises: ImportError/ValueError。来源: https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/technology/layer_stack.py
+
+    gdsfactory 9.44.0 API: LayerStack.layers 为 dict[str, LayerLevel]。
+    兼容旧版 levels 属性。
+    """
     _ensure_gdsfactory_available()
-    gf_levels = getattr(gf_layerstack, "levels", None)
+    # gdsfactory 9.44.0 用 .layers（dict），旧版用 .levels
+    gf_levels = getattr(gf_layerstack, "layers", None) or getattr(gf_layerstack, "levels", None)
     if gf_levels is None:
-        raise ValueError("gdsfactory LayerStack 无 levels 属性")
+        raise ValueError("gdsfactory LayerStack 无 layers/levels 属性")
     levels: list[PolarisLayerLevel] = []
-    for level_name, level in gf_levels.items():
+    # gf_levels 可能是 dict 或 list
+    items = gf_levels.items() if hasattr(gf_levels, "items") else enumerate(gf_levels)
+    for level_name, level in items:
         layer = getattr(level, "layer", level_name)
         if isinstance(layer, tuple):
             layer = f"{layer[0]}/{layer[1]}"
@@ -419,6 +426,10 @@ def polaris_to_gdsfactory_component(device: Device) -> Any:
 
     创新逻辑：gdsfactory 无双向互操作，PoLaRIS 提供反向转换。
     支持理论: 互操作层模式（Fowler 2002）。Raises: ImportError（规则 14.1）。
+
+    gdsfactory 9.44.0: add_port 需指定 layer 或 cross_section。
+    使用 (1, 0) 作为默认 WG 层（SiEPIC 标准，layer 1 datatype 0）。
+    来源: SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     _ensure_gdsfactory_available()
     component = gf.Component(name=device.device_id)
@@ -428,7 +439,8 @@ def polaris_to_gdsfactory_component(device: Device) -> Any:
             center=(port.x, port.y),
             width=port.width,
             orientation=_DIRECTION_TO_ORIENTATION.get(port.direction, 0.0),
-            port_type=port.waveguide_type,
+            port_type="optical" if "optical" in port.waveguide_type else "electrical",
+            layer=(1, 0),  # SiEPIC WG 层标准
         )
     component.info["polaris_device_id"] = device.device_id
     component.info["polaris_platform"] = device.platform
