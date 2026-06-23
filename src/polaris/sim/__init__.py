@@ -209,6 +209,13 @@ from polaris.sim.system_level import (
     TimeDomainSimulator,
     to_time_domain,
 )
+from polaris.sim.time_domain_circuit import (
+    FDTDSimulator,
+    NonlinearModel,
+    PMLBoundary,
+    TimeDomainCircuitSimulator,
+    YeeGrid,
+)
 
 __all__ = [
     # 类型
@@ -385,4 +392,10 @@ __all__ = [
     "TLLMLaser",
     "TimeDomainSimulator",
     "to_time_domain",
+    # R16 时域光子电路仿真（FDTD + Yee + PML + Nonlinear + Circuit）
+    "FDTDSimulator",
+    "NonlinearModel",
+    "PMLBoundary",
+    "TimeDomainCircuitSimulator",
+    "YeeGrid",
 ]
