@@ -44,13 +44,28 @@ from polaris.pdk.layer_map import (
     get_layer_tuple,
 )
 from polaris.pdk.lnoi import LNOI_DEVICES
+from polaris.pdk.pcell_engine import (
+    BezierTransform,
+    CircuitView,
+    LayoutView,
+    NetlistView,
+    PCell,
+    PCellCache,
+    Reference,
+    Transform2D,
+    ai_generate_pcell,
+    bezier_transform,
+    polaris_cell,
+)
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.sin import SIN_DEVICES
 from polaris.pdk.soi import SOI_DEVICES
 from polaris.pdk.source import Source
 
 __all__ = [
+    "BezierTransform",
     "BoundingBox",
+    "CircuitView",
     "Device",
     "DeviceCatalog",
     "Direction",
@@ -58,6 +73,10 @@ __all__ = [
     "GDSLayer",
     "INP_DEVICES",
     "LNOI_DEVICES",
+    "LayoutView",
+    "NetlistView",
+    "PCell",
+    "PCellCache",
     "PDKConflict",
     "PDKInfo",
     "POLARIS_CATEGORY_LAYER_MAP",
@@ -73,10 +92,14 @@ __all__ = [
     "PolarisPDKRegistry",
     "PolarisSection",
     "Port",
+    "Reference",
     "SIN_DEVICES",
     "SOI_DEVICES",
     "Source",
+    "Transform2D",
     "VersionCompatibility",
+    "ai_generate_pcell",
+    "bezier_transform",
     "check_gdsfactory_version_compatibility",
     "convert_crosssection",
     "convert_layerstack",
@@ -84,5 +107,6 @@ __all__ = [
     "get_category_layer_tuple",
     "get_layer_tuple",
     "parse_pic_yaml",
+    "polaris_cell",
     "polaris_to_gdsfactory_component",
 ]
