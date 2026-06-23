@@ -1,0 +1,15 @@
+`include "disciplines.vams"
+module photodetector_soi (in, rf_out);
+  electrical in, rf_out;  // in 光学, rf_out 电学输出
+  parameter real responsivity = 1.000000e+00 from [0:inf);  // A/W
+  parameter real load_resistance = 5.000000e+01 from (0:inf);  // Ohm
+  real i_photo, v_out;
+
+  analog begin
+    // 光电流 I_photo = R * P_in (P_in 正比于 V(in)^2)
+    i_photo = responsivity * V(in) * V(in);
+    // 输出电压 V_out = I_photo * R_load
+    v_out = i_photo * load_resistance;
+    V(rf_out) <+ v_out;
+  end
+endmodule
