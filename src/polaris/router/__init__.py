@@ -5,6 +5,10 @@
 
 R10 路标新增：gdsfactory routing strategies 对齐
 （JPS/Bundle/AllAngle/Dubins/AutoTaper/LengthMatch/自适应交叉）。
+
+R21 路标新增：LiDAR 曲线感知 A* + OptoDesigner Autorouting 对齐
+（CurvyAStarRouter/AdaptiveCrossingInserter/CongestionAwareNetOrdering/
+OptoDesignerAutorouter/DRVFreeValidator）。
 """
 
 from polaris.router.all_angle_router import AllAngleRouter
@@ -14,6 +18,19 @@ from polaris.router.bundle_router import (
     route_bundle,
     route_bundle_from_waypoints,
     route_bundle_path_length_match,
+)
+from polaris.router.curvy_router import (
+    AdaptiveCrossingInserter,
+    CongestionAwareNetOrdering,
+    CurveType,
+    CurvyAStarConfig,
+    CurvyAStarRouter,
+    CurvyPathResult,
+    CurvyRouteConfig,
+    CurvyRouter,
+    DRVFreeValidator,
+    OptoDesignerAutorouter,
+    route_curvy_connection,
 )
 from polaris.router.jps_router import JPSRouter
 
@@ -26,4 +43,17 @@ __all__ = [
     "route_bundle",
     "route_bundle_from_waypoints",
     "route_bundle_path_length_match",
+    # R21: LiDAR 曲线感知 A* + OptoDesigner Autorouting 对齐
+    "AdaptiveCrossingInserter",
+    "CongestionAwareNetOrdering",
+    "CurvyAStarConfig",
+    "CurvyAStarRouter",
+    "DRVFreeValidator",
+    "OptoDesignerAutorouter",
+    # R10: 向后兼容 route_curvy_connection API
+    "CurvyRouter",
+    "CurvyRouteConfig",
+    "CurvyPathResult",
+    "CurveType",
+    "route_curvy_connection",
 ]
