@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 import traceback
 from datetime import datetime, timezone
@@ -39,6 +40,9 @@ _COLOR_YELLOW = "\033[33m"
 _COLOR_RED = "\033[31m"
 _COLOR_BLUE = "\033[34m"
 _COLOR_RESET = "\033[0m"
+
+# ANSI 颜色码清理正则（用于 events 字段去除颜色码，保持 JSONL 纯文本）
+_ANSI_ESCAPE_RE = re.compile(r"\033\[[0-9;]*m")
 
 # JSONL 日志文件名
 _JSONL_FILENAME = "showcase.jsonl"
@@ -90,18 +94,20 @@ class _EventCaptureHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
+            # 去除 ANSI 颜色码，保持 events 字段纯文本
+            msg = _ANSI_ESCAPE_RE.sub("", record.getMessage())
             # 仅捕获 INFO 和 WARNING 级别（ERROR 由 __exit__ 处理）
             if record.levelno == logging.INFO:
                 self._stage_logger._events.append({
                     "level": "info",
                     "time": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
-                    "msg": record.getMessage(),
+                    "msg": msg,
                 })
             elif record.levelno == logging.WARNING:
                 self._stage_logger._events.append({
                     "level": "warning",
                     "time": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
-                    "msg": record.getMessage(),
+                    "msg": msg,
                 })
         except Exception:
             # 日志捕获不能影响主流程
