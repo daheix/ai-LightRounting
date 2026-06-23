@@ -31,14 +31,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
-from scipy.integrate import solve_ivp
-
-from polaris.sim.types import SDict
 
 logger = logging.getLogger(__name__)
 
@@ -100,8 +97,8 @@ class CAPHENode:
     name: str
     s_matrix: np.ndarray | Callable[[float], np.ndarray]
     state_variables: dict = field(default_factory=dict)
-    ode_func: Optional[Callable[[float, np.ndarray, np.ndarray], np.ndarray]] = None
-    output_func: Optional[Callable[[float, np.ndarray, np.ndarray], np.ndarray]] = None
+    ode_func: Callable[[float, np.ndarray, np.ndarray], np.ndarray] | None = None
+    output_func: Callable[[float, np.ndarray, np.ndarray], np.ndarray] | None = None
     is_linear: bool = True
     port_names: list[str] = field(default_factory=list)
 
@@ -135,9 +132,7 @@ class CAPHENode:
             return int(trial.shape[0])
         arr = np.asarray(self.s_matrix, dtype=complex)
         if arr.ndim != 2 or arr.shape[0] != arr.shape[1]:
-            raise ValueError(
-                f"节点 {self.name!r} S 矩阵必须是方阵，得到 shape={arr.shape}"
-            )
+            raise ValueError(f"节点 {self.name!r} S 矩阵必须是方阵，得到 shape={arr.shape}")
         return int(arr.shape[0])
 
     def get_s_matrix(self, wavelength: float = 1.55) -> np.ndarray:
@@ -152,9 +147,7 @@ class CAPHENode:
         if callable(self.s_matrix):
             sm = np.asarray(self.s_matrix(wavelength), dtype=complex)
             if sm.ndim != 2 or sm.shape[0] != sm.shape[1]:
-                raise ValueError(
-                    f"节点 {self.name!r} S 矩阵函数返回非方阵 shape={sm.shape}"
-                )
+                raise ValueError(f"节点 {self.name!r} S 矩阵函数返回非方阵 shape={sm.shape}")
             return sm
         return np.asarray(self.s_matrix, dtype=complex)
 
@@ -206,9 +199,7 @@ class CAPHENetwork:
             raise ValueError(f"节点 {node.name!r} 已存在")
         self._nodes[node.name] = node
 
-    def connect(
-        self, node1: str, port1: int, node2: str, port2: int
-    ) -> None:
+    def connect(self, node1: str, port1: int, node2: str, port2: int) -> None:
         """连接两个节点的端口。
 
         Args:
@@ -225,19 +216,13 @@ class CAPHENetwork:
                 raise ValueError(f"节点 {name!r} 不存在")
             node = self._nodes[name]
             if port < 0 or port >= node.n_ports:
-                raise ValueError(
-                    f"节点 {name!r} 端口索引 {port} 越界（0-{node.n_ports - 1}）"
-                )
+                raise ValueError(f"节点 {name!r} 端口索引 {port} 越界（0-{node.n_ports - 1}）")
         # 检查端口是否已被连接
         for n1, p1, n2, p2 in self._connections:
             if (n1 == node1 and p1 == port1) or (n2 == node2 and p2 == port2):
-                raise ValueError(
-                    f"端口 {node1}.{port1} 或 {node2}.{port2} 已被连接"
-                )
+                raise ValueError(f"端口 {node1}.{port1} 或 {node2}.{port2} 已被连接")
             if (n1 == node2 and p1 == port2) or (n2 == node1 and p2 == port1):
-                raise ValueError(
-                    f"端口 {node2}.{port2} 或 {node1}.{port1} 已被连接"
-                )
+                raise ValueError(f"端口 {node2}.{port2} 或 {node1}.{port1} 已被连接")
         self._connections.append((node1, port1, node2, port2))
 
     def add_external_port(self, ext_name: str, node_name: str, port_idx: int) -> None:
@@ -257,9 +242,7 @@ class CAPHENetwork:
             raise ValueError(f"节点 {node_name!r} 不存在")
         node = self._nodes[node_name]
         if port_idx < 0 or port_idx >= node.n_ports:
-            raise ValueError(
-                f"节点 {node_name!r} 端口索引 {port_idx} 越界"
-            )
+            raise ValueError(f"节点 {node_name!r} 端口索引 {port_idx} 越界")
         self._external_ports[ext_name] = (node_name, port_idx)
 
     def get_nodes(self) -> list[CAPHENode]:
@@ -365,9 +348,7 @@ class CAPHEFrequencySolver:
                         cols.append(self._port_index[key_j])
                         vals.append(complex(sm[i, j]))
 
-        S_block = sp.csr_matrix(
-            (vals, (rows, cols)), shape=(n, n), dtype=complex
-        )
+        S_block = sp.csr_matrix((vals, (rows, cols)), shape=(n, n), dtype=complex)
         return S_block
 
     def build_connection_matrix(self) -> sp.csr_matrix:
@@ -393,14 +374,10 @@ class CAPHEFrequencySolver:
             cols.extend([j, i])
             vals.extend([1.0, 1.0])
 
-        C = sp.csr_matrix(
-            (vals, (rows, cols)), shape=(n, n), dtype=complex
-        )
+        C = sp.csr_matrix((vals, (rows, cols)), shape=(n, n), dtype=complex)
         return C
 
-    def eliminate_linear_nodes(
-        self, wavelength: float = 1.55
-    ) -> tuple[sp.csr_matrix, list[str]]:
+    def eliminate_linear_nodes(self, wavelength: float = 1.55) -> tuple[sp.csr_matrix, list[str]]:
         """消去无源线性节点。
 
         学术依据：CAPHE 频域消去算法（Fiers 2012 §III-A）
@@ -433,7 +410,7 @@ class CAPHEFrequencySolver:
 
         # 识别可消去的端口：无源线性节点且非外部端口
         ext_port_keys: set[str] = set()
-        for ext_name, (node_name, port_idx) in self.network.external_ports.items():
+        for _ext_name, (node_name, port_idx) in self.network.external_ports.items():
             ext_port_keys.add(f"{node_name}:{port_idx}")
 
         keep_indices: list[int] = []
@@ -448,8 +425,7 @@ class CAPHEFrequencySolver:
                 if node.is_linear and not is_external:
                     # 检查是否连接到其他节点（叶子节点可消去）
                     has_connection = any(
-                        (n1 == node.name and p1 == p) or
-                        (n2 == node.name and p2 == p)
+                        (n1 == node.name and p1 == p) or (n2 == node.name and p2 == p)
                         for n1, p1, n2, p2 in self.network.connections
                     )
                     if has_connection:
@@ -478,14 +454,11 @@ class CAPHEFrequencySolver:
         # 检查 M_bb 条件数
         try:
             cond_bb = np.linalg.cond(M_bb)
-        except np.linalg.LinAlgError:
-            raise RuntimeError(
-                f"消去子矩阵奇异，无法计算 Schur 补（节点数={len(elim)}）"
-            )
+        except np.linalg.LinAlgError as exc:
+            raise RuntimeError(f"消去子矩阵奇异，无法计算 Schur 补（节点数={len(elim)}）") from exc
         if cond_bb > SINGULAR_THRESHOLD:
             raise RuntimeError(
-                f"消去子矩阵条件数 {cond_bb:.2e} 过大（>{SINGULAR_THRESHOLD}），"
-                f"Schur 补数值不稳定"
+                f"消去子矩阵条件数 {cond_bb:.2e} 过大（>{SINGULAR_THRESHOLD}），Schur 补数值不稳定"
             )
 
         # Schur 补: M_reduced = M_aa - M_ab · M_bb^{-1} · M_ba
@@ -536,9 +509,7 @@ class CAPHEFrequencySolver:
             if ext_name not in self.network.external_ports:
                 raise ValueError(f"外部端口 {ext_name!r} 不存在")
 
-        outputs: dict[str, list[complex]] = {
-            name: [] for name in self.network.external_ports
-        }
+        outputs: dict[str, list[complex]] = {name: [] for name in self.network.external_ports}
         internal_all: dict[str, list[complex]] = {}
 
         for wl in wl_arr:
@@ -552,20 +523,12 @@ class CAPHEFrequencySolver:
 
         return {
             "wavelengths": wl_arr,
-            "outputs": {
-                name: np.array(vals, dtype=complex)
-                for name, vals in outputs.items()
-            },
-            "internal": {
-                key: np.array(vals, dtype=complex)
-                for key, vals in internal_all.items()
-            },
+            "outputs": {name: np.array(vals, dtype=complex) for name, vals in outputs.items()},
+            "internal": {key: np.array(vals, dtype=complex) for key, vals in internal_all.items()},
             "eliminated": result.get("eliminated", []),
         }
 
-    def _solve_single_wavelength(
-        self, wavelength: float, inputs: dict[str, complex]
-    ) -> dict:
+    def _solve_single_wavelength(self, wavelength: float, inputs: dict[str, complex]) -> dict:
         """单波长求解。"""
         n = len(self._port_index)
         S = self.build_global_matrix(wavelength)
@@ -586,10 +549,8 @@ class CAPHEFrequencySolver:
         try:
             M_dense = M.toarray()
             cond = np.linalg.cond(M_dense)
-        except np.linalg.LinAlgError:
-            raise RuntimeError(
-                f"全局矩阵奇异（波长={wavelength} μm）"
-            )
+        except np.linalg.LinAlgError as exc:
+            raise RuntimeError(f"全局矩阵奇异（波长={wavelength} μm）") from exc
         if cond > SINGULAR_THRESHOLD:
             raise RuntimeError(
                 f"全局矩阵条件数 {cond:.2e} 过大（>{SINGULAR_THRESHOLD}），"
@@ -602,9 +563,7 @@ class CAPHEFrequencySolver:
             lu = spla.splu(M.tocsc())
             s_out = lu.solve(b)
         except RuntimeError as exc:
-            raise RuntimeError(
-                f"稀疏 LU 分解失败（波长={wavelength} μm）: {exc}"
-            ) from exc
+            raise RuntimeError(f"稀疏 LU 分解失败（波长={wavelength} μm）: {exc}") from exc
 
         # 提取外部端口输出
         outputs: dict[str, complex] = {}
@@ -624,336 +583,8 @@ class CAPHEFrequencySolver:
         }
 
 
-# =============================================================================
-# 4. CAPHETimeDomainSolver — 时域 ODE 求解器（CMT）
-# =============================================================================
-class CAPHETimeDomainSolver:
-    """CAPHE 时域 ODE 求解器（基于 CMT 耦合模理论）。
-
-    学术依据：CAPHE 时域 CMT 求解（Fiers 2012 §III-B）
-    URL: https://biblio.ugent.be/publication/2036548/file/3146073.pdf
-
-    时域下，节点输出包含线性 + 非线性部分：
-        s_out,i(t) = Σ_j S_ij · s_in,j(t) + g_i(a(t), s_in(t), t)
-    状态变量 ODE：
-        da_k(t)/dt = f_k(a(t), s_in(t), t)
-
-    使用 scipy.integrate.solve_ivp（RK45 自适应步长）求解 ODE 系统。
-    来源: scipy.integrate.solve_ivp 文档
-    URL: https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
-    """
-
-    def __init__(self, network: CAPHENetwork) -> None:
-        """初始化时域求解器。
-
-        Args:
-            network: CAPHE 网络。
-        """
-        self.network = network
-        self._state_names: list[str] = []
-        self._state_offsets: dict[str, int] = {}
-        self._build_state_index()
-
-    def _build_state_index(self) -> None:
-        """构建状态变量全局索引。
-
-        将所有节点的状态变量展平为全局状态向量。
-        """
-        offset = 0
-        for node in self.network.get_nodes():
-            for sname in node.state_variables:
-                global_key = f"{node.name}.{sname}"
-                self._state_names.append(global_key)
-                self._state_offsets[global_key] = offset
-                offset += 1
-
-    @property
-    def n_states(self) -> int:
-        """全局状态变量数。"""
-        return len(self._state_names)
-
-    def build_ode_system(
-        self, t: float, y: np.ndarray, inputs: Callable[[float], dict[str, complex]]
-    ) -> np.ndarray:
-        """构建 ODE 系统 dy/dt = f(t, y, inputs)。
-
-        学术依据：CAPHE 时域 CMT 求解（Fiers 2012 §III-B）
-
-        Args:
-            t: 当前时间。
-            y: 全局状态向量。
-            inputs: 输入函数 t -> {ext_name: amplitude}。
-
-        Returns:
-            状态导数向量 dy/dt。
-        """
-        if self.n_states == 0:
-            return np.array([], dtype=float)
-
-        dydt = np.zeros(self.n_states, dtype=float)
-        current_inputs = inputs(t) if callable(inputs) else inputs
-
-        # 计算各节点输入（简化：仅外部输入直接作用）
-        for node in self.network.get_nodes():
-            if node.ode_func is None:
-                continue
-            # 提取该节点的状态子向量
-            node_state = np.array(
-                [y[self._state_offsets[f"{node.name}.{sn}"]]
-                 for sn in node.state_variables],
-                dtype=float,
-            )
-            # 构造节点输入向量（外部激励 + 连接端口输入）
-            s_in = np.zeros(node.n_ports, dtype=complex)
-            for ext_name, (n_name, p_idx) in self.network.external_ports.items():
-                if n_name == node.name and ext_name in current_inputs:
-                    s_in[p_idx] = complex(current_inputs[ext_name])
-
-            # 调用节点 ODE 函数
-            dstate = node.ode_func(t, node_state, s_in)
-            for i, sname in enumerate(node.state_variables):
-                global_key = f"{node.name}.{sname}"
-                dydt[self._state_offsets[global_key]] = float(dstate[i])
-
-        return dydt
-
-    def extract_states(self, y: np.ndarray) -> dict[str, float]:
-        """从解向量提取状态变量。
-
-        Args:
-            y: 全局状态向量。
-
-        Returns:
-            状态变量字典 {global_key: value}。
-        """
-        states: dict[str, float] = {}
-        for i, name in enumerate(self._state_names):
-            states[name] = float(y[i])
-        return states
-
-    def solve(
-        self,
-        t_span: tuple[float, float],
-        inputs: Callable[[float], dict[str, complex]],
-        y0: list[float] | None = None,
-        n_points: int = 100,
-    ) -> dict:
-        """时域 ODE 求解。
-
-        学术依据：CAPHE 时域 CMT 求解（Fiers 2012 §III-B）
-        URL: https://biblio.ugent.be/publication/2036548/file/3146073.pdf
-
-        使用 scipy.integrate.solve_ivp（RK45 自适应步长）。
-
-        Args:
-            t_span: 时间范围 (t_start, t_end)。
-            inputs: 输入函数 t -> {ext_name: amplitude}。
-            y0: 初始状态向量（None 则用各节点 state_variables 默认值）。
-            n_points: 输出时间点数。
-
-        Returns:
-            求解结果字典：
-            {
-                "t": 时间数组,
-                "y": 状态向量数组 (n_times × n_states),
-                "states": 时间序列状态字典 {global_key: 数组},
-            }
-
-        Raises:
-            ValueError: 时间范围非法。
-            RuntimeError: ODE 求解失败。
-        """
-        if t_span[0] >= t_span[1]:
-            raise ValueError(
-                f"t_span[0] 必须 < t_span[1]，得到 {t_span}"
-            )
-        if n_points <= 0:
-            raise ValueError(f"n_points 必须 > 0，得到 {n_points}")
-
-        # 构建初始状态向量
-        if y0 is None:
-            y0_arr = np.zeros(self.n_states, dtype=float)
-            offset = 0
-            for node in self.network.get_nodes():
-                for sname, val in node.state_variables.items():
-                    y0_arr[offset] = float(val)
-                    offset += 1
-        else:
-            if len(y0) != self.n_states:
-                raise ValueError(
-                    f"y0 长度 {len(y0)} != 状态变量数 {self.n_states}"
-                )
-            y0_arr = np.array(y0, dtype=float)
-
-        # 无状态变量时直接返回空解
-        if self.n_states == 0:
-            t_eval = np.linspace(t_span[0], t_span[1], n_points)
-            return {
-                "t": t_eval,
-                "y": np.zeros((n_points, 0), dtype=float),
-                "states": {},
-            }
-
-        t_eval = np.linspace(t_span[0], t_span[1], n_points)
-
-        # 调用 scipy.integrate.solve_ivp（RK45 自适应步长）
-        # 来源: scipy 文档
-        # URL: https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
-        try:
-            sol = solve_ivp(
-                fun=lambda t, y: self.build_ode_system(t, y, inputs),
-                t_span=t_span,
-                y0=y0_arr,
-                method="RK45",
-                t_eval=t_eval,
-                rtol=1e-6,
-                atol=1e-9,
-            )
-        except Exception as exc:
-            raise RuntimeError(
-                f"ODE 求解失败: {exc}"
-            ) from exc
-
-        if not sol.success:
-            raise RuntimeError(
-                f"ODE 求解未收敛: {sol.message}"
-            )
-
-        # 提取状态时间序列
-        states_ts: dict[str, np.ndarray] = {}
-        for i, name in enumerate(self._state_names):
-            states_ts[name] = sol.y[i, :]
-
-        return {
-            "t": sol.t,
-            "y": sol.y.T,  # (n_times × n_states)
-            "states": states_ts,
-        }
-
-
-# =============================================================================
-# 5. CAPHEBackend — CAPHE 后端适配器（统一频域+时域接口）
-# =============================================================================
-class CAPHEBackend:
-    """CAPHE 后端适配器（统一频域+时域接口）。
-
-    学术依据：CAPHE 统一接口（Fiers 2012）
-    URL: https://biblio.ugent.be/publication/2036548/file/3146073.pdf
-
-    提供统一的频域+时域仿真接口，并支持与 sax/simphony 后端交叉验证
-    （误差 < 1e-4，来源: R26.md §1）。
-
-    创新点（标注"创新"）:
-    - 自动稀疏化：自动检测无源线性节点并消去，无需用户手动标记。
-      创新逻辑：节点实例化时自动分析是否含状态变量/ODE。
-      支持理论：图论中的"叶子节点消去"。
-      预期收益：用户无需手动标记，降低使用门槛。
-    """
-
-    def __init__(self) -> None:
-        """初始化 CAPHE 后端。"""
-        self._freq_solver: Optional[CAPHEFrequencySolver] = None
-        self._time_solver: Optional[CAPHETimeDomainSolver] = None
-
-    def simulate_frequency(
-        self,
-        network: CAPHENetwork,
-        wavelengths: list[float],
-        inputs: dict[str, complex],
-    ) -> dict:
-        """频域仿真。
-
-        Args:
-            network: CAPHE 网络。
-            wavelengths: 波长列表（μm）。
-            inputs: 外部端口输入字典 {ext_name: amplitude}。
-
-        Returns:
-            频域求解结果（见 CAPHEFrequencySolver.solve）。
-        """
-        self._freq_solver = CAPHEFrequencySolver(network)
-        return self._freq_solver.solve(wavelengths, inputs)
-
-    def simulate_time(
-        self,
-        network: CAPHENetwork,
-        t_span: tuple[float, float],
-        inputs: Callable[[float], dict[str, complex]],
-        y0: list[float] | None = None,
-        n_points: int = 100,
-    ) -> dict:
-        """时域仿真。
-
-        Args:
-            network: CAPHE 网络。
-            t_span: 时间范围 (t_start, t_end)。
-            inputs: 输入函数 t -> {ext_name: amplitude}。
-            y0: 初始状态向量。
-            n_points: 输出时间点数。
-
-        Returns:
-            时域求解结果（见 CAPHETimeDomainSolver.solve）。
-        """
-        self._time_solver = CAPHETimeDomainSolver(network)
-        return self._time_solver.solve(t_span, inputs, y0, n_points)
-
-    def cross_validate(
-        self, sax_result: dict, caphe_result: dict
-    ) -> dict:
-        """与 sax 后端交叉验证。
-
-        学术依据：R26.md §1，与 sax/simphony 后端误差 < 1e-4。
-
-        Args:
-            sax_result: sax 后端求解结果，格式 {"outputs": {ext_name: array}}。
-            caphe_result: CAPHE 后端求解结果。
-
-        Returns:
-            交叉验证结果：
-            {
-                "max_error": 最大绝对误差,
-                "mean_error": 平均绝对误差,
-                "passed": 是否通过（误差 < 1e-4）,
-                "per_port": 各端口误差,
-            }
-        """
-        if "outputs" not in sax_result or "outputs" not in caphe_result:
-            raise ValueError("sax_result 和 caphe_result 必须包含 'outputs' 键")
-
-        per_port: dict[str, float] = {}
-        max_err = 0.0
-        total_err = 0.0
-        count = 0
-
-        for port_name, caphe_arr in caphe_result["outputs"].items():
-            if port_name not in sax_result["outputs"]:
-                raise ValueError(f"sax 结果缺少端口 {port_name!r}")
-            sax_arr = np.asarray(sax_result["outputs"][port_name], dtype=complex)
-            caphe_arr = np.asarray(caphe_arr, dtype=complex)
-            if sax_arr.shape != caphe_arr.shape:
-                raise ValueError(
-                    f"端口 {port_name!r} 形状不匹配: "
-                    f"sax={sax_arr.shape} vs caphe={caphe_arr.shape}"
-                )
-            err = float(np.max(np.abs(sax_arr - caphe_arr)))
-            per_port[port_name] = err
-            max_err = max(max_err, err)
-            total_err += float(np.sum(np.abs(sax_arr - caphe_arr)))
-            count += sax_arr.size
-
-        mean_err = total_err / max(count, 1)
-        return {
-            "max_error": max_err,
-            "mean_error": mean_err,
-            "passed": max_err < CROSS_VALIDATE_TOL,
-            "per_port": per_port,
-        }
-
-
 __all__ = [
     "CAPHENode",
     "CAPHENetwork",
     "CAPHEFrequencySolver",
-    "CAPHETimeDomainSolver",
-    "CAPHEBackend",
 ]

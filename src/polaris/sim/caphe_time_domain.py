@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 from scipy.integrate import solve_ivp
@@ -109,8 +109,7 @@ class CAPHETimeDomainSolver:
                 continue
             # 提取该节点的状态子向量
             node_state = np.array(
-                [y[self._state_offsets[f"{node.name}.{sn}"]]
-                 for sn in node.state_variables],
+                [y[self._state_offsets[f"{node.name}.{sn}"]] for sn in node.state_variables],
                 dtype=float,
             )
             # 构造节点输入向量（外部激励 + 连接端口输入）
@@ -174,9 +173,7 @@ class CAPHETimeDomainSolver:
             RuntimeError: ODE 求解失败。
         """
         if t_span[0] >= t_span[1]:
-            raise ValueError(
-                f"t_span[0] 必须 < t_span[1]，得到 {t_span}"
-            )
+            raise ValueError(f"t_span[0] 必须 < t_span[1]，得到 {t_span}")
         if n_points <= 0:
             raise ValueError(f"n_points 必须 > 0，得到 {n_points}")
 
@@ -185,14 +182,12 @@ class CAPHETimeDomainSolver:
             y0_arr = np.zeros(self.n_states, dtype=float)
             offset = 0
             for node in self.network.get_nodes():
-                for sname, val in node.state_variables.items():
+                for _sname, val in node.state_variables.items():
                     y0_arr[offset] = float(val)
                     offset += 1
         else:
             if len(y0) != self.n_states:
-                raise ValueError(
-                    f"y0 长度 {len(y0)} != 状态变量数 {self.n_states}"
-                )
+                raise ValueError(f"y0 长度 {len(y0)} != 状态变量数 {self.n_states}")
             y0_arr = np.array(y0, dtype=float)
 
         # 无状态变量时直接返回空解
@@ -220,14 +215,10 @@ class CAPHETimeDomainSolver:
                 atol=1e-9,
             )
         except Exception as exc:
-            raise RuntimeError(
-                f"ODE 求解失败: {exc}"
-            ) from exc
+            raise RuntimeError(f"ODE 求解失败: {exc}") from exc
 
         if not sol.success:
-            raise RuntimeError(
-                f"ODE 求解未收敛: {sol.message}"
-            )
+            raise RuntimeError(f"ODE 求解未收敛: {sol.message}")
 
         # 提取状态时间序列
         states_ts: dict[str, np.ndarray] = {}
@@ -262,8 +253,8 @@ class CAPHEBackend:
 
     def __init__(self) -> None:
         """初始化 CAPHE 后端。"""
-        self._freq_solver: Optional[object] = None
-        self._time_solver: Optional[CAPHETimeDomainSolver] = None
+        self._freq_solver: object | None = None
+        self._time_solver: CAPHETimeDomainSolver | None = None
 
     def simulate_frequency(
         self,
@@ -310,9 +301,7 @@ class CAPHEBackend:
         self._time_solver = CAPHETimeDomainSolver(network)
         return self._time_solver.solve(t_span, inputs, y0, n_points)
 
-    def cross_validate(
-        self, sax_result: dict, caphe_result: dict
-    ) -> dict:
+    def cross_validate(self, sax_result: dict, caphe_result: dict) -> dict:
         """与 sax 后端交叉验证。
 
         学术依据：R26.md §1，与 sax/simphony 后端误差 < 1e-4。
@@ -345,8 +334,7 @@ class CAPHEBackend:
             caphe_arr = np.asarray(caphe_arr, dtype=complex)
             if sax_arr.shape != caphe_arr.shape:
                 raise ValueError(
-                    f"端口 {port_name!r} 形状不匹配: "
-                    f"sax={sax_arr.shape} vs caphe={caphe_arr.shape}"
+                    f"端口 {port_name!r} 形状不匹配: sax={sax_arr.shape} vs caphe={caphe_arr.shape}"
                 )
             err = float(np.max(np.abs(sax_arr - caphe_arr)))
             per_port[port_name] = err
