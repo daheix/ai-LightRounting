@@ -175,16 +175,30 @@ class GedneyPML:
             raise ValueError(f"eps_r_bg 必须 > 0，实际 {eps_r_bg}")
         self.eps_r_bg = eps_r_bg
 
-    def _build_sigma_profile(self, n: int, dx: float, axis: str) -> jnp.ndarray:
+    def _build_sigma_profile(self, n: int, dx: float, axis: str, dt: float) -> jnp.ndarray:
         """构建 σ 梯度剖面。
 
         sigma(d) = sigma_max * (d/L)^m
-        sigma_max = (m+1) / (150 * pi * dx * sqrt(eps_r))
+
+        R2 修复: sigma_max 考虑 dt/CFL 比例补偿。
+        原始 Taflove 2005 §7.6.2 优化值假设 dt=CFL:
+            sigma_opt = 0.8*(m+1)/(η0*Δ*sqrt(eps_r))
+        当 dt<CFL 时，σΔt/2ε 相应减小，PML 阻尼不足导致数值不稳定。
+        修复: sigma_max = sigma_opt / (dt/CFL) * sigma_ratio
+        来源: Taflove 2005 §7.6.2; Gedney 1996 IEEE TAP §III
         """
         if self.n_layers == 0:
             return jnp.zeros(n)
         eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max），避免 cb 放大
-        sigma_max = (self.m + 1) / (150.0 * jnp.pi * dx * jnp.sqrt(eps_r_bg))
+        # R2: 考虑 dt/CFL 比例补偿（Taflove 2005 §7.6.2 假设 dt=CFL）
+        eta0 = jnp.sqrt(MU0 / EPS0)  # 真空阻抗 377 Ω（NIST CODATA 2018）
+        cfl_dt = self.grid.cfl_timestep(eps_r_bg)
+        dt_ratio = dt / float(cfl_dt)  # dt/CFL 比例（通常 0.3-0.95）
+        if dt_ratio <= 0:
+            dt_ratio = 0.95  # 保护：dt_ratio 必须为正
+        # Taflove 2005 §7.6.2 优化值: sigma_opt = 0.8*(m+1)/(η0*Δ*sqrt(eps_r))
+        # 补偿 dt<CFL: sigma_max = sigma_opt / dt_ratio
+        sigma_max = 0.8 * (self.m + 1) / (eta0 * dx * jnp.sqrt(eps_r_bg)) / dt_ratio
         sigma_max = sigma_max * self.sigma_ratio
         idx = jnp.arange(self.n_layers, dtype=jnp.float32)
         depth = (self.n_layers - idx) * dx  # 距 PML 内边界的深度
@@ -208,9 +222,9 @@ class GedneyPML:
             raise ValueError(f"dt 必须 > 0，实际 {dt}")
         eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max）
         eps = EPS0 * eps_r_bg
-        sigma_x = self._build_sigma_profile(self.grid.nx, self.grid.dx, "x")
-        sigma_y = self._build_sigma_profile(self.grid.ny, self.grid.dy, "y")
-        sigma_z = self._build_sigma_profile(self.grid.nz, self.grid.dz, "z")
+        sigma_x = self._build_sigma_profile(self.grid.nx, self.grid.dx, "x", dt)
+        sigma_y = self._build_sigma_profile(self.grid.ny, self.grid.dy, "y", dt)
+        sigma_z = self._build_sigma_profile(self.grid.nz, self.grid.dz, "z", dt)
         # 广播到 3D（每轴的 σ 只沿该轴变化）
         sigma_x_3d = sigma_x.reshape(-1, 1, 1)
         sigma_y_3d = sigma_y.reshape(1, -1, 1)

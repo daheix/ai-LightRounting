@@ -68,7 +68,8 @@ _TARGET_WAVELENGTH_UM = 1.55  # C 波段
 # =============================================================================
 # 来源: Jensen & Sigmund 2011 拓扑优化典型参数
 _N_ITERATIONS = 10  # 优化迭代次数（showcase 演示，控制时长）
-_LEARNING_RATE = 1e3  # R2: 真实折射率差梯度更大，适当降低学习率（从 1e4 到 1e3）
+# R2: 源距 PML 4 像素后 peak≈0.1（O(1) 量级），学习率 10.0 使 width 变化 0.1 像素/迭代
+_LEARNING_RATE = 10.0
 _INITIAL_WIDTH_PIXELS = 2.0  # 初始波导半宽度（像素）
 
 
@@ -234,9 +235,11 @@ def _run_adjoint_optimization() -> dict:
     fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=_EPS_R_SI)
     _logger.info("PML 吸收边界: %d 层（Gedney 1996 IEEE TAP）, eps_r_bg=%.3f", _PML_N_LAYERS, _EPS_R_SI)
 
-    # 源/监视器位置（R2: z=3 在 PML 外，PML z=[0:2] 和 [6:8]）
-    source_pos = (3, ny // 2, 3)
-    monitor_pos = (nx - 4, ny // 2, 3)
+    # 源/监视器位置（R2: 距 PML 4 像素，避免源能量被 PML 吸收）
+    # PML x=[0:2] 和 [22:24]，y=[0:2] 和 [10:12]，z=[0:2] 和 [6:8]
+    # 源 x=PML+4=6, z=PML+1=3；监视器 x=NX-PML-4=18, z=3
+    source_pos = (_PML_N_LAYERS + 4, ny // 2, _PML_N_LAYERS + 1)
+    monitor_pos = (nx - _PML_N_LAYERS - 4, ny // 2, _PML_N_LAYERS + 1)
     source_freq = _C0_M_S / (_TARGET_WAVELENGTH_UM * 1e-6)
     target_freq = source_freq
 
