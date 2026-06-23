@@ -200,6 +200,15 @@ from polaris.sim.building_block import (
     s_to_t,
     t_to_s,
 )
+from polaris.sim.system_level import (
+    BerEvaluator,
+    HybridSimulator,
+    OpticalLink,
+    SignalFlowGraph,
+    TLLMLaser,
+    TimeDomainSimulator,
+    to_time_domain,
+)
 
 __all__ = [
     # 类型
@@ -368,4 +377,12 @@ __all__ = [
     "VirtualExperiment",
     "s_to_t",
     "t_to_s",
+    # R14 VPIphotonics 系统级仿真（SFG + TLLM + Hybrid + Link + BER）
+    "BerEvaluator",
+    "HybridSimulator",
+    "OpticalLink",
+    "SignalFlowGraph",
+    "TLLMLaser",
+    "TimeDomainSimulator",
+    "to_time_domain",
 ]
