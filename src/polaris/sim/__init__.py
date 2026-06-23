@@ -191,6 +191,15 @@ from polaris.sim.subcircuit import (
 )
 from polaris.sim.touchstone import load_touchstone, save_touchstone
 from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
+from polaris.sim.building_block import (
+    BBRegistry,
+    BuildingBlock,
+    ModelCard,
+    TMatrix,
+    VirtualExperiment,
+    s_to_t,
+    t_to_s,
+)
 
 __all__ = [
     # 类型
@@ -351,4 +360,12 @@ __all__ = [
     "run_graph_lvs",
     "verify_port_orientation",
     "verify_waveguide_length",
+    # R13 Aspic 频域 S 参数对齐（BuildingBlock + TMatrix + VirtualExperiment）
+    "BBRegistry",
+    "BuildingBlock",
+    "ModelCard",
+    "TMatrix",
+    "VirtualExperiment",
+    "s_to_t",
+    "t_to_s",
 ]
