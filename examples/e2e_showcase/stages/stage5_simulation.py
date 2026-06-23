@@ -66,7 +66,8 @@ _WL_N_POINTS = 101
 # FDTD 仿真参数（来源: Yee 1966 IEEE TAP; Taflove 2005 §4.1）
 _FDTD_GRID_DX_UM = 0.2  # 网格步长 200nm（来源: Taflove 2005 §4.1 建议 λ/10）
 _FDTD_DT_SAFETY = 0.3  # dt = 0.3×CFL（保守稳定，确保波传播到监视器）
-_FDTD_N_STEPS = 1000  # 时间步数（确保高斯脉冲传播到监视器并完整通过）
+# R2: 从 1000 减至 600（与 stage10 对齐，避免 PML 反射累积导致远场增强）
+_FDTD_N_STEPS = 600  # 时间步数（确保高斯脉冲传播到监视器并完整通过）
 
 
 def _simulate_mzi_sparam(reports_dir: Path) -> dict:
@@ -416,16 +417,23 @@ def _run_fdtd_waveguide() -> dict:
     )
     fdtd_duration_s = time.time() - t_start
 
-    # 用 monitor_signal 峰值振幅计算传输率（Taflove 2005 §13.2）
+    # 用 FFT 频域幅值比计算传输率（Taflove 2005 §13.2 标准方法）
+    # R2 修复: 时域峰值比在 PML 启用后不准确（PML 反射导致远场峰值增强），
+    # 改用 FFT 频域幅值比，提取目标频率分量，过滤直流和低频分量。
     mon_near = np.asarray(result_near["monitor_signal"])
     mon_far = np.asarray(result_far["monitor_signal"])
-    peak_near = float(np.max(np.abs(mon_near)))
-    peak_far = float(np.max(np.abs(mon_far)))
+    fft_near = np.fft.fft(mon_near)
+    fft_far = np.fft.fft(mon_far)
+    freqs = np.fft.fftfreq(len(mon_near), d=dt)
+    target_freq = c0 / 1.55e-6
+    idx_target = int(np.argmin(np.abs(freqs - target_freq)))
+    amp_near = float(np.abs(fft_near[idx_target]))
+    amp_far = float(np.abs(fft_far[idx_target]))
 
-    # 传输率 = (远场峰值 / 近场峰值)²，消除源归一化问题
-    if peak_near > 0 and peak_far > 0:
-        T_fdtd = (peak_far / peak_near) ** 2
-        transmission_db = 10.0 * np.log10(T_fdtd)
+    # 传输率 = (远场频域幅值 / 近场频域幅值)²，消除源归一化问题
+    if amp_near > 1e-30 and amp_far > 0:
+        T_fdtd = (amp_far / amp_near) ** 2
+        transmission_db = 10.0 * np.log10(max(T_fdtd, 1e-30))
     else:
         transmission_db = -999.0
 
@@ -546,13 +554,23 @@ def _run_fdtd_mmi() -> dict:
     )
     fdtd_duration_s = time.time() - t_start
 
-    # 用 monitor_signal 提取峰值功率（双监视器比值法，消除源归一化）
+    # 用 FFT 频域幅值比提取功率（Taflove 2005 §13.2 标准方法）
+    # R2 修复: 时域峰值比在 PML 启用后不准确，改用 FFT 频域幅值比
     mon_ref = np.asarray(result_ref["monitor_signal"])
     mon_sig1 = np.asarray(result1["monitor_signal"])
     mon_sig2 = np.asarray(result2["monitor_signal"])
-    p_ref = float(np.max(np.abs(mon_ref))) ** 2
-    p_out1 = float(np.max(np.abs(mon_sig1))) ** 2
-    p_out2 = float(np.max(np.abs(mon_sig2))) ** 2
+    fft_ref = np.fft.fft(mon_ref)
+    fft_sig1 = np.fft.fft(mon_sig1)
+    fft_sig2 = np.fft.fft(mon_sig2)
+    freqs = np.fft.fftfreq(len(mon_ref), d=dt)
+    target_freq = c0 / 1.55e-6
+    idx_target = int(np.argmin(np.abs(freqs - target_freq)))
+    amp_ref = float(np.abs(fft_ref[idx_target]))
+    amp_out1 = float(np.abs(fft_sig1[idx_target]))
+    amp_out2 = float(np.abs(fft_sig2[idx_target]))
+    p_ref = amp_ref ** 2
+    p_out1 = amp_out1 ** 2
+    p_out2 = amp_out2 ** 2
 
     # 分束比（输出 1 占总输出功率的比例）
     p_total_out = p_out1 + p_out2
