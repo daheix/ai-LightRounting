@@ -341,7 +341,7 @@ def _simulate_pam4(reports_dir: Path) -> dict:
 
 
 def _run_fdtd_waveguide() -> dict:
-    """执行硅波导 2D FDTD 全波仿真。
+    """执行硅波导 2D FDTD 全波仿真（R2: 启用 PML 吸收边界）。
 
     对均匀硅平板执行 FDTD 仿真，用双监视器比值法提取传输率，
     与解析模型对比。双监视器法消除源归一化问题（Taflove 2005 §13.2）。
@@ -351,15 +351,21 @@ def _run_fdtd_waveguide() -> dict:
         - 网格步长 dx=200nm（Taflove 2005 §4.1）
         - dt=0.3×CFL（保守稳定，确保波传播到监视器）
 
+    R2 修复: 启用 GedneyPML 吸收边界（Gedney 1996 IEEE TAP）。
+        - nz 从 2 增至 8，支持 2 层 PML + 非PML区域 z=[2:6]
+        - 源/监视器距 PML 至少 4 像素，避免源能量被 PML 吸收
+        - eps_r_bg=12.08（硅背景），避免 PML 区域 cb 被放大
+
     方法:
-        近监视器 (8,6,1) 和远监视器 (13,6,1)，距离 5 网格 = 1μm。
+        近监视器 (11,6,3) 和远监视器 (16,6,3)，距离 5 网格 = 1μm。
         T = (peak_far / peak_near)²，消除源注入幅度不确定性。
 
-    来源: Yee 1966 IEEE TAP; Taflove 2005 §3.6/§4.1/§13.2
+    来源: Yee 1966 IEEE TAP; Taflove 2005 §3.6/§4.1/§13.2;
+          Gedney 1996 IEEE TAP https://doi.org/10.1109/8.546249
 
     Returns:
         含 transmission_db / analytical_transmission_db /
-        fdtd_duration_s 的 dict。
+        fdtd_duration_s / pml_enabled 的 dict。
 
     Raises:
         RuntimeError: JAX FDTD 模块不可用时抛出（规则 14.1：无 fall-back）。
@@ -367,12 +373,15 @@ def _run_fdtd_waveguide() -> dict:
     try:
         import jax.numpy as jnp
 
-        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, YeeGrid3D
+        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, GedneyPML, YeeGrid3D
     except ImportError as e:
         raise RuntimeError(f"JAX FDTD 模块不可用: {e}") from e
 
     eps_r_si = 12.08  # 硅介电常数（Soref 1993）
-    nx, ny, nz = 20, 12, 2  # 薄 z 维近似 2D
+    # R2: nz 从 2 增至 8，支持 2 层 PML + 非PML区域 z=[2:6]
+    # R2: nx 从 20 增至 24，源距 PML 4 像素（x=6, PML=[0:2]）
+    nx, ny, nz = 24, 12, 8
+    pml_n_layers = 2  # R2: PML 层数（每侧）
     dx = _FDTD_GRID_DX_UM * 1e-6  # 200nm
 
     grid = YeeGrid3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dx, dz=dx)
@@ -381,22 +390,29 @@ def _run_fdtd_waveguide() -> dict:
 
     cfl_dt = grid.cfl_timestep(eps_r_si)
     dt = _FDTD_DT_SAFETY * float(cfl_dt)
-    fdtd = DifferentiableFDTD(grid, pml=None, dt=dt)
+    # R2: 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
+    # eps_r_bg=eps_r_si（硅背景），避免 PML 区域 cb 被放大
+    pml = GedneyPML(grid, n_layers=pml_n_layers, eps_r_bg=eps_r_si)
+    fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=eps_r_si)
 
     c0 = 2.99792458e8  # 真空光速 m/s（NIST CODATA 2018）
     source_freq = c0 / 1.55e-6
 
     t_start = time.time()
-    # 双监视器法: 近 (8,6,1) 和远 (13,6,1)，距离 5 网格 = 1μm
+    # R2: 双监视器法，源/监视器距 PML 4 像素（避免源能量被 PML 吸收）
+    # 源 x=PML+4=6, z=PML+1=3；近监视器 x=11, 远监视器 x=16，距离 5 网格 = 1μm
+    source_pos = (pml_n_layers + 4, 6, pml_n_layers + 1)
+    monitor_near_pos = (pml_n_layers + 9, 6, pml_n_layers + 1)
+    monitor_far_pos = (pml_n_layers + 14, 6, pml_n_layers + 1)
     result_near = fdtd.run(
-        epsilon_r=eps_r, source_pos=(3, 6, 1),
+        epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
-        monitor_pos=(8, 6, 1),
+        monitor_pos=monitor_near_pos,
     )
     result_far = fdtd.run(
-        epsilon_r=eps_r, source_pos=(3, 6, 1),
+        epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
-        monitor_pos=(13, 6, 1),
+        monitor_pos=monitor_far_pos,
     )
     fdtd_duration_s = time.time() - t_start
 
@@ -418,8 +434,8 @@ def _run_fdtd_waveguide() -> dict:
     analytical_transmission_db = -_MZI_WG_LOSS_DB_CM * dist_cm  # ≈ -0.0003 dB
 
     _logger.info(
-        "波导 FDTD: T_fdtd=%.4f dB, T_analytical=%.4f dB, 耗时=%.2fs",
-        transmission_db, analytical_transmission_db, fdtd_duration_s,
+        "波导 FDTD (PML=%d层): T_fdtd=%.4f dB, T_analytical=%.4f dB, 耗时=%.2fs",
+        pml_n_layers, transmission_db, analytical_transmission_db, fdtd_duration_s,
     )
 
     return {
@@ -429,11 +445,13 @@ def _run_fdtd_waveguide() -> dict:
         "n_steps": _FDTD_N_STEPS,
         "grid_size": (nx, ny, nz),
         "dx_um": _FDTD_GRID_DX_UM,
+        "pml_enabled": True,
+        "pml_n_layers": pml_n_layers,
     }
 
 
 def _run_fdtd_mmi() -> dict:
-    """执行 MMI 1x2 2D FDTD 全波仿真。
+    """执行 MMI 1x2 2D FDTD 全波仿真（R2: 启用 PML 吸收边界）。
 
     对 MMI 1x2 结构（输入波导 → 宽 MMI 区 → 两输出波导）执行 FDTD 仿真，
     提取分束比与插入损耗。需运行两次（每个输出端口一次），
@@ -444,10 +462,18 @@ def _run_fdtd_mmi() -> dict:
         - MMI 区宽度 10 网格 × 200nm = 2μm
         - dt=0.3×CFL（基于最小 eps_r，保守稳定）
 
-    来源: Yee 1966 IEEE TAP; Taflove 2005 §3.6/§4.1/§13.2
+    R2 修复: 启用 GedneyPML 吸收边界（Gedney 1996 IEEE TAP）。
+        - nz 从 2 增至 8，支持 2 层 PML + 非PML区域 z=[2:6]
+        - nx 从 25 增至 29，源距 PML 4 像素（x=6, PML=[0:2]）
+        - eps_r_bg=2.085（SiO2 包层背景），PML 区域是 SiO2，避免 cb 放大
+        - MMI 结构 x 坐标整体 +3，保持物理尺寸不变
+
+    来源: Yee 1966 IEEE TAP; Taflove 2005 §3.6/§4.1/§13.2;
+          Gedney 1996 IEEE TAP https://doi.org/10.1109/8.546249
 
     Returns:
-        含 mmi_split_ratio / mmi_insertion_loss_db / fdtd_duration_s 的 dict。
+        含 mmi_split_ratio / mmi_insertion_loss_db / fdtd_duration_s /
+        pml_enabled 的 dict。
 
     Raises:
         RuntimeError: JAX FDTD 模块不可用时抛出（规则 14.1：无 fall-back）。
@@ -455,7 +481,7 @@ def _run_fdtd_mmi() -> dict:
     try:
         import jax.numpy as jnp
 
-        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, YeeGrid3D
+        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, GedneyPML, YeeGrid3D
     except ImportError as e:
         raise RuntimeError(f"JAX FDTD 模块不可用: {e}") from e
 
@@ -463,43 +489,60 @@ def _run_fdtd_mmi() -> dict:
     eps_r_si = 12.08  # 硅
     eps_r_sio2 = 2.085  # 二氧化硅
 
-    nx, ny, nz = 25, 20, 2  # 薄 z 维近似 2D
+    # R2: nz 从 2 增至 8（支持 PML）；nx 从 25 增至 29（源距 PML 4 像素）
+    nx, ny, nz = 29, 20, 8
+    pml_n_layers = 2  # R2: PML 层数（每侧）
     dx = _FDTD_GRID_DX_UM * 1e-6  # 200nm
 
     grid = YeeGrid3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dx, dz=dx)
     # MMI 结构: 输入波导 → 宽 MMI 区 → 两输出波导
+    # R2: x 坐标整体 +3（pml_n_layers+1），保持物理尺寸不变
+    x_in_start = pml_n_layers + 1  # 3
+    x_in_end = x_in_start + 8  # 11
+    x_mmi_start = x_in_end  # 11
+    x_mmi_end = x_mmi_start + 9  # 20
+    x_out_start = x_mmi_end  # 20
+    x_out_end = x_out_start + 7  # 27
     eps_r = jnp.full((nx, ny, nz), eps_r_sio2)  # SiO2 背景
-    eps_r = eps_r.at[0:8, 9:11, :].set(eps_r_si)  # 输入波导
-    eps_r = eps_r.at[8:17, 5:15, :].set(eps_r_si)  # MMI 区（宽区域）
-    eps_r = eps_r.at[17:25, 7:9, :].set(eps_r_si)  # 输出波导 1
-    eps_r = eps_r.at[17:25, 11:13, :].set(eps_r_si)  # 输出波导 2
+    eps_r = eps_r.at[x_in_start:x_in_end, 9:11, :].set(eps_r_si)  # 输入波导
+    eps_r = eps_r.at[x_mmi_start:x_mmi_end, 5:15, :].set(eps_r_si)  # MMI 区（宽区域）
+    eps_r = eps_r.at[x_out_start:x_out_end, 7:9, :].set(eps_r_si)  # 输出波导 1
+    eps_r = eps_r.at[x_out_start:x_out_end, 11:13, :].set(eps_r_si)  # 输出波导 2
     grid.epsilon_r = eps_r
 
     # CFL 时间步长（使用最小 eps_r 确保全局稳定）
     eps_min = float(jnp.min(eps_r))
     cfl_dt = grid.cfl_timestep(eps_min)
     dt = _FDTD_DT_SAFETY * float(cfl_dt)
-    fdtd = DifferentiableFDTD(grid, pml=None, dt=dt)
+    # R2: 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
+    # eps_r_bg=eps_r_sio2（SiO2 包层背景），PML 区域是 SiO2，避免 cb 放大
+    pml = GedneyPML(grid, n_layers=pml_n_layers, eps_r_bg=eps_r_sio2)
+    fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=eps_r_sio2)
 
     c0 = 2.99792458e8  # 真空光速 m/s
     source_freq = c0 / 1.55e-6
 
     t_start = time.time()
-    # 三次运行: 输入参考 (5,10,1) + 输出 1 (20,8,1) + 输出 2 (20,12,1)
+    # R2: 三次运行，源/监视器距 PML 4 像素
+    # 源 x=PML+4=6, z=PML+1=3；参考 x=8, 输出1/2 x=23
+    source_pos = (pml_n_layers + 4, 10, pml_n_layers + 1)
+    monitor_ref_pos = (pml_n_layers + 6, 10, pml_n_layers + 1)  # 输入波导参考点
+    monitor_out1_pos = (pml_n_layers + 21, 8, pml_n_layers + 1)  # 输出 1
+    monitor_out2_pos = (pml_n_layers + 21, 12, pml_n_layers + 1)  # 输出 2
     result_ref = fdtd.run(
-        epsilon_r=eps_r, source_pos=(3, 10, 1),
+        epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
-        monitor_pos=(5, 10, 1),  # 输入波导参考点
+        monitor_pos=monitor_ref_pos,
     )
     result1 = fdtd.run(
-        epsilon_r=eps_r, source_pos=(3, 10, 1),
+        epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
-        monitor_pos=(20, 8, 1),  # 输出 1
+        monitor_pos=monitor_out1_pos,
     )
     result2 = fdtd.run(
-        epsilon_r=eps_r, source_pos=(3, 10, 1),
+        epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
-        monitor_pos=(20, 12, 1),  # 输出 2
+        monitor_pos=monitor_out2_pos,
     )
     fdtd_duration_s = time.time() - t_start
 
@@ -522,8 +565,8 @@ def _run_fdtd_mmi() -> dict:
         mmi_insertion_loss_db = -999.0
 
     _logger.info(
-        "MMI FDTD: 分束比=%.4f (理想: 0.5), 插损=%.2fdB (解析: -0.4), 耗时=%.2fs",
-        mmi_split_ratio, mmi_insertion_loss_db, fdtd_duration_s,
+        "MMI FDTD (PML=%d层): 分束比=%.4f (理想: 0.5), 插损=%.2fdB (解析: -0.4), 耗时=%.2fs",
+        pml_n_layers, mmi_split_ratio, mmi_insertion_loss_db, fdtd_duration_s,
     )
 
     return {
@@ -533,6 +576,8 @@ def _run_fdtd_mmi() -> dict:
         "n_steps": _FDTD_N_STEPS,
         "grid_size": (nx, ny, nz),
         "dx_um": _FDTD_GRID_DX_UM,
+        "pml_enabled": True,
+        "pml_n_layers": pml_n_layers,
     }
 
 
