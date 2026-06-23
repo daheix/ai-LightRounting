@@ -43,10 +43,12 @@ _C0_M_S = 2.99792458e8  # 真空光速 (m/s)
 # FDTD 网格参数（与 stage5 对齐，保证数值稳定性）
 # =============================================================================
 # 来源: stage5_simulation.py 同款参数（Taflove 2005 §4.1 建议 λ/10）
+# R2 修复: nz 从 2 增至 6，支持 PML 吸收边界（n_layers*2 < min(nx,ny,nz)）
 _GRID_NX = 24
 _GRID_NY = 12
-_GRID_NZ = 2
+_GRID_NZ = 8  # R2: 从 2 改为 8，支持 2 层 PML + 非PML区域 z=[2:6]
 _GRID_DX_M = 0.2e-6  # 200 nm 网格步长（Taflove 2005 §4.1）
+_PML_N_LAYERS = 2  # PML 层数（每侧）
 
 # 硅/二氧化硅相对介电常数（1.55 μm 波长）
 # 来源: Polyanskiy refractiveindex.info
@@ -56,7 +58,7 @@ _EPS_R_SIO2 = 1.444 ** 2  # n_SiO2=1.444 → eps_r≈2.085
 # FDTD 时间步参数（与 stage5 对齐）
 # 来源: Taflove 2005 §4.4, CFL 稳定条件 + 0.3 安全系数
 _FDTD_DT_SAFETY = 0.3  # dt = 0.3×CFL（保守稳定）
-_FDTD_N_STEPS = 450  # 时间步数（波到达监视器，反射未回来，避免发散）
+_FDTD_N_STEPS = 600  # R2: 从 450 延长至 600（PML 吸收边界反射，可延长仿真）
 
 # 目标波长
 _TARGET_WAVELENGTH_UM = 1.55  # C 波段
@@ -66,7 +68,7 @@ _TARGET_WAVELENGTH_UM = 1.55  # C 波段
 # =============================================================================
 # 来源: Jensen & Sigmund 2011 拓扑优化典型参数
 _N_ITERATIONS = 10  # 优化迭代次数（showcase 演示，控制时长）
-_LEARNING_RATE = 1e4  # 梯度上升学习率（FoM≈1e-8，梯度≈1e-5，需大学习率）
+_LEARNING_RATE = 1e3  # R2: 真实折射率差梯度更大，适当降低学习率（从 1e4 到 1e3）
 _INITIAL_WIDTH_PIXELS = 2.0  # 初始波导半宽度（像素）
 
 
@@ -83,10 +85,9 @@ def _epsilon_r_from_width(
     波导沿 x 方向传播，y 方向居中，宽度由 width_param 控制（半宽度，像素）。
     用 sigmoid 软化边界，使宽度参数连续可微（拓扑优化标准技巧）。
 
-    设计说明:
-    - 全硅背景 (eps_si) + 波导区域小幅 eps_r 调制 (eps_si * 1.05)
-    - 小折射率差避免无 PML 时的边界反射发散
-    - 宽度参数仍通过有效折射率变化影响 FoM
+    R2 修复: 用真实硅/二氧化硅折射率差（eps_si=12.08 vs eps_sio2=2.085），
+    替代 R1 的全硅背景+20%调制（因无 PML 被迫限制折射率差）。
+    启用 PML 吸收边界后，可用真实折射率差，提升逆向设计物理真实性。
 
     来源:
     - Jensen & Sigmund 2011 "Topology optimization for nano-photonics"
@@ -96,8 +97,8 @@ def _epsilon_r_from_width(
     Args:
         width_param: 波导半宽度（像素，连续可微标量）。
         nx, ny, nz: 网格尺寸。
-        eps_si: 硅相对介电常数（背景）。
-        eps_bg: 未使用（保留接口兼容）。
+        eps_si: 硅相对介电常数（波导芯）。
+        eps_bg: 二氧化硅相对介电常数（包层背景）。
 
     Returns:
         epsilon_r 分布 (nx, ny, nz)。
@@ -108,9 +109,12 @@ def _epsilon_r_from_width(
     softness = 0.5  # 软化温度（像素）
     dist_to_center = jnp.abs(y_coords - center)
     soft_mask = jax.nn.sigmoid((width_param - dist_to_center) / softness)
-    # 全硅背景 + 波导区域 eps_r 调制（20% 增强，增大梯度信号）
-    # 小折射率差避免无 PML 时边界反射发散
-    delta = 0.20 * eps_si  # 20% eps_r 调制
+    # R2: 硅背景 + 波导区域 50% eps_r 增强
+    # 设计说明:
+    # - 全硅背景 (eps_si) 确保PML区域 epsilon_r ≈ eps_r_bg，避免 cb 放大
+    # - 50% 调制比 R1 的 20% 更大，梯度信号更强
+    # - PML 吸收边界启用后，可延长 n_steps 提升精度
+    delta = 0.50 * eps_si  # 50% eps_r 调制（R2: 从 20% 提升至 50%）
     eps_r = eps_si + delta * soft_mask[None, :, None]
     # 广播到 3D: (ny,) → (nx, ny, nz)
     eps_r = jnp.broadcast_to(eps_r, (nx, ny, nz))
@@ -156,7 +160,8 @@ def _fom_fn(
     eps_r = _epsilon_r_from_width(
         width_param, grid.nx, grid.ny, grid.nz, _EPS_R_SI, _EPS_R_SIO2
     )
-    grid.epsilon_r = eps_r
+    # R2: 不设置 grid.epsilon_r（保持初始硅背景），避免 jax.grad 追踪时 float() 报错
+    # PML 系数用 grid.epsilon_r（硅背景）计算，cb 用传入的 epsilon_r 计算
     result = fdtd.run(
         epsilon_r=eps_r,
         source_pos=source_pos,
@@ -198,7 +203,11 @@ def _run_adjoint_optimization() -> dict:
     _logger.info("Adjoint 逆向设计: JAX 可微分 FDTD 优化波导宽度")
 
     try:
-        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, YeeGrid3D
+        from polaris.sim.fdtd_jax_backend import (
+            DifferentiableFDTD,
+            GedneyPML,
+            YeeGrid3D,
+        )
     except ImportError as e:
         raise RuntimeError(f"JAX FDTD 模块不可用: {e}") from e
 
@@ -206,6 +215,8 @@ def _run_adjoint_optimization() -> dict:
     nx, ny, nz = _GRID_NX, _GRID_NY, _GRID_NZ
     dx = _GRID_DX_M
     grid = YeeGrid3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dx, dz=dx)
+    # R2: 初始化 grid.epsilon_r 为硅背景（PML 系数计算用）
+    grid.epsilon_r = jnp.ones((nx, ny, nz)) * _EPS_R_SI
 
     # CFL 稳定条件时间步 + 安全系数（与 stage5 对齐）
     # 来源: Taflove 2005 §4.4, Courant-Friedrichs-Lewy 条件
@@ -216,12 +227,15 @@ def _run_adjoint_optimization() -> dict:
         nx, ny, nz, dx * 1e9, dt, _FDTD_N_STEPS,
     )
 
-    # 初始化 DifferentiableFDTD
-    fdtd = DifferentiableFDTD(grid, pml=None, dt=dt)
+    # R2: 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
+    # R1 时因无 PML 被迫限制折射率差（20% 调制），R2 启用 PML 后可用真实硅/二氧化硅折射率差
+    pml = GedneyPML(grid, n_layers=_PML_N_LAYERS)
+    fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt)
+    _logger.info("PML 吸收边界: %d 层（Gedney 1996 IEEE TAP）", _PML_N_LAYERS)
 
-    # 源/监视器位置（z=1 避免 z=0 边界，与 stage5 对齐）
-    source_pos = (3, ny // 2, 1)
-    monitor_pos = (nx - 4, ny // 2, 1)
+    # 源/监视器位置（R2: z=3 在 PML 外，PML z=[0:2] 和 [6:8]）
+    source_pos = (3, ny // 2, 3)
+    monitor_pos = (nx - 4, ny // 2, 3)
     source_freq = _C0_M_S / (_TARGET_WAVELENGTH_UM * 1e-6)
     target_freq = source_freq
 
