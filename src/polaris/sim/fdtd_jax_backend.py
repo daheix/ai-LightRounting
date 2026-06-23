@@ -398,17 +398,21 @@ class DifferentiableFDTD:
         Db = (Δt/μ) / (1 + σ*Δt/2μ)        磁场驱动
         """
         shape = (self.grid.nx, self.grid.ny, self.grid.nz)
+        eps_r_bg = float(jnp.max(self.grid.epsilon_r)) if self.grid.epsilon_r is not None else 1.0
         if self.pml is not None:
             (ca_x, cb_x, ca_y, cb_y, ca_z, cb_z) = self.pml.damping_coefficients(self.dt)
             # 三轴 PML 系数合并（取最大阻尼）
             self.ca = jnp.minimum(jnp.minimum(ca_x, ca_y), ca_z) * jnp.ones(shape)
             self.cb = jnp.minimum(jnp.minimum(cb_x, cb_y), cb_z) * jnp.ones(shape)
+            # 磁场 PML 阻尼（阻抗匹配: σ_m/μ = σ/ε，Gedney 1996 IEEE TAP）
+            # Da = Ca, Db = Cb * ε/μ = Cb * ε₀*ε_r_bg/μ₀
+            self.da = self.ca
+            self.db = self.cb * EPS0 * eps_r_bg / MU0
         else:
             self.ca = jnp.ones(shape)
             self.cb = jnp.ones(shape)
-        # 磁场无 PML 阻尼（μ_r=1，σ_m=0）
-        self.da = jnp.ones(shape)
-        self.db = jnp.ones(shape)
+            self.da = jnp.ones(shape)
+            self.db = jnp.ones(shape)
 
     def step_e(
         self,
@@ -488,20 +492,24 @@ class DifferentiableFDTD:
         """
         shape = (self.grid.nx, self.grid.ny, self.grid.nz)
         eps = EPS0 * jnp.asarray(epsilon_r)
-        # 在 run 内重新计算 Ca/Cb（使 jax.grad 能追踪 epsilon_r 梯度）
+        eps_r_bg = float(jnp.max(self.grid.epsilon_r)) if self.grid.epsilon_r is not None else 1.0
+        # 在 run 内重新计算 Ca/Cb/Da/Db（使 jax.grad 能追踪 epsilon_r 梯度）
         if self.pml is not None:
             (ca_x, cb_x, ca_y, cb_y, ca_z, cb_z) = self.pml.damping_coefficients(self.dt)
             ca_pml = jnp.minimum(jnp.minimum(ca_x, ca_y), ca_z) * jnp.ones(shape)
             cb_pml = jnp.minimum(jnp.minimum(cb_x, cb_y), cb_z) * jnp.ones(shape)
-            # Cb 需除以 eps_r 以纳入介电常数（PML 系数已含背景 eps）
-            cb = cb_pml / jnp.asarray(epsilon_r)
+            # Cb: PML 系数已含 1/eps_bg，乘 eps_bg/epsilon_r 得到 1/epsilon_r
+            # 非 PML 区域: cb = dt/(EPS0*eps_r_bg) * eps_r_bg/epsilon_r = dt/(EPS0*epsilon_r) ✓
+            cb = cb_pml * eps_r_bg / jnp.asarray(epsilon_r)
             ca = ca_pml
+            # 磁场 PML 阻尼（阻抗匹配: σ_m/μ = σ/ε，Gedney 1996 IEEE TAP）
+            da = ca_pml
+            db = cb_pml * EPS0 * eps_r_bg / MU0
         else:
             ca = jnp.ones(shape)
             cb = self.dt / eps  # Cb = dt/eps（含 epsilon_r 梯度追踪）
-        # 磁场系数（μ_r=1）
-        da = jnp.ones(shape)
-        db = self.dt / MU0
+            da = jnp.ones(shape)
+            db = self.dt / MU0
         # 初始化场
         Ex0 = jnp.zeros(shape)
         Ey0 = jnp.zeros(shape)
