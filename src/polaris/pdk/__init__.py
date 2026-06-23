@@ -18,6 +18,12 @@ R11 路标：重导出版图参数化代码驱动模块（``pcell``）的公开�
 
 from polaris.pdk.catalog import DeviceCatalog, default_catalog
 from polaris.pdk.device import BoundingBox, Device
+from polaris.pdk.gpic import (
+    GPIC_ALIAS_MAP,
+    GPICBB,
+    GPICPDK,
+    build_gpic_pdk,
+)
 from polaris.pdk.gdsfactory_pdk_bridge import (
     GDSFACTORY_PDK_REGISTRY,
     PDKConflict,
@@ -77,6 +83,10 @@ __all__ = [
     "Direction",
     "GDSFACTORY_PDK_REGISTRY",
     "GDSLayer",
+    "GPIC_ALIAS_MAP",
+    "GPICBB",
+    "GPICPDK",
+    "GPIC_DRC_RUNSET",
     "INP_DEVICES",
     "LNOI_DEVICES",
     "PCellCache",
@@ -120,4 +130,19 @@ __all__ = [
     "build_hhi_pdk",
     "build_ligentec_pdk",
     "build_lionix_pdk",
+    # R19 L-Edit GPIC iPDK 对齐（GPICPDK + 15 BB + SPICE + PDAflow）
+    "build_gpic_pdk",
 ]
+
+
+def __getattr__(name: str):
+    """PEP 562 延迟访问 GPIC_DRC_RUNSET（避免循环导入）。
+
+    GPIC_DRC_RUNSET 依赖 polaris.sim.klayout_drc.DRCRule，而 klayout_drc
+    依赖 polaris.pdk.layer_map，形成循环。通过 __getattr__ 延迟到首次访问
+    时才从 polaris.pdk.gpic 导入，此时所有模块均已完成初始化。
+    """
+    if name == "GPIC_DRC_RUNSET":
+        from polaris.pdk.gpic import GPIC_DRC_RUNSET
+        return GPIC_DRC_RUNSET
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
