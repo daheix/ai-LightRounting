@@ -1,12 +1,16 @@
 """PoLaRIS Web Server — HTTP API + 静态文件服务（阶段 F4）。
 
 使用 Python 内置 http.server 实现 REST API + 静态前端服务，无需 Flask/FastAPI。
-支持电路预设选择、一键布局布线、结果可视化、DRC 报告、GDS 导出。
+支持电路预设选择、一键布局布线、结果可视化、DRC 报告、GDS 导出、
+端到端 Demo Showcase 全流程演示。
 
 API 端点:
-- GET  /api/presets        — 列出预设电路
-- POST /api/run            — 运行布局布线流水线
-- GET  /api/health         — 健康检查
+- GET  /api/health                          — 健康检查
+- GET  /api/presets                         — 列出预设电路
+- POST /api/run                             — 运行布局布线流水线
+- POST /api/showcase/run                    — 启动端到端 Demo Showcase 全流程
+- GET  /api/showcase/report/{run_id}        — 查询 Showcase 汇总报告
+- GET  /api/showcase/stages/{run_id}/{stage_id} — 查询 Showcase 单阶段结果
 
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
@@ -17,8 +21,10 @@ from __future__ import annotations
 
 import json
 import logging
+import sys
 import threading
 import traceback
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -26,6 +32,9 @@ from urllib.parse import urlparse
 logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).parent / "static"
+
+# Showcase 运行状态字典: {run_id: {"status": str, "output_dir": str, "error": str|None}}
+_showcase_runs: dict[str, dict] = {}
 
 
 def _get_presets() -> list[dict]:
@@ -178,6 +187,80 @@ def _run_pipeline(preset_id: str, router_type: str = "default") -> dict:
     }
 
 
+# Showcase 输出子目录列表
+_SHOWCASE_SUBDIRS = ["logs", "gds", "verilog_a", "spice", "reports"]
+
+
+def _run_showcase_background(run_id: str, output_dir: str) -> None:
+    """在后台线程中运行端到端 Demo Showcase 全流程。
+
+    顺序执行 9 个阶段，每阶段用 StageLogger 包裹，结构化日志写入
+    output_dir/logs/showcase.jsonl。运行前清空 JSONL 文件，避免历史记录污染。
+
+    Args:
+        run_id: 运行 ID（时间戳格式 YYYYMMDD_HHMMSS）。
+        output_dir: 输出目录路径。
+    """
+    try:
+        # 添加 examples/e2e_showcase 到 sys.path，使 stages/ 与同级模块可被导入
+        showcase_dir = Path(__file__).parent.parent.parent.parent / "examples" / "e2e_showcase"
+        if str(showcase_dir) not in sys.path:
+            sys.path.insert(0, str(showcase_dir))
+
+        from logging_config import StageLogger, setup_logging  # noqa: E402
+        from stages import (  # noqa: E402
+            stage1_pdk_catalog,
+            stage2_circuit_spec,
+            stage3_ai_placement,
+            stage4_routing,
+            stage5_simulation,
+            stage6_drc_lvs,
+            stage7_gds_export,
+            stage8_opto_electrical,
+            stage9_quantum_photonics,
+        )
+
+        out_dir = Path(output_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for subdir in _SHOWCASE_SUBDIRS:
+            (out_dir / subdir).mkdir(parents=True, exist_ok=True)
+
+        # 清空 JSONL 日志文件，避免历史记录污染本次运行结果
+        jsonl_path = out_dir / "logs" / "showcase.jsonl"
+        jsonl_path.write_text("", encoding="utf-8")
+
+        setup_logging(out_dir)
+
+        stages = [
+            (1, "PDK 器件目录展示", stage1_pdk_catalog),
+            (2, "电路规格定义", stage2_circuit_spec),
+            (3, "AI 布局", stage3_ai_placement),
+            (4, "智能布线", stage4_routing),
+            (5, "仿真验证", stage5_simulation),
+            (6, "DRC/LVS 验证", stage6_drc_lvs),
+            (7, "GDS 导出", stage7_gds_export),
+            (8, "光电协同", stage8_opto_electrical),
+            (9, "量子光子验证", stage9_quantum_photonics),
+        ]
+
+        for stage_id, stage_name, stage_module in stages:
+            with StageLogger(stage_id, stage_name, out_dir) as sl:
+                result = stage_module.run(out_dir)
+                if result:
+                    for key, value in result.items():
+                        sl.log_output(key, value)
+
+        _showcase_runs[run_id]["status"] = "done"
+        logger.info("Showcase 运行完成: run_id=%s", run_id)
+    except Exception as e:
+        logger.error(
+            "Showcase 运行失败: run_id=%s, 错误: %s\n%s",
+            run_id, e, traceback.format_exc(),
+        )
+        _showcase_runs[run_id]["status"] = "failed"
+        _showcase_runs[run_id]["error"] = str(e)
+
+
 class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
     """PoLaRIS HTTP 请求处理器。"""
 
@@ -224,6 +307,27 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/presets":
             self._send_json({"presets": _get_presets()})
             return
+        if path.startswith("/api/showcase/report/"):
+            run_id = path.split("/")[-1]
+            self._handle_showcase_report(run_id)
+            return
+        if path.startswith("/api/showcase/stages/"):
+            parts = path.split("/")
+            # 路径格式: /api/showcase/stages/{run_id}/{stage_id}
+            run_id = parts[-2]
+            try:
+                stage_id = int(parts[-1])
+            except ValueError:
+                self._send_json(
+                    {"success": False, "error": f"无效的阶段 ID: {parts[-1]}"},
+                    code=400,
+                )
+                return
+            self._handle_showcase_stage(run_id, stage_id)
+            return
+        if path == "/showcase.html" or path == "/showcase":
+            self._send_static(_STATIC_DIR / "showcase.html")
+            return
 
         if path == "/" or path == "":
             path = "/index.html"
@@ -250,8 +354,128 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
                     code=500,
                 )
             return
+        if path == "/api/showcase/run":
+            self._handle_showcase_run()
+            return
 
         self.send_error(404, "Not found")
+
+    def _handle_showcase_run(self) -> None:
+        """处理 POST /api/showcase/run: 启动后台 Showcase 全流程。"""
+        content_length = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_length) if content_length > 0 else b"{}"
+        try:
+            params = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            self._send_json({"success": False, "error": "请求体不是有效的 JSON"}, code=400)
+            return
+        output_dir = params.get("output_dir", "out/e2e_showcase_web")
+
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        _showcase_runs[run_id] = {
+            "status": "running",
+            "output_dir": output_dir,
+            "error": None,
+        }
+
+        thread = threading.Thread(
+            target=_run_showcase_background,
+            args=(run_id, output_dir),
+            daemon=True,
+        )
+        thread.start()
+
+        logger.info("启动 Showcase: run_id=%s, output_dir=%s", run_id, output_dir)
+        self._send_json({
+            "success": True,
+            "run_id": run_id,
+            "output_dir": output_dir,
+            "message": f"Showcase 已启动，使用 GET /api/showcase/report/{run_id} 查询结果",
+        })
+
+    def _handle_showcase_report(self, run_id: str) -> None:
+        """处理 GET /api/showcase/report/{run_id}: 返回汇总报告。"""
+        run_info = _showcase_runs.get(run_id)
+        if run_info is None:
+            self._send_json(
+                {"success": False, "error": f"未知 run_id: {run_id}"},
+                code=404,
+            )
+            return
+        output_dir = run_info.get("output_dir", "out/e2e_showcase_web")
+
+        jsonl_path = Path(output_dir) / "logs" / "showcase.jsonl"
+        stages: list[dict] = []
+        if jsonl_path.exists():
+            with jsonl_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            stages.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            logger.warning("跳过无效 JSONL 行: %s", line[:100])
+
+        n_done = sum(1 for s in stages if s.get("status") == "done")
+        n_failed = sum(1 for s in stages if s.get("status") == "failed")
+        total_duration = sum(s.get("duration_s", 0) for s in stages)
+
+        self._send_json({
+            "success": True,
+            "run_id": run_id,
+            "status": run_info.get("status", "unknown"),
+            "error": run_info.get("error"),
+            "stages": stages,
+            "summary": {
+                "n_done": n_done,
+                "n_failed": n_failed,
+                "n_total": len(stages),
+                "total_duration_s": round(total_duration, 4),
+            },
+        })
+
+    def _handle_showcase_stage(self, run_id: str, stage_id: int) -> None:
+        """处理 GET /api/showcase/stages/{run_id}/{stage_id}: 返回单阶段结果。"""
+        run_info = _showcase_runs.get(run_id)
+        if run_info is None:
+            self._send_json(
+                {"success": False, "error": f"未知 run_id: {run_id}"},
+                code=404,
+            )
+            return
+        output_dir = run_info.get("output_dir", "out/e2e_showcase_web")
+
+        jsonl_path = Path(output_dir) / "logs" / "showcase.jsonl"
+        stage_data: dict | None = None
+        if jsonl_path.exists():
+            with jsonl_path.open("r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        log = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if log.get("stage_id") == stage_id:
+                        stage_data = log
+                        break
+
+        if stage_data is None:
+            self._send_json(
+                {
+                    "success": False,
+                    "error": f"阶段 {stage_id} 未找到（可能尚未运行或 run_id 无效）",
+                },
+                code=404,
+            )
+            return
+
+        self._send_json({
+            "success": True,
+            "run_id": run_id,
+            **stage_data,
+        })
 
 
 class WebServer:
