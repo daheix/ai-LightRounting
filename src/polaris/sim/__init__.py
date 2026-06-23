@@ -102,6 +102,19 @@ from polaris.sim.fdtd_jax_backend import (
     SParamExtractor,
     YeeGrid3D,
 )
+from polaris.sim.interconnect import (
+    CMLComponent,
+    CMLCompiler,
+    EyeDiagramAnalyzer,
+    FIRComponent,
+    InterconnectTimeDomainSimulator,
+    ONA,
+)
+from polaris.sim.interconnect_jax import (
+    JAXCircuitSimulator,
+    MCResult,
+    MonteCarloCircuit,
+)
 from polaris.sim.graph_lvs import (
     EquivalenceHints,
     GraphIsomorphismLVSComparer,
@@ -462,6 +475,16 @@ __all__ = [
     "SParamExtractor",
     "DifferentiableFDTD",
     "JAXFDTDEngine",
+    # R32 Lumerical INTERCONNECT 光子电路仿真对齐（时域+CML+ONA+眼图+JAX+MC）
+    "FIRComponent",
+    "InterconnectTimeDomainSimulator",
+    "CMLComponent",
+    "CMLCompiler",
+    "ONA",
+    "EyeDiagramAnalyzer",
+    "JAXCircuitSimulator",
+    "MCResult",
+    "MonteCarloCircuit",
     # R17 layout-aware 仿真（ElasticConnector + ParasiticExtractor + LayoutCircuitFeedback）
     "BBPlacement",
     "ElasticConnector",
