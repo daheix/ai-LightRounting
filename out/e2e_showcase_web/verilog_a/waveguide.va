@@ -1,0 +1,31 @@
+`include "disciplines.vams"
+`include "constants.vams"
+
+module waveguide_soi (in, out);
+  electrical in, out;
+  parameter real length = 1.000000e+02 from [0:inf);  // 波导长度 (m)
+  parameter real neff = 2.400000e+00 from (0:inf);          // 有效折射率
+  parameter real ng = 4.000000e+00 from (0:inf);              // 群折射率
+  parameter real loss_db_cm = 5.000000e-01 from [0:inf);  // 损耗 (dB/cm)
+  parameter real wavelength = 1.550000e+00 from (0:inf);  // 波长 (m)
+
+  real beta;
+  real phase;
+  real alpha_linear;
+  real s21_mag;
+  real s21_phase;
+
+  analog begin
+    // 传播常数 beta = 2*pi*neff/lambda
+    beta = 2.0 * `M_PI * neff / wavelength;
+    // 相位累积
+    phase = beta * length;
+    // 损耗转线性 (dB/cm -> 振幅衰减)
+    alpha_linear = pow(10.0, -loss_db_cm * length * 1e4 / 20.0);
+    // S21 = alpha * exp(j*phase)
+    s21_mag = alpha_linear;
+    s21_phase = phase;
+    // 光功率传输（小信号线性近似）
+    V(out) <+ s21_mag * cos(s21_phase) * V(in);
+  end
+endmodule
