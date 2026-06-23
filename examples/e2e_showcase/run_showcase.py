@@ -111,6 +111,9 @@ def run_single_stage(stage_id: int, stage_name: str, stage_module: Any, output_d
     start = time.time()
     try:
         with StageLogger(stage_id, stage_name, output_dir) as sl:
+            # 记录输入参数（修复 P0: inputs 字段始终为空）
+            sl.log_input("output_dir", str(output_dir))
+            sl.log_input("stage_module", stage_module.__name__)
             result = stage_module.run(output_dir)
             if result:
                 for key, value in result.items():

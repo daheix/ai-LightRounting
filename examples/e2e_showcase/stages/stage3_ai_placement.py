@@ -159,7 +159,9 @@ def _load_checkpoint() -> str | None:
             _logger.info("R34 预训练 checkpoint 加载: %s", path)
             return path
     _logger.warning(
-        "R34 预训练 checkpoint 未找到，降级为解析布局（非 RL 策略）"
+        "R34 预训练 checkpoint 未找到 (%s)，降级为随机贪心布局（非 AI 策略）。"
+        "HPWL 仅为随机基线，非 AI 布局结果，不能与 AlphaChip 对标。",
+        _CHECKPOINT_CANDIDATES,
     )
     return None
 
@@ -266,7 +268,7 @@ def _place_circuit(
 
     Args:
         circuit: 电路规格。
-        checkpoint_path: RL checkpoint 路径，None 时用解析布局。
+        checkpoint_path: RL checkpoint 路径，None 时用随机贪心布局（非 AI 策略）。
 
     Returns:
         电路布局结果 dict，含 name/n_devices/placements/hpwl/ascii_layout。
@@ -308,11 +310,17 @@ def run(output_dir: Path) -> dict:
     """执行阶段 3: AI 布局。
 
     流程:
-    1. 尝试加载 R34 预训练 checkpoint（若不存在则降级为解析布局并告警）
+    1. 尝试加载 R34 预训练 checkpoint（若不存在则降级为随机贪心布局并告警）
     2. 构造 3 个演示电路（MZI、Clements 4x4、量子占位）
     3. 对每个电路执行布局，计算 HPWL 指标
     4. 输出 ASCII 布局预览
     5. 返回布局结果摘要
+
+    学术诚信说明:
+        - checkpoint 不存在时，IntegratedPipeline 内部调用 _place_random
+          （随机贪心布局，固定种子 42），此时 HPWL 仅为随机基线，
+          非 Edge-GNN+PPO 的 AI 布局结果，不能与 AlphaChip 对标。
+        - placement_mode 如实标注为 "random_greedy"，ai_layout_executed=False。
 
     Args:
         output_dir: 输出目录。
@@ -321,14 +329,17 @@ def run(output_dir: Path) -> dict:
         阶段执行结果，含:
         - circuits: 3 电路布局结果列表
         - checkpoint_loaded: checkpoint 是否加载成功
-        - placement_mode: 布局模式（"rl" 或 "analytical"）
+        - placement_mode: 布局模式（"rl" 或 "random_greedy"）
+        - ai_layout_executed: 是否真正执行了 AI 布局（checkpoint 加载成功才为 True）
+        - baseline_type: 基线类型（"rl" 或 "random_greedy"）
+        - warning: 降级告警信息（checkpoint 未加载时非 None）
     """
     _logger.info("阶段 3 开始: AI 布局")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     checkpoint_path = _load_checkpoint()
     checkpoint_loaded = checkpoint_path is not None
-    placement_mode = "rl" if checkpoint_loaded else "analytical"
+    placement_mode = "rl" if checkpoint_loaded else "random_greedy"
     _logger.info(
         "布局模式: %s (checkpoint_loaded=%s)",
         placement_mode,
@@ -350,4 +361,11 @@ def run(output_dir: Path) -> dict:
         "circuits": results,
         "checkpoint_loaded": checkpoint_loaded,
         "placement_mode": placement_mode,
+        "ai_layout_executed": checkpoint_loaded,
+        "baseline_type": placement_mode,
+        "warning": (
+            "HPWL 来自随机贪心布局，非 AI 结果，不能与 AlphaChip 对标"
+            if not checkpoint_loaded
+            else None
+        ),
     }

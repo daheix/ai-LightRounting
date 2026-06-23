@@ -32,6 +32,30 @@ import numpy as np
 plt.rcParams["font.sans-serif"] = ["DejaVu Sans", "SimHei", "Arial Unicode MS"]
 plt.rcParams["axes.unicode_minus"] = False
 
+# 深色主题配置 — 禁止白色底子
+_DARK_BG = "#0f1419"
+_DARK_PANEL = "#1a2030"
+_DARK_GRID = "#2d3748"
+_LIGHT_TEXT = "#e2e8f0"
+_MUTED_TEXT = "#94a3b8"
+plt.rcParams.update({
+    "figure.facecolor": _DARK_BG,
+    "axes.facecolor": _DARK_PANEL,
+    "axes.edgecolor": _DARK_GRID,
+    "axes.labelcolor": _LIGHT_TEXT,
+    "axes.titlecolor": _LIGHT_TEXT,
+    "xtick.color": _MUTED_TEXT,
+    "ytick.color": _MUTED_TEXT,
+    "grid.color": _DARK_GRID,
+    "grid.alpha": 0.5,
+    "text.color": _LIGHT_TEXT,
+    "legend.facecolor": _DARK_PANEL,
+    "legend.edgecolor": _DARK_GRID,
+    "legend.labelcolor": _LIGHT_TEXT,
+    "savefig.facecolor": _DARK_BG,
+    "savefig.edgecolor": _DARK_BG,
+})
+
 REPORTS_DIR = Path("out/e2e_showcase_web/reports")
 OUTPUT_DIR = Path("out/e2e_showcase_web/reports")
 
@@ -43,8 +67,8 @@ def plot_pam4_eye() -> Path:
 
     n_symbols = data["n_symbols"]
     samples_per_symbol = data["samples_per_symbol"]
-    noise_std = data["noise_std_v"]
-    bit_rate = data["bit_rate_bps"]
+    noise_std = data.get("noise_std_v", data.get("noise_std", 0.05))
+    bit_rate = data.get("bit_rate_bps", data.get("bit_rate_gbps", 100) * 1e9)
 
     # 重建 PAM4 信号（4 电平: 0, 1, 2, 3）
     rng = np.random.default_rng(42)
@@ -63,16 +87,16 @@ def plot_pam4_eye() -> Path:
 
     fig, ax = plt.subplots(figsize=(10, 6), dpi=100)
     for row in eye_data:
-        ax.plot(np.arange(eye_period) / samples_per_symbol, row, color="blue", alpha=0.05, linewidth=0.5)
+        ax.plot(np.arange(eye_period) / samples_per_symbol, row, color="#60a5fa", alpha=0.08, linewidth=0.5)
     ax.set_title(f"PAM4 Eye Diagram (BER={data.get('ber', 'N/A')}, SNR={data.get('snr_db', 'N/A')} dB)", fontsize=13)
     ax.set_xlabel("Symbol Period (UI)")
     ax.set_ylabel("Amplitude (V)")
     ax.set_xlim(0, 2)
-    ax.grid(True, alpha=0.3)
+    ax.grid(True, alpha=0.5)
     # 标注 4 电平
     for level in range(4):
-        ax.axhline(y=level, color="red", linestyle="--", alpha=0.3)
-        ax.text(2.05, level, f"L{level}", color="red", fontsize=9, va="center")
+        ax.axhline(y=level, color="#f87171", linestyle="--", alpha=0.4)
+        ax.text(2.05, level, f"L{level}", color="#f87171", fontsize=9, va="center")
 
     plt.tight_layout()
     out_path = OUTPUT_DIR / "pam4_eye.png"
@@ -101,30 +125,30 @@ def plot_mzi_spectrum() -> Path:
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), dpi=100)
 
     # 上图: MZI 传输率（线性）
-    ax1.plot(wavelengths, t_mzi, color="blue", linewidth=1.5)
+    ax1.plot(wavelengths, t_mzi, color="#60a5fa", linewidth=1.5)
     ax1.set_title("MZI Transmission Spectrum (1500-1600 nm)", fontsize=13)
     ax1.set_xlabel("Wavelength (nm)")
     ax1.set_ylabel("Transmission T_mzi")
-    ax1.grid(True, alpha=0.3)
+    ax1.grid(True, alpha=0.5)
     # 标注谐振峰
     peak_idx = np.argmax(t_mzi)
     ax1.annotate(
         f"Peak: {wavelengths[peak_idx]:.1f} nm\nT={t_mzi[peak_idx]:.4f}",
         xy=(wavelengths[peak_idx], t_mzi[peak_idx]),
         xytext=(wavelengths[peak_idx] + 20, t_mzi[peak_idx] * 0.7),
-        arrowprops={"arrowstyle": "->", "color": "red"},
-        color="red",
+        arrowprops={"arrowstyle": "->", "color": "#f87171"},
+        color="#f87171",
         fontsize=10,
     )
 
     # 下图: 总传输率（dB）
     # 限制 dB 范围以避免 -inf
     t_total_db_plot = np.clip(t_total_db, -80, 0)
-    ax2.plot(wavelengths, t_total_db_plot, color="darkgreen", linewidth=1.5)
+    ax2.plot(wavelengths, t_total_db_plot, color="#34d399", linewidth=1.5)
     ax2.set_title("Total Insertion Loss (dB)", fontsize=13)
     ax2.set_xlabel("Wavelength (nm)")
     ax2.set_ylabel("Transmission (dB)")
-    ax2.grid(True, alpha=0.3)
+    ax2.grid(True, alpha=0.5)
     ax2.invert_yaxis()
 
     plt.tight_layout()
@@ -147,7 +171,7 @@ def plot_boson_sampling() -> Path:
     probs = [v for _, v in sorted_items]
 
     fig, ax = plt.subplots(figsize=(14, 6), dpi=100)
-    bars = ax.bar(range(len(labels)), probs, color="steelblue", edgecolor="navy", alpha=0.8)
+    bars = ax.bar(range(len(labels)), probs, color="#60a5fa", edgecolor="#1e40af", alpha=0.85)
     ax.set_title(
         f"4-Photon 4-Mode Boson Sampling Distribution (Top 15)\n"
         f"Prob Sum = {data['prob_sum']:.10f} (Conserved: {data['prob_sum_ok']})",
@@ -157,7 +181,7 @@ def plot_boson_sampling() -> Path:
     ax.set_ylabel("Probability")
     ax.set_xticks(range(len(labels)))
     ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=8)
-    ax.grid(True, axis="y", alpha=0.3)
+    ax.grid(True, axis="y", alpha=0.5)
 
     # 在柱顶标注概率值
     for bar, prob in zip(bars, probs):
@@ -190,15 +214,15 @@ def plot_hom_klm() -> Path:
     # 子图 1: HOM 干涉输出概率
     hom_labels = list(hom_data["output_prob"].keys())
     hom_probs = list(hom_data["output_prob"].values())
-    colors = ["green", "green", "red"]
-    bars1 = ax1.bar(hom_labels, hom_probs, color=colors, edgecolor="black", alpha=0.8)
+    colors = ["#34d399", "#34d399", "#f87171"]
+    bars1 = ax1.bar(hom_labels, hom_probs, color=colors, edgecolor="#e2e8f0", alpha=0.85)
     ax1.set_title(
         f"HOM Interference (50:50 BS)\n|1,1> Prob = {hom_data['coincidence_prob']:.2e}\nVerified: {hom_data['hom_verified']}",
         fontsize=11,
     )
     ax1.set_xlabel("Output State")
     ax1.set_ylabel("Probability")
-    ax1.grid(True, axis="y", alpha=0.3)
+    ax1.grid(True, axis="y", alpha=0.5)
     for bar, prob in zip(bars1, hom_probs):
         ax1.text(
             bar.get_x() + bar.get_width() / 2,
@@ -207,15 +231,16 @@ def plot_hom_klm() -> Path:
             ha="center",
             va="bottom",
             fontsize=8,
+            color=_LIGHT_TEXT,
         )
 
     # 子图 2: KLM CNOT 成功率
     ax2.bar(
         ["Theoretical", "Actual"],
         [klm_data["cnot_expected"], klm_data["cnot_success_prob"]],
-        color=["gray", "steelblue"],
-        edgecolor="black",
-        alpha=0.8,
+        color=["#64748b", "#60a5fa"],
+        edgecolor="#e2e8f0",
+        alpha=0.85,
     )
     ax2.set_title(
         f"KLM CNOT Success Probability\nVerified: {klm_data['cnot_verified']}",
@@ -223,8 +248,8 @@ def plot_hom_klm() -> Path:
     )
     ax2.set_ylabel("Probability")
     ax2.set_ylim(0, 0.3)
-    ax2.grid(True, axis="y", alpha=0.3)
-    ax2.axhline(y=0.25, color="red", linestyle="--", alpha=0.5, label="Expected 0.25")
+    ax2.grid(True, axis="y", alpha=0.5)
+    ax2.axhline(y=0.25, color="#f87171", linestyle="--", alpha=0.6, label="Expected 0.25")
     ax2.legend()
 
     # 子图 3: Hadamard 门酉矩阵热图

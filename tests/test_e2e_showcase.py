@@ -437,6 +437,74 @@ class TestLoggingConfig:
 
 
 # =============================================================================
+# 阶段失败日志（P0 缺陷修复验证）
+# =============================================================================
+
+
+class TestStageFailureLogging:
+    """阶段失败日志测试（P0 缺陷修复验证）。
+
+    验证三个 P0 缺陷修复:
+    1. error 字段含完整 traceback
+    2. events 字段记录中间过程日志（info/warn）
+    3. inputs 字段被正确填充
+    """
+
+    def test_failed_stage_logs_error_with_traceback(self, tmp_path: Path) -> None:
+        """失败阶段应记录完整 traceback。"""
+        out = tmp_path / "test_fail"
+        (out / "logs").mkdir(parents=True)
+        setup_logging(out)
+
+        with pytest.raises(ValueError):
+            with StageLogger(99, "失败测试", out) as sl:
+                sl.log_input("test_input", "value")
+                raise ValueError("模拟失败")
+
+        jsonl_path = out / "logs" / "showcase.jsonl"
+        assert jsonl_path.exists()
+        entry = json.loads(jsonl_path.read_text(encoding="utf-8").strip())
+        assert entry["status"] == "failed"
+        assert "ValueError" in entry["error"]
+        assert "Traceback" in entry["error"]
+        assert "模拟失败" in entry["error"]
+        assert entry["inputs"]["test_input"] == "value"
+
+    def test_events_recorded_in_jsonl(self, tmp_path: Path) -> None:
+        """中间过程日志应记录到 events 字段。"""
+        out = tmp_path / "test_events"
+        (out / "logs").mkdir(parents=True)
+        setup_logging(out)
+
+        with StageLogger(1, "测试", out) as sl:
+            sl.info("步骤 1 开始")
+            sl.info("步骤 2 进行中")
+            sl.warn("发现警告")
+            sl.log_output("result", 42)
+
+        entry = json.loads((out / "logs" / "showcase.jsonl").read_text(encoding="utf-8").strip())
+        assert "events" in entry
+        assert len(entry["events"]) == 3  # 2 info + 1 warn
+        assert entry["events"][0]["level"] == "info"
+        assert entry["events"][0]["msg"] == "步骤 1 开始"
+        assert entry["events"][2]["level"] == "warning"
+
+    def test_inputs_populated(self, tmp_path: Path) -> None:
+        """inputs 字段应被填充。"""
+        out = tmp_path / "test_inputs"
+        (out / "logs").mkdir(parents=True)
+        setup_logging(out)
+
+        with StageLogger(1, "测试", out) as sl:
+            sl.log_input("param1", "value1")
+            sl.log_input("param2", 42)
+
+        entry = json.loads((out / "logs" / "showcase.jsonl").read_text(encoding="utf-8").strip())
+        assert entry["inputs"]["param1"] == "value1"
+        assert entry["inputs"]["param2"] == 42
+
+
+# =============================================================================
 # 汇总报告生成器
 # =============================================================================
 
