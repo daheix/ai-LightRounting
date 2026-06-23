@@ -9,8 +9,21 @@ R10 路标新增：gdsfactory routing strategies 对齐
 R21 路标新增：LiDAR 曲线感知 A* + OptoDesigner Autorouting 对齐
 （CurvyAStarRouter/AdaptiveCrossingInserter/CongestionAwareNetOrdering/
 OptoDesignerAutorouter/DRVFreeValidator）。
+
+R22 路标新增：OptoDesigner Advanced Connectors Module 对齐
+（EulerBend/LengthDefinedConnector/PhaseMatchedRouter/RFGSGRouter/
+BusRouter/HighOrderBezierConnector）。
 """
 
+from polaris.router.advanced_connectors import (
+    BusRouter,
+    EulerBend,
+    EulerBendConfig,
+    HighOrderBezierConnector,
+    LengthDefinedConnector,
+    PhaseMatchedRouter,
+    RFGSGRouter,
+)
 from polaris.router.all_angle_router import AllAngleRouter
 from polaris.router.bundle_router import (
     auto_taper,
@@ -56,4 +69,12 @@ __all__ = [
     "CurvyPathResult",
     "CurveType",
     "route_curvy_connection",
+    # R22: OptoDesigner Advanced Connectors Module 对齐
+    "BusRouter",
+    "EulerBend",
+    "EulerBendConfig",
+    "HighOrderBezierConnector",
+    "LengthDefinedConnector",
+    "PhaseMatchedRouter",
+    "RFGSGRouter",
 ]
