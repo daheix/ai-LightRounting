@@ -28,11 +28,29 @@
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 """
 
+from polaris.sim.autodiff import (
+    compute_gradient,
+    compute_jvp,
+    compute_vjp,
+    finite_difference_gradient,
+    optimize_waveguide_lengths,
+    verify_gradient,
+    waveguide_transmission_loss,
+)
 from polaris.sim.backend_selector import (
     StabilityReport,
     compute_condition_number,
     diagnose_stability,
     select_backend,
+)
+from polaris.sim.building_block import (
+    BBRegistry,
+    BuildingBlock,
+    ModelCard,
+    TMatrix,
+    VirtualExperiment,
+    s_to_t,
+    t_to_s,
 )
 from polaris.sim.cascade import cascade_circuit
 from polaris.sim.cascade_backends import (
@@ -52,19 +70,33 @@ from polaris.sim.dag_scheduler import (
     flat_circuit,
     schedule_circuit,
 )
-from polaris.sim.subnetwork_decomp import (
-    BlockTridiagonalMatrix,
-    SubnetworkCache,
-    SubnetworkDecomposition,
-    block_thomas_solve,
-    build_block_tridiagonal_from_chain,
-    cascade_adaptive,
-    decompose_circuit,
-    detect_block_tridiagonal,
-    merge_subnetworks_via_schur,
-    schur_complement,
-    select_strategy,
-    solve_subnetwork,
+from polaris.sim.eqdrc import (
+    CurvilinearLVS,
+    DRCReportGenerator,
+    EqDRCEngine,
+    EqDRCRule,
+    EqDRCViolation,
+    FoundryDRCCertifier,
+    FoundryDRCRunset,
+)
+from polaris.sim.graph_lvs import (
+    EquivalenceHints,
+    GraphIsomorphismLVSComparer,
+    NetlistEdge,
+    NetlistNode,
+    PhotonicsLVSReport,
+    PhotonicsNetlist,
+    run_graph_lvs,
+    verify_port_orientation,
+    verify_waveguide_length,
+)
+from polaris.sim.hierarchical_drc import (
+    BVH,
+    BVHNode,
+    DRCViolation,
+    HierarchicalDRC,
+    RowPartition,
+    run_hierarchical_drc,
 )
 from polaris.sim.jax_backend import (
     JAXConfig,
@@ -78,22 +110,6 @@ from polaris.sim.jax_backend import (
     simulate_waveguide_chain_jax,
     waveguide_s_jax,
 )
-from polaris.sim.autodiff import (
-    compute_gradient,
-    compute_jvp,
-    compute_vjp,
-    finite_difference_gradient,
-    optimize_waveguide_lengths,
-    verify_gradient,
-    waveguide_transmission_loss,
-)
-from polaris.sim.monte_carlo import (
-    MonteCarloResult,
-    monte_carlo_simulate,
-    sensitivity_analysis,
-    waveguide_transmission_mc,
-    yield_analysis,
-)
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
@@ -102,24 +118,12 @@ from polaris.sim.klayout_drc import (
     KLayoutDRCRunner,
     run_klayout_drc,
 )
-from polaris.sim.hierarchical_drc import (
-    BVH,
-    BVHNode,
-    DRCViolation,
-    HierarchicalDRC,
-    RowPartition,
-    run_hierarchical_drc,
-)
-from polaris.sim.graph_lvs import (
-    EquivalenceHints,
-    GraphIsomorphismLVSComparer,
-    NetlistEdge,
-    NetlistNode,
-    PhotonicsLVSReport,
-    PhotonicsNetlist,
-    run_graph_lvs,
-    verify_port_orientation,
-    verify_waveguide_length,
+from polaris.sim.layout_aware import (
+    BBPlacement,
+    ElasticConnector,
+    LayoutAwareSimulator,
+    LayoutCircuitFeedback,
+    ParasiticExtractor,
 )
 from polaris.sim.lvs import (
     ExtractedNetlist,
@@ -164,6 +168,13 @@ from polaris.sim.models_extended import (
     taper_s,
     unitary_s,
 )
+from polaris.sim.monte_carlo import (
+    MonteCarloResult,
+    monte_carlo_simulate,
+    sensitivity_analysis,
+    waveguide_transmission_mc,
+    yield_analysis,
+)
 from polaris.sim.netlist_adapter import (
     PolarNetlist,
     adapt_netlist,
@@ -189,24 +200,27 @@ from polaris.sim.subcircuit import (
     Subcircuit,
     Term,
 )
-from polaris.sim.touchstone import load_touchstone, save_touchstone
-from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
-from polaris.sim.building_block import (
-    BBRegistry,
-    BuildingBlock,
-    ModelCard,
-    TMatrix,
-    VirtualExperiment,
-    s_to_t,
-    t_to_s,
+from polaris.sim.subnetwork_decomp import (
+    BlockTridiagonalMatrix,
+    SubnetworkCache,
+    SubnetworkDecomposition,
+    block_thomas_solve,
+    build_block_tridiagonal_from_chain,
+    cascade_adaptive,
+    decompose_circuit,
+    detect_block_tridiagonal,
+    merge_subnetworks_via_schur,
+    schur_complement,
+    select_strategy,
+    solve_subnetwork,
 )
 from polaris.sim.system_level import (
     BerEvaluator,
     HybridSimulator,
     OpticalLink,
     SignalFlowGraph,
-    TLLMLaser,
     TimeDomainSimulator,
+    TLLMLaser,
     to_time_domain,
 )
 from polaris.sim.time_domain_circuit import (
@@ -216,13 +230,8 @@ from polaris.sim.time_domain_circuit import (
     TimeDomainCircuitSimulator,
     YeeGrid,
 )
-from polaris.sim.layout_aware import (
-    BBPlacement,
-    ElasticConnector,
-    LayoutAwareSimulator,
-    LayoutCircuitFeedback,
-    ParasiticExtractor,
-)
+from polaris.sim.touchstone import load_touchstone, save_touchstone
+from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
 
 __all__ = [
     # 类型
@@ -411,4 +420,12 @@ __all__ = [
     "LayoutAwareSimulator",
     "LayoutCircuitFeedback",
     "ParasiticExtractor",
+    # R23 Siemens Calibre eqDRC + nmLVS 光子 DRC 认证（方程化 DRC + 曲线 LVS + 多 foundry）
+    "CurvilinearLVS",
+    "DRCReportGenerator",
+    "EqDRCEngine",
+    "EqDRCRule",
+    "EqDRCViolation",
+    "FoundryDRCCertifier",
+    "FoundryDRCRunset",
 ]
