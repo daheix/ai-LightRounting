@@ -68,12 +68,12 @@
   - [x] SubTask 12.3: 新增 `showcase.js` 轮询进度与日志流展示
   - [x] SubTask 12.4: 新增 `showcase.css` 卡片样式与状态色
 
-- [ ] Task 13: 测试与验证
-  - [ ] SubTask 13.1: 编写 `tests/test_e2e_showcase.py`，验证 9 个阶段独立运行
-  - [ ] SubTask 13.2: 验证端到端串联（`run_showcase.py` 全流程）
-  - [ ] SubTask 13.3: 验证 JSONL 日志格式与字段完整性
-  - [ ] SubTask 13.4: 验证 Markdown 报告生成
-  - [ ] SubTask 13.5: ruff check + 全量回归测试
+- [x] Task 13: 测试与验证
+  - [x] SubTask 13.1: 编写 `tests/test_e2e_showcase.py`，验证 9 个阶段独立运行
+  - [x] SubTask 13.2: 验证端到端串联（`run_showcase.py` 全流程）
+  - [x] SubTask 13.3: 验证 JSONL 日志格式与字段完整性
+  - [x] SubTask 13.4: 验证 Markdown 报告生成
+  - [x] SubTask 13.5: ruff check + 全量回归测试
 
 # Task Dependencies
 

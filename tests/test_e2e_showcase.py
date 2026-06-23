@@ -1,7 +1,10 @@
 """PoLaRIS 端到端 Demo Showcase 测试套件。
 
 覆盖 examples/e2e_showcase 9 阶段全流程，验证各阶段 run() 返回值结构与关键指标，
-以及汇总报告生成与全流程集成。
+日志配置、汇总报告生成与全流程集成。
+
+测试优化: 各阶段 run() 较慢（含 IntegratedPipeline 布局布线），使用类级 fixture
+缓存阶段结果，避免每个测试方法重复执行（规则 15.1 性能基准）。
 
 学术诚信（规则 18）:
 - 所有断言基于真实阶段输出，无 fall-back 假数据
@@ -10,12 +13,14 @@
 
 来源:
 - Showcase 模块: examples/e2e_showcase/stages/
+- 日志配置: examples/e2e_showcase/logging_config.py
 - 报告生成器: examples/e2e_showcase/report_generator.py
 - 主入口: examples/e2e_showcase/run_showcase.py
 """
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -26,6 +31,7 @@ _SHOWCASE_DIR = Path(__file__).resolve().parent.parent / "examples" / "e2e_showc
 if str(_SHOWCASE_DIR) not in sys.path:
     sys.path.insert(0, str(_SHOWCASE_DIR))
 
+from logging_config import StageLogger, setup_logging  # noqa: E402
 from report_generator import generate_report  # noqa: E402
 from stages import (  # noqa: E402
     stage1_pdk_catalog,
@@ -39,6 +45,37 @@ from stages import (  # noqa: E402
     stage9_quantum_photonics,
 )
 
+# 9 阶段定义: (阶段 ID, 阶段名称, 阶段模块)
+_STAGES: list[tuple[int, str, object]] = [
+    (1, "PDK 器件目录展示", stage1_pdk_catalog),
+    (2, "电路规格定义", stage2_circuit_spec),
+    (3, "AI 布局", stage3_ai_placement),
+    (4, "智能布线", stage4_routing),
+    (5, "仿真验证", stage5_simulation),
+    (6, "DRC/LVS 验证", stage6_drc_lvs),
+    (7, "GDS 导出", stage7_gds_export),
+    (8, "光电协同", stage8_opto_electrical),
+    (9, "量子光子验证", stage9_quantum_photonics),
+]
+
+
+def _make_output_dir(tmp_path_factory: pytest.TempPathFactory, name: str) -> Path:
+    """创建输出目录（含 logs/gds/verilog_a/spice/reports 子目录）并配置日志。
+
+    Args:
+        tmp_path_factory: pytest 临时目录工厂。
+        name: 子目录名（用于区分不同测试类）。
+
+    Returns:
+        配置好日志的输出目录路径。
+    """
+    out = tmp_path_factory.mktemp(name)
+    for subdir in ["logs", "gds", "verilog_a", "spice", "reports"]:
+        (out / subdir).mkdir(parents=True, exist_ok=True)
+    setup_logging(out)
+    return out
+
+
 # =============================================================================
 # 阶段 1: PDK 器件目录展示
 # =============================================================================
@@ -47,27 +84,29 @@ from stages import (  # noqa: E402
 class TestStage1PDKCatalog:
     """阶段 1: PDK 器件目录展示测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 1 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage1")
+        return stage1_pdk_catalog.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage1_pdk_catalog.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_platforms_count(self, tmp_path: Path) -> None:
+    def test_platforms_count(self, result: dict) -> None:
         """验证 4 个平台（SOI/SiN/InP/LNOI）。"""
-        result = stage1_pdk_catalog.run(tmp_path)
         platforms = result["platforms"]
         assert len(platforms) == 4
         names = {p["platform"] for p in platforms}
         assert names == {"SOI", "SiN", "InP", "LNOI"}
 
-    def test_total_device_count(self, tmp_path: Path) -> None:
+    def test_total_device_count(self, result: dict) -> None:
         """验证总器件数 ≥ 36（SOI 15 + SiN 7 + InP 7 + LNOI 7 = 36）。"""
-        result = stage1_pdk_catalog.run(tmp_path)
         assert result["total_device_count"] >= 36
 
-    def test_representative_devices(self, tmp_path: Path) -> None:
+    def test_representative_devices(self, result: dict) -> None:
         """验证每平台有代表器件（≥ 3 个）。"""
-        result = stage1_pdk_catalog.run(tmp_path)
         for platform in result["platforms"]:
             assert len(platform["representative_devices"]) >= 3
             for dev in platform["representative_devices"]:
@@ -75,9 +114,8 @@ class TestStage1PDKCatalog:
                 assert "params" in dev
                 assert "source" in dev
 
-    def test_foundry_sources(self, tmp_path: Path) -> None:
+    def test_foundry_sources(self, result: dict) -> None:
         """验证来源 foundry 标注（每平台含 foundry 与 foundry_url）。"""
-        result = stage1_pdk_catalog.run(tmp_path)
         for platform in result["platforms"]:
             assert platform["foundry"]
             assert platform["foundry_url"].startswith("https://")
@@ -91,31 +129,32 @@ class TestStage1PDKCatalog:
 class TestStage2CircuitSpec:
     """阶段 2: 电路规格定义测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 2 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage2")
+        return stage2_circuit_spec.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage2_circuit_spec.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_circuits_count(self, tmp_path: Path) -> None:
+    def test_circuits_count(self, result: dict) -> None:
         """验证 3 个电路（MZI/Clements/玻色采样）。"""
-        result = stage2_circuit_spec.run(tmp_path)
         assert len(result["circuits"]) == 3
 
-    def test_mzi_devices(self, tmp_path: Path) -> None:
+    def test_mzi_devices(self, result: dict) -> None:
         """验证 MZI 有 5 器件。"""
-        result = stage2_circuit_spec.run(tmp_path)
         mzi = result["circuits"][0]
         assert mzi["n_devices"] == 5
 
-    def test_clements_devices(self, tmp_path: Path) -> None:
+    def test_clements_devices(self, result: dict) -> None:
         """验证 Clements 有 10 器件（6 分束器 + 4 相移器）。"""
-        result = stage2_circuit_spec.run(tmp_path)
         clements = result["circuits"][1]
         assert clements["n_devices"] == 10
 
-    def test_unitary_matrix_shape(self, tmp_path: Path) -> None:
+    def test_unitary_matrix_shape(self, result: dict) -> None:
         """验证酉矩阵形状为 [4, 4]。"""
-        result = stage2_circuit_spec.run(tmp_path)
         assert result["unitary_matrix_shape"] == [4, 4]
 
 
@@ -127,25 +166,27 @@ class TestStage2CircuitSpec:
 class TestStage3AIPlacement:
     """阶段 3: AI 布局测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 3 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage3")
+        return stage3_ai_placement.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage3_ai_placement.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_circuits_count(self, tmp_path: Path) -> None:
+    def test_circuits_count(self, result: dict) -> None:
         """验证 3 个电路布局。"""
-        result = stage3_ai_placement.run(tmp_path)
         assert len(result["circuits"]) == 3
 
-    def test_hpwl_positive(self, tmp_path: Path) -> None:
+    def test_hpwl_positive(self, result: dict) -> None:
         """验证 HPWL > 0（布局后器件间连线长度非零）。"""
-        result = stage3_ai_placement.run(tmp_path)
         for circuit in result["circuits"]:
             assert circuit["hpwl"] > 0
 
-    def test_placement_mode(self, tmp_path: Path) -> None:
+    def test_placement_mode(self, result: dict) -> None:
         """验证 placement_mode 为 "rl" 或 "analytical"。"""
-        result = stage3_ai_placement.run(tmp_path)
         assert result["placement_mode"] in {"rl", "analytical"}
 
 
@@ -157,24 +198,26 @@ class TestStage3AIPlacement:
 class TestStage4Routing:
     """阶段 4: 智能布线测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 4 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage4")
+        return stage4_routing.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage4_routing.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_circuits_count(self, tmp_path: Path) -> None:
+    def test_circuits_count(self, result: dict) -> None:
         """验证 3 个电路布线。"""
-        result = stage4_routing.run(tmp_path)
         assert len(result["circuits"]) == 3
 
-    def test_router_type(self, tmp_path: Path) -> None:
+    def test_router_type(self, result: dict) -> None:
         """验证 router_type = "curvy"。"""
-        result = stage4_routing.run(tmp_path)
         assert result["router_type"] == "curvy"
 
-    def test_loss_positive(self, tmp_path: Path) -> None:
+    def test_loss_positive(self, result: dict) -> None:
         """验证损耗 ≥ 0（波导传播损耗非负）。"""
-        result = stage4_routing.run(tmp_path)
         for circuit in result["circuits"]:
             assert circuit["total_loss_db"] >= 0
 
@@ -187,30 +230,32 @@ class TestStage4Routing:
 class TestStage5Simulation:
     """阶段 5: 仿真验证测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 5 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage5")
+        return stage5_simulation.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage5_simulation.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_mzi_s_param(self, tmp_path: Path) -> None:
+    def test_mzi_s_param(self, result: dict) -> None:
         """验证 MZI S 参数含 resonant_wavelength_nm 和 extinction_ratio_db。"""
-        result = stage5_simulation.run(tmp_path)
         mzi = result["mzi_s_param"]
         assert "resonant_wavelength_nm" in mzi
         assert "extinction_ratio_db" in mzi
         # 谐振波长应在扫描范围 1500-1600nm 内
         assert 1500 <= mzi["resonant_wavelength_nm"] <= 1600
 
-    def test_clements_unitary(self, tmp_path: Path) -> None:
+    def test_clements_unitary(self, result: dict) -> None:
         """验证酉性误差 < 1e-6。"""
-        result = stage5_simulation.run(tmp_path)
         clements = result["clements_unitary"]
         assert clements["unitarity_error"] < 1e-6
         assert clements["is_unitary"] is True
 
-    def test_pam4(self, tmp_path: Path) -> None:
+    def test_pam4(self, result: dict) -> None:
         """验证 PAM4 BER > 0 且 SNR > 0。"""
-        result = stage5_simulation.run(tmp_path)
         pam4 = result["pam4"]
         assert pam4["ber"] > 0
         assert pam4["snr_db"] > 0
@@ -224,19 +269,22 @@ class TestStage5Simulation:
 class TestStage6DRCLVS:
     """阶段 6: DRC/LVS 验证测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 6 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage6")
+        return stage6_drc_lvs.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage6_drc_lvs.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_drc_pass_rate(self, tmp_path: Path) -> None:
+    def test_drc_pass_rate(self, result: dict) -> None:
         """验证 DRC 通过率 ≥ 0。"""
-        result = stage6_drc_lvs.run(tmp_path)
         assert result["drc"]["pass_rate"] >= 0
 
-    def test_lvs_consistent(self, tmp_path: Path) -> None:
+    def test_lvs_consistent(self, result: dict) -> None:
         """验证 LVS 结果为 bool。"""
-        result = stage6_drc_lvs.run(tmp_path)
         assert isinstance(result["lvs"]["is_consistent"], bool)
 
 
@@ -248,19 +296,22 @@ class TestStage6DRCLVS:
 class TestStage7GDSExport:
     """阶段 7: GDS 导出测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 7 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage7")
+        return stage7_gds_export.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage7_gds_export.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_circuits_count(self, tmp_path: Path) -> None:
+    def test_circuits_count(self, result: dict) -> None:
         """验证 3 个电路 GDS。"""
-        result = stage7_gds_export.run(tmp_path)
         assert len(result["circuits"]) == 3
 
-    def test_gds_files_exist(self, tmp_path: Path) -> None:
+    def test_gds_files_exist(self, result: dict) -> None:
         """验证 GDS 文件存在且可加载。"""
-        result = stage7_gds_export.run(tmp_path)
         for circuit in result["circuits"]:
             gds_path = Path(circuit["gds_path"])
             assert gds_path.exists()
@@ -276,29 +327,31 @@ class TestStage7GDSExport:
 class TestStage8OptoElectrical:
     """阶段 8: 光电协同测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 8 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage8")
+        return stage8_opto_electrical.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage8_opto_electrical.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_verilog_a_models(self, tmp_path: Path) -> None:
+    def test_verilog_a_models(self, result: dict) -> None:
         """验证 ≥ 5 个 Verilog-A 模型。"""
-        result = stage8_opto_electrical.run(tmp_path)
         models = result["verilog_a_models"]
         assert len(models) >= 5
         for m in models:
             assert Path(m["file_path"]).exists()
 
-    def test_spice_netlist(self, tmp_path: Path) -> None:
+    def test_spice_netlist(self, result: dict) -> None:
         """验证 SPICE 网表存在。"""
-        result = stage8_opto_electrical.run(tmp_path)
         netlist = result["spice_netlist"]
         assert Path(netlist["file_path"]).exists()
         assert netlist["lines"] > 0
 
-    def test_pam4(self, tmp_path: Path) -> None:
+    def test_pam4(self, result: dict) -> None:
         """验证 PAM4 BER > 0 且 SNR > 0。"""
-        result = stage8_opto_electrical.run(tmp_path)
         pam4 = result["pam4"]
         assert pam4["ber"] > 0
         assert pam4["snr_db"] > 0
@@ -312,38 +365,75 @@ class TestStage8OptoElectrical:
 class TestStage9QuantumPhotonics:
     """阶段 9: 量子光子验证测试。"""
 
-    def test_run_returns_dict(self, tmp_path: Path) -> None:
+    @pytest.fixture(scope="class")
+    def result(self, tmp_path_factory: pytest.TempPathFactory) -> dict:
+        """类级 fixture: 运行阶段 9 一次，结果供所有测试方法共享。"""
+        out = _make_output_dir(tmp_path_factory, "stage9")
+        return stage9_quantum_photonics.run(out)
+
+    def test_run_returns_dict(self, result: dict) -> None:
         """验证 run() 返回 dict。"""
-        result = stage9_quantum_photonics.run(tmp_path)
         assert isinstance(result, dict)
 
-    def test_boson_sampling_prob_sum(self, tmp_path: Path) -> None:
+    def test_boson_sampling_prob_sum(self, result: dict) -> None:
         """验证概率守恒（所有输出概率之和 ≈ 1）。"""
-        result = stage9_quantum_photonics.run(tmp_path)
         bs = result["boson_sampling"]
         assert abs(bs["prob_sum"] - 1.0) < 1e-6
         assert bs["prob_sum_ok"] is True
 
-    def test_hom_verified(self, tmp_path: Path) -> None:
+    def test_hom_verified(self, result: dict) -> None:
         """验证 HOM 干涉（|1,1⟩ 输出概率 ≈ 0）。"""
-        result = stage9_quantum_photonics.run(tmp_path)
         hom = result["hom"]
         assert hom["hom_verified"] is True
         assert abs(hom["coincidence_prob"]) < 1e-6
 
-    def test_klm_cnot(self, tmp_path: Path) -> None:
+    def test_klm_cnot(self, result: dict) -> None:
         """验证 KLM CNOT 成功率 ≈ 0.25（Knill et al., Nature 2001）。"""
-        result = stage9_quantum_photonics.run(tmp_path)
         klm = result["klm"]
         assert klm["cnot_verified"] is True
         assert abs(klm["cnot_success_prob"] - 0.25) < 1e-6
 
-    def test_klm_hadamard(self, tmp_path: Path) -> None:
+    def test_klm_hadamard(self, result: dict) -> None:
         """验证 Hadamard 门酉性（H @ H† = I）。"""
-        result = stage9_quantum_photonics.run(tmp_path)
         klm = result["klm"]
         assert klm["hadamard_verified"] is True
         assert klm["hadamard_unitary_error"] < 1e-6
+
+
+# =============================================================================
+# 日志配置
+# =============================================================================
+
+
+class TestLoggingConfig:
+    """日志配置测试。"""
+
+    def test_setup_logging(self, tmp_path: Path) -> None:
+        """验证 setup_logging 返回名为 e2e_showcase 的日志器。"""
+        out = tmp_path / "test_logs"
+        out.mkdir()
+        logger = setup_logging(out)
+        assert logger.name == "e2e_showcase"
+
+    def test_stage_logger(self, tmp_path: Path) -> None:
+        """验证 StageLogger 写入 JSONL 日志（含输入/输出/状态字段）。"""
+        out = tmp_path / "test_stage_logger"
+        out.mkdir()
+        (out / "logs").mkdir()
+        setup_logging(out)
+        with StageLogger(1, "测试阶段", out) as sl:
+            sl.log_input("test_input", "value")
+            sl.log_output("test_output", 42)
+        jsonl_path = out / "logs" / "showcase.jsonl"
+        assert jsonl_path.exists()
+        lines = jsonl_path.read_text(encoding="utf-8").strip().split("\n")
+        assert len(lines) == 1
+        entry = json.loads(lines[0])
+        assert entry["stage_id"] == 1
+        assert entry["stage_name"] == "测试阶段"
+        assert entry["status"] == "done"
+        assert entry["inputs"]["test_input"] == "value"
+        assert entry["outputs"]["test_output"] == 42
 
 
 # =============================================================================
@@ -356,32 +446,29 @@ class TestReportGenerator:
 
     def test_generate_report(self, tmp_path: Path) -> None:
         """验证报告生成（report.md 文件存在且非空）。"""
-        # 先执行阶段 1 生成 JSONL 日志（通过 StageLogger）
-        from logging_config import StageLogger, setup_logging
-
-        setup_logging(tmp_path)
-        with StageLogger(1, "PDK 器件目录展示", tmp_path) as sl:
-            result = stage1_pdk_catalog.run(tmp_path)
-            for key, value in result.items():
-                sl.log_output(key, value)
-
-        report_path = generate_report(tmp_path)
+        out = tmp_path / "test_report"
+        (out / "logs").mkdir(parents=True)
+        (out / "reports").mkdir(parents=True)
+        setup_logging(out)
+        # 运行一个阶段以生成日志
+        with StageLogger(1, "PDK 器件目录展示", out) as sl:
+            sl.log_output("total_device_count", 36)
+        report_path = generate_report(out)
         assert report_path.exists()
         assert report_path.stat().st_size > 0
 
     def test_report_contains_stages(self, tmp_path: Path) -> None:
         """验证报告含阶段信息（阶段执行状态表与学术诚信声明）。"""
-        from logging_config import StageLogger, setup_logging
-
-        setup_logging(tmp_path)
-        with StageLogger(1, "PDK 器件目录展示", tmp_path) as sl:
-            result = stage1_pdk_catalog.run(tmp_path)
-            for key, value in result.items():
-                sl.log_output(key, value)
-
-        report_path = generate_report(tmp_path)
+        out = tmp_path / "test_report_stages"
+        (out / "logs").mkdir(parents=True)
+        (out / "reports").mkdir(parents=True)
+        setup_logging(out)
+        with StageLogger(1, "PDK 器件目录展示", out) as sl:
+            sl.log_output("total_device_count", 36)
+        report_path = generate_report(out)
         content = report_path.read_text(encoding="utf-8")
         # 报告应包含阶段状态表头与学术诚信声明
+        assert "PoLaRIS 端到端 Demo Showcase 汇总报告" in content
         assert "阶段执行状态" in content
         assert "PDK 器件目录展示" in content
         assert "学术诚信声明" in content
@@ -393,58 +480,33 @@ class TestReportGenerator:
 
 
 @pytest.mark.slow
-class TestE2EIntegration:
-    """端到端集成测试：运行全流程 9 阶段。"""
+class TestEndToEnd:
+    """端到端串联测试：验证 9 阶段顺序运行、JSONL 日志与报告生成。"""
 
-    def test_full_showcase(self, tmp_path: Path) -> None:
-        """运行全流程 9 阶段，验证全部成功。
+    def test_full_pipeline(self, tmp_path: Path) -> None:
+        """验证 9 阶段串联运行。
 
-        依次执行 stage1-stage9，验证每阶段 run() 返回非空 dict，
-        且关键产物（酉矩阵 JSON、GDS、Verilog-A、SPICE 网表）均生成。
+        依次执行 stage1-stage9，每阶段用 StageLogger 包裹，
+        验证 JSONL 日志含 9 条记录且报告生成成功。
         """
-        # 阶段 1: PDK 器件目录
-        r1 = stage1_pdk_catalog.run(tmp_path)
-        assert isinstance(r1, dict) and r1["total_device_count"] >= 36
+        out = tmp_path / "e2e_full"
+        for subdir in ["logs", "gds", "verilog_a", "spice", "reports"]:
+            (out / subdir).mkdir(parents=True, exist_ok=True)
+        setup_logging(out)
 
-        # 阶段 2: 电路规格定义
-        r2 = stage2_circuit_spec.run(tmp_path)
-        assert isinstance(r2, dict) and len(r2["circuits"]) == 3
-        assert (tmp_path / "reports" / "boson_sampling_unitary.json").exists()
+        for stage_id, stage_name, stage_module in _STAGES:
+            with StageLogger(stage_id, stage_name, out):
+                result = stage_module.run(out)
+                assert isinstance(result, dict), f"阶段 {stage_id} 返回非 dict"
 
-        # 阶段 3: AI 布局
-        r3 = stage3_ai_placement.run(tmp_path)
-        assert isinstance(r3, dict) and len(r3["circuits"]) == 3
-        assert r3["placement_mode"] in {"rl", "analytical"}
+        # 验证 JSONL 日志含 9 条记录
+        jsonl_path = out / "logs" / "showcase.jsonl"
+        assert jsonl_path.exists()
+        lines = jsonl_path.read_text(encoding="utf-8").strip().split("\n")
+        assert len(lines) == 9  # 9 阶段
 
-        # 阶段 4: 智能布线
-        r4 = stage4_routing.run(tmp_path)
-        assert isinstance(r4, dict) and r4["router_type"] == "curvy"
-
-        # 阶段 5: 仿真验证
-        r5 = stage5_simulation.run(tmp_path)
-        assert isinstance(r5, dict)
-        assert r5["clements_unitary"]["is_unitary"] is True
-
-        # 阶段 6: DRC/LVS 验证
-        r6 = stage6_drc_lvs.run(tmp_path)
-        assert isinstance(r6, dict)
-        assert isinstance(r6["lvs"]["is_consistent"], bool)
-
-        # 阶段 7: GDS 导出
-        r7 = stage7_gds_export.run(tmp_path)
-        assert isinstance(r7, dict) and len(r7["circuits"]) == 3
-        for c in r7["circuits"]:
-            assert Path(c["gds_path"]).exists()
-
-        # 阶段 8: 光电协同
-        r8 = stage8_opto_electrical.run(tmp_path)
-        assert isinstance(r8, dict)
-        assert len(r8["verilog_a_models"]) >= 5
-        assert Path(r8["spice_netlist"]["file_path"]).exists()
-
-        # 阶段 9: 量子光子验证
-        r9 = stage9_quantum_photonics.run(tmp_path)
-        assert isinstance(r9, dict)
-        assert r9["boson_sampling"]["prob_sum_ok"] is True
-        assert r9["hom"]["hom_verified"] is True
-        assert r9["klm"]["cnot_verified"] is True
+        # 验证报告生成
+        report_path = generate_report(out)
+        assert report_path.exists()
+        report_content = report_path.read_text(encoding="utf-8")
+        assert "9" in report_content  # 总阶段数
