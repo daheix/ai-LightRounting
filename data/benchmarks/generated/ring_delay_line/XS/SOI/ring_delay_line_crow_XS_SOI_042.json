@@ -1,0 +1,196 @@
+{
+  "name": "ring_delay_line_crow_XS_SOI_042",
+  "description": "环形延迟线 CROW (XS/SOI)",
+  "platform": "SOI",
+  "topology": "ring_delay_line",
+  "scale": "XS",
+  "canvas_w": 200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "wg1",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 30.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "ring1",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 5.0,
+        "gap_um": 0.2,
+        "topology": "CROW",
+        "source": "Yariv et al., Optics Express 2002 (CROW)"
+      }
+    },
+    {
+      "name": "ring2",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 5.0,
+        "gap_um": 0.2,
+        "topology": "CROW",
+        "source": "Yariv et al., Optics Express 2002 (CROW)"
+      }
+    },
+    {
+      "name": "wg2",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 30.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg3",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 30.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "wg1",
+      "out",
+      "ring1",
+      "in"
+    ],
+    [
+      "ring1",
+      "through",
+      "wg2",
+      "in"
+    ],
+    [
+      "wg2",
+      "out",
+      "ring2",
+      "in"
+    ],
+    [
+      "ring2",
+      "through",
+      "wg3",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 42,
+    "platform_source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 5.0,
+    "waveguide_width_um": 0.5
+  }
+}

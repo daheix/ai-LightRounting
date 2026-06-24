@@ -44,7 +44,9 @@ class _CurvyRouter:
     """
 
     # rip-up and reroute 最大迭代次数（避免死循环）
-    _MAX_RIPUP_ITERATIONS = 3
+    # 设为 2 以平衡大规模电路测试速度与布线成功率
+    # （1次迭代在M规模SOI上3/5连接成功，2次迭代可提升至4-5/5）
+    _MAX_RIPUP_ITERATIONS = 2
 
     def __init__(self, curve_type: str = "euler") -> None:
         """初始化弯曲布线器。
@@ -78,6 +80,20 @@ class _CurvyRouter:
         grid_size = cons["min_bend_radius_um"]
         grid_w = int(circuit.canvas_w / grid_size)
         grid_h = int(circuit.canvas_h / grid_size)
+        # 网格分辨率自适应：确保网格在 10x10 ~ 200x200 之间
+        # - 下界 10x10：大弯曲半径平台（LNOI/InP/SiN）网格过粗会导致布线失败
+        #   （如 LNOI 400x400画布 + grid_size=80 → 5x5网格，min_bend_steps=1，无法转弯）
+        # - 上界 200x200：避免网格过细导致 A* 状态空间爆炸（200x200=40K节点，可接受）
+        min_grid_dim = 10
+        max_grid_dim = 200
+        if grid_w < min_grid_dim or grid_h < min_grid_dim:
+            grid_size = max(circuit.canvas_w, circuit.canvas_h) / min_grid_dim
+            grid_w = int(circuit.canvas_w / grid_size)
+            grid_h = int(circuit.canvas_h / grid_size)
+        elif grid_w > max_grid_dim or grid_h > max_grid_dim:
+            grid_size = max(circuit.canvas_w, circuit.canvas_h) / max_grid_dim
+            grid_w = int(circuit.canvas_w / grid_size)
+            grid_h = int(circuit.canvas_h / grid_size)
         # 障碍物半宽优化：waveguide_width/2 + min_spacing_um
         # SOI: 0.5/2 + 1.0 = 1.25μm（原 grid_size*0.6 = 3.0μm，过度阻塞）
         # 来源: LiDAR ISPD'25 间距保证 + SiEPIC EBeam PDK 波导宽度 0.5μm

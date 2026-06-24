@@ -1,0 +1,1201 @@
+{
+  "name": "mmi_array_L_SOI_042",
+  "description": "MMI 阵列 16 单元 (L/SOI)",
+  "platform": "SOI",
+  "topology": "mmi_array",
+  "scale": "L",
+  "canvas_w": 1500.0,
+  "canvas_h": 1500.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "input"
+      }
+    },
+    {
+      "name": "mmi1",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 0
+      }
+    },
+    {
+      "name": "wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "mmi2",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 1
+      }
+    },
+    {
+      "name": "wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "mmi3",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 2
+      }
+    },
+    {
+      "name": "wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_2"
+      }
+    },
+    {
+      "name": "mmi4",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 3
+      }
+    },
+    {
+      "name": "wg5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_3"
+      }
+    },
+    {
+      "name": "mmi5",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 4
+      }
+    },
+    {
+      "name": "wg6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_4"
+      }
+    },
+    {
+      "name": "mmi6",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 5
+      }
+    },
+    {
+      "name": "wg7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_5"
+      }
+    },
+    {
+      "name": "mmi7",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 6
+      }
+    },
+    {
+      "name": "wg8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_6"
+      }
+    },
+    {
+      "name": "mmi8",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 7
+      }
+    },
+    {
+      "name": "wg9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_7"
+      }
+    },
+    {
+      "name": "mmi9",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 8
+      }
+    },
+    {
+      "name": "wg10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_8"
+      }
+    },
+    {
+      "name": "mmi10",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 9
+      }
+    },
+    {
+      "name": "wg11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_9"
+      }
+    },
+    {
+      "name": "mmi11",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 10
+      }
+    },
+    {
+      "name": "wg12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_10"
+      }
+    },
+    {
+      "name": "mmi12",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 11
+      }
+    },
+    {
+      "name": "wg13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_11"
+      }
+    },
+    {
+      "name": "mmi13",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 12
+      }
+    },
+    {
+      "name": "wg14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_12"
+      }
+    },
+    {
+      "name": "mmi14",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 13
+      }
+    },
+    {
+      "name": "wg15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_13"
+      }
+    },
+    {
+      "name": "mmi15",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 14
+      }
+    },
+    {
+      "name": "wg16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_14"
+      }
+    },
+    {
+      "name": "mmi16",
+      "type": "mmi_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          8.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          2.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "type": "1x2",
+        "gap_um": 0.5,
+        "source": "Soldano & Pennings, JLT 1995",
+        "index": 15
+      }
+    },
+    {
+      "name": "wg17",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "tap_15"
+      }
+    },
+    {
+      "name": "wg18",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 0.5,
+        "role": "through"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "wg1",
+      "out",
+      "mmi1",
+      "in"
+    ],
+    [
+      "mmi1",
+      "out2",
+      "wg2",
+      "in"
+    ],
+    [
+      "mmi1",
+      "out1",
+      "mmi2",
+      "in"
+    ],
+    [
+      "mmi2",
+      "out2",
+      "wg3",
+      "in"
+    ],
+    [
+      "mmi2",
+      "out1",
+      "mmi3",
+      "in"
+    ],
+    [
+      "mmi3",
+      "out2",
+      "wg4",
+      "in"
+    ],
+    [
+      "mmi3",
+      "out1",
+      "mmi4",
+      "in"
+    ],
+    [
+      "mmi4",
+      "out2",
+      "wg5",
+      "in"
+    ],
+    [
+      "mmi4",
+      "out1",
+      "mmi5",
+      "in"
+    ],
+    [
+      "mmi5",
+      "out2",
+      "wg6",
+      "in"
+    ],
+    [
+      "mmi5",
+      "out1",
+      "mmi6",
+      "in"
+    ],
+    [
+      "mmi6",
+      "out2",
+      "wg7",
+      "in"
+    ],
+    [
+      "mmi6",
+      "out1",
+      "mmi7",
+      "in"
+    ],
+    [
+      "mmi7",
+      "out2",
+      "wg8",
+      "in"
+    ],
+    [
+      "mmi7",
+      "out1",
+      "mmi8",
+      "in"
+    ],
+    [
+      "mmi8",
+      "out2",
+      "wg9",
+      "in"
+    ],
+    [
+      "mmi8",
+      "out1",
+      "mmi9",
+      "in"
+    ],
+    [
+      "mmi9",
+      "out2",
+      "wg10",
+      "in"
+    ],
+    [
+      "mmi9",
+      "out1",
+      "mmi10",
+      "in"
+    ],
+    [
+      "mmi10",
+      "out2",
+      "wg11",
+      "in"
+    ],
+    [
+      "mmi10",
+      "out1",
+      "mmi11",
+      "in"
+    ],
+    [
+      "mmi11",
+      "out2",
+      "wg12",
+      "in"
+    ],
+    [
+      "mmi11",
+      "out1",
+      "mmi12",
+      "in"
+    ],
+    [
+      "mmi12",
+      "out2",
+      "wg13",
+      "in"
+    ],
+    [
+      "mmi12",
+      "out1",
+      "mmi13",
+      "in"
+    ],
+    [
+      "mmi13",
+      "out2",
+      "wg14",
+      "in"
+    ],
+    [
+      "mmi13",
+      "out1",
+      "mmi14",
+      "in"
+    ],
+    [
+      "mmi14",
+      "out2",
+      "wg15",
+      "in"
+    ],
+    [
+      "mmi14",
+      "out1",
+      "mmi15",
+      "in"
+    ],
+    [
+      "mmi15",
+      "out2",
+      "wg16",
+      "in"
+    ],
+    [
+      "mmi15",
+      "out1",
+      "mmi16",
+      "in"
+    ],
+    [
+      "mmi16",
+      "out2",
+      "wg17",
+      "in"
+    ],
+    [
+      "mmi16",
+      "out1",
+      "wg18",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 42,
+    "platform_source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 5.0,
+    "waveguide_width_um": 0.5,
+    "n_mmi": 16,
+    "source": "Soldano & Pennings, JLT 1995"
+  }
+}

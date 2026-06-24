@@ -1,0 +1,2197 @@
+{
+  "name": "polarization_array_XL_InP_042",
+  "description": "偏振分束/合束阵列 (XL/InP)",
+  "platform": "InP",
+  "topology": "polarization_array",
+  "scale": "XL",
+  "canvas_w": 3000.0,
+  "canvas_h": 3000.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "pbs1",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc1",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg1",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg2",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs2",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc2",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg3",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg4",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs3",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc3",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg5",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg6",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs4",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc4",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg7",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg8",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs5",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc5",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg9",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg10",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs6",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc6",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg11",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg12",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs7",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc7",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg13",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg14",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs8",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc8",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg15",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg16",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs9",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc9",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg17",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg18",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs10",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc10",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg19",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg20",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs11",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc11",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg21",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg22",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs12",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc12",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg23",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg24",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs13",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc13",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg25",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg26",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs14",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc14",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg27",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg28",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs15",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc15",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg29",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg30",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "pbs16",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc16",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg31",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "wg32",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "pbs1",
+      "through",
+      "wg1",
+      "in"
+    ],
+    [
+      "wg1",
+      "out",
+      "pbc1",
+      "in1"
+    ],
+    [
+      "pbs1",
+      "drop",
+      "wg2",
+      "in"
+    ],
+    [
+      "wg2",
+      "out",
+      "pbc1",
+      "in2"
+    ],
+    [
+      "pbs2",
+      "through",
+      "wg3",
+      "in"
+    ],
+    [
+      "wg3",
+      "out",
+      "pbc2",
+      "in1"
+    ],
+    [
+      "pbs2",
+      "drop",
+      "wg4",
+      "in"
+    ],
+    [
+      "wg4",
+      "out",
+      "pbc2",
+      "in2"
+    ],
+    [
+      "pbs3",
+      "through",
+      "wg5",
+      "in"
+    ],
+    [
+      "wg5",
+      "out",
+      "pbc3",
+      "in1"
+    ],
+    [
+      "pbs3",
+      "drop",
+      "wg6",
+      "in"
+    ],
+    [
+      "wg6",
+      "out",
+      "pbc3",
+      "in2"
+    ],
+    [
+      "pbs4",
+      "through",
+      "wg7",
+      "in"
+    ],
+    [
+      "wg7",
+      "out",
+      "pbc4",
+      "in1"
+    ],
+    [
+      "pbs4",
+      "drop",
+      "wg8",
+      "in"
+    ],
+    [
+      "wg8",
+      "out",
+      "pbc4",
+      "in2"
+    ],
+    [
+      "pbs5",
+      "through",
+      "wg9",
+      "in"
+    ],
+    [
+      "wg9",
+      "out",
+      "pbc5",
+      "in1"
+    ],
+    [
+      "pbs5",
+      "drop",
+      "wg10",
+      "in"
+    ],
+    [
+      "wg10",
+      "out",
+      "pbc5",
+      "in2"
+    ],
+    [
+      "pbs6",
+      "through",
+      "wg11",
+      "in"
+    ],
+    [
+      "wg11",
+      "out",
+      "pbc6",
+      "in1"
+    ],
+    [
+      "pbs6",
+      "drop",
+      "wg12",
+      "in"
+    ],
+    [
+      "wg12",
+      "out",
+      "pbc6",
+      "in2"
+    ],
+    [
+      "pbs7",
+      "through",
+      "wg13",
+      "in"
+    ],
+    [
+      "wg13",
+      "out",
+      "pbc7",
+      "in1"
+    ],
+    [
+      "pbs7",
+      "drop",
+      "wg14",
+      "in"
+    ],
+    [
+      "wg14",
+      "out",
+      "pbc7",
+      "in2"
+    ],
+    [
+      "pbs8",
+      "through",
+      "wg15",
+      "in"
+    ],
+    [
+      "wg15",
+      "out",
+      "pbc8",
+      "in1"
+    ],
+    [
+      "pbs8",
+      "drop",
+      "wg16",
+      "in"
+    ],
+    [
+      "wg16",
+      "out",
+      "pbc8",
+      "in2"
+    ],
+    [
+      "pbs9",
+      "through",
+      "wg17",
+      "in"
+    ],
+    [
+      "wg17",
+      "out",
+      "pbc9",
+      "in1"
+    ],
+    [
+      "pbs9",
+      "drop",
+      "wg18",
+      "in"
+    ],
+    [
+      "wg18",
+      "out",
+      "pbc9",
+      "in2"
+    ],
+    [
+      "pbs10",
+      "through",
+      "wg19",
+      "in"
+    ],
+    [
+      "wg19",
+      "out",
+      "pbc10",
+      "in1"
+    ],
+    [
+      "pbs10",
+      "drop",
+      "wg20",
+      "in"
+    ],
+    [
+      "wg20",
+      "out",
+      "pbc10",
+      "in2"
+    ],
+    [
+      "pbs11",
+      "through",
+      "wg21",
+      "in"
+    ],
+    [
+      "wg21",
+      "out",
+      "pbc11",
+      "in1"
+    ],
+    [
+      "pbs11",
+      "drop",
+      "wg22",
+      "in"
+    ],
+    [
+      "wg22",
+      "out",
+      "pbc11",
+      "in2"
+    ],
+    [
+      "pbs12",
+      "through",
+      "wg23",
+      "in"
+    ],
+    [
+      "wg23",
+      "out",
+      "pbc12",
+      "in1"
+    ],
+    [
+      "pbs12",
+      "drop",
+      "wg24",
+      "in"
+    ],
+    [
+      "wg24",
+      "out",
+      "pbc12",
+      "in2"
+    ],
+    [
+      "pbs13",
+      "through",
+      "wg25",
+      "in"
+    ],
+    [
+      "wg25",
+      "out",
+      "pbc13",
+      "in1"
+    ],
+    [
+      "pbs13",
+      "drop",
+      "wg26",
+      "in"
+    ],
+    [
+      "wg26",
+      "out",
+      "pbc13",
+      "in2"
+    ],
+    [
+      "pbs14",
+      "through",
+      "wg27",
+      "in"
+    ],
+    [
+      "wg27",
+      "out",
+      "pbc14",
+      "in1"
+    ],
+    [
+      "pbs14",
+      "drop",
+      "wg28",
+      "in"
+    ],
+    [
+      "wg28",
+      "out",
+      "pbc14",
+      "in2"
+    ],
+    [
+      "pbs15",
+      "through",
+      "wg29",
+      "in"
+    ],
+    [
+      "wg29",
+      "out",
+      "pbc15",
+      "in1"
+    ],
+    [
+      "pbs15",
+      "drop",
+      "wg30",
+      "in"
+    ],
+    [
+      "wg30",
+      "out",
+      "pbc15",
+      "in2"
+    ],
+    [
+      "pbs16",
+      "through",
+      "wg31",
+      "in"
+    ],
+    [
+      "wg31",
+      "out",
+      "pbc16",
+      "in1"
+    ],
+    [
+      "pbs16",
+      "drop",
+      "wg32",
+      "in"
+    ],
+    [
+      "wg32",
+      "out",
+      "pbc16",
+      "in2"
+    ]
+  ],
+  "metadata": {
+    "seed": 42,
+    "platform_source": "https://www.imec-int.com/technologies/photonics",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 250.0,
+    "waveguide_width_um": 2.0
+  }
+}

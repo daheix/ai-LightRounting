@@ -141,7 +141,13 @@ class CircuitGenerator(ABC):
     所有具体生成器继承此类，实现 generate() 返回电路 JSON dict。
     """
 
-    def __init__(self, topology: str, scale: ScaleConfig, platform: PlatformConfig, seed: int) -> None:
+    def __init__(
+        self,
+        topology: str,
+        scale: ScaleConfig,
+        platform: PlatformConfig,
+        seed: int,
+    ) -> None:
         """初始化生成器。
 
         Args:
@@ -376,7 +382,8 @@ class MZIArrayGenerator(CircuitGenerator):
     def generate(self) -> dict:
         """生成 MZI 阵列电路。"""
         name = f"mzi_array_{self.scale.name}_{self.platform.name}_{self.seed:03d}"
-        circuit = self._base_circuit_dict(name, f"MZI 阵列 ({self.scale.name}/{self.platform.name})")
+        desc = f"MZI 阵列 ({self.scale.name}/{self.platform.name})"
+        circuit = self._base_circuit_dict(name, desc)
 
         # 器件参数（来源: SiEPIC EBeam PDK）
         dc_params = {"gap_um": 0.2, "coupling_length_um": 20.0, "source": "SiEPIC EBeam PDK"}
@@ -436,7 +443,8 @@ class RingFilterGenerator(CircuitGenerator):
     def generate(self) -> dict:
         """生成 Ring 滤波器电路。"""
         name = f"ring_filter_{self.scale.name}_{self.platform.name}_{self.seed:03d}"
-        circuit = self._base_circuit_dict(name, f"Ring 滤波器 ({self.scale.name}/{self.platform.name})")
+        desc = f"Ring 滤波器 ({self.scale.name}/{self.platform.name})"
+        circuit = self._base_circuit_dict(name, desc)
 
         # 器件参数
         ring_params = {

@@ -1,0 +1,331 @@
+{
+  "name": "wdm_mux_demux_XS_SiN_142",
+  "description": "WDM 复用/解复用器 4 通道 (XS/SiN)",
+  "platform": "SiN",
+  "topology": "wdm_mux_demux",
+  "scale": "XS",
+  "canvas_w": 200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "awg1",
+      "type": "arrayed_waveguide_grating",
+      "width_um": 100.0,
+      "height_um": 40.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          15.0,
+          "W"
+        ],
+        [
+          "in3",
+          0.0,
+          25.0,
+          "W"
+        ],
+        [
+          "in4",
+          0.0,
+          35.0,
+          "W"
+        ],
+        [
+          "out1",
+          100.0,
+          5.0,
+          "E"
+        ],
+        [
+          "out2",
+          100.0,
+          15.0,
+          "E"
+        ],
+        [
+          "out3",
+          100.0,
+          25.0,
+          "E"
+        ],
+        [
+          "out4",
+          100.0,
+          35.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "channels": 4,
+        "fsr_nm": 80.0,
+        "insertion_loss_db": 3.0,
+        "source": "Takada et al., 1984; SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "wg_in1",
+      "out",
+      "awg1",
+      "in1"
+    ],
+    [
+      "awg1",
+      "out1",
+      "wg_out1",
+      "in"
+    ],
+    [
+      "wg_in2",
+      "out",
+      "awg1",
+      "in2"
+    ],
+    [
+      "awg1",
+      "out2",
+      "wg_out2",
+      "in"
+    ],
+    [
+      "wg_in3",
+      "out",
+      "awg1",
+      "in3"
+    ],
+    [
+      "awg1",
+      "out3",
+      "wg_out3",
+      "in"
+    ],
+    [
+      "wg_in4",
+      "out",
+      "awg1",
+      "in4"
+    ],
+    [
+      "awg1",
+      "out4",
+      "wg_out4",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 142,
+    "platform_source": "https://www.ligentec.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 100.0,
+    "waveguide_width_um": 1.0
+  }
+}

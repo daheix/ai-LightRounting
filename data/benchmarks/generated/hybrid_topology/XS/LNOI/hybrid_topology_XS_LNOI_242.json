@@ -1,0 +1,267 @@
+{
+  "name": "hybrid_topology_XS_LNOI_242",
+  "description": "混合 MZI+Ring+DC 拓扑 (XS/LNOI)",
+  "platform": "LNOI",
+  "topology": "hybrid_topology",
+  "scale": "XS",
+  "canvas_w": 200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK + gdsfactory 示例（混合拓扑设计）"
+      }
+    },
+    {
+      "name": "dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK + gdsfactory 示例（混合拓扑设计）"
+      }
+    },
+    {
+      "name": "wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "ps1",
+      "type": "phase_shifter",
+      "width_um": 50.0,
+      "height_um": 1.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_shift_rad": 3.14159265,
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK + gdsfactory 示例（混合拓扑设计）"
+      }
+    },
+    {
+      "name": "ring1",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 50.0,
+        "gap_um": 0.2,
+        "source": "SiEPIC EBeam PDK + gdsfactory 示例（混合拓扑设计）"
+      }
+    },
+    {
+      "name": "wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "SiEPIC EBeam PDK + gdsfactory 示例（混合拓扑设计）"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "dc1",
+      "out1",
+      "wg1",
+      "in"
+    ],
+    [
+      "dc1",
+      "out2",
+      "ps1",
+      "in"
+    ],
+    [
+      "wg1",
+      "out",
+      "dc2",
+      "in1"
+    ],
+    [
+      "ps1",
+      "out",
+      "dc2",
+      "in2"
+    ],
+    [
+      "dc2",
+      "out1",
+      "ring1",
+      "in"
+    ],
+    [
+      "ring1",
+      "through",
+      "wg2",
+      "in"
+    ],
+    [
+      "wg2",
+      "out",
+      "det1",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 242,
+    "platform_source": "https://www.hyperlightcorp.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 50.0,
+    "waveguide_width_um": 1.5
+  }
+}

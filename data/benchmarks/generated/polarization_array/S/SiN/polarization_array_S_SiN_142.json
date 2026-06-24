@@ -1,0 +1,293 @@
+{
+  "name": "polarization_array_S_SiN_142",
+  "description": "偏振分束/合束阵列 (S/SiN)",
+  "platform": "SiN",
+  "topology": "polarization_array",
+  "scale": "S",
+  "canvas_w": 400.0,
+  "canvas_h": 400.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "pbs1",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc1",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg1",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg2",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "pbs2",
+      "type": "polarization_beam_splitter",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "through",
+          20.0,
+          5.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          0.0,
+          "S"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "pbc2",
+      "type": "polarization_beam_combiner",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "out",
+          20.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "extinction_ratio_db": 20.0,
+        "insertion_loss_db": 0.5,
+        "source": "SiEPIC EBeam PDK; T.Barwicz IBM J Res 2007"
+      }
+    },
+    {
+      "name": "wg3",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg4",
+      "type": "strip_waveguide",
+      "width_um": 40.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          40.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "pbs1",
+      "through",
+      "wg1",
+      "in"
+    ],
+    [
+      "wg1",
+      "out",
+      "pbc1",
+      "in1"
+    ],
+    [
+      "pbs1",
+      "drop",
+      "wg2",
+      "in"
+    ],
+    [
+      "wg2",
+      "out",
+      "pbc1",
+      "in2"
+    ],
+    [
+      "pbs2",
+      "through",
+      "wg3",
+      "in"
+    ],
+    [
+      "wg3",
+      "out",
+      "pbc2",
+      "in1"
+    ],
+    [
+      "pbs2",
+      "drop",
+      "wg4",
+      "in"
+    ],
+    [
+      "wg4",
+      "out",
+      "pbc2",
+      "in2"
+    ]
+  ],
+  "metadata": {
+    "seed": 142,
+    "platform_source": "https://www.ligentec.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 100.0,
+    "waveguide_width_um": 1.0
+  }
+}

@@ -1,0 +1,346 @@
+{
+  "name": "ring_delay_line_crow_S_SiN_142",
+  "description": "环形延迟线 CROW (S/SiN)",
+  "platform": "SiN",
+  "topology": "ring_delay_line",
+  "scale": "S",
+  "canvas_w": 400.0,
+  "canvas_h": 400.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "wg1",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "ring1",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 100.0,
+        "gap_um": 0.2,
+        "topology": "CROW",
+        "source": "Yariv et al., Optics Express 2002 (CROW)"
+      }
+    },
+    {
+      "name": "ring2",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 100.0,
+        "gap_um": 0.2,
+        "topology": "CROW",
+        "source": "Yariv et al., Optics Express 2002 (CROW)"
+      }
+    },
+    {
+      "name": "ring3",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 100.0,
+        "gap_um": 0.2,
+        "topology": "CROW",
+        "source": "Yariv et al., Optics Express 2002 (CROW)"
+      }
+    },
+    {
+      "name": "ring4",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 100.0,
+        "gap_um": 0.2,
+        "topology": "CROW",
+        "source": "Yariv et al., Optics Express 2002 (CROW)"
+      }
+    },
+    {
+      "name": "wg2",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg3",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg4",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg5",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "wg1",
+      "out",
+      "ring1",
+      "in"
+    ],
+    [
+      "ring1",
+      "through",
+      "wg2",
+      "in"
+    ],
+    [
+      "wg2",
+      "out",
+      "ring2",
+      "in"
+    ],
+    [
+      "ring2",
+      "through",
+      "wg3",
+      "in"
+    ],
+    [
+      "wg3",
+      "out",
+      "ring3",
+      "in"
+    ],
+    [
+      "ring3",
+      "through",
+      "wg4",
+      "in"
+    ],
+    [
+      "wg4",
+      "out",
+      "ring4",
+      "in"
+    ],
+    [
+      "ring4",
+      "through",
+      "wg5",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 142,
+    "platform_source": "https://www.ligentec.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 100.0,
+    "waveguide_width_um": 1.0
+  }
+}

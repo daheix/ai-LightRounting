@@ -64,6 +64,20 @@ class _DefaultSimulator:
         "mrm_modulator": 0.5,  # MRM 调制器环耦合损耗 0.5 dB
         "thermo_optic_tuned_ring_modulator": 0.5,  # 热光环调制器，同 mrm_modulator
         "thermo_optic_switch": 1.0,  # 热光开关插损 1.0 dB
+        # 以下为生成器使用的别名（来源: SiEPIC EBeam PDK + 通用光子器件参数）
+        "photodetector": 0.5,  # 通用光电探测器，同 ge_photodetector
+        "single_photon_source": 0.0,  # 理想单光子源（无插损）
+        "single_photon_detector": 0.5,  # 单光子探测器，同 ge_photodetector
+        "polarizing_beam_splitter": 0.3,  # PBS 插损 0.3 dB（来源: SiEPIC EBeam PDK）
+        "polarizing_beam_combiner": 0.3,  # PBC 插损 0.3 dB（同 PBS）
+        "pbs": 0.3,  # PBS 简写
+        "pbc": 0.3,  # PBC 简写
+        "awg": 1.0,  # 阵列波导光栅插损 1.0 dB（来源: Takada 1984）
+        "arrayed_waveguide_grating": 1.0,  # AWG 全称
+        "optical_switch": 1.0,  # 2x2 光开关，同 thermo_optic_switch
+        "switch_2x2": 1.0,  # 2x2 开关别名
+        "mzm": 4.0,  # MZM 简写，同 mzm_modulator
+        "mach_zehnder_modulator": 4.0,  # MZM 全称
     }
 
     # 波导类器件类型集合（按长度计算损耗，需 length/wg_length 参数）

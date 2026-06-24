@@ -1,0 +1,155 @@
+{
+  "name": "quantum_photonics_XS_SiN_042",
+  "description": "量子光子电路 (XS/SiN)",
+  "platform": "SiN",
+  "topology": "quantum_photonics",
+  "scale": "XS",
+  "canvas_w": 200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "src1",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "HOM 1987"
+      }
+    },
+    {
+      "name": "src2",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "HOM 1987"
+      }
+    },
+    {
+      "name": "dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "HOM 1987"
+      }
+    },
+    {
+      "name": "det1",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "HOM 1987"
+      }
+    },
+    {
+      "name": "det2",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "HOM 1987"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "src1",
+      "out",
+      "dc1",
+      "in1"
+    ],
+    [
+      "src2",
+      "out",
+      "dc1",
+      "in2"
+    ],
+    [
+      "dc1",
+      "out1",
+      "det1",
+      "in"
+    ],
+    [
+      "dc1",
+      "out2",
+      "det2",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 42,
+    "platform_source": "https://www.ligentec.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 100.0,
+    "waveguide_width_um": 1.0
+  }
+}

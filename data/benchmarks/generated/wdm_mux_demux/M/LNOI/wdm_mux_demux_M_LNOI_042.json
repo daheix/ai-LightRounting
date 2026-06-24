@@ -1,0 +1,1219 @@
+{
+  "name": "wdm_mux_demux_M_LNOI_042",
+  "description": "WDM 复用/解复用器 16 通道 (M/LNOI)",
+  "platform": "LNOI",
+  "topology": "wdm_mux_demux",
+  "scale": "M",
+  "canvas_w": 800.0,
+  "canvas_h": 800.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "awg1",
+      "type": "arrayed_waveguide_grating",
+      "width_um": 100.0,
+      "height_um": 160.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          15.0,
+          "W"
+        ],
+        [
+          "in3",
+          0.0,
+          25.0,
+          "W"
+        ],
+        [
+          "in4",
+          0.0,
+          35.0,
+          "W"
+        ],
+        [
+          "in5",
+          0.0,
+          45.0,
+          "W"
+        ],
+        [
+          "in6",
+          0.0,
+          55.0,
+          "W"
+        ],
+        [
+          "in7",
+          0.0,
+          65.0,
+          "W"
+        ],
+        [
+          "in8",
+          0.0,
+          75.0,
+          "W"
+        ],
+        [
+          "in9",
+          0.0,
+          85.0,
+          "W"
+        ],
+        [
+          "in10",
+          0.0,
+          95.0,
+          "W"
+        ],
+        [
+          "in11",
+          0.0,
+          105.0,
+          "W"
+        ],
+        [
+          "in12",
+          0.0,
+          115.0,
+          "W"
+        ],
+        [
+          "in13",
+          0.0,
+          125.0,
+          "W"
+        ],
+        [
+          "in14",
+          0.0,
+          135.0,
+          "W"
+        ],
+        [
+          "in15",
+          0.0,
+          145.0,
+          "W"
+        ],
+        [
+          "in16",
+          0.0,
+          155.0,
+          "W"
+        ],
+        [
+          "out1",
+          100.0,
+          5.0,
+          "E"
+        ],
+        [
+          "out2",
+          100.0,
+          15.0,
+          "E"
+        ],
+        [
+          "out3",
+          100.0,
+          25.0,
+          "E"
+        ],
+        [
+          "out4",
+          100.0,
+          35.0,
+          "E"
+        ],
+        [
+          "out5",
+          100.0,
+          45.0,
+          "E"
+        ],
+        [
+          "out6",
+          100.0,
+          55.0,
+          "E"
+        ],
+        [
+          "out7",
+          100.0,
+          65.0,
+          "E"
+        ],
+        [
+          "out8",
+          100.0,
+          75.0,
+          "E"
+        ],
+        [
+          "out9",
+          100.0,
+          85.0,
+          "E"
+        ],
+        [
+          "out10",
+          100.0,
+          95.0,
+          "E"
+        ],
+        [
+          "out11",
+          100.0,
+          105.0,
+          "E"
+        ],
+        [
+          "out12",
+          100.0,
+          115.0,
+          "E"
+        ],
+        [
+          "out13",
+          100.0,
+          125.0,
+          "E"
+        ],
+        [
+          "out14",
+          100.0,
+          135.0,
+          "E"
+        ],
+        [
+          "out15",
+          100.0,
+          145.0,
+          "E"
+        ],
+        [
+          "out16",
+          100.0,
+          155.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "channels": 16,
+        "fsr_nm": 320.0,
+        "insertion_loss_db": 3.0,
+        "source": "Takada et al., 1984; SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_in16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "wg_out16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "wg_in1",
+      "out",
+      "awg1",
+      "in1"
+    ],
+    [
+      "awg1",
+      "out1",
+      "wg_out1",
+      "in"
+    ],
+    [
+      "wg_in2",
+      "out",
+      "awg1",
+      "in2"
+    ],
+    [
+      "awg1",
+      "out2",
+      "wg_out2",
+      "in"
+    ],
+    [
+      "wg_in3",
+      "out",
+      "awg1",
+      "in3"
+    ],
+    [
+      "awg1",
+      "out3",
+      "wg_out3",
+      "in"
+    ],
+    [
+      "wg_in4",
+      "out",
+      "awg1",
+      "in4"
+    ],
+    [
+      "awg1",
+      "out4",
+      "wg_out4",
+      "in"
+    ],
+    [
+      "wg_in5",
+      "out",
+      "awg1",
+      "in5"
+    ],
+    [
+      "awg1",
+      "out5",
+      "wg_out5",
+      "in"
+    ],
+    [
+      "wg_in6",
+      "out",
+      "awg1",
+      "in6"
+    ],
+    [
+      "awg1",
+      "out6",
+      "wg_out6",
+      "in"
+    ],
+    [
+      "wg_in7",
+      "out",
+      "awg1",
+      "in7"
+    ],
+    [
+      "awg1",
+      "out7",
+      "wg_out7",
+      "in"
+    ],
+    [
+      "wg_in8",
+      "out",
+      "awg1",
+      "in8"
+    ],
+    [
+      "awg1",
+      "out8",
+      "wg_out8",
+      "in"
+    ],
+    [
+      "wg_in9",
+      "out",
+      "awg1",
+      "in9"
+    ],
+    [
+      "awg1",
+      "out9",
+      "wg_out9",
+      "in"
+    ],
+    [
+      "wg_in10",
+      "out",
+      "awg1",
+      "in10"
+    ],
+    [
+      "awg1",
+      "out10",
+      "wg_out10",
+      "in"
+    ],
+    [
+      "wg_in11",
+      "out",
+      "awg1",
+      "in11"
+    ],
+    [
+      "awg1",
+      "out11",
+      "wg_out11",
+      "in"
+    ],
+    [
+      "wg_in12",
+      "out",
+      "awg1",
+      "in12"
+    ],
+    [
+      "awg1",
+      "out12",
+      "wg_out12",
+      "in"
+    ],
+    [
+      "wg_in13",
+      "out",
+      "awg1",
+      "in13"
+    ],
+    [
+      "awg1",
+      "out13",
+      "wg_out13",
+      "in"
+    ],
+    [
+      "wg_in14",
+      "out",
+      "awg1",
+      "in14"
+    ],
+    [
+      "awg1",
+      "out14",
+      "wg_out14",
+      "in"
+    ],
+    [
+      "wg_in15",
+      "out",
+      "awg1",
+      "in15"
+    ],
+    [
+      "awg1",
+      "out15",
+      "wg_out15",
+      "in"
+    ],
+    [
+      "wg_in16",
+      "out",
+      "awg1",
+      "in16"
+    ],
+    [
+      "awg1",
+      "out16",
+      "wg_out16",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 42,
+    "platform_source": "https://www.hyperlightcorp.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 50.0,
+    "waveguide_width_um": 1.5
+  }
+}

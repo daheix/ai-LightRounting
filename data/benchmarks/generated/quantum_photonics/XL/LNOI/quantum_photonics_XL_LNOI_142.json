@@ -1,0 +1,6469 @@
+{
+  "name": "quantum_photonics_XL_LNOI_142",
+  "description": "量子光子电路 (XL/LNOI)",
+  "platform": "LNOI",
+  "topology": "quantum_photonics",
+  "scale": "XL",
+  "canvas_w": 3000.0,
+  "canvas_h": 3000.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "src1",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src2",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src3",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src4",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src5",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src6",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src7",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src8",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src9",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src10",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src11",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src12",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src13",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src14",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src15",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "src16",
+      "type": "single_photon_source",
+      "width_um": 50.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "wavelength_nm": 1550.0,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det1",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det2",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det3",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det4",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det5",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det6",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det7",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det8",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det9",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det10",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det11",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det12",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det13",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det14",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det15",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "det16",
+      "type": "single_photon_detector",
+      "width_um": 20.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "dark_count_hz": 100,
+        "efficiency": 0.9,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc3",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc4",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc5",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc6",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc7",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc8",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc9",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc10",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc11",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc12",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc13",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc14",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc15",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc16",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc17",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc18",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc19",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc20",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc21",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc22",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc23",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc24",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc25",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc26",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc27",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc28",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc29",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc30",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc31",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc32",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc33",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc34",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc35",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc36",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc37",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc38",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc39",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc40",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc41",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc42",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc43",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc44",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc45",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc46",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc47",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc48",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc49",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc50",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc51",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc52",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc53",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc54",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc55",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc56",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc57",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc58",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc59",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc60",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc61",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc62",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc63",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc64",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc65",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc66",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc67",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc68",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc69",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc70",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc71",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc72",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc73",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc74",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc75",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc76",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc77",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc78",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc79",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc80",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc81",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc82",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc83",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc84",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc85",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc86",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc87",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc88",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc89",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc90",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc91",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc92",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc93",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc94",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc95",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc96",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc97",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc98",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc99",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc100",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc101",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc102",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc103",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc104",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc105",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc106",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc107",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc108",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc109",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc110",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc111",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc112",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc113",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc114",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc115",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc116",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc117",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc118",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc119",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    },
+    {
+      "name": "dc120",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Clements 2016"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "src1",
+      "out",
+      "dc1",
+      "in1"
+    ],
+    [
+      "src2",
+      "out",
+      "dc1",
+      "in2"
+    ],
+    [
+      "src3",
+      "out",
+      "dc2",
+      "in1"
+    ],
+    [
+      "src4",
+      "out",
+      "dc2",
+      "in2"
+    ],
+    [
+      "src5",
+      "out",
+      "dc3",
+      "in1"
+    ],
+    [
+      "src6",
+      "out",
+      "dc3",
+      "in2"
+    ],
+    [
+      "src7",
+      "out",
+      "dc4",
+      "in1"
+    ],
+    [
+      "src8",
+      "out",
+      "dc4",
+      "in2"
+    ],
+    [
+      "src9",
+      "out",
+      "dc5",
+      "in1"
+    ],
+    [
+      "src10",
+      "out",
+      "dc5",
+      "in2"
+    ],
+    [
+      "src11",
+      "out",
+      "dc6",
+      "in1"
+    ],
+    [
+      "src12",
+      "out",
+      "dc6",
+      "in2"
+    ],
+    [
+      "src13",
+      "out",
+      "dc7",
+      "in1"
+    ],
+    [
+      "src14",
+      "out",
+      "dc7",
+      "in2"
+    ],
+    [
+      "src15",
+      "out",
+      "dc8",
+      "in1"
+    ],
+    [
+      "src16",
+      "out",
+      "dc8",
+      "in2"
+    ],
+    [
+      "dc1",
+      "out2",
+      "dc9",
+      "in1"
+    ],
+    [
+      "dc2",
+      "out1",
+      "dc9",
+      "in2"
+    ],
+    [
+      "dc2",
+      "out2",
+      "dc10",
+      "in1"
+    ],
+    [
+      "dc3",
+      "out1",
+      "dc10",
+      "in2"
+    ],
+    [
+      "dc3",
+      "out2",
+      "dc11",
+      "in1"
+    ],
+    [
+      "dc4",
+      "out1",
+      "dc11",
+      "in2"
+    ],
+    [
+      "dc4",
+      "out2",
+      "dc12",
+      "in1"
+    ],
+    [
+      "dc5",
+      "out1",
+      "dc12",
+      "in2"
+    ],
+    [
+      "dc5",
+      "out2",
+      "dc13",
+      "in1"
+    ],
+    [
+      "dc6",
+      "out1",
+      "dc13",
+      "in2"
+    ],
+    [
+      "dc6",
+      "out2",
+      "dc14",
+      "in1"
+    ],
+    [
+      "dc7",
+      "out1",
+      "dc14",
+      "in2"
+    ],
+    [
+      "dc7",
+      "out2",
+      "dc15",
+      "in1"
+    ],
+    [
+      "dc8",
+      "out1",
+      "dc15",
+      "in2"
+    ],
+    [
+      "dc1",
+      "out1",
+      "dc16",
+      "in1"
+    ],
+    [
+      "dc9",
+      "out1",
+      "dc16",
+      "in2"
+    ],
+    [
+      "dc9",
+      "out2",
+      "dc17",
+      "in1"
+    ],
+    [
+      "dc10",
+      "out1",
+      "dc17",
+      "in2"
+    ],
+    [
+      "dc10",
+      "out2",
+      "dc18",
+      "in1"
+    ],
+    [
+      "dc11",
+      "out1",
+      "dc18",
+      "in2"
+    ],
+    [
+      "dc11",
+      "out2",
+      "dc19",
+      "in1"
+    ],
+    [
+      "dc12",
+      "out1",
+      "dc19",
+      "in2"
+    ],
+    [
+      "dc12",
+      "out2",
+      "dc20",
+      "in1"
+    ],
+    [
+      "dc13",
+      "out1",
+      "dc20",
+      "in2"
+    ],
+    [
+      "dc13",
+      "out2",
+      "dc21",
+      "in1"
+    ],
+    [
+      "dc14",
+      "out1",
+      "dc21",
+      "in2"
+    ],
+    [
+      "dc14",
+      "out2",
+      "dc22",
+      "in1"
+    ],
+    [
+      "dc15",
+      "out1",
+      "dc22",
+      "in2"
+    ],
+    [
+      "dc15",
+      "out2",
+      "dc23",
+      "in1"
+    ],
+    [
+      "dc8",
+      "out2",
+      "dc23",
+      "in2"
+    ],
+    [
+      "dc16",
+      "out2",
+      "dc24",
+      "in1"
+    ],
+    [
+      "dc17",
+      "out1",
+      "dc24",
+      "in2"
+    ],
+    [
+      "dc17",
+      "out2",
+      "dc25",
+      "in1"
+    ],
+    [
+      "dc18",
+      "out1",
+      "dc25",
+      "in2"
+    ],
+    [
+      "dc18",
+      "out2",
+      "dc26",
+      "in1"
+    ],
+    [
+      "dc19",
+      "out1",
+      "dc26",
+      "in2"
+    ],
+    [
+      "dc19",
+      "out2",
+      "dc27",
+      "in1"
+    ],
+    [
+      "dc20",
+      "out1",
+      "dc27",
+      "in2"
+    ],
+    [
+      "dc20",
+      "out2",
+      "dc28",
+      "in1"
+    ],
+    [
+      "dc21",
+      "out1",
+      "dc28",
+      "in2"
+    ],
+    [
+      "dc21",
+      "out2",
+      "dc29",
+      "in1"
+    ],
+    [
+      "dc22",
+      "out1",
+      "dc29",
+      "in2"
+    ],
+    [
+      "dc22",
+      "out2",
+      "dc30",
+      "in1"
+    ],
+    [
+      "dc23",
+      "out1",
+      "dc30",
+      "in2"
+    ],
+    [
+      "dc16",
+      "out1",
+      "dc31",
+      "in1"
+    ],
+    [
+      "dc24",
+      "out1",
+      "dc31",
+      "in2"
+    ],
+    [
+      "dc24",
+      "out2",
+      "dc32",
+      "in1"
+    ],
+    [
+      "dc25",
+      "out1",
+      "dc32",
+      "in2"
+    ],
+    [
+      "dc25",
+      "out2",
+      "dc33",
+      "in1"
+    ],
+    [
+      "dc26",
+      "out1",
+      "dc33",
+      "in2"
+    ],
+    [
+      "dc26",
+      "out2",
+      "dc34",
+      "in1"
+    ],
+    [
+      "dc27",
+      "out1",
+      "dc34",
+      "in2"
+    ],
+    [
+      "dc27",
+      "out2",
+      "dc35",
+      "in1"
+    ],
+    [
+      "dc28",
+      "out1",
+      "dc35",
+      "in2"
+    ],
+    [
+      "dc28",
+      "out2",
+      "dc36",
+      "in1"
+    ],
+    [
+      "dc29",
+      "out1",
+      "dc36",
+      "in2"
+    ],
+    [
+      "dc29",
+      "out2",
+      "dc37",
+      "in1"
+    ],
+    [
+      "dc30",
+      "out1",
+      "dc37",
+      "in2"
+    ],
+    [
+      "dc30",
+      "out2",
+      "dc38",
+      "in1"
+    ],
+    [
+      "dc23",
+      "out2",
+      "dc38",
+      "in2"
+    ],
+    [
+      "dc31",
+      "out2",
+      "dc39",
+      "in1"
+    ],
+    [
+      "dc32",
+      "out1",
+      "dc39",
+      "in2"
+    ],
+    [
+      "dc32",
+      "out2",
+      "dc40",
+      "in1"
+    ],
+    [
+      "dc33",
+      "out1",
+      "dc40",
+      "in2"
+    ],
+    [
+      "dc33",
+      "out2",
+      "dc41",
+      "in1"
+    ],
+    [
+      "dc34",
+      "out1",
+      "dc41",
+      "in2"
+    ],
+    [
+      "dc34",
+      "out2",
+      "dc42",
+      "in1"
+    ],
+    [
+      "dc35",
+      "out1",
+      "dc42",
+      "in2"
+    ],
+    [
+      "dc35",
+      "out2",
+      "dc43",
+      "in1"
+    ],
+    [
+      "dc36",
+      "out1",
+      "dc43",
+      "in2"
+    ],
+    [
+      "dc36",
+      "out2",
+      "dc44",
+      "in1"
+    ],
+    [
+      "dc37",
+      "out1",
+      "dc44",
+      "in2"
+    ],
+    [
+      "dc37",
+      "out2",
+      "dc45",
+      "in1"
+    ],
+    [
+      "dc38",
+      "out1",
+      "dc45",
+      "in2"
+    ],
+    [
+      "dc31",
+      "out1",
+      "dc46",
+      "in1"
+    ],
+    [
+      "dc39",
+      "out1",
+      "dc46",
+      "in2"
+    ],
+    [
+      "dc39",
+      "out2",
+      "dc47",
+      "in1"
+    ],
+    [
+      "dc40",
+      "out1",
+      "dc47",
+      "in2"
+    ],
+    [
+      "dc40",
+      "out2",
+      "dc48",
+      "in1"
+    ],
+    [
+      "dc41",
+      "out1",
+      "dc48",
+      "in2"
+    ],
+    [
+      "dc41",
+      "out2",
+      "dc49",
+      "in1"
+    ],
+    [
+      "dc42",
+      "out1",
+      "dc49",
+      "in2"
+    ],
+    [
+      "dc42",
+      "out2",
+      "dc50",
+      "in1"
+    ],
+    [
+      "dc43",
+      "out1",
+      "dc50",
+      "in2"
+    ],
+    [
+      "dc43",
+      "out2",
+      "dc51",
+      "in1"
+    ],
+    [
+      "dc44",
+      "out1",
+      "dc51",
+      "in2"
+    ],
+    [
+      "dc44",
+      "out2",
+      "dc52",
+      "in1"
+    ],
+    [
+      "dc45",
+      "out1",
+      "dc52",
+      "in2"
+    ],
+    [
+      "dc45",
+      "out2",
+      "dc53",
+      "in1"
+    ],
+    [
+      "dc38",
+      "out2",
+      "dc53",
+      "in2"
+    ],
+    [
+      "dc46",
+      "out2",
+      "dc54",
+      "in1"
+    ],
+    [
+      "dc47",
+      "out1",
+      "dc54",
+      "in2"
+    ],
+    [
+      "dc47",
+      "out2",
+      "dc55",
+      "in1"
+    ],
+    [
+      "dc48",
+      "out1",
+      "dc55",
+      "in2"
+    ],
+    [
+      "dc48",
+      "out2",
+      "dc56",
+      "in1"
+    ],
+    [
+      "dc49",
+      "out1",
+      "dc56",
+      "in2"
+    ],
+    [
+      "dc49",
+      "out2",
+      "dc57",
+      "in1"
+    ],
+    [
+      "dc50",
+      "out1",
+      "dc57",
+      "in2"
+    ],
+    [
+      "dc50",
+      "out2",
+      "dc58",
+      "in1"
+    ],
+    [
+      "dc51",
+      "out1",
+      "dc58",
+      "in2"
+    ],
+    [
+      "dc51",
+      "out2",
+      "dc59",
+      "in1"
+    ],
+    [
+      "dc52",
+      "out1",
+      "dc59",
+      "in2"
+    ],
+    [
+      "dc52",
+      "out2",
+      "dc60",
+      "in1"
+    ],
+    [
+      "dc53",
+      "out1",
+      "dc60",
+      "in2"
+    ],
+    [
+      "dc46",
+      "out1",
+      "dc61",
+      "in1"
+    ],
+    [
+      "dc54",
+      "out1",
+      "dc61",
+      "in2"
+    ],
+    [
+      "dc54",
+      "out2",
+      "dc62",
+      "in1"
+    ],
+    [
+      "dc55",
+      "out1",
+      "dc62",
+      "in2"
+    ],
+    [
+      "dc55",
+      "out2",
+      "dc63",
+      "in1"
+    ],
+    [
+      "dc56",
+      "out1",
+      "dc63",
+      "in2"
+    ],
+    [
+      "dc56",
+      "out2",
+      "dc64",
+      "in1"
+    ],
+    [
+      "dc57",
+      "out1",
+      "dc64",
+      "in2"
+    ],
+    [
+      "dc57",
+      "out2",
+      "dc65",
+      "in1"
+    ],
+    [
+      "dc58",
+      "out1",
+      "dc65",
+      "in2"
+    ],
+    [
+      "dc58",
+      "out2",
+      "dc66",
+      "in1"
+    ],
+    [
+      "dc59",
+      "out1",
+      "dc66",
+      "in2"
+    ],
+    [
+      "dc59",
+      "out2",
+      "dc67",
+      "in1"
+    ],
+    [
+      "dc60",
+      "out1",
+      "dc67",
+      "in2"
+    ],
+    [
+      "dc60",
+      "out2",
+      "dc68",
+      "in1"
+    ],
+    [
+      "dc53",
+      "out2",
+      "dc68",
+      "in2"
+    ],
+    [
+      "dc61",
+      "out2",
+      "dc69",
+      "in1"
+    ],
+    [
+      "dc62",
+      "out1",
+      "dc69",
+      "in2"
+    ],
+    [
+      "dc62",
+      "out2",
+      "dc70",
+      "in1"
+    ],
+    [
+      "dc63",
+      "out1",
+      "dc70",
+      "in2"
+    ],
+    [
+      "dc63",
+      "out2",
+      "dc71",
+      "in1"
+    ],
+    [
+      "dc64",
+      "out1",
+      "dc71",
+      "in2"
+    ],
+    [
+      "dc64",
+      "out2",
+      "dc72",
+      "in1"
+    ],
+    [
+      "dc65",
+      "out1",
+      "dc72",
+      "in2"
+    ],
+    [
+      "dc65",
+      "out2",
+      "dc73",
+      "in1"
+    ],
+    [
+      "dc66",
+      "out1",
+      "dc73",
+      "in2"
+    ],
+    [
+      "dc66",
+      "out2",
+      "dc74",
+      "in1"
+    ],
+    [
+      "dc67",
+      "out1",
+      "dc74",
+      "in2"
+    ],
+    [
+      "dc67",
+      "out2",
+      "dc75",
+      "in1"
+    ],
+    [
+      "dc68",
+      "out1",
+      "dc75",
+      "in2"
+    ],
+    [
+      "dc61",
+      "out1",
+      "dc76",
+      "in1"
+    ],
+    [
+      "dc69",
+      "out1",
+      "dc76",
+      "in2"
+    ],
+    [
+      "dc69",
+      "out2",
+      "dc77",
+      "in1"
+    ],
+    [
+      "dc70",
+      "out1",
+      "dc77",
+      "in2"
+    ],
+    [
+      "dc70",
+      "out2",
+      "dc78",
+      "in1"
+    ],
+    [
+      "dc71",
+      "out1",
+      "dc78",
+      "in2"
+    ],
+    [
+      "dc71",
+      "out2",
+      "dc79",
+      "in1"
+    ],
+    [
+      "dc72",
+      "out1",
+      "dc79",
+      "in2"
+    ],
+    [
+      "dc72",
+      "out2",
+      "dc80",
+      "in1"
+    ],
+    [
+      "dc73",
+      "out1",
+      "dc80",
+      "in2"
+    ],
+    [
+      "dc73",
+      "out2",
+      "dc81",
+      "in1"
+    ],
+    [
+      "dc74",
+      "out1",
+      "dc81",
+      "in2"
+    ],
+    [
+      "dc74",
+      "out2",
+      "dc82",
+      "in1"
+    ],
+    [
+      "dc75",
+      "out1",
+      "dc82",
+      "in2"
+    ],
+    [
+      "dc75",
+      "out2",
+      "dc83",
+      "in1"
+    ],
+    [
+      "dc68",
+      "out2",
+      "dc83",
+      "in2"
+    ],
+    [
+      "dc76",
+      "out2",
+      "dc84",
+      "in1"
+    ],
+    [
+      "dc77",
+      "out1",
+      "dc84",
+      "in2"
+    ],
+    [
+      "dc77",
+      "out2",
+      "dc85",
+      "in1"
+    ],
+    [
+      "dc78",
+      "out1",
+      "dc85",
+      "in2"
+    ],
+    [
+      "dc78",
+      "out2",
+      "dc86",
+      "in1"
+    ],
+    [
+      "dc79",
+      "out1",
+      "dc86",
+      "in2"
+    ],
+    [
+      "dc79",
+      "out2",
+      "dc87",
+      "in1"
+    ],
+    [
+      "dc80",
+      "out1",
+      "dc87",
+      "in2"
+    ],
+    [
+      "dc80",
+      "out2",
+      "dc88",
+      "in1"
+    ],
+    [
+      "dc81",
+      "out1",
+      "dc88",
+      "in2"
+    ],
+    [
+      "dc81",
+      "out2",
+      "dc89",
+      "in1"
+    ],
+    [
+      "dc82",
+      "out1",
+      "dc89",
+      "in2"
+    ],
+    [
+      "dc82",
+      "out2",
+      "dc90",
+      "in1"
+    ],
+    [
+      "dc83",
+      "out1",
+      "dc90",
+      "in2"
+    ],
+    [
+      "dc76",
+      "out1",
+      "dc91",
+      "in1"
+    ],
+    [
+      "dc84",
+      "out1",
+      "dc91",
+      "in2"
+    ],
+    [
+      "dc84",
+      "out2",
+      "dc92",
+      "in1"
+    ],
+    [
+      "dc85",
+      "out1",
+      "dc92",
+      "in2"
+    ],
+    [
+      "dc85",
+      "out2",
+      "dc93",
+      "in1"
+    ],
+    [
+      "dc86",
+      "out1",
+      "dc93",
+      "in2"
+    ],
+    [
+      "dc86",
+      "out2",
+      "dc94",
+      "in1"
+    ],
+    [
+      "dc87",
+      "out1",
+      "dc94",
+      "in2"
+    ],
+    [
+      "dc87",
+      "out2",
+      "dc95",
+      "in1"
+    ],
+    [
+      "dc88",
+      "out1",
+      "dc95",
+      "in2"
+    ],
+    [
+      "dc88",
+      "out2",
+      "dc96",
+      "in1"
+    ],
+    [
+      "dc89",
+      "out1",
+      "dc96",
+      "in2"
+    ],
+    [
+      "dc89",
+      "out2",
+      "dc97",
+      "in1"
+    ],
+    [
+      "dc90",
+      "out1",
+      "dc97",
+      "in2"
+    ],
+    [
+      "dc90",
+      "out2",
+      "dc98",
+      "in1"
+    ],
+    [
+      "dc83",
+      "out2",
+      "dc98",
+      "in2"
+    ],
+    [
+      "dc91",
+      "out2",
+      "dc99",
+      "in1"
+    ],
+    [
+      "dc92",
+      "out1",
+      "dc99",
+      "in2"
+    ],
+    [
+      "dc92",
+      "out2",
+      "dc100",
+      "in1"
+    ],
+    [
+      "dc93",
+      "out1",
+      "dc100",
+      "in2"
+    ],
+    [
+      "dc93",
+      "out2",
+      "dc101",
+      "in1"
+    ],
+    [
+      "dc94",
+      "out1",
+      "dc101",
+      "in2"
+    ],
+    [
+      "dc94",
+      "out2",
+      "dc102",
+      "in1"
+    ],
+    [
+      "dc95",
+      "out1",
+      "dc102",
+      "in2"
+    ],
+    [
+      "dc95",
+      "out2",
+      "dc103",
+      "in1"
+    ],
+    [
+      "dc96",
+      "out1",
+      "dc103",
+      "in2"
+    ],
+    [
+      "dc96",
+      "out2",
+      "dc104",
+      "in1"
+    ],
+    [
+      "dc97",
+      "out1",
+      "dc104",
+      "in2"
+    ],
+    [
+      "dc97",
+      "out2",
+      "dc105",
+      "in1"
+    ],
+    [
+      "dc98",
+      "out1",
+      "dc105",
+      "in2"
+    ],
+    [
+      "dc91",
+      "out1",
+      "dc106",
+      "in1"
+    ],
+    [
+      "dc99",
+      "out1",
+      "dc106",
+      "in2"
+    ],
+    [
+      "dc99",
+      "out2",
+      "dc107",
+      "in1"
+    ],
+    [
+      "dc100",
+      "out1",
+      "dc107",
+      "in2"
+    ],
+    [
+      "dc100",
+      "out2",
+      "dc108",
+      "in1"
+    ],
+    [
+      "dc101",
+      "out1",
+      "dc108",
+      "in2"
+    ],
+    [
+      "dc101",
+      "out2",
+      "dc109",
+      "in1"
+    ],
+    [
+      "dc102",
+      "out1",
+      "dc109",
+      "in2"
+    ],
+    [
+      "dc102",
+      "out2",
+      "dc110",
+      "in1"
+    ],
+    [
+      "dc103",
+      "out1",
+      "dc110",
+      "in2"
+    ],
+    [
+      "dc103",
+      "out2",
+      "dc111",
+      "in1"
+    ],
+    [
+      "dc104",
+      "out1",
+      "dc111",
+      "in2"
+    ],
+    [
+      "dc104",
+      "out2",
+      "dc112",
+      "in1"
+    ],
+    [
+      "dc105",
+      "out1",
+      "dc112",
+      "in2"
+    ],
+    [
+      "dc105",
+      "out2",
+      "dc113",
+      "in1"
+    ],
+    [
+      "dc98",
+      "out2",
+      "dc113",
+      "in2"
+    ],
+    [
+      "dc106",
+      "out2",
+      "dc114",
+      "in1"
+    ],
+    [
+      "dc107",
+      "out1",
+      "dc114",
+      "in2"
+    ],
+    [
+      "dc107",
+      "out2",
+      "dc115",
+      "in1"
+    ],
+    [
+      "dc108",
+      "out1",
+      "dc115",
+      "in2"
+    ],
+    [
+      "dc108",
+      "out2",
+      "dc116",
+      "in1"
+    ],
+    [
+      "dc109",
+      "out1",
+      "dc116",
+      "in2"
+    ],
+    [
+      "dc109",
+      "out2",
+      "dc117",
+      "in1"
+    ],
+    [
+      "dc110",
+      "out1",
+      "dc117",
+      "in2"
+    ],
+    [
+      "dc110",
+      "out2",
+      "dc118",
+      "in1"
+    ],
+    [
+      "dc111",
+      "out1",
+      "dc118",
+      "in2"
+    ],
+    [
+      "dc111",
+      "out2",
+      "dc119",
+      "in1"
+    ],
+    [
+      "dc112",
+      "out1",
+      "dc119",
+      "in2"
+    ],
+    [
+      "dc112",
+      "out2",
+      "dc120",
+      "in1"
+    ],
+    [
+      "dc113",
+      "out1",
+      "dc120",
+      "in2"
+    ],
+    [
+      "dc106",
+      "out1",
+      "det1",
+      "in"
+    ],
+    [
+      "dc114",
+      "out1",
+      "det2",
+      "in"
+    ],
+    [
+      "dc114",
+      "out2",
+      "det3",
+      "in"
+    ],
+    [
+      "dc115",
+      "out1",
+      "det4",
+      "in"
+    ],
+    [
+      "dc115",
+      "out2",
+      "det5",
+      "in"
+    ],
+    [
+      "dc116",
+      "out1",
+      "det6",
+      "in"
+    ],
+    [
+      "dc116",
+      "out2",
+      "det7",
+      "in"
+    ],
+    [
+      "dc117",
+      "out1",
+      "det8",
+      "in"
+    ],
+    [
+      "dc117",
+      "out2",
+      "det9",
+      "in"
+    ],
+    [
+      "dc118",
+      "out1",
+      "det10",
+      "in"
+    ],
+    [
+      "dc118",
+      "out2",
+      "det11",
+      "in"
+    ],
+    [
+      "dc119",
+      "out1",
+      "det12",
+      "in"
+    ],
+    [
+      "dc119",
+      "out2",
+      "det13",
+      "in"
+    ],
+    [
+      "dc120",
+      "out1",
+      "det14",
+      "in"
+    ],
+    [
+      "dc120",
+      "out2",
+      "det15",
+      "in"
+    ],
+    [
+      "dc113",
+      "out2",
+      "det16",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 142,
+    "platform_source": "https://www.hyperlightcorp.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 50.0,
+    "waveguide_width_um": 1.5
+  }
+}

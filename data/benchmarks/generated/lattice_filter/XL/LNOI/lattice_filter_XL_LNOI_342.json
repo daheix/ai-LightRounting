@@ -1,0 +1,2505 @@
+{
+  "name": "lattice_filter_XL_LNOI_342",
+  "description": "格栅滤波器 32 级 (XL/LNOI)",
+  "platform": "LNOI",
+  "topology": "lattice_filter",
+  "scale": "XL",
+  "canvas_w": 3000.0,
+  "canvas_h": 3000.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps1",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps2",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc3",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps3",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc4",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps4",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc5",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps5",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc6",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps6",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc7",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps7",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc8",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps8",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc9",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps9",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc10",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps10",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc11",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps11",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc12",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps12",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc13",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps13",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc14",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps14",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc15",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps15",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc16",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps16",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc17",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps17",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc18",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps18",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc19",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps19",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc20",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps20",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc21",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps21",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc22",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps22",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc23",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps23",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc24",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps24",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc25",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps25",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc26",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps26",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc27",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps27",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc28",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps28",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc29",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps29",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc30",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps30",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc31",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps31",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "dc32",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "coupling_ratio": 0.5,
+        "source": "Madsen & Zhao, 1999"
+      }
+    },
+    {
+      "name": "ps32",
+      "type": "phase_shifter",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "phase_rad": 3.141592653589793,
+        "source": "Madsen & Zhao, 1999"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "dc1",
+      "out1",
+      "ps1",
+      "in"
+    ],
+    [
+      "ps1",
+      "out",
+      "dc2",
+      "in1"
+    ],
+    [
+      "dc1",
+      "out2",
+      "dc2",
+      "in2"
+    ],
+    [
+      "dc2",
+      "out1",
+      "ps2",
+      "in"
+    ],
+    [
+      "ps2",
+      "out",
+      "dc3",
+      "in1"
+    ],
+    [
+      "dc2",
+      "out2",
+      "dc3",
+      "in2"
+    ],
+    [
+      "dc3",
+      "out1",
+      "ps3",
+      "in"
+    ],
+    [
+      "ps3",
+      "out",
+      "dc4",
+      "in1"
+    ],
+    [
+      "dc3",
+      "out2",
+      "dc4",
+      "in2"
+    ],
+    [
+      "dc4",
+      "out1",
+      "ps4",
+      "in"
+    ],
+    [
+      "ps4",
+      "out",
+      "dc5",
+      "in1"
+    ],
+    [
+      "dc4",
+      "out2",
+      "dc5",
+      "in2"
+    ],
+    [
+      "dc5",
+      "out1",
+      "ps5",
+      "in"
+    ],
+    [
+      "ps5",
+      "out",
+      "dc6",
+      "in1"
+    ],
+    [
+      "dc5",
+      "out2",
+      "dc6",
+      "in2"
+    ],
+    [
+      "dc6",
+      "out1",
+      "ps6",
+      "in"
+    ],
+    [
+      "ps6",
+      "out",
+      "dc7",
+      "in1"
+    ],
+    [
+      "dc6",
+      "out2",
+      "dc7",
+      "in2"
+    ],
+    [
+      "dc7",
+      "out1",
+      "ps7",
+      "in"
+    ],
+    [
+      "ps7",
+      "out",
+      "dc8",
+      "in1"
+    ],
+    [
+      "dc7",
+      "out2",
+      "dc8",
+      "in2"
+    ],
+    [
+      "dc8",
+      "out1",
+      "ps8",
+      "in"
+    ],
+    [
+      "ps8",
+      "out",
+      "dc9",
+      "in1"
+    ],
+    [
+      "dc8",
+      "out2",
+      "dc9",
+      "in2"
+    ],
+    [
+      "dc9",
+      "out1",
+      "ps9",
+      "in"
+    ],
+    [
+      "ps9",
+      "out",
+      "dc10",
+      "in1"
+    ],
+    [
+      "dc9",
+      "out2",
+      "dc10",
+      "in2"
+    ],
+    [
+      "dc10",
+      "out1",
+      "ps10",
+      "in"
+    ],
+    [
+      "ps10",
+      "out",
+      "dc11",
+      "in1"
+    ],
+    [
+      "dc10",
+      "out2",
+      "dc11",
+      "in2"
+    ],
+    [
+      "dc11",
+      "out1",
+      "ps11",
+      "in"
+    ],
+    [
+      "ps11",
+      "out",
+      "dc12",
+      "in1"
+    ],
+    [
+      "dc11",
+      "out2",
+      "dc12",
+      "in2"
+    ],
+    [
+      "dc12",
+      "out1",
+      "ps12",
+      "in"
+    ],
+    [
+      "ps12",
+      "out",
+      "dc13",
+      "in1"
+    ],
+    [
+      "dc12",
+      "out2",
+      "dc13",
+      "in2"
+    ],
+    [
+      "dc13",
+      "out1",
+      "ps13",
+      "in"
+    ],
+    [
+      "ps13",
+      "out",
+      "dc14",
+      "in1"
+    ],
+    [
+      "dc13",
+      "out2",
+      "dc14",
+      "in2"
+    ],
+    [
+      "dc14",
+      "out1",
+      "ps14",
+      "in"
+    ],
+    [
+      "ps14",
+      "out",
+      "dc15",
+      "in1"
+    ],
+    [
+      "dc14",
+      "out2",
+      "dc15",
+      "in2"
+    ],
+    [
+      "dc15",
+      "out1",
+      "ps15",
+      "in"
+    ],
+    [
+      "ps15",
+      "out",
+      "dc16",
+      "in1"
+    ],
+    [
+      "dc15",
+      "out2",
+      "dc16",
+      "in2"
+    ],
+    [
+      "dc16",
+      "out1",
+      "ps16",
+      "in"
+    ],
+    [
+      "ps16",
+      "out",
+      "dc17",
+      "in1"
+    ],
+    [
+      "dc16",
+      "out2",
+      "dc17",
+      "in2"
+    ],
+    [
+      "dc17",
+      "out1",
+      "ps17",
+      "in"
+    ],
+    [
+      "ps17",
+      "out",
+      "dc18",
+      "in1"
+    ],
+    [
+      "dc17",
+      "out2",
+      "dc18",
+      "in2"
+    ],
+    [
+      "dc18",
+      "out1",
+      "ps18",
+      "in"
+    ],
+    [
+      "ps18",
+      "out",
+      "dc19",
+      "in1"
+    ],
+    [
+      "dc18",
+      "out2",
+      "dc19",
+      "in2"
+    ],
+    [
+      "dc19",
+      "out1",
+      "ps19",
+      "in"
+    ],
+    [
+      "ps19",
+      "out",
+      "dc20",
+      "in1"
+    ],
+    [
+      "dc19",
+      "out2",
+      "dc20",
+      "in2"
+    ],
+    [
+      "dc20",
+      "out1",
+      "ps20",
+      "in"
+    ],
+    [
+      "ps20",
+      "out",
+      "dc21",
+      "in1"
+    ],
+    [
+      "dc20",
+      "out2",
+      "dc21",
+      "in2"
+    ],
+    [
+      "dc21",
+      "out1",
+      "ps21",
+      "in"
+    ],
+    [
+      "ps21",
+      "out",
+      "dc22",
+      "in1"
+    ],
+    [
+      "dc21",
+      "out2",
+      "dc22",
+      "in2"
+    ],
+    [
+      "dc22",
+      "out1",
+      "ps22",
+      "in"
+    ],
+    [
+      "ps22",
+      "out",
+      "dc23",
+      "in1"
+    ],
+    [
+      "dc22",
+      "out2",
+      "dc23",
+      "in2"
+    ],
+    [
+      "dc23",
+      "out1",
+      "ps23",
+      "in"
+    ],
+    [
+      "ps23",
+      "out",
+      "dc24",
+      "in1"
+    ],
+    [
+      "dc23",
+      "out2",
+      "dc24",
+      "in2"
+    ],
+    [
+      "dc24",
+      "out1",
+      "ps24",
+      "in"
+    ],
+    [
+      "ps24",
+      "out",
+      "dc25",
+      "in1"
+    ],
+    [
+      "dc24",
+      "out2",
+      "dc25",
+      "in2"
+    ],
+    [
+      "dc25",
+      "out1",
+      "ps25",
+      "in"
+    ],
+    [
+      "ps25",
+      "out",
+      "dc26",
+      "in1"
+    ],
+    [
+      "dc25",
+      "out2",
+      "dc26",
+      "in2"
+    ],
+    [
+      "dc26",
+      "out1",
+      "ps26",
+      "in"
+    ],
+    [
+      "ps26",
+      "out",
+      "dc27",
+      "in1"
+    ],
+    [
+      "dc26",
+      "out2",
+      "dc27",
+      "in2"
+    ],
+    [
+      "dc27",
+      "out1",
+      "ps27",
+      "in"
+    ],
+    [
+      "ps27",
+      "out",
+      "dc28",
+      "in1"
+    ],
+    [
+      "dc27",
+      "out2",
+      "dc28",
+      "in2"
+    ],
+    [
+      "dc28",
+      "out1",
+      "ps28",
+      "in"
+    ],
+    [
+      "ps28",
+      "out",
+      "dc29",
+      "in1"
+    ],
+    [
+      "dc28",
+      "out2",
+      "dc29",
+      "in2"
+    ],
+    [
+      "dc29",
+      "out1",
+      "ps29",
+      "in"
+    ],
+    [
+      "ps29",
+      "out",
+      "dc30",
+      "in1"
+    ],
+    [
+      "dc29",
+      "out2",
+      "dc30",
+      "in2"
+    ],
+    [
+      "dc30",
+      "out1",
+      "ps30",
+      "in"
+    ],
+    [
+      "ps30",
+      "out",
+      "dc31",
+      "in1"
+    ],
+    [
+      "dc30",
+      "out2",
+      "dc31",
+      "in2"
+    ],
+    [
+      "dc31",
+      "out1",
+      "ps31",
+      "in"
+    ],
+    [
+      "ps31",
+      "out",
+      "dc32",
+      "in1"
+    ],
+    [
+      "dc31",
+      "out2",
+      "dc32",
+      "in2"
+    ],
+    [
+      "dc32",
+      "out1",
+      "ps32",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "seed": 342,
+    "platform_source": "https://www.hyperlightcorp.com/",
+    "wavelength_nm": 1550.0,
+    "r_min_um": 50.0,
+    "waveguide_width_um": 1.5
+  }
+}
