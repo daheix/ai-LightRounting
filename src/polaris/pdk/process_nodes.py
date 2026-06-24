@@ -78,7 +78,7 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
         name="GF_Fotonix_45CLO",
         foundry="GlobalFoundries",
         cmos_node_nm=45,
-        photonic_layer_nm=220,
+        photonic_layer_nm=160,
         material_platform="SOI",
         wafer_size_mm=300,
         integration_type="monolithic",
@@ -86,7 +86,7 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
             "https://www.globalfoundries.com/technology-innovation/silicon-photonics",
             "https://europractice-ic.com/technologies/photonics/globalfoundries/",
         ],
-        notes="GF Fotonix 45CLO，45nm CMOS + 220nm SOI，单片集成光电子",
+        notes="GF Fotonix 45CLO，45nm CMOS + 160nm Si，单片集成光电子",
     ),
     "GF_Fotonix_90WG": ProcessNode(
         name="GF_Fotonix_90WG",
@@ -193,6 +193,62 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
             "https://www.hyperlightcorp.com/",
         ],
         notes="HyperLight LNOI，X-cut 铌酸锂，Pockels 调制 100GHz",
+    ),
+    "CompoundTek_90nm_SOI": ProcessNode(
+        name="CompoundTek_90nm_SOI",
+        foundry="CompoundTek",
+        cmos_node_nm=90,
+        photonic_layer_nm=220,
+        material_platform="SOI",
+        wafer_size_mm=200,
+        integration_type="monolithic",
+        sources=[
+            "https://cloud.tencent.com/developer/article/2022690",
+            "http://ydioe.pku.edu.cn/info/1162/1743.htm",
+        ],
+        notes="CompoundTek 90nm SOI，新加坡硅光子代工，Si+SiN 集成",
+    ),
+    "LIGENTEC_AN800_SiN": ProcessNode(
+        name="LIGENTEC_AN800_SiN",
+        foundry="LIGENTEC",
+        cmos_node_nm=0,  # 纯光子平台
+        photonic_layer_nm=800,  # SiN 波导层
+        material_platform="SiN",
+        wafer_size_mm=200,
+        integration_type="photonic_only",
+        sources=[
+            "https://www.meetoptics.com/suppliers/ligentec",
+            "https://zenodo.org/record/7937413/files/ome-13-2-458.pdf",
+        ],
+        notes="LIGENTEC AN800，全氮化物波导，Q>20M，400-4000nm 透明窗口",
+    ),
+    "VTT_ThickSOI": ProcessNode(
+        name="VTT_ThickSOI",
+        foundry="VTT Technical Research Centre",
+        cmos_node_nm=0,  # 纯光子平台
+        photonic_layer_nm=3000,  # 3μm 厚膜 SOI
+        material_platform="ThickSOI",
+        wafer_size_mm=150,
+        integration_type="photonic_only",
+        sources=[
+            "https://cloud.tencent.com/developer/article/1678542",
+            "https://www.omedasemi.com/news/641.html",
+        ],
+        notes="VTT 3μm 厚膜 SOI，Euler bend 1.3μm，偏振不敏感",
+    ),
+    "Tyndall_InP_SOI_Hybrid": ProcessNode(
+        name="Tyndall_InP_SOI_Hybrid",
+        foundry="Tyndall National Institute",
+        cmos_node_nm=0,  # 纯光子平台（异质集成）
+        photonic_layer_nm=220,  # SOI 层
+        material_platform="Hybrid",
+        wafer_size_mm=300,
+        integration_type="heterogeneous",
+        sources=[
+            "https://pattern-project.eu/technology/material-platforms/inp-platform/",
+            "https://pubs.aip.org/aip/apl/article-pdf/doi/10.1063/5.0223167/20123271/081104_1_5.0223167.pdf",
+        ],
+        notes="Tyndall InP+SOI 异质集成，InP DBR 激光器 μTP 工艺",
     ),
 }
 
@@ -433,6 +489,59 @@ def suggest_process_node_for_circuit(
     return candidates[0] if candidates else None
 
 
+# =============================================================================
+# Foundry 平台 → 结构化 ProcessNode 关联（第75轮 P1-3 深化）
+# 来源: foundry_platforms.py FOUNDRY_PLATFORMS 注册表
+# =============================================================================
+
+# Foundry 平台名 → CMOS_PROCESS_NODES 键的映射
+# 用于将 FoundryPlatform.process_node（字符串）关联到结构化 ProcessNode
+# 第89轮：全量映射 11/11 foundry 平台（新增 CompoundTek/LIGENTEC/VTT/Tyndall）
+_FOUNDRY_TO_PROCESS_NODE: dict[str, str] = {
+    "AIM": "AIM_300mm_SOI",
+    "AMF": "AMF_130nm_CMOS",
+    "CompoundTek": "CompoundTek_90nm_SOI",
+    "IHP": "IHP_SG25H5",
+    "GF_Fotonix": "GF_Fotonix_45CLO",
+    "Tower_OpenLight": "Tower_PH18DA",
+    "LIGENTEC": "LIGENTEC_AN800_SiN",
+    "LioniX": "LioniX_TriPleX",
+    "VTT": "VTT_ThickSOI",
+    "Tyndall": "Tyndall_InP_SOI_Hybrid",
+    "HyperLight": "HyperLight_LNOI",
+}
+
+
+def get_process_node_for_foundry(foundry_name: str) -> ProcessNode | None:
+    """按 foundry 平台名查询结构化工艺节点（第75/89轮 P1-3 深化）。
+
+    将 FoundryPlatform.process_node（字符串）关联到 CMOS_PROCESS_NODES
+    注册表中的结构化 ProcessNode，提供 foundry 平台与 CMOS 节点的双向查询能力。
+
+    来源: foundry_platforms.py FOUNDRY_PLATFORMS 注册表（11 个 foundry 平台）。
+    第89轮全量映射 11/11 foundry 平台（新增 CompoundTek/LIGENTEC/VTT/Tyndall）。
+
+    Args:
+        foundry_name: foundry 平台名（如 ``"AMF"``、``"GF_Fotonix"``）。
+
+    Returns:
+        对应的结构化 ``ProcessNode``，无映射则 None。
+    """
+    key = _FOUNDRY_TO_PROCESS_NODE.get(foundry_name)
+    if key is None:
+        return None
+    return CMOS_PROCESS_NODES.get(key)
+
+
+def list_foundries_with_process_node() -> list[str]:
+    """列出有结构化工艺节点映射的 foundry 平台名（第75/89轮 P1-3 深化）。
+
+    Returns:
+        有结构化 ProcessNode 映射的 foundry 平台名列表（当前 11 个，全量映射）。
+    """
+    return list(_FOUNDRY_TO_PROCESS_NODE.keys())
+
+
 __all__ = [
     "ProcessNode",
     "CMOS_PROCESS_NODES",
@@ -444,4 +553,6 @@ __all__ = [
     "cmos_process_node_count",
     "parse_process_node_string",
     "suggest_process_node_for_circuit",
+    "get_process_node_for_foundry",
+    "list_foundries_with_process_node",
 ]

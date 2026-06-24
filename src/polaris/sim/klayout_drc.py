@@ -47,6 +47,10 @@ class DRCCheckType(Enum):
 
     来源: KLayout DRC 规则类别
     https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+
+    第85轮扩展: 添加 DENSITY 检查类型（CMP 工艺密度规则）。
+    来源: Banerjee, "CMOS Photonic Circuits", Springer 2024，
+    CMP 工艺要求层密度在 30%-70% 范围内，避免化学机械抛光不均匀。
     """
 
     WIDTH = "width"  # 最小宽度（同层图形内部边缘间距）
@@ -54,6 +58,7 @@ class DRCCheckType(Enum):
     NOTCH = "notch"  # 凹槽间距（同一图形内凹处间距）
     ENCLOSE = "enclose"  # 包围规则（内层须被外层包围）
     AREA = "area"  # 最小面积
+    DENSITY = "density"  # 层密度（CMP 工艺要求，第85轮新增）
 
 
 @dataclass(frozen=True)
@@ -63,13 +68,15 @@ class DRCRule:
     Attributes:
         name: 规则名（如 ``"WG_MIN_WIDTH"``）。
         layer_name: 层名（对应 ``POLARIS_GDS_LAYER_MAP`` 键，如 ``"WG"``）。
-        check_type: 检查类型（WIDTH/SPACE/NOTCH/ENCLOSE/AREA）。
+        check_type: 检查类型（WIDTH/SPACE/NOTCH/ENCLOSE/AREA/DENSITY）。
         threshold_um: 阈值（μm）。WIDTH/SPACE/NOTCH/ENCLOSE 为最小距离，
-            AREA 为最小面积（μm²）。
+            AREA 为最小面积（μm²），DENSITY 为最小密度（%，如 30.0 表示 30%）。
         enclosure_layer_name: ENCLOSE 检查的外层名（仅 ENCLOSE 用）。
         vtype: 对应的 PoLaRIS ViolationType。
         severity: 违规严重程度（0-1）。
         description: 规则描述（含来源）。
+        max_density: DENSITY 检查的最大密度（%，第85轮新增）。
+            仅 DENSITY 检查使用，None 表示不检查上限。
     """
 
     name: str
@@ -80,6 +87,7 @@ class DRCRule:
     vtype: ViolationType = ViolationType.MIN_WIDTH
     severity: float = 1.0
     description: str = ""
+    max_density: float | None = None  # 第85轮新增，DENSITY 检查上限
 
 
 # SiEPIC EBeam PDK 默认 DRC runset
@@ -154,6 +162,29 @@ SIEPIC_EBEAM_DRC_RUNSET: list[DRCRule] = [
         threshold_um=1.0,
         vtype=ViolationType.MIN_WIDTH,
         description="GE 层最小宽度 1.0μm（锗外延工艺极限）",
+    ),
+    # 第85轮新增：DENSITY 检查（CMP 工艺密度规则）
+    # 来源: Banerjee, "CMOS Photonic Circuits", Springer 2024
+    # CMP 工艺要求层密度在 30%-70% 范围内，避免化学机械抛光不均匀
+    DRCRule(
+        name="WG_DENSITY",
+        layer_name="WG",
+        check_type=DRCCheckType.DENSITY,
+        threshold_um=30.0,  # 最小密度 30%
+        max_density=70.0,  # 最大密度 70%
+        vtype=ViolationType.LAYER_DENSITY,
+        description="WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
+    ),
+    # 第87轮新增：VIA ENCLOSURE 检查（VIAC 须被 M1_HEATER 包围）
+    # 来源: SiEPIC EBeam PDK 规格表，Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
+    DRCRule(
+        name="VIAC_M1_ENCLOSURE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.ENCLOSE,
+        threshold_um=0.5,
+        enclosure_layer_name="M1_HEATER",
+        vtype=ViolationType.ENCLOSEMENT,
+        description="VIAC 须被 M1_HEATER 包围 ≥0.5μm（防止接触孔开路）",
     ),
 ]
 
@@ -310,6 +341,8 @@ class KLayoutDRCRunner:
             return self._check_enclose(LayoutContext(layout, cell, dbu), region, rule)
         if rule.check_type == DRCCheckType.AREA:
             return self._check_area(region, rule, dbu)
+        if rule.check_type == DRCCheckType.DENSITY:
+            return self._check_density(region, rule, dbu, cell)
         return []
 
     def _get_layer_index(self, layout: db.Layout, layer_name: str) -> int | None:
@@ -410,6 +443,58 @@ class KLayoutDRCRunner:
                 )
             )
         return violations
+
+    def _check_density(
+        self,
+        region: db.Region,
+        rule: DRCRule,
+        dbu: float,
+        cell: db.Cell,
+    ) -> list[Violation]:
+        """层密度检查（第85轮新增，CMP 工艺要求）。
+
+        计算层图形面积占 cell 总面积的比例，检查是否在 min/max 范围内。
+        CMP 工艺要求层密度通常在 30%-70%，避免化学机械抛光不均匀。
+
+        来源:
+            - KLayout Region.area / cell.bbox
+            - Banerjee, "CMOS Photonic Circuits", Springer 2024
+            - SiEPIC density rules
+
+        Args:
+            region: 层 Region。
+            rule: DRC 规则（threshold_um=min_density%, max_density=max_density%）。
+            dbu: Database unit（μm）。
+            cell: Top cell（用于计算总面积）。
+
+        Returns:
+            违规列表（密度超出范围时返回 1 条违规）。
+        """
+        if region.is_empty():
+            return []
+        layer_area_dbu2 = float(region.area())
+        cell_bbox = cell.bbox()
+        cell_area_dbu2 = float(cell_bbox.area())
+        if cell_area_dbu2 <= 0:
+            return []
+        density_pct = layer_area_dbu2 / cell_area_dbu2 * 100.0
+        min_density = rule.threshold_um
+        max_density = rule.max_density if rule.max_density is not None else 100.0
+        if density_pct < min_density or density_pct > max_density:
+            loc = (cell_bbox.center().x * dbu, cell_bbox.center().y * dbu)
+            return [
+                Violation(
+                    vtype=rule.vtype,
+                    severity=rule.severity,
+                    message=(
+                        f"{rule.name}: 层密度 {density_pct:.1f}% 超出范围 "
+                        f"[{min_density:.0f}%, {max_density:.0f}%]"
+                    ),
+                    device_name=rule.layer_name,
+                    location=loc,
+                )
+            ]
+        return []
 
     def _edge_pairs_to_violations(
         self,

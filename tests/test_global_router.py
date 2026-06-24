@@ -425,3 +425,108 @@ class TestGlobalRouterEdgeCases:
         assert router.gh == 1
         results = router.route()
         assert len(results) == 1
+
+
+class TestGlobalToDetailRoutingIntegration:
+    """全局-详细布线端到端集成测试。
+
+    验证 GlobalRouter waypoints → WaveguideRouter 分段布线的完整流程，
+    对标商业工具 Innovus/ICC2 的全局-详细分层布线架构。
+
+    来源:
+        Cadence Innovus 全局-详细分层:
+        https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
+    """
+
+    def test_global_route_produces_waypoints(self):
+        """GlobalRouter 应产生 waypoints 供详细布线消费。"""
+        dev1 = _make_device("d1", 0, 0, 20, 20)
+        dev2 = _make_device("d2", 150, 0, 20, 20)
+        placements = {
+            "d1": _make_placement(dev1, 0, 0),
+            "d2": _make_placement(dev2, 150, 0),
+        }
+        net = _make_netlist([("d1", "out", "d2", "in")])
+        router = GlobalRouter(net, placements, CanvasSize(300, 100))
+        results = router.route()
+        assert len(results) == 1
+        gr = results[0]
+        assert len(gr.gcell_path) >= 2
+        assert len(gr.waypoints) >= 2
+
+    def test_waypoints_within_canvas(self):
+        """waypoints 应在画布范围内。"""
+        dev1 = _make_device("d1", 0, 0, 20, 20)
+        dev2 = _make_device("d2", 200, 100, 20, 20)
+        placements = {
+            "d1": _make_placement(dev1, 0, 0),
+            "d2": _make_placement(dev2, 200, 100),
+        }
+        net = _make_netlist([("d1", "out", "d2", "in")])
+        canvas = CanvasSize(300, 200)
+        router = GlobalRouter(net, placements, canvas)
+        results = router.route()
+        assert len(results) == 1
+        for wx, wy in results[0].waypoints:
+            assert 0.0 <= wx <= canvas.width
+            assert 0.0 <= wy <= canvas.height
+
+    def test_waypoints_connect_endpoints(self):
+        """waypoints 首尾应接近源/目标端口位置。"""
+        dev1 = _make_device("d1", 0, 0, 20, 20)
+        dev2 = _make_device("d2", 200, 0, 20, 20)
+        placements = {
+            "d1": _make_placement(dev1, 0, 0),
+            "d2": _make_placement(dev2, 200, 0),
+        }
+        net = _make_netlist([("d1", "out", "d2", "in")])
+        router = GlobalRouter(net, placements, CanvasSize(300, 100))
+        results = router.route()
+        assert len(results) == 1
+        wpts = results[0].waypoints
+        # 首点接近 d1.out (20, 10)，末点接近 d2.in (200, 10)
+        first_x, first_y = wpts[0]
+        last_x, last_y = wpts[-1]
+        assert abs(first_x - 20.0) < 60.0  # GCell 粒度内
+        assert abs(last_x - 200.0) < 60.0
+
+    def test_waypoints_consumable_by_detail_router(self):
+        """GlobalRouter waypoints 应可被 WaveguideRouter 分段布线消费。"""
+        from polaris.router.waveguide_router import route_connection
+
+        dev1 = _make_device("d1", 0, 0, 20, 20)
+        dev2 = _make_device("d2", 200, 0, 20, 20)
+        placements = {
+            "d1": _make_placement(dev1, 0, 0),
+            "d2": _make_placement(dev2, 200, 0),
+        }
+        net = _make_netlist([("d1", "out", "d2", "in")])
+        router = GlobalRouter(net, placements, CanvasSize(300, 100))
+        results = router.route()
+        assert len(results) == 1
+        wpts = results[0].waypoints
+        # 分段布线：相邻 waypoints 之间用 route_connection 布线
+        for i in range(len(wpts) - 1):
+            start_pt = wpts[i]
+            end_pt = wpts[i + 1]
+            path = route_connection(start_pt, end_pt, platform="SOI")
+            assert path is not None
+            assert len(path.points) >= 2
+
+    def test_hierarchical_routing_avoids_obstacles(self):
+        """分层布线应能绕过障碍物（已放置器件）。"""
+        dev1 = _make_device("d1", 0, 0, 20, 20)
+        dev2 = _make_device("d2", 200, 0, 20, 20)
+        # 障碍器件在中间
+        dev3 = _make_device("d3", 100, 0, 20, 20)
+        placements = {
+            "d1": _make_placement(dev1, 0, 0),
+            "d2": _make_placement(dev2, 200, 0),
+            "d3": _make_placement(dev3, 100, 0),
+        }
+        net = _make_netlist([("d1", "out", "d2", "in")])
+        router = GlobalRouter(net, placements, CanvasSize(300, 100))
+        results = router.route()
+        assert len(results) == 1
+        # 全局布线应成功（可能绕过 d3）
+        assert len(results[0].gcell_path) >= 2

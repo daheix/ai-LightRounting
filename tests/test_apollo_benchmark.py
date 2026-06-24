@@ -28,6 +28,7 @@ from polaris.data.apollo_benchmark import (
 from polaris.data.benchmark_evaluator import (
     evaluate_benchmark,
     evaluate_hpwl,
+    evaluate_insertion_loss,
     evaluate_overlap,
     grid_placement,
 )
@@ -368,3 +369,99 @@ class TestCommercialGapReduction:
             assert isinstance(result.passed, bool)
             assert result.extra["benchmark_source"] == "apollo"
             assert result.extra["process_node"] == "220nm SOI"
+            # 第90轮新增：插入损耗应在 extra 中
+            assert "insertion_loss_db" in result.extra
+            assert result.extra["insertion_loss_db"] >= 0.0
+
+    def test_ptc_insertion_loss_evaluation(self) -> None:
+        """PTC benchmark 插入损耗评估（第90轮新增）。"""
+        circuit = load_apollo_ptc_benchmark()
+        placements = grid_placement(circuit)
+        loss = evaluate_insertion_loss(circuit, placements)
+        # 插入损耗应为非负值
+        assert loss >= 0.0
+        # 网格布局有波导长度，损耗应 > 0（除非无连接）
+        assert loss > 0.0  # PTC 有 13 条连接
+
+    def test_ptc_insertion_loss_in_benchmark_result(self) -> None:
+        """PTC benchmark evaluate_benchmark 应含插入损耗（第90轮新增）。"""
+        circuit = load_apollo_ptc_benchmark()
+        placements = grid_placement(circuit)
+        result = evaluate_benchmark(circuit, placements)
+        assert "insertion_loss_db" in result.extra
+        assert result.extra["insertion_loss_db"] > 0.0
+
+    def test_ptc_insertion_loss_target_metric_passed(self) -> None:
+        """PTC benchmark target_metric=insertion_loss_db 达标判定不再静默失败（第90轮修复）。"""
+        circuit = load_apollo_ptc_benchmark()
+        # PTC 的 target_metric 是 INSERTION_LOSS_DB
+        assert circuit.target_metric == TargetMetric.INSERTION_LOSS_DB
+        placements = grid_placement(circuit)
+        result = evaluate_benchmark(circuit, placements)
+        # 达标判定应基于 insertion_loss < target_value and overlap == 0
+        # 网格布局无重叠，passed 应取决于插入损耗是否 < target_value
+        assert isinstance(result.passed, bool)
+        # 验证 passed 逻辑正确
+        expected_passed = (
+            result.extra["insertion_loss_db"] < circuit.target_value
+            and result.overlap_count == 0
+        )
+        assert result.passed == expected_passed
+
+    def test_ptc_devices_have_insertion_loss_db(self) -> None:
+        """PTC 器件应含 insertion_loss_db 参数（第93轮新增）。"""
+        for dev in PTC_DEVICES.values():
+            assert hasattr(dev, "insertion_loss_db")
+            assert dev.insertion_loss_db >= 0.0
+        # 光栅耦合器损耗应 > 0（1.5 dB 典型值）
+        assert PTC_DEVICES["gc_in_array"].insertion_loss_db > 0.0
+        assert PTC_DEVICES["gc_out_array"].insertion_loss_db > 0.0
+        # MZI 矩阵损耗应 > 0
+        assert PTC_DEVICES["mzi_matrix_4x4"].insertion_loss_db > 0.0
+        # 波导损耗应为 0（按长度计算）
+        assert PTC_DEVICES["input_waveguide_bus"].insertion_loss_db == 0.0
+        # 激光器损耗应为 0（光源）
+        assert PTC_DEVICES["bias_laser_in"].insertion_loss_db == 0.0
+
+    def test_onoc_devices_have_insertion_loss_db(self) -> None:
+        """oNoC 器件应含 insertion_loss_db 参数（第93轮新增）。"""
+        for dev in ONOC_DEVICES.values():
+            assert hasattr(dev, "insertion_loss_db")
+            assert dev.insertion_loss_db >= 0.0
+        # MMI 路由器损耗应 > 0
+        assert ONOC_DEVICES["central_router"].insertion_loss_db > 0.0
+        # 调制器损耗应 > 0
+        assert ONOC_DEVICES["node_0_modulator"].insertion_loss_db > 0.0
+        # 波导损耗应为 0
+        assert ONOC_DEVICES["waveguide_ring"].insertion_loss_db == 0.0
+
+    def test_ptc_device_spec_carries_insertion_loss(self) -> None:
+        """PTC DeviceSpec.params 应含 insertion_loss_db（第93轮新增）。"""
+        circuit = load_apollo_ptc_benchmark()
+        for dev in circuit.devices:
+            assert "insertion_loss_db" in dev.params
+            loss = float(dev.params["insertion_loss_db"])
+            assert loss >= 0.0
+        # 光栅耦合器在 DeviceSpec 中也应 > 0
+        gc_in = next(d for d in circuit.devices if d.name == "gc_in_array")
+        assert float(gc_in.params["insertion_loss_db"]) > 0.0
+
+    def test_ptc_insertion_loss_includes_device_loss(self) -> None:
+        """PTC 插入损耗应包含器件损耗（第93轮新增）。
+
+        第90轮 evaluate_insertion_loss 只计算波导损耗，器件损耗为 0。
+        第93轮为器件添加 insertion_loss_db 后，总损耗应 > 纯波导损耗。
+        """
+        circuit = load_apollo_ptc_benchmark()
+        placements = grid_placement(circuit)
+        total_loss = evaluate_insertion_loss(circuit, placements)
+
+        # 计算纯波导损耗（waveguide_loss_db_cm=0，只保留器件损耗）
+        device_only_loss = evaluate_insertion_loss(
+            circuit, placements, waveguide_loss_db_cm=0.0
+        )
+        # PTC 有 12 个器件，其中多个有 insertion_loss_db > 0
+        # 器件损耗应 > 0
+        assert device_only_loss > 0.0, "器件插入损耗应 > 0（第93轮添加）"
+        # 总损耗应 > 器件损耗（波导损耗 > 0）
+        assert total_loss > device_only_loss
