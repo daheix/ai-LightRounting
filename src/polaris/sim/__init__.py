@@ -61,6 +61,15 @@ from polaris.sim.klayout_drc import (
     KLayoutDRCRunner,
     run_klayout_drc,
 )
+from polaris.sim.lumerical_integration import (
+    CHARGEConfig,
+    CHARGESimulator,
+    INTERCONNECTConfig,
+    INTERCONNECTSimulator,
+    LumericalIntegration,
+    ModeConfig,
+    ModeSolver,
+)
 from polaris.sim.lvs import (
     ExtractedNetlist,
     LVSMismatch,
@@ -157,4 +166,12 @@ __all__ = [
     "compare_netlists",
     "extract_netlist_from_gds",
     "run_lvs",
+    # R31-R33 Ansys Lumerical 全流程对齐
+    "ModeConfig",
+    "ModeSolver",
+    "INTERCONNECTConfig",
+    "INTERCONNECTSimulator",
+    "CHARGEConfig",
+    "CHARGESimulator",
+    "LumericalIntegration",
 ]
