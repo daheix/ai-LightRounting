@@ -186,8 +186,9 @@ class TestStage3AIPlacement:
             assert circuit["hpwl"] > 0
 
     def test_placement_mode(self, result: dict) -> None:
-        """验证 placement_mode 为 "rl" 或 "analytical"。"""
-        assert result["placement_mode"] in {"rl", "analytical"}
+        """验证 placement_mode 为 RL 或 analytical 模式。"""
+        # 接受所有 RL 变种（rl/ppo_gnn_init/ppo_gnn_pretrained）和 analytical
+        assert result["placement_mode"] in {"rl", "analytical", "ppo_gnn_init", "ppo_gnn_pretrained"}
 
 
 # =============================================================================

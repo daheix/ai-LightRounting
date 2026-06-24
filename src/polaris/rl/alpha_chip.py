@@ -804,6 +804,8 @@ class AlphaChipAgent:
         z1 = state_vec @ params["W1"] + params["b1"]
         h = np.maximum(0.0, z1)
         logits = h @ params["W2"] + params["b2"]
+        # 数值稳定：限制 logits 范围，防止 matmul 溢出
+        logits = np.clip(logits, -50.0, 50.0)
         # 稳定 softmax
         shifted = logits - logits.max()
         exp = np.exp(shifted)
@@ -974,6 +976,8 @@ class AlphaChipAgent:
         z1 = x @ params["W1"] + params["b1"]
         h = np.maximum(0.0, z1)
         logits = h @ params["W2"] + params["b2"]
+        # 数值稳定：限制 logits 范围（与 forward 一致），防止 matmul 溢出
+        logits = np.clip(logits, -50.0, 50.0)
         shifted = logits - logits.max()
         exp = np.exp(shifted)
         probs = exp / exp.sum()
