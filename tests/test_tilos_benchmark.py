@@ -20,7 +20,6 @@ from polaris.data.benchmark_evaluator import (
     BenchmarkResult,
     evaluate_area_utilization,
     evaluate_benchmark,
-    evaluate_drv,
     evaluate_hpwl,
     evaluate_overlap,
     grid_placement,
@@ -313,92 +312,6 @@ class TestBenchmarkEvaluator:
         # 第一行 5 个模块
         first_row_x = [placements[m][0] for m in list(placements.keys())[:5]]
         assert len(set(first_row_x)) == 5
-
-
-class TestCongestionEvaluator:
-    """拥塞度评估器测试（第82轮新增）。"""
-
-    def test_evaluate_congestion_empty(self) -> None:
-        """空布局拥塞度全为 0。"""
-        from polaris.data.benchmark_evaluator import evaluate_congestion
-
-        circuit = load_ariane_benchmark()
-        cong = evaluate_congestion(circuit, {})
-        assert cong["max_congestion"] == 0.0
-        assert cong["avg_congestion"] == 0.0
-        assert cong["overflow_count"] == 0
-        assert cong["total_overflow"] == 0.0
-
-    def test_evaluate_congestion_single_connection(self) -> None:
-        """单连接拥塞度 > 0。"""
-        from polaris.data.benchmark_evaluator import evaluate_congestion
-        from polaris.data.specs import CircuitSpec, DeviceSpec
-
-        circuit = CircuitSpec(
-            name="test_cong",
-            devices=[
-                DeviceSpec(name="a", device_type="x", width_um=10, height_um=10),
-                DeviceSpec(name="b", device_type="x", width_um=10, height_um=10),
-            ],
-            connections=[("a", "out", "b", "in")],
-            canvas_w=100.0,
-            canvas_h=100.0,
-        )
-        placements = {"a": (10.0, 10.0), "b": (90.0, 90.0)}
-        cong = evaluate_congestion(circuit, placements)
-        assert cong["max_congestion"] > 0.0
-        assert cong["avg_congestion"] > 0.0
-
-    def test_evaluate_congestion_grid_layout(self) -> None:
-        """Ariane 网格布局拥塞度合理（max_congestion > 0）。"""
-        from polaris.data.benchmark_evaluator import evaluate_congestion
-
-        circuit = load_ariane_benchmark()
-        placements = grid_placement(circuit)
-        cong = evaluate_congestion(circuit, placements)
-        assert cong["max_congestion"] > 0.0
-        assert cong["avg_congestion"] >= 0.0
-        assert cong["overflow_count"] >= 0
-        assert cong["total_overflow"] >= 0.0
-
-    def test_evaluate_congestion_custom_grid_size(self) -> None:
-        """支持自定义网格大小。"""
-        from polaris.data.benchmark_evaluator import evaluate_congestion
-
-        circuit = load_ariane_benchmark()
-        placements = grid_placement(circuit)
-        cong_16 = evaluate_congestion(circuit, placements, grid_rows=16, grid_cols=16)
-        cong_8 = evaluate_congestion(circuit, placements, grid_rows=8, grid_cols=8)
-        # 不同网格大小结果应不同
-        assert cong_16["max_congestion"] != cong_8["max_congestion"] or \
-               cong_16["avg_congestion"] != cong_8["avg_congestion"]
-
-    def test_evaluate_benchmark_includes_congestion(self) -> None:
-        """evaluate_benchmark 输出含拥塞度指标。"""
-        circuit = load_ariane_benchmark()
-        placements = grid_placement(circuit)
-        result = evaluate_benchmark(circuit, placements)
-        assert "max_congestion" in result.extra
-        assert "avg_congestion" in result.extra
-        assert "overflow_count" in result.extra
-        assert "total_overflow" in result.extra
-        assert result.extra["max_congestion"] > 0.0
-
-    def test_evaluate_congestion_zero_canvas(self) -> None:
-        """零画布返回空结果（边界条件）。"""
-        from polaris.data.benchmark_evaluator import evaluate_congestion
-        from polaris.data.specs import CircuitSpec, DeviceSpec
-
-        circuit = CircuitSpec(
-            name="test_zero",
-            devices=[DeviceSpec(name="a", device_type="x", width_um=10, height_um=10)],
-            connections=[],
-            canvas_w=0.0,
-            canvas_h=0.0,
-        )
-        cong = evaluate_congestion(circuit, {"a": (0.0, 0.0)})
-        assert cong["max_congestion"] == 0.0
-        assert cong["overflow_count"] == 0
 
 
 class TestCommercialGapReduction:

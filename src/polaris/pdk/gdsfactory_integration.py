@@ -64,27 +64,15 @@ def is_available() -> bool:
 
     Returns:
         True 若 gdsfactory 已安装且 PDK 可正常激活。
-
-    gdsfactory 9.44.0: 需显式激活 PDK。若未激活，自动激活 generic PDK。
-    来源: https://gdsfactory.github.io/gdsfactory/
     """
     if not _HAS_GDSFACTORY:
         return False
     try:
+        # gdsfactory 8.18.0 API: gdsfactory.pdk.get_active_pdk()
         from gdsfactory.pdk import get_active_pdk
 
         get_active_pdk()
         return True
-    except ValueError:
-        # PDK 未激活，尝试自动激活 generic PDK
-        try:
-            import gdsfactory as gf
-
-            gf.gpdk.PDK.activate()
-            get_active_pdk()
-            return True
-        except Exception:
-            return False
     except Exception:
         return False
 

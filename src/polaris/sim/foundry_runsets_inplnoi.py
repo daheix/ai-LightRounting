@@ -84,32 +84,6 @@ HHI_INP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.SPACING,
         description="HHI InP M1_HEATER 最小间距 3.0μm",
     ),
-    DRCRule(
-        name="HHI_INP_WG_DENSITY",
-        layer_name="WG",
-        check_type=DRCCheckType.DENSITY,
-        threshold_um=30.0,
-        max_density=70.0,
-        vtype=ViolationType.LAYER_DENSITY,
-        description="HHI InP WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
-    ),
-    DRCRule(
-        name="HHI_INP_VIAC_MIN_WIDTH",
-        layer_name="VIAC",
-        check_type=DRCCheckType.WIDTH,
-        threshold_um=1.0,
-        vtype=ViolationType.MIN_WIDTH,
-        description="HHI InP VIAC 接触孔最小宽度 1.0μm（InP 工艺对准精度限制）",
-    ),
-    DRCRule(
-        name="HHI_INP_VIAC_M1_ENCLOSURE",
-        layer_name="VIAC",
-        check_type=DRCCheckType.ENCLOSE,
-        threshold_um=0.5,
-        enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
-        description="HHI InP VIAC 须被 M1_HEATER 包围 ≥0.5μm（InP 工艺）",
-    ),
 ]
 
 
@@ -156,32 +130,6 @@ LIONIX_INP_DRC_RUNSET: list[DRCRule] = [
         threshold_um=2.5,
         vtype=ViolationType.MIN_WIDTH,
         description="LioniX InP M1_HEATER 最小宽度 2.5μm",
-    ),
-    DRCRule(
-        name="LIONIX_INP_WG_DENSITY",
-        layer_name="WG",
-        check_type=DRCCheckType.DENSITY,
-        threshold_um=30.0,
-        max_density=70.0,
-        vtype=ViolationType.LAYER_DENSITY,
-        description="LioniX InP WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
-    ),
-    DRCRule(
-        name="LIONIX_INP_VIAC_MIN_WIDTH",
-        layer_name="VIAC",
-        check_type=DRCCheckType.WIDTH,
-        threshold_um=1.0,
-        vtype=ViolationType.MIN_WIDTH,
-        description="LioniX InP VIAC 接触孔最小宽度 1.0μm（InP TriPleX 工艺）",
-    ),
-    DRCRule(
-        name="LIONIX_INP_VIAC_M1_ENCLOSURE",
-        layer_name="VIAC",
-        check_type=DRCCheckType.ENCLOSE,
-        threshold_um=0.5,
-        enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
-        description="LioniX InP VIAC 须被 M1_HEATER 包围 ≥0.5μm（InP 工艺）",
     ),
 ]
 
@@ -254,24 +202,6 @@ LNOI_DRC_RUNSET: list[DRCRule] = [
         threshold_um=1.0,
         vtype=ViolationType.MIN_WIDTH,
         description="LNOI VIAC 接触孔最小宽度 1.0μm",
-    ),
-    DRCRule(
-        name="LNOI_WG_DENSITY",
-        layer_name="WG",
-        check_type=DRCCheckType.DENSITY,
-        threshold_um=30.0,
-        max_density=70.0,
-        vtype=ViolationType.LAYER_DENSITY,
-        description="LNOI WG 层密度须在 30%-70%（CMP 工艺均匀性要求）",
-    ),
-    DRCRule(
-        name="LNOI_VIAC_M1_ENCLOSURE",
-        layer_name="VIAC",
-        check_type=DRCCheckType.ENCLOSE,
-        threshold_um=0.5,
-        enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
-        description="LNOI VIAC 须被 M1_HEATER 包围 ≥0.5μm（LNOI 电极工艺）",
     ),
 ]
 

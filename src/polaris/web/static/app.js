@@ -134,12 +134,11 @@ function drawLayout(result) {
   const W = canvas.width;
   const H = canvas.height;
 
-  // 深色主题画布背景
-  ctx.fillStyle = '#0a0e14';
+  ctx.fillStyle = '#fafbfc';
   ctx.fillRect(0, 0, W, H);
 
   if (!result.placements || result.placements.length === 0) {
-    ctx.fillStyle = '#64748b';
+    ctx.fillStyle = '#94a3b8';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('无布局数据', W / 2, H / 2);
@@ -156,13 +155,13 @@ function drawLayout(result) {
   const offsetX = (W - canvasW * scale) / 2;
   const offsetY = (H - canvasH * scale) / 2;
 
-  // 绘制画布边界（深色主题）
-  ctx.strokeStyle = '#2d3748';
+  // 绘制画布边界
+  ctx.strokeStyle = '#cbd5e1';
   ctx.lineWidth = 1;
   ctx.strokeRect(offsetX, offsetY, canvasW * scale, canvasH * scale);
 
-  // 绘制布线路径（先画路径，再画器件覆盖）— 深色主题亮色路径
-  const colors = ['#60a5fa', '#f87171', '#34d399', '#fbbf24', '#a78bfa', '#22d3ee'];
+  // 绘制布线路径（先画路径，再画器件覆盖）
+  const colors = ['#2d5aa0', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2'];
   if (result.paths) {
     result.paths.forEach((path, i) => {
       const color = colors[i % colors.length];
@@ -180,7 +179,7 @@ function drawLayout(result) {
     });
   }
 
-  // 绘制器件（深色主题）
+  // 绘制器件
   ctx.font = '10px sans-serif';
   ctx.textAlign = 'center';
   result.placements.forEach(pl => {
@@ -188,13 +187,13 @@ function drawLayout(result) {
     const y = offsetY + pl.y * scale;
     const w = pl.w * scale;
     const h = pl.h * scale;
-    ctx.fillStyle = '#1e3a5f';
+    ctx.fillStyle = '#1a365d';
     ctx.fillRect(x, y, Math.max(w, 2), Math.max(h, 2));
-    ctx.strokeStyle = '#3b82f6';
+    ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 0.5;
     ctx.strokeRect(x, y, Math.max(w, 2), Math.max(h, 2));
     if (w > 30 && h > 12) {
-      ctx.fillStyle = '#f1f5f9';
+      ctx.fillStyle = 'white';
       ctx.fillText(pl.name, x + w / 2, y + h / 2 + 3);
     }
   });

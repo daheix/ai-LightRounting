@@ -44,7 +44,6 @@ class FoundryDeviceSpec:
         length_um: 器件长度（μm）。
         insertion_loss_db: 插入损耗（dB）。
         source: 文献来源。
-        process_node: 工艺节点描述（None 时从 foundry 继承，第75轮 P1-3 深化）。
     """
 
     foundry_name: str
@@ -53,7 +52,6 @@ class FoundryDeviceSpec:
     length_um: float
     insertion_loss_db: float
     source: Source
-    process_node: str | None = None
 
 
 def _make_straight_waveguide(

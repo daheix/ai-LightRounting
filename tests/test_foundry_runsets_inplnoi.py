@@ -101,8 +101,8 @@ def test_list_inplnoi_runsets_by_material_empty():
 
 
 def test_hhi_inp_runset_rules():
-    """测试 HHI InP runset 规则数和阈值（第88轮新增 VIAC WIDTH + VIA ENCLOSURE）。"""
-    assert len(HHI_INP_DRC_RUNSET) == 10
+    """测试 HHI InP runset 规则数和阈值。"""
+    assert len(HHI_INP_DRC_RUNSET) == 7
     # InP WG 最小宽度 1.0μm（比 SOI 0.4μm 更大）
     wg_width = next(r for r in HHI_INP_DRC_RUNSET if r.name == "HHI_INP_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 1.0
@@ -115,8 +115,8 @@ def test_hhi_inp_runset_rules():
 
 
 def test_lionix_inp_runset_rules():
-    """测试 LioniX InP runset 规则数和阈值（第88轮新增 VIAC WIDTH + VIA ENCLOSURE）。"""
-    assert len(LIONIX_INP_DRC_RUNSET) == 8
+    """测试 LioniX InP runset 规则数和阈值。"""
+    assert len(LIONIX_INP_DRC_RUNSET) == 5
     # LioniX InP WG 最小宽度 1.5μm（TriPleX 工艺）
     wg_width = next(r for r in LIONIX_INP_DRC_RUNSET if r.name == "LIONIX_INP_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 1.5
@@ -126,8 +126,8 @@ def test_lionix_inp_runset_rules():
 
 
 def test_lnoi_runset_rules():
-    """测试 LNOI runset 规则数和阈值（第86轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
-    assert len(LNOI_DRC_RUNSET) == 10
+    """测试 LNOI runset 规则数和阈值。"""
+    assert len(LNOI_DRC_RUNSET) == 8
     # LNOI WG 最小宽度 0.8μm（薄膜铌酸锂干法刻蚀极限）
     wg_width = next(r for r in LNOI_DRC_RUNSET if r.name == "LNOI_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.8

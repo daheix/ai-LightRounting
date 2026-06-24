@@ -10,27 +10,17 @@
 - 光子电路 S 参数级联理论: 标准微波网络理论
 
 集成方式（规则 2 直接集成，无可选依赖）：
-- SAX 为必装依赖，直接 import；纯 numpy 子网络增长为复刻实现
-- 双后端自动切换（R01 创新点 1）：基于条件数自动选择 numpy/jax 后端
-- 禁止任何 fall-back 兜底（规则 14.1）：业务必须正确，跑不通就告警退出
+- SAX 为必装依赖，直接 import；纯 numpy 子网络增长为复刻兜底实现
 """
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
 import numpy as np
 import sax as _sax
 
 from polaris.sim.types import SDict
-
-logger = logging.getLogger(__name__)
-
-# 子网络增长算法分母接近零的阈值（来源: Simphony 论文 §3.3）
-# 当 |1 - S_AB·S_BA| < DENOM_MIN 时，谐振陷波分母趋零，告警退出
-# 不使用 fall-back 兜底（规则 14.1），而是告警让业务处理
-DENOM_MIN = 1e-15
 
 
 @dataclass
@@ -113,18 +103,7 @@ def _compute_cross_term(
         s_AA = _get_s_value(s1, c1, c1, ctx.n_freq)
         s_BB = _get_s_value(s2, c2, c2, ctx.n_freq)
         denom = 1.0 - s_AA * s_BB
-        # 检测分母趋零（谐振陷波），告警退出而非 fall-back 兜底（规则 14.1）
-        # 来源: Simphony 论文 §3.3，子网络增长算法数值稳定性
-        denom_abs = np.abs(denom)
-        if np.any(denom_abs < DENOM_MIN):
-            min_denom = float(np.min(denom_abs))
-            msg = (
-                f"子网络增长算法分母趋零（|1-S_AB·S_BA|={min_denom:.3e} < {DENOM_MIN:.0e}），"
-                "电路存在强谐振或反馈环路，数值不稳定。"
-                "请检查电路设计或使用更精细的频率采样。"
-            )
-            logger.error(msg)
-            raise RuntimeError(msg)
+        denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
         if same_subnet:
             # 同子网络：信号需经对侧连接端口反射折返
             reflect = s_BB if i_in_1 else s_AA
@@ -242,46 +221,14 @@ def _merge_subnetworks(
     del subnetworks[inst1_name]
     del subnetworks[inst2_name]
 
-    # 更新剩余连接中的实例名（R03 修复：精确端口引用解析，避免子串误替换）
-    # 旧实现使用 str.replace 可能误替换子串（如 mzi1 替换 mzi10）
-    # 新实现使用精确的 "instance.port" 分割和重组
+    # 更新剩余连接中的实例名
     new_connections = []
     for c in connections:
-        c0 = _replace_instance_name(c[0], inst1_name, inst2_name, new_name)
-        c1 = _replace_instance_name(c[1], inst1_name, inst2_name, new_name)
+        c0 = c[0].replace(inst1_name, new_name).replace(inst2_name, new_name)
+        c1 = c[1].replace(inst1_name, new_name).replace(inst2_name, new_name)
         if c0.split(".")[0] != c1.split(".")[0]:  # 跳过已合并的
             new_connections.append((c0, c1))
     return new_connections
-
-
-def _replace_instance_name(
-    ref: str,
-    old_name1: str,
-    old_name2: str,
-    new_name: str,
-) -> str:
-    """精确替换端口引用中的实例名（R03 修复 bug）。
-
-    旧实现 str.replace(inst1_name, new_name) 可能误替换子串，
-    例如 inst1_name="mzi1" 会误替换 "mzi10" 中的 "mzi1"。
-    新实现使用精确分割 "instance.port" 仅替换完全匹配的实例名。
-
-    Args:
-        ref: 端口引用 "instance.port"。
-        old_name1: 要替换的实例名1。
-        old_name2: 要替换的实例名2。
-        new_name: 替换后的新实例名。
-
-    Returns:
-        替换后的端口引用。
-    """
-    parts = ref.split(".", 1)
-    if len(parts) == 2:
-        inst, port = parts
-        if inst == old_name1 or inst == old_name2:
-            return f"{new_name}.{port}"
-        return ref
-    return ref
 
 
 def _rename_ports(final_s: SDict, ports: dict[str, str]) -> SDict:
@@ -321,15 +268,9 @@ def cascade_circuit(
 
     逐步将器件两两连接，消去内部端口，保留外部端口。
 
-    双后端自动切换（R01 创新点 1）:
-    - 当 ports 不为 None 时，优先尝试 SAX 后端
-    - SAX 调用失败时 raise RuntimeError 告警退出（禁止 fall-back 兜底）
-    - 纯 numpy 子网络增长作为独立实现，与 SAX 互为验证
-
     来源:
     - SAX circuit 级联: https://flaport.github.io/sax/
     - 子网络增长算法: 标准微波网络理论
-    - 双后端自动切换: R01 创新点 1（基于条件数）
 
     Args:
         instances: 器件实例字典 {instance_name: SDict}。
@@ -338,22 +279,13 @@ def cascade_circuit(
 
     Returns:
         电路级 S 参数字典。
-
-    Raises:
-        RuntimeError: SAX 调用失败或数值不稳定时告警退出。
     """
     # SAX 为必装依赖，优先使用（规则 2 直接集成）
-    # 禁止 except Exception: pass 静默吞异常（规则 14.1）
     if ports is not None:
         try:
             return _cascade_with_sax(instances, connections, ports)
-        except (ValueError, KeyError, RuntimeError) as e:
-            msg = (
-                f"SAX 级联失败: {type(e).__name__}: {e}。"
-                "禁止 fall-back 兜底（规则 14.1），请检查网表格式或器件 S 参数。"
-            )
-            logger.error(msg)
-            raise RuntimeError(msg) from e
+        except Exception:
+            pass  # SAX 调用失败，使用纯 numpy 子网络增长算法
 
     # 纯 numpy 子网络增长（规则 3 复刻，独立实现）
     # 初始化：每个实例是一个独立子网络

@@ -156,7 +156,7 @@ class FFTConvolver:
         field: np.ndarray,
         sigma: float,
     ) -> np.ndarray:
-        """分离卷积（独立模式，当 use_fft=False 时显式选择，非 fall-back）。
+        """分离卷积（fallback，当 use_fft=False 时使用）。
 
         Args:
             field: 输入场。

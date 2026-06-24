@@ -1,107 +1,8 @@
 # PoLaRIS 与商业光电子 EDA 工具差距分析报告
 
 **生成日期**: 2026-06-21
-**最后更新**: 2026-06-24（R4 迭代修复：D13 量子光子深化数值仿真验证）
 **作者**: PoLaRIS 项目组
 **目标**: 系统对比 PoLaRIS 与最强商业光电子 EDA 工具的能力差距，给出分级解决办法与版本路线图，支撑商业化决策。
-
----
-
-## 0. R4 迭代修复摘要（2026-06-24）
-
-R4 迭代针对 R3 修复后的剩余差距，在 stage9 新增 3 项量子光子数值仿真验证，将 D13 量子光子从解析验证提升至数值仿真验证：
-
-| 差距编号 | 维度 | R3 修复后 | R4 修复后 | 修复内容 | showcase 证据 |
-|----------|------|----------|----------|----------|---------------|
-| D13 | 量子光子 | 7/10 | 9/10 | stage9 新增 3 项数值仿真验证（HOM dip 时间分辨 + 玻色采样器卡方检验 + KLM CNOT 电路蒙特卡洛） | HOM dip dip_depth=1.0; 采样器 chi2=20.95 p=0.9611; KLM 电路 post_select_prob=0.1975 量子干涉=True |
-
-**综合得分演进**: v1.0 初版 9.27（虚高）→ v2.0 修正 6.86 → v3.0 R1 修复 7.64 → v4.0 R2 修复 7.78 → v5.0 R3 修复 7.88 → v6.0 R4 修复 **7.96**
-
-**R4 修复学术依据**:
-- HOM dip 时间分辨: Hong, Ou, Mandel, PRL 1987
-  https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
-  P_coinc(Δt) = 0.5 × (1 - exp(-Δt²/(2σ²)))
-- 玻色采样器 + 卡方检验: Aaronson & Arkhipov, STOC 2011
-  https://arxiv.org/abs/0910.4698
-  卡方检验: Pearson, Philosophical Magazine 1900
-- KLM CNOT 电路: Knill, Laflamme, Milburn, Nature 2001
-  https://www.nature.com/articles/35051009
-  Ralph et al., PRA 2002, https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324
-
-**学术诚信**:
-- HOM dip dip_depth=1.0 为完美量子干涉理论值（高斯波包模型）
-- 玻色采样器卡方检验 p=0.9611>0.05，采样分布与解析分布统计一致
-- KLM CNOT 电路为 4 模式简化版（Ralph et al. 2002），完整版需 8 模式 + NS gate
-- 验证标准为"量子干涉特征"（信号模式分布非均匀），非严格 CNOT 真值表
-- 简化版后选择成功率约 20%，完整版理论 25%
-
-**仍未修复的差距**: D10 GUI（仅 web 卡片页）、D15 用户规模（0 tape-out）
-
----
-
-## 0.1 R3 迭代修复摘要（2026-06-24，保留）
-
-R3 迭代针对 R2 修复后的剩余差距，在 stage3 接入 AlphaChipEdgeGNN 前向推理，增强 AI 布局的电路拓扑感知能力：
-
-| 差距编号 | 维度 | R2 修复后 | R3 修复后 | 修复内容 | showcase 证据 |
-|----------|------|----------|----------|----------|---------------|
-| D07 | AI/ML 能力 | 6/10 | 7/10 | stage3 接入 AlphaChipEdgeGNN 前向推理（16 维图级嵌入拼接观测向量，8+16=24 维） | stage3 gnn_enabled=True, gnn_out_dim=16, placement_mode=ppo_gnn_init, 3 电路布局成功 |
-
-**综合得分演进**: v1.0 初版 9.27（虚高）→ v2.0 修正 6.86 → v3.0 R1 修复 7.64 → v4.0 R2 修复 7.78 → v5.0 R3 修复 **7.88**
-
-**R3 修复学术依据**:
-- AlphaChip Edge-GNN: Mirhoseini et al., Nature 2021
-  https://www.nature.com/articles/s41586-021-03544-w
-- GAT 注意力: Veličković et al., ICLR 2018
-  https://arxiv.org/abs/1710.10903
-- GlobalAttention 读出: PyTorch Geometric
-- polaris.nn.Tensor: 纯 NumPy 自动微分（复刻 PyTorch Tensor 子集）
-
-**学术诚信**:
-- GNN 为随机初始化（无预训练 checkpoint），嵌入近似随机噪声
-- placement_mode="ppo_gnn_init"（非预训练）
-- HPWL 不能与 AlphaChip 预训练模型对标
-- 但确为 Edge-GNN + PPO 策略网络前向推理（非纯随机贪心）
-
-**仍未修复的差距**: D10 GUI（仅 web 卡片页）、D15 用户规模（0 tape-out）
-
----
-
-## 0.2 R2 迭代修复摘要（2026-06-24，保留）
-
-R2 迭代针对 R1 修复后的剩余差距，启用 PML 吸收边界（D03）与蒙特卡洛玻色采样验证（D13），均有 showcase 实证：
-
-| 差距编号 | 维度 | R1 修复后 | R2 修复后 | 修复内容 | showcase 证据 |
-|----------|------|----------|----------|----------|---------------|
-| D03 | 仿真精度 | 8/10 | 9/10 | stage5/stage10 启用 GedneyPML 吸收边界（Gedney 1996 IEEE TAP），eps_r_bg 参数化，dt/CFL 补偿 sigma_max | stage5 PML=2层启用，综合误差=5.65dB；stage10 PML 启用 converged=True |
-| D13 | 量子光子 | 6/10 | 7/10 | stage9 蒙特卡洛玻色采样验证（200 采样，1% 高斯扰动） | 概率守恒 mean=1.0, std=6.17e-16, prob_sum_ok=True |
-
-**综合得分演进**: v1.0 初版 9.27（虚高）→ v2.0 修正 6.86 → v3.0 R1 修复 7.64 → v4.0 R2 修复 **7.78**
-
-**R2 修复学术依据**:
-- Gedney 1996 IEEE TAP: https://doi.org/10.1109/8.546249（单轴各向异性 PML 吸收边界）
-- 蒙特卡洛方法: Metropolis & Ulam 1949
-- 玻色采样: Aaronson & Arkhipov 2011 https://arxiv.org/abs/0910.4698
-- Clements 分解: Clements et al., Optica 2016 https://doi.org/10.1364/OPTICA.3.001460
-
-**仍未修复的差距**: D10 GUI（仅 web 卡片页）、D15 用户规模（0 tape-out）、D07 AI/ML（仅 PPO 前向推理）
-
----
-
-## 0.3 R1 迭代修复摘要（2026-06-24，保留）
-
-R1 迭代针对 showcase 实证发现的 4 项差距进行修复，均有代码提交与 showcase 验证证据：
-
-| 差距编号 | 维度 | 修复前 | 修复后 | 修复内容 | showcase 证据 |
-|----------|------|--------|--------|----------|---------------|
-| D03 | 仿真精度 | 6/10 | 8/10 | stage5 调用 JAX FDTD 全波仿真 + stage10 adjoint 逆向设计 | stage5 FDTD 仿真成功，stage10 FoM 改善 14.72 dB |
-| D07 | AI/ML 能力 | 5/10 | 6/10 | stage3 调用 PPO ActorCritic 策略网络前向推理（ppo_init 模式） | stage3 placement_mode=ppo_init, ai_layout_executed=True |
-| D11 | 光电协同 | 4/10 | 7/10 | stage8 自研 MNA SPICE 求解器实现真实电路仿真（Ho et al. IEEE ISCAS 1974） | stage8 MNA DC+瞬态分析成功，PAM4 BER=0.019 |
-| D12 | 逆向设计 | 3/10 | 6/10 | stage10 JAX jax.grad adjoint 逆向设计，FoM 改善 14.72 dB | stage10 宽度 400nm→1000nm, converged=True |
-
-**综合得分演进**: v1.0 初版 9.27（虚高）→ v2.0 修正 6.86 → v3.0 R1 修复 **7.64**
-
-**仍未修复的差距**: D10 GUI（仅 web 卡片页）、D13 量子光子（仅解析验证）、D15 用户规模（0 tape-out）
 
 ---
 
@@ -227,19 +128,15 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   5. 建立 PDK 认证流程与 foundry 合作机制
 
 #### P0-4 FDTD 仿真缺失（仅 S 参数级联）
-- **现状**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py（FDTD 基础框架，第64轮更新）+ **JAX 可微分 FDTD（R1 已接入 showcase）**
+- **现状**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py（FDTD 基础框架，第64轮更新）
 - **商业标杆**：
   - Lumerical FDTD：3D 全波 FDTD + 多物理场 + GPU 加速 + adjoint 逆向设计
   - Tidy3D：GPU 云端 FDTD，10-5000× 加速，亚像素精度，250+ 公司高校使用
   - MEEP（开源）：MIT 开发，GPL 协议，学术界广泛使用
 - **影响**：无法做器件级精确仿真与逆向设计，仅依赖 S 参数模型限制创新器件设计
 - **量化差距**：0 FDTD vs Tidy3D 10-5000× 加速 = 仿真能力代际差距
-- **R1 修复进展**：
-  - ✅ stage5 已调用 JAX FDTD 全波仿真（`polaris.sim.fdtd_jax_backend`）
-  - ✅ stage10 已用 JAX jax.grad 实现 adjoint 逆向设计（FoM 改善 14.72 dB）
-  - ⚠️ 仍缺：3D 全波、多物理场、GPU 分布式、PML 边界（当前为无 PML 简化模型）
 - **解决办法**：
-  1. ✅ 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，v1.0）
+  1. 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，v1.0）
   2. 集成 MEEP 开源 FDTD（`pip install meep`，GPL 协议，MIT 开发）→ 直接用原工具（v2.0）
   3. 保留 S 参数级联作为快速电路级仿真（已实现，适合 RL 反馈）
   4. 建立 S 参数模型 → FDTD 校准流程（参考 Lumerical CML Compiler）
@@ -321,28 +218,19 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 ### 3.3 P2 次要差距（v3.0 追赶领先）
 
 #### P2-1 无逆向设计能力
-- **现状**：**R1 已实现 JAX jax.grad adjoint 逆向设计（stage10）**，FoM 改善 14.72 dB，波导宽度 400nm→1000nm
+- **现状**：无 adjoint optimization / topology optimization / shape optimization
 - **商业标杆**：
   - Lumerical lumopt：adjoint method 逆向设计（开源 https://github.com/chriskeraly/lumopt）
   - Tidy3D：PSO/GA/adjoint/topology/level-set 全套逆向设计
   - 学术：Molesky et al., Nature Photonics 2018 逆向设计综述
-- **R1 修复进展**：
-  - ✅ stage10 JAX 可微分 FDTD + jax.grad 自动微分（替代 lumopt 手动伴随方程）
-  - ✅ sigmoid 软边界参数化波导宽度，梯度上升优化 FoM
-  - ⚠️ 仍缺：拓扑优化、level-set、PSO/GA、3D 逆向
 - **解决办法**：集成 lumopt 开源 adjoint 框架（v3.0，`pip install lumopt`，直接用原工具）
 
 #### P2-2 无光电协同仿真
-- **现状**：**R1 已实现自研 MNA SPICE 求解器（stage8）**，真实电路仿真（DC + 瞬态分析），PAM4 BER=0.019
+- **现状**：opto_electrical.py 仅基础光电布线，无 SPICE 联合仿真
 - **商业标杆**：
   - Lumerical-Synopsys OptoCompiler：Photonic Verilog-A + PrimeSim HSPICE 联合
   - Lumerical-Cadence Virtuoso：INTERCONNECT + Spectre 联合
   - VPIphotonics：layout-aware schematic-driven 设计
-- **R1 修复进展**：
-  - ✅ stage8 自研 MNA SPICE 求解器（Ho et al. IEEE ISCAS 1974，改进节点分析法）
-  - ✅ DC 工作点分析 + 后向欧拉瞬态分析
-  - ✅ 光电联合链路电路模型（PAM4 调制器 + 探测器 + TIA）
-  - ⚠️ 仍缺：Ngspice 真实联合仿真（Ngspice 未安装时降级为 MNA）、Verilog-A 编译
 - **解决办法**：集成 Verilog-A 光子模型 + SPICE 联合仿真（v3.0）
 
 #### P2-3 无 GUI 与协同设计
@@ -437,38 +325,19 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 ### 5.1 综合得分对比
 
-> 更新日期: 2026-06-24（R1 迭代修复后，基于 showcase 10/10 stage 全部成功证据）
-
-| 评估维度 | PoLaRIS R1 修复后 | 商业领先 | 差距 | v2.0 目标 |
+| 评估维度 | PoLaRIS 当前 | 商业领先 | 差距 | v2.0 目标 |
 |----------|-------------|----------|------|-----------|
-| 布局算法先进性 | 9/10 | AlphaChip 9/10 | 0 | 9/10 |
-| 布线算法完整度 | 9/10 | Innovus 9/10 | 0 | 9/10 |
-| 仿真精度 | 8/10 | Lumerical 10/10 | -2 | 9/10 |
-| PDK 覆盖 | 9/10 | Luceda 9/10 | 0 | 9/10 |
-| AI 能力 | 6/10 | AlphaChip 10/10 | -4 | 9/10 |
-| 工艺节点支持 | 9/10 | ICC2 10/10 | -1 | 9/10 |
-| GDS/DRC/LVS 链路 | 9/10 | Lumerical 9/10 | 0 | 9/10 |
-| 性能规模 | 9/10 | ICC2 10/10 | -1 | 9/10 |
-| GUI | 4/10 | Innovus 9/10 | -5 | 8/10 |
-| 光电协同 | 7/10 | Lumerical 9/10 | -2 | 9/10 |
-| 逆向设计 | 6/10 | Lumerical 9/10 | -3 | 9/10 |
-| 量子光子 | 6/10 | Lumerical 5/10 | +1 | 8/10 |
-| 开源开放 | 10/10 | gdsfactory 9/10 | +1 | 10/10 |
-| 文档与测试 | 10/10 | 业界平均 7/10 | +3 | 10/10 |
-| 用户规模 | 2/10 | Lumerical 9/10 | -7 | 5/10 |
-| **综合得分（15 维加权）** | **7.64/10** | **9.0/10** | **-1.36** | **9.20/10** |
-
-#### 评分变更说明（R1 迭代修复进展，2026-06-24）
-- **仿真精度 6→8**: stage5 调用 JAX FDTD 全波仿真 + stage10 adjoint 逆向设计
-- **AI 能力 5→6**: stage3 调用 PPO ActorCritic 策略网络前向推理（ppo_init 模式）
-- **光电协同 4→7**: stage8 自研 MNA SPICE 求解器实现真实电路仿真（Ho et al. IEEE ISCAS 1974）
-- **逆向设计 3→6**: stage10 JAX jax.grad adjoint 逆向设计，FoM 改善 14.72 dB
-- **综合得分 6.86→7.64**: R1 修复后提升 0.78 分，差距从 -2.14 缩小到 -1.36
-
-#### 仍未修复的主要差距
-- **GUI 4/10**: 仅 web 卡片页（report.md），非交互式编辑器（v3.0 解决）
-- **用户规模 2/10**: 0 tape-out, 0 外部用户（需真实流片验证）
-- **AI 能力 6/10**: 仅 PPO 前向推理，未实现 Edge-GNN + 预训练-微调（v2.0 解决）
+| 布局算法先进性 | 6/10 | AlphaChip 9/10 | -3 | 8/10 |
+| 布线算法完整度 | 5/10 | Innovus 9/10 | -4 | 8/10 |
+| 仿真精度 | 5/10 | Lumerical 10/10 | -5 | 7/10 |
+| PDK 覆盖 | 4/10 | Luceda 9/10 | -5 | 7/10 |
+| AI 能力 | 7/10 | AlphaChip 10/10 | -3 | 9/10 |
+| 工艺节点支持 | 3/10 | ICC2 10/10 | -7 | 6/10 |
+| GDS/DRC/LVS 链路 | 4/10 | Lumerical 9/10 | -5 | 8/10 |
+| 性能规模 | 3/10 | ICC2 10/10 | -7 | 7/10 |
+| 开源开放 | 9/10 | gdsfactory 9/10 | 0 | 9/10 |
+| 文档与测试 | 8/10 | 业界平均 7/10 | +1 | 9/10 |
+| **综合得分** | **5.4/10** | **8.7/10** | **-3.3** | **7.8/10** |
 
 ---
 
