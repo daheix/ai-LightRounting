@@ -1395,30 +1395,49 @@ MVP（v1.0）必须满足：
 | MEEP | https://meep.readthedocs.io/ |
 | Gymnasium | https://gymnasium.farama.org/ |
 | NetworkX | https://networkx.org/ |
-<<<<<<< HEAD
 
 ---
 
-## 规则 23：保活脚本（强制）
+## 规则 23：长时间后台任务进度汇报（强制）
 
-### 23.1 保活脚本要求
-- 每个会话启动后，**第一件事**必须启动保活脚本，每 5 分钟 touch 一个文件，防止会话超时断开。
-- 保活脚本命令（方案2：简单 touch 文件）：
-  ```bash
-  nohup bash -c 'while true; do date >> /tmp/keepalive.log; touch /tmp/keepalive_marker; sleep 300; done' > /dev/null 2>&1 &
-  ```
-- 保活日志写入 `/tmp/keepalive.log`，标记文件为 `/tmp/keepalive_marker`。
+### 23.1 核心原则
 
-### 23.2 启动验证
-- 启动后立即向用户报告："保活脚本已启动，每 5 分钟 touch 文件一次"。
-- 验证脚本运行：`ps aux | grep keepalive` 或检查 `/tmp/keepalive.log` 是否有新写入。
+长时间后台程序运行时，**必须通过 `sleep 60; 循环汇报` 的方式告知进度**，禁止什么都不做。沙箱工作环境长时间无活动会被回收。
 
-### 23.3 规则同步
-- 本规则必须同步添加到 `AGENTS.md`（根目录）中。
-- AGENTS.md 必须包含本规则的完整内容。
+### 23.2 执行方式
 
-### 23.4 失败处理
-- 若保活脚本启动失败，立即告警并退出（禁止 fall-back 静默继续）。
-- 若会话中途检测到保活脚本停止，立即重启。
-=======
->>>>>>> trae/solo-agent-pkVjID
+当执行长时间运行的任务（如大规模测试、FDTD 仿真、RL 训练、Git 合并等）时，必须：
+
+```bash
+# 方式 1：在后台任务执行期间，前台循环汇报
+while true; do
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] 任务进行中..."
+    sleep 60
+done
+
+# 方式 2：长时间命令执行时，另开终端循环汇报
+nohup bash -c 'while true; do date >> /tmp/keepalive.log; sleep 60; done' &
+```
+
+### 23.3 汇报内容
+
+每次汇报必须包含：
+- 当前时间戳
+- 正在执行的任务描述
+- 已完成进度（如 "R29 测试运行中，已完成 15/23"）
+- 预计剩余时间（如 "预计还需 120s"）
+
+### 23.4 禁止行为
+
+- **禁止** 启动长时间任务后什么都不做
+- **禁止** 超过 120 秒无任何输出
+- **禁止** 依赖沙箱保活机制而不主动汇报
+
+### 23.5 保活脚本
+
+会话启动时必须启动保活脚本：
+```bash
+nohup bash -c 'while true; do date >> /tmp/keepalive.log; sleep 300; done' &
+```
+
+该脚本每 5 分钟 touch 一个文件，防止会话超时。
