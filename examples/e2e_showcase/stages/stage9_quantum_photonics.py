@@ -784,21 +784,21 @@ def _verify_klm_cnot_circuit(output_dir: Path) -> dict:
     klm_circuit_data = {
         "n_modes": 4,
         "input_state": list(result["input_state"]),
-        "n_shots": result["n_shots"],
-        "total_prob": result["total_prob"],
-        "prob_sum_ok": prob_ok,
-        "post_select_prob": post_select_prob,
-        "sampled_success_rate": result["sampled_success_rate"],
-        "theoretical_success_prob": result["theoretical_success_prob"],
-        "simplified_success_prob": result["simplified_success_prob"],
+        "n_shots": int(result["n_shots"]),
+        "total_prob": float(result["total_prob"]),
+        "prob_sum_ok": bool(prob_ok),
+        "post_select_prob": float(post_select_prob),
+        "sampled_success_rate": float(result["sampled_success_rate"]),
+        "theoretical_success_prob": float(result["theoretical_success_prob"]),
+        "simplified_success_prob": float(result["simplified_success_prob"]),
         "signal_dist": signal_dist_serializable,
         "quantum_interference": {
-            "max_deviation_from_classical": qi["max_deviation_from_classical"],
-            "is_quantum": qi["is_quantum"],
-            "classical_uniform_prob": qi["classical_uniform_prob"],
+            "max_deviation_from_classical": float(qi["max_deviation_from_classical"]),
+            "is_quantum": bool(qi["is_quantum"]),
+            "classical_uniform_prob": float(qi["classical_uniform_prob"]),
         },
-        "success_verified": success_verified,
-        "quantum_verified": quantum_verified,
+        "success_verified": bool(success_verified),
+        "quantum_verified": bool(quantum_verified),
         "success_tolerance": _KLM_CNOT_SUCCESS_TOL,
         "sources": {
             "klm_scheme": "https://www.nature.com/articles/35051009",
@@ -811,15 +811,15 @@ def _verify_klm_cnot_circuit(output_dir: Path) -> dict:
     _logger.info("KLM CNOT 电路结果已保存: %s", klm_circuit_path)
 
     return {
-        "n_shots": result["n_shots"],
-        "prob_sum_ok": prob_ok,
-        "post_select_prob": post_select_prob,
-        "sampled_success_rate": result["sampled_success_rate"],
-        "theoretical_success_prob": result["theoretical_success_prob"],
-        "simplified_success_prob": result["simplified_success_prob"],
-        "quantum_interference_verified": quantum_verified,
-        "max_deviation_from_classical": qi["max_deviation_from_classical"],
-        "success_verified": success_verified,
+        "n_shots": int(result["n_shots"]),
+        "prob_sum_ok": bool(prob_ok),
+        "post_select_prob": float(post_select_prob),
+        "sampled_success_rate": float(result["sampled_success_rate"]),
+        "theoretical_success_prob": float(result["theoretical_success_prob"]),
+        "simplified_success_prob": float(result["simplified_success_prob"]),
+        "quantum_interference_verified": bool(quantum_verified),
+        "max_deviation_from_classical": float(qi["max_deviation_from_classical"]),
+        "success_verified": bool(success_verified),
     }
 
 
