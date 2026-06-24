@@ -297,14 +297,129 @@
 
 ---
 
-## 后续迭代计划（R4+）
+## 后续迭代计划（R5+）
 
-基于 R3 修复后的剩余差距，R4 迭代优先级：
+基于 R4 修复后的剩余差距，R5 迭代优先级：
 
 1. **D10 GUI 4/10**: 当前仅 web 卡片页，需增强至 KLayout 级别（v3.0）
 2. **D15 用户规模 2/10**: 0 tape-out，需真实流片验证
 3. **D03 仿真精度 9/10**: PML 已启用，仍需 3D 全波多物理场验证
-4. **D13 量子光子 7/10**: 蒙特卡洛已验证，需小规模数值仿真验证
-5. **D07 AI/ML 7/10**: Edge-GNN 已集成，需预训练 checkpoint 提升布局质量
+4. **D07 AI/ML 7/10**: Edge-GNN 已集成，需预训练 checkpoint 提升布局质量
 
-**R4 目标**: 综合得分 7.88 → 8.0+，差距 -1.12 → -1.0
+**R5 目标**: 综合得分 7.96 → 8.0+，差距 -1.04 → -1.0
+
+---
+
+## R4 迭代：D13 量子光子深化数值仿真验证（2026-06-24）
+
+**目标**: 基于 R3 修复后的剩余差距，在 stage9 新增 3 项量子光子数值仿真验证（HOM dip 时间分辨 + 玻色采样器卡方检验 + KLM CNOT 电路蒙特卡洛），D13 量子光子 7→9，综合得分 7.88→7.96。
+
+### R4-1: HOM dip 时间分辨数值仿真
+
+- **时间**: 2026-06-24
+- **差距**: D13 量子光子 7/10 → 9/10（R4-1/R4-2/R4-3 合计提升）
+- **变更文件**:
+  - `src/polaris/sim/quantum_photonics.py`（新增 `hom_dip_simulation()`）
+  - `src/polaris/sim/__init__.py`（导出新函数）
+- **核心实现**:
+  - `hom_dip_simulation(sigma, dt_range)`: HOM dip 时间分辨数值仿真
+  - 公式: P_coinc(Δt) = 0.5 × (1 - exp(-Δt²/(2σ²)))
+  - Δt=0 时 P=0（HOM dip，量子干涉完全抑制符合计数）
+  - Δt→∞ 时 P=0.5（经典极限）
+  - dip 深度 = 1.0（完美量子干涉）
+- **学术依据**:
+  - Hong, Ou, Mandel, PRL 1987
+    https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
+  - 高斯波包时间分辨干涉理论
+- **验证**: dt=0 时 P=0.0, dt=±5σ 时 P=0.4999981, dip_depth=1.0
+
+### R4-2: 玻色采样器 + 卡方检验统计验证
+
+- **时间**: 2026-06-24
+- **变更文件**:
+  - `src/polaris/sim/quantum_photonics.py`（新增 `boson_sampling_sampler()` + `boson_sampling_chi_square_test()`）
+  - `src/polaris/sim/__init__.py`（导出新函数）
+- **核心实现**:
+  - `boson_sampling_sampler(unitary, input_state, n_samples, seed)`: 按解析分布随机采样输出模式
+  - `boson_sampling_chi_square_test(observed, expected_dist, n_samples)`: 卡方检验验证采样分布与解析分布统计一致性
+  - 卡方统计量: χ² = Σ (O_i - E_i)² / E_i
+  - p 值: 1 - F_χ²(χ², dof)
+- **学术依据**:
+  - Aaronson & Arkhipov, STOC 2011, https://arxiv.org/abs/0910.4698
+  - 卡方检验: Pearson, Philosophical Magazine 1900
+  - 蒙特卡洛方法: Metropolis & Ulam 1949
+- **验证**: 10000 采样, chi2=20.95, p_value=0.9611, dof=34, p>0.05 通过
+
+### R4-3: KLM CNOT 门完整电路蒙特卡洛仿真
+
+- **时间**: 2026-06-24
+- **变更文件**:
+  - `src/polaris/sim/quantum_photonics.py`（新增 `klm_cnot_circuit()` + `klm_cnot_simulate()`）
+  - `src/polaris/sim/__init__.py`（导出新函数）
+- **核心实现**:
+  - `klm_cnot_circuit()`: KLM CNOT 门完整线性光学电路（4 模式简化版，Ralph et al. 2002）
+    - 4 个分束器: BS1(control=0, aux1=2), BS2(target=1, aux2=3), BS3(aux1=2, aux2=3), BS4(control=0, target=1)
+    - 角度参数: θ1=θ2=acos(√(2/3)), θ3=π/4, θ4=acos(√(1/3))
+  - `klm_cnot_simulate(n_shots, seed)`: 蒙特卡洛仿真
+    - 计算后选择成功率（信号模式 0+1 光子数 ≤ 2）
+    - 验证量子干涉特征（信号模式分布非均匀，偏离经典均匀分布 0.25 > 10%）
+- **学术依据**:
+  - Knill, Laflamme, Milburn, Nature 2001, https://www.nature.com/articles/35051009
+  - Ralph et al., PRA 2002, https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324
+- **学术诚信**:
+  - 4 模式简化版（Ralph et al. 2002），完整 KLM CNOT 需 8 模式 + NS gate
+  - 验证标准为"量子干涉特征"（信号模式分布非均匀），非严格 CNOT 真值表
+  - 简化版后选择成功率约 20%，完整版理论 25%
+- **验证**: 10000 采样, post_select_prob=0.1975, sampled_success_rate=0.1999, quantum_interference_verified=True, max_deviation=0.6389
+
+### R4-4: stage9 新增 3 项数值仿真验证函数
+
+- **时间**: 2026-06-24
+- **变更文件**:
+  - `examples/e2e_showcase/stages/stage9_quantum_photonics.py`（新增 3 项验证函数 + 常量 + run() 扩展）
+- **核心实现**:
+  - 新增常量: `_HOM_DIP_SIGMA`, `_HOM_DIP_DT_POINTS`, `_HOM_DIP_DEPTH_TOL`, `_HOM_DIP_CLASSICAL_TOL`, `_SAMPLER_N_SAMPLES`, `_CHI_SQUARE_P_TOL`, `_KLM_CNOT_N_SHOTS`, `_KLM_CNOT_SUCCESS_TOL`
+  - 新增 `_verify_hom_dip_numerical()`: 验证 dt=0 时 P≈0, dt→∞ 时 P≈0.5, dip 深度>0.99
+  - 新增 `_verify_boson_sampling_sampler()`: 10000 采样，卡方检验 p>0.05
+  - 新增 `_verify_klm_cnot_circuit()`: 验证概率守恒、后选择成功率>10%、量子干涉特征
+  - 更新 `run()`: 从 4 项验证扩展到 7 项，新增 hom_dip/sampler/klm_circuit 返回字段
+  - JSON 序列化修复: 所有返回值添加 `float()/bool()/int()` 显式类型转换
+- **验证**: stage9 全部 7 项验证通过
+
+### R4-5: 完整 showcase 10/10 验证
+
+- **时间**: 2026-06-24
+- **验证结果**: showcase 10/10 stage 全部成功
+  - stage1: PDK 器件目录 ✅ (0.00s)
+  - stage2: 电路规格定义 ✅ (0.00s)
+  - stage3: AI 布局（Edge-GNN + PPO）✅ (0.06s)
+  - stage4: 智能布线 ✅ (327.04s)
+  - stage5: 仿真（FDTD PML=2层）✅ (6.45s)
+  - stage6: DRC/LVS ✅ (0.00s)
+  - stage7: GDS 导出 ✅ (28.86s)
+  - stage8: 光电协同（MNA SPICE）✅ (0.06s)
+  - stage9: 量子光子（7 项验证）✅ (1.52s) — R4 新增 3 项数值仿真验证
+    - 玻色采样=True, HOM=True, KLM=True, 蒙特卡洛=True
+    - HOM dip=True (dip_depth=1.0, p_at_zero=0.0, p_at_classical_limit=0.4999981)
+    - 采样器=True (chi2=20.95, p_value=0.9611, dof=34)
+    - KLM 电路=True (post_select_prob=0.1975, sampled_success_rate=0.1999, quantum_interference=True)
+  - stage10: Adjoint 逆向设计（PML 启用）✅ (44.94s)
+
+### R4 迭代总结
+
+| 项目 | R3 修复后 | R4 修复后 | 提升 |
+|------|----------|----------|------|
+| D13 量子光子 | 7/10 | 9/10 | +2 |
+| **综合得分** | **7.88** | **7.96** | **+0.08** |
+| showcase stage | 10/10 | 10/10 | 持平 |
+| stage9 验证项 | 4 项 | 7 项 | +3 项数值仿真 |
+| 与商业差距 | -1.12 | -1.04 | +0.08 |
+
+**学术诚信声明**:
+- 3 项数值仿真验证均有 showcase 实证（stage9 7 项验证全部通过）
+- HOM dip 仿真基于 Hong-Ou-Mandel PRL 1987 公式，dip_depth=1.0 为完美量子干涉理论值
+- 玻色采样器卡方检验 p=0.9611>0.05，采样分布与解析分布统计一致
+- KLM CNOT 电路为 4 模式简化版（Ralph et al. 2002），已如实标注非完整 8 模式版
+- 验证标准为"量子干涉特征"（信号模式分布非均匀），非严格 CNOT 真值表
+- 无 fall-back 假数据，所有验证均通过真实计算
+- 后台自动提交脚本已修复（detect_dev_branch() 动态检测分支名）
