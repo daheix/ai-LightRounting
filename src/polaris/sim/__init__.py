@@ -7,7 +7,10 @@
         models.py          — 基础器件 S 参数模型（规则3复刻 SiPANN）
         touchstone.py      — Touchstone .s2p/.snp 文件加载/保存
         cascade.py         — S 参数级联器（子网络增长算法，规则3复刻 SAX）
+<<<<<<< HEAD
         caphe_backend.py   — R26 CAPHE 电路仿真器对齐（节点抽象+频域消去+时域ODE）
+=======
+>>>>>>> trae/solo-agent-pkVjID
         simulator.py       — CircuitSimulator 电路级频率域仿真器
         device_models.py   — 51 器件到 S 参数模型映射
         constraint_checker.py — 约束检查器（16 项 DRC 规则）
@@ -29,6 +32,7 @@
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 """
 
+<<<<<<< HEAD
 from polaris.sim.autodiff import (
     compute_gradient,
     compute_jvp,
@@ -146,6 +150,18 @@ from polaris.sim.jax_backend import (
     simulate_waveguide_chain_jax,
     waveguide_s_jax,
 )
+=======
+from polaris.sim.ai_inverse_design import (
+    AdjointConfig,
+    AdjointOptimizer,
+    GANDesigner,
+    ManufactureAwareOptimizer,
+    MultiObjectiveOptimizer,
+    RLDesignConfig,
+    RLInverseDesigner,
+)
+from polaris.sim.cascade import cascade_circuit
+>>>>>>> trae/solo-agent-pkVjID
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
@@ -154,6 +170,7 @@ from polaris.sim.klayout_drc import (
     KLayoutDRCRunner,
     run_klayout_drc,
 )
+<<<<<<< HEAD
 from polaris.sim.layout_aware import (
     BBPlacement,
     ElasticConnector,
@@ -161,6 +178,8 @@ from polaris.sim.layout_aware import (
     LayoutCircuitFeedback,
     ParasiticExtractor,
 )
+=======
+>>>>>>> trae/solo-agent-pkVjID
 from polaris.sim.lvs import (
     ExtractedNetlist,
     LVSMismatch,
@@ -172,9 +191,13 @@ from polaris.sim.lvs import (
     run_lvs,
 )
 from polaris.sim.models import (
+<<<<<<< HEAD
     CouplerParams,
     RingParams,
     WaveguideParams,
+=======
+    RingParams,
+>>>>>>> trae/solo-agent-pkVjID
     crossing_s,
     directional_coupler_s,
     grating_coupler_s,
@@ -183,6 +206,7 @@ from polaris.sim.models import (
     phase_shifter_s,
     ring_resonator_s,
     terminator_s,
+<<<<<<< HEAD
     validate_wavelength,
     waveguide_s,
     y_branch_s,
@@ -332,11 +356,25 @@ from polaris.sim.verilog_a import (
     run_ngspice_cosimulation,
     save_verilog_a,
 )
+=======
+    waveguide_s,
+    y_branch_s,
+)
+from polaris.sim.simulator import (
+    CircuitSimulator,
+    WavelengthRange,
+    default_models,
+    simphony_models,
+)
+from polaris.sim.touchstone import load_touchstone, save_touchstone
+from polaris.sim.types import ModelFunc, SDict
+>>>>>>> trae/solo-agent-pkVjID
 
 __all__ = [
     # 类型
     "SDict",
     "ModelFunc",
+<<<<<<< HEAD
     # 双后端支持（R01 创新点）
     "set_backend",
     "get_backend",
@@ -347,6 +385,19 @@ __all__ = [
     "WaveguideParams",
     "CouplerParams",
     "WavelengthRange",
+=======
+    # 参数集合（规则 4：降低函数参数个数）
+    "RingParams",
+    "WavelengthRange",
+    # R29 AI 驱动光子逆向设计
+    "AdjointConfig",
+    "AdjointOptimizer",
+    "RLDesignConfig",
+    "RLInverseDesigner",
+    "GANDesigner",
+    "MultiObjectiveOptimizer",
+    "ManufactureAwareOptimizer",
+>>>>>>> trae/solo-agent-pkVjID
     # 基础器件 S 参数模型
     "waveguide_s",
     "y_branch_s",
@@ -358,6 +409,7 @@ __all__ = [
     "crossing_s",
     "terminator_s",
     "phase_shifter_s",
+<<<<<<< HEAD
     # R02 新增 SiEPIC 模型
     "half_ring_s",
     "add_drop_ring_s",
@@ -387,11 +439,14 @@ __all__ = [
     "adapt_netlist",
     "detect_format",
     "validate_netlist",
+=======
+>>>>>>> trae/solo-agent-pkVjID
     # Touchstone 文件
     "load_touchstone",
     "save_touchstone",
     # 级联器
     "cascade_circuit",
+<<<<<<< HEAD
     # R03 级联后端集合（KLU + Redheffer 星积 + Additive + Forward-only + auto）
     "cascade_klu",
     "cascade_auto",
@@ -443,10 +498,13 @@ __all__ = [
     "sensitivity_analysis",
     "yield_analysis",
     "waveguide_transmission_mc",
+=======
+>>>>>>> trae/solo-agent-pkVjID
     # 仿真器
     "CircuitSimulator",
     "default_models",
     "simphony_models",
+<<<<<<< HEAD
     # R02 群延迟和色散分析
     "group_delay",
     "analyze_dispersion",
@@ -459,6 +517,8 @@ __all__ = [
     "parse_siepic_json_with_models",
     "SIEPIC_TYPE_MAP",
     "SIEPIC_PORT_MAP",
+=======
+>>>>>>> trae/solo-agent-pkVjID
     # KLayout DRC（第2轮 P0-1）
     "DRCCheckType",
     "DRCResult",
@@ -475,6 +535,7 @@ __all__ = [
     "compare_netlists",
     "extract_netlist_from_gds",
     "run_lvs",
+<<<<<<< HEAD
     # R07 层次化 DRC 引擎（BVH + 自适应行分块，OpenDRC 算法）
     "BVH",
     "BVHNode",
@@ -616,4 +677,6 @@ __all__ = [
     "optimize_opto_electrical_link",
     "run_ngspice_cosimulation",
     "save_verilog_a",
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ]

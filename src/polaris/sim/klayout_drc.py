@@ -47,10 +47,13 @@ class DRCCheckType(Enum):
 
     来源: KLayout DRC 规则类别
     https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+<<<<<<< HEAD
 
     第85轮扩展: 添加 DENSITY 检查类型（CMP 工艺密度规则）。
     来源: Banerjee, "CMOS Photonic Circuits", Springer 2024，
     CMP 工艺要求层密度在 30%-70% 范围内，避免化学机械抛光不均匀。
+=======
+>>>>>>> trae/solo-agent-pkVjID
     """
 
     WIDTH = "width"  # 最小宽度（同层图形内部边缘间距）
@@ -58,7 +61,10 @@ class DRCCheckType(Enum):
     NOTCH = "notch"  # 凹槽间距（同一图形内凹处间距）
     ENCLOSE = "enclose"  # 包围规则（内层须被外层包围）
     AREA = "area"  # 最小面积
+<<<<<<< HEAD
     DENSITY = "density"  # 层密度（CMP 工艺要求，第85轮新增）
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 
 @dataclass(frozen=True)
@@ -68,15 +74,24 @@ class DRCRule:
     Attributes:
         name: 规则名（如 ``"WG_MIN_WIDTH"``）。
         layer_name: 层名（对应 ``POLARIS_GDS_LAYER_MAP`` 键，如 ``"WG"``）。
+<<<<<<< HEAD
         check_type: 检查类型（WIDTH/SPACE/NOTCH/ENCLOSE/AREA/DENSITY）。
         threshold_um: 阈值（μm）。WIDTH/SPACE/NOTCH/ENCLOSE 为最小距离，
             AREA 为最小面积（μm²），DENSITY 为最小密度（%，如 30.0 表示 30%）。
+=======
+        check_type: 检查类型（WIDTH/SPACE/NOTCH/ENCLOSE/AREA）。
+        threshold_um: 阈值（μm）。WIDTH/SPACE/NOTCH/ENCLOSE 为最小距离，
+            AREA 为最小面积（μm²）。
+>>>>>>> trae/solo-agent-pkVjID
         enclosure_layer_name: ENCLOSE 检查的外层名（仅 ENCLOSE 用）。
         vtype: 对应的 PoLaRIS ViolationType。
         severity: 违规严重程度（0-1）。
         description: 规则描述（含来源）。
+<<<<<<< HEAD
         max_density: DENSITY 检查的最大密度（%，第85轮新增）。
             仅 DENSITY 检查使用，None 表示不检查上限。
+=======
+>>>>>>> trae/solo-agent-pkVjID
     """
 
     name: str
@@ -87,7 +102,10 @@ class DRCRule:
     vtype: ViolationType = ViolationType.MIN_WIDTH
     severity: float = 1.0
     description: str = ""
+<<<<<<< HEAD
     max_density: float | None = None  # 第85轮新增，DENSITY 检查上限
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 
 # SiEPIC EBeam PDK 默认 DRC runset
@@ -163,6 +181,7 @@ SIEPIC_EBEAM_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.MIN_WIDTH,
         description="GE 层最小宽度 1.0μm（锗外延工艺极限）",
     ),
+<<<<<<< HEAD
     # 第85轮新增：DENSITY 检查（CMP 工艺密度规则）
     # 来源: Banerjee, "CMOS Photonic Circuits", Springer 2024
     # CMP 工艺要求层密度在 30%-70% 范围内，避免化学机械抛光不均匀
@@ -186,6 +205,8 @@ SIEPIC_EBEAM_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.ENCLOSEMENT,
         description="VIAC 须被 M1_HEATER 包围 ≥0.5μm（防止接触孔开路）",
     ),
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ]
 
 
@@ -341,8 +362,11 @@ class KLayoutDRCRunner:
             return self._check_enclose(LayoutContext(layout, cell, dbu), region, rule)
         if rule.check_type == DRCCheckType.AREA:
             return self._check_area(region, rule, dbu)
+<<<<<<< HEAD
         if rule.check_type == DRCCheckType.DENSITY:
             return self._check_density(region, rule, dbu, cell)
+=======
+>>>>>>> trae/solo-agent-pkVjID
         return []
 
     def _get_layer_index(self, layout: db.Layout, layer_name: str) -> int | None:
@@ -444,6 +468,7 @@ class KLayoutDRCRunner:
             )
         return violations
 
+<<<<<<< HEAD
     def _check_density(
         self,
         region: db.Region,
@@ -496,6 +521,8 @@ class KLayoutDRCRunner:
             ]
         return []
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
     def _edge_pairs_to_violations(
         self,
         edge_pairs: db.EdgePairs,

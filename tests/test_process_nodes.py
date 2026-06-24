@@ -18,8 +18,6 @@ from polaris.pdk.process_nodes import (
     ProcessNode,
     cmos_process_node_count,
     get_process_node,
-    get_process_node_for_foundry,
-    list_foundries_with_process_node,
     list_process_nodes,
     list_process_nodes_by_cmos_node,
     list_process_nodes_by_foundry,
@@ -70,8 +68,8 @@ class TestCmosProcessNodesRegistry:
         assert len(CMOS_PROCESS_NODES) > 0
 
     def test_registry_count(self) -> None:
-        """应有 13 个公开工艺节点（第89轮新增 4 个）。"""
-        assert cmos_process_node_count() == 13
+        """应有 9 个公开工艺节点。"""
+        assert cmos_process_node_count() == 9
 
     def test_gf_fotonix_45clo_exists(self) -> None:
         """应含 GF Fotonix 45CLO（45nm CMOS photonics）。"""
@@ -159,9 +157,9 @@ class TestListProcessNodes:
     """list_process_nodes 函数测试。"""
 
     def test_list_all(self) -> None:
-        """list_process_nodes 应返回全部节点名（第89轮 13 个）。"""
+        """list_process_nodes 应返回全部节点名。"""
         names = list_process_nodes()
-        assert len(names) == 13
+        assert len(names) == 9
         assert "GF_Fotonix_45CLO" in names
 
     def test_list_by_cmos_node_45(self) -> None:
@@ -170,16 +168,12 @@ class TestListProcessNodes:
         assert "GF_Fotonix_45CLO" in names
 
     def test_list_by_cmos_node_0(self) -> None:
-        """按 0nm（纯光子）筛选应返回 6 个平台（第89轮新增 3 个）。"""
+        """按 0nm（纯光子）筛选应返回 3 个平台。"""
         names = list_process_nodes_by_cmos_node(0)
         assert "AIM_300mm_SOI" in names
         assert "LioniX_TriPleX" in names
         assert "HyperLight_LNOI" in names
-        # 第89轮新增
-        assert "LIGENTEC_AN800_SiN" in names
-        assert "VTT_ThickSOI" in names
-        assert "Tyndall_InP_SOI_Hybrid" in names
-        assert len(names) == 6
+        assert len(names) == 3
 
     def test_list_by_foundry_gf(self) -> None:
         """按 GlobalFoundries 筛选应返回 2 个节点。"""
@@ -382,156 +376,3 @@ class TestCommercialGapReduction:
             assert isinstance(result, dict)
             # 至少应解析出晶圆直径
             assert result["wafer_size_mm"] > 0, f"{name} 未解析出晶圆直径"
-
-
-class TestFoundryProcessNodeAssociation:
-    """Foundry 平台 → 结构化 ProcessNode 关联测试（第75轮 P1-3 深化）。"""
-
-    def test_get_process_node_for_foundry_amf(self) -> None:
-        """AMF foundry 应映射到 AMF_130nm_CMOS 结构化节点。"""
-        node = get_process_node_for_foundry("AMF")
-        assert node is not None
-        assert node.name == "AMF_130nm_CMOS"
-        assert node.cmos_node_nm == 130
-        assert node.foundry == "Advanced Micro Foundry"
-
-    def test_get_process_node_for_foundry_gf_fotonix(self) -> None:
-        """GF_Fotonix foundry 应映射到 GF_Fotonix_45CLO 结构化节点。"""
-        node = get_process_node_for_foundry("GF_Fotonix")
-        assert node is not None
-        assert node.name == "GF_Fotonix_45CLO"
-        assert node.cmos_node_nm == 45
-        assert node.foundry == "GlobalFoundries"
-
-    def test_get_process_node_for_foundry_ihp(self) -> None:
-        """IHP foundry 应映射到 IHP_SG25H5 结构化节点。"""
-        node = get_process_node_for_foundry("IHP")
-        assert node is not None
-        assert node.name == "IHP_SG25H5"
-        assert node.cmos_node_nm == 250
-        assert node.foundry == "IHP Microelectronics"
-
-    def test_get_process_node_for_foundry_tower(self) -> None:
-        """Tower_OpenLight foundry 应映射到 Tower_PH18DA 结构化节点。"""
-        node = get_process_node_for_foundry("Tower_OpenLight")
-        assert node is not None
-        assert node.name == "Tower_PH18DA"
-        assert node.cmos_node_nm == 180
-
-    def test_get_process_node_for_foundry_photonic_only(self) -> None:
-        """纯光子平台（AIM/LioniX/HyperLight）应映射到 cmos_node_nm=0 的节点。"""
-        for foundry_name, expected_name in [
-            ("AIM", "AIM_300mm_SOI"),
-            ("LioniX", "LioniX_TriPleX"),
-            ("HyperLight", "HyperLight_LNOI"),
-        ]:
-            node = get_process_node_for_foundry(foundry_name)
-            assert node is not None, f"{foundry_name} 无映射"
-            assert node.name == expected_name
-            assert node.cmos_node_nm == 0  # 纯光子平台
-
-    def test_get_process_node_for_unknown_foundry_returns_none(self) -> None:
-        """未映射的 foundry 应返回 None（第89轮全量映射后仅 UnknownFoundry 返回 None）。"""
-        # 第89轮已全量映射 11/11 foundry，仅未知 foundry 返回 None
-        assert get_process_node_for_foundry("UnknownFoundry") is None
-
-    def test_get_process_node_for_foundry_compoundtek(self) -> None:
-        """CompoundTek foundry 应映射到 CompoundTek_90nm_SOI 结构化节点（第89轮新增）。"""
-        node = get_process_node_for_foundry("CompoundTek")
-        assert node is not None
-        assert node.name == "CompoundTek_90nm_SOI"
-        assert node.cmos_node_nm == 90
-        assert node.foundry == "CompoundTek"
-        assert node.material_platform == "SOI"
-
-    def test_get_process_node_for_foundry_ligentec(self) -> None:
-        """LIGENTEC foundry 应映射到 LIGENTEC_AN800_SiN 结构化节点（第89轮新增）。"""
-        node = get_process_node_for_foundry("LIGENTEC")
-        assert node is not None
-        assert node.name == "LIGENTEC_AN800_SiN"
-        assert node.cmos_node_nm == 0  # 纯光子平台
-        assert node.material_platform == "SiN"
-        assert node.photonic_layer_nm == 800
-
-    def test_get_process_node_for_foundry_vtt(self) -> None:
-        """VTT foundry 应映射到 VTT_ThickSOI 结构化节点（第89轮新增）。"""
-        node = get_process_node_for_foundry("VTT")
-        assert node is not None
-        assert node.name == "VTT_ThickSOI"
-        assert node.cmos_node_nm == 0  # 纯光子平台
-        assert node.material_platform == "ThickSOI"
-        assert node.photonic_layer_nm == 3000  # 3μm
-
-    def test_get_process_node_for_foundry_tyndall(self) -> None:
-        """Tyndall foundry 应映射到 Tyndall_InP_SOI_Hybrid 结构化节点（第89轮新增）。"""
-        node = get_process_node_for_foundry("Tyndall")
-        assert node is not None
-        assert node.name == "Tyndall_InP_SOI_Hybrid"
-        assert node.cmos_node_nm == 0  # 纯光子平台
-        assert node.material_platform == "Hybrid"
-        assert node.integration_type == "heterogeneous"
-
-    def test_list_foundries_with_process_node(self) -> None:
-        """应列出 11 个有结构化映射的 foundry 平台（第89轮全量映射）。"""
-        foundries = list_foundries_with_process_node()
-        assert len(foundries) == 11
-        # 应包含主要 CMOS photonics foundry
-        assert "AMF" in foundries
-        assert "GF_Fotonix" in foundries
-        assert "IHP" in foundries
-        assert "Tower_OpenLight" in foundries
-        # 第89轮新增的 4 个 foundry
-        assert "CompoundTek" in foundries
-        assert "LIGENTEC" in foundries
-        assert "VTT" in foundries
-        assert "Tyndall" in foundries
-
-    def test_foundry_to_process_node_consistency(self) -> None:
-        """所有 foundry 映射的 ProcessNode 应存在于 CMOS_PROCESS_NODES 注册表。"""
-        foundries = list_foundries_with_process_node()
-        for fname in foundries:
-            node = get_process_node_for_foundry(fname)
-            assert node is not None
-            assert node.name in CMOS_PROCESS_NODES
-
-
-class TestDeviceCatalogProcessNode:
-    """DeviceCatalog.list_by_process_node 检索 API 测试（第75轮 P1-3 深化）。"""
-
-    def test_list_by_process_node_returns_matching_devices(self) -> None:
-        """list_by_process_node 应返回匹配工艺节点的器件列表。"""
-        from polaris.pdk.catalog import default_catalog
-
-        catalog = default_catalog()
-        # 默认目录的 SOI 平台器件应有 process_node="220nm SOI"
-        soi_devices = catalog.list_by_process_node("220nm SOI")
-        assert len(soi_devices) > 0
-        for dev in soi_devices:
-            assert dev.process_node == "220nm SOI"
-
-    def test_list_by_process_node_no_match_returns_empty(self) -> None:
-        """不匹配的工艺节点应返回空列表。"""
-        from polaris.pdk.catalog import default_catalog
-
-        catalog = default_catalog()
-        result = catalog.list_by_process_node("999nm UnknownMaterial")
-        assert result == []
-
-    def test_list_by_process_node_none_excluded(self) -> None:
-        """process_node 为 None 的器件不应被匹配。"""
-        from polaris.pdk.catalog import DeviceCatalog
-        from polaris.pdk.device import BoundingBox, Device
-        from polaris.pdk.port import Direction, Port
-
-        catalog = DeviceCatalog()
-        dev_no_pn = Device(
-            device_id="test_no_pn",
-            platform="SOI",
-            category="passive",
-            name="test",
-            ports=[Port("in", 0.0, 0.0, Direction.WEST, "strip", 0.5)],
-            bbox=BoundingBox(0.0, 0.0, 1.0, 0.5),
-            process_node=None,
-        )
-        catalog.register(dev_no_pn)
-        assert catalog.list_by_process_node("220nm SOI") == []

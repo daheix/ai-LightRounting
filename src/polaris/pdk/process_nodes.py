@@ -78,7 +78,11 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
         name="GF_Fotonix_45CLO",
         foundry="GlobalFoundries",
         cmos_node_nm=45,
+<<<<<<< HEAD
         photonic_layer_nm=160,
+=======
+        photonic_layer_nm=220,
+>>>>>>> trae/solo-agent-pkVjID
         material_platform="SOI",
         wafer_size_mm=300,
         integration_type="monolithic",
@@ -86,7 +90,11 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
             "https://www.globalfoundries.com/technology-innovation/silicon-photonics",
             "https://europractice-ic.com/technologies/photonics/globalfoundries/",
         ],
+<<<<<<< HEAD
         notes="GF Fotonix 45CLO，45nm CMOS + 160nm Si，单片集成光电子",
+=======
+        notes="GF Fotonix 45CLO，45nm CMOS + 220nm SOI，单片集成光电子",
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "GF_Fotonix_90WG": ProcessNode(
         name="GF_Fotonix_90WG",
@@ -194,6 +202,7 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
         ],
         notes="HyperLight LNOI，X-cut 铌酸锂，Pockels 调制 100GHz",
     ),
+<<<<<<< HEAD
     "CompoundTek_90nm_SOI": ProcessNode(
         name="CompoundTek_90nm_SOI",
         foundry="CompoundTek",
@@ -250,6 +259,8 @@ CMOS_PROCESS_NODES: dict[str, ProcessNode] = {
         ],
         notes="Tyndall InP+SOI 异质集成，InP DBR 激光器 μTP 工艺",
     ),
+=======
+>>>>>>> trae/solo-agent-pkVjID
 }
 
 
@@ -489,6 +500,7 @@ def suggest_process_node_for_circuit(
     return candidates[0] if candidates else None
 
 
+<<<<<<< HEAD
 # =============================================================================
 # Foundry 平台 → 结构化 ProcessNode 关联（第75轮 P1-3 深化）
 # 来源: foundry_platforms.py FOUNDRY_PLATFORMS 注册表
@@ -542,6 +554,8 @@ def list_foundries_with_process_node() -> list[str]:
     return list(_FOUNDRY_TO_PROCESS_NODE.keys())
 
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 __all__ = [
     "ProcessNode",
     "CMOS_PROCESS_NODES",
@@ -553,6 +567,9 @@ __all__ = [
     "cmos_process_node_count",
     "parse_process_node_string",
     "suggest_process_node_for_circuit",
+<<<<<<< HEAD
     "get_process_node_for_foundry",
     "list_foundries_with_process_node",
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ]

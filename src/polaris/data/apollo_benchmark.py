@@ -44,8 +44,11 @@ class PhotonicDevice:
         height_um: 高度（μm）。
         category: 类别（active/passive/coupler）。
         description: 功能描述。
+<<<<<<< HEAD
         insertion_loss_db: 片上插入损耗（dB），用于 INSERTION_LOSS_DB 评估。
             来源: SOI 220nm 平台典型器件损耗文献值。
+=======
+>>>>>>> trae/solo-agent-pkVjID
     """
 
     name: str
@@ -54,12 +57,16 @@ class PhotonicDevice:
     height_um: float
     category: str
     description: str
+<<<<<<< HEAD
     insertion_loss_db: float = 0.0
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 
 # ─── Apollo PTC 光子张量核心器件库 ───
 # 来源: Apollo 论文 Fig.2 PTC 架构
 # https://arxiv.org/abs/2504.18813
+<<<<<<< HEAD
 # insertion_loss_db 来源: SOI 220nm 平台典型器件损耗文献值
 #   - 光栅耦合器: 0.4-3 dB（取 1.5 dB 中值）
 #   - MZI 调制器: 0.5 dB（片上损耗，不含耦合）
@@ -74,6 +81,8 @@ class PhotonicDevice:
 #   - 无源光子耦合器件仿真设计（2026）: 光栅耦合 0.4-3 dB
 #   - 硅基双模光开关芯片（2026）: MZI 热光 1.74 dB / 电光 3.79 dB
 #   - IHP O-band coherent DCI（Seiler 2021）: 波导损耗 0.87-0.92 dB/cm
+=======
+>>>>>>> trae/solo-agent-pkVjID
 PTC_DEVICES: dict[str, PhotonicDevice] = {
     "gc_in_array": PhotonicDevice(
         name="gc_in_array",
@@ -82,7 +91,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=200.0,
         category="coupler",
         description="输入光栅耦合器阵列（8 通道）",
+<<<<<<< HEAD
         insertion_loss_db=1.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "modulator_array": PhotonicDevice(
         name="modulator_array",
@@ -91,7 +103,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=150.0,
         category="active",
         description="输入调制器阵列（8 通道 MZM）",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "mzi_matrix_4x4": PhotonicDevice(
         name="mzi_matrix_4x4",
@@ -100,7 +115,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=400.0,
         category="active",
         description="4×4 MZI 矩阵（可编程权重）",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "phase_shifter_array": PhotonicDevice(
         name="phase_shifter_array",
@@ -109,7 +127,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=100.0,
         category="active",
         description="相位调制器阵列（权重编程）",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "detector_array": PhotonicDevice(
         name="detector_array",
@@ -118,7 +139,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=120.0,
         category="active",
         description="输出探测器阵列（8 通道 PD）",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "gc_out_array": PhotonicDevice(
         name="gc_out_array",
@@ -127,7 +151,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=200.0,
         category="coupler",
         description="输出光栅耦合器阵列（8 通道）",
+<<<<<<< HEAD
         insertion_loss_db=1.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "input_waveguide_bus": PhotonicDevice(
         name="input_waveguide_bus",
@@ -136,7 +163,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="输入波导总线（8 通道扇出）",
+<<<<<<< HEAD
         insertion_loss_db=0.0,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "output_waveguide_bus": PhotonicDevice(
         name="output_waveguide_bus",
@@ -145,7 +175,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="输出波导总线（8 通道扇入）",
+<<<<<<< HEAD
         insertion_loss_db=0.0,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "bias_laser_in": PhotonicDevice(
         name="bias_laser_in",
@@ -154,7 +187,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=40.0,
         category="active",
         description="偏置激光输入（CW 光源）",
+<<<<<<< HEAD
         insertion_loss_db=0.0,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "taper_in": PhotonicDevice(
         name="taper_in",
@@ -163,7 +199,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=10.0,
         category="passive",
         description="输入锥形转换器",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "taper_out": PhotonicDevice(
         name="taper_out",
@@ -172,7 +211,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=10.0,
         category="passive",
         description="输出锥形转换器",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "crossing": PhotonicDevice(
         name="crossing",
@@ -181,7 +223,10 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="波导交叉（低损耗）",
+<<<<<<< HEAD
         insertion_loss_db=0.2,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
 }
 
@@ -209,7 +254,10 @@ PTC_CONNECTIONS: list[tuple[str, str, str, str]] = [
 
 # ─── Apollo oNoC 片上光网络器件库 ───
 # 来源: Apollo 论文 oNoC 架构（星型拓扑 + 多节点）
+<<<<<<< HEAD
 # insertion_loss_db 来源: SOI 220nm 平台典型器件损耗文献值（同 PTC_DEVICES 注释）
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ONOC_DEVICES: dict[str, PhotonicDevice] = {
     "central_router": PhotonicDevice(
         name="central_router",
@@ -218,7 +266,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=300.0,
         category="passive",
         description="中心光路由器（8×8 MMI 交叉开关）",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_0_modulator": PhotonicDevice(
         name="node_0_modulator",
@@ -227,7 +278,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=60.0,
         category="active",
         description="节点 0 调制器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_0_detector": PhotonicDevice(
         name="node_0_detector",
@@ -236,7 +290,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=50.0,
         category="active",
         description="节点 0 探测器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_1_modulator": PhotonicDevice(
         name="node_1_modulator",
@@ -245,7 +302,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=60.0,
         category="active",
         description="节点 1 调制器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_1_detector": PhotonicDevice(
         name="node_1_detector",
@@ -254,7 +314,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=50.0,
         category="active",
         description="节点 1 探测器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_2_modulator": PhotonicDevice(
         name="node_2_modulator",
@@ -263,7 +326,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=60.0,
         category="active",
         description="节点 2 调制器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_2_detector": PhotonicDevice(
         name="node_2_detector",
@@ -272,7 +338,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=50.0,
         category="active",
         description="节点 2 探测器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_3_modulator": PhotonicDevice(
         name="node_3_modulator",
@@ -281,7 +350,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=60.0,
         category="active",
         description="节点 3 调制器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "node_3_detector": PhotonicDevice(
         name="node_3_detector",
@@ -290,7 +362,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=50.0,
         category="active",
         description="节点 3 探测器",
+<<<<<<< HEAD
         insertion_loss_db=0.5,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "laser_source": PhotonicDevice(
         name="laser_source",
@@ -299,7 +374,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=50.0,
         category="active",
         description="共享激光源（CW）",
+<<<<<<< HEAD
         insertion_loss_db=0.0,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "waveguide_ring": PhotonicDevice(
         name="waveguide_ring",
@@ -308,7 +386,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=500.0,
         category="passive",
         description="环形波导总线（4 节点共享）",
+<<<<<<< HEAD
         insertion_loss_db=0.0,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "serdes_0": PhotonicDevice(
         name="serdes_0",
@@ -317,7 +398,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="节点 0 串并转换",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "serdes_1": PhotonicDevice(
         name="serdes_1",
@@ -326,7 +410,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="节点 1 串并转换",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "serdes_2": PhotonicDevice(
         name="serdes_2",
@@ -335,7 +422,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="节点 2 串并转换",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
     "serdes_3": PhotonicDevice(
         name="serdes_3",
@@ -344,7 +434,10 @@ ONOC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="节点 3 串并转换",
+<<<<<<< HEAD
         insertion_loss_db=0.1,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     ),
 }
 
@@ -384,7 +477,11 @@ ONOC_CONNECTIONS: list[tuple[str, str, str, str]] = [
 
 
 def _photonic_to_device_spec(dev: PhotonicDevice) -> DeviceSpec:
+<<<<<<< HEAD
     """将 PhotonicDevice 转为 DeviceSpec（含 in/out 标准端口 + insertion_loss_db）。"""
+=======
+    """将 PhotonicDevice 转为 DeviceSpec（含 in/out 标准端口）。"""
+>>>>>>> trae/solo-agent-pkVjID
     return DeviceSpec(
         name=dev.name,
         device_type=dev.device_type,
@@ -398,7 +495,10 @@ def _photonic_to_device_spec(dev: PhotonicDevice) -> DeviceSpec:
             "category": dev.category,
             "description": dev.description,
             "benchmark": "apollo",
+<<<<<<< HEAD
             "insertion_loss_db": dev.insertion_loss_db,
+=======
+>>>>>>> trae/solo-agent-pkVjID
         },
         process_node="220nm SOI",
     )

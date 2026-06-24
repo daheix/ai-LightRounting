@@ -3,6 +3,7 @@
 负责网表解析、连接图构建、布局环境（Gymnasium 接口）
 与基于 GNN 的状态编码。
 """
+<<<<<<< HEAD
 
 # R33: AlphaChip Edge-GNN 对齐（光电子专用边特征 + 多关系 + GAT）
 from polaris.engine.alphachip_gnn import (
@@ -31,3 +32,5 @@ __all__ = [
     "PhotonicEdgeFeatureConfig",
     "build_photonic_edge_features",
 ]
+=======
+>>>>>>> trae/solo-agent-pkVjID

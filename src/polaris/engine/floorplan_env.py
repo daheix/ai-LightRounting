@@ -224,6 +224,7 @@ class FloorplanEnv(gym.Env):
         )
         self._step_idx = 0
         self._last_reward = 0.0  # 上一步的累计奖励（用于计算增量奖励）
+<<<<<<< HEAD
         if options is not None and options.get("warm_start", False):
             self._apply_warm_start(options.get("warm_start_config"))
         return self._obs(), {"step": self._step_idx}
@@ -301,6 +302,9 @@ class FloorplanEnv(gym.Env):
         # warm-start 后所有器件已放置，step_idx 跳到末尾
         self._step_idx = len(self.instance_ids)
         self._last_reward = self._reward()
+=======
+        return self._obs(), {"step": 0}
+>>>>>>> trae/solo-agent-pkVjID
 
     def _build_edge_index(self) -> np.ndarray:
         """从 net.connections 构建无向图边索引 ``[2, E]``（双向）。

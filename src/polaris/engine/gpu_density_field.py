@@ -137,6 +137,7 @@ class GPUDensityField:
             self.field = field
             return field
 
+<<<<<<< HEAD
         # 计算双线性插值权重和邻域索引
         x0, y0, wx0, wy0, wx1, wy1 = self._compute_bilinear_weights(
             pos, bin_x, bin_y, gx
@@ -150,6 +151,23 @@ class GPUDensityField:
         self._distribute_to_bins(field, x0, y1, wx0 * wy1 * areas)
         self._distribute_to_bins(field, x1, y0, wx1 * wy0 * areas)
         self._distribute_to_bins(field, x1, y1, wx1 * wy1 * areas)
+=======
+        # 向量化双线性插值面积分布
+        # 每个器件在 4 个相邻网格中分配面积
+        x_centers = pos[:, 0]
+        y_centers = pos[:, 1]
+
+        # 找到每个器件所在的网格索引
+        ix = np.searchsorted(bin_x[1:], x_centers, side="right")
+        iy = np.searchsorted(bin_y[1:], y_centers, side="right")
+        ix = np.clip(ix, 0, gx - 1)
+        iy = np.clip(iy, 0, gx - 1)
+
+        # 简化：每个器件的面积全部分配到中心所在网格
+        # （完整双线性插值需要 4 邻域分配，这里用简化版保证数值稳定）
+        areas = widths * heights
+        np.add.at(field, (ix, iy), areas)
+>>>>>>> trae/solo-agent-pkVjID
 
         # 归一化
         bin_area = (bin_x[1] - bin_x[0]) * (bin_y[1] - bin_y[0])
@@ -159,6 +177,7 @@ class GPUDensityField:
         self.field = field
         return field
 
+<<<<<<< HEAD
     def _compute_bilinear_weights(
         self, pos, bin_x, bin_y, gx
     ):
@@ -203,6 +222,8 @@ class GPUDensityField:
             weighted_areas[mask],
         )
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
     def smooth_gaussian(self, sigma: float | None = None) -> np.ndarray:
         """高斯平滑（FFT 卷积，GPU 加速）。
 

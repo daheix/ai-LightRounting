@@ -1,22 +1,33 @@
 """公开 Benchmark 评估器（P1-5）。
 
+<<<<<<< HEAD
 对标 TILOS MacroPlacement 评估标准，提供 HPWL/重叠/利用率/拥塞度等指标计算，
+=======
+对标 TILOS MacroPlacement 评估标准，提供 HPWL/重叠/利用率等指标计算，
+>>>>>>> trae/solo-agent-pkVjID
 用于与电子 EDA 工具（Innovus/ICC2/DREAMPlace/Circuit Training）公平对比。
 
 来源:
 - TILOS MacroPlacement 评估: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
 - Circuit Training 评估: https://github.com/google-research/circuit_training
 - HPWL 经典定义: EDA 教材半周长线长估计
+<<<<<<< HEAD
 - Congestion 评估: Nesterenko & Hsu 2002 "Congestion-Aware Placement"
 - Insertion Loss: 光子电路插入损耗 = 波导损耗 + 器件损耗
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 评估指标:
 - HPWL (Half-Perimeter Wire Length): 半周长线长，布局质量核心指标
 - Overlap Count: 重叠对数，布局合法性指标
 - Area Utilization: 面积利用率
+<<<<<<< HEAD
 - Congestion: 拥塞度（基于布线网格，第82轮新增）
 - Insertion Loss: 光子插入损耗（dB，第90轮新增）
 - DRV: 设计规则违规数（重叠+间距+边界，第94轮新增）
+=======
+- Congestion: 拥塞度（基于布线网格）
+>>>>>>> trae/solo-agent-pkVjID
 """
 
 from __future__ import annotations
@@ -138,6 +149,7 @@ def evaluate_area_utilization(
     return used / total if total > 0 else 0.0
 
 
+<<<<<<< HEAD
 def _build_demand_grid(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
@@ -417,12 +429,15 @@ def evaluate_drv(
     }
 
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 def evaluate_benchmark(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
 ) -> BenchmarkResult:
     """综合评估 benchmark 布局结果。
 
+<<<<<<< HEAD
     对标 TILOS MacroPlacement 评估流程：计算 HPWL/重叠/利用率/拥塞度/插入损耗，
     根据 target_metric 判定是否达标。
 
@@ -435,6 +450,11 @@ def evaluate_benchmark(
     第94轮扩展：集成 DRV 评估，使用真正的 DRV 计数（重叠+间距+边界），
     替代原先仅检测重叠的简化判定。DRV target_value 表示允许的最大违规数。
 
+=======
+    对标 TILOS MacroPlacement 评估流程：计算 HPWL/重叠/利用率，
+    根据 target_metric 判定是否达标。
+
+>>>>>>> trae/solo-agent-pkVjID
     Args:
         circuit: 电路规格（含 target_metric/target_value）。
         placements: 布局字典 {module_name: (cx, cy)}。
@@ -445,15 +465,21 @@ def evaluate_benchmark(
     hpwl = evaluate_hpwl(circuit, placements)
     overlap = evaluate_overlap(circuit, placements)
     util = evaluate_area_utilization(circuit, placements)
+<<<<<<< HEAD
     cong = evaluate_congestion(circuit, placements)
     insertion_loss = evaluate_insertion_loss(circuit, placements)
     drv = evaluate_drv(circuit, placements)
 
     # 达标判定：根据 target_metric 判定是否达标
+=======
+
+    # 达标判定：HPWL < target 且 无重叠
+>>>>>>> trae/solo-agent-pkVjID
     target_metric = circuit.target_metric.value
     target_value = circuit.target_value
     passed = False
     if target_metric == "hpwl":
+<<<<<<< HEAD
         passed = hpwl < target_value and drv["total"] == 0
     elif target_metric == "drv":
         # DRV 达标：总违规数 <= target_value（target_value=0 表示零违规）
@@ -464,6 +490,13 @@ def evaluate_benchmark(
     elif target_metric == "insertion_loss_db":
         # 插入损耗达标：总损耗 < target_value 且无 DRV 违规
         passed = insertion_loss < target_value and drv["total"] == 0
+=======
+        passed = hpwl < target_value and overlap == 0
+    elif target_metric == "drv":
+        passed = overlap == 0
+    elif target_metric == "routing_success_rate":
+        passed = 1.0 >= target_value
+>>>>>>> trae/solo-agent-pkVjID
 
     return BenchmarkResult(
         benchmark_name=circuit.name,
@@ -478,6 +511,7 @@ def evaluate_benchmark(
         extra={
             "benchmark_source": circuit.benchmark_source.value,
             "process_node": circuit.process_node,
+<<<<<<< HEAD
             "max_congestion": cong["max_congestion"],
             "avg_congestion": cong["avg_congestion"],
             "overflow_count": cong["overflow_count"],
@@ -487,6 +521,8 @@ def evaluate_benchmark(
             "drv_overlap": drv["overlap_violations"],
             "drv_spacing": drv["spacing_violations"],
             "drv_boundary": drv["boundary_violations"],
+=======
+>>>>>>> trae/solo-agent-pkVjID
         },
     )
 
@@ -531,6 +567,7 @@ def grid_placement(
     return placements
 
 
+<<<<<<< HEAD
 def analytical_placement(circuit: CircuitSpec) -> dict[str, tuple[float, float]]:
     """解析法布局（DREAMPlace 风格，第76轮 P1-5 扩展）。
 
@@ -600,11 +637,14 @@ def placement_by_method(
     )
 
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 __all__ = [
     "BenchmarkResult",
     "evaluate_hpwl",
     "evaluate_overlap",
     "evaluate_area_utilization",
+<<<<<<< HEAD
     "evaluate_congestion",
     "evaluate_insertion_loss",
     "evaluate_drv",
@@ -613,4 +653,8 @@ __all__ = [
     "analytical_placement",
     "hierarchical_placement",
     "placement_by_method",
+=======
+    "evaluate_benchmark",
+    "grid_placement",
+>>>>>>> trae/solo-agent-pkVjID
 ]

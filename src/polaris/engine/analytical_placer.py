@@ -78,6 +78,7 @@ class AnalyticalPlacerConfig:
         density_bandwidth: 密度场高斯核带宽（μm）。
             来源: DREAMPlace 默认 = 平均器件尺寸。
         convergence_threshold: 收敛阈值（HPWL 变化 < 阈值则停止）。
+<<<<<<< HEAD
         congestion_weight: 拥塞惩罚权重（第83轮新增，越大越强制降低拥塞）。
             来源: Nesterenko & Hsu "Congestion-Aware Placement" TCAD 2002，
             默认 0.0（关闭），典型值 1.0e-4 ~ 1.0e-2。
@@ -87,6 +88,8 @@ class AnalyticalPlacerConfig:
             来源: Dollas & Betz "Congestion-Aware Legalization" FCCM 2018，
             默认 False。当 True 时，合法化阶段在多行可选时选择拥塞度
             最低的行，避免合法化步骤覆盖连续优化的拥塞感知效果。
+=======
+>>>>>>> trae/solo-agent-pkVjID
     """
 
     gamma: float = 4.0
@@ -95,9 +98,12 @@ class AnalyticalPlacerConfig:
     max_iterations: int = 200
     density_bandwidth: float = 10.0
     convergence_threshold: float = 1.0
+<<<<<<< HEAD
     congestion_weight: float = 0.0
     congestion_grid_size: int = 16
     congestion_aware_legalization: bool = False
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 
 class AnalyticalPlacer:
@@ -212,6 +218,7 @@ class AnalyticalPlacer:
 
         梯度对每个器件坐标求偏导。
 
+<<<<<<< HEAD
         **数值稳定性**（第70轮修复）：当坐标值较大时 exp(x/γ) 会溢出产生 NaN。
         标准做法是减去最大值后再 exp（log-sum-exp trick）：
         - exp(x/γ) → exp((x - max_x)/γ)
@@ -220,6 +227,9 @@ class AnalyticalPlacer:
         来源: DREAMPlace 平滑 HPWL（TCAD 2020 公式 4-6）；
               log-sum-exp trick: Blanchard et al., "Accurate Numerical Methods
               for the Log-Sum-Exp Problem", arXiv:2106.14588
+=======
+        来源: DREAMPlace 平滑 HPWL（TCAD 2020 公式 4-6）。
+>>>>>>> trae/solo-agent-pkVjID
 
         Args:
             pos: 当前坐标 ``(n, 2)``。
@@ -234,6 +244,7 @@ class AnalyticalPlacer:
             x2, y2 = pos[dst]
             xs = np.array([x1, x2])
             ys = np.array([y1, y2])
+<<<<<<< HEAD
             # 数值稳定的 log-sum-exp：减去最大值防止溢出
             max_x = xs.max()
             min_x = xs.min()
@@ -244,15 +255,25 @@ class AnalyticalPlacer:
             exp_neg_x = np.exp((-xs + min_x) / gamma)
             exp_y = np.exp((ys - max_y) / gamma)
             exp_neg_y = np.exp((-ys + min_y) / gamma)
+=======
+            # 平滑 max/min
+            exp_x = np.exp(xs / gamma)
+            exp_neg_x = np.exp(-xs / gamma)
+            exp_y = np.exp(ys / gamma)
+            exp_neg_y = np.exp(-ys / gamma)
+>>>>>>> trae/solo-agent-pkVjID
             sum_exp_x = exp_x.sum()
             sum_exp_neg_x = exp_neg_x.sum()
             sum_exp_y = exp_y.sum()
             sum_exp_neg_y = exp_neg_y.sum()
+<<<<<<< HEAD
             # 防止除零（sum 不会为 0，但加保护）
             sum_exp_x = max(sum_exp_x, 1e-300)
             sum_exp_neg_x = max(sum_exp_neg_x, 1e-300)
             sum_exp_y = max(sum_exp_y, 1e-300)
             sum_exp_neg_y = max(sum_exp_neg_y, 1e-300)
+=======
+>>>>>>> trae/solo-agent-pkVjID
             # d(smooth_max_x)/d(x_i) = exp(x_i/γ) / sum(exp(x_j/γ))
             # d(smooth_min_x)/d(x_i) = -exp(-x_i/γ) / sum(exp(-x_j/γ))
             # HPWL = smooth_max_x - smooth_min_x + smooth_max_y - smooth_min_y
@@ -261,9 +282,12 @@ class AnalyticalPlacer:
                 i = 0 if idx == src else 1
                 grad[idx, 0] += exp_x[i] / sum_exp_x - exp_neg_x[i] / sum_exp_neg_x
                 grad[idx, 1] += exp_y[i] / sum_exp_y - exp_neg_y[i] / sum_exp_neg_y
+<<<<<<< HEAD
         # NaN/Inf 安全检查（防止极端坐标导致数值问题）
         if not np.all(np.isfinite(grad)):
             grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
+=======
+>>>>>>> trae/solo-agent-pkVjID
         return grad
 
     def _density_gradient(self, pos: np.ndarray) -> np.ndarray:
@@ -350,6 +374,7 @@ class AnalyticalPlacer:
         field.smooth_gaussian(bw)
         return field.gradient_at(pos)
 
+<<<<<<< HEAD
     def _build_congestion_demand(
         self,
         pos: np.ndarray,
@@ -463,6 +488,8 @@ class AnalyticalPlacer:
             grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
         return grad
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
     def _adam_update(
         self,
         pos: np.ndarray,
@@ -491,6 +518,7 @@ class AnalyticalPlacer:
         new_pos = pos - lr * m_hat / (np.sqrt(v_hat) + eps)
         return new_pos, m, v
 
+<<<<<<< HEAD
     def _legalize(self, pos: np.ndarray) -> dict[str, tuple[float, float]]:
         """合法化布局：消除重叠（自适应行高 FFDH）。
 
@@ -504,11 +532,19 @@ class AnalyticalPlacer:
             DREAMPlace Legalization (TCAD 2020 Section III.C)
             FFDH: Coffman et al. SIAM J. Comput. 9(4), 1980
             拥塞感知合法化: Dollas & Betz FCCM 2018
+=======
+    def _discretize(self, pos: np.ndarray) -> dict[str, tuple[float, float]]:
+        """将连续坐标离散化到布局字典。
+
+        保留小数（不强制网格对齐），供 RL 微调。
+        限制在画布内。
+>>>>>>> trae/solo-agent-pkVjID
 
         Args:
             pos: 连续坐标 ``(n, 2)``。
 
         Returns:
+<<<<<<< HEAD
             合法化后的布局字典 ``{name: (cx, cy)}``，保证无重叠且在画布内。
         """
         from polaris.engine.legalization import LegalizationContext, legalize_placement
@@ -541,6 +577,22 @@ class AnalyticalPlacer:
 
         Returns:
             布局字典 ``{name: (cx, cy)}``，中心坐标，无重叠。
+=======
+            布局字典 ``{name: (cx, cy)}``。
+        """
+        placements: dict[str, tuple[float, float]] = {}
+        for i, name in enumerate(self.device_names):
+            x = float(np.clip(pos[i, 0], 0, self.canvas_w))
+            y = float(np.clip(pos[i, 1], 0, self.canvas_h))
+            placements[name] = (x, y)
+        return placements
+
+    def place(self) -> dict[str, tuple[float, float]]:
+        """执行解析法布局（DREAMPlace warm-start）。
+
+        Returns:
+            布局字典 ``{name: (cx, cy)}``，中心坐标。
+>>>>>>> trae/solo-agent-pkVjID
         """
         if self.n == 0:
             return {}
@@ -553,6 +605,7 @@ class AnalyticalPlacer:
         for t in range(1, self.config.max_iterations + 1):
             hpwl_grad = self._smooth_hpwl_gradient(pos)
             dens_grad = self._density_gradient(pos)
+<<<<<<< HEAD
             total_grad = hpwl_grad + self.config.density_weight * dens_grad
             # 第83轮：拥塞感知布局，拥塞惩罚项
             if self.config.congestion_weight > 0:
@@ -561,13 +614,27 @@ class AnalyticalPlacer:
             pos, m, v = self._adam_update(pos, total_grad, AdamState(m=m, v=v, t=t))
             pos[:, 0] = np.clip(pos[:, 0], 0, self.canvas_w)
             pos[:, 1] = np.clip(pos[:, 1], 0, self.canvas_h)
+=======
+            # 总梯度 = HPWL 梯度 + 密度权重 * 密度梯度
+            total_grad = hpwl_grad + self.config.density_weight * dens_grad
+            pos, m, v = self._adam_update(pos, total_grad, AdamState(m=m, v=v, t=t))
+            # 限制在画布内
+            pos[:, 0] = np.clip(pos[:, 0], 0, self.canvas_w)
+            pos[:, 1] = np.clip(pos[:, 1], 0, self.canvas_h)
+            # 收敛检查（每 10 轮）
+>>>>>>> trae/solo-agent-pkVjID
             if t % 10 == 0:
                 cur_hpwl = self._compute_hpwl(pos)
                 if abs(prev_hpwl - cur_hpwl) < self.config.convergence_threshold:
                     break
                 prev_hpwl = cur_hpwl
+<<<<<<< HEAD
         # 3. 合法化（消除重叠，DREAMPlace 标准流程）
         return self._legalize(pos)
+=======
+        # 3. 离散化
+        return self._discretize(pos)
+>>>>>>> trae/solo-agent-pkVjID
 
     def _compute_hpwl(self, pos: np.ndarray) -> float:
         """计算当前布局的 HPWL（真实，非平滑）。

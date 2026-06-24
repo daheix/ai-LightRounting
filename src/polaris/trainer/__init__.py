@@ -2,6 +2,7 @@
 
 负责 PPO 智能体（actor-critic + clip + GAE）、训练数据集合成
 与训练主循环（采样→GNN→PPO→环境→奖励→更新）。
+<<<<<<< HEAD
 
 R34: AlphaChip 预训练-微调范式对齐（pretrain + transfer_learning）。
 """
@@ -68,3 +69,6 @@ __all__ = [
     "SelfSupervisedPretrainer",
     "TransferResult",
 ]
+=======
+"""
+>>>>>>> trae/solo-agent-pkVjID

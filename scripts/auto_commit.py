@@ -21,6 +21,7 @@ from pathlib import Path
 
 INTERVAL_SECONDS = 6 * 60  # 6 分钟（用户规则）
 REPO_DIR = Path(__file__).resolve().parent.parent
+<<<<<<< HEAD
 MAIN_BRANCH = "main"
 
 
@@ -59,6 +60,12 @@ def detect_dev_branch() -> str:
 DEV_BRANCH = detect_dev_branch()
 
 
+=======
+DEV_BRANCH = "trae/solo-agent-QtGqG4-ai-Light"  # 规则 1.2.1 固定名称，永久不变
+MAIN_BRANCH = "main"
+
+
+>>>>>>> trae/solo-agent-pkVjID
 def run(cmd: str, check: bool = True) -> tuple[int, str]:
     """运行 shell 命令，返回 (返回码, 输出)。"""
     result = subprocess.run(

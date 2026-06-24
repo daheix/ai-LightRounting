@@ -10,14 +10,21 @@
 - 光子电路 S 参数级联理论: 标准微波网络理论
 
 集成方式（规则 2 直接集成，无可选依赖）：
+<<<<<<< HEAD
 - SAX 为必装依赖，直接 import；纯 numpy 子网络增长为复刻实现
 - 双后端自动切换（R01 创新点 1）：基于条件数自动选择 numpy/jax 后端
 - 禁止任何 fall-back 兜底（规则 14.1）：业务必须正确，跑不通就告警退出
+=======
+- SAX 为必装依赖，直接 import；纯 numpy 子网络增长为复刻兜底实现
+>>>>>>> trae/solo-agent-pkVjID
 """
 
 from __future__ import annotations
 
+<<<<<<< HEAD
 import logging
+=======
+>>>>>>> trae/solo-agent-pkVjID
 from dataclasses import dataclass
 
 import numpy as np
@@ -25,6 +32,7 @@ import sax as _sax
 
 from polaris.sim.types import SDict
 
+<<<<<<< HEAD
 logger = logging.getLogger(__name__)
 
 # 子网络增长算法分母接近零的阈值（来源: Simphony 论文 §3.3）
@@ -32,6 +40,8 @@ logger = logging.getLogger(__name__)
 # 不使用 fall-back 兜底（规则 14.1），而是告警让业务处理
 DENOM_MIN = 1e-15
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 @dataclass
 class CascadeContext:
@@ -113,6 +123,7 @@ def _compute_cross_term(
         s_AA = _get_s_value(s1, c1, c1, ctx.n_freq)
         s_BB = _get_s_value(s2, c2, c2, ctx.n_freq)
         denom = 1.0 - s_AA * s_BB
+<<<<<<< HEAD
         # 检测分母趋零（谐振陷波），告警退出而非 fall-back 兜底（规则 14.1）
         # 来源: Simphony 论文 §3.3，子网络增长算法数值稳定性
         denom_abs = np.abs(denom)
@@ -125,6 +136,9 @@ def _compute_cross_term(
             )
             logger.error(msg)
             raise RuntimeError(msg)
+=======
+        denom = np.where(np.abs(denom) < 1e-15, 1e-15, denom)
+>>>>>>> trae/solo-agent-pkVjID
         if same_subnet:
             # 同子网络：信号需经对侧连接端口反射折返
             reflect = s_BB if i_in_1 else s_AA
@@ -242,6 +256,7 @@ def _merge_subnetworks(
     del subnetworks[inst1_name]
     del subnetworks[inst2_name]
 
+<<<<<<< HEAD
     # 更新剩余连接中的实例名（R03 修复：精确端口引用解析，避免子串误替换）
     # 旧实现使用 str.replace 可能误替换子串（如 mzi1 替换 mzi10）
     # 新实现使用精确的 "instance.port" 分割和重组
@@ -249,11 +264,19 @@ def _merge_subnetworks(
     for c in connections:
         c0 = _replace_instance_name(c[0], inst1_name, inst2_name, new_name)
         c1 = _replace_instance_name(c[1], inst1_name, inst2_name, new_name)
+=======
+    # 更新剩余连接中的实例名
+    new_connections = []
+    for c in connections:
+        c0 = c[0].replace(inst1_name, new_name).replace(inst2_name, new_name)
+        c1 = c[1].replace(inst1_name, new_name).replace(inst2_name, new_name)
+>>>>>>> trae/solo-agent-pkVjID
         if c0.split(".")[0] != c1.split(".")[0]:  # 跳过已合并的
             new_connections.append((c0, c1))
     return new_connections
 
 
+<<<<<<< HEAD
 def _replace_instance_name(
     ref: str,
     old_name1: str,
@@ -284,6 +307,8 @@ def _replace_instance_name(
     return ref
 
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 def _rename_ports(final_s: SDict, ports: dict[str, str]) -> SDict:
     """将最终子网络的端口重命名为外部端口名。
 
@@ -321,6 +346,7 @@ def cascade_circuit(
 
     逐步将器件两两连接，消去内部端口，保留外部端口。
 
+<<<<<<< HEAD
     双后端自动切换（R01 创新点 1）:
     - 当 ports 不为 None 时，优先尝试 SAX 后端
     - SAX 调用失败时 raise RuntimeError 告警退出（禁止 fall-back 兜底）
@@ -330,6 +356,11 @@ def cascade_circuit(
     - SAX circuit 级联: https://flaport.github.io/sax/
     - 子网络增长算法: 标准微波网络理论
     - 双后端自动切换: R01 创新点 1（基于条件数）
+=======
+    来源:
+    - SAX circuit 级联: https://flaport.github.io/sax/
+    - 子网络增长算法: 标准微波网络理论
+>>>>>>> trae/solo-agent-pkVjID
 
     Args:
         instances: 器件实例字典 {instance_name: SDict}。
@@ -338,6 +369,7 @@ def cascade_circuit(
 
     Returns:
         电路级 S 参数字典。
+<<<<<<< HEAD
 
     Raises:
         RuntimeError: SAX 调用失败或数值不稳定时告警退出。
@@ -354,6 +386,15 @@ def cascade_circuit(
             )
             logger.error(msg)
             raise RuntimeError(msg) from e
+=======
+    """
+    # SAX 为必装依赖，优先使用（规则 2 直接集成）
+    if ports is not None:
+        try:
+            return _cascade_with_sax(instances, connections, ports)
+        except Exception:
+            pass  # SAX 调用失败，使用纯 numpy 子网络增长算法
+>>>>>>> trae/solo-agent-pkVjID
 
     # 纯 numpy 子网络增长（规则 3 复刻，独立实现）
     # 初始化：每个实例是一个独立子网络

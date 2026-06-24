@@ -1,6 +1,7 @@
 """PoLaRIS Web Server — HTTP API + 静态文件服务（阶段 F4）。
 
 使用 Python 内置 http.server 实现 REST API + 静态前端服务，无需 Flask/FastAPI。
+<<<<<<< HEAD
 支持电路预设选择、一键布局布线、结果可视化、DRC 报告、GDS 导出、
 端到端 Demo Showcase 全流程演示。
 
@@ -11,6 +12,14 @@ API 端点:
 - POST /api/showcase/run                    — 启动端到端 Demo Showcase 全流程
 - GET  /api/showcase/report/{run_id}        — 查询 Showcase 汇总报告
 - GET  /api/showcase/stages/{run_id}/{stage_id} — 查询 Showcase 单阶段结果
+=======
+支持电路预设选择、一键布局布线、结果可视化、DRC 报告、GDS 导出。
+
+API 端点:
+- GET  /api/presets        — 列出预设电路
+- POST /api/run            — 运行布局布线流水线
+- GET  /api/health         — 健康检查
+>>>>>>> trae/solo-agent-pkVjID
 
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
@@ -21,10 +30,15 @@ from __future__ import annotations
 
 import json
 import logging
+<<<<<<< HEAD
 import sys
 import threading
 import traceback
 from datetime import datetime
+=======
+import threading
+import traceback
+>>>>>>> trae/solo-agent-pkVjID
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
@@ -33,9 +47,12 @@ logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
+<<<<<<< HEAD
 # Showcase 运行状态字典: {run_id: {"status": str, "output_dir": str, "error": str|None}}
 _showcase_runs: dict[str, dict] = {}
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 def _get_presets() -> list[dict]:
     """获取预设电路列表。"""
@@ -187,6 +204,7 @@ def _run_pipeline(preset_id: str, router_type: str = "default") -> dict:
     }
 
 
+<<<<<<< HEAD
 # Showcase 输出子目录列表
 _SHOWCASE_SUBDIRS = ["logs", "gds", "verilog_a", "spice", "reports"]
 
@@ -264,6 +282,8 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
         _showcase_runs[run_id]["error"] = str(e)
 
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
     """PoLaRIS HTTP 请求处理器。"""
 
@@ -310,6 +330,7 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/presets":
             self._send_json({"presets": _get_presets()})
             return
+<<<<<<< HEAD
         if path.startswith("/api/showcase/report/"):
             run_id = path.split("/")[-1]
             self._handle_showcase_report(run_id)
@@ -331,6 +352,8 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
         if path == "/showcase.html" or path == "/showcase":
             self._send_static(_STATIC_DIR / "showcase.html")
             return
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
         if path == "/" or path == "":
             path = "/index.html"
@@ -357,6 +380,7 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
                     code=500,
                 )
             return
+<<<<<<< HEAD
         if path == "/api/showcase/run":
             self._handle_showcase_run()
             return
@@ -480,6 +504,11 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
             **stage_data,
         })
 
+=======
+
+        self.send_error(404, "Not found")
+
+>>>>>>> trae/solo-agent-pkVjID
 
 class WebServer:
     """PoLaRIS Web UI 服务器。

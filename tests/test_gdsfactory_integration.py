@@ -100,6 +100,7 @@ def test_list_available_components_has_straight():
 
 
 def test_list_gdsfactory_pdks_returns_list():
+<<<<<<< HEAD
     """list_gdsfactory_pdks 应返回列表。
 
     gdsfactory 已安装但 PDK 未激活时，list_gdsfactory_pdks 仍应返回
@@ -121,6 +122,17 @@ def test_list_gdsfactory_pdks_returns_list():
         # gdsfactory 已安装时至少有 generic
         assert "generic" in pdks
         assert len(pdks) > 0
+=======
+    """list_gdsfactory_pdks 应返回列表。"""
+    pdks = list_gdsfactory_pdks()
+    assert isinstance(pdks, list)
+    # gdsfactory 不可用时返回空列表
+    if not is_available():
+        assert len(pdks) == 0
+    else:
+        # gdsfactory 可用时至少有 generic
+        assert "generic" in pdks
+>>>>>>> trae/solo-agent-pkVjID
 
 
 def test_load_gdsfactory_pdk_unavailable_returns_empty():

@@ -392,6 +392,7 @@ class TestRunAllBenchmarks:
         assert comp.total_connections == 74
 
     def test_run_all_placement_method(self) -> None:
+<<<<<<< HEAD
         """placement_method 应正确传递（第76轮改为 analytical，支持的方法名）。"""
         comp = run_all_benchmarks(placement_method="analytical")
         for r in comp.reports:
@@ -421,6 +422,12 @@ class TestRunAllBenchmarks:
         circuit = load_tilos_ariane()
         with pytest.raises(ValueError, match="未知布局方法"):
             placement_by_method(circuit, "unknown_method")
+=======
+        """placement_method 应正确传递。"""
+        comp = run_all_benchmarks(placement_method="rl_ppo")
+        for r in comp.reports:
+            assert r.placement_method == "rl_ppo"
+>>>>>>> trae/solo-agent-pkVjID
 
 
 class TestFormatMarkdown:

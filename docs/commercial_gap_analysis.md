@@ -1,12 +1,16 @@
 # PoLaRIS 与商业光电子 EDA 工具差距分析报告
 
 **生成日期**: 2026-06-21
+<<<<<<< HEAD
 **最后更新**: 2026-06-24（R3 迭代修复：D07 Edge-GNN 前向推理集成）
+=======
+>>>>>>> trae/solo-agent-pkVjID
 **作者**: PoLaRIS 项目组
 **目标**: 系统对比 PoLaRIS 与最强商业光电子 EDA 工具的能力差距，给出分级解决办法与版本路线图，支撑商业化决策。
 
 ---
 
+<<<<<<< HEAD
 ## 0. R3 迭代修复摘要（2026-06-24）
 
 R3 迭代针对 R2 修复后的剩余差距，在 stage3 接入 AlphaChipEdgeGNN 前向推理，增强 AI 布局的电路拓扑感知能力：
@@ -73,6 +77,8 @@ R1 迭代针对 showcase 实证发现的 4 项差距进行修复，均有代码�
 
 ---
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ## 1. 摘要：PoLaRIS 当前定位
 
 PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开源 AI 光电子布局布线引擎**，
@@ -195,19 +201,28 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   5. 建立 PDK 认证流程与 foundry 合作机制
 
 #### P0-4 FDTD 仿真缺失（仅 S 参数级联）
+<<<<<<< HEAD
 - **现状**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py（FDTD 基础框架，第64轮更新）+ **JAX 可微分 FDTD（R1 已接入 showcase）**
+=======
+- **现状**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py（FDTD 基础框架，第64轮更新）
+>>>>>>> trae/solo-agent-pkVjID
 - **商业标杆**：
   - Lumerical FDTD：3D 全波 FDTD + 多物理场 + GPU 加速 + adjoint 逆向设计
   - Tidy3D：GPU 云端 FDTD，10-5000× 加速，亚像素精度，250+ 公司高校使用
   - MEEP（开源）：MIT 开发，GPL 协议，学术界广泛使用
 - **影响**：无法做器件级精确仿真与逆向设计，仅依赖 S 参数模型限制创新器件设计
 - **量化差距**：0 FDTD vs Tidy3D 10-5000× 加速 = 仿真能力代际差距
+<<<<<<< HEAD
 - **R1 修复进展**：
   - ✅ stage5 已调用 JAX FDTD 全波仿真（`polaris.sim.fdtd_jax_backend`）
   - ✅ stage10 已用 JAX jax.grad 实现 adjoint 逆向设计（FoM 改善 14.72 dB）
   - ⚠️ 仍缺：3D 全波、多物理场、GPU 分布式、PML 边界（当前为无 PML 简化模型）
 - **解决办法**：
   1. ✅ 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，v1.0）
+=======
+- **解决办法**：
+  1. 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，v1.0）
+>>>>>>> trae/solo-agent-pkVjID
   2. 集成 MEEP 开源 FDTD（`pip install meep`，GPL 协议，MIT 开发）→ 直接用原工具（v2.0）
   3. 保留 S 参数级联作为快速电路级仿真（已实现，适合 RL 反馈）
   4. 建立 S 参数模型 → FDTD 校准流程（参考 Lumerical CML Compiler）
@@ -289,11 +304,16 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 ### 3.3 P2 次要差距（v3.0 追赶领先）
 
 #### P2-1 无逆向设计能力
+<<<<<<< HEAD
 - **现状**：**R1 已实现 JAX jax.grad adjoint 逆向设计（stage10）**，FoM 改善 14.72 dB，波导宽度 400nm→1000nm
+=======
+- **现状**：无 adjoint optimization / topology optimization / shape optimization
+>>>>>>> trae/solo-agent-pkVjID
 - **商业标杆**：
   - Lumerical lumopt：adjoint method 逆向设计（开源 https://github.com/chriskeraly/lumopt）
   - Tidy3D：PSO/GA/adjoint/topology/level-set 全套逆向设计
   - 学术：Molesky et al., Nature Photonics 2018 逆向设计综述
+<<<<<<< HEAD
 - **R1 修复进展**：
   - ✅ stage10 JAX 可微分 FDTD + jax.grad 自动微分（替代 lumopt 手动伴随方程）
   - ✅ sigmoid 软边界参数化波导宽度，梯度上升优化 FoM
@@ -302,15 +322,24 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 #### P2-2 无光电协同仿真
 - **现状**：**R1 已实现自研 MNA SPICE 求解器（stage8）**，真实电路仿真（DC + 瞬态分析），PAM4 BER=0.019
+=======
+- **解决办法**：集成 lumopt 开源 adjoint 框架（v3.0，`pip install lumopt`，直接用原工具）
+
+#### P2-2 无光电协同仿真
+- **现状**：opto_electrical.py 仅基础光电布线，无 SPICE 联合仿真
+>>>>>>> trae/solo-agent-pkVjID
 - **商业标杆**：
   - Lumerical-Synopsys OptoCompiler：Photonic Verilog-A + PrimeSim HSPICE 联合
   - Lumerical-Cadence Virtuoso：INTERCONNECT + Spectre 联合
   - VPIphotonics：layout-aware schematic-driven 设计
+<<<<<<< HEAD
 - **R1 修复进展**：
   - ✅ stage8 自研 MNA SPICE 求解器（Ho et al. IEEE ISCAS 1974，改进节点分析法）
   - ✅ DC 工作点分析 + 后向欧拉瞬态分析
   - ✅ 光电联合链路电路模型（PAM4 调制器 + 探测器 + TIA）
   - ⚠️ 仍缺：Ngspice 真实联合仿真（Ngspice 未安装时降级为 MNA）、Verilog-A 编译
+=======
+>>>>>>> trae/solo-agent-pkVjID
 - **解决办法**：集成 Verilog-A 光子模型 + SPICE 联合仿真（v3.0）
 
 #### P2-3 无 GUI 与协同设计
@@ -405,6 +434,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 ### 5.1 综合得分对比
 
+<<<<<<< HEAD
 > 更新日期: 2026-06-24（R1 迭代修复后，基于 showcase 10/10 stage 全部成功证据）
 
 | 评估维度 | PoLaRIS R1 修复后 | 商业领先 | 差距 | v2.0 目标 |
@@ -437,6 +467,21 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 - **GUI 4/10**: 仅 web 卡片页（report.md），非交互式编辑器（v3.0 解决）
 - **用户规模 2/10**: 0 tape-out, 0 外部用户（需真实流片验证）
 - **AI 能力 6/10**: 仅 PPO 前向推理，未实现 Edge-GNN + 预训练-微调（v2.0 解决）
+=======
+| 评估维度 | PoLaRIS 当前 | 商业领先 | 差距 | v2.0 目标 |
+|----------|-------------|----------|------|-----------|
+| 布局算法先进性 | 6/10 | AlphaChip 9/10 | -3 | 8/10 |
+| 布线算法完整度 | 5/10 | Innovus 9/10 | -4 | 8/10 |
+| 仿真精度 | 5/10 | Lumerical 10/10 | -5 | 7/10 |
+| PDK 覆盖 | 4/10 | Luceda 9/10 | -5 | 7/10 |
+| AI 能力 | 7/10 | AlphaChip 10/10 | -3 | 9/10 |
+| 工艺节点支持 | 3/10 | ICC2 10/10 | -7 | 6/10 |
+| GDS/DRC/LVS 链路 | 4/10 | Lumerical 9/10 | -5 | 8/10 |
+| 性能规模 | 3/10 | ICC2 10/10 | -7 | 7/10 |
+| 开源开放 | 9/10 | gdsfactory 9/10 | 0 | 9/10 |
+| 文档与测试 | 8/10 | 业界平均 7/10 | +1 | 9/10 |
+| **综合得分** | **5.4/10** | **8.7/10** | **-3.3** | **7.8/10** |
+>>>>>>> trae/solo-agent-pkVjID
 
 ---
 

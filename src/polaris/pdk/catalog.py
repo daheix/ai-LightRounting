@@ -349,6 +349,7 @@ class DeviceCatalog(CatalogSerializerMixin):
         """
         return [d for d in self._devices.values() if d.category == category]
 
+<<<<<<< HEAD
     def list_by_process_node(self, process_node: str) -> list[Device]:
         """按工艺节点检索（第75轮 P1-3 深化）。
 
@@ -366,6 +367,8 @@ class DeviceCatalog(CatalogSerializerMixin):
             if d.process_node is not None and d.process_node == process_node
         ]
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
     def list_all(self) -> list[Device]:
         """列出所有器件。
 

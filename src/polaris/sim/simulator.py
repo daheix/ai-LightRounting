@@ -32,10 +32,13 @@ from polaris.sim.models import (
 )
 from polaris.sim.types import ModelFunc, SDict
 
+<<<<<<< HEAD
 # 光速（m/s），用于群延迟计算
 # 来源: CODATA 2018 推荐值
 SPEED_OF_LIGHT = 2.99792458e8
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 @dataclass
 class WavelengthRange:
@@ -170,6 +173,7 @@ def simphony_models() -> dict[str, ModelFunc]:
         "siepic_terminator": siepic.terminator,
         "siepic_taper": siepic.taper,
     }
+<<<<<<< HEAD
 
 
 # ---------------------------------------------------------------------------
@@ -431,3 +435,5 @@ def analyze_dispersion(
         "ER_dB": er_db,
         "BW_3dB_nm": bw_3db_nm,
     }
+=======
+>>>>>>> trae/solo-agent-pkVjID

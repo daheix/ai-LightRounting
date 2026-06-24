@@ -277,6 +277,7 @@ class TestPlace:
         assert placements == {}
 
     def test_place_star_topology(self, star_circuit: CircuitSpec) -> None:
+<<<<<<< HEAD
         """星型拓扑应正确布局（合法化后无重叠、在画布内）。"""
         placer = AnalyticalPlacer(star_circuit)
         placements = placer.place()
@@ -288,6 +289,16 @@ class TestPlace:
         # 合法化后应无重叠
         from polaris.data.benchmark_evaluator import evaluate_overlap
         assert evaluate_overlap(star_circuit, placements) == 0
+=======
+        """星型拓扑应正确布局。"""
+        placer = AnalyticalPlacer(star_circuit)
+        placements = placer.place()
+        assert len(placements) == 5
+        # 中心器件 dev_0 应在画布中心附近
+        cx, cy = placements["dev_0"]
+        assert 50 < cx < 150
+        assert 50 < cy < 150
+>>>>>>> trae/solo-agent-pkVjID
 
 
 class TestWarmStartPlacement:
@@ -468,6 +479,7 @@ class TestCommercialGapReduction:
             hpwl = evaluate_hpwl(circuit, placements)
             assert np.isfinite(hpwl), f"{circuit.name} HPWL 非有限"
             assert hpwl > 0, f"{circuit.name} HPWL 非正"
+<<<<<<< HEAD
 
 
 class TestLegalization:
@@ -766,3 +778,5 @@ class TestCongestionAwareLegalization:
         # tilos_ariane 上拥塞感知合法化不应显著增加 max_congestion
         # 允许 1.3x 容差（合法化 FFDH 行选择有随机性，效果取决于电路结构）
         assert cong_cal["max_congestion"] <= cong_plain["max_congestion"] * 1.3
+=======
+>>>>>>> trae/solo-agent-pkVjID

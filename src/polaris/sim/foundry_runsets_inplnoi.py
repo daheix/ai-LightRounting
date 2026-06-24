@@ -84,6 +84,7 @@ HHI_INP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.SPACING,
         description="HHI InP M1_HEATER 最小间距 3.0μm",
     ),
+<<<<<<< HEAD
     DRCRule(
         name="HHI_INP_WG_DENSITY",
         layer_name="WG",
@@ -110,6 +111,8 @@ HHI_INP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.ENCLOSEMENT,
         description="HHI InP VIAC 须被 M1_HEATER 包围 ≥0.5μm（InP 工艺）",
     ),
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ]
 
 
@@ -157,6 +160,7 @@ LIONIX_INP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.MIN_WIDTH,
         description="LioniX InP M1_HEATER 最小宽度 2.5μm",
     ),
+<<<<<<< HEAD
     DRCRule(
         name="LIONIX_INP_WG_DENSITY",
         layer_name="WG",
@@ -183,6 +187,8 @@ LIONIX_INP_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.ENCLOSEMENT,
         description="LioniX InP VIAC 须被 M1_HEATER 包围 ≥0.5μm（InP 工艺）",
     ),
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ]
 
 
@@ -255,6 +261,7 @@ LNOI_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.MIN_WIDTH,
         description="LNOI VIAC 接触孔最小宽度 1.0μm",
     ),
+<<<<<<< HEAD
     DRCRule(
         name="LNOI_WG_DENSITY",
         layer_name="WG",
@@ -273,6 +280,8 @@ LNOI_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.ENCLOSEMENT,
         description="LNOI VIAC 须被 M1_HEATER 包围 ≥0.5μm（LNOI 电极工艺）",
     ),
+=======
+>>>>>>> trae/solo-agent-pkVjID
 ]
 
 

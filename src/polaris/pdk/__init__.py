@@ -6,6 +6,7 @@
 顶层重导出四平台器件工厂汇总表（``SOI_DEVICES``/``SIN_DEVICES``/
 ``INP_DEVICES``/``LNOI_DEVICES``），便于上层代码统一访问：
 ``from polaris.pdk import SOI_DEVICES, LNOI_DEVICES``。
+<<<<<<< HEAD
 
 R09 路标：重导出 gdsfactory PDK 桥接模块（``gdsfactory_pdk_bridge``）的
 公开符号，包括 PDK 注册表、LayerStack/CrossSection 转换、YAML 解析、
@@ -14,10 +15,13 @@ PolarisPDKRegistry、反向转换、版本兼容检测。
 R11 路标：重导出版图参数化代码驱动模块（``pcell``）的公开符号，包括
 ``@polaris_cell`` 装饰器、``PCellMultiView`` 多视图 PCell、``TransformMatrix``
 仿射变换引擎、``ai_generate_pcell`` AI 辅助生成。
+=======
+>>>>>>> trae/solo-agent-pkVjID
 """
 
 from polaris.pdk.catalog import DeviceCatalog, default_catalog
 from polaris.pdk.device import BoundingBox, Device
+<<<<<<< HEAD
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -45,6 +49,8 @@ from polaris.pdk.gdsfactory_pdk_bridge import (
     parse_pic_yaml,
     polaris_to_gdsfactory_component,
 )
+=======
+>>>>>>> trae/solo-agent-pkVjID
 from polaris.pdk.inp import INP_DEVICES
 from polaris.pdk.layer_map import (
     POLARIS_CATEGORY_LAYER_MAP,
@@ -54,6 +60,7 @@ from polaris.pdk.layer_map import (
     get_layer_tuple,
 )
 from polaris.pdk.lnoi import LNOI_DEVICES
+<<<<<<< HEAD
 from polaris.pdk.optodesigner import (
     DesignIntent,
     DesignIntentEngine,
@@ -81,6 +88,8 @@ from polaris.pdk.vpi_pdk import (
     build_ligentec_pdk,
     build_lionix_pdk,
 )
+=======
+>>>>>>> trae/solo-agent-pkVjID
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.sin import SIN_DEVICES
 from polaris.pdk.soi import SOI_DEVICES
@@ -91,6 +100,7 @@ __all__ = [
     "Device",
     "DeviceCatalog",
     "Direction",
+<<<<<<< HEAD
     "GDSFACTORY_PDK_REGISTRY",
     "GDSLayer",
     "GPIC_ALIAS_MAP",
@@ -115,10 +125,18 @@ __all__ = [
     "PolarisPDK",
     "PolarisPDKRegistry",
     "PolarisSection",
+=======
+    "GDSLayer",
+    "INP_DEVICES",
+    "LNOI_DEVICES",
+    "POLARIS_CATEGORY_LAYER_MAP",
+    "POLARIS_GDS_LAYER_MAP",
+>>>>>>> trae/solo-agent-pkVjID
     "Port",
     "SIN_DEVICES",
     "SOI_DEVICES",
     "Source",
+<<<<<<< HEAD
     "TransformMatrix",
     "VersionCompatibility",
     "ai_generate_pcell",
@@ -165,3 +183,9 @@ def __getattr__(name: str):
         from polaris.pdk.gpic import GPIC_DRC_RUNSET
         return GPIC_DRC_RUNSET
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+=======
+    "default_catalog",
+    "get_category_layer_tuple",
+    "get_layer_tuple",
+]
+>>>>>>> trae/solo-agent-pkVjID

@@ -182,6 +182,7 @@ def _extract_devices_from_devrec(layout: db.Layout, cell: db.Cell) -> list[str]:
         region = db.Region(layout.begin_shapes(cell, devrec_idx))
         for i, _shape in enumerate(region.each()):
             devices.append(f"device_{i}")
+<<<<<<< HEAD
     except (KeyError, RuntimeError) as e:
         # DEVREC 层不存在或 KLayout API 异常：记录警告，返回空器件列表
         # 调用方需处理空器件情况（非 fall-back 假数据）
@@ -192,6 +193,10 @@ def _extract_devices_from_devrec(layout: db.Layout, cell: db.Cell) -> list[str]:
             RuntimeWarning,
             stacklevel=2,
         )
+=======
+    except (KeyError, RuntimeError):
+        pass
+>>>>>>> trae/solo-agent-pkVjID
     return devices
 
 
@@ -234,6 +239,7 @@ def _extract_connections_from_proximity(
                 "波导追踪未找到连接关系。如需使用包围盒邻近关系提取连接，"
                 "请显式调用 extract_connections_by_proximity()"
             )
+<<<<<<< HEAD
     except (KeyError, RuntimeError) as e:
         import logging
         logging.getLogger(__name__).error(
@@ -244,6 +250,10 @@ def _extract_connections_from_proximity(
         raise RuntimeError(
             f"波导追踪连接提取失败: {type(e).__name__}: {e}"
         ) from e
+=======
+    except (KeyError, RuntimeError):
+        pass
+>>>>>>> trae/solo-agent-pkVjID
     return connections
 
 

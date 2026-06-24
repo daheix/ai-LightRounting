@@ -99,7 +99,11 @@ def test_get_foundry_runset_valid():
     """测试 get_foundry_runset 返回有效 runset。"""
     runset = get_foundry_runset("AMF")
     assert runset.foundry_name == "AMF"
+<<<<<<< HEAD
     assert runset.process_node == "130nm CMOS, 220nm SOI"
+=======
+    assert runset.process_node == "180nm SOI"
+>>>>>>> trae/solo-agent-pkVjID
     assert runset.material_platform == "SOI"
     assert len(runset.rules) > 0
 
@@ -162,17 +166,29 @@ def test_list_foundry_runsets_by_material_empty():
 
 
 def test_siepic_ebeam_runset_unchanged():
+<<<<<<< HEAD
     """测试 SiEPIC EBeam runset 规则数（第85轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
     from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET
 
     assert len(SIEPIC_EBEAM_DRC_RUNSET) == 10
+=======
+    """测试 SiEPIC EBeam runset 仍是原 8 条规则（向后兼容）。"""
+    from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET
+
+    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 8
+>>>>>>> trae/solo-agent-pkVjID
     runset = FOUNDRY_RUNSETS["SiEPIC_EBeam"]
     assert runset.rules is SIEPIC_EBEAM_DRC_RUNSET
 
 
 def test_amf_runset_rules():
+<<<<<<< HEAD
     """测试 AMF runset 规则数和阈值（第88轮新增 VIAC WIDTH + VIA ENCLOSURE）。"""
     assert len(AMF_DRC_RUNSET) == 13
+=======
+    """测试 AMF runset 规则数和阈值。"""
+    assert len(AMF_DRC_RUNSET) == 10
+>>>>>>> trae/solo-agent-pkVjID
     # WG 最小宽度 0.4μm
     wg_width = next(r for r in AMF_DRC_RUNSET if r.name == "AMF_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.4
@@ -185,8 +201,13 @@ def test_amf_runset_rules():
 
 
 def test_ihp_runset_rules():
+<<<<<<< HEAD
     """测试 IHP runset 规则数和阈值（第86轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
     assert len(IHP_DRC_RUNSET) == 13
+=======
+    """测试 IHP runset 规则数和阈值。"""
+    assert len(IHP_DRC_RUNSET) == 11
+>>>>>>> trae/solo-agent-pkVjID
     # IHP 包含 N/P 掺杂规则
     n_width = next(r for r in IHP_DRC_RUNSET if r.name == "IHP_N_MIN_WIDTH")
     assert n_width.threshold_um == 0.5
@@ -198,8 +219,13 @@ def test_ihp_runset_rules():
 
 
 def test_gf_fotonix_runset_rules():
+<<<<<<< HEAD
     """测试 GF Fotonix 45nm 工艺规则（第86轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
     assert len(GF_FOTONIX_DRC_RUNSET) == 11
+=======
+    """测试 GF Fotonix 45nm 工艺规则（更紧凑的阈值）。"""
+    assert len(GF_FOTONIX_DRC_RUNSET) == 9
+>>>>>>> trae/solo-agent-pkVjID
     # 45nm 工艺 WG 最小宽度 0.3μm（比 180nm 工艺更小）
     wg_width = next(r for r in GF_FOTONIX_DRC_RUNSET if r.name == "GF_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.3
@@ -212,8 +238,13 @@ def test_gf_fotonix_runset_rules():
 
 
 def test_compoundtek_runset_rules():
+<<<<<<< HEAD
     """测试 CompoundTek 130nm SOI runset（第88轮新增 VIAC WIDTH + VIA ENCLOSURE）。"""
     assert len(COMPOUNDTEK_DRC_RUNSET) == 9
+=======
+    """测试 CompoundTek 130nm SOI runset。"""
+    assert len(COMPOUNDTEK_DRC_RUNSET) == 6
+>>>>>>> trae/solo-agent-pkVjID
     wg_width = next(r for r in COMPOUNDTEK_DRC_RUNSET if r.name == "CT_WG_MIN_WIDTH")
     assert wg_width.threshold_um == 0.4
     wg_space = next(r for r in COMPOUNDTEK_DRC_RUNSET if r.name == "CT_WG_MIN_SPACE")
@@ -221,8 +252,13 @@ def test_compoundtek_runset_rules():
 
 
 def test_ligentec_runset_rules():
+<<<<<<< HEAD
     """测试 LIGENTEC SiN 平台 runset（第86轮新增 WGN_DENSITY）。"""
     assert len(LIGENTEC_DRC_RUNSET) == 6
+=======
+    """测试 LIGENTEC SiN 平台 runset。"""
+    assert len(LIGENTEC_DRC_RUNSET) == 5
+>>>>>>> trae/solo-agent-pkVjID
     # SiN 波导最小宽度 0.8μm（比 SOI 0.4μm 更大）
     wgn_width = next(r for r in LIGENTEC_DRC_RUNSET if r.name == "LIG_WGN_MIN_WIDTH")
     assert wgn_width.threshold_um == 0.8
@@ -278,6 +314,7 @@ def test_rule_name_prefix_consistency():
             )
 
 
+<<<<<<< HEAD
 def test_foundry_runset_platform_consistency():
     """测试 foundry_runset 与 foundry_platforms 的 process_node 数据一致性（第91轮新增）。
 
@@ -332,6 +369,8 @@ def test_gf_fotonix_process_node_photonic_layer_160():
     assert node.photonic_layer_nm == 160
 
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 # -- GDS 实际运行测试 --
 
 

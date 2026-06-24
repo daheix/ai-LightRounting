@@ -89,9 +89,9 @@ def test_siepic_ebeam_runset_completeness():
     # 每条规则必须有 name/layer/check_type/threshold
     for rule in SIEPIC_EBEAM_DRC_RUNSET:
         assert rule.name, f"规则缺少 name: {rule}"
-        assert rule.layer_name in (
-            "WG", "DEEPTRENCH", "SLAB150", "GE", "VIAC",
-        ), f"未知层: {rule.layer_name}"
+        assert rule.layer_name in ("WG", "DEEPTRENCH", "SLAB150", "GE"), (
+            f"未知层: {rule.layer_name}"
+        )
         assert rule.threshold_um > 0, f"阈值无效: {rule}"
         assert rule.description, f"缺少描述: {rule}"
 
@@ -168,22 +168,10 @@ def spacing_violation_gds(tmp_path: Path) -> Path:
 
 
 def test_run_gds_clean(clean_gds: Path):
-    """测试 DRC clean 的 GDS 文件。
-
-    第85轮更新：添加 DENSITY 检查后，小测试 GDS 的 WG 层密度可能低于
-    30%（CMP 工艺要求），这是预期行为。本测试只检查非 DENSITY 违规。
-    """
+    """测试 DRC clean 的 GDS 文件。"""
     runner = KLayoutDRCRunner()
     result = runner.run_gds(clean_gds)
-    # 排除 DENSITY 违规（小测试 GDS 不满足 CMP 密度要求是正常的）
-    non_density_violations = [
-        v for v in result.violations
-        if v.vtype != ViolationType.LAYER_DENSITY
-    ]
-    assert len(non_density_violations) == 0, (
-        f"期望非 DENSITY 违规为 0，但有 {len(non_density_violations)} 个: "
-        f"{[v.vtype.value for v in non_density_violations]}"
-    )
+    assert result.is_clean, f"期望 DRC clean，但有 {result.violation_count} 个违规"
     assert result.total_rules == len(SIEPIC_EBEAM_DRC_RUNSET)
     assert result.passed_rules >= 1  # 至少 WG_WIDTH 通过
 
@@ -254,18 +242,11 @@ def test_run_gds_strict_runset(clean_gds: Path):
 
 
 def test_run_klayout_drc_convenience_function(clean_gds: Path):
-    """测试 run_klayout_drc 便捷函数。
-
-    第85轮更新：排除 DENSITY 违规（小测试 GDS 不满足 CMP 密度要求）。
-    """
+    """测试 run_klayout_drc 便捷函数。"""
     violations = run_klayout_drc(clean_gds)
     assert isinstance(violations, list)
-    # 排除 DENSITY 违规（小测试 GDS 不满足 CMP 密度要求是正常的）
-    non_density_violations = [
-        v for v in violations
-        if v.vtype != ViolationType.LAYER_DENSITY
-    ]
-    assert len(non_density_violations) == 0
+    # clean GDS 应无违规
+    assert len(violations) == 0
 
 
 def test_run_klayout_drc_with_violation(violation_gds: Path):
@@ -276,20 +257,12 @@ def test_run_klayout_drc_with_violation(violation_gds: Path):
 
 
 def test_layer_not_in_gds_skipped(clean_gds: Path):
-    """测试 GDS 中不存在的层被跳过（非违规）。
-
-    第85轮更新：排除 DENSITY 违规（小测试 GDS 不满足 CMP 密度要求）。
-    """
+    """测试 GDS 中不存在的层被跳过（非违规）。"""
     # SiEPIC runset 包含 DEEPTRENCH/SLAB150/GE 层，但 clean_gds 只有 WG
     runner = KLayoutDRCRunner()
     result = runner.run_gds(clean_gds)
-    # 排除 DENSITY 违规（小测试 GDS 不满足 CMP 密度要求是正常的）
-    non_density_violations = [
-        v for v in result.violations
-        if v.vtype != ViolationType.LAYER_DENSITY
-    ]
     # 不存在的层不应产生违规
-    assert len(non_density_violations) == 0
+    assert result.is_clean
 
 
 def test_violation_has_location(violation_gds: Path):
@@ -302,96 +275,3 @@ def test_violation_has_location(violation_gds: Path):
         # 位置应在 GDS 坐标范围内
         assert -1000 < v.location[0] < 1000
         assert -1000 < v.location[1] < 1000
-
-
-# -- 第85轮：DENSITY 检查测试 --
-
-
-class TestDensityCheck:
-    """DENSITY DRC 检查测试（第85轮新增）。
-
-    对标 Banerjee, "CMOS Photonic Circuits", Springer 2024，
-    CMP 工艺要求层密度在 30%-70% 范围内。
-    """
-
-    def test_density_check_type_exists(self) -> None:
-        """DENSITY 检查类型应存在。"""
-        assert hasattr(DRCCheckType, "DENSITY")
-        assert DRCCheckType.DENSITY.value == "density"
-
-    def test_drc_rule_max_density_default_none(self) -> None:
-        """DRCRule max_density 默认为 None。"""
-        rule = DRCRule(
-            name="TEST_DENSITY",
-            layer_name="WG",
-            check_type=DRCCheckType.DENSITY,
-            threshold_um=30.0,
-        )
-        assert rule.max_density is None
-
-    def test_drc_rule_max_density_custom(self) -> None:
-        """DRCRule max_density 可自定义。"""
-        rule = DRCRule(
-            name="TEST_DENSITY",
-            layer_name="WG",
-            check_type=DRCCheckType.DENSITY,
-            threshold_um=30.0,
-            max_density=70.0,
-        )
-        assert rule.max_density == 70.0
-
-    def test_siepic_runset_has_density_rule(self) -> None:
-        """SiEPIC runset 应包含 DENSITY 规则。"""
-        density_rules = [
-            r for r in SIEPIC_EBEAM_DRC_RUNSET
-            if r.check_type == DRCCheckType.DENSITY
-        ]
-        assert len(density_rules) >= 1
-        rule = density_rules[0]
-        assert rule.name == "WG_DENSITY"
-        assert rule.layer_name == "WG"
-        assert rule.threshold_um == 30.0  # min density
-        assert rule.max_density == 70.0  # max density
-        assert rule.vtype == ViolationType.LAYER_DENSITY
-
-    def test_siepic_runset_rule_count_increased(self) -> None:
-        """SiEPIC runset 规则数应 >= 9（原 8 + DENSITY）。"""
-        assert len(SIEPIC_EBEAM_DRC_RUNSET) >= 9
-
-    def test_density_check_low_density_violation(self, clean_gds: Path) -> None:
-        """密度超出范围的层应触发 DENSITY 违规。
-
-        clean_gds 的 WG 层填充整个 cell，密度 100%，超过 70% 上限。
-        """
-        density_rule = DRCRule(
-            name="TEST_DENSITY",
-            layer_name="WG",
-            check_type=DRCCheckType.DENSITY,
-            threshold_um=30.0,
-            max_density=70.0,
-            vtype=ViolationType.LAYER_DENSITY,
-            description="测试密度",
-        )
-        runner = KLayoutDRCRunner()
-        result = runner.run_gds(clean_gds, [density_rule])
-        # clean_gds 的 WG 层密度 100%，超过 70% 上限
-        assert len(result.violations) >= 1
-        assert result.violations[0].vtype == ViolationType.LAYER_DENSITY
-
-    def test_density_check_no_violation_when_disabled(self, clean_gds: Path) -> None:
-        """不包含 DENSITY 规则时不应有 DENSITY 违规。"""
-        # 仅运行 WIDTH 规则
-        width_rule = DRCRule(
-            name="TEST_WIDTH",
-            layer_name="WG",
-            check_type=DRCCheckType.WIDTH,
-            threshold_um=0.4,
-            vtype=ViolationType.MIN_WIDTH,
-            description="测试宽度",
-        )
-        runner = KLayoutDRCRunner()
-        result = runner.run_gds(clean_gds, [width_rule])
-        # 不应有 LAYER_DENSITY 违规
-        assert not any(
-            v.vtype == ViolationType.LAYER_DENSITY for v in result.violations
-        )

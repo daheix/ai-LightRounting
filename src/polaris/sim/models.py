@@ -7,9 +7,12 @@
 
 SiPANN 安装失败（ResolutionImpossible），按 project_rules.md 规则 3
 用纯 numpy 100% 复刻其解析模型，通过功率守恒和谐振陷波测试验证。
+<<<<<<< HEAD
 
 R01 改进: 添加参数 schema 验证（dataclass + __post_init__），
 非法参数 raise ValueError 告警退出（禁止 fall-back）。
+=======
+>>>>>>> trae/solo-agent-pkVjID
 """
 
 from __future__ import annotations
@@ -49,6 +52,7 @@ class RingParams:
     coupling: float = 0.01
     loss_db_cm: float = 0.0
 
+<<<<<<< HEAD
     def __post_init__(self) -> None:
         """参数 schema 验证（R01 创新点 2）。
 
@@ -155,6 +159,8 @@ def validate_wavelength(wl: float | np.ndarray) -> np.ndarray:
         raise ValueError(msg)
     return wl_arr
 
+=======
+>>>>>>> trae/solo-agent-pkVjID
 
 def waveguide_s(
     wl: float | np.ndarray = 1.55,
@@ -168,9 +174,28 @@ def waveguide_s(
     光在波导中传播距离 L 后的相位累积与损耗：
     - 相位: phi = 2*pi*neff*L/wl
     - 损耗: alpha = -loss_db_cm * L / (10*4.343) (转换为振幅衰减)
+<<<<<<< HEAD
 
     默认值见 WaveguideParams dataclass。
     来源: Simphony/SiPANN waveguide 模型。
+=======
+    - 群折射率 ng 用于色散计算
+
+    默认值来源:
+    - wl=1.55μm: C 波段中心波长 (ITU-T G.694.1 DWDM 标准)。
+    - length=100μm: SiEPIC EBeam PDK 波导典型长度
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - neff=2.4: SiEPIC EBeam PDK strip waveguide 1550nm 有效折射率典型值
+      (Chrostowski 2015 §2.3)。
+    - ng=4.0: SiEPIC EBeam PDK strip waveguide 1550nm 群折射率典型值
+      (Chrostowski 2015 §2.3)。
+    - loss_db_cm=0.0: 默认无损，调用方按场景设置
+      (SiEPIC EBeam PDK strip waveguide 0.1-3.0 dB/cm)。
+
+    来源:
+    - Simphony waveguide 模型: https://simphonyphotonics.readthedocs.io/
+    - SiPANN waveguide 模型: https://sipann.readthedocs.io/
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     beta = 2.0 * np.pi * neff / wl
@@ -194,11 +219,27 @@ def y_branch_s(
 ) -> SDict:
     """Y 分支 S 参数模型（1进2出/2进1出分束器）。
 
+<<<<<<< HEAD
     理想 3dB 分束器：每个输出端口获得 50% 功率（-3dB）。
     端口: port_1（合束/分束端）, port_2, port_3（两个分支端）
 
     默认值: insertion_loss_db=0.3 (SiEPIC EBeam PDK y_branch 1550nm)。
     来源: Simphony siepic.y_branch, SiPANN y_branch。
+=======
+    理想 3dB 分束器：每个输出端口获得 50% 功率（-3dB），
+    加上插损后实际功率略低于 50%。
+
+    端口: port_1（合束/分束端）, port_2, port_3（两个分支端）
+
+    默认值来源:
+    - insertion_loss_db=0.3: SiEPIC EBeam PDK y_branch 1550nm 典型插损 0.3dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      Simphony SiEPIC y_branch 默认值)。
+
+    来源:
+    - Simphony siepic.y_branch: https://simphonyphotonics.readthedocs.io/
+    - SiPANN y_branch 模型: https://sipann.readthedocs.io/
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     # 功率分束比 0.5，加上插损
@@ -226,11 +267,30 @@ def directional_coupler_s(
 ) -> SDict:
     """定向耦合器 S 参数模型。
 
+<<<<<<< HEAD
     耦合区长度决定分光比。简化模型：coupling 为功率耦合比（0~1）。
     端口: in1, in2, out1, out2（交叉耦合 out2←in1, out1←in2）
 
     默认值见 CouplerParams dataclass。
     来源: SiPANN directional_coupler, Simphony siepic.directional_coupler。
+=======
+    耦合区长度决定分光比。耦合系数 kappa 由间隙 gap 和波长 wl 决定。
+    简化模型：coupling 为功率耦合比（0~1），转换为振幅。
+
+    端口: in1, in2, out1, out2（交叉耦合 out2←in1, out1←in2）
+
+    默认值来源:
+    - coupling=0.5: 3dB 分束典型值 (50:50 分光比)
+      (SiPANN directional_coupler 默认)。
+    - length=10μm: SiEPIC EBeam PDK 定向耦合器耦合区典型长度
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - gap=0.2μm: SiEPIC EBeam PDK 定向耦合器 gap 200nm
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+
+    来源:
+    - SiPANN directional_coupler: https://sipann.readthedocs.io/en/latest/models.html
+    - Simphony siepic.directional_coupler
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     # 振幅耦合系数 = sqrt(功率耦合比)
@@ -267,15 +327,36 @@ def ring_resonator_s(
     """环谐振器 S 参数模型（全通型 single bus）。
 
     传输函数 T = (t - a*e^{i*phi}) / (1 - t*a*e^{i*phi})，
+<<<<<<< HEAD
     t=直通振幅, a=环内损耗, phi=环周相位。端口: in/through。
 
     默认值: radius=10μm, 损耗 0.1 dB/cm (SiEPIC EBeam PDK)。
     来源: SiPANN ring_resonator, Yariv 1997 §10.5 Lorentzian 谐振模型。
+=======
+    t=直通振幅, a=环内损耗, phi=环周相位。无损时传输恒为 1，
+    谐振陷波仅在环内有损耗时出现。端口: in/through/drop（全通型无 drop）。
+
+    默认值来源:
+    - radius=10μm: SiEPIC EBeam PDK ring_resonator 默认半径 10μm
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - 默认损耗 0.1 dB/cm: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗
+      典型值 0.1-3.0 dB/cm，取下限用于显示谐振陷波
+      (Chrostowski 2015 §6.4)。
+
+    来源:
+    - SiPANN ring_resonator: https://sipann.readthedocs.io/en/latest/models.html
+    - Lorentzian 谐振模型: 标准光子学教材
+      (Yariv, "Optical Electronics in Modern Communications", Oxford 1997, §10.5)
+>>>>>>> trae/solo-agent-pkVjID
 
     Args:
         wl: 波长（μm）或波长数组。
         radius: 环半径（μm）。
+<<<<<<< HEAD
         params: 环参数集合，None 时用默认。
+=======
+        params: 环参数集合（neff/ng/coupling/loss_db_cm），None 时用默认。
+>>>>>>> trae/solo-agent-pkVjID
 
     Returns:
         S 参数字典 {(port_out, port_in): np.ndarray}。
@@ -291,7 +372,14 @@ def ring_resonator_s(
     # 环内损耗（振幅）— 默认给一个小损耗以显示谐振
     loss_db_cm = params.loss_db_cm
     if loss_db_cm <= 0:
+<<<<<<< HEAD
         # 默认 0.1 dB/cm 以显示谐振陷波 (SiEPIC EBeam PDK)
+=======
+        # 默认 0.1 dB/cm 以显示谐振陷波
+        # 来源: SiEPIC EBeam PDK strip waveguide 1550nm 传播损耗典型值 0.1-3.0 dB/cm
+        #   SiEPIC_EBeam_PDK, Lukas Chrostowski et al., UBC, MIT 协议
+        #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+>>>>>>> trae/solo-agent-pkVjID
         loss_db_cm = 0.1
     a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
     # 直通振幅（自耦合系数）
@@ -314,10 +402,25 @@ def mmi_1x2_s(
 ) -> SDict:
     """MMI 1x2 S 参数模型（1进2出分束器）。
 
+<<<<<<< HEAD
     理想 3dB 分束器，基于多模干涉原理。端口: in, out1, out2
 
     默认值: insertion_loss_db=0.4 (SiEPIC EBeam PDK mmi1x2 1550nm)。
     来源: gdsfactory mmi1x2, Simphony SiEPIC MMI。
+=======
+    理想 3dB 分束器，与 Y 分支类似但基于多模干涉原理。
+
+    端口: in, out1, out2
+
+    默认值来源:
+    - insertion_loss_db=0.4: SiEPIC EBeam PDK mmi1x2 1550nm 典型插损 0.4dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      gdsfactory mmi1x2 默认插损)。
+
+    来源:
+    - gdsfactory mmi1x2: https://gdsfactory.github.io/gdsfactory/
+    - Simphony SiEPIC MMI 模型
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     amp = 10.0 ** (-(insertion_loss_db + 3.0) / 20.0)
@@ -344,8 +447,18 @@ def mmi_2x2_s(
 
     端口: in1, in2, out1, out2
 
+<<<<<<< HEAD
     默认值: insertion_loss_db=0.5 (SiEPIC EBeam PDK mmi2x2 1550nm)。
     来源: gdsfactory mmi2x2。
+=======
+    默认值来源:
+    - insertion_loss_db=0.5: SiEPIC EBeam PDK mmi2x2 1550nm 典型插损 0.5dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      gdsfactory mmi2x2 默认插损)。
+
+    来源:
+    - gdsfactory mmi2x2: https://gdsfactory.github.io/gdsfactory/
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     amp = 10.0 ** (-(insertion_loss_db + 3.0) / 20.0)
@@ -380,11 +493,29 @@ def grating_coupler_s(
 ) -> SDict:
     """光栅耦合器 S 参数模型（高斯型波长响应）。
 
+<<<<<<< HEAD
     端口: fiber（光纤端）, waveguide（波导端）
 
     默认值: peak_wl=1.55μm, bandwidth_3db=0.04μm, insertion_loss_db=1.9
     (SiEPIC EBeam PDK, Chrostowski 2015 §7.3)。
     来源: Simphony siepic.grating_coupler, gdsfactory grating_coupler。
+=======
+    光栅耦合器有中心波长和带宽，响应曲线近似高斯型。
+
+    端口: fiber（光纤端）, waveguide（波导端）
+
+    默认值来源:
+    - peak_wl=1.55μm: C 波段中心波长 (ITU-T G.694.1)。
+    - bandwidth_3db=0.04μm: SiEPIC EBeam PDK grating_coupler 3dB 带宽 40nm
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)。
+    - insertion_loss_db=1.9: SiEPIC EBeam PDK grating_coupler 1550nm 典型插损
+      1.5-2.5 dB，取中值 1.9dB
+      (Chrostowski 2015 §7.3)。
+
+    来源:
+    - Simphony siepic.grating_coupler: https://simphonyphotonics.readthedocs.io/
+    - gdsfactory grating_coupler: https://gdsfactory.github.io/gdsfactory/
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     # 高斯型波长响应
@@ -408,8 +539,17 @@ def crossing_s(
 
     端口: in1, in2, out1, out2（直通无交叉耦合）
 
+<<<<<<< HEAD
     默认值: insertion_loss_db=0.3 (SiEPIC EBeam PDK crossing 1550nm)。
     来源: gdsfactory crossing。
+=======
+    默认值来源:
+    - insertion_loss_db=0.3: SiEPIC EBeam PDK crossing 1550nm 典型插损 0.3dB
+      (https://github.com/SiEPIC/SiEPIC_EBeam_PDK;
+      gdsfactory crossing 默认插损)。
+
+    来源: gdsfactory crossing
+>>>>>>> trae/solo-agent-pkVjID
     """
     wl = np.asarray(wl, dtype=float)
     amp = 10.0 ** (-insertion_loss_db / 20.0)

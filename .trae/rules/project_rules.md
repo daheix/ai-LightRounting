@@ -1395,6 +1395,7 @@ MVP（v1.0）必须满足：
 | MEEP | https://meep.readthedocs.io/ |
 | Gymnasium | https://gymnasium.farama.org/ |
 | NetworkX | https://networkx.org/ |
+<<<<<<< HEAD
 
 ---
 
@@ -1419,3 +1420,5 @@ MVP（v1.0）必须满足：
 ### 23.4 失败处理
 - 若保活脚本启动失败，立即告警并退出（禁止 fall-back 静默继续）。
 - 若会话中途检测到保活脚本停止，立即重启。
+=======
+>>>>>>> trae/solo-agent-pkVjID

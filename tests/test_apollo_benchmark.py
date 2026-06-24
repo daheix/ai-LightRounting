@@ -28,7 +28,10 @@ from polaris.data.apollo_benchmark import (
 from polaris.data.benchmark_evaluator import (
     evaluate_benchmark,
     evaluate_hpwl,
+<<<<<<< HEAD
     evaluate_insertion_loss,
+=======
+>>>>>>> trae/solo-agent-pkVjID
     evaluate_overlap,
     grid_placement,
 )
@@ -369,6 +372,7 @@ class TestCommercialGapReduction:
             assert isinstance(result.passed, bool)
             assert result.extra["benchmark_source"] == "apollo"
             assert result.extra["process_node"] == "220nm SOI"
+<<<<<<< HEAD
             # 第90轮新增：插入损耗应在 extra 中
             assert "insertion_loss_db" in result.extra
             assert result.extra["insertion_loss_db"] >= 0.0
@@ -465,3 +469,5 @@ class TestCommercialGapReduction:
         assert device_only_loss > 0.0, "器件插入损耗应 > 0（第93轮添加）"
         # 总损耗应 > 器件损耗（波导损耗 > 0）
         assert total_loss > device_only_loss
+=======
+>>>>>>> trae/solo-agent-pkVjID
