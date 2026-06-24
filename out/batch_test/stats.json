@@ -1,0 +1,144 @@
+{
+  "source": "/workspace/out/batch_test/progress.json",
+  "updated": "2026-06-24T14:40:24.621048",
+  "overall": {
+    "total": 220,
+    "success": 220,
+    "success_rate": 1.0,
+    "drc_passed": 220,
+    "drc_rate": 1.0,
+    "avg_loss_db": 3.1458181818181807,
+    "p50_loss_db": 0.93,
+    "p95_loss_db": 22.739999999999984,
+    "p99_loss_db": 22.739999999999984,
+    "avg_elapsed_sec": 20.005549467572614,
+    "p50_elapsed_sec": 0.7134815999997954,
+    "p95_elapsed_sec": 158.83852682769867,
+    "p99_elapsed_sec": 159.89403116134076,
+    "avg_crossings": 1.309090909090909
+  },
+  "by_topology": {
+    "clements_matrix": {
+      "total": 60,
+      "success": 60,
+      "success_rate": 1.0,
+      "drc_passed": 60,
+      "drc_rate": 1.0,
+      "avg_loss_db": 9.203999999999997,
+      "avg_elapsed_sec": 51.495645594666286
+    },
+    "mzi_array": {
+      "total": 80,
+      "success": 80,
+      "success_rate": 1.0,
+      "drc_passed": 80,
+      "drc_rate": 1.0,
+      "avg_loss_db": 0.93,
+      "avg_elapsed_sec": 16.261290123325125
+    },
+    "ring_filter": {
+      "total": 80,
+      "success": 80,
+      "success_rate": 1.0,
+      "drc_passed": 80,
+      "drc_rate": 1.0,
+      "avg_loss_db": 0.8180000000000001,
+      "avg_elapsed_sec": 0.1322367164998468
+    }
+  },
+  "by_scale": {
+    "XS": {
+      "total": 48,
+      "success": 48,
+      "success_rate": 1.0,
+      "drc_passed": 48,
+      "drc_rate": 1.0,
+      "avg_loss_db": 0.9026666666666667,
+      "avg_elapsed_sec": 0.4470941359166621
+    },
+    "S": {
+      "total": 48,
+      "success": 48,
+      "success_rate": 1.0,
+      "drc_passed": 48,
+      "drc_rate": 1.0,
+      "avg_loss_db": 2.1226666666666665,
+      "avg_elapsed_sec": 1.2671511930828576
+    },
+    "M": {
+      "total": 48,
+      "success": 48,
+      "success_rate": 1.0,
+      "drc_passed": 48,
+      "drc_rate": 1.0,
+      "avg_loss_db": 4.542666666666666,
+      "avg_elapsed_sec": 29.867696251270672
+    },
+    "L": {
+      "total": 44,
+      "success": 44,
+      "success_rate": 1.0,
+      "drc_passed": 44,
+      "drc_rate": 1.0,
+      "avg_loss_db": 6.837454545454541,
+      "avg_elapsed_sec": 50.05454539847729
+    },
+    "XL": {
+      "total": 32,
+      "success": 32,
+      "success_rate": 1.0,
+      "drc_passed": 32,
+      "drc_rate": 1.0,
+      "avg_loss_db": 0.8740000000000001,
+      "avg_elapsed_sec": 21.34024029625016
+    }
+  },
+  "by_platform": {
+    "InP": {
+      "total": 56,
+      "success": 56,
+      "success_rate": 1.0,
+      "drc_passed": 56,
+      "drc_rate": 1.0,
+      "avg_loss_db": 3.4957142857142847,
+      "avg_elapsed_sec": 22.46503026982152
+    },
+    "LNOI": {
+      "total": 52,
+      "success": 52,
+      "success_rate": 1.0,
+      "drc_passed": 52,
+      "drc_rate": 1.0,
+      "avg_loss_db": 2.0153846153846153,
+      "avg_elapsed_sec": 11.971771144980966
+    },
+    "SOI": {
+      "total": 56,
+      "success": 56,
+      "success_rate": 1.0,
+      "drc_passed": 56,
+      "drc_rate": 1.0,
+      "avg_loss_db": 3.4957142857142847,
+      "avg_elapsed_sec": 22.50969842835671
+    },
+    "SiN": {
+      "total": 56,
+      "success": 56,
+      "success_rate": 1.0,
+      "drc_passed": 56,
+      "drc_rate": 1.0,
+      "avg_loss_db": 3.4957142857142847,
+      "avg_elapsed_sec": 22.50185671837471
+    }
+  },
+  "failures": {
+    "total": 0,
+    "categories": {},
+    "list": []
+  },
+  "known_routing_issues": {
+    "first_round_routing_failures": 3189,
+    "affected_circuits": 1,
+    "note": "第一轮布线失败但经重试/回退后最终成功，不影响总体成功率"
+  }
+}

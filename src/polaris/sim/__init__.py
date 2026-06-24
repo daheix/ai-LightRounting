@@ -13,6 +13,11 @@
         constraint_checker.py — 约束检查器（16 项 DRC 规则）
         klayout_drc.py     — KLayout DRC runset 适配层（第2轮 P0-1）
         lvs.py             — LVS 基础实现（第3轮 P0-1）
+        graph_lvs.py       — R08 图同构 LVS 比对器
+        hierarchical_drc.py — R09 层次化 DRC 引擎
+        layout_aware.py    — R17 layout-aware 仿真（BBPlacement/ElasticConnector/ParasiticExtractor）
+        building_block.py  — R14 Building Block 抽象（ModelCard/TMatrix/s_to_t/t_to_s）
+        eqdrc.py           — R23 Equation-driven DRC + CurvilinearLVS + FoundryDRCRunset
 
 集成方式（遵守 project_rules.md 规则 2/3）：
 1. 直接集成 simphony + sax（规则 2）
@@ -38,6 +43,30 @@ from polaris.sim.ai_inverse_design import (
     RLDesignConfig,
     RLInverseDesigner,
 )
+from polaris.sim.autodiff import (
+    compute_gradient,
+    compute_jvp,
+    compute_vjp,
+    finite_difference_gradient,
+    optimize_waveguide_lengths,
+    verify_gradient,
+    waveguide_transmission_loss,
+)
+from polaris.sim.backend_selector import (
+    StabilityReport,
+    compute_condition_number,
+    diagnose_stability,
+    select_backend,
+)
+from polaris.sim.building_block import (
+    BBRegistry,
+    BuildingBlock,
+    ModelCard,
+    TMatrix,
+    VirtualExperiment,
+    s_to_t,
+    t_to_s,
+)
 from polaris.sim.caphe_backend import (
     CAPHEFrequencySolver,
     CAPHENetwork,
@@ -48,6 +77,63 @@ from polaris.sim.caphe_time_domain import (
     CAPHETimeDomainSolver,
 )
 from polaris.sim.cascade import cascade_circuit
+from polaris.sim.cascade_backends import (
+    CircuitMatrix,
+    build_circuit_matrix,
+    cascade_additive,
+    cascade_auto,
+    cascade_forward_only,
+    cascade_klu,
+    redheffer_star,
+)
+from polaris.sim.dag_scheduler import (
+    CircuitDAG,
+    cascade_parallel,
+    create_dag,
+    detect_parallel_groups,
+    flat_circuit,
+    schedule_circuit,
+)
+from polaris.sim.eqdrc import (
+    CurvilinearLVS,
+    DRCReportGenerator,
+    EqDRCEngine,
+    EqDRCRule,
+    EqDRCViolation,
+    FoundryDRCCertifier,
+    FoundryDRCRunset,
+)
+from polaris.sim.graph_lvs import (
+    GraphIsomorphismLVSComparer,
+    NetlistEdge,
+    NetlistNode,
+    PhotonicsLVSReport,
+    PhotonicsNetlist,
+    run_graph_lvs,
+)
+from polaris.sim.hierarchical_drc import (
+    HierarchicalDRC,
+    run_hierarchical_drc,
+)
+from polaris.sim.jax_backend import (
+    JAXConfig,
+    benchmark_jit_vs_numpy,
+    cascade_two_port_jax,
+    enable_float64,
+    get_jax_devices,
+    is_jax_available,
+    jit_compile,
+    set_jax_backend,
+    simulate_waveguide_chain_jax,
+    waveguide_s_jax,
+)
+from polaris.sim.layout_aware import (
+    BBPlacement,
+    ElasticConnector,
+    LayoutAwareSimulator,
+    LayoutCircuitFeedback,
+    ParasiticExtractor,
+)
 from polaris.sim.tidy3d_integration import (
     FDTDCrossValidator,
     GPUFDTDConfig,
@@ -267,6 +353,38 @@ __all__ = [
     "GANDesigner",
     "MultiObjectiveOptimizer",
     "ManufactureAwareOptimizer",
+    # R14 Building Block 抽象（ModelCard/TMatrix/s_to_t/t_to_s）
+    "BBRegistry",
+    "BuildingBlock",
+    "ModelCard",
+    "TMatrix",
+    "VirtualExperiment",
+    "s_to_t",
+    "t_to_s",
+    # R17 layout-aware 仿真
+    "BBPlacement",
+    "ElasticConnector",
+    "LayoutAwareSimulator",
+    "LayoutCircuitFeedback",
+    "ParasiticExtractor",
+    # R23 Equation-driven DRC + CurvilinearLVS + FoundryDRCRunset
+    "CurvilinearLVS",
+    "DRCReportGenerator",
+    "EqDRCEngine",
+    "EqDRCRule",
+    "EqDRCViolation",
+    "FoundryDRCCertifier",
+    "FoundryDRCRunset",
+    # R08 图同构 LVS 比对器
+    "GraphIsomorphismLVSComparer",
+    "NetlistEdge",
+    "NetlistNode",
+    "PhotonicsLVSReport",
+    "PhotonicsNetlist",
+    "run_graph_lvs",
+    # R09 层次化 DRC 引擎
+    "HierarchicalDRC",
+    "run_hierarchical_drc",
     # R26 CAPHE 电路仿真后端
     "CAPHENode",
     "CAPHENetwork",
@@ -315,16 +433,6 @@ __all__ = [
     "select_backend",
     "diagnose_stability",
     "StabilityReport",
-    # 网表格式自动适配器（R01 创新点 3）
-    "PolarNetlist",
-    "adapt_netlist",
-    "detect_format",
-    "validate_netlist",
-    # Touchstone 文件
-    "load_touchstone",
-    "save_touchstone",
-    # 级联器
-    "cascade_circuit",
     # R03 级联后端集合（KLU + Redheffer 星积 + Additive + Forward-only + auto）
     "cascade_klu",
     "cascade_auto",
@@ -333,19 +441,6 @@ __all__ = [
     "redheffer_star",
     "build_circuit_matrix",
     "CircuitMatrix",
-    # R04 子网络分解（块三对角 + Schur 补 + 自适应策略 + 增量缓存）
-    "BlockTridiagonalMatrix",
-    "SubnetworkDecomposition",
-    "SubnetworkCache",
-    "schur_complement",
-    "block_thomas_solve",
-    "detect_block_tridiagonal",
-    "build_block_tridiagonal_from_chain",
-    "decompose_circuit",
-    "solve_subnetwork",
-    "merge_subnetworks_via_schur",
-    "select_strategy",
-    "cascade_adaptive",
     # R04 DAG 调度器（DAG 创建 + 拓扑排序 + 并行调度）
     "CircuitDAG",
     "create_dag",
@@ -370,7 +465,30 @@ __all__ = [
     "finite_difference_gradient",
     "verify_gradient",
     "waveguide_transmission_loss",
-    "optimize_waveguide_lengths",
+    # 网表格式自动适配器（R01 创新点 3）
+    "PolarNetlist",
+    "adapt_netlist",
+    "detect_format",
+    "validate_netlist",
+    # Touchstone 文件
+    "load_touchstone",
+    "save_touchstone",
+    # 级联器
+    "cascade_circuit",
+    # R04 子网络分解（块三对角 + Schur 补 + 自适应策略 + 增量缓存）
+    "BlockTridiagonalMatrix",
+    "SubnetworkDecomposition",
+    "SubnetworkCache",
+    "schur_complement",
+    "block_thomas_solve",
+    "detect_block_tridiagonal",
+    "build_block_tridiagonal_from_chain",
+    "decompose_circuit",
+    "solve_subnetwork",
+    "merge_subnetworks_via_schur",
+    "select_strategy",
+    "cascade_adaptive",
+    # 蒙特卡洛仿真
     "MonteCarloResult",
     "monte_carlo_simulate",
     "sensitivity_analysis",
@@ -408,6 +526,20 @@ __all__ = [
     "compare_netlists",
     "extract_netlist_from_gds",
     "run_lvs",
+    # 时域电路仿真
+    "FDTDSimulator",
+    "NonlinearModel",
+    "PMLBoundary",
+    "TimeDomainCircuitSimulator",
+    "YeeGrid",
+    # 系统级仿真
+    "BerEvaluator",
+    "HybridSimulator",
+    "OpticalLink",
+    "SignalFlowGraph",
+    "TimeDomainSimulator",
+    "TLLMLaser",
+    "to_time_domain",
     # R31-R33 Ansys Lumerical 全流程对齐
     "ModeConfig",
     "ModeSolver",
