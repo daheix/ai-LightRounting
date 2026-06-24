@@ -132,12 +132,13 @@ class FDTDResult:
 # =============================================================================
 # SOI 波导解析物理模型常量（独立接口，非 fall-back）
 # =============================================================================
-# 来源: Saleh & Teich, "Fundamentals of Photonics", 3rd ed., Ch. 7
+# 来源: Saleh & Teich, "Fundamentals of Photonics", 3rd ed., Ch. 7,
+#        ISBN: 9781119503338, Wiley, 2019
 # - n_eff @ 1.55μm: 表 7.1（SOI 波导典型值 2.34）
 # - dn/dλ: 式 (7.3-15) 色散关系（典型值 -0.5 /μm）
 # - α: 0.5 dB/cm（SOI 波导工业共识，Soref et al., 1993）
 SOI_N_EFF_CENTER = 2.34  # SOI 波导 @ 1.55μm 典型有效折射率
-SOI_DN_D_LAMBDA = -0.5  # 色散系数 dn/dλ（1/μm）
+SOI_DN_D_LAMBDA = -0.5  # 色散系数 dn/dλ（1/μm），式(7.3-15)
 SOI_ALPHA_DB_PER_UM = 5e-5  # 波导损耗 0.5 dB/cm = 5e-5 dB/μm
 # dB → Np 转换系数: 1 Np = 20/ln(10) dB ≈ 8.686 dB
 # 来源: IEEE Std 100-2000 "Dictionary of IEEE Standards Terms"

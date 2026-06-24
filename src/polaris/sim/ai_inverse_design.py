@@ -66,7 +66,7 @@ except ImportError:  # pragma: no cover - 沙箱已离线打包 JAX
         "这不是 fall-back，而是显式告警的替代后端。"
     )
 
-# 物理常数（来源：SiPANN/SiEPIC PDK 标准值）
+# 物理常数（来源：SiPANN/SiEPIC PDK 标准值, https://github.com/SiEPIC/SiEPIC_EBeam_PDK）
 N_AIR = 1.0  # 空气折射率
 N_SILICON = 3.48  # 硅折射率（1.55μm，来源 SiEPIC EBeam PDK）
 N_SIO2 = 1.44  # 二氧化硅折射率（1.55μm）
@@ -84,6 +84,16 @@ def _transfer_matrix_transmission(
     其中 δ_i = 2π·n_i·d/λ。总传输系数：
         t = 2·n0 / (M00·n0 + M01·n0·ns + M10 + M11·ns)
     传输率 T = |t|²。
+
+    矩阵索引约定说明：
+    - 本实现使用 0-based 索引：M00, M01, M10, M11 对应矩阵行列下标
+      (0,0), (0,1), (1,0), (1,1)。
+    - Born & Wolf《Principles of Optics》§1.6 原文使用 1-based 索引
+      M₁₁, M₁₂, M₂₁, M₂₂，对应关系为：
+        M00 ↔ M₁₁, M01 ↔ M₁₂, M10 ↔ M₂₁, M11 ↔ M₂₂
+    - 传输系数公式 t = 2·n0 / (M₁₁·n0 + M₁₂·n0·ns + M₂₁ + M₂₂·ns)
+      （Born & Wolf §1.6 (55) 式），本实现 0-based 形式完全等价。
+    - 特征矩阵 M_i 的元素排列与文献一致（行优先），仅索引基不同。
 
     Args:
         params: 设计参数 θ∈[0,1]^N，映射为折射率 n_i = n_low + θ_i·(n_high-n_low)。

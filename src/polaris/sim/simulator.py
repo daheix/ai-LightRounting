@@ -85,6 +85,9 @@ class CircuitSimulator:
 
         Returns:
             电路级 S 参数字典。
+
+        Raises:
+            KeyError: 网表中引用的模型未注册时（修复违规 10，不再静默跳过）。
         """
         if wavelengths is None:
             wavelengths = np.linspace(1.5, 1.6, 1000)
@@ -92,8 +95,13 @@ class CircuitSimulator:
         # 计算每个实例的 S 参数
         instance_s: dict[str, SDict] = {}
         for inst_name, model_name in netlist.get("instances", {}).items():
-            if model_name in self.models:
-                instance_s[inst_name] = self.models[model_name](wl=wavelengths, **model_kwargs)
+            if model_name not in self.models:
+                raise KeyError(
+                    f"实例 '{inst_name}' 引用的模型 '{model_name}' 未注册。"
+                    f"已注册模型: {sorted(self.models.keys())}。"
+                    f"请先调用 register_model('{model_name}', ...) 注册该模型。"
+                )
+            instance_s[inst_name] = self.models[model_name](wl=wavelengths, **model_kwargs)
 
         # 级联
         connections = list(netlist.get("connections", {}).items())

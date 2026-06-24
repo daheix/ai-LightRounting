@@ -16,6 +16,7 @@ from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
 from polaris.pdk.sin.sources import (
     _SIN_CONSTRAINTS,
+    _SRC_EEFOCUS_SIN_TOC,
     _SRC_IMEC_SIN,
     _SRC_LI_DAMASCENE,
     _SRC_LIONIX_TRIPLEX,
@@ -392,13 +393,14 @@ def make_sin_material() -> Device:
 
 
 # ===========================================================================
-# 11. SiN 热光系数（台积电 ISSCC 2026）
+# 11. SiN 热光系数（文献典型值 2.4-2.5×10⁻⁵ /K，台积电 ISSCC 2026 为下界）
 # ===========================================================================
 def make_sin_thermo_optic() -> Device:
     """SiN 热光系数。
 
-    热光系数 0.2×10⁻⁴ /K（比 Si 低一个数量级），温度敏感度低。
-    来源: 台积电 ISSCC 2026 硅光平台。
+    热光系数 2.4×10⁻⁵ /K（0.24×10⁻⁴ /K，比 Si 低一个数量级），温度敏感度低。
+    来源: 文献典型值 2.4-2.5×10⁻⁵ /K（eefocus, ResearchGate），
+          台积电 ISSCC 2026 报告 2.0×10⁻⁵ /K 为下界。
     """
     return Device(
         device_id="sin_thermo_optic",
@@ -408,11 +410,11 @@ def make_sin_thermo_optic() -> Device:
         ports=[],  # 材料参数无端口
         bbox=BoundingBox(xmin=0.0, ymin=0.0, xmax=1.0, ymax=1.0),
         params={
-            "thermo_optic_coefficient_per_k": 2.0e-5,  # 0.2×10⁻⁴ /K
+            "thermo_optic_coefficient_per_k": 2.4e-5,  # 2.4×10⁻⁵ /K（文献典型值）
             "si_thermo_optic_coefficient_per_k": 1.8e-4,  # Si 1.8×10⁻⁴ /K（对比）
             "comparison": "比 Si 低一个数量级",
         },
-        source=_SRC_TSMC_ISSCC2026,
+        source=_SRC_EEFOCUS_SIN_TOC,
         constraints=_SIN_CONSTRAINTS,
     )
 

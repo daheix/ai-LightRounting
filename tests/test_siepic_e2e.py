@@ -243,6 +243,7 @@ class TestDemoCircuits:
                         width_um=d.bbox.xmax - d.bbox.xmin,
                         height_um=d.bbox.ymax - d.bbox.ymin,
                         ports=[(p.name, p.x, p.y, p.direction.name) for p in d.ports],
+                        params=dict(d.params),
                     )
                     for d in devices.values()
                 ],

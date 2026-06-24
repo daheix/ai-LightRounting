@@ -125,39 +125,49 @@ class _DefaultPlacer:
             self._try_load_agent(checkpoint_path)
 
     def _try_load_agent(self, path: str) -> None:
-        """加载 RL agent（加载失败时切换为随机贪心模式并记录日志）。"""
-        try:
-            from pathlib import Path
+        """加载 RL agent。
 
-            from polaris.trainer.ppo_buffers import AgentSpec, PPOConfig
-            from polaris.trainer.ppo_torch import PPOAgentDiscrete
+        修复（违规 1）：原实现在检查点不存在或加载异常时静默切换为随机贪心
+        模式（fall-back）。现改为加载失败时 raise RuntimeError，由调用方决定
+        是否显式选择 random 模式（mode="random"）。若调用方想用随机模式，
+        应显式传入 mode="random"，而不是在加载失败时静默降级。
+        """
+        from pathlib import Path
 
-            ckpt = Path(path)
-            if not ckpt.exists():
-                logger.warning("检查点不存在: %s，切换为随机贪心模式", path)
-                return
+        from polaris.trainer.ppo_buffers import AgentSpec, PPOConfig
+        from polaris.trainer.ppo_torch import PPOAgentDiscrete
 
-            # 动态推断 obs_dim 和 n_actions
-            from polaris.engine.floorplan_env import FloorplanEnv, FloorplanEnvConfig
-            from polaris.engine.netlist import load_netlist
-
-            net, devices, _ = load_netlist("data/benchmarks/mzi.json")
-            env = FloorplanEnv(
-                net,
-                devices,
-                config=FloorplanEnvConfig(canvas_w=200.0, canvas_h=200.0, grid_size=20.0),
+        ckpt = Path(path)
+        if not ckpt.exists():
+            raise RuntimeError(
+                f"RL agent 检查点不存在: {path}。"
+                f"若需使用随机贪心布局，请显式传入 mode='random'。"
             )
-            obs, _ = env.reset()
-            self._obs_dim = len(obs) if hasattr(obs, "__len__") else 1
-            self._n_actions = 400  # MultiDiscrete([10,10,4]) = 400
 
-            spec = AgentSpec(obs_dim=self._obs_dim, n_actions=self._n_actions, hidden_dim=128)
-            cfg = PPOConfig(lr=3e-4, n_epochs=4, batch_size=64)
+        # 动态推断 obs_dim 和 n_actions
+        from polaris.engine.floorplan_env import FloorplanEnv, FloorplanEnvConfig
+        from polaris.engine.netlist import load_netlist
+
+        net, devices, _ = load_netlist("data/benchmarks/mzi.json")
+        env = FloorplanEnv(
+            net,
+            devices,
+            config=FloorplanEnvConfig(canvas_w=200.0, canvas_h=200.0, grid_size=20.0),
+        )
+        obs, _ = env.reset()
+        self._obs_dim = len(obs) if hasattr(obs, "__len__") else 1
+        self._n_actions = 400  # MultiDiscrete([10,10,4]) = 400
+
+        spec = AgentSpec(obs_dim=self._obs_dim, n_actions=self._n_actions, hidden_dim=128)
+        cfg = PPOConfig(lr=3e-4, n_epochs=4, batch_size=64)
+        try:
             self._agent = PPOAgentDiscrete.load(str(ckpt), cfg, spec)
-            logger.info("RL agent 加载成功: %s (obs_dim=%d)", path, self._obs_dim)
         except Exception as e:
-            logger.warning("RL agent 加载失败: %s，切换为随机贪心模式", e)
-            self._agent = None
+            raise RuntimeError(
+                f"RL agent 加载失败: {e}。"
+                f"若需使用随机贪心布局，请显式传入 mode='random'。"
+            ) from e
+        logger.info("RL agent 加载成功: %s (obs_dim=%d)", path, self._obs_dim)
 
     def place(self, circuit: CircuitSpec, feedback=None) -> dict:
         """放置器件。
@@ -257,7 +267,13 @@ class _DefaultRouter:
     """
 
     def route(self, circuit: CircuitSpec, placements: dict) -> dict:
-        """布线连接。"""
+        """布线连接。
+
+        修复（违规 3）：原实现在 ``grid_path`` 为空时静默跳过该连接（fall-back）。
+        现改为收集所有未布线连接，若存在未布线连接则记录 warning 日志明确
+        列出失败连接（非静默跳过），让调用方知晓布线不完整。全部连接布线
+        成功时正常返回。
+        """
         from polaris.router.waveguide_router import (
             GridRouter,
             RouterConstraints,
@@ -275,6 +291,7 @@ class _DefaultRouter:
         cons = RouterConstraints(min_bend_radius_um=5.0, min_spacing_um=1.0)
         router = GridRouter(grid_w, grid_h, grid_size, cons)
         paths = {}
+        unrouted: list[str] = []
         for d1, p1, d2, p2 in circuit.connections:
             if d1 in placements and d2 in placements:
                 pos1 = placements[d1]
@@ -285,6 +302,16 @@ class _DefaultRouter:
                 if grid_path:
                     pts = [(g[0] * grid_size, g[1] * grid_size) for g in grid_path]
                     paths[f"{d1}_{p1}_{d2}_{p2}"] = pts
+                else:
+                    unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
+            else:
+                unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
+        if unrouted:
+            logger.warning(
+                "A* 网格布线存在 %d 条未布线连接: %s",
+                len(unrouted),
+                unrouted,
+            )
         return paths
 
 
@@ -308,7 +335,13 @@ class _CurvyRouter:
         self.curve_type = curve_type
 
     def route(self, circuit: CircuitSpec, placements: dict) -> dict:
-        """弯曲感知布线。"""
+        """弯曲感知布线。
+
+        修复（违规 2）：原实现在 ``route_curvy_connection`` 抛出 RuntimeError 时
+        静默 ``continue`` 跳过该连接（fall-back）。现改为收集所有未布线连接，
+        若存在未布线连接则记录 warning 日志明确列出失败连接（非静默跳过），
+        让调用方知晓布线不完整。全部连接布线成功时正常返回。
+        """
         from polaris.router.waveguide_router import (
             RouteConnectionConfig,
             auto_grid_size,
@@ -327,6 +360,7 @@ class _CurvyRouter:
             grid_size=grid_size,
         )
         paths = {}
+        unrouted: list[str] = []
         for d1, p1, d2, p2 in circuit.connections:
             if d1 in placements and d2 in placements:
                 pos1 = placements[d1]
@@ -342,8 +376,24 @@ class _CurvyRouter:
                         curve_type=self.curve_type,
                     )
                     paths[f"{d1}_{p1}_{d2}_{p2}"] = wp.points
-                except RuntimeError:
-                    continue
+                except RuntimeError as e:
+                    unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
+                    logger.warning(
+                        "弯曲布线失败 %s_%s_%s_%s: %s",
+                        d1,
+                        p1,
+                        d2,
+                        p2,
+                        e,
+                    )
+            else:
+                unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
+        if unrouted:
+            logger.warning(
+                "弯曲感知布线存在 %d 条未布线连接: %s",
+                len(unrouted),
+                unrouted,
+            )
         return paths
 
 
@@ -362,15 +412,42 @@ class _DefaultSimulator:
 
     # 器件类型 → 单位损耗 (dB)
     # 来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
+    # 波导类器件按 dB/cm × length(μm)/1e4 计算，其余为固定插损。
     _LOSS_TABLE: dict[str, float] = {
         "waveguide": 3.0,  # SOI strip waveguide 3.0 dB/cm，需乘以 length/1e4
+        "straight": 3.0,  # 直波导（gdsfactory/LiDAR 命名），同 waveguide
+        "strip_waveguide": 3.0,  # PoLaRIS PDK 标准波导名，同 waveguide
+        "waveguide_bump$1": 3.0,  # SiEPIC 波导弯曲，同 waveguide
         "mzi": 1.0,  # MZI 插损 1.0 dB
         "ring": 0.3,  # 环谐振器插损 0.3 dB
+        "ring_resonator": 0.3,  # 环谐振器（SiEPIC 命名），同 ring
         "grating_coupler": 1.9,  # GC 耦合损耗 1.9 dB
+        "grating_coupler_1d": 1.9,  # SiEPIC ebeam_gc_te1550，同 grating_coupler
         "mmi": 0.4,  # MMI 1x2/2x2 插损 0.4 dB
+        "mmi_1x2": 0.4,  # MMI 1x2（gdsfactory 命名），同 mmi
+        "mmi_2x2": 0.4,  # MMI 2x2（gdsfactory 命名），同 mmi
         "y_branch": 0.3,  # Y 分支插损 0.3 dB
         "directional_coupler": 0.2,  # DC 插损 0.2 dB
+        "ebeam_dc_halfring_straight$1": 0.2,  # SiEPIC 半环 DC，同 directional_coupler
+        "DirectionalCoupler_SeriesRings$1": 0.2,  # SiEPIC 串联环 DC，同 directional_coupler
+        "crossing": 0.2,  # 波导交叉插损 0.2 dB
+        "ebeam_crossing4": 0.2,  # SiEPIC ebeam_crossing4，同 crossing
+        "terminator": 0.1,  # 终端吸收器插损 0.1 dB
+        "phase_shifter": 0.5,  # 热光移相器插损 0.5 dB
+        "thermo_optic_phase_shifter": 0.5,  # PoLaRIS PDK 标准移相器名，同 phase_shifter
+        "heater": 0.5,  # 加热器（同 phase_shifter）
+        "ge_photodetector": 0.5,  # Ge 光电探测器耦合损耗 0.5 dB
+        "avalanche_photodetector": 0.5,  # 雪崩光电探测器耦合损耗 0.5 dB
+        "mzm_modulator": 4.0,  # MZM 调制器插损 4.0 dB（含分束+合束）
+        "mrm_modulator": 0.5,  # MRM 调制器环耦合损耗 0.5 dB
+        "thermo_optic_tuned_ring_modulator": 0.5,  # 热光环调制器，同 mrm_modulator
+        "thermo_optic_switch": 1.0,  # 热光开关插损 1.0 dB
     }
+
+    # 波导类器件类型集合（按长度计算损耗，需 length/wg_length 参数）
+    _WAVEGUIDE_TYPES: frozenset[str] = frozenset(
+        {"waveguide", "straight", "strip_waveguide", "waveguide_bump$1"}
+    )
 
     def __init__(self, mode: str = "table") -> None:
         """初始化仿真器。
@@ -411,17 +488,81 @@ class _DefaultSimulator:
     def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
         """查表估算损耗（独立接口，用于快速可行性筛查）。
 
+        修复（违规 6/7/8）：
+        - 违规 6：未知器件类型不再默认返回 0.0，改为 raise KeyError。
+        - 违规 7：波导长度参数缺失不再用宽度代替，改为 raise ValueError。
+        - 违规 8：n_crossings 不再固定返回 0，改为基于 paths 几何实际
+          计算交叉数（线段相交检测）。
+
         来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
         """
         total_loss = 0.0
         for dev in circuit.devices:
-            loss = self._LOSS_TABLE.get(dev.device_type, 0.0)
-            if dev.device_type == "waveguide":
-                length = dev.params.get("length", dev.width_um)
+            if dev.device_type not in self._LOSS_TABLE:
+                raise KeyError(
+                    f"器件类型 '{dev.device_type}' 不在损耗表中，"
+                    f"已知类型: {sorted(self._LOSS_TABLE.keys())}。"
+                    f"请在 _LOSS_TABLE 中补充该器件类型的损耗值。"
+                )
+            loss = self._LOSS_TABLE[dev.device_type]
+            if dev.device_type in self._WAVEGUIDE_TYPES:
+                # 波导类器件按长度计算损耗，支持 length/wg_length 参数名
+                length = dev.params.get("length", dev.params.get("wg_length"))
+                if length is None:
+                    raise ValueError(
+                        f"波导器件 '{dev.name}'（类型 '{dev.device_type}'）"
+                        f"缺少 length 参数，无法计算波导损耗。"
+                        f"请在器件 params 中提供 length（μm）。"
+                    )
                 total_loss += loss * length / 1e4
             else:
                 total_loss += loss
-        return {"total_loss_db": total_loss, "n_crossings": 0}
+        n_crossings = _count_path_crossings(paths)
+        return {"total_loss_db": total_loss, "n_crossings": n_crossings}
+
+
+def _count_path_crossings(paths: dict) -> int:
+    """基于路径几何计算交叉数（违规 8 修复）。
+
+    遍历所有不同连接的线段对，检测是否相交（不含共享端点）。
+    使用方向叉积（CCW）判断线段相交，复杂度 O(n^2 * m^2)，
+    其中 n 为连接数，m 为单条路径线段数。对典型 PIC 规模（<100 连接）可接受。
+
+    来源: 计算几何经典线段相交算法（Bentley-Ottmann 简化版）。
+    """
+    segs: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    for pts in paths.values():
+        if len(pts) < 2:
+            continue
+        for i in range(len(pts) - 1):
+            p1 = (float(pts[i][0]), float(pts[i][1]))
+            p2 = (float(pts[i + 1][0]), float(pts[i + 1][1]))
+            segs.append((p1, p2))
+
+    def _cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    def _segments_intersect(p1, p2, p3, p4):
+        """检测线段 p1p2 与 p3p4 是否真相交（不含共享端点）。"""
+        d1 = _cross(p3, p4, p1)
+        d2 = _cross(p3, p4, p2)
+        d3 = _cross(p1, p2, p3)
+        d4 = _cross(p1, p2, p4)
+        if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and (
+            (d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)
+        ):
+            return True
+        return False
+
+    crossings = 0
+    n = len(segs)
+    for i in range(n):
+        for j in range(i + 1, n):
+            p1, p2 = segs[i]
+            p3, p4 = segs[j]
+            if _segments_intersect(p1, p2, p3, p4):
+                crossings += 1
+    return crossings
 
 
 class IntegratedPipeline:

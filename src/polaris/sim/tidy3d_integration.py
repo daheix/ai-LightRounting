@@ -45,7 +45,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# 物理常数（来源: CODATA 2018, SiPANN/SiEPIC PDK 标准值）
+# 物理常数（来源: CODATA 2018, https://physics.nist.gov/cuu/Constants/;
+#           SiPANN/SiEPIC PDK 标准值, https://github.com/SiEPIC/SiEPIC_EBeam_PDK）
 _C0 = 2.99792458e8  # 真空光速 (m/s)
 _N_SILICON = 3.48  # 硅折射率 @ 1.55μm (SiEPIC EBeam PDK)
 _N_SIO2 = 1.44  # 二氧化硅折射率 @ 1.55μm
@@ -401,7 +402,7 @@ class GPUFDTDEngine:
 
     # 物理常数（SI 单位）
     _MU0: float = field(default=4e-7 * np.pi, repr=False)
-    _EPS0: float = field(default=8.854e-12, repr=False)
+    _EPS0: float = field(default=8.8541878128e-12, repr=False)  # CODATA 2018, https://physics.nist.gov/cuu/Constants/
 
     def _run_fdtd(
         self, eps_full: np.ndarray, dx_um: float | None = None
