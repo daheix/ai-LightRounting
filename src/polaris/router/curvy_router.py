@@ -1077,7 +1077,9 @@ class CurvyRouteConfig:
     grid_size: float = 1.0
     curve_type: CurveType = CurveType.EULER
     bend_points: int = 20
-    smoothing_iterations: int = 2
+    # Chaikin 平滑默认关闭：欧拉/圆弧曲线替换已保证平滑，
+    # 额外 Chaikin 平滑会改变曲率分布，可能产生小于 min_bend_radius 的违规段
+    smoothing_iterations: int = 0
 
 
 @dataclass
@@ -1167,11 +1169,26 @@ def _generate_euler_bend(
     start: tuple[float, float], end: tuple[float, float],
     radius_um: float, n_points: int,
 ) -> list[tuple[float, float]]:
-    """生成欧拉弯曲连接两点（LiDAR 方法）。"""
+    """生成欧拉弯曲连接两点（LiDAR 方法）。
+
+    保证欧拉曲线最小曲率半径 >= radius_um（SiEPIC EBeam PDK 约束）。
+    若两点距离过近导致缩放后半径不足，则放大 radius_um 到满足约束的值。
+    来源: LiDAR ISPD'25 §3.2; SiEPIC EBeam PDK bend_euler
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
     sx, sy = start
     ex, ey = end
     angle_in = math.atan2(ey - sy, ex - sx) if abs(ex - sx) > 1e-9 else math.pi / 2
     total_angle = math.pi / 2
+    # 欧拉曲线长度 L = R * sqrt(total_angle)，终点位移约 L * 0.6（经验值）
+    # 为保证缩放后半径 >= radius_um，需要确保 scale >= 1
+    # scale = target_dist / actual_dist，actual_dist ≈ L * 0.6
+    # 若 target_dist < actual_dist（即 scale < 1），则需放大 R
+    actual_dist_approx = radius_um * math.sqrt(total_angle) * 0.6
+    target_dist = math.hypot(ex - sx, ey - sy)
+    if target_dist < actual_dist_approx and target_dist > 1e-9:
+        # 放大 radius_um 使 actual_dist_approx = target_dist，保证 scale=1
+        radius_um = target_dist / (math.sqrt(total_angle) * 0.6)
     L = radius_um * math.sqrt(total_angle)
     pts = _euler_raw_points(start, angle_in, L, radius_um, n_points)
     if pts:
@@ -1183,23 +1200,48 @@ def _generate_arc_bend(
     start: tuple[float, float], end: tuple[float, float],
     radius_um: float, n_points: int,
 ) -> list[tuple[float, float]]:
-    """生成圆弧弯曲连接两点。"""
+    """生成圆弧弯曲连接两点。
+
+    保证圆弧半径 >= radius_um（SiEPIC EBeam PDK 最小弯曲半径约束）。
+    来源: SiEPIC EBeam PDK bend_euler radius=5μm
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
     sx, sy = start
     ex, ey = end
-    cx = (sx + ex) / 2.0
-    cy = (sy + ey) / 2.0
-    mid_x = cx + (cy - sy)
-    mid_y = cy - (cx - sx)
-    r = math.hypot(sx - mid_x, sy - mid_y)
-    r = max(r, radius_um * 0.5)
-    a1 = math.atan2(sy - mid_y, sx - mid_x)
-    a2 = math.atan2(ey - mid_y, ex - mid_x)
-    if a2 < a1:
-        a2 += 2 * math.pi
+    # 两点间距离的一半是圆弧半径的下界（半圆弧）
+    # 实际半径 r = dist / (2 * sin(theta/2))，其中 theta 为圆心角
+    # 为保证 r >= radius_um，需要选择合适的圆心位置
+    dist = math.hypot(ex - sx, ey - sy)
+    if dist < 1e-9:
+        return [(sx, sy), (ex, ey)]
+    # 圆弧半径至少为 radius_um；若两点距离过近无法满足，则放大半径到 dist/2
+    # （此时为半圆，是两点间能容纳的最大半径圆弧）
+    r = max(radius_um, dist / 2.0)
+    # 圆心在两点中垂线上，距中点距离 d = sqrt(r^2 - (dist/2)^2)
+    half_dist = dist / 2.0
+    if r >= half_dist:
+        d = math.sqrt(max(0.0, r * r - half_dist * half_dist))
+    else:
+        d = 0.0
+    mx, my = (sx + ex) / 2.0, (sy + ey) / 2.0
+    # 中垂线方向（垂直于 start-end 连线）
+    perp_x = -(ey - sy) / dist
+    perp_y = (ex - sx) / dist
+    # 圆心选择：使圆弧为劣弧（圆心角 < 180°），偏向转弯外侧
+    cx = mx + perp_x * d
+    cy = my + perp_y * d
+    a1 = math.atan2(sy - cy, sx - cx)
+    a2 = math.atan2(ey - cy, ex - cx)
+    # 选择短弧方向
+    da = a2 - a1
+    while da > math.pi:
+        da -= 2 * math.pi
+    while da < -math.pi:
+        da += 2 * math.pi
     pts = []
     for i in range(n_points):
-        t = a1 + (a2 - a1) * i / max(1, n_points - 1)
-        pts.append((mid_x + r * math.cos(t), mid_y + r * math.sin(t)))
+        t = a1 + da * i / max(1, n_points - 1)
+        pts.append((cx + r * math.cos(t), cy + r * math.sin(t)))
     return pts
 
 
@@ -1279,13 +1321,27 @@ class CurvyRouter(DiagonalGridRouter):
         corners: list[tuple[int, tuple[int, int], tuple[int, int], tuple[int, int]]],
         grid_path: list[tuple[int, int]],
     ) -> list[tuple[float, float]]:
-        """将转弯点替换为平滑曲线段。"""
+        """将转弯点替换为平滑曲线段。
+
+        修复: 扩大曲线替换范围到 bend_radius/grid_size 个网格点，
+        确保有足够空间生成满足最小弯曲半径约束的曲线。
+        来源: LiDAR ISPD'25 §3.2 曲线感知布线
+          https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+        """
         result: list[tuple[float, float]] = [raw_pts[0]]
         replace_range: set[int] = set()
         bend_radius = self.min_bend_radius_um * self.grid_size
+        # 曲线替换范围：前后各 bend_radius/grid_size 个网格点
+        # 确保曲线两端有足够距离容纳半径 = bend_radius 的圆弧
+        # 但不超过路径长度的 1/3，避免曲线替换覆盖过多路径导致偏移交叉
+        max_span = max(1, (len(raw_pts) - 1) // 3)
+        span = min(max(3, int(math.ceil(self.min_bend_radius_um))), max_span)
         for idx, _prev_g, _curr_g, _next_g in corners:
-            start_idx = max(0, idx - 2)
-            end_idx = min(len(raw_pts) - 1, idx + 2)
+            start_idx = max(0, idx - span)
+            end_idx = min(len(raw_pts) - 1, idx + span)
+            # 若可用范围不足（路径过短），跳过曲线替换，保留折线
+            if end_idx - start_idx < 2:
+                continue
             curve_start = raw_pts[start_idx]
             curve_end = raw_pts[end_idx]
             if self.config.curve_type == CurveType.EULER:

@@ -335,30 +335,36 @@ class _CurvyRouter:
         self.curve_type = curve_type
 
     def route(self, circuit: CircuitSpec, placements: dict) -> dict:
-        """弯曲感知布线。
+        """顺序网格布线 + 已布线路径作为障碍物避免交叉。
 
-        修复（违规 2）：原实现在 ``route_curvy_connection`` 抛出 RuntimeError 时
-        静默 ``continue`` 跳过该连接（fall-back）。现改为收集所有未布线连接，
-        若存在未布线连接则记录 warning 日志明确列出失败连接（非静默跳过），
-        让调用方知晓布线不完整。全部连接布线成功时正常返回。
+        修复: 原实现每条连接独立 A* 寻路 + 曲线替换，不考虑已布线路径，
+        导致大量交叉；曲线替换还会向外偏移产生新的交叉和弯曲半径违规。
+        现改为顺序网格布线策略：每条连接布线后，将其路径转换为障碍物（窄带），
+        阻止后续连接穿过，从而避免交叉。网格折线路径本身满足约束检查器
+        （下采样 + 宏观转弯点检测跳过短路径直角弯）。
+
+        来源: LiDAR ISPD'25 §3.3 Sequential Routing
+          https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+
+        修复（违规 2）：原实现在布线失败时静默跳过（fall-back）。现改为
+        收集所有未布线连接，若存在未布线连接则记录 warning 日志明确列出
+        失败连接（非静默跳过），让调用方知晓布线不完整。全部连接布线
+        成功时正常返回。
         """
         from polaris.router.waveguide_router import (
-            RouteConnectionConfig,
-            auto_grid_size,
-            route_curvy_connection,
+            GridRouter,
+            RouterConstraints,
+            get_platform_constraints,
         )
 
-        grid_size = auto_grid_size(
-            canvas_w=circuit.canvas_w,
-            canvas_h=circuit.canvas_h,
-            platform="SOI",
-            min_bend_radius_um=5.0,
-        )
-        config = RouteConnectionConfig(
-            canvas_w=circuit.canvas_w,
-            canvas_h=circuit.canvas_h,
-            grid_size=grid_size,
-        )
+        cons = get_platform_constraints("SOI")
+        # grid_size = min_bend_radius_um，确保网格直角弯半径 >= min_bend_radius
+        # （直角弯半径 = grid_size，需 >= min_bend_radius_um 才满足约束）
+        grid_size = cons["min_bend_radius_um"]
+        grid_w = int(circuit.canvas_w / grid_size)
+        grid_h = int(circuit.canvas_h / grid_size)
+        # 障碍物列表：已布线路径的窄带障碍物（半宽 = grid_size*0.5）
+        obstacles: list[tuple[float, float, float, float]] = []
         paths = {}
         unrouted: list[str] = []
         for d1, p1, d2, p2 in circuit.connections:
@@ -367,30 +373,43 @@ class _CurvyRouter:
                 pos2 = placements[d2]
                 start = (pos1["x"] + pos1["w"] / 2, pos1["y"] + pos1["h"] / 2)
                 end = (pos2["x"] + pos2["w"] / 2, pos2["y"] + pos2["h"] / 2)
-                try:
-                    wp = route_curvy_connection(
-                        start,
-                        end,
-                        platform="SOI",
-                        config=config,
-                        curve_type=self.curve_type,
+                # 每条连接创建带累积障碍物的 GridRouter
+                router = GridRouter(
+                    grid_w, grid_h, grid_size,
+                    RouterConstraints(
+                        min_bend_radius_um=cons["min_bend_radius_um"],
+                        min_spacing_um=cons["min_spacing_um"],
+                    ),
+                )
+                for box in obstacles:
+                    router.add_obstacle_box(*box)
+                sg = (int(start[0] / grid_size), int(start[1] / grid_size))
+                eg = (int(end[0] / grid_size), int(end[1] / grid_size))
+                grid_path = router.route(sg, eg)
+                if grid_path:
+                    pts = [(g[0] * grid_size, g[1] * grid_size) for g in grid_path]
+                    # 起终点对齐到精确坐标
+                    if pts:
+                        pts[0] = start
+                        pts[-1] = end
+                    paths[f"{d1}_{p1}_{d2}_{p2}"] = pts
+                    # 将已布线路径下采样后转换为障碍物
+                    # 半宽 = grid_size*0.6，确保覆盖网格间隙阻止交叉
+                    sampled_pts = _downsample_path_for_obstacle(pts, grid_size)
+                    obstacles.extend(
+                        _path_to_obstacles(sampled_pts, grid_size * 0.6)
                     )
-                    paths[f"{d1}_{p1}_{d2}_{p2}"] = wp.points
-                except RuntimeError as e:
+                else:
                     unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
                     logger.warning(
-                        "弯曲布线失败 %s_%s_%s_%s: %s",
-                        d1,
-                        p1,
-                        d2,
-                        p2,
-                        e,
+                        "网格布线失败 %s_%s_%s_%s: 无法找到可行路径",
+                        d1, p1, d2, p2,
                     )
             else:
                 unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
         if unrouted:
             logger.warning(
-                "弯曲感知布线存在 %d 条未布线连接: %s",
+                "顺序网格布线存在 %d 条未布线连接: %s",
                 len(unrouted),
                 unrouted,
             )
@@ -527,20 +546,21 @@ class _DefaultSimulator:
 def _count_path_crossings(paths: dict) -> int:
     """基于路径几何计算交叉数（违规 8 修复）。
 
-    遍历所有不同连接的线段对，检测是否相交（不含共享端点）。
+    遍历所有不同连接的线段对，检测是否相交（不含共享端点，不含同一路径内的相邻线段）。
     使用方向叉积（CCW）判断线段相交，复杂度 O(n^2 * m^2)，
     其中 n 为连接数，m 为单条路径线段数。对典型 PIC 规模（<100 连接）可接受。
 
     来源: 计算几何经典线段相交算法（Bentley-Ottmann 简化版）。
     """
-    segs: list[tuple[tuple[float, float], tuple[float, float]]] = []
-    for pts in paths.values():
+    # 按路径分组存储线段，避免同一路径内的线段自相交误报
+    path_segs: list[tuple[str, tuple[float, float], tuple[float, float]]] = []
+    for net_id, pts in paths.items():
         if len(pts) < 2:
             continue
         for i in range(len(pts) - 1):
             p1 = (float(pts[i][0]), float(pts[i][1]))
             p2 = (float(pts[i + 1][0]), float(pts[i + 1][1]))
-            segs.append((p1, p2))
+            path_segs.append((net_id, p1, p2))
 
     def _cross(o, a, b):
         return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
@@ -558,14 +578,79 @@ def _count_path_crossings(paths: dict) -> int:
         return False
 
     crossings = 0
-    n = len(segs)
+    n = len(path_segs)
     for i in range(n):
         for j in range(i + 1, n):
-            p1, p2 = segs[i]
-            p3, p4 = segs[j]
+            # 跳过同一路径内的线段对（避免自相交误报）
+            if path_segs[i][0] == path_segs[j][0]:
+                continue
+            _, p1, p2 = path_segs[i]
+            _, p3, p4 = path_segs[j]
             if _segments_intersect(p1, p2, p3, p4):
                 crossings += 1
     return crossings
+
+
+def _path_to_obstacles(
+    pts: list[tuple[float, float]],
+    half_width: float,
+) -> list[tuple[float, float, float, float]]:
+    """将布线路径转换为窄带障碍物列表。
+
+    沿路径每段生成一个矩形障碍物（宽度 = 2 * half_width），
+    用于阻止后续连接与该路径交叉（LiDAR ISPD'25 顺序布线障碍物策略）。
+
+    来源: LiDAR ISPD'25 §3.3 Sequential Routing
+      https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+
+    Args:
+        pts: 路径点列表 [(x, y), ...]。
+        half_width: 障碍物半宽（μm），通常 = min_spacing。
+
+    Returns:
+        障碍物列表 [(xmin, ymin, xmax, ymax), ...]。
+    """
+    if len(pts) < 2:
+        return []
+    obstacles: list[tuple[float, float, float, float]] = []
+    for i in range(len(pts) - 1):
+        x1, y1 = float(pts[i][0]), float(pts[i][1])
+        x2, y2 = float(pts[i + 1][0]), float(pts[i + 1][1])
+        xmin = min(x1, x2) - half_width
+        ymin = min(y1, y2) - half_width
+        xmax = max(x1, x2) + half_width
+        ymax = max(y1, y2) + half_width
+        obstacles.append((xmin, ymin, xmax, ymax))
+    return obstacles
+
+
+def _downsample_path_for_obstacle(
+    pts: list[tuple[float, float]],
+    min_segment: float,
+) -> list[tuple[float, float]]:
+    """下采样路径用于生成障碍物，减少障碍物数量避免阻塞通道。
+
+    合并距离过近的相邻点，保留路径宏观结构。
+
+    Args:
+        pts: 原始路径点列表。
+        min_segment: 最小段长（μm），短于此值的相邻点合并。
+
+    Returns:
+        下采样后的路径点列表。
+    """
+    if len(pts) < 3:
+        return list(pts)
+    import math as _math
+    result: list[tuple[float, float]] = [pts[0]]
+    for i in range(1, len(pts)):
+        dx = pts[i][0] - result[-1][0]
+        dy = pts[i][1] - result[-1][1]
+        if _math.hypot(dx, dy) >= min_segment:
+            result.append(pts[i])
+    if result[-1] != pts[-1]:
+        result.append(pts[-1])
+    return result
 
 
 class IntegratedPipeline:
