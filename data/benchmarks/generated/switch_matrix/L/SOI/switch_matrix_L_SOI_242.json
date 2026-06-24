@@ -2135,6 +2135,806 @@
         "switch_time_ns": 10.0,
         "source": "Benes 1965; Spanke & Murphy JLT 1988"
       }
+    },
+    {
+      "name": "wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_in16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "wg_out16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
     }
   ],
   "connections": [
@@ -2713,6 +3513,198 @@
       "out2",
       "sw56",
       "in2"
+    ],
+    [
+      "wg_in1",
+      "out",
+      "sw1",
+      "in1"
+    ],
+    [
+      "wg_in2",
+      "out",
+      "sw1",
+      "in2"
+    ],
+    [
+      "wg_in3",
+      "out",
+      "sw2",
+      "in1"
+    ],
+    [
+      "wg_in4",
+      "out",
+      "sw2",
+      "in2"
+    ],
+    [
+      "wg_in5",
+      "out",
+      "sw3",
+      "in1"
+    ],
+    [
+      "wg_in6",
+      "out",
+      "sw3",
+      "in2"
+    ],
+    [
+      "wg_in7",
+      "out",
+      "sw4",
+      "in1"
+    ],
+    [
+      "wg_in8",
+      "out",
+      "sw4",
+      "in2"
+    ],
+    [
+      "wg_in9",
+      "out",
+      "sw5",
+      "in1"
+    ],
+    [
+      "wg_in10",
+      "out",
+      "sw5",
+      "in2"
+    ],
+    [
+      "wg_in11",
+      "out",
+      "sw6",
+      "in1"
+    ],
+    [
+      "wg_in12",
+      "out",
+      "sw6",
+      "in2"
+    ],
+    [
+      "wg_in13",
+      "out",
+      "sw7",
+      "in1"
+    ],
+    [
+      "wg_in14",
+      "out",
+      "sw7",
+      "in2"
+    ],
+    [
+      "wg_in15",
+      "out",
+      "sw8",
+      "in1"
+    ],
+    [
+      "wg_in16",
+      "out",
+      "sw8",
+      "in2"
+    ],
+    [
+      "sw49",
+      "out1",
+      "wg_out1",
+      "in"
+    ],
+    [
+      "sw49",
+      "out2",
+      "wg_out2",
+      "in"
+    ],
+    [
+      "sw50",
+      "out1",
+      "wg_out3",
+      "in"
+    ],
+    [
+      "sw50",
+      "out2",
+      "wg_out4",
+      "in"
+    ],
+    [
+      "sw51",
+      "out1",
+      "wg_out5",
+      "in"
+    ],
+    [
+      "sw51",
+      "out2",
+      "wg_out6",
+      "in"
+    ],
+    [
+      "sw52",
+      "out1",
+      "wg_out7",
+      "in"
+    ],
+    [
+      "sw52",
+      "out2",
+      "wg_out8",
+      "in"
+    ],
+    [
+      "sw53",
+      "out1",
+      "wg_out9",
+      "in"
+    ],
+    [
+      "sw53",
+      "out2",
+      "wg_out10",
+      "in"
+    ],
+    [
+      "sw54",
+      "out1",
+      "wg_out11",
+      "in"
+    ],
+    [
+      "sw54",
+      "out2",
+      "wg_out12",
+      "in"
+    ],
+    [
+      "sw55",
+      "out1",
+      "wg_out13",
+      "in"
+    ],
+    [
+      "sw55",
+      "out2",
+      "wg_out14",
+      "in"
+    ],
+    [
+      "sw56",
+      "out1",
+      "wg_out15",
+      "in"
+    ],
+    [
+      "sw56",
+      "out2",
+      "wg_out16",
+      "in"
     ]
   ],
   "metadata": {

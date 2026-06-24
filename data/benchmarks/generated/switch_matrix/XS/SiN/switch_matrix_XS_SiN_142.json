@@ -45,9 +45,134 @@
         "switch_time_ns": 10.0,
         "source": "Benes 1965; Spanke & Murphy JLT 1988"
       }
+    },
+    {
+      "name": "wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
     }
   ],
-  "connections": [],
+  "connections": [
+    [
+      "wg_in1",
+      "out",
+      "sw1",
+      "in1"
+    ],
+    [
+      "wg_in2",
+      "out",
+      "sw1",
+      "in2"
+    ],
+    [
+      "sw1",
+      "out1",
+      "wg_out1",
+      "in"
+    ],
+    [
+      "sw1",
+      "out2",
+      "wg_out2",
+      "in"
+    ]
+  ],
   "metadata": {
     "seed": 142,
     "platform_source": "https://www.ligentec.com/",

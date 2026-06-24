@@ -1,6 +1,6 @@
 {
   "name": "spanke_matrix_XL_SiN_242",
-  "description": "Spanke 16x16 网络 (XL/SiN)",
+  "description": "Spanke 12x12 网络 (XL/SiN)",
   "platform": "SiN",
   "topology": "spanke_matrix",
   "scale": "XL",
@@ -318,110 +318,6 @@
         "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
         "width_um": 1.0,
         "role": "input_11"
-      }
-    },
-    {
-      "name": "wg13",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "input_12"
-      }
-    },
-    {
-      "name": "wg14",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "input_13"
-      }
-    },
-    {
-      "name": "wg15",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "input_14"
-      }
-    },
-    {
-      "name": "wg16",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "input_15"
       }
     },
     {
@@ -1417,999 +1313,7 @@
       }
     },
     {
-      "name": "dc17",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps17",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc18",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps18",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc19",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps19",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc20",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps20",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc21",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps21",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc22",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps22",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc23",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps23",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc24",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps24",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc25",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps25",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc26",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps26",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc27",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps27",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc28",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps28",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc29",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps29",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc30",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps30",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc31",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps31",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "dc32",
-      "type": "directional_coupler",
-      "width_um": 30.0,
-      "height_um": 10.0,
-      "ports": [
-        [
-          "in1",
-          0.0,
-          7.0,
-          "W"
-        ],
-        [
-          "in2",
-          0.0,
-          3.0,
-          "W"
-        ],
-        [
-          "out1",
-          30.0,
-          7.0,
-          "E"
-        ],
-        [
-          "out2",
-          30.0,
-          3.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "gap_um": 0.2,
-        "coupling_length_um": 20.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "ps32",
-      "type": "phase_shifter",
-      "width_um": 20.0,
-      "height_um": 2.0,
-      "ports": [
-        [
-          "in",
-          0.0,
-          5.0,
-          "W"
-        ],
-        [
-          "out",
-          20.0,
-          5.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "phase_rad": 0.0,
-        "loss_db": 0.1,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-      }
-    },
-    {
-      "name": "wg17",
+      "name": "wg13",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2435,7 +1339,7 @@
       }
     },
     {
-      "name": "wg18",
+      "name": "wg14",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2461,7 +1365,7 @@
       }
     },
     {
-      "name": "wg19",
+      "name": "wg15",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2487,7 +1391,7 @@
       }
     },
     {
-      "name": "wg20",
+      "name": "wg16",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2513,7 +1417,7 @@
       }
     },
     {
-      "name": "wg21",
+      "name": "wg17",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2539,7 +1443,7 @@
       }
     },
     {
-      "name": "wg22",
+      "name": "wg18",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2565,7 +1469,7 @@
       }
     },
     {
-      "name": "wg23",
+      "name": "wg19",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2591,7 +1495,7 @@
       }
     },
     {
-      "name": "wg24",
+      "name": "wg20",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2617,7 +1521,7 @@
       }
     },
     {
-      "name": "wg25",
+      "name": "wg21",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2643,7 +1547,7 @@
       }
     },
     {
-      "name": "wg26",
+      "name": "wg22",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2669,7 +1573,7 @@
       }
     },
     {
-      "name": "wg27",
+      "name": "wg23",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2695,7 +1599,7 @@
       }
     },
     {
-      "name": "wg28",
+      "name": "wg24",
       "type": "strip_waveguide",
       "width_um": 50.0,
       "height_um": 0.5,
@@ -2718,110 +1622,6 @@
         "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
         "width_um": 1.0,
         "role": "output_11"
-      }
-    },
-    {
-      "name": "wg29",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "output_12"
-      }
-    },
-    {
-      "name": "wg30",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "output_13"
-      }
-    },
-    {
-      "name": "wg31",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "output_14"
-      }
-    },
-    {
-      "name": "wg32",
-      "type": "strip_waveguide",
-      "width_um": 50.0,
-      "height_um": 0.5,
-      "ports": [
-        [
-          "in",
-          0.0,
-          0.0,
-          "W"
-        ],
-        [
-          "out",
-          50.0,
-          0.0,
-          "E"
-        ]
-      ],
-      "params": {
-        "length_um": 50.0,
-        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "width_um": 1.0,
-        "role": "output_15"
       }
     }
   ],
@@ -2935,567 +1735,255 @@
       "in"
     ],
     [
-      "wg13",
-      "out",
-      "dc7",
-      "in1"
-    ],
-    [
-      "wg14",
-      "out",
-      "dc7",
-      "in2"
-    ],
-    [
-      "dc7",
-      "out1",
-      "ps7",
-      "in"
-    ],
-    [
-      "wg15",
-      "out",
-      "dc8",
-      "in1"
-    ],
-    [
-      "wg16",
-      "out",
-      "dc8",
-      "in2"
-    ],
-    [
-      "dc8",
-      "out1",
-      "ps8",
-      "in"
-    ],
-    [
       "ps1",
       "out",
-      "dc9",
+      "dc7",
       "in1"
     ],
     [
       "ps2",
       "out",
-      "dc9",
+      "dc7",
       "in2"
     ],
     [
-      "dc9",
+      "dc7",
       "out1",
-      "ps9",
+      "ps7",
       "in"
     ],
     [
       "dc1",
       "out2",
-      "dc10",
+      "dc8",
       "in1"
     ],
     [
       "dc2",
       "out2",
-      "dc10",
+      "dc8",
       "in2"
     ],
     [
-      "dc10",
+      "dc8",
       "out1",
-      "ps10",
+      "ps8",
       "in"
     ],
     [
       "ps3",
       "out",
-      "dc11",
+      "dc9",
       "in1"
     ],
     [
       "ps4",
       "out",
-      "dc11",
+      "dc9",
       "in2"
     ],
     [
-      "dc11",
+      "dc9",
       "out1",
-      "ps11",
+      "ps9",
       "in"
     ],
     [
       "dc3",
       "out2",
-      "dc12",
+      "dc10",
       "in1"
     ],
     [
       "dc4",
       "out2",
-      "dc12",
+      "dc10",
       "in2"
     ],
     [
-      "dc12",
+      "dc10",
       "out1",
-      "ps12",
+      "ps10",
       "in"
     ],
     [
       "ps5",
       "out",
-      "dc13",
+      "dc11",
       "in1"
     ],
     [
       "ps6",
       "out",
-      "dc13",
+      "dc11",
       "in2"
     ],
     [
-      "dc13",
+      "dc11",
       "out1",
-      "ps13",
+      "ps11",
       "in"
     ],
     [
       "dc5",
       "out2",
-      "dc14",
+      "dc12",
       "in1"
     ],
     [
       "dc6",
       "out2",
-      "dc14",
+      "dc12",
       "in2"
     ],
     [
-      "dc14",
+      "dc12",
       "out1",
-      "ps14",
+      "ps12",
       "in"
     ],
     [
       "ps7",
       "out",
-      "dc15",
+      "dc13",
       "in1"
+    ],
+    [
+      "ps9",
+      "out",
+      "dc13",
+      "in2"
+    ],
+    [
+      "dc13",
+      "out1",
+      "ps13",
+      "in"
     ],
     [
       "ps8",
       "out",
-      "dc15",
+      "dc14",
+      "in1"
+    ],
+    [
+      "ps10",
+      "out",
+      "dc14",
       "in2"
     ],
     [
-      "dc15",
+      "dc14",
       "out1",
-      "ps15",
+      "ps14",
       "in"
     ],
     [
       "dc7",
       "out2",
-      "dc16",
+      "dc15",
       "in1"
+    ],
+    [
+      "dc9",
+      "out2",
+      "dc15",
+      "in2"
+    ],
+    [
+      "dc15",
+      "out1",
+      "ps15",
+      "in"
     ],
     [
       "dc8",
       "out2",
       "dc16",
+      "in1"
+    ],
+    [
+      "dc10",
+      "out2",
+      "dc16",
       "in2"
     ],
     [
       "dc16",
       "out1",
       "ps16",
-      "in"
-    ],
-    [
-      "ps9",
-      "out",
-      "dc17",
-      "in1"
-    ],
-    [
-      "ps11",
-      "out",
-      "dc17",
-      "in2"
-    ],
-    [
-      "dc17",
-      "out1",
-      "ps17",
-      "in"
-    ],
-    [
-      "ps10",
-      "out",
-      "dc18",
-      "in1"
-    ],
-    [
-      "ps12",
-      "out",
-      "dc18",
-      "in2"
-    ],
-    [
-      "dc18",
-      "out1",
-      "ps18",
-      "in"
-    ],
-    [
-      "dc9",
-      "out2",
-      "dc19",
-      "in1"
-    ],
-    [
-      "dc11",
-      "out2",
-      "dc19",
-      "in2"
-    ],
-    [
-      "dc19",
-      "out1",
-      "ps19",
-      "in"
-    ],
-    [
-      "dc10",
-      "out2",
-      "dc20",
-      "in1"
-    ],
-    [
-      "dc12",
-      "out2",
-      "dc20",
-      "in2"
-    ],
-    [
-      "dc20",
-      "out1",
-      "ps20",
       "in"
     ],
     [
       "ps13",
       "out",
-      "dc21",
-      "in1"
-    ],
-    [
-      "ps15",
-      "out",
-      "dc21",
-      "in2"
-    ],
-    [
-      "dc21",
-      "out1",
-      "ps21",
+      "wg13",
       "in"
     ],
     [
       "ps14",
       "out",
-      "dc22",
-      "in1"
+      "wg14",
+      "in"
+    ],
+    [
+      "ps15",
+      "out",
+      "wg15",
+      "in"
     ],
     [
       "ps16",
       "out",
-      "dc22",
-      "in2"
-    ],
-    [
-      "dc22",
-      "out1",
-      "ps22",
+      "wg16",
       "in"
     ],
     [
       "dc13",
       "out2",
-      "dc23",
-      "in1"
-    ],
-    [
-      "dc15",
-      "out2",
-      "dc23",
-      "in2"
-    ],
-    [
-      "dc23",
-      "out1",
-      "ps23",
+      "wg17",
       "in"
     ],
     [
       "dc14",
       "out2",
-      "dc24",
-      "in1"
-    ],
-    [
-      "dc16",
-      "out2",
-      "dc24",
-      "in2"
-    ],
-    [
-      "dc24",
-      "out1",
-      "ps24",
-      "in"
-    ],
-    [
-      "ps17",
-      "out",
-      "dc25",
-      "in1"
-    ],
-    [
-      "ps21",
-      "out",
-      "dc25",
-      "in2"
-    ],
-    [
-      "dc25",
-      "out1",
-      "ps25",
-      "in"
-    ],
-    [
-      "ps18",
-      "out",
-      "dc26",
-      "in1"
-    ],
-    [
-      "ps22",
-      "out",
-      "dc26",
-      "in2"
-    ],
-    [
-      "dc26",
-      "out1",
-      "ps26",
-      "in"
-    ],
-    [
-      "ps19",
-      "out",
-      "dc27",
-      "in1"
-    ],
-    [
-      "ps23",
-      "out",
-      "dc27",
-      "in2"
-    ],
-    [
-      "dc27",
-      "out1",
-      "ps27",
-      "in"
-    ],
-    [
-      "ps20",
-      "out",
-      "dc28",
-      "in1"
-    ],
-    [
-      "ps24",
-      "out",
-      "dc28",
-      "in2"
-    ],
-    [
-      "dc28",
-      "out1",
-      "ps28",
-      "in"
-    ],
-    [
-      "dc17",
-      "out2",
-      "dc29",
-      "in1"
-    ],
-    [
-      "dc21",
-      "out2",
-      "dc29",
-      "in2"
-    ],
-    [
-      "dc29",
-      "out1",
-      "ps29",
-      "in"
-    ],
-    [
-      "dc18",
-      "out2",
-      "dc30",
-      "in1"
-    ],
-    [
-      "dc22",
-      "out2",
-      "dc30",
-      "in2"
-    ],
-    [
-      "dc30",
-      "out1",
-      "ps30",
-      "in"
-    ],
-    [
-      "dc19",
-      "out2",
-      "dc31",
-      "in1"
-    ],
-    [
-      "dc23",
-      "out2",
-      "dc31",
-      "in2"
-    ],
-    [
-      "dc31",
-      "out1",
-      "ps31",
-      "in"
-    ],
-    [
-      "dc20",
-      "out2",
-      "dc32",
-      "in1"
-    ],
-    [
-      "dc24",
-      "out2",
-      "dc32",
-      "in2"
-    ],
-    [
-      "dc32",
-      "out1",
-      "ps32",
-      "in"
-    ],
-    [
-      "ps25",
-      "out",
-      "wg17",
-      "in"
-    ],
-    [
-      "ps26",
-      "out",
       "wg18",
       "in"
     ],
     [
-      "ps27",
-      "out",
+      "dc15",
+      "out2",
       "wg19",
       "in"
     ],
     [
-      "ps28",
-      "out",
+      "dc16",
+      "out2",
       "wg20",
       "in"
     ],
     [
-      "ps29",
+      "ps11",
       "out",
       "wg21",
       "in"
     ],
     [
-      "ps30",
+      "ps12",
       "out",
       "wg22",
       "in"
     ],
     [
-      "ps31",
-      "out",
+      "dc11",
+      "out2",
       "wg23",
       "in"
     ],
     [
-      "ps32",
-      "out",
+      "dc12",
+      "out2",
       "wg24",
-      "in"
-    ],
-    [
-      "dc25",
-      "out2",
-      "wg25",
-      "in"
-    ],
-    [
-      "dc26",
-      "out2",
-      "wg26",
-      "in"
-    ],
-    [
-      "dc27",
-      "out2",
-      "wg27",
-      "in"
-    ],
-    [
-      "dc28",
-      "out2",
-      "wg28",
-      "in"
-    ],
-    [
-      "dc29",
-      "out2",
-      "wg29",
-      "in"
-    ],
-    [
-      "dc30",
-      "out2",
-      "wg30",
-      "in"
-    ],
-    [
-      "dc31",
-      "out2",
-      "wg31",
-      "in"
-    ],
-    [
-      "dc32",
-      "out2",
-      "wg32",
       "in"
     ]
   ],
@@ -3505,7 +1993,7 @@
     "wavelength_nm": 1550.0,
     "r_min_um": 100.0,
     "waveguide_width_um": 1.0,
-    "matrix_size": 16,
+    "matrix_size": 12,
     "source": "Spanke & Murphy, JLT 1988"
   }
 }
