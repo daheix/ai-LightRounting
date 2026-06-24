@@ -28,6 +28,15 @@
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 """
 
+from polaris.sim.ai_inverse_design import (
+    AdjointConfig,
+    AdjointOptimizer,
+    GANDesigner,
+    ManufactureAwareOptimizer,
+    MultiObjectiveOptimizer,
+    RLDesignConfig,
+    RLInverseDesigner,
+)
 from polaris.sim.cascade import cascade_circuit
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
@@ -76,6 +85,14 @@ __all__ = [
     # 参数集合（规则 4：降低函数参数个数）
     "RingParams",
     "WavelengthRange",
+    # R29 AI 驱动光子逆向设计
+    "AdjointConfig",
+    "AdjointOptimizer",
+    "RLDesignConfig",
+    "RLInverseDesigner",
+    "GANDesigner",
+    "MultiObjectiveOptimizer",
+    "ManufactureAwareOptimizer",
     # 基础器件 S 参数模型
     "waveguide_s",
     "y_branch_s",
