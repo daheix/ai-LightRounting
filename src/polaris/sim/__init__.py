@@ -37,7 +37,22 @@ from polaris.sim.ai_inverse_design import (
     RLDesignConfig,
     RLInverseDesigner,
 )
+from polaris.sim.caphe_backend import (
+    CAPHEBackend,
+    CAPHENetwork,
+    CAPHENode,
+    CAPHEFrequencySolver,
+    CAPHETimeDomainSolver,
+)
 from polaris.sim.cascade import cascade_circuit
+from polaris.sim.tidy3d_integration import (
+    FDTDCrossValidator,
+    GPUFDTDConfig,
+    GPUFDTDEngine,
+    Tidy3DAdapter,
+    Tidy3DAsyncRunner,
+    Tidy3DConfig,
+)
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
@@ -93,6 +108,19 @@ __all__ = [
     "GANDesigner",
     "MultiObjectiveOptimizer",
     "ManufactureAwareOptimizer",
+    # R26 CAPHE 电路仿真后端
+    "CAPHENode",
+    "CAPHENetwork",
+    "CAPHEFrequencySolver",
+    "CAPHETimeDomainSolver",
+    "CAPHEBackend",
+    # R27+R28 Tidy3D 集成与 GPU FDTD 引擎
+    "Tidy3DConfig",
+    "Tidy3DAdapter",
+    "Tidy3DAsyncRunner",
+    "GPUFDTDConfig",
+    "GPUFDTDEngine",
+    "FDTDCrossValidator",
     # 基础器件 S 参数模型
     "waveguide_s",
     "y_branch_s",
