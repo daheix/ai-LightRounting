@@ -71,18 +71,21 @@ WG_PARAMS_BASE = {
 def _matrix_dims(scale_name: str) -> tuple[int, int]:
     """根据规模名返回 (矩阵维度 N, 阵列数)。
 
-    矩阵拓扑规模映射：
-    - XS: 4x4 单阵列
-    - S:  8x8 单阵列
-    - M:  16x16 单阵列
-    - L:  8x8 双阵列
-    - XL: 16x16 双阵列
+    矩阵拓扑规模映射（调整: 器件数符合规模定义 4-500 器件）：
+    - XS: 2x2 单阵列 (MZI=1, 器件~5)
+    - S:  4x4 单阵列 (MZI=6, 器件~20)
+    - M:  6x6 单阵列 (MZI=15, 器件~50)
+    - L:  8x8 单阵列 (MZI=28, 器件~90)
+    - XL: 12x12 单阵列 (MZI=66, 器件~200)
+
+    注: 原 M=16x16 产生 371 器件 581 连接, 布线 364s 不可接受。
+    Clements/Reck/Spanke 矩阵器件数 = N(N-1)/2 * 3 + 2N (MZI=2DC+1PS)。
     """
     mapping = {
-        "XS": (4, 1), "S": (8, 1), "M": (16, 1),
-        "L": (8, 2), "XL": (16, 2),
+        "XS": (2, 1), "S": (4, 1), "M": (6, 1),
+        "L": (8, 1), "XL": (12, 1),
     }
-    return mapping.get(scale_name, (4, 1))
+    return mapping.get(scale_name, (2, 1))
 
 
 def _array_count(scale_name: str) -> int:
