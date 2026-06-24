@@ -46,6 +46,7 @@ class _CurvyRouter:
     # rip-up and reroute 最大迭代次数（避免死循环）
     # 设为 2 以平衡大规模电路测试速度与布线成功率
     # （1次迭代在M规模SOI上3/5连接成功，2次迭代可提升至4-5/5）
+    # 注: 3次迭代在链式电路上反而更差(rip-up拆掉已布线路径后无法重布)
     _MAX_RIPUP_ITERATIONS = 2
 
     def __init__(self, curve_type: str = "euler") -> None:

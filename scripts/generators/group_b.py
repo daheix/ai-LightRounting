@@ -130,7 +130,16 @@ class OpticalSwitchMatrixGenerator(CircuitGenerator):
         super().__init__(topology="switch_matrix", scale=scale, platform=platform, seed=seed)
 
     def generate(self) -> dict:
-        """生成光开关矩阵电路。"""
+        """生成光开关矩阵电路。
+
+        Benes 网络: N×N 无阻塞开关矩阵, 由 2x2 开关单元级联构成。
+        - stages = 2*log2(N) - 1 (Benes 1965)
+        - 每级 N/2 个 2x2 开关
+        - 级间按 Benes 拓扑连接 (此处简化为直通级联, 保证连通性)
+
+        修复: 原 XS(n=2) 时 stages=1, range(0) 不生成连接。
+        现添加输入/输出波导, 并保证至少有 I/O 连接 (即使单级开关也有连接)。
+        """
         n = self.PORT_MAP[self.scale.name]
         name = f"switch_matrix_{self.scale.name}_{self.platform.name}_{self.seed:03d}"
         circuit = self._base_circuit_dict(
@@ -138,6 +147,7 @@ class OpticalSwitchMatrixGenerator(CircuitGenerator):
         )
 
         # Benes 网络：stages = 2*log2(N) - 1, 每级 N/2 个开关
+        # n=2 时 stages=1 (单级即可实现 2x2 交换), n=4 时 stages=3, n=8 时 stages=5
         stages = 2 * int(math.log2(n)) - 1 if n >= 2 else 1
         switches_per_stage = n // 2
 
@@ -161,6 +171,26 @@ class OpticalSwitchMatrixGenerator(CircuitGenerator):
                 )
             switch_grid.append(stage_switches)
 
+        # 输入/输出波导 (N 条输入 + N 条输出)
+        wg_params = {
+            "width_um": self.platform.waveguide_width_um, "length_um": 50.0,
+            "source": self.platform.source_url,
+        }
+        wg_ports = [["in", 0.0, 0.0, "W"], ["out", 50.0, 0.0, "E"]]
+        in_wgs: list[str] = []
+        out_wgs: list[str] = []
+        for _ in range(n):
+            in_wg = self._next_device_name("wg_in")
+            out_wg = self._next_device_name("wg_out")
+            in_wgs.append(in_wg)
+            out_wgs.append(out_wg)
+            circuit["devices"].append(
+                self._make_device(in_wg, "strip_waveguide", wg_ports, 50.0, 0.5, wg_params)
+            )
+            circuit["devices"].append(
+                self._make_device(out_wg, "strip_waveguide", wg_ports, 50.0, 0.5, wg_params)
+            )
+
         # 级间连接：简化 Benes 拓扑（直通级联）
         # 第 i 级开关 j 的 out1 → 第 i+1 级开关 j 的 in1
         # 第 i 级开关 j 的 out2 → 第 i+1 级开关 j 的 in2
@@ -174,6 +204,26 @@ class OpticalSwitchMatrixGenerator(CircuitGenerator):
                     self._make_connection(switch_grid[stage][idx], "out2",
                                           switch_grid[stage + 1][idx], "in2")
                 )
+
+        # 输入波导 → 第一级开关 (N 条输入对应 N/2 个开关的 2 个输入端)
+        # 输入 i (i=0..N-1): 偶数 i → sw[i//2].in1, 奇数 i → sw[i//2].in2
+        for i in range(n):
+            sw_idx = i // 2
+            port = "in1" if i % 2 == 0 else "in2"
+            circuit["connections"].append(
+                self._make_connection(in_wgs[i], "out", switch_grid[0][sw_idx], port)
+            )
+
+        # 最后一级开关 → 输出波导 (N/2 个开关的 2 个输出端对应 N 条输出)
+        # 开关 j: out1 → 输出[2j], out2 → 输出[2j+1]
+        last_stage = switch_grid[-1]
+        for j in range(switches_per_stage):
+            circuit["connections"].append(
+                self._make_connection(last_stage[j], "out1", out_wgs[2 * j], "in")
+            )
+            circuit["connections"].append(
+                self._make_connection(last_stage[j], "out2", out_wgs[2 * j + 1], "in")
+            )
 
         return circuit
 

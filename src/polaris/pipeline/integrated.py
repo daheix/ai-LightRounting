@@ -228,7 +228,7 @@ class _DefaultPlacer:
 
         修复 P0-1: 原网格布局在大器件小画布场景产生重叠（器件尺寸 > 格子尺寸时
         溢出到相邻格子）。现增加: 1) 重叠检测 2) 合法化（推开重叠器件到最近空闲位置）
-        3) 画布空间不足时扩大画布（×1.5）重新布局。
+        3) 画布空间不足时扩大画布（×2.0）重新布局, 最多 5 次。
 
         来源: DREAMPlace 合法化（TCAD 2020 §III.C）
           https://arxiv.org/abs/1904.03522
@@ -242,20 +242,26 @@ class _DefaultPlacer:
 
         canvas_w = circuit.canvas_w
         canvas_h = circuit.canvas_h
-        for attempt in range(3):
+        # 最多扩大 5 次 (×2.0), 每次面积 ×4, 5 次后面积 ×1024
+        # 足以容纳任何合理电路 (50 器件 × 30×20μm = 30000μm², 5 次后画布 ×1024 倍)
+        for attempt in range(5):
             placements = _grid_place(circuit.devices, canvas_w, canvas_h, rng)
-            placements = _legalize_overlaps(placements, canvas_w, canvas_h)
+            # 合法化迭代: 多次扫描消除级联重叠 (单次无法解决 A 推 B 又撞 C 的情况)
+            for _ in range(3):
+                placements = _legalize_overlaps(placements, canvas_w, canvas_h)
+                if not _has_overlap(placements):
+                    break
             if not _has_overlap(placements):
                 return placements
-            # 仍有重叠 → 扩大画布重试
-            canvas_w *= 1.5
-            canvas_h *= 1.5
+            # 仍有重叠 → 扩大画布重试 (×2.0, 比 ×1.5 更快达到足够空间)
+            canvas_w *= 2.0
+            canvas_h *= 2.0
             logger.warning(
-                "P0-1: 画布空间不足，扩大至 %.1f×%.1f μm 重试 (attempt %d/3)",
+                "P0-1: 画布空间不足，扩大至 %.1f×%.1f μm 重试 (attempt %d/5)",
                 canvas_w, canvas_h, attempt + 1,
             )
         logger.warning(
-            "P0-1: 经过 3 次画布扩大仍有重叠，返回最后布局（%d 器件）", n_dev,
+            "P0-1: 经过 5 次画布扩大仍有重叠，返回最后布局（%d 器件）", n_dev,
         )
         return placements
 
@@ -266,7 +272,10 @@ _MIN_PLACE_SPACING_UM = 5.0  # 器件间最小间距 μm
 
 
 def _grid_place(devices, canvas_w: float, canvas_h: float, rng) -> dict:
-    """网格布局：将画布划分为 N×N 网格，每个器件占一格。"""
+    """网格布局：将画布划分为 N×N 网格，每个器件占一格。
+
+    修复: 当格子尺寸 < 器件尺寸时, 器件居中放置 (不随机偏移, 避免溢出重叠)。
+    """
     n_dev = len(devices)
     n_cols = int(math.ceil(math.sqrt(n_dev)))
     n_rows = int(math.ceil(n_dev / n_cols))
@@ -276,10 +285,16 @@ def _grid_place(devices, canvas_w: float, canvas_h: float, rng) -> dict:
     for idx, dev in enumerate(devices):
         row = idx // n_cols
         col = idx % n_cols
+        # 格子足够大: 随机偏移; 格子过小: 居中放置 (避免溢出)
         avail_w = max(cell_w - dev.width_um - _MIN_PLACE_SPACING_UM, 0)
         avail_h = max(cell_h - dev.height_um - _MIN_PLACE_SPACING_UM, 0)
-        offset_x = rng.uniform(0, avail_w) if avail_w > 0 else 0.0
-        offset_y = rng.uniform(0, avail_h) if avail_h > 0 else 0.0
+        if avail_w > 0 and avail_h > 0:
+            offset_x = rng.uniform(0, avail_w)
+            offset_y = rng.uniform(0, avail_h)
+        else:
+            # 格子过小: 器件居中放置 (可能仍有重叠, 由 _legalize_overlaps 处理)
+            offset_x = max((cell_w - dev.width_um) / 2, 0)
+            offset_y = max((cell_h - dev.height_um) / 2, 0)
         x = col * cell_w + _MIN_PLACE_SPACING_UM / 2 + offset_x
         y = row * cell_h + _MIN_PLACE_SPACING_UM / 2 + offset_y
         placements[dev.name] = {"x": x, "y": y, "w": dev.width_um, "h": dev.height_um}
