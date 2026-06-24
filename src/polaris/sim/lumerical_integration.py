@@ -38,7 +38,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# 物理常数（来源: CODATA 2018, SiPANN/SiEPIC PDK 标准值）
+# 物理常数（来源: CODATA 2018, https://physics.nist.gov/cuu/Constants/;
+#           SiPANN/SiEPIC PDK 标准值, https://github.com/SiEPIC/SiEPIC_EBeam_PDK）
 _C0 = 2.99792458e8  # 真空光速 (m/s)
 _Q = 1.602176634e-19  # 电子电荷 (C)
 _KB = 1.380649e-23  # 玻尔兹曼常数 (J/K)

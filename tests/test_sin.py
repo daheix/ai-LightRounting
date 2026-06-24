@@ -201,9 +201,9 @@ def test_sin_material_params_match_literature() -> None:
 
 def test_sin_thermo_optic_params_match_literature() -> None:
     """SiN 热光系数须与文献报告值一致。"""
-    # 热光系数: 0.2×10⁻⁴ /K = 2.0e-5
+    # 热光系数: 2.4×10⁻⁵ /K（文献典型值 2.4-2.5×10⁻⁵ /K，eefocus/ResearchGate）
     to = SIN_DEVICES["sin_thermo_optic"]()
-    assert to.params["thermo_optic_coefficient_per_k"] == pytest.approx(2.0e-5)
+    assert to.params["thermo_optic_coefficient_per_k"] == pytest.approx(2.4e-5)
 
 
 def test_sin_tsmc_waveguide_params_match_literature() -> None:

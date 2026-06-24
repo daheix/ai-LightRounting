@@ -138,6 +138,7 @@ def make_strip_waveguide() -> Device:
         ports=ports,
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=length, ymax=width / 2),
         params={
+            "length": length,  # 波导长度（μm），用于损耗计算
             "thickness_nm": 220,  # SOI 顶层硅厚 220nm（SiEPIC 标准）
             "width_nm": 500,  # 单模条形波导宽 500nm（SiEPIC 默认）
             "loss_db_cm": 3.0,  # 传播损耗 2-3 dB/cm（SiEPIC e-beam 工艺典型值）

@@ -64,37 +64,15 @@ def is_available() -> bool:
 
     Returns:
         True 若 gdsfactory 已安装且 PDK 可正常激活。
-<<<<<<< HEAD
-
-    gdsfactory 9.44.0: 需显式激活 PDK。若未激活，自动激活 generic PDK。
-    来源: https://gdsfactory.github.io/gdsfactory/
-=======
->>>>>>> trae/solo-agent-pkVjID
     """
     if not _HAS_GDSFACTORY:
         return False
     try:
-<<<<<<< HEAD
-=======
         # gdsfactory 8.18.0 API: gdsfactory.pdk.get_active_pdk()
->>>>>>> trae/solo-agent-pkVjID
         from gdsfactory.pdk import get_active_pdk
 
         get_active_pdk()
         return True
-<<<<<<< HEAD
-    except ValueError:
-        # PDK 未激活，尝试自动激活 generic PDK
-        try:
-            import gdsfactory as gf
-
-            gf.gpdk.PDK.activate()
-            get_active_pdk()
-            return True
-        except Exception:
-            return False
-=======
->>>>>>> trae/solo-agent-pkVjID
     except Exception:
         return False
 
@@ -109,42 +87,36 @@ def generate_mzi_gds(
     生成标准 MZI 结构：gc_in → y_branch → 双臂（长短臂差 delta_length）
     → y_branch → gc_out。使用 ubcpdk 真实器件参数。
 
+    修复（违规 4/5）：
+    - 违规 4：gdsfactory 为必装依赖，不可用时 raise ImportError（不再返回空字符串）。
+    - 违规 5：ubcpdk 为指定 PDK 依赖，不可用时 raise ImportError（不再降级到
+      gdsfactory generic_pdk）。
+
     Args:
         output_path: GDS 输出路径。
         delta_length_um: 两臂长度差（μm，控制 FSR）。
         bend_radius_um: 弯曲半径（μm，SiEPIC 默认 5μm）。
 
     Returns:
-        GDS 文件路径。gdsfactory 不可用时返回空字符串。
+        GDS 文件路径。
+
+    Raises:
+        ImportError: gdsfactory 或 ubcpdk 未安装时。
     """
     if not _HAS_GDSFACTORY:
-        logger.warning(
-            "gdsfactory 未安装，无法生成真实 MZI GDS。可执行 pip install gdsfactory 安装。"
+        raise ImportError(
+            "gdsfactory 未安装，无法生成真实 MZI GDS。"
+            "gdsfactory 为必装依赖，请执行 pip install gdsfactory 安装。"
         )
-        return ""
 
-    try:
-        # 尝试用 ubcpdk 真实器件
-        try:
-            from ubcpdk import PDK, cells
+    # ubcpdk 为指定 PDK 依赖，不可用时 raise（不再降级到 generic_pdk）
+    from ubcpdk import PDK, cells
 
-            PDK.activate()
-            mzi = cells.mzi(delta_length=delta_length_um)
-            mzi.write_gds(output_path)
-            logger.info("ubcpdk MZI GDS 生成: %s", output_path)
-            return output_path
-        except ImportError:
-            # ubcpdk 不可用，用 gdsfactory generic_pdk
-            import gdsfactory as gf
-
-            gf.get_active_pdk()
-            mzi = gf.components.mzi(delta_length=delta_length_um)
-            mzi.write_gds(output_path)
-            logger.info("gdsfactory generic MZI GDS 生成: %s", output_path)
-            return output_path
-    except Exception as e:
-        logger.error("gdsfactory MZI 生成失败: %s", e)
-        return ""
+    PDK.activate()
+    mzi = cells.mzi(delta_length=delta_length_um)
+    mzi.write_gds(output_path)
+    logger.info("ubcpdk MZI GDS 生成: %s", output_path)
+    return output_path
 
 
 def generate_ring_resonator_gds(
@@ -156,40 +128,36 @@ def generate_ring_resonator_gds(
 
     生成单环谐振器：直波导 + 耦合环（半径 radius，间隙 gap）。
 
+    修复（违规 4/5）：
+    - 违规 4：gdsfactory 为必装依赖，不可用时 raise ImportError（不再返回空字符串）。
+    - 违规 5：ubcpdk 为指定 PDK 依赖，不可用时 raise ImportError（不再降级到
+      gdsfactory generic_pdk）。
+
     Args:
         output_path: GDS 输出路径。
         radius_um: 环半径（μm，SiEPIC 默认 5μm）。
         gap_nm: 耦合间隙（nm，SiEPIC 默认 200nm）。
 
     Returns:
-        GDS 文件路径。gdsfactory 不可用时返回空字符串。
+        GDS 文件路径。
+
+    Raises:
+        ImportError: gdsfactory 或 ubcpdk 未安装时。
     """
     if not _HAS_GDSFACTORY:
-        logger.warning(
-            "gdsfactory 未安装，无法生成真实 Ring GDS。可执行 pip install gdsfactory 安装。"
+        raise ImportError(
+            "gdsfactory 未安装，无法生成真实 Ring GDS。"
+            "gdsfactory 为必装依赖，请执行 pip install gdsfactory 安装。"
         )
-        return ""
 
-    try:
-        try:
-            from ubcpdk import PDK, cells
+    # ubcpdk 为指定 PDK 依赖，不可用时 raise（不再降级到 generic_pdk）
+    from ubcpdk import PDK, cells
 
-            PDK.activate()
-            ring = cells.ring_single(radius=radius_um, gap=gap_nm * 1e-3)
-            ring.write_gds(output_path)
-            logger.info("ubcpdk Ring GDS 生成: %s", output_path)
-            return output_path
-        except ImportError:
-            import gdsfactory as gf
-
-            gf.get_active_pdk()
-            ring = gf.components.ring_single(radius=radius_um, gap=gap_nm * 1e-3)
-            ring.write_gds(output_path)
-            logger.info("gdsfactory generic Ring GDS 生成: %s", output_path)
-            return output_path
-    except Exception as e:
-        logger.error("gdsfactory Ring 生成失败: %s", e)
-        return ""
+    PDK.activate()
+    ring = cells.ring_single(radius=radius_um, gap=gap_nm * 1e-3)
+    ring.write_gds(output_path)
+    logger.info("ubcpdk Ring GDS 生成: %s", output_path)
+    return output_path
 
 
 def generate_component_gds(
@@ -202,36 +170,40 @@ def generate_component_gds(
     支持 gdsfactory 标准器件名：straight/bend_euler/mmi1x2/mmi2x2/
     grating_coupler/y_branch/directional_coupler 等。
 
+    修复（违规 4）：gdsfactory 为必装依赖，不可用时 raise ImportError（不再
+    返回空字符串）。器件名不存在时 raise AttributeError（不再返回空字符串）。
+
     Args:
         component_name: gdsfactory 器件名（如 'mmi1x2'）。
         output_path: GDS 输出路径。
         **kwargs: 器件参数（如 length=10.0, width=0.5）。
 
     Returns:
-        GDS 文件路径。gdsfactory 不可用时返回空字符串。
+        GDS 文件路径。
+
+    Raises:
+        ImportError: gdsfactory 未安装时。
+        AttributeError: gdsfactory 无指定器件名时。
     """
     if not _HAS_GDSFACTORY:
-        logger.warning(
-            "gdsfactory 未安装，无法生成 %s GDS。可执行 pip install gdsfactory 安装。",
-            component_name,
+        raise ImportError(
+            f"gdsfactory 未安装，无法生成 {component_name} GDS。"
+            f"gdsfactory 为必装依赖，请执行 pip install gdsfactory 安装。"
         )
-        return ""
 
-    try:
-        import gdsfactory as gf
+    import gdsfactory as gf
 
-        gf.get_active_pdk()
-        component_func = getattr(gf.components, component_name, None)
-        if component_func is None:
-            logger.error("gdsfactory 无 %s 器件", component_name)
-            return ""
-        component = component_func(**kwargs)
-        component.write_gds(output_path)
-        logger.info("gdsfactory %s GDS 生成: %s", component_name, output_path)
-        return output_path
-    except Exception as e:
-        logger.error("gdsfactory %s 生成失败: %s", component_name, e)
-        return ""
+    gf.get_active_pdk()
+    component_func = getattr(gf.components, component_name, None)
+    if component_func is None:
+        raise AttributeError(
+            f"gdsfactory 无 '{component_name}' 器件，"
+            f"请检查器件名是否正确。"
+        )
+    component = component_func(**kwargs)
+    component.write_gds(output_path)
+    logger.info("gdsfactory %s GDS 生成: %s", component_name, output_path)
+    return output_path
 
 
 def list_available_components() -> list[str]:

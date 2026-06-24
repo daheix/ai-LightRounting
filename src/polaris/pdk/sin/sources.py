@@ -17,7 +17,9 @@
 - 台积电 ISSCC 2026 硅光平台
   https://cloud.tencent.com.cn/developer/article/2634252
 - 三星 300mm 硅光平台 OFC 2026
-  https://cloud.tencent.com/developer/article/2650050
+  https://cloud.tencent.com.cn/developer/article/2650050
+- SiN 热光系数文献典型值综述（eefocus / ResearchGate）
+  https://m.eefocus.com/article/2023416.html
 """
 
 from __future__ import annotations
@@ -74,6 +76,15 @@ _SRC_TSMC_ISSCC2026 = Source(
     authors="TSMC",
     year=2026,
     url="https://cloud.tencent.com.cn/developer/article/2634252",
+)
+# SiN 热光系数文献典型值（eefocus 综述 / ResearchGate）
+# 文献典型值 2.4-2.5×10⁻⁵ /K；台积电 ISSCC 2026 报告 2.0×10⁻⁵ /K 为下界
+_SRC_EEFOCUS_SIN_TOC = Source(
+    title="SiN 热光系数典型值综述",
+    authors="eefocus / ResearchGate",
+    year=2023,
+    url="https://m.eefocus.com/article/2023416.html",
+    note="文献典型值 2.4-2.5×10⁻⁵ /K；台积电 ISSCC 2026 报告 2.0×10⁻⁵ /K 为下界",
 )
 
 # SiN 平台通用设计约束（最小间距 2μm，最小弯曲半径 50μm）

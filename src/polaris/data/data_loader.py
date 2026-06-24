@@ -43,11 +43,15 @@ def load_directory(
 
     Returns:
         CircuitSpec 列表。
+
+    Raises:
+        FileNotFoundError: 数据目录不存在时（修复违规 9，不再返回空列表）。
     """
     p = Path(path)
     if not p.exists():
-        logger.error("数据目录不存在: %s", path)
-        return []
+        raise FileNotFoundError(
+            f"数据目录不存在: {path}。请检查路径是否正确。"
+        )
 
     circuits: list[CircuitSpec] = []
     for fp in sorted(p.glob("*.y*ml")):

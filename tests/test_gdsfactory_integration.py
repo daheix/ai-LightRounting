@@ -39,28 +39,28 @@ def test_is_available_returns_bool():
     assert isinstance(result, bool)
 
 
-def test_generate_mzi_gds_unavailable_returns_empty(tmp_path):
-    """gdsfactory 不可用时 generate_mzi_gds 应返回空字符串。"""
+def test_generate_mzi_gds_unavailable_raises(tmp_path):
+    """gdsfactory 不可用时 generate_mzi_gds 应 raise ImportError（违规 4 修复）。"""
     if is_available():
         pytest.skip("gdsfactory 已安装，跳过降级测试")
-    result = generate_mzi_gds(str(tmp_path / "mzi.gds"))
-    assert result == "", "gdsfactory 不可用时应返回空字符串"
+    with pytest.raises(ImportError, match="gdsfactory 未安装"):
+        generate_mzi_gds(str(tmp_path / "mzi.gds"))
 
 
-def test_generate_ring_gds_unavailable_returns_empty(tmp_path):
-    """gdsfactory 不可用时 generate_ring_resonator_gds 应返回空字符串。"""
+def test_generate_ring_gds_unavailable_raises(tmp_path):
+    """gdsfactory 不可用时 generate_ring_resonator_gds 应 raise ImportError（违规 4 修复）。"""
     if is_available():
         pytest.skip("gdsfactory 已安装，跳过降级测试")
-    result = generate_ring_resonator_gds(str(tmp_path / "ring.gds"))
-    assert result == "", "gdsfactory 不可用时应返回空字符串"
+    with pytest.raises(ImportError, match="gdsfactory 未安装"):
+        generate_ring_resonator_gds(str(tmp_path / "ring.gds"))
 
 
-def test_generate_component_gds_unavailable_returns_empty(tmp_path):
-    """gdsfactory 不可用时 generate_component_gds 应返回空字符串。"""
+def test_generate_component_gds_unavailable_raises(tmp_path):
+    """gdsfactory 不可用时 generate_component_gds 应 raise ImportError（违规 4 修复）。"""
     if is_available():
         pytest.skip("gdsfactory 已安装，跳过降级测试")
-    result = generate_component_gds("straight", str(tmp_path / "wg.gds"))
-    assert result == "", "gdsfactory 不可用时应返回空字符串"
+    with pytest.raises(ImportError, match="gdsfactory 未安装"):
+        generate_component_gds("straight", str(tmp_path / "wg.gds"))
 
 
 def test_list_available_components_returns_list():
@@ -100,29 +100,6 @@ def test_list_available_components_has_straight():
 
 
 def test_list_gdsfactory_pdks_returns_list():
-<<<<<<< HEAD
-    """list_gdsfactory_pdks 应返回列表。
-
-    gdsfactory 已安装但 PDK 未激活时，list_gdsfactory_pdks 仍应返回
-    内置 PDK 列表（如 generic），因为 list_gdsfactory_pdks 检查的是
-    import 成功而非 PDK 激活状态。
-    """
-    pdks = list_gdsfactory_pdks()
-    assert isinstance(pdks, list)
-    # 检查 gdsfactory 是否可 import（而非 PDK 是否激活）
-    try:
-        import gdsfactory  # noqa: F401
-
-        has_gf = True
-    except ImportError:
-        has_gf = False
-    if not has_gf:
-        assert len(pdks) == 0
-    else:
-        # gdsfactory 已安装时至少有 generic
-        assert "generic" in pdks
-        assert len(pdks) > 0
-=======
     """list_gdsfactory_pdks 应返回列表。"""
     pdks = list_gdsfactory_pdks()
     assert isinstance(pdks, list)
@@ -132,7 +109,6 @@ def test_list_gdsfactory_pdks_returns_list():
     else:
         # gdsfactory 可用时至少有 generic
         assert "generic" in pdks
->>>>>>> trae/solo-agent-pkVjID
 
 
 def test_load_gdsfactory_pdk_unavailable_returns_empty():

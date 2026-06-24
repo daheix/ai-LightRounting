@@ -87,9 +87,3 @@ follow_imports = "skip"
 testpaths = ["tests"]
 pythonpath = ["src", "3dtool"]
 addopts = "-ra"
-<<<<<<< HEAD
-markers = [
-    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
-]
-=======
->>>>>>> trae/solo-agent-pkVjID

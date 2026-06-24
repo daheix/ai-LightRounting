@@ -173,6 +173,24 @@ def _weno5_side_flux(
 ) -> np.ndarray:
     """计算 WENO5 单侧通量。
 
+    简化实现说明：本实现为 HJ-WENO5 的简化版本，与 Jiang & Peng 2000
+    标准形式有以下差异：
+
+    1. 光滑性指示器 β_k 公式本身与标准形式一致（见下方注释），但标准
+       HJ-WENO5 要求对 Hamiltonian 进行 Lax-Friedrichs 通量分裂
+      （H = H⁺ + H⁻，分别用不同方向的模板），本实现通过左右通量
+       权重反转（c1↔c3）+ 模板反转近似通量分裂，简化了实现。
+    2. 标准 WENO5 在临界点（critical point）附近需使用映射权重
+       （mapped weights, Henrick et al. 2005）以避免精度损失，本实现
+       未使用映射权重，在临界点附近可能降至 3 阶精度。
+    3. 影响：对光滑区域精度为 5 阶；在激波/尖锐边界附近保持单调性，
+       但临界点附近精度可能降低。对水平集演化（曲率流）影响可忽略，
+       因为水平集函数在界面附近通常不存在严格临界点。
+
+    来源: Jiang & Peng, "Weighted ENO Schemes for Hamilton-Jacobi
+    Equations", J. Sci. Comput. 2000, DOI: 10.1023/A:1006419410705
+    https://doi.org/10.1023/A:1006419410705
+
     Args:
         stencils: 5 个偏移切片。
         weights: 理想权重与正则化常数。
@@ -182,7 +200,8 @@ def _weno5_side_flux(
     """
     v1, v2, v3, v4, v5 = stencils.v1, stencils.v2, stencils.v3, stencils.v4, stencils.v5
     c1, c2, c3, eps = weights.c1, weights.c2, weights.c3, weights.eps
-    # 光滑性指示器
+    # 光滑性指示器 β_k（与 Jiang & Peng 2000 标准形式一致，式 (2.2)-(2.4)）
+    # β_k = Σ (13/12)(v_{k-2}-2v_{k-1}+v_k)² + (1/4)(v_{k-2}-4v_{k-1}+3v_k)²
     s1 = 13.0 / 12.0 * (v1 - 2 * v2 + v3) ** 2 + 0.25 * (v1 - 4 * v2 + 3 * v3) ** 2
     s2 = 13.0 / 12.0 * (v2 - 2 * v3 + v4) ** 2 + 0.25 * (v2 - v4) ** 2
     s3 = 13.0 / 12.0 * (v3 - 2 * v4 + v5) ** 2 + 0.25 * (3 * v3 - 4 * v4 + v5) ** 2

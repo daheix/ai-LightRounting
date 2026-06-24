@@ -84,28 +84,10 @@ def _load_raw(data: str | Path | dict) -> dict:
     """
     if isinstance(data, dict):
         raw = data
-<<<<<<< HEAD
-    elif isinstance(data, Path):
-        text = data.read_text(encoding="utf-8")
-        raw = yaml.safe_load(text)
-    else:
-        # 字符串：先判断是否为文件路径（短字符串且无换行符），
-        # 否则视为 YAML/JSON 内容。避免 Path(多行字符串) 触发 OSError。
-        if "\n" not in data and len(data) < 4096:
-            p = Path(data)
-            if p.exists():
-                text = p.read_text(encoding="utf-8")
-                raw = yaml.safe_load(text)
-                if not isinstance(raw, dict):
-                    raise ValueError("网表须为映射（dict）结构")
-                return raw
-        raw = yaml.safe_load(str(data))
-=======
     else:
         p = Path(data)
         text = p.read_text(encoding="utf-8") if p.exists() else str(data)
         raw = yaml.safe_load(text)
->>>>>>> trae/solo-agent-pkVjID
     if not isinstance(raw, dict):
         raise ValueError("网表须为映射（dict）结构")
     return raw

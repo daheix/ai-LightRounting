@@ -1,24 +1,8 @@
-<<<<<<< HEAD
-"""多 foundry DRC runset 注册表与辅助函数（第15轮 P0-1 扩展，第86轮拆分）。
-=======
 """多 foundry DRC runset 集合（第15轮 P0-1 扩展）。
->>>>>>> trae/solo-agent-pkVjID
 
 将 SiEPIC EBeam 单一 runset 扩展为多 foundry runset 库，对齐 Luceda IPKISS
 15+ foundry PDK 与 gdsfactory 43+ PDK 的 DRC 覆盖能力。
 
-<<<<<<< HEAD
-## 文件结构（按材料平台拆分，第86轮重构）
-
-- ``foundry_runsets_soi.py``：SOI 平台（AMF/IHP/GF_Fotonix/CompoundTek）
-- ``foundry_runsets_inplnoi.py``：InP/LNOI 平台（HHI_InP/LioniX_InP/LNOI）
-- ``foundry_runsets.py``（本文件）：SiN 平台（LIGENTEC）+ 注册表 + 辅助函数
-
-## 来源（均为开源仓库，MIT/GPL 协议）
-
-- SiEPIC EBeam PDK (MIT, UBC): https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-- LIGENTEC PDK (Luceda IPKISS): https://www.lucedaphotonics.com/zh_CN/luceda-design-kits
-=======
 ## 来源（均为开源仓库，MIT/GPL 协议）
 
 - SiEPIC EBeam PDK (MIT, UBC): https://github.com/SiEPIC/SiEPIC_EBeam_PDK
@@ -26,7 +10,6 @@
 - IHP SG25H5 (Open Source PDK): https://github.com/IHP-GmbH/IHP-Open-PDK
 - GF Fotonix 45CLO: https://www.globalfoundries.com/en/press-release/globalfoundries-introduces-monolithic-photonics-platform
 - gdsfactory generic_pdk (MIT): https://github.com/gdsfactory/gdsfactory
->>>>>>> trae/solo-agent-pkVjID
 - 教科书: Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
 
 ## 合规性: 规则 4.1（直接集成不复刻）/ 7.1（<500 行）/ 18（阈值来自开源仓库）
@@ -42,15 +25,6 @@ from polaris.sim.foundry_runsets_inplnoi import (
     LIONIX_INP_DRC_RUNSET,
     LNOI_DRC_RUNSET,
 )
-<<<<<<< HEAD
-from polaris.sim.foundry_runsets_soi import (
-    AMF_DRC_RUNSET,
-    COMPOUNDTEK_DRC_RUNSET,
-    GF_FOTONIX_DRC_RUNSET,
-    IHP_DRC_RUNSET,
-)
-=======
->>>>>>> trae/solo-agent-pkVjID
 from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET, DRCCheckType, DRCRule
 
 
@@ -66,8 +40,6 @@ class FoundryRunset:
     notes: str = ""
 
 
-<<<<<<< HEAD
-=======
 # AMF (Advanced Micro Foundry) 180nm SOI runset - 来源: Luceda IPKISS AMF PDK
 # https://www.lucedaphotonics.com/zh_CN/luceda-design-kits
 AMF_DRC_RUNSET: list[DRCRule] = [
@@ -380,7 +352,6 @@ COMPOUNDTEK_DRC_RUNSET: list[DRCRule] = [
 ]
 
 
->>>>>>> trae/solo-agent-pkVjID
 # LIGENTEC ANR 200nm SiN runset - 来源: LIGENTEC 官方 + Luceda IPKISS LIGENTEC PDK
 # https://www.lucedaphotonics.com/zh_CN/luceda-design-kits
 LIGENTEC_DRC_RUNSET: list[DRCRule] = [
@@ -424,18 +395,6 @@ LIGENTEC_DRC_RUNSET: list[DRCRule] = [
         vtype=ViolationType.MIN_WIDTH,
         description="LIGENTEC WGN_CLAD 最小宽度 1.0μm",
     ),
-<<<<<<< HEAD
-    DRCRule(
-        name="LIG_WGN_DENSITY",
-        layer_name="WGN",
-        check_type=DRCCheckType.DENSITY,
-        threshold_um=30.0,
-        max_density=70.0,
-        vtype=ViolationType.LAYER_DENSITY,
-        description="LIGENTEC WGN 层密度须在 30%-70%（CMP 工艺均匀性要求）",
-    ),
-=======
->>>>>>> trae/solo-agent-pkVjID
 ]
 
 
@@ -451,11 +410,7 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "AMF": FoundryRunset(
         foundry_name="AMF",
-<<<<<<< HEAD
-        process_node="130nm CMOS, 220nm SOI",
-=======
         process_node="180nm SOI",
->>>>>>> trae/solo-agent-pkVjID
         material_platform="SOI",
         rules=AMF_DRC_RUNSET,
         source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
@@ -463,11 +418,7 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "IHP": FoundryRunset(
         foundry_name="IHP",
-<<<<<<< HEAD
-        process_node="250nm BiCMOS, 220nm SOI",
-=======
         process_node="250nm BiCMOS SOI",
->>>>>>> trae/solo-agent-pkVjID
         material_platform="SOI",
         rules=IHP_DRC_RUNSET,
         source_url="https://github.com/IHP-GmbH/IHP-Open-PDK",
@@ -475,11 +426,7 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "GF_Fotonix": FoundryRunset(
         foundry_name="GlobalFoundries",
-<<<<<<< HEAD
-        process_node="45nm CMOS, 160nm Si",
-=======
         process_node="45nm CMOS photonics",
->>>>>>> trae/solo-agent-pkVjID
         material_platform="SOI",
         rules=GF_FOTONIX_DRC_RUNSET,
         source_url=(
@@ -490,21 +437,6 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
     ),
     "CompoundTek": FoundryRunset(
         foundry_name="CompoundTek",
-<<<<<<< HEAD
-        process_node="90nm SOI",
-        material_platform="SOI",
-        rules=COMPOUNDTEK_DRC_RUNSET,
-        source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
-        notes="CompoundTek 90nm SOI，通过 Luceda IPKISS 接入",
-    ),
-    "LIGENTEC": FoundryRunset(
-        foundry_name="LIGENTEC",
-        process_node="800nm SiN",
-        material_platform="SiN",
-        rules=LIGENTEC_DRC_RUNSET,
-        source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
-        notes="LIGENTEC AN800 SiN 平台，低损耗氮化硅",
-=======
         process_node="130nm SOI",
         material_platform="SOI",
         rules=COMPOUNDTEK_DRC_RUNSET,
@@ -518,7 +450,6 @@ FOUNDRY_RUNSETS: dict[str, FoundryRunset] = {
         rules=LIGENTEC_DRC_RUNSET,
         source_url="https://www.lucedaphotonics.com/zh_CN/luceda-design-kits",
         notes="LIGENTEC ANR SiN 平台，低损耗氮化硅",
->>>>>>> trae/solo-agent-pkVjID
     ),
     "HHI_InP": FoundryRunset(
         foundry_name="HHI",

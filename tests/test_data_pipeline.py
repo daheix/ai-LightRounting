@@ -210,6 +210,9 @@ class TestDataLoader:
             circuits = load_directory(tmp)
             assert circuits == []
 
-    def test_load_directory_nonexistent(self):
-        circuits = load_directory("/nonexistent/path")
-        assert circuits == []
+    def test_load_directory_nonexistent_raises(self):
+        """数据目录不存在时应 raise FileNotFoundError（违规 9 修复）。"""
+        import pytest
+
+        with pytest.raises(FileNotFoundError, match="数据目录不存在"):
+            load_directory("/nonexistent/path")

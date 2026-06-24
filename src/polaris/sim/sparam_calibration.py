@@ -379,7 +379,13 @@ def export_touchstone(
     lines = ["! Touchstone S-parameter export (PoLaRIS FDTD calibration)"]
     lines.append("# GHz S RI R 50")
     for i, wl in enumerate(wavelengths):
-        # c/λ, λ in μm → freq in THz → ×1000 GHz
+        # 频率-波长转换 f=c/λ，c=299792458 m/s（CODATA 2018 精确值,
+        # https://physics.nist.gov/cuu/Constants/），λ 单位 μm，f 单位 GHz
+        # 推导: f[Hz] = c[m/s] / (λ[μm] × 1e-6) = c / λ × 1e6 Hz
+        #       f[GHz] = (c / λ × 1e6) / 1e9 = c / λ × 1e-3 = 299.792458 / λ
+        #       ×1000: 此处 299.792458 = c × 1e-3 (GHz·μm), ×1000 为 THz→GHz
+        #       完整: f[GHz] = (c[μm/ns] / λ[μm]) = 299.792458 / λ[μm] (THz)
+        #             × 1000 → GHz
         freq_ghz = 299.792458 / float(wl) * 1000.0
         lines.append(_format_s_param_line(freq_ghz, i, port_order, s_dict))
     return "\n".join(lines) + "\n"
