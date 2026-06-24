@@ -3,7 +3,7 @@
 使用 Edge-GNN + PPO 对电路执行 AI 布局，加载预训练 checkpoint（若存在），
 输出布局坐标与 HPWL（半周长线长）指标。
 
-对应路标: R33（Edge-GNN 状态编码）/ R34（预训练 checkpoint 加载）
+对应路标: R33（Edge-GNN 状态编码）/ R34（预训练 checkpoint 加载）/ R3（Edge-GNN 前向推理集成）
 
 HPWL 公式来源:
 - Kahng & Lienig, "VLSI Placement", IEEE TCAD 2009
@@ -16,6 +16,11 @@ AlphaChip 预训练范式来源:
 - Mirhoseini et al., "Chip Placement with Deep Reinforcement Learning",
   arXiv 2004.10746, 2020, https://arxiv.org/abs/2004.10746
 - Mirhoseini et al., Nature 2021, https://www.nature.com/articles/s41586-021-03544-w
+
+R3 Edge-GNN 集成来源:
+- AlphaChip Edge-GNN: Mirhoseini et al., Nature 2021
+  边特征消息传递 + GAT 注意力 + GlobalAttention 读出
+- polaris.nn.Tensor: 纯 NumPy 自动微分（复刻 PyTorch Tensor 子集）
 """
 
 from __future__ import annotations
@@ -27,6 +32,8 @@ import numpy as np
 import torch
 
 from polaris.data.specs import CircuitSpec, DeviceSpec
+from polaris.engine.alphachip_gnn import AlphaChipEdgeGNN, PHOTONIC_EDGE_DIM
+from polaris.nn import Tensor
 from polaris.trainer.ppo_networks import ActorCritic
 
 _logger = logging.getLogger("e2e_showcase")
@@ -44,6 +51,19 @@ _CHECKPOINT_CANDIDATES: list[str] = [
 # PPO 策略网络观测维度（电路特征编码）
 # 来源: Mirhoseini et al., Nature 2021 (AlphaChip) 状态编码
 _OBS_DIM = 8
+
+# R3: Edge-GNN 输出维度（图级嵌入）
+# 来源: AlphaChip Edge-GNN GlobalAttention 读出（Mirhoseini et al., Nature 2021）
+_GNN_OUT_DIM = 16
+
+# R3: Edge-GNN 隐藏层维度
+_GNN_HIDDEN_DIM = 32
+
+# R3: Edge-GNN 消息传递层数
+_GNN_NUM_LAYERS = 2
+
+# R3: GNN 节点特征维度（简化版: width_norm, height_norm, type_hash, idx_norm）
+_GNN_NODE_FEAT_DIM = 4
 
 # PPO 策略网络动作维度（归一化坐标 x, y）
 _ACTION_DIM = 2
@@ -357,6 +377,141 @@ def _encode_circuit_obs(
     return obs
 
 
+def _build_edge_index_from_circuit(
+    circuit: CircuitSpec,
+    instance_ids: list[str],
+) -> np.ndarray:
+    """从电路连接构建 GNN 边索引（双向边）。
+
+    将 CircuitSpec.connections 转换为 [2, E] 边索引数组，
+    每条连接生成双向边（src→dst 和 dst→src）。
+
+    来源: AlphaChip netlist graph construction
+      Mirhoseini et al., Nature 2021
+
+    Args:
+        circuit: 电路规格（含连接列表）。
+        instance_ids: 器件名称列表（与节点索引对应）。
+
+    Returns:
+        边索引数组 [2, E]（每列为 (src_idx, dst_idx)）。
+    """
+    id_to_idx = {name: i for i, name in enumerate(instance_ids)}
+    edges: list[tuple[int, int]] = []
+    for d1, _p1, d2, _p2 in circuit.connections:
+        if d1 in id_to_idx and d2 in id_to_idx:
+            src, dst = id_to_idx[d1], id_to_idx[d2]
+            edges.append((src, dst))
+            edges.append((dst, src))  # 双向边
+    if not edges:
+        return np.zeros((2, 0), dtype=np.int64)
+    return np.array(edges, dtype=np.int64).T  # [2, E]
+
+
+def _build_gnn_node_features(
+    circuit: CircuitSpec,
+    instance_ids: list[str],
+) -> np.ndarray:
+    """构建 GNN 节点特征矩阵（简化版 4 维）。
+
+    节点特征:
+    - [0] 器件宽度归一化 width_um/canvas_w
+    - [1] 器件高度归一化 height_um/canvas_h
+    - [2] 器件类型哈希归一化（区分 grating_coupler/mmi/waveguide 等）
+    - [3] 器件索引归一化 idx/(n_dev-1)
+
+    来源: AlphaChip node features
+      Mirhoseini et al., Nature 2021
+      简化为器件级几何+类型特征（适用于 showcase 演示）
+
+    Args:
+        circuit: 电路规格。
+        instance_ids: 器件名称列表。
+
+    Returns:
+        节点特征矩阵 [N, 4]。
+    """
+    n_dev = len(instance_ids)
+    feats = np.zeros((n_dev, _GNN_NODE_FEAT_DIM), dtype=np.float64)
+    dev_map = {d.name: d for d in circuit.devices}
+    for i, name in enumerate(instance_ids):
+        dev = dev_map.get(name)
+        if dev is not None:
+            feats[i, 0] = dev.width_um / max(circuit.canvas_w, 1.0)
+            feats[i, 1] = dev.height_um / max(circuit.canvas_h, 1.0)
+            feats[i, 2] = hash(dev.device_type) % 100 / 100.0
+            feats[i, 3] = i / max(n_dev - 1, 1)
+    return feats
+
+
+def _build_gnn_edge_features(
+    circuit: CircuitSpec,
+    instance_ids: list[str],
+    edge_index: np.ndarray,
+    placements: dict | None = None,
+) -> np.ndarray:
+    """构建 GNN 边特征矩阵（15 维，与 PHOTONIC_EDGE_DIM 对齐）。
+
+    边特征维度（15 维，简化版）:
+    - [0] 距离（曼哈顿，μm，若已放置）
+    - [1] 带宽需求（端口数代理，默认 1.0）
+    - [2] 优先级（默认 1.0）
+    - [3-6] 类型 one-hot(4): passive-passive
+    - [7-9] 波段 one-hot(3): C-band
+    - [10] 折射率差（默认 0.5）
+    - [11] 波导损耗（默认 0.3）
+    - [12] 串扰系数（默认 0.1）
+    - [13] 弯曲半径约束（默认 0.5）
+    - [14] net 关系类型（0=光波导）
+
+    来源: AlphaChip edge features + 光电子扩展
+      Mirhoseini et al., Nature 2021;
+      PHOTONIC_EDGE_DIM 定义于 polaris.engine.alphachip_gnn
+
+    Args:
+        circuit: 电路规格。
+        instance_ids: 器件名称列表。
+        edge_index: 边索引 [2, E]。
+        placements: 当前布局（用于距离计算，可选）。
+
+    Returns:
+        边特征矩阵 [E, 15]。
+    """
+    n_edges = edge_index.shape[1]
+    feats = np.zeros((n_edges, PHOTONIC_EDGE_DIM), dtype=np.float64)
+    for i in range(n_edges):
+        src_idx = edge_index[0, i]
+        dst_idx = edge_index[1, i]
+        src_id = instance_ids[src_idx]
+        dst_id = instance_ids[dst_idx]
+        # [0] 距离（若已放置）
+        if placements and src_id in placements and dst_id in placements:
+            p1 = placements[src_id]
+            p2 = placements[dst_id]
+            x1, y1 = p1["x"] + p1["w"] / 2, p1["y"] + p1["h"] / 2
+            x2, y2 = p2["x"] + p2["w"] / 2, p2["y"] + p2["h"] / 2
+            feats[i, 0] = abs(x1 - x2) + abs(y1 - y2)
+        # [1] 带宽需求
+        feats[i, 1] = 1.0
+        # [2] 优先级
+        feats[i, 2] = 1.0
+        # [3-6] 类型 one-hot: passive-passive
+        feats[i, 3] = 1.0
+        # [7-9] 波段 one-hot: C-band
+        feats[i, 7] = 1.0
+        # [10] 折射率差
+        feats[i, 10] = 0.5
+        # [11] 波导损耗
+        feats[i, 11] = 0.3
+        # [12] 串扰
+        feats[i, 12] = 0.1
+        # [13] 弯曲半径
+        feats[i, 13] = 0.5
+        # [14] net 关系类型: 0=光波导
+        feats[i, 14] = 0.0
+    return feats
+
+
 def _place_with_ppo_policy(
     circuit: CircuitSpec,
     checkpoint_path: str | None,
@@ -488,13 +643,143 @@ def _resolve_overlap(
     return x, y
 
 
+def _place_with_ppo_gnn_policy(
+    circuit: CircuitSpec,
+    checkpoint_path: str | None,
+) -> dict:
+    """使用 Edge-GNN + PPO ActorCritic 策略网络执行 AI 布局（R3 新增）。
+
+    在 PPO 观测向量中注入 Edge-GNN 图级嵌入，增强电路拓扑感知能力:
+    1. 构建 GNN 输入（节点特征 + 边索引 + 边特征）
+    2. 实例化 AlphaChipEdgeGNN（随机初始化，无 checkpoint）
+    3. 实例化 PyTorch ActorCritic（obs_dim = 8 + 16 = 24）
+    4. 逐器件布局: GNN 前向提取图嵌入 → 拼接到观测 → PPO 采样坐标
+    5. 边特征随放置状态动态更新（距离特征变化）
+
+    学术诚信说明:
+        - GNN 为随机初始化（无预训练 checkpoint），嵌入近似随机噪声
+        - placement_mode="ppo_gnn_init"（非预训练）
+        - HPWL 不能与 AlphaChip 预训练模型对标
+        - 但确为 Edge-GNN + PPO 策略网络前向推理（非纯随机贪心）
+
+    来源:
+    - AlphaChip Edge-GNN: Mirhoseini et al., Nature 2021
+      https://www.nature.com/articles/s41586-021-03544-w
+    - GAT 注意力: Veličković et al., ICLR 2018
+      https://arxiv.org/abs/1710.10903
+    - GlobalAttention 读出: PyTorch Geometric
+      https://pytorch-geometric.readthedocs.io/
+
+    Args:
+        circuit: 电路规格。
+        checkpoint_path: PPO checkpoint 路径（GNN 无 checkpoint，始终随机初始化）。
+
+    Returns:
+        布局结果 {name: {x, y, w, h}}。
+    """
+    instance_ids = [d.name for d in circuit.devices]
+    n_dev = len(instance_ids)
+
+    # 1. 构建 GNN 输入
+    node_feats_np = _build_gnn_node_features(circuit, instance_ids)
+    edge_index = _build_edge_index_from_circuit(circuit, instance_ids)
+
+    # 2. 实例化 AlphaChipEdgeGNN（随机初始化）
+    gnn = AlphaChipEdgeGNN(
+        in_dim=_GNN_NODE_FEAT_DIM,
+        edge_feat_dim=PHOTONIC_EDGE_DIM,
+        hidden_dim=_GNN_HIDDEN_DIM,
+        out_dim=_GNN_OUT_DIM,
+        num_layers=_GNN_NUM_LAYERS,
+        use_gat=True,
+        use_multi_relation=True,
+    )
+    _logger.info(
+        "Edge-GNN 实例化: in_dim=%d, out_dim=%d, hidden=%d, layers=%d, "
+        "edge_feat_dim=%d, edges=%d, nodes=%d",
+        _GNN_NODE_FEAT_DIM, _GNN_OUT_DIM, _GNN_HIDDEN_DIM,
+        _GNN_NUM_LAYERS, PHOTONIC_EDGE_DIM, edge_index.shape[1], n_dev,
+    )
+
+    # 3. 实例化 PyTorch ActorCritic（obs_dim = 8 + 16 = 24）
+    gnn_obs_dim = _OBS_DIM + _GNN_OUT_DIM
+    agent = ActorCritic(
+        obs_dim=gnn_obs_dim,
+        action_dim=_ACTION_DIM,
+        hidden_dim=_HIDDEN_DIM,
+    )
+    agent.eval()
+
+    # 尝试加载 PPO checkpoint（GNN 无 checkpoint，始终随机初始化）
+    weights_loaded = False
+    if checkpoint_path is not None:
+        try:
+            data = torch.load(checkpoint_path, weights_only=False)
+            if isinstance(data, dict) and "network" in data:
+                agent.load_state_dict(data["network"])
+                weights_loaded = True
+                _logger.info("PPO checkpoint 权重加载成功: %s", checkpoint_path)
+        except Exception as exc:
+            _logger.warning(
+                "PPO checkpoint 加载失败 (%s): %s，使用 Orthogonal 初始化网络",
+                checkpoint_path, exc,
+            )
+
+    if not weights_loaded:
+        _logger.info(
+            "使用 Orthogonal 初始化 PPO + 随机初始化 Edge-GNN 做前向推理"
+            "（非预训练，非纯随机贪心）"
+        )
+
+    # 4. 逐器件布局
+    placements: dict[str, dict[str, float]] = {}
+    occupied: list[tuple[float, float, float, float]] = []
+
+    for idx, dev in enumerate(circuit.devices):
+        # 动态更新边特征（距离随放置变化）
+        edge_feats_np = _build_gnn_edge_features(
+            circuit, instance_ids, edge_index, placements
+        )
+
+        # GNN 前向推理（无需梯度）
+        node_feats_t = Tensor(node_feats_np)
+        edge_feats_t = Tensor(edge_feats_np)
+        gnn_emb = gnn(node_feats_t, edge_index, edge_feats_t)
+        gnn_emb_np = gnn_emb.data.flatten()  # [out_dim]
+
+        # 基础 8 维观测 + GNN 16 维嵌入 = 24 维
+        base_obs = _encode_circuit_obs(circuit, dev, idx, n_dev)
+        obs = np.concatenate([base_obs, gnn_emb_np]).astype(np.float32)
+
+        # PPO 网络前向推理
+        action, _logprob, _value = agent.get_action(obs)
+        coord = 1.0 / (1.0 + np.exp(-action))
+        x = float(coord[0]) * (circuit.canvas_w - dev.width_um)
+        y = float(coord[1]) * (circuit.canvas_h - dev.height_um)
+
+        # 重叠检测
+        x, y = _resolve_overlap(
+            x, y, dev.width_um, dev.height_um, occupied, circuit
+        )
+
+        placements[dev.name] = {
+            "x": x, "y": y, "w": dev.width_um, "h": dev.height_um,
+        }
+        occupied.append((x, y, dev.width_um, dev.height_um))
+
+    return placements
+
+
 def _place_circuit(
     circuit: CircuitSpec,
     checkpoint_path: str | None,
+    use_gnn: bool = False,
 ) -> dict:
     """对单个电路执行布局。
 
     使用 PPO ActorCritic 策略网络执行 AI 布局：
+    - use_gnn=False: PPO 前向推理（8 维观测）
+    - use_gnn=True: Edge-GNN + PPO 前向推理（24 维观测 = 8 + 16 维 GNN 嵌入）
     - checkpoint 存在且可加载 → 加载预训练权重做前向推理
     - checkpoint 不存在 → 用 Orthogonal 初始化网络做前向推理（非纯随机贪心）
 
@@ -509,12 +794,16 @@ def _place_circuit(
     Args:
         circuit: 电路规格。
         checkpoint_path: RL checkpoint 路径，None 时用初始化网络（非纯随机贪心）。
+        use_gnn: 是否启用 Edge-GNN 前向推理（R3 新增）。
 
     Returns:
         电路布局结果 dict，含 name/n_devices/placements/hpwl/ascii_layout/
             placement_source。
     """
-    placements = _place_with_ppo_policy(circuit, checkpoint_path)
+    if use_gnn:
+        placements = _place_with_ppo_gnn_policy(circuit, checkpoint_path)
+    else:
+        placements = _place_with_ppo_policy(circuit, checkpoint_path)
 
     if not placements:
         raise RuntimeError(
@@ -577,16 +866,17 @@ def run(output_dir: Path) -> dict:
         - baseline_type: 基线类型
         - warning: 告警信息（checkpoint 未加载时提示为初始化网络）
     """
-    _logger.info("阶段 3 开始: AI 布局（PPO ActorCritic 策略网络）")
+    _logger.info("阶段 3 开始: AI 布局（Edge-GNN + PPO ActorCritic 策略网络）")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     checkpoint_path = _load_checkpoint()
     # 学术诚信：测试权重是否真正可加载（文件存在 ≠ 权重匹配）
     weights_loadable = _test_checkpoint_loadable(checkpoint_path)
     checkpoint_loaded = weights_loadable
-    placement_mode = "ppo_pretrained" if checkpoint_loaded else "ppo_init"
+    # R3: 启用 Edge-GNN 前向推理，placement_mode 标识 GNN 模式
+    placement_mode = "ppo_gnn_pretrained" if checkpoint_loaded else "ppo_gnn_init"
     _logger.info(
-        "布局模式: %s (checkpoint_path=%s, weights_loadable=%s)",
+        "布局模式: %s (checkpoint_path=%s, weights_loadable=%s, gnn=enabled)",
         placement_mode,
         checkpoint_path,
         checkpoint_loaded,
@@ -595,12 +885,14 @@ def run(output_dir: Path) -> dict:
     circuits = _build_circuits()
     # 若权重不可加载，传 None 避免每个电路重复尝试加载失败
     effective_checkpoint = checkpoint_path if checkpoint_loaded else None
+    # R3: use_gnn=True 启用 Edge-GNN 前向推理
     results = [
-        _place_circuit(circuit, effective_checkpoint) for circuit in circuits
+        _place_circuit(circuit, effective_checkpoint, use_gnn=True)
+        for circuit in circuits
     ]
 
     _logger.info(
-        "阶段 3 完成: %d 电路布局完成, 模式=%s",
+        "阶段 3 完成: %d 电路布局完成, 模式=%s (Edge-GNN 启用)",
         len(results),
         placement_mode,
     )
@@ -611,9 +903,12 @@ def run(output_dir: Path) -> dict:
         "placement_mode": placement_mode,
         "ai_layout_executed": True,
         "baseline_type": placement_mode,
+        "gnn_enabled": True,
+        "gnn_out_dim": _GNN_OUT_DIM,
         "warning": (
-            "HPWL 来自 Orthogonal 初始化 PPO 网络前向推理（非预训练），"
-            "不能与 AlphaChip 预训练模型对标，但确为 AI 策略前向推理结果"
+            "HPWL 来自 Orthogonal 初始化 PPO + 随机初始化 Edge-GNN 前向推理"
+            "（非预训练），不能与 AlphaChip 预训练模型对标，"
+            "但确为 Edge-GNN + PPO 策略前向推理结果"
             if not checkpoint_loaded
             else None
         ),
