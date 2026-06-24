@@ -6,8 +6,9 @@
 - 4 光子 4 模玻色采样概率分布与守恒验证（总和 = 1）
 - HOM 干涉 |1,1⟩ 概率 = 0（量子干涉抑制符合计数）
 - KLM CNOT 成功率 = 0.25 与 Hadamard 门酉性
+- R2 新增: 蒙特卡洛玻色采样稳定性验证（D13）
 
-对应路标: R35（玻色采样 + HOM + KLM）
+对应路标: R35（玻色采样 + HOM + KLM）/ R2-D13（蒙特卡洛验证）
 
 公式来源:
 - 玻色采样: Aaronson & Arkhipov, STOC 2011,
@@ -24,6 +25,8 @@
   M×M 酉矩阵分解为 M(M-1)/2 个分束器
 - Ryser 算法: Ryser, 1963, Combinatorial Mathematics
   Per(A) = (-1)^n Σ_{S⊆[n]} (-1)^|S| Π_i Σ_{j∈S} A_{i,j}
+- 蒙特卡洛方法: Metropolis & Ulam 1949;
+  JAX vmap 并行: https://docs.jax.dev/en/latest/_autosummary/jax.vmap.html
 """
 
 from __future__ import annotations
@@ -42,6 +45,7 @@ from polaris.sim import (
     klm_cnot_success_probability,
     klm_hadamard_gate,
 )
+from polaris.sim.monte_carlo import monte_carlo_simulate
 
 _logger = logging.getLogger("e2e_showcase")
 
@@ -51,6 +55,22 @@ _PROB_TOL = 1e-6
 _UNITARY_TOL = 1e-6
 # KLM CNOT 理论成功率（Knill et al., Nature 2001）
 _KLM_CNOT_EXPECTED = 0.25
+
+# R2-D13: 蒙特卡洛玻色采样验证参数
+# 演示用任意参数（非物理常量），用于生成有效 4×4 酉矩阵
+# theta 控制分束比，phi 控制相对相位（Clements et al., Optica 2016）
+_CLEMENTS_THETAS = np.array(
+    [math.pi / 4, math.pi / 6, math.pi / 3, math.pi / 5, math.pi / 8, math.pi / 7]
+)
+_CLEMENTS_PHIS = np.array(
+    [0.0, math.pi / 4, math.pi / 2, math.pi / 3, math.pi / 6, math.pi / 5]
+)
+# 蒙特卡洛采样数（R2-D13: 玻色采样稳定性验证）
+_MC_N_SAMPLES = 200
+# 蒙特卡洛参数扰动标准差（1%，模拟制造工艺波动）
+_MC_SIGMA = 0.01
+# 蒙特卡洛概率守恒容差（扰动后概率总和仍应接近 1）
+_MC_PROB_TOL = 1e-4
 
 
 def _build_clements_unitary() -> np.ndarray:
@@ -72,12 +92,9 @@ def _build_clements_unitary() -> np.ndarray:
     n_modes = 4
     # Clements 三角形拓扑: 6 个分束器参数（theta, phi 各 6 个）
     # theta 控制分束比，phi 控制相对相位
-    thetas = np.array(
-        [math.pi / 4, math.pi / 6, math.pi / 3, math.pi / 5, math.pi / 8, math.pi / 7]
-    )
-    phis = np.array(
-        [0.0, math.pi / 4, math.pi / 2, math.pi / 3, math.pi / 6, math.pi / 5]
-    )
+    # R2: 使用模块级常量 _CLEMENTS_THETAS/_CLEMENTS_PHIS（演示用任意参数）
+    thetas = _CLEMENTS_THETAS
+    phis = _CLEMENTS_PHIS
     n_bs = n_modes * (n_modes - 1) // 2
     _logger.info(
         "Clements 分解: %d 模, %d 个分束器 (theta/phi 各 %d)",
@@ -336,13 +353,133 @@ def _verify_klm(output_dir: Path) -> dict:
     }
 
 
+def _verify_monte_carlo_boson_sampling(output_dir: Path, unitary: np.ndarray) -> dict:
+    """R2-D13: 蒙特卡洛玻色采样稳定性验证。
+
+    对 Clements 酉矩阵的分束器参数（thetas/phis）施加 1% 高斯扰动，
+    执行 N 次蒙特卡洛采样，验证玻色采样概率守恒在参数扰动下仍成立。
+
+    物理意义: 模拟制造工艺波动（分束比误差 ±1%）对玻色采样的影响，
+    验证量子光子电路的鲁棒性。
+
+    方法:
+    1. 将 thetas/phis 合并为基准参数向量
+    2. 对参数施加高斯扰动，用 numpy 循环计算每次采样的概率总和
+       （注: clements_unitary 内部含 float() 转换，不兼容 jax.vmap，
+       故用 numpy 循环替代 monte_carlo_simulate）
+    3. 验证所有采样的概率总和在 [1-ε, 1+ε] 范围内
+
+    公式来源:
+    - 蒙特卡洛方法: Metropolis & Ulam 1949
+    - 玻色采样: Aaronson & Arkhipov 2011 https://arxiv.org/abs/0910.4698
+    - Clements 分解: Clements et al., Optica 2016
+
+    Args:
+        output_dir: 输出目录。
+        unitary: 基准 4×4 酉矩阵（用于验证基准概率守恒）。
+
+    Returns:
+        蒙特卡洛验证结果 dict。
+
+    Raises:
+        ValueError: 蒙特卡洛采样中概率守恒失败。
+    """
+    _logger.info(
+        "R2-D13 蒙特卡洛玻色采样验证: %d 采样, σ=%.2f", _MC_N_SAMPLES, _MC_SIGMA
+    )
+
+    n_modes = 4
+    input_state = (1, 1, 1, 1)
+    # 基准参数: thetas(6) + phis(6) = 12 个参数
+    base_params = np.concatenate([_CLEMENTS_THETAS, _CLEMENTS_PHIS])
+
+    # 生成高斯随机扰动（Metropolis & Ulam 1949 蒙特卡洛方法）
+    rng = np.random.default_rng(seed=42)
+    noise = rng.normal(0, 1, size=(_MC_N_SAMPLES, len(base_params)))
+    # 参数扰动: params_i = base · (1 + σ · ε)
+    samples_params = base_params * (1 + _MC_SIGMA * noise)
+
+    # numpy 循环执行蒙特卡洛采样
+    # 注: clements_unitary 内部含 float() 转换，不兼容 jax.vmap，
+    # 故用 numpy 循环替代 monte_carlo_simulate
+    prob_sums = np.zeros(_MC_N_SAMPLES)
+    for i in range(_MC_N_SAMPLES):
+        thetas_p = samples_params[i, :6]
+        phis_p = samples_params[i, 6:]
+        u = clements_unitary(n_modes, thetas=thetas_p, phis=phis_p)
+        result = boson_sampling_distribution(u, input_state)
+        prob_sums[i] = sum(result.output_prob.values())
+
+    # 统计分析
+    prob_sum_mean = float(np.mean(prob_sums))
+    prob_sum_std = float(np.std(prob_sums))
+    prob_sum_min = float(np.min(prob_sums))
+    prob_sum_max = float(np.max(prob_sums))
+
+    # 概率守恒验证: 所有采样概率总和在 [1-ε, 1+ε] 范围内
+    mc_prob_ok = bool(
+        abs(prob_sum_mean - 1.0) < _MC_PROB_TOL
+        and abs(prob_sum_min - 1.0) < _MC_PROB_TOL * 10
+        and abs(prob_sum_max - 1.0) < _MC_PROB_TOL * 10
+    )
+    if not mc_prob_ok:
+        raise ValueError(
+            f"R2-D13 蒙特卡洛概率守恒失败: mean={prob_sum_mean:.8f}, "
+            f"min={prob_sum_min:.8f}, max={prob_sum_max:.8f}, "
+            f"容差={_MC_PROB_TOL}"
+        )
+
+    _logger.info(
+        "R2-D13 蒙特卡洛验证通过: 概率总和 mean=%.8f, std=%.2e, "
+        "min=%.8f, max=%.8f",
+        prob_sum_mean, prob_sum_std, prob_sum_min, prob_sum_max,
+    )
+
+    # 保存蒙特卡洛结果到 JSON
+    reports_dir = output_dir / "reports"
+    reports_dir.mkdir(parents=True, exist_ok=True)
+    mc_path = reports_dir / "monte_carlo_boson_sampling.json"
+    mc_data = {
+        "n_samples": _MC_N_SAMPLES,
+        "sigma": _MC_SIGMA,
+        "input_state": list(input_state),
+        "n_modes": n_modes,
+        "prob_sum_mean": prob_sum_mean,
+        "prob_sum_std": prob_sum_std,
+        "prob_sum_min": prob_sum_min,
+        "prob_sum_max": prob_sum_max,
+        "prob_sum_ok": mc_prob_ok,
+        "tolerance": _MC_PROB_TOL,
+        "sources": {
+            "monte_carlo": "Metropolis & Ulam 1949",
+            "boson_sampling": "https://arxiv.org/abs/0910.4698",
+            "clements": "https://doi.org/10.1364/OPTICA.3.001460",
+        },
+    }
+    mc_path.write_text(
+        json.dumps(mc_data, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    _logger.info("蒙特卡洛结果已保存: %s", mc_path)
+
+    return {
+        "n_samples": _MC_N_SAMPLES,
+        "sigma": _MC_SIGMA,
+        "prob_sum_mean": prob_sum_mean,
+        "prob_sum_std": prob_sum_std,
+        "prob_sum_min": prob_sum_min,
+        "prob_sum_max": prob_sum_max,
+        "prob_sum_ok": mc_prob_ok,
+    }
+
+
 def run(output_dir: Path) -> dict:
     """执行阶段 9: 量子光子验证。
 
-    执行三项量子光子验证:
+    执行四项量子光子验证:
     1. 4 光子 4 模玻色采样概率分布与守恒（Clements 分解酉矩阵）
     2. HOM 干涉 |1,1⟩ 概率 = 0（50:50 分束器）
     3. KLM CNOT 成功率 = 0.25 与 Hadamard 门酉性
+    4. R2-D13: 蒙特卡洛玻色采样稳定性验证（1% 参数扰动，200 采样）
 
     所有验证失败均 raise（规则 14.1：禁止 fall-back）。
     报告写入 output_dir/reports/ 目录。
@@ -351,10 +488,11 @@ def run(output_dir: Path) -> dict:
         output_dir: 输出目录，报告写入 output_dir/reports/。
 
     Returns:
-        验证结果 dict，含三个子 dict:
+        验证结果 dict，含四个子 dict:
         - boson_sampling: unitary_shape/input_state/prob_distribution/prob_sum_ok
         - hom: theta/coincidence_prob/hom_verified
         - klm: cnot_success_prob/cnot_verified/hadamard_unitary_error/hadamard_verified
+        - monte_carlo: n_samples/prob_sum_mean/prob_sum_std/prob_sum_ok
     """
     _logger.info("阶段 9 开始: 量子光子验证")
 
@@ -370,16 +508,21 @@ def run(output_dir: Path) -> dict:
     # 4. KLM 验证
     klm_result = _verify_klm(output_dir)
 
+    # 5. R2-D13: 蒙特卡洛玻色采样稳定性验证
+    mc_result = _verify_monte_carlo_boson_sampling(output_dir, unitary)
+
     _logger.info(
         "阶段 9 完成: 量子光子验证全部通过 "
-        "(玻色采样概率守恒=%s, HOM 干涉=%s, KLM=%s)",
+        "(玻色采样概率守恒=%s, HOM 干涉=%s, KLM=%s, 蒙特卡洛=%s)",
         boson_result["prob_sum_ok"],
         hom_result["hom_verified"],
         klm_result["cnot_verified"],
+        mc_result["prob_sum_ok"],
     )
 
     return {
         "boson_sampling": boson_result,
         "hom": hom_result,
         "klm": klm_result,
+        "monte_carlo": mc_result,
     }
