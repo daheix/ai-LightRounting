@@ -349,6 +349,23 @@ class DeviceCatalog(CatalogSerializerMixin):
         """
         return [d for d in self._devices.values() if d.category == category]
 
+    def list_by_process_node(self, process_node: str) -> list[Device]:
+        """按工艺节点检索（第75轮 P1-3 深化）。
+
+        支持精确匹配 process_node 字符串（如 ``"220nm SOI"``、
+        ``"45nm CMOS, 220nm SOI (300mm)"``）。None process_node 的器件不匹配。
+
+        Args:
+            process_node: 工艺节点描述字符串。
+
+        Returns:
+            匹配工艺节点的器件列表。
+        """
+        return [
+            d for d in self._devices.values()
+            if d.process_node is not None and d.process_node == process_node
+        ]
+
     def list_all(self) -> list[Device]:
         """列出所有器件。
 

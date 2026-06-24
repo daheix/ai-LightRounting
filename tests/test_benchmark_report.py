@@ -392,10 +392,35 @@ class TestRunAllBenchmarks:
         assert comp.total_connections == 74
 
     def test_run_all_placement_method(self) -> None:
-        """placement_method 应正确传递。"""
-        comp = run_all_benchmarks(placement_method="rl_ppo")
+        """placement_method 应正确传递（第76轮改为 analytical，支持的方法名）。"""
+        comp = run_all_benchmarks(placement_method="analytical")
         for r in comp.reports:
-            assert r.placement_method == "rl_ppo"
+            assert r.placement_method == "analytical"
+
+    def test_run_all_analytical_completes(self) -> None:
+        """analytical 布局方法应成功运行所有 benchmark（第76轮 P1-5 扩展）。"""
+        comp = run_all_benchmarks(placement_method="analytical")
+        assert len(comp.reports) == 4
+        for r in comp.reports:
+            assert r.placement_method == "analytical"
+            assert r.module_count > 0
+
+    def test_run_all_hierarchical_completes(self) -> None:
+        """hierarchical 布局方法应成功运行所有 benchmark（第76轮 P1-5 扩展）。"""
+        comp = run_all_benchmarks(placement_method="hierarchical")
+        assert len(comp.reports) == 4
+        for r in comp.reports:
+            assert r.placement_method == "hierarchical"
+            assert r.module_count > 0
+
+    def test_placement_by_method_unknown_raises(self) -> None:
+        """未知布局方法应抛出 ValueError（第76轮 P1-5 扩展，禁止 fall-back）。"""
+        from polaris.data.benchmark_evaluator import placement_by_method
+        from polaris.data.data_loader import load_tilos_ariane
+
+        circuit = load_tilos_ariane()
+        with pytest.raises(ValueError, match="未知布局方法"):
+            placement_by_method(circuit, "unknown_method")
 
 
 class TestFormatMarkdown:

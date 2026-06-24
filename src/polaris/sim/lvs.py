@@ -182,8 +182,16 @@ def _extract_devices_from_devrec(layout: db.Layout, cell: db.Cell) -> list[str]:
         region = db.Region(layout.begin_shapes(cell, devrec_idx))
         for i, _shape in enumerate(region.each()):
             devices.append(f"device_{i}")
-    except (KeyError, RuntimeError):
-        pass
+    except (KeyError, RuntimeError) as e:
+        # DEVREC 层不存在或 KLayout API 异常：记录警告，返回空器件列表
+        # 调用方需处理空器件情况（非 fall-back 假数据）
+        import warnings
+        warnings.warn(
+            f"DEVREC 层器件提取失败（{e}），返回空器件列表。"
+            f"请检查 GDS 文件是否包含 DEVREC 层。",
+            RuntimeWarning,
+            stacklevel=2,
+        )
     return devices
 
 
@@ -226,8 +234,16 @@ def _extract_connections_from_proximity(
                 "波导追踪未找到连接关系。如需使用包围盒邻近关系提取连接，"
                 "请显式调用 extract_connections_by_proximity()"
             )
-    except (KeyError, RuntimeError):
-        pass
+    except (KeyError, RuntimeError) as e:
+        import logging
+        logging.getLogger(__name__).error(
+            "波导追踪连接提取失败: %s: %s。禁止 fall-back（规则 14.1）。"
+            "返回空连接列表，请检查版图设计。",
+            type(e).__name__, e
+        )
+        raise RuntimeError(
+            f"波导追踪连接提取失败: {type(e).__name__}: {e}"
+        ) from e
     return connections
 
 

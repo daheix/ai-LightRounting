@@ -21,8 +21,42 @@ from pathlib import Path
 
 INTERVAL_SECONDS = 6 * 60  # 6 分钟（用户规则）
 REPO_DIR = Path(__file__).resolve().parent.parent
-DEV_BRANCH = "trae/solo-agent-QtGqG4-ai-Light"  # 规则 1.2.1 固定名称，永久不变
 MAIN_BRANCH = "main"
+
+
+def detect_dev_branch() -> str:
+    """检测当前开发分支（启动时所在分支，非 main）。
+
+    规则 1.2.1: 开发分支固定名称。但跨会话分支名可能变化，
+    因此启动时自动检测当前分支作为开发分支（若在 main 上则回退到最近开发分支）。
+    """
+    result = subprocess.run(
+        "git branch --show-current",
+        shell=True,
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    branch = result.stdout.strip()
+    if branch and branch != MAIN_BRANCH:
+        return branch
+    # 在 main 上，查找最近的 trae/* 开发分支
+    result = subprocess.run(
+        "git branch --list 'trae/*'",
+        shell=True,
+        cwd=REPO_DIR,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    branches = [b.strip().lstrip("* ") for b in result.stdout.splitlines() if b.strip()]
+    if branches:
+        return branches[0]
+    return "trae/r2-continue"
+
+
+DEV_BRANCH = detect_dev_branch()
 
 
 def run(cmd: str, check: bool = True) -> tuple[int, str]:

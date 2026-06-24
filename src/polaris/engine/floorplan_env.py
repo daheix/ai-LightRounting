@@ -224,7 +224,83 @@ class FloorplanEnv(gym.Env):
         )
         self._step_idx = 0
         self._last_reward = 0.0  # 上一步的累计奖励（用于计算增量奖励）
-        return self._obs(), {"step": 0}
+        if options is not None and options.get("warm_start", False):
+            self._apply_warm_start(options.get("warm_start_config"))
+        return self._obs(), {"step": self._step_idx}
+
+    def _apply_warm_start(self, placer_config=None) -> None:
+        """应用 DREAMPlace warm-start 布局到环境状态。
+
+        使用解析法（DREAMPlace warm-start）生成高质量初始布局，
+        所有器件一次性放置完毕，step_idx 跳到末尾。
+        对标商业工具 Innovus/ICC2 的两阶段流程（解析初始化 + RL 微调）。
+
+        Args:
+            placer_config: AnalyticalPlacerConfig（None 用默认）。
+
+        来源:
+            DREAMPlace warm-start: https://arxiv.org/abs/2004.10746
+        """
+        circuit = self._build_circuit_for_warm_start()
+
+        # 生成 warm-start 布局 {name: (cx, cy)}
+        from polaris.engine.analytical_placer import (
+            AnalyticalPlacerConfig,
+            warm_start_placement,
+        )
+        cfg = placer_config or AnalyticalPlacerConfig()
+        layout = warm_start_placement(circuit, cfg)
+
+        self._apply_warm_start_layout(layout)
+
+    def _build_circuit_for_warm_start(self):
+        """从环境状态构建 CircuitSpec（供 warm-start 使用）。"""
+        from polaris.data.specs import CircuitSpec, DeviceSpec
+
+        device_specs = []
+        for inst_id in self.instance_ids:
+            dev = self.devices[inst_id]
+            bbox = dev.bbox
+            w = float(bbox.xmax - bbox.xmin)
+            h = float(bbox.ymax - bbox.ymin)
+            ports = [(p.name, p.x, p.y, p.direction) for p in dev.ports]
+            device_specs.append(DeviceSpec(
+                name=inst_id,
+                device_type=dev.device_type if hasattr(dev, "device_type") else "generic",
+                width_um=w,
+                height_um=h,
+                ports=ports,
+            ))
+        connections = [
+            (c.src_instance, c.src_port, c.dst_instance, c.dst_port)
+            for c in self.net.connections
+        ]
+        return CircuitSpec(
+            name="warm_start",
+            devices=device_specs,
+            connections=connections,
+            canvas_w=self.state.canvas_w,
+            canvas_h=self.state.canvas_h,
+        )
+
+    def _apply_warm_start_layout(self, layout: dict) -> None:
+        """将 warm-start 布局结果应用到环境 placements。"""
+        for inst_id, (cx, cy) in layout.items():
+            if inst_id not in self.devices:
+                continue
+            dev = self.devices[inst_id]
+            bbox = dev.bbox
+            w = float(bbox.xmax - bbox.xmin)
+            h = float(bbox.ymax - bbox.ymin)
+            x = max(0.0, min(cx - w / 2, self.state.canvas_w - w))
+            y = max(0.0, min(cy - h / 2, self.state.canvas_h - h))
+            self.state.placements[inst_id] = Placement(
+                instance_id=inst_id, device=dev, x=x, y=y, rotation=0
+            )
+
+        # warm-start 后所有器件已放置，step_idx 跳到末尾
+        self._step_idx = len(self.instance_ids)
+        self._last_reward = self._reward()
 
     def _build_edge_index(self) -> np.ndarray:
         """从 net.connections 构建无向图边索引 ``[2, E]``（双向）。
