@@ -506,13 +506,16 @@ class _DefaultSimulator:
                 )
             loss = self._LOSS_TABLE[dev.device_type]
             if dev.device_type in self._WAVEGUIDE_TYPES:
-                # 波导类器件按长度计算损耗，支持 length/wg_length 参数名
-                length = dev.params.get("length", dev.params.get("wg_length"))
+                # 波导类器件按长度计算损耗，支持 length/wg_length/length_um 参数名
+                # length_um 为 SiEPIC/gdsfactory 标准命名
+                length = dev.params.get(
+                    "length", dev.params.get("wg_length", dev.params.get("length_um"))
+                )
                 if length is None:
                     raise ValueError(
                         f"波导器件 '{dev.name}'（类型 '{dev.device_type}'）"
                         f"缺少 length 参数，无法计算波导损耗。"
-                        f"请在器件 params 中提供 length（μm）。"
+                        f"请在器件 params 中提供 length/length_um（μm）。"
                     )
                 total_loss += loss * length / 1e4
             else:

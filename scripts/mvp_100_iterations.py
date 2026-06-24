@@ -149,9 +149,15 @@ def build_circuit_spec(circuit_data: dict):
     """
     from polaris.data.specs import CircuitSpec, DeviceSpec
 
+    # 合并 instances 中的 settings 到 devices 的 params（修复波导 length 参数缺失）
+    instances = circuit_data.get("instances", {})
     devices = []
     for dev in circuit_data.get("devices", []):
         ports = [(p[0], float(p[1]), float(p[2]), p[3]) for p in dev.get("ports", [])]
+        # 合并 instances 中同名器件的 settings 到 params
+        params = dict(dev.get("params", {}))
+        inst = instances.get(dev["name"], {})
+        params.update(inst.get("settings", {}))
         devices.append(
             DeviceSpec(
                 name=dev["name"],
@@ -159,6 +165,7 @@ def build_circuit_spec(circuit_data: dict):
                 width_um=float(dev["width_um"]),
                 height_um=float(dev["height_um"]),
                 ports=ports,
+                params=params,
             )
         )
 

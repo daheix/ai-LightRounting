@@ -35,6 +35,11 @@ from typing import Any
 import numpy as np
 
 from polaris.sim.cascade import cascade_circuit
+
+# CAPHE 与 SAX 交叉验证容差（S 参数幅值最大绝对误差阈值）
+# 来源: 与 fdtd_gpu_engine.CROSS_VALIDATE_TOL 一致，1e-3 为工程级仿真容差
+CROSS_VALIDATE_TOL: float = 1e-3
+
 from polaris.sim.models import (
     directional_coupler_s,
     mmi_1x2_s,
