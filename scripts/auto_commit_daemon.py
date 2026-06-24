@@ -1,34 +1,37 @@
 #!/usr/bin/env python3
-"""6分钟自动提交守护进程 (V5: worktree + 与main时刻一致 + 零冲突)
+"""6分钟自动提交守护进程 (V5: worktree + 与main时刻一致 + 零冲突 + 主动fast-forward main + 质量门禁)
 
-最佳方案: git worktree + rsync + reset --soft origin/main
+最佳方案: git worktree + rsync + reset --soft origin/main + 主动fast-forward main
 - 当前工作区完全不动 (无stash/checkout, 零干扰)
 - 当前分支不产生任何commit (不写日志)
 - 变更通过 rsync 同步到 worktree 目录
 - 每次提交前 fetch origin main + reset --soft, 保持与main时刻一致
 - trae/auto-commit 永远 = origin/main最新 + 当前工作区变更 (单commit)
 - 零冲突: reset --soft 不会产生冲突, 工作区文件以rsync内容为准
+- 保底机制: 主动 fast-forward main (V5架构保证零冲突, 失败放弃等待下次)
+- 质量门禁: 提交前运行12电路门禁检查, 不通过禁止提交
 
 流程:
   1. 检测当前工作区变更 (git status)
   2. 创建/更新 worktree: /tmp/ai-polaris-autocommit (trae/auto-commit分支)
   3. rsync 同步变更文件到 worktree (排除.git/build/运行时数据)
-  4. git fetch origin main (获取main最新)
+  4. git fetch origin (在worktree中, 获取main + trae/auto-commit引用)
   5. git reset --soft origin/main (HEAD移到main最新, 保留工作区变更)
-  6. git add -A + commit + push --force-with-lease origin trae/auto-commit
-  7. 当前工作区保持不变, 继续AI开发
+  6. 质量门禁检查 (12电路, 不通过跳过本次提交)
+  7. git add -A + commit + push --force-with-lease=trae/auto-commit:<sha>
+  8. 主动 fast-forward main: git push origin trae/auto-commit:main (零冲突, 失败放弃)
+  9. 当前工作区保持不变, 继续AI开发
 
 冲突解决机制 (自动, 零人工):
   - reset --soft origin/main 不会产生冲突 (只移动HEAD, 不动工作区)
   - 工作区文件以 rsync 同步的最新内容为准
-  - push --force-with-lease 失败时: 重新fetch + reset + commit + push
-  - 永远不会产生 merge conflict (因为不merge, 只reset)
+  - push --force-with-lease=<sha> 显式指定远端sha, 避免 stale info
+  - 永远不会产生 merge conflict (因为不merge, 只reset + fast-forward)
 """
 import os
 import sys
 import time
 import subprocess
-import shutil
 from datetime import datetime
 
 def _find_repo_root():
@@ -56,18 +59,21 @@ RSYNC_EXCLUDES = [
     "*.log",
     "/tmp/",
     ".trae/",  # spec文档不同步
+    "third-party/database/etcd/default.etcd/",
+    "third-party/database/etcd/etcd1.etcd/",
+    "third-party/database/etcd/etcd2.etcd/",
+    "third-party/database/etcd/etcd3.etcd/",
+    "third-party/database/kafka/zookeeper-data/",
+    "third-party/database/mongodb/data/",
+    "third-party/database/prometheus/data/",
+    "third-party/database/mysql/mysql.sock.lock",
+    "reports/stress_23h/",  # 压测报告不同步(大文件)
     "auto_commit.log",  # 自身日志不同步
     "pids/",  # 进程pid文件
-    "out/",  # 运行输出(大文件)
-    "data/benchmarks/generated/",  # 生成的电路(大文件, 按需单独提交)
+    "stress_test_logs/",  # 压测日志
+    "stress_test_reports/",  # 压测报告
     "dump.rdb",  # redis快照
-    ".ruff_cache/",
-    ".mypy_cache/",
-    "node_modules/",
-    "*.egg-info/",
-    ".tox/",
-    ".coverage",
-    "htmlcov/",
+    "etcd1.etcd/", "etcd2.etcd/", "etcd3.etcd/",  # etcd数据(根目录)
 ]
 
 
@@ -139,21 +145,15 @@ def ensure_worktree():
     V5方案: worktree 基于origin/main创建 (因为每次提交前会reset --soft origin/main,
     所以初始基于哪里不重要, 但基于origin/main最符合设计意图)。
     """
-    # 检查worktree是否已存在
     rc, out = run("git worktree list")
     if WORKTREE_DIR in out:
-        # worktree已存在, 检查分支
         rc2, out2 = run(f"git -C {WORKTREE_DIR} branch --show-current")
         if out2.strip() == SYNC_BRANCH:
             return True
-        # 分支不对, 删除重建
         run(f"git worktree remove {WORKTREE_DIR} --force")
 
-    # 先fetch origin main, 确保origin/main引用最新
+    # 基于origin/main创建worktree (V5核心设计)
     run("git fetch origin main", timeout=60)
-
-    # 基于origin/main创建worktree, 分支名为SYNC_BRANCH
-    # (V5核心: trae/auto-commit永远基于origin/main最新 + 当前工作区变更)
     rc, out = run(
         f"git worktree add {WORKTREE_DIR} -B {SYNC_BRANCH} origin/main", timeout=60
     )
@@ -173,10 +173,7 @@ def ensure_worktree():
 
 def sync_to_worktree(files):
     """同步变更文件到 worktree 目录 (rsync)"""
-    # 构建rsync排除参数
     exclude_args = " ".join(f"--exclude={e}" for e in RSYNC_EXCLUDES)
-
-    # 整体同步 (保持目录结构一致)
     cmd = f"rsync -av --delete {exclude_args} {REPO_DIR}/ {WORKTREE_DIR}/"
     rc, out = run(cmd, timeout=120)
     if rc != 0:
@@ -185,8 +182,23 @@ def sync_to_worktree(files):
     return True
 
 
+def quality_gate_check() -> bool:
+    """质量门禁检查: 12电路 (4平台×3规模) 端到端流水线。
+
+    不通过则返回False, 禁止提交 (代码质量回退)。
+    通过且优于基准则自动刷新基准。
+    """
+    rc, out = run("python scripts/quality_gate_baseline.py --check", timeout=600)
+    if rc != 0:
+        log(f"质量门禁未通过, 跳过本次提交 (代码质量回退)")
+        log(f"门禁输出: {out[-500:]}")
+        return False
+    log("质量门禁通过, 允许提交")
+    return True
+
+
 def auto_commit_push():
-    """V5: worktree方案 + 与main时刻保持一致 + 自动解决冲突"""
+    """V5: worktree方案 + 与main时刻保持一致 + 质量门禁 + 主动fast-forward main"""
     global DEV_BRANCH
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     changed, status = has_changes()
@@ -211,12 +223,13 @@ def auto_commit_push():
         return False
     log(f"已同步 {len(files)} 个文件到 worktree")
 
-    # === 步骤3: fetch origin main, 保持与main一致 ===
-    rc, out = run("git fetch origin main", timeout=60)
+    # === 步骤3: fetch origin (在worktree中执行), 保持与main一致 + 获取trae/auto-commit远端引用 ===
+    # 必须在worktree中fetch, 否则 --force-with-lease 会因 stale info 失败
+    rc, out = run(f"git -C {WORKTREE_DIR} fetch origin", timeout=60)
     if rc != 0:
-        log(f"fetch origin main失败: {out}, 继续使用本地记录")
+        log(f"fetch origin失败: {out}, 继续使用本地记录")
     else:
-        log("已fetch origin main, 确保与main一致")
+        log("已fetch origin (worktree), 确保与main一致 + 获取trae/auto-commit引用")
 
     # === 步骤4: 软重置到 origin/main (关键: 保持与main一致 + 零冲突) ===
     rc, out = run(f"git -C {WORKTREE_DIR} reset --soft origin/main", timeout=30)
@@ -224,7 +237,11 @@ def auto_commit_push():
         log(f"reset --soft origin/main失败: {out}, 尝试reset --soft HEAD")
         run(f"git -C {WORKTREE_DIR} reset --soft HEAD", timeout=30)
 
-    # === 步骤5: 在 worktree 中 add + commit ===
+    # === 步骤5: 质量门禁检查 (提交前必须通过) ===
+    if not quality_gate_check():
+        return False
+
+    # === 步骤6: 在 worktree 中 add + commit ===
     run(f"git -C {WORKTREE_DIR} add -A")
 
     commit_msg = f"""auto: 6分钟守护进程同步 ({now})
@@ -235,6 +252,7 @@ def auto_commit_push():
 来源分支: {DEV_BRANCH} (未提交, 仅同步)
 同步目标: {SYNC_BRANCH} (基于origin/main最新, 时刻与main一致)
 方案: git worktree + rsync + reset --soft origin/main (零冲突)
+质量门禁: 通过 (12电路 4平台×3规模)
 """
     rc, out = run(
         f'git -C {WORKTREE_DIR} commit -m "$(cat <<\'EOF\'\n{commit_msg}\nEOF\n)"'
@@ -246,55 +264,100 @@ def auto_commit_push():
         log(f"commit失败: {out}")
         return False
 
-    # === 步骤6: force-with-lease push ===
-    # 全量fetch确保所有tracking ref最新 (refspec已配置main + trae/auto-commit)
-    # 兜底: 显式fetch trae/auto-commit到tracking ref (防止refspec丢失)
-    run("git fetch origin", timeout=60)
-    run(f"git fetch origin {SYNC_BRANCH}:refs/remotes/origin/{SYNC_BRANCH}", timeout=60)
-    rc, out = run(
-        f"git -C {WORKTREE_DIR} push --force-with-lease origin {SYNC_BRANCH}",
-        timeout=120,
-    )
+    # === 步骤7: force-with-lease push (显式指定远端sha, 避免stale info) ===
+    rc, remote_ref = run("git ls-remote --heads origin trae/auto-commit", timeout=30)
+    remote_sha = remote_ref.split()[0] if remote_ref.strip() else ""
+    if remote_sha:
+        push_cmd = f"git -C {WORKTREE_DIR} push --force-with-lease=trae/auto-commit:{remote_sha} origin {SYNC_BRANCH}"
+    else:
+        push_cmd = f"git -C {WORKTREE_DIR} push origin {SYNC_BRANCH}"
+    rc, out = run(push_cmd, timeout=120)
     if rc != 0:
         log(f"push --force-with-lease失败: {out}")
-        # 远端可能有新提交, 重新fetch + reset + push
-        run("git fetch origin", timeout=60)
-        run(f"git fetch origin {SYNC_BRANCH}:refs/remotes/origin/{SYNC_BRANCH}", timeout=60)
+        run(f"git -C {WORKTREE_DIR} fetch origin", timeout=60)
         run(f"git -C {WORKTREE_DIR} reset --soft origin/main", timeout=30)
         run(f"git -C {WORKTREE_DIR} add -A")
         rc, out = run(
             f'git -C {WORKTREE_DIR} commit -m "$(cat <<\'EOF\'\n{commit_msg}\nEOF\n)"'
         )
-        rc, out = run(
-            f"git -C {WORKTREE_DIR} push --force-with-lease origin {SYNC_BRANCH}",
-            timeout=120,
-        )
+        rc2, remote_ref2 = run("git ls-remote --heads origin trae/auto-commit", timeout=30)
+        remote_sha2 = remote_ref2.split()[0] if remote_ref2.strip() else ""
+        if remote_sha2:
+            push_cmd2 = f"git -C {WORKTREE_DIR} push --force-with-lease=trae/auto-commit:{remote_sha2} origin {SYNC_BRANCH}"
+        else:
+            push_cmd2 = f"git -C {WORKTREE_DIR} push origin {SYNC_BRANCH}"
+        rc, out = run(push_cmd2, timeout=120)
         if rc != 0:
-            # 最终兜底: 使用--force (V5方案中trae/auto-commit是覆盖式同步分支, 覆盖是预期行为)
-            log(f"force-with-lease仍失败, 改用--force: {out}")
-            rc, out = run(
-                f"git -C {WORKTREE_DIR} push --force origin {SYNC_BRANCH}",
-                timeout=120,
-            )
-            if rc != 0:
-                log(f"push失败(所有重试后): {out}")
-                return False
+            log(f"push失败(重试后): {out}")
+            return False
 
     log(f"已同步到远端 {SYNC_BRANCH} (基于origin/main, 时刻与main一致, 零冲突)")
+
+    # === 步骤8: 主动 fast-forward main (最保底方案) ===
+    try:
+        fast_forward_main()
+    except Exception as e:
+        log(f"[WARN] fast-forward main 异常(放弃, 下次重试): {e}")
+
+    return True
+
+
+def fast_forward_main():
+    """主动 fast-forward main 到 trae/auto-commit (最保底方案).
+
+    原理:
+    - V5 的 reset --soft origin/main 保证 trae/auto-commit 的 commit 父节点 = origin/main
+    - 因此 origin/main merge trae/auto-commit 是 fast-forward, 零冲突
+    - 禁止强制推送, 只用 fast-forward, 失败则放弃等待下次
+    """
+    rc, out = run("git ls-remote origin main", timeout=30)
+    main_sha = out.split()[0] if out.strip() else ""
+    if rc != 0 or not main_sha:
+        log(f"fast-forward: 获取 origin/main sha 失败, 放弃: {out}")
+        return False
+
+    rc, out = run("git ls-remote origin trae/auto-commit", timeout=30)
+    ac_sha = out.split()[0] if out.strip() else ""
+    if rc != 0 or not ac_sha:
+        log(f"fast-forward: 获取 origin/trae/auto-commit sha 失败, 放弃: {out}")
+        return False
+
+    run("git fetch origin main", timeout=60)
+    run("git fetch origin trae/auto-commit", timeout=60)
+
+    rc, out = run(f"git merge-base --is-ancestor {main_sha} {ac_sha}", timeout=10)
+    if rc != 0:
+        log(f"fast-forward: main 已被推进 (非祖先关系), 放弃等待下次. main={main_sha[:8]} ac={ac_sha[:8]}")
+        return False
+
+    if main_sha == ac_sha:
+        return True
+
+    rc, out = run(
+        f"git push origin trae/auto-commit:main",
+        timeout=120,
+    )
+    if rc != 0:
+        log(f"fast-forward: push main 失败(放弃, 下次重试): {out}")
+        return False
+
+    log(f"fast-forward: main 已推进到 trae/auto-commit ({ac_sha[:8]}), 零冲突")
     return True
 
 
 def main():
     global DEV_BRANCH
     DEV_BRANCH = get_current_branch()
-    log("=== 6分钟自动提交守护进程启动 (V5 worktree+main一致) ===")
+    log("=== 6分钟自动提交守护进程启动 (V5 worktree+main一致+质量门禁+fast-forward) ===")
     log(f"仓库: {REPO_DIR}")
     log(f"开发分支(当前): {DEV_BRANCH} (零commit, 零干扰)")
     log(f"同步目标分支: {SYNC_BRANCH} (远端, 基于origin/main)")
     log(f"worktree目录: {WORKTREE_DIR}")
     log(f"检查间隔: {INTERVAL_SECONDS}秒")
-    log(f"方案: git worktree + rsync + reset --soft origin/main")
-    log(f"冲突解决: 自动(零人工), reset --soft不产生冲突, push失败则重新fetch+reset+push")
+    log(f"方案: git worktree + rsync + reset --soft origin/main + 质量门禁")
+    log(f"冲突解决: 自动(零人工), reset --soft不产生冲突, push用显式sha避免stale")
+    log(f"保底机制: 主动 fast-forward main (V5架构保证零冲突, 失败放弃等待下次)")
+    log(f"质量门禁: 12电路 (4平台×3规模), 不通过禁止提交")
 
     while True:
         try:
