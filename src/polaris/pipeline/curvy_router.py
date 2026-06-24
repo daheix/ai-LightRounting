@@ -158,6 +158,15 @@ class _CurvyRouter:
         来源: Lillis & Dutt, DAC 1999 Rip-up and Reroute
           https://dl.acm.org/doi/10.1145/309847.309970
         """
+        # 密度保护: 失败连接过多时跳过 rip-up (密度过高无解, 浪费时间)
+        # 阈值: 失败连接 > 总连接的 60% 时, rip-up 无法改善 (器件密度过高)
+        total_conns = len(connections)
+        if total_conns > 0 and len(unrouted) > total_conns * 0.6:
+            logger.warning(
+                "P0-2: 失败连接 %d/%d (%.0f%%) 超过 60%%, 跳过 rip-up (密度过高无解)",
+                len(unrouted), total_conns, 100.0 * len(unrouted) / total_conns,
+            )
+            return unrouted
         for iteration in range(self._MAX_RIPUP_ITERATIONS):
             if not unrouted:
                 break
