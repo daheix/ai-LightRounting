@@ -107,7 +107,7 @@ HHI_INP_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.5,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="HHI InP VIAC 须被 M1_HEATER 包围 ≥0.5μm（InP 工艺）",
     ),
 ]
@@ -180,7 +180,7 @@ LIONIX_INP_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.5,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="LioniX InP VIAC 须被 M1_HEATER 包围 ≥0.5μm（InP 工艺）",
     ),
 ]
@@ -270,7 +270,7 @@ LNOI_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.5,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="LNOI VIAC 须被 M1_HEATER 包围 ≥0.5μm（LNOI 电极工艺）",
     ),
 ]

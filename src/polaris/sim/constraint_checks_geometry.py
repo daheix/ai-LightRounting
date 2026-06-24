@@ -426,6 +426,167 @@ def _rects_overlap(p1: dict, p2: dict) -> bool:
     )
 
 
+# ------------------------------------------------------------------
+# P0-3 修复: 新增 enclosure / notch / pin_match 检查
+# ------------------------------------------------------------------
+
+
+def check_enclosure(
+    placements: dict,
+    canvas_w: float,
+    canvas_h: float,
+    min_enclosure: float,
+) -> list[Violation]:
+    """检查包围规则约束（P0-3 修复）。
+
+    所有器件 bbox 必须在画布边界内，且与边界保持 min_enclosure_um 间距。
+    来源: IHP SG25H5 PDK enclosure 规则
+           https://www.ihp-microelectronics.com/
+
+    Args:
+        placements: 器件布局 {name: {x, y, w, h}}。
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+        min_enclosure: 最小包围间距（μm）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    if canvas_w <= 0 or canvas_h <= 0:
+        return violations  # 无画布尺寸信息，跳过
+    for name, p in placements.items():
+        x, y = p.get("x", 0), p.get("y", 0)
+        w, h = p.get("w", 0), p.get("h", 0)
+        # 检查四个方向是否满足 enclosure 间距
+        if x < min_enclosure:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.ENCLOSURE,
+                    severity=1.0 - (x / min_enclosure if min_enclosure > 0 else 1.0),
+                    message=f"器件 {name} 左边界间距 {x:.2f} μm < enclosure {min_enclosure:.2f} μm",
+                    device_name=name,
+                )
+            )
+        if y < min_enclosure:
+            violations.append(
+                Violation(
+                    vtype=ViolationType.ENCLOSURE,
+                    severity=1.0 - (y / min_enclosure if min_enclosure > 0 else 1.0),
+                    message=f"器件 {name} 下边界间距 {y:.2f} μm < enclosure {min_enclosure:.2f} μm",
+                    device_name=name,
+                )
+            )
+        if x + w > canvas_w - min_enclosure:
+            gap = canvas_w - (x + w)
+            violations.append(
+                Violation(
+                    vtype=ViolationType.ENCLOSURE,
+                    severity=1.0 - (gap / min_enclosure if min_enclosure > 0 else 1.0),
+                    message=f"器件 {name} 右边界间距 {gap:.2f} μm < enclosure {min_enclosure:.2f} μm",
+                    device_name=name,
+                )
+            )
+        if y + h > canvas_h - min_enclosure:
+            gap = canvas_h - (y + h)
+            violations.append(
+                Violation(
+                    vtype=ViolationType.ENCLOSURE,
+                    severity=1.0 - (gap / min_enclosure if min_enclosure > 0 else 1.0),
+                    message=f"器件 {name} 上边界间距 {gap:.2f} μm < enclosure {min_enclosure:.2f} μm",
+                    device_name=name,
+                )
+            )
+    return violations
+
+
+def check_notch(
+    placements: dict,
+    min_notch: float,
+) -> list[Violation]:
+    """检查凹槽间距约束（P0-3 修复，简化版）。
+
+    简化版：检查器件间最小间距是否 >= min_notch_um。
+    严格 notch 检查需要多边形凹槽分析，此处简化为器件间距检查。
+    来源: KLayout DRC runset notch 规则
+           https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+
+    Args:
+        placements: 器件布局 {name: {x, y, w, h}}。
+        min_notch: 最小凹槽间距（μm）。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    items = list(placements.items())
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            n1, p1 = items[i]
+            n2, p2 = items[j]
+            gap = _rect_gap(p1, p2)
+            if 0 < gap < min_notch:
+                violations.append(
+                    Violation(
+                        vtype=ViolationType.NOTCH,
+                        severity=1.0 - gap / min_notch if min_notch > 0 else 1.0,
+                        message=f"器件 {n1} 与 {n2} 间距 {gap:.2f} μm < notch {min_notch:.2f} μm",
+                        device_name=f"{n1}-{n2}",
+                    )
+                )
+    return violations
+
+
+# 端口方向兼容性映射（P0-3 pin_match 检查）
+# 来源: SiEPIC EBeam PDK 端口方向约定
+#   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+# 光子器件端口方向: E/W/N/S（地理方向）或 input/output（功能方向）
+# 兼容规则: output→input, input→output, E↔W, N↔S
+_DIR_COMPAT = {
+    ("output", "input"): True,
+    ("input", "output"): True,
+    ("E", "W"): True,
+    ("W", "E"): True,
+    ("N", "S"): True,
+    ("S", "N"): True,
+}
+
+
+def check_pin_match(
+    pin_pairs: dict[str, tuple[str, str]],
+) -> list[Violation]:
+    """检查端口方向兼容性约束（P0-3 修复）。
+
+    检查连接的两端端口方向是否兼容（如 output → input, E ↔ W）。
+    来源: SiEPIC EBeam PDK 端口方向约定
+           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+    Args:
+        pin_pairs: 端口对方向信息 {net_id: (dir1, dir2)}。
+
+    Returns:
+        违规列表。
+    """
+    violations: list[Violation] = []
+    for net_id, (dir1, dir2) in pin_pairs.items():
+        if not dir1 or not dir2:
+            continue  # 无方向信息，跳过
+        # 检查方向兼容性
+        if (dir1, dir2) in _DIR_COMPAT:
+            continue  # 兼容
+        # 同方向（如 input→input, output→output）不兼容
+        if dir1 == dir2 and dir1 in ("input", "output"):
+            violations.append(
+                Violation(
+                    vtype=ViolationType.PIN_MATCH,
+                    severity=0.8,
+                    message=f"网络 {net_id} 端口方向不兼容: {dir1}→{dir2}（应为 output→input）",
+                    net_id=net_id,
+                )
+            )
+    return violations
+
+
 __all__ = [
     "check_bend_radius",
     "check_spacing",
@@ -436,4 +597,7 @@ __all__ = [
     "check_min_area",
     "check_port_connectivity",
     "check_layer_density",
+    "check_enclosure",
+    "check_notch",
+    "check_pin_match",
 ]

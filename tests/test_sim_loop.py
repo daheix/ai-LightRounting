@@ -59,11 +59,14 @@ def _make_circuit() -> CircuitSpec:
 
 
 class _StubPlacer:
-    """桩布局器：返回固定布局。"""
+    """桩布局器：返回固定布局。
+
+    器件间距 >= 120μm 以满足热安全距离 100μm（SiEPIC EBeam PDK）。
+    """
 
     def place(self, circuit: CircuitSpec, feedback=None) -> dict:
         return {
-            dev.name: {"x": 10.0 + i * 50, "y": 10.0, "w": dev.width_um, "h": dev.height_um}
+            dev.name: {"x": 10.0 + i * 120, "y": 10.0, "w": dev.width_um, "h": dev.height_um}
             for i, dev in enumerate(circuit.devices)
         }
 
@@ -138,7 +141,7 @@ class TestSimLoop:
         placements = {"d1": {"x": 0, "y": 0, "w": 10, "h": 10}}
         routes = {"n1": [(0, 0), (10, 10)]}
         sim_result = {"total_loss_db": 5.0, "n_crossings": 2}
-        violations = loop._check_constraints(placements, routes, sim_result)
+        violations = loop._check_constraints(_make_circuit(), placements, routes, sim_result)
         assert isinstance(violations, list)
 
 

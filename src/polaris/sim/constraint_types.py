@@ -37,7 +37,7 @@ class ViolationType(Enum):
     MIN_LENGTH = "min_length"  # 波导最小长度不足
     MAX_LENGTH = "max_length"  # 波导最大长度超标
     MIN_AREA = "min_area"  # 最小面积违规
-    ENCLOSEMENT = "enclosure"  # 包围规则违规（内层须被外层包围）
+    ENCLOSURE = "enclosure"  # 包围规则违规（内层须被外层包围）
     NOTCH = "notch"  # 凹槽间距不足（同一图形内凹处）
     PORT_CONNECTIVITY = "port_connectivity"  # 端口未连接
     PIN_MATCH = "pin_match"  # 端口宽度/类型不匹配
@@ -158,6 +158,8 @@ class CheckContext:
         device_areas: 器件面积字典 {device_name: area_um2}。
         port_connections: 端口连接状态 {port_name: connected_bool}。
         layer_densities: 层密度字典 {layer_name: density_0_to_1}。
+        canvas_w: 画布宽度（μm），用于 enclosure 检查（P0-3 修复）。
+        canvas_h: 画布高度（μm），用于 enclosure 检查（P0-3 修复）。
     """
 
     total_loss_db: float = 0.0
@@ -168,6 +170,10 @@ class CheckContext:
     device_areas: dict[str, float] | None = None
     port_connections: dict[str, bool] | None = None
     layer_densities: dict[str, float] | None = None
+    canvas_w: float = 0.0
+    canvas_h: float = 0.0
+    # P0-3: pin_match 检查的端口对方向信息 {net_id: (dir1, dir2)}
+    pin_pairs: dict[str, tuple[str, str]] | None = None
 
 
 __all__ = [

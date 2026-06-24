@@ -87,9 +87,11 @@ _SRC_EEFOCUS_SIN_TOC = Source(
     note="文献典型值 2.4-2.5×10⁻⁵ /K；台积电 ISSCC 2026 报告 2.0×10⁻⁵ /K 为下界",
 )
 
-# SiN 平台通用设计约束（最小间距 2μm，最小弯曲半径 50μm）
+# SiN 平台通用设计约束（最小间距 2μm，最小弯曲半径 100μm）
 # 低折射率差平台需更大间距抑制串扰，弯曲半径远大于 SOI 的 2-6μm
+# LIGENTEC AN800 SiN 平台最小弯曲半径 100μm
+# 来源: https://www.meetoptics.com/suppliers/ligentec
 _SIN_CONSTRAINTS: dict = {
     "min_spacing_um": 2.0,
-    "min_bend_radius_um": 50.0,
+    "min_bend_radius_um": 100.0,
 }

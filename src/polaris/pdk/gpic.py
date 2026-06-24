@@ -395,7 +395,7 @@ def _build_gpic_drc_runset() -> list[Any]:
             check_type=DRCCheckType.ENCLOSE,
             threshold_um=0.5,
             enclosure_layer_name="M1_HEATER",
-            vtype=ViolationType.ENCLOSEMENT,
+            vtype=ViolationType.ENCLOSURE,
             description="GPIC VIAC 须被 M1_HEATER 包围 ≥0.5μm",
         ),
     ]

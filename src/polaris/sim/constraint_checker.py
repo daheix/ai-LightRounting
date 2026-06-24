@@ -30,10 +30,13 @@ from polaris.sim.constraint_types import (
 from polaris.sim.constraint_checks_geometry import (
     check_bend_radius,
     check_coupling_gap,
+    check_enclosure,
     check_layer_density,
     check_min_area,
     check_min_width,
+    check_notch,
     check_overlap,
+    check_pin_match,
     check_port_connectivity,
     check_spacing,
     check_waveguide_length,
@@ -67,6 +70,10 @@ class ConstraintChecker:
     ) -> list[Violation]:
         """综合约束检查。
 
+        P0-3 修复: 调用全部 16 项 ViolationType 检查函数，无遗漏。
+        新增调用: check_thermal, check_crosstalk, check_enclosure,
+        check_notch, check_pin_match。
+
         Args:
             placements: 器件布局。
             paths: 布线路径。
@@ -78,11 +85,18 @@ class ConstraintChecker:
         cfg = self.config
         ctx = context or CheckContext()
         violations: list[Violation] = []
+        # 几何 DRC
         violations.extend(check_overlap(placements))
         violations.extend(check_spacing(placements, cfg.min_spacing_um))
         violations.extend(check_bend_radius(paths, cfg.min_bend_radius_um))
+        violations.extend(check_enclosure(placements, ctx.canvas_w, ctx.canvas_h, cfg.min_enclosure_um))
+        violations.extend(check_notch(placements, cfg.min_notch_um))
+        # 性能 DRC
         violations.extend(check_insertion_loss(ctx.total_loss_db, cfg.max_insertion_loss_db))
         violations.extend(check_crossings(ctx.n_crossings, cfg.max_crossings))
+        violations.extend(check_thermal(placements, cfg.safe_thermal_distance_um))
+        violations.extend(check_crosstalk(placements, paths, cfg.max_crosstalk_db))
+        # 可选 DRC（基于 context 提供的输入）
         violations.extend(self._check_optional(ctx, cfg))
         return violations
 
@@ -107,6 +121,8 @@ class ConstraintChecker:
             violations.extend(check_port_connectivity(ctx.port_connections))
         if ctx.layer_densities is not None:
             violations.extend(check_layer_density(ctx.layer_densities, cfg.max_layer_density))
+        if ctx.pin_pairs is not None:
+            violations.extend(check_pin_match(ctx.pin_pairs))
         return violations
 
     def check_passed(self, **kwargs) -> bool:

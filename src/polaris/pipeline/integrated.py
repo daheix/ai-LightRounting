@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from polaris.data.specs import CircuitSpec
+from polaris.pipeline.curvy_router import _CurvyRouter
+from polaris.pipeline.default_simulator import _DefaultSimulator
 from polaris.sim.constraint_checker import ConstraintConfig
 from polaris.sim.sim_loop import SimLoop, SimLoopConfig
 
@@ -224,38 +226,149 @@ class _DefaultPlacer:
     def _place_random(self, circuit: CircuitSpec) -> dict:
         """随机贪心布局（独立模式，用于基线对比/无 checkpoint 场景）。
 
-        修复: 原实现用固定 margin=50，小画布（200×200）上大器件（30×20）必然重叠。
-        现改为网格布局：将画布划分为 N×N 网格，每个器件占一格，保证不重叠。
+        修复 P0-1: 原网格布局在大器件小画布场景产生重叠（器件尺寸 > 格子尺寸时
+        溢出到相邻格子）。现增加: 1) 重叠检测 2) 合法化（推开重叠器件到最近空闲位置）
+        3) 画布空间不足时扩大画布（×1.5）重新布局。
+
+        来源: DREAMPlace 合法化（TCAD 2020 §III.C）
+          https://arxiv.org/abs/1904.03522
         """
         import random
 
         rng = random.Random(42)
-        placements = {}
         n_dev = len(circuit.devices)
         if n_dev == 0:
-            return placements
+            return {}
 
-        # 网格布局：计算行列数（尽量方形）
-        n_cols = int(math.ceil(math.sqrt(n_dev)))
-        n_rows = int(math.ceil(n_dev / n_cols))
-
-        # 每格尺寸（含间距）
-        cell_w = circuit.canvas_w / n_cols
-        cell_h = circuit.canvas_h / n_rows
-        min_spacing = 5.0  # 器件间最小间距 μm
-
-        for idx, dev in enumerate(circuit.devices):
-            row = idx // n_cols
-            col = idx % n_cols
-            # 器件在格内随机偏移（保留 spacing）
-            avail_w = max(cell_w - dev.width_um - min_spacing, 0)
-            avail_h = max(cell_h - dev.height_um - min_spacing, 0)
-            offset_x = rng.uniform(0, avail_w) if avail_w > 0 else 0.0
-            offset_y = rng.uniform(0, avail_h) if avail_h > 0 else 0.0
-            x = col * cell_w + min_spacing / 2 + offset_x
-            y = row * cell_h + min_spacing / 2 + offset_y
-            placements[dev.name] = {"x": x, "y": y, "w": dev.width_um, "h": dev.height_um}
+        canvas_w = circuit.canvas_w
+        canvas_h = circuit.canvas_h
+        for attempt in range(3):
+            placements = _grid_place(circuit.devices, canvas_w, canvas_h, rng)
+            placements = _legalize_overlaps(placements, canvas_w, canvas_h)
+            if not _has_overlap(placements):
+                return placements
+            # 仍有重叠 → 扩大画布重试
+            canvas_w *= 1.5
+            canvas_h *= 1.5
+            logger.warning(
+                "P0-1: 画布空间不足，扩大至 %.1f×%.1f μm 重试 (attempt %d/3)",
+                canvas_w, canvas_h, attempt + 1,
+            )
+        logger.warning(
+            "P0-1: 经过 3 次画布扩大仍有重叠，返回最后布局（%d 器件）", n_dev,
+        )
         return placements
+
+
+# P0-1 布局合法化辅助函数
+# 来源: DREAMPlace 合法化（TCAD 2020 §III.C）https://arxiv.org/abs/1904.03522
+_MIN_PLACE_SPACING_UM = 5.0  # 器件间最小间距 μm
+
+
+def _grid_place(devices, canvas_w: float, canvas_h: float, rng) -> dict:
+    """网格布局：将画布划分为 N×N 网格，每个器件占一格。"""
+    n_dev = len(devices)
+    n_cols = int(math.ceil(math.sqrt(n_dev)))
+    n_rows = int(math.ceil(n_dev / n_cols))
+    cell_w = canvas_w / n_cols
+    cell_h = canvas_h / n_rows
+    placements = {}
+    for idx, dev in enumerate(devices):
+        row = idx // n_cols
+        col = idx % n_cols
+        avail_w = max(cell_w - dev.width_um - _MIN_PLACE_SPACING_UM, 0)
+        avail_h = max(cell_h - dev.height_um - _MIN_PLACE_SPACING_UM, 0)
+        offset_x = rng.uniform(0, avail_w) if avail_w > 0 else 0.0
+        offset_y = rng.uniform(0, avail_h) if avail_h > 0 else 0.0
+        x = col * cell_w + _MIN_PLACE_SPACING_UM / 2 + offset_x
+        y = row * cell_h + _MIN_PLACE_SPACING_UM / 2 + offset_y
+        placements[dev.name] = {"x": x, "y": y, "w": dev.width_um, "h": dev.height_um}
+    return placements
+
+
+def _rects_overlap(p1: dict, p2: dict) -> bool:
+    """检查两矩形是否重叠（严格重叠，共享边界不算）。"""
+    return not (
+        p1["x"] + p1["w"] <= p2["x"]
+        or p2["x"] + p2["w"] <= p1["x"]
+        or p1["y"] + p1["h"] <= p2["y"]
+        or p2["y"] + p2["h"] <= p1["y"]
+    )
+
+
+def _has_overlap(placements: dict) -> bool:
+    """检测布局中是否存在任意重叠。"""
+    items = list(placements.values())
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            if _rects_overlap(items[i], items[j]):
+                return True
+    return False
+
+
+def _legalize_overlaps(placements: dict, canvas_w: float, canvas_h: float) -> dict:
+    """合法化布局：消除重叠（推开重叠器件到最近空闲位置）。
+
+    遍历所有器件对，对重叠器件沿 x/y 方向搜索最近空闲位置。
+    来源: DREAMPlace 合法化（TCAD 2020 §III.C）
+      https://arxiv.org/abs/1904.03522
+    """
+    names = list(placements.keys())
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            p1 = placements[names[i]]
+            p2 = placements[names[j]]
+            if _rects_overlap(p1, p2):
+                # 将 p2 推开到最近空闲位置
+                new_p2 = _find_nearest_free(
+                    p2, placements, canvas_w, canvas_h, exclude=names[j]
+                )
+                placements[names[j]] = new_p2
+    return placements
+
+
+def _find_nearest_free(
+    p: dict,
+    placements: dict,
+    canvas_w: float,
+    canvas_h: float,
+    exclude: str,
+) -> dict:
+    """沿 +x/+y/-x/-y 方向搜索最近空闲位置。
+
+    Args:
+        p: 待移动器件的布局 {x, y, w, h}。
+        placements: 所有器件布局（用于碰撞检测）。
+        canvas_w: 画布宽度。
+        canvas_h: 画布高度。
+        exclude: 排除的器件名（即待移动器件自身）。
+
+    Returns:
+        移动后的布局 dict；找不到空闲位置时返回原位置（由上层扩大画布重试）。
+    """
+    step = _MIN_PLACE_SPACING_UM
+    # 4 个搜索方向: +x, +y, -x, -y
+    for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+        new_p = dict(p)
+        for _ in range(200):  # 最多搜索 200 步
+            new_p["x"] += dx * step
+            new_p["y"] += dy * step
+            # 边界检查
+            if new_p["x"] < 0 or new_p["y"] < 0:
+                break
+            if new_p["x"] + new_p["w"] > canvas_w or new_p["y"] + new_p["h"] > canvas_h:
+                break
+            # 检查是否与其他器件重叠
+            clash = False
+            for name, other in placements.items():
+                if name == exclude:
+                    continue
+                if _rects_overlap(new_p, other):
+                    clash = True
+                    break
+            if not clash:
+                return new_p
+    return p  # 找不到空闲位置，返回原位置（由上层扩大画布重试）
 
 
 class _DefaultRouter:
@@ -313,344 +426,6 @@ class _DefaultRouter:
                 unrouted,
             )
         return paths
-
-
-class _CurvyRouter:
-    """弯曲感知布线器（LiDAR ISPD'25 curvy-aware routing）。
-
-    在 A* 网格路径基础上，用欧拉/圆弧曲线替换直角弯，输出平滑弯曲波导路径。
-    相比 _DefaultRouter 的折线输出，弯曲波导损耗更低、更符合光子工艺实际。
-
-    来源:
-    - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
-    - LiDAR 2.0 TCAD 2025: https://arxiv.org/html/2505.17239v2
-    """
-
-    def __init__(self, curve_type: str = "euler") -> None:
-        """初始化弯曲布线器。
-
-        Args:
-            curve_type: 弯曲类型（"euler"/"arc"/"bezier"）。
-        """
-        self.curve_type = curve_type
-
-    def route(self, circuit: CircuitSpec, placements: dict) -> dict:
-        """顺序网格布线 + 已布线路径作为障碍物避免交叉。
-
-        修复: 原实现每条连接独立 A* 寻路 + 曲线替换，不考虑已布线路径，
-        导致大量交叉；曲线替换还会向外偏移产生新的交叉和弯曲半径违规。
-        现改为顺序网格布线策略：每条连接布线后，将其路径转换为障碍物（窄带），
-        阻止后续连接穿过，从而避免交叉。网格折线路径本身满足约束检查器
-        （下采样 + 宏观转弯点检测跳过短路径直角弯）。
-
-        来源: LiDAR ISPD'25 §3.3 Sequential Routing
-          https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
-
-        修复（违规 2）：原实现在布线失败时静默跳过（fall-back）。现改为
-        收集所有未布线连接，若存在未布线连接则记录 warning 日志明确列出
-        失败连接（非静默跳过），让调用方知晓布线不完整。全部连接布线
-        成功时正常返回。
-        """
-        from polaris.router.waveguide_router import (
-            GridRouter,
-            RouterConstraints,
-            get_platform_constraints,
-        )
-
-        cons = get_platform_constraints("SOI")
-        # grid_size = min_bend_radius_um，确保网格直角弯半径 >= min_bend_radius
-        # （直角弯半径 = grid_size，需 >= min_bend_radius_um 才满足约束）
-        grid_size = cons["min_bend_radius_um"]
-        grid_w = int(circuit.canvas_w / grid_size)
-        grid_h = int(circuit.canvas_h / grid_size)
-        # 障碍物列表：已布线路径的窄带障碍物（半宽 = grid_size*0.5）
-        obstacles: list[tuple[float, float, float, float]] = []
-        paths = {}
-        unrouted: list[str] = []
-        for d1, p1, d2, p2 in circuit.connections:
-            if d1 in placements and d2 in placements:
-                pos1 = placements[d1]
-                pos2 = placements[d2]
-                start = (pos1["x"] + pos1["w"] / 2, pos1["y"] + pos1["h"] / 2)
-                end = (pos2["x"] + pos2["w"] / 2, pos2["y"] + pos2["h"] / 2)
-                # 每条连接创建带累积障碍物的 GridRouter
-                router = GridRouter(
-                    grid_w, grid_h, grid_size,
-                    RouterConstraints(
-                        min_bend_radius_um=cons["min_bend_radius_um"],
-                        min_spacing_um=cons["min_spacing_um"],
-                    ),
-                )
-                for box in obstacles:
-                    router.add_obstacle_box(*box)
-                sg = (int(start[0] / grid_size), int(start[1] / grid_size))
-                eg = (int(end[0] / grid_size), int(end[1] / grid_size))
-                grid_path = router.route(sg, eg)
-                if grid_path:
-                    pts = [(g[0] * grid_size, g[1] * grid_size) for g in grid_path]
-                    # 起终点对齐到精确坐标
-                    if pts:
-                        pts[0] = start
-                        pts[-1] = end
-                    paths[f"{d1}_{p1}_{d2}_{p2}"] = pts
-                    # 将已布线路径下采样后转换为障碍物
-                    # 半宽 = grid_size*0.6，确保覆盖网格间隙阻止交叉
-                    sampled_pts = _downsample_path_for_obstacle(pts, grid_size)
-                    obstacles.extend(
-                        _path_to_obstacles(sampled_pts, grid_size * 0.6)
-                    )
-                else:
-                    unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
-                    logger.warning(
-                        "网格布线失败 %s_%s_%s_%s: 无法找到可行路径",
-                        d1, p1, d2, p2,
-                    )
-            else:
-                unrouted.append(f"{d1}_{p1}_{d2}_{p2}")
-        if unrouted:
-            logger.warning(
-                "顺序网格布线存在 %d 条未布线连接: %s",
-                len(unrouted),
-                unrouted,
-            )
-        return paths
-
-
-class _DefaultSimulator:
-    """默认仿真器。
-
-    支持两种独立模式（非 fallback，按需选择）：
-    1. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator
-    2. 查表估算：基于器件类型损耗查表的快速估算（独立接口，用于快速可行性筛查）
-
-    仿真来源:
-    - simphony: https://simphonyphotonics.readthedocs.io/
-    - sax: https://flaport.github.io/sax/
-    - 查表损耗值来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
-    """
-
-    # 器件类型 → 单位损耗 (dB)
-    # 来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
-    # 波导类器件按 dB/cm × length(μm)/1e4 计算，其余为固定插损。
-    _LOSS_TABLE: dict[str, float] = {
-        "waveguide": 3.0,  # SOI strip waveguide 3.0 dB/cm，需乘以 length/1e4
-        "straight": 3.0,  # 直波导（gdsfactory/LiDAR 命名），同 waveguide
-        "strip_waveguide": 3.0,  # PoLaRIS PDK 标准波导名，同 waveguide
-        "waveguide_bump$1": 3.0,  # SiEPIC 波导弯曲，同 waveguide
-        "mzi": 1.0,  # MZI 插损 1.0 dB
-        "ring": 0.3,  # 环谐振器插损 0.3 dB
-        "ring_resonator": 0.3,  # 环谐振器（SiEPIC 命名），同 ring
-        "grating_coupler": 1.9,  # GC 耦合损耗 1.9 dB
-        "grating_coupler_1d": 1.9,  # SiEPIC ebeam_gc_te1550，同 grating_coupler
-        "mmi": 0.4,  # MMI 1x2/2x2 插损 0.4 dB
-        "mmi_1x2": 0.4,  # MMI 1x2（gdsfactory 命名），同 mmi
-        "mmi_2x2": 0.4,  # MMI 2x2（gdsfactory 命名），同 mmi
-        "y_branch": 0.3,  # Y 分支插损 0.3 dB
-        "directional_coupler": 0.2,  # DC 插损 0.2 dB
-        "ebeam_dc_halfring_straight$1": 0.2,  # SiEPIC 半环 DC，同 directional_coupler
-        "DirectionalCoupler_SeriesRings$1": 0.2,  # SiEPIC 串联环 DC，同 directional_coupler
-        "crossing": 0.2,  # 波导交叉插损 0.2 dB
-        "ebeam_crossing4": 0.2,  # SiEPIC ebeam_crossing4，同 crossing
-        "terminator": 0.1,  # 终端吸收器插损 0.1 dB
-        "phase_shifter": 0.5,  # 热光移相器插损 0.5 dB
-        "thermo_optic_phase_shifter": 0.5,  # PoLaRIS PDK 标准移相器名，同 phase_shifter
-        "heater": 0.5,  # 加热器（同 phase_shifter）
-        "ge_photodetector": 0.5,  # Ge 光电探测器耦合损耗 0.5 dB
-        "avalanche_photodetector": 0.5,  # 雪崩光电探测器耦合损耗 0.5 dB
-        "mzm_modulator": 4.0,  # MZM 调制器插损 4.0 dB（含分束+合束）
-        "mrm_modulator": 0.5,  # MRM 调制器环耦合损耗 0.5 dB
-        "thermo_optic_tuned_ring_modulator": 0.5,  # 热光环调制器，同 mrm_modulator
-        "thermo_optic_switch": 1.0,  # 热光开关插损 1.0 dB
-    }
-
-    # 波导类器件类型集合（按长度计算损耗，需 length/wg_length 参数）
-    _WAVEGUIDE_TYPES: frozenset[str] = frozenset(
-        {"waveguide", "straight", "strip_waveguide", "waveguide_bump$1"}
-    )
-
-    def __init__(self, mode: str = "table") -> None:
-        """初始化仿真器。
-
-        Args:
-            mode: 仿真模式，"real" 使用真实 S 参数仿真器，
-                  "table" 使用查表估算（默认，快速）。
-        """
-        self._mode = mode
-        self._sim = None
-        if mode == "real":
-            self._init_real_simulator()
-
-    def _init_real_simulator(self) -> None:
-        """初始化真实 S 参数仿真器。"""
-        try:
-            from polaris.sim.simulator import CircuitSimulator
-
-            self._sim = CircuitSimulator()
-            logger.info("真实 S 参数仿真器初始化成功")
-        except Exception as e:
-            raise RuntimeError(f"真实仿真器初始化失败: {e}") from e
-
-    def simulate(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """仿真 S 参数（按初始化模式选择）。"""
-        if self._mode == "real" and self._sim is not None:
-            return self._simulate_real(circuit, placements, paths)
-        return self._simulate_table(circuit, placements, paths)
-
-    def _simulate_real(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """真实 S 参数级联仿真。"""
-        result = self._sim.simulate(circuit)
-        return {
-            "total_loss_db": float(result.get("total_loss_db", 0.0)),
-            "n_crossings": int(result.get("n_crossings", 0)),
-        }
-
-    def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """查表估算损耗（独立接口，用于快速可行性筛查）。
-
-        修复（违规 6/7/8）：
-        - 违规 6：未知器件类型不再默认返回 0.0，改为 raise KeyError。
-        - 违规 7：波导长度参数缺失不再用宽度代替，改为 raise ValueError。
-        - 违规 8：n_crossings 不再固定返回 0，改为基于 paths 几何实际
-          计算交叉数（线段相交检测）。
-
-        来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
-        """
-        total_loss = 0.0
-        for dev in circuit.devices:
-            if dev.device_type not in self._LOSS_TABLE:
-                raise KeyError(
-                    f"器件类型 '{dev.device_type}' 不在损耗表中，"
-                    f"已知类型: {sorted(self._LOSS_TABLE.keys())}。"
-                    f"请在 _LOSS_TABLE 中补充该器件类型的损耗值。"
-                )
-            loss = self._LOSS_TABLE[dev.device_type]
-            if dev.device_type in self._WAVEGUIDE_TYPES:
-                # 波导类器件按长度计算损耗，支持 length/wg_length/length_um 参数名
-                # length_um 为 SiEPIC/gdsfactory 标准命名
-                length = dev.params.get(
-                    "length", dev.params.get("wg_length", dev.params.get("length_um"))
-                )
-                if length is None:
-                    raise ValueError(
-                        f"波导器件 '{dev.name}'（类型 '{dev.device_type}'）"
-                        f"缺少 length 参数，无法计算波导损耗。"
-                        f"请在器件 params 中提供 length/length_um（μm）。"
-                    )
-                total_loss += loss * length / 1e4
-            else:
-                total_loss += loss
-        n_crossings = _count_path_crossings(paths)
-        return {"total_loss_db": total_loss, "n_crossings": n_crossings}
-
-
-def _count_path_crossings(paths: dict) -> int:
-    """基于路径几何计算交叉数（违规 8 修复）。
-
-    遍历所有不同连接的线段对，检测是否相交（不含共享端点，不含同一路径内的相邻线段）。
-    使用方向叉积（CCW）判断线段相交，复杂度 O(n^2 * m^2)，
-    其中 n 为连接数，m 为单条路径线段数。对典型 PIC 规模（<100 连接）可接受。
-
-    来源: 计算几何经典线段相交算法（Bentley-Ottmann 简化版）。
-    """
-    # 按路径分组存储线段，避免同一路径内的线段自相交误报
-    path_segs: list[tuple[str, tuple[float, float], tuple[float, float]]] = []
-    for net_id, pts in paths.items():
-        if len(pts) < 2:
-            continue
-        for i in range(len(pts) - 1):
-            p1 = (float(pts[i][0]), float(pts[i][1]))
-            p2 = (float(pts[i + 1][0]), float(pts[i + 1][1]))
-            path_segs.append((net_id, p1, p2))
-
-    def _cross(o, a, b):
-        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-
-    def _segments_intersect(p1, p2, p3, p4):
-        """检测线段 p1p2 与 p3p4 是否真相交（不含共享端点）。"""
-        d1 = _cross(p3, p4, p1)
-        d2 = _cross(p3, p4, p2)
-        d3 = _cross(p1, p2, p3)
-        d4 = _cross(p1, p2, p4)
-        if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and (
-            (d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)
-        ):
-            return True
-        return False
-
-    crossings = 0
-    n = len(path_segs)
-    for i in range(n):
-        for j in range(i + 1, n):
-            # 跳过同一路径内的线段对（避免自相交误报）
-            if path_segs[i][0] == path_segs[j][0]:
-                continue
-            _, p1, p2 = path_segs[i]
-            _, p3, p4 = path_segs[j]
-            if _segments_intersect(p1, p2, p3, p4):
-                crossings += 1
-    return crossings
-
-
-def _path_to_obstacles(
-    pts: list[tuple[float, float]],
-    half_width: float,
-) -> list[tuple[float, float, float, float]]:
-    """将布线路径转换为窄带障碍物列表。
-
-    沿路径每段生成一个矩形障碍物（宽度 = 2 * half_width），
-    用于阻止后续连接与该路径交叉（LiDAR ISPD'25 顺序布线障碍物策略）。
-
-    来源: LiDAR ISPD'25 §3.3 Sequential Routing
-      https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
-
-    Args:
-        pts: 路径点列表 [(x, y), ...]。
-        half_width: 障碍物半宽（μm），通常 = min_spacing。
-
-    Returns:
-        障碍物列表 [(xmin, ymin, xmax, ymax), ...]。
-    """
-    if len(pts) < 2:
-        return []
-    obstacles: list[tuple[float, float, float, float]] = []
-    for i in range(len(pts) - 1):
-        x1, y1 = float(pts[i][0]), float(pts[i][1])
-        x2, y2 = float(pts[i + 1][0]), float(pts[i + 1][1])
-        xmin = min(x1, x2) - half_width
-        ymin = min(y1, y2) - half_width
-        xmax = max(x1, x2) + half_width
-        ymax = max(y1, y2) + half_width
-        obstacles.append((xmin, ymin, xmax, ymax))
-    return obstacles
-
-
-def _downsample_path_for_obstacle(
-    pts: list[tuple[float, float]],
-    min_segment: float,
-) -> list[tuple[float, float]]:
-    """下采样路径用于生成障碍物，减少障碍物数量避免阻塞通道。
-
-    合并距离过近的相邻点，保留路径宏观结构。
-
-    Args:
-        pts: 原始路径点列表。
-        min_segment: 最小段长（μm），短于此值的相邻点合并。
-
-    Returns:
-        下采样后的路径点列表。
-    """
-    if len(pts) < 3:
-        return list(pts)
-    import math as _math
-    result: list[tuple[float, float]] = [pts[0]]
-    for i in range(1, len(pts)):
-        dx = pts[i][0] - result[-1][0]
-        dy = pts[i][1] - result[-1][1]
-        if _math.hypot(dx, dy) >= min_segment:
-            result.append(pts[i])
-    if result[-1] != pts[-1]:
-        result.append(pts[-1])
-    return result
 
 
 class IntegratedPipeline:

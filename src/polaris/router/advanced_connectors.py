@@ -242,12 +242,14 @@ class PhaseMatchedRouter:
     确保 MZI 两臂光程差 < λ/10（相位匹配）
     """
 
-    def __init__(self, wavelength: float = 1.55, neff: float = 2.34) -> None:
+    def __init__(self, wavelength: float = 1.55, neff: float = 2.4) -> None:
         """初始化相位匹配路由器。
 
         Args:
             wavelength: 工作波长（μm），默认 1.55（C 波段）。
-            neff: 有效折射率，默认 2.34（SOI strip 波导典型值）。
+            neff: 有效折射率，默认 2.4（SiEPIC EBeam PDK strip waveguide 1550nm
+                有效折射率典型值，来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK；
+                与 sim/device_models.py 和 sim/interconnect_jax.py 统一）。
 
         Raises:
             ValueError: 参数非正。

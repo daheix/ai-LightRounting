@@ -54,6 +54,12 @@ def auto_grid_size(
 ) -> float:
     """根据画布尺寸与平台约束自动选择最优网格分辨率。
 
+    *创新*：综合公式（非单一文献直接引用）
+
+    创新逻辑:
+    - 将三个独立约束统一为单一网格分辨率公式，取最大值确保同时满足
+    - 三个下界分别对应物理可行性、几何精度、计算效率三类约束
+
     经验公式（来源: LiDAR ISPD 2025 + Ada-Routing ICCAD 2025 + DREAMPlace DAC 2019）::
 
         grid_size = max(
@@ -64,6 +70,8 @@ def auto_grid_size(
 
     对于 5000×5000 μm 画布 + SOI 平台（R_min=5μm, w=0.5μm）::
         grid_size = max(0.6, 2.5, 2.5) = 2.5 μm → 2000×2000 = 4M 单元
+
+    对标: Cadence Innovus grid-based router 自适应网格
 
     Args:
         canvas_w: 画布宽度（μm）。

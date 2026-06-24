@@ -1,0 +1,37 @@
+{
+  "total": 4,
+  "circuits": [
+    {
+      "path": "mzi_array/XS/SOI/mzi_array_XS_SOI_042.json",
+      "topology": "mzi_array",
+      "scale": "XS",
+      "platform": "SOI",
+      "n_devices": 5,
+      "name": "mzi_array_XS_SOI_042"
+    },
+    {
+      "path": "mzi_array/XS/SiN/mzi_array_XS_SiN_042.json",
+      "topology": "mzi_array",
+      "scale": "XS",
+      "platform": "SiN",
+      "n_devices": 5,
+      "name": "mzi_array_XS_SiN_042"
+    },
+    {
+      "path": "ring_filter/XS/SOI/ring_filter_XS_SOI_042.json",
+      "topology": "ring_filter",
+      "scale": "XS",
+      "platform": "SOI",
+      "n_devices": 4,
+      "name": "ring_filter_XS_SOI_042"
+    },
+    {
+      "path": "ring_filter/XS/SiN/ring_filter_XS_SiN_042.json",
+      "topology": "ring_filter",
+      "scale": "XS",
+      "platform": "SiN",
+      "n_devices": 4,
+      "name": "ring_filter_XS_SiN_042"
+    }
+  ]
+}

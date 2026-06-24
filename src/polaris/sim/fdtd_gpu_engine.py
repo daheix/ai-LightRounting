@@ -596,12 +596,16 @@ class FDTDCrossValidator:
 
         tidy3d_config = Tidy3DConfig()
         tidy3d_adapter = Tidy3DAdapter(tidy3d_config)
-        try:
-            tidy3d_result = tidy3d_adapter.run_full(device, wavelengths)
-            results["tidy3d"] = tidy3d_result
-        except RuntimeError as e:
-            logger.warning("Tidy3D 云端不可用，跳过对比: %s", e)
-            results["tidy3d"] = None
+        # 规则 14.1：禁止 fall-back，Tidy3D 后端不可用时必须 raise 告警
+        # Tidy3DAdapter 无 run_full 方法（云端 API key 未配置），
+        # 调用方应捕获 RuntimeError 决定是否跳过交叉验证
+        if not hasattr(tidy3d_adapter, "run_full"):
+            raise RuntimeError(
+                "Tidy3D 云端后端不可用：Tidy3DAdapter 未实现 run_full 方法。"
+                "请配置 Tidy3D API key 或安装 tidy3d 包后重试。"
+            )
+        tidy3d_result = tidy3d_adapter.run_full(device, wavelengths)
+        results["tidy3d"] = tidy3d_result
         # 3. 交叉验证（仅当两个后端都可用）
         validation = None
         if results.get("tidy3d") and results.get("gpu"):

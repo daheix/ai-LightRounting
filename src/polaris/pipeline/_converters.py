@@ -132,8 +132,12 @@ def convert_to_placements(circuit: CircuitSpec, sim_placements: dict) -> dict:
     for inst_id, pl_dict in sim_placements.items():
         spec = spec_by_name.get(inst_id)
         if spec is None:
-            logger.warning("Placement 转换跳过 %s：未在 circuit.devices 中找到", inst_id)
-            continue
+            # 规则 14.1：禁止 fall-back，sim_placements 与 circuit.devices
+            # 不一致属于数据完整性错误，必须 raise 告警
+            raise ValueError(
+                f"Placement 转换失败：实例 '{inst_id}' 未在 circuit.devices 中找到。"
+                f"sim_placements 与 circuit.devices 不一致，请检查数据源。"
+            )
         device = _build_device_from_spec(spec)
         placements[inst_id] = Placement(
             instance_id=inst_id,

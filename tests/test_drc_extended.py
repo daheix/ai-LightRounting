@@ -112,9 +112,9 @@ def test_constraint_checker_with_optional_drc():
     """测试 ConstraintChecker 综合检查含可选 DRC。"""
     placements = {
         "dev1": {"x": 0, "y": 0, "w": 20, "h": 20},
-        "dev2": {"x": 50, "y": 50, "w": 20, "h": 20},
+        "dev2": {"x": 150, "y": 150, "w": 20, "h": 20},
     }
-    paths = {"net1": [(10, 10), (50, 50)]}
+    paths = {"net1": [(10, 10), (150, 150)]}
     context = CheckContext(
         waveguide_widths={"net1": 0.5},
         waveguide_lengths={"net1": 50.0},

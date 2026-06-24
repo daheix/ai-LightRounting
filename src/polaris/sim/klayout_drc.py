@@ -183,7 +183,7 @@ SIEPIC_EBEAM_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.5,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="VIAC 须被 M1_HEATER 包围 ≥0.5μm（防止接触孔开路）",
     ),
 ]

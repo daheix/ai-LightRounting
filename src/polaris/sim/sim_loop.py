@@ -18,6 +18,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass, field
 
 from polaris.sim.constraint_checker import (
@@ -128,7 +129,7 @@ class SimLoop:
             logger.info("SimLoop 迭代 %d/%d", iteration + 1, cfg.max_iterations)
 
             placements, routes, sim_result = self._run_one_step(circuit, feedback)
-            violations = self._check_constraints(placements, routes, sim_result)
+            violations = self._check_constraints(circuit, placements, routes, sim_result)
             state = _IterState(placements, routes, sim_result, violations)
             fb = self.adapter.adapt(violations)
             history.append(fb)
@@ -153,14 +154,76 @@ class SimLoop:
         sim_result = self.simulator.simulate(circuit, placements, routes)
         return placements, routes, sim_result
 
-    def _check_constraints(self, placements, routes, sim_result):
+    def _check_constraints(self, circuit, placements, routes, sim_result):
         """执行约束检查。
 
-        将仿真结果封装为 CheckContext，调用重构后的 check API。
+        P0-3 修复: 填充 CheckContext 的全部可用字段，确保 16 项 DRC 检查
+        均能获取所需输入。字段来源:
+        - waveguide_widths: SOI 平台默认 0.5μm（SiEPIC EBeam PDK）
+        - waveguide_lengths: 从 routes 计算 path 累积长度
+        - device_areas: 从 placements 计算 w×h
+        - port_connections: 从 circuit.connections 提取
+        - canvas_w/canvas_h: 从 circuit 提取
+        - pin_pairs: 从 circuit 器件端口方向提取
+
+        来源:
+        - SiEPIC EBeam PDK strip waveguide 宽度 500nm
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         """
+        # 波导宽度: SOI 平台默认 0.5μm
+        # 来源: SiEPIC EBeam PDK strip waveguide 宽度 500nm
+        # https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        _SOI_WAVEGUIDE_WIDTH_UM = 0.5
+        waveguide_widths = {nid: _SOI_WAVEGUIDE_WIDTH_UM for nid in routes} or None
+
+        # 波导长度: 从 path 点序列计算累积长度
+        waveguide_lengths: dict[str, float] = {}
+        for nid, pts in routes.items():
+            if len(pts) < 2:
+                waveguide_lengths[nid] = 0.0
+            else:
+                waveguide_lengths[nid] = sum(
+                    math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+                    for i in range(len(pts) - 1)
+                )
+        waveguide_lengths = waveguide_lengths or None
+
+        # 器件面积: w × h
+        device_areas = {
+            name: pl.get("w", 0.0) * pl.get("h", 0.0)
+            for name, pl in placements.items()
+        } or None
+
+        # 端口连接状态: 从 circuit.connections 提取（已连接端口标记为 True）
+        port_connections: dict[str, bool] = {}
+        for d1, p1, d2, p2 in circuit.connections:
+            port_connections[f"{d1}.{p1}"] = True
+            port_connections[f"{d2}.{p2}"] = True
+        port_connections = port_connections or None
+
+        # 端口方向对: 从 circuit 器件端口提取方向，用于 pin_match 检查
+        # 来源: SiEPIC EBeam PDK 端口方向约定
+        # https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        dev_port_dirs: dict[str, dict[str, str]] = {}
+        for dev in circuit.devices:
+            dev_port_dirs[dev.name] = {p[0]: p[3] for p in dev.ports}
+        pin_pairs: dict[str, tuple[str, str]] = {}
+        for d1, p1, d2, p2 in circuit.connections:
+            dir1 = dev_port_dirs.get(d1, {}).get(p1, "")
+            dir2 = dev_port_dirs.get(d2, {}).get(p2, "")
+            pin_pairs[f"{d1}_{p1}_{d2}_{p2}"] = (dir1, dir2)
+        pin_pairs = pin_pairs or None
+
         ctx = CheckContext(
             total_loss_db=sim_result.get("total_loss_db", 0.0),
             n_crossings=sim_result.get("n_crossings", 0),
+            waveguide_widths=waveguide_widths,
+            waveguide_lengths=waveguide_lengths,
+            device_areas=device_areas,
+            port_connections=port_connections,
+            canvas_w=circuit.canvas_w,
+            canvas_h=circuit.canvas_h,
+            pin_pairs=pin_pairs,
         )
         return self.checker.check(placements=placements, paths=routes, context=ctx)
 

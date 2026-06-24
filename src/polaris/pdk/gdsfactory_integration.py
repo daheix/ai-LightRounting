@@ -463,7 +463,10 @@ def _convert_gdsfactory_components(
                 ),
             )
         except Exception as e:
-            logger.debug("跳过 gdsfactory 器件 %s: %s", name, e)
+            # 规则 14.1：禁止 fall-back，器件加载失败必须 raise 告警
+            raise RuntimeError(
+                f"gdsfactory 器件 '{name}' 加载失败: {e}"
+            ) from e
     return devices
 
 

@@ -128,7 +128,7 @@ AMF_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.4,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="AMF VIAC 须被 M1_HEATER 包围 ≥0.4μm（180nm SOI 工艺）",
     ),
 ]
@@ -240,7 +240,7 @@ IHP_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.3,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="IHP VIAC 须被 M1_HEATER 包围 ≥0.3μm（250nm BiCMOS 工艺）",
     ),
 ]
@@ -336,7 +336,7 @@ GF_FOTONIX_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.2,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="GF VIAC 须被 M1_HEATER 包围 ≥0.2μm（45nm CMOS 工艺）",
     ),
 ]
@@ -416,7 +416,7 @@ COMPOUNDTEK_DRC_RUNSET: list[DRCRule] = [
         check_type=DRCCheckType.ENCLOSE,
         threshold_um=0.4,
         enclosure_layer_name="M1_HEATER",
-        vtype=ViolationType.ENCLOSEMENT,
+        vtype=ViolationType.ENCLOSURE,
         description="CompoundTek VIAC 须被 M1_HEATER 包围 ≥0.4μm（130nm SOI 工艺）",
     ),
 ]

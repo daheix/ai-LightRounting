@@ -443,7 +443,7 @@ def _count_bend_radius_violations(
     来源: 三点圆弧半径公式 R = |v1||v2||v1-v2| / (2|v1×v2|)
            与 polaris.sim.constraint_checker._estimate_bend_radius 一致
     工艺最小值来源: polaris.router.waveguide_router.PLATFORM_CONSTRAINTS
-           SOI=5.0μm / SiN=50.0μm / InP=100.0μm / LNOI=30.0μm
+           SOI=5.0μm / SiN=100.0μm / InP=250.0μm / LNOI=80.0μm
            来源: SiEPIC EBeam PDK 与各 foundry 工艺手册
            https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
