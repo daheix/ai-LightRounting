@@ -142,7 +142,7 @@ h_i^{(l+1)} = LayerNorm( W_self · h_i
 h_i'   = σ( Σ_{j∈N(i)} α_{ij} · W h_j )
 ```
 
-PoLaRIS 在 Edge-GNN 层后交替堆叠 GAT 层（默认 num_layers=2），让高扇出节点（如光源分配树、时钟/控制总线）的邻居重要性由注意力权重自适应学习，而非均等聚合。
+PoLaRIS 在 Edge-GNN 层后交替堆叠 GAT 层（默认 num_layers=2），让高扇出节点（光源分配树、时钟/控制总线）的邻居重要性由注意力权重自适应学习，而非均等聚合。
 
 ### 4.4 图级读出：GlobalAttention
 
@@ -447,5 +447,3 @@ CheckpointManager.save(gnn, actor_critic, path="ckpt/alphachip_final.ckpt")
 | [10] | TILOS-AI MacroPlacement 基准与复现 | https://tilos-ai-institute.github.io/MacroPlacement/ |
 | [11] | ITU-T G.694.1 光通信波段划分（C/L/O-band） | https://www.itu.int/rec/T-REC-G.694.1 |
 | [12] | SiEPIC EBeam PDK（边特征默认值来源） | https://github.com/SiEPIC/SiEPIC_EBeam_PDK |
-
-> 版本 v1.0 / 2026-06-25：初版，11 章节完整算法逻辑文档，含端到端伪代码与 12 篇文献。
