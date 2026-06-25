@@ -292,15 +292,16 @@ class TestBenchmarkEvaluator:
         assert result.target_metric == "hpwl"
 
     def test_evaluate_benchmark_passed_no_overlap(self) -> None:
-        """网格布局无重叠且 HPWL < target 时 passed=True。"""
+        """网格布局无重叠且 HPWL < target 且 DRV=0 时 passed=True。"""
         circuit = load_ariane_benchmark()
         placements = grid_placement(circuit)
         result = evaluate_benchmark(circuit, placements)
         # 网格布局应无重叠
         assert result.overlap_count == 0
-        # HPWL 是否达标取决于 target_value（50000μm）
-        # 网格布局 HPWL 可能超过 target，但 passed 仅在 HPWL < target 且无重叠时为 True
-        if result.hpwl_um < circuit.target_value:
+        # passed 判定: HPWL < target AND DRV=0（第94轮扩展后）
+        hpwl_ok = result.hpwl_um < circuit.target_value
+        drv_ok = result.extra["drv_total"] == 0
+        if hpwl_ok and drv_ok:
             assert result.passed is True
         else:
             assert result.passed is False
