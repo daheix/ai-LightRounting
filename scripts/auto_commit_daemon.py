@@ -58,7 +58,7 @@ RSYNC_EXCLUDES = [
     "build/",  # 编译产物不同步
     "*.log",
     "/tmp/",
-    ".trae/",  # spec文档不同步
+    # 注意: .trae/ 目录(rules+specs+hooks)是项目必要文档,必须同步提交,禁止排除
     "third-party/database/etcd/default.etcd/",
     "third-party/database/etcd/etcd1.etcd/",
     "third-party/database/etcd/etcd2.etcd/",
