@@ -127,9 +127,9 @@
 - **FFTConvolver**: FFT 卷积加速器。实现: `src/polaris/engine/fft_density_field.py:58`。成熟度: 生产可用
 - **DensityFieldFFT**: FFT 加速密度场平滑。实现: `src/polaris/engine/fft_density_field.py:220`。成熟度: 生产可用
 
-### gpu_backend — GPU 后端
-- **GPUBackend**: CuPy GPU 后端（自动回退 NumPy）。实现: `src/polaris/engine/gpu_backend.py:221`。成熟度: 实验性
-- **CuPyBackend**: CuPy 运算后端。实现: `src/polaris/engine/gpu_backend.py:141`。成熟度: 实验性
+### gpu_backend — GPU 后端（🚫不参与：PoLaRIS 决定不参与 GPU 计算）
+- **GPUBackend**: CuPy GPU 后端（自动回退 NumPy）。实现: `src/polaris/engine/gpu_backend.py:221`。成熟度: 实验性。**状态: 不参与 — PoLaRIS 战略决策不参与 GPU 计算，GPU 后端代码保留但不作为发展方向，相关功能点不计入商业对标覆盖率**
+- **CuPyBackend**: CuPy 运算后端。实现: `src/polaris/engine/gpu_backend.py:141`。成熟度: 实验性。**状态: 不参与 — 同上**
 
 ### routability — 布线感知评估
 - **RoutabilityEstimator**: Apollo 布线感知布局评估。实现: `src/polaris/engine/routability.py:161`。成熟度: 生产可用
@@ -256,7 +256,7 @@
 
 ### tidy3d_integration — Tidy3D 集成
 - **Tidy3DAdapter**: Tidy3D 适配器。实现: `src/polaris/sim/tidy3d_integration.py:116`。成熟度: 实验性
-- **GPUFDTDEngine**: GPU FDTD 引擎。实现: `src/polaris/sim/tidy3d_integration.py:382`。成熟度: 实验性
+- **GPUFDTDEngine**: GPU FDTD 引擎。实现: `src/polaris/sim/tidy3d_integration.py:382`。成熟度: 实验性。**状态: 不参与 — PoLaRIS 战略决策不参与 GPU 计算，代码保留但不作为发展方向**
 - **FDTDCrossValidator**: FDTD 交叉验证。实现: `src/polaris/sim/tidy3d_integration.py:578`。成熟度: 生产可用
 
 ### interconnect — INTERCONNECT 对齐
