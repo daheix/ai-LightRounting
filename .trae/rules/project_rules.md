@@ -253,6 +253,8 @@ install.sh 统一安装全部依赖（无核心/可选之分），确保环境�
 - pyCopyKLayout：klayout 0.30.9 极度活跃，直接用原工具 + 离线 wheel
 - pyCopyMEEP/pyCopyFemwell/pyCopyMeow：项目未使用，删除预留空包
 
+**复刻候选清单**：参见 [INVENTORY.md](../../3dtool/INVENTORY.md) 的"🚫不可商用/待复刻"章节（tidy3d/SiPANN/lumerical/vpi/CuPy）。当前已复刻：pyCopySiPANN（SiPANN，因 tensorflow 无 Py3.14 wheel）。
+
 ### 4.2 复刻品目录结构
 
 ```

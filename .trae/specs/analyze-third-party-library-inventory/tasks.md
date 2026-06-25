@@ -114,29 +114,29 @@
 
 ## 阶段 5：同步更新规则与文档
 
-- [ ] Task 5.1: 更新 `3dtool/README.md` 顶部新增清单索引
+- [x] Task 5.1: 更新 `3dtool/README.md` 顶部新增清单索引
   - 引用 INVENTORY.md 和 ALGORITHMS.md
   - 添加"如何查询某库商用状态"的简短说明
 
-- [ ] Task 5.2: 更新 `.trae/rules/project_rules.md` 规则 3.2
+- [x] Task 5.2: 更新 `.trae/rules/project_rules.md` 规则 3.2
   - 在工具清单表中新增"许可"列和"商用状态"列
   - 同步更新规则 4.1 复刻触发条件的引用
 
-- [ ] Task 5.3: 更新 `3dtool/<category>/README.md`（layout/simulation/ml/numeric/viz/serialization 6 个）
+- [x] Task 5.3: 更新 `3dtool/<category>/README.md`（layout/simulation/ml/numeric/viz/serialization 6 个）
   - 每个分类 README 的工具表新增"许可"列
   - 标注商用状态图标（✅可商用/⚠️受限/🚫不可商用）
 
-- [ ] Task 5.4: 追加 `操作记录.md` 本轮记录
+- [x] Task 5.4: 追加 `操作记录.md` 本轮记录
   - 轮次编号：R-2026-06-25-LIB-INVENTORY
   - 记录调研过程、产出文件、四档分类统计
 
 ## 阶段 6：提交与合并
 
-- [ ] Task 6.1: git 提交（按规则 1.2，每完成阶段即提交）
+- [x] Task 6.1: git 提交（按规则 1.2，每完成阶段即提交）
   - 提交消息：`docs(3dtool): 三方库清单与商用许可分析 + 求解器算法公式手册`
   - 列出变更文件清单与统计
 
-- [ ] Task 6.2: 合并 main 分支并推送远端（按规则 24）
+- [x] Task 6.2: 合并 main 分支并推送远端（按规则 24）
   - dev → main → push origin main
   - dev 同步 main
 
