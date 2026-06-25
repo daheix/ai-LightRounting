@@ -8,6 +8,7 @@
 
 - **用途**: 版图渲染、拥塞热力图
 - **状态**: ✅ 已装 3.11.0
+- **许可**: PSF (Matplotlib License)（✅可商用）
 - **来源**: https://matplotlib.org/
 - **安装**: `pip install matplotlib`
 - **项目使用**: `src/polaris/eval/layout_render.py` 的 `render_layout()` 渲染版图

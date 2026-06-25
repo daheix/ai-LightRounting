@@ -10,6 +10,7 @@
 
 - **用途**: 数值计算、矩阵运算
 - **状态**: ✅ 已装 2.4.6（必装依赖）
+- **许可**: BSD-3-Clause（✅可商用）
 - **来源**: https://numpy.org/
 - **安装**: `pip install numpy`
 - **项目使用**: 全项目核心依赖
@@ -18,6 +19,7 @@
 
 - **用途**: 优化求解、信号处理
 - **状态**: ✅ 已装 1.17.1（必装依赖）
+- **许可**: BSD-3-Clause（✅可商用）
 - **来源**: https://scipy.org/
 - **安装**: `pip install scipy`
 - **项目使用**: 优化求解
@@ -26,6 +28,7 @@
 
 - **用途**: 几何运算（多边形、缓冲区、相交检测）
 - **状态**: ✅ 已装 2.1.2（必装依赖）
+- **许可**: BSD-3-Clause（✅可商用）
 - **来源**: https://shapely.readthedocs.io/
 - **安装**: `pip install shapely`
 - **项目使用**: 几何运算，gdsfactory 依赖，constraint_checker 可选用
