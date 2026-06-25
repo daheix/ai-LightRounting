@@ -49,31 +49,39 @@ WORKTREE_DIR = "/tmp/ai-polaris-autocommit"  # 独立worktree目录
 INTERVAL_SECONDS = 360  # 6分钟
 LOG_FILE = os.path.join(REPO_DIR, "auto_commit.log")
 
-# rsync排除规则 (不同步的文件/目录)
+# rsync排除规则 (与 .gitignore 保持一致，只排除纯运行时缓存和临时文件)
+# 原则：所有 git 跟踪的文件都必须同步，不得排除任何含跟踪文件的目录
 RSYNC_EXCLUDES = [
-    ".git",  # 排除.git(主仓库目录)和.git文件(worktree指针), 防止破坏worktree结构
+    # === Git 结构（必须排除，防止破坏 worktree）===
+    ".git",
+    # === Python 缓存与产物（与 .gitignore 对齐）===
     "__pycache__/",
     "*.pyc",
+    "*.pyo",
+    "*.pyd",
     ".pytest_cache/",
-    "build/",  # 编译产物不同步
-    "*.log",
+    ".mypy_cache/",
+    ".ruff_cache/",
+    "*.egg-info/",
+    "dist/",
+    "build/",
+    # === 虚拟环境（与 .gitignore 对齐）===
+    ".venv/",
+    "venv/",
+    # === 日志与临时文件 ===
+    "*.log",  # 含 auto_commit.log 自身
     "/tmp/",
-    # 注意: .trae/ 目录(rules+specs+hooks)是项目必要文档,必须同步提交,禁止排除
-    "third-party/database/etcd/default.etcd/",
-    "third-party/database/etcd/etcd1.etcd/",
-    "third-party/database/etcd/etcd2.etcd/",
-    "third-party/database/etcd/etcd3.etcd/",
-    "third-party/database/kafka/zookeeper-data/",
-    "third-party/database/mongodb/data/",
-    "third-party/database/prometheus/data/",
-    "third-party/database/mysql/mysql.sock.lock",
-    "reports/stress_23h/",  # 压测报告不同步(大文件)
-    "auto_commit.log",  # 自身日志不同步
-    "pids/",  # 进程pid文件
-    "stress_test_logs/",  # 压测日志
-    "stress_test_reports/",  # 压测报告
-    "dump.rdb",  # redis快照
-    "etcd1.etcd/", "etcd2.etcd/", "etcd3.etcd/",  # etcd数据(根目录)
+    # === 密钥与凭据（与 .gitignore 对齐）===
+    ".env",
+    "*.key",
+    "credentials.json",
+    # === IDE 文件（与 .gitignore 对齐）===
+    ".idea/",
+    ".vscode/",
+    "*.swp",
+    "*.swo",
+    # === 运行时 PID（不提交）===
+    "pids/",
 ]
 
 
