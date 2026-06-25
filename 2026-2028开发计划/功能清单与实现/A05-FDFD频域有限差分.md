@@ -270,7 +270,7 @@ Lumerical 主推 FDTD/EME/FDE/varFDTD，未单独销售 FDFD 模块，但其 FDT
 
 - 实现文件位于 `src/polaris/sim/fdfd_solver.py`，遵循规则 7（圈复杂度 ≤15、函数 ≤80 行、文件 ≤800 行）。
 - 测试位于 `tests/test_fdfd_solver.py`，覆盖率 ≥ 90%（规则 10）。
-- 文档字符串标注所有公式来源 URL（规则 18），无 TODO/FIXME，无 fall-back。
+- 文档字符串标注所有公式来源 URL（规则 18），代码无待办标记，无 fall-back。
 
 ---
 
