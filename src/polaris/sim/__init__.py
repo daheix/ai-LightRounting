@@ -18,12 +18,15 @@
         layout_aware.py    — R17 layout-aware 仿真（BBPlacement/ElasticConnector/ParasiticExtractor）
         building_block.py  — R14 Building Block 抽象（ModelCard/TMatrix/s_to_t/t_to_s）
         eqdrc.py           — R23 Equation-driven DRC + CurvilinearLVS + FoundryDRCRunset
+        cascade/           — R03 级联包（__init__.py 电路级 SAX + smatrix.py C03 Redheffer 矩阵级）
+        rcwa/              — A01-RCWA 严格耦合波分析（1D/2D，Sprint 1 Task 1.2）
 
 集成方式（遵守 project_rules.md 规则 2/3）：
 1. 直接集成 simphony + sax（规则 2）
 2. SiPANN 安装失败 → 纯 numpy 100% 复刻（规则 3）
 3. Touchstone .s2p/.snp 文件支持
 4. KLayout DRC/LVS 引擎直接集成（规则 4.1，klayout 活跃维护）
+5. A01-RCWA + C03-Redheffer 矩阵级内核（Sprint 1，纯 NumPy/SciPy CPU）
 
 来源:
 - Simphony: https://simphonyphotonics.readthedocs.io/
@@ -32,6 +35,9 @@
 - Touchstone: https://en.wikipedia.org/wiki/Touchstone_file
 - KLayout DRC: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
+- Moharam 1995 ETM: https://doi.org/10.1364/JOSAA.12.001077
+- Li 1996 FFF: https://doi.org/10.1364/JOSAA.13.001870
+- Victor Liu 2013 Redheffer: http://victorliu.info/pdfs/Scombine.pdf
 """
 
 from polaris.sim.fde import (
@@ -97,6 +103,12 @@ from polaris.sim.caphe_time_domain import (
     CAPHETimeDomainSolver,
 )
 from polaris.sim.cascade import cascade_circuit
+from polaris.sim.cascade.smatrix import (
+    BlockSMatrix,
+    build_propagation_s,
+    cascade_redheffer,
+    redheffer_star_product,
+)
 from polaris.sim.cascade_backends import (
     CircuitMatrix,
     build_circuit_matrix,
@@ -256,6 +268,31 @@ from polaris.sim.quantum_photonics import (
     permanent_ryser,
     quantum_advantage_threshold,
 )
+from polaris.sim.rcwa import (
+    FourierRule,
+    GratingLayer1D,
+    GratingLayer2D,
+    LayerModes,
+    Polarization,
+    RcwaConfig1D,
+    RcwaConfig2D,
+    RcwaResult1D,
+    RcwaResult2D,
+    build_epsilon_inv_toeplitz_1d,
+    build_epsilon_inv_toeplitz_2d,
+    build_epsilon_toeplitz_1d,
+    build_epsilon_toeplitz_2d,
+    build_homogeneous_modes_1d,
+    build_interface_smatrix,
+    build_propagation_smatrix,
+    fourier_coefficients_1d,
+    fourier_coefficients_2d,
+    select_rule,
+    solve_layer_eigenmodes_1d,
+    solve_rcwa_1d,
+    solve_rcwa_2d,
+    toeplitz_from_coefficients,
+)
 from polaris.sim.siepic_netlist import (
     SIEPIC_PORT_MAP,
     SIEPIC_TYPE_MAP,
@@ -373,6 +410,35 @@ __all__ = [
     "SParameters",
     "extract_s_parameters",
     "verify_energy_conservation",
+    # C03-Redheffer 矩阵级 S 矩阵级联（Sprint 1 Task 1.3，与字典级 redheffer_star 互补）
+    "BlockSMatrix",
+    "redheffer_star_product",
+    "cascade_redheffer",
+    "build_propagation_s",
+    # A01-RCWA 严格耦合波分析（Sprint 1 Task 1.2，1D/2D 周期光栅）
+    "FourierRule",
+    "Polarization",
+    "LayerModes",
+    "GratingLayer1D",
+    "RcwaConfig1D",
+    "RcwaResult1D",
+    "solve_rcwa_1d",
+    "GratingLayer2D",
+    "RcwaConfig2D",
+    "RcwaResult2D",
+    "solve_rcwa_2d",
+    "select_rule",
+    "fourier_coefficients_1d",
+    "fourier_coefficients_2d",
+    "toeplitz_from_coefficients",
+    "build_epsilon_toeplitz_1d",
+    "build_epsilon_inv_toeplitz_1d",
+    "build_epsilon_toeplitz_2d",
+    "build_epsilon_inv_toeplitz_2d",
+    "solve_layer_eigenmodes_1d",
+    "build_homogeneous_modes_1d",
+    "build_interface_smatrix",
+    "build_propagation_smatrix",
     # 双后端支持（R01 创新点）
     "set_backend",
     "get_backend",

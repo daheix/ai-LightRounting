@@ -8,18 +8,23 @@
 字典级（命名端口）实现，本模块为矩阵级（S11/S12/S21/S22 分块）实现，供
 A01-RCWA 与 A02-EME 共享。
 
-数学定义（Victor Liu 2013 公式，与 Redheffer 1959 原始定义一致）：
+数学定义（Redheffer 1959，连接 A.right ↔ B.left，前向传播子 = (I - A_{22}·B_{11})⁻¹）：
 
     S^{tot} = S^{(1)} ★ S^{(2)},  S^{(k)} = [[A_{11}, A_{12}], [A_{21}, A_{22}]]
 
-    S^{tot}_{11} = B_{11} (I - A_{12} B_{21})^{-1} A_{11}
-    S^{tot}_{12} = B_{12} + B_{11} (I - A_{12} B_{21})^{-1} A_{12} B_{22}
-    S^{tot}_{21} = A_{21} + A_{22} (I - B_{21} A_{12})^{-1} B_{21} A_{11}
-    S^{tot}_{22} = A_{22} (I - B_{21} A_{12})^{-1} B_{22}
+    连接条件: a_left^{(2)} = b_right^{(1)},  a_right^{(1)} = b_left^{(2)}
+
+    M_1 = (I - A_{22}·B_{11})^{-1}          # 前向传播子（A 右反射 · B 左反射 的反馈环）
+    M_2 = (I - B_{11}·A_{22})^{-1}          # 后向传播子（同特征值，不同本征向量）
+
+    S^{tot}_{11} = A_{11} + A_{12}·B_{11}·M_1·A_{21}
+    S^{tot}_{12} = A_{12}·M_2·B_{12}
+    S^{tot}_{21} = B_{21}·M_1·A_{21}
+    S^{tot}_{22} = B_{22} + B_{21}·M_1·A_{22}·B_{12}
 
 数值稳定性（Andersson 2023）：耗散矩阵的星积仍为耗散矩阵，消逝波在 S 矩阵中
-天然有界（|S_ij|≤1），逆矩阵 (I - A_{12}B_{21}) 在无源系统中良态。实现中用
-``scipy.linalg.solve`` 替代显式 ``inv``，避免条件数放大。
+天然有界（|S_ij|≤1），逆矩阵 (I - A_{22}·B_{11}) 在无源系统中良态（|A_{22}·B_{11}|<1）。
+实现中用 ``scipy.linalg.solve`` 替代显式 ``inv``，避免条件数放大。
 
 文献来源（≥5，规则 18 学术诚信）：
 1. Redheffer 1959 J Math Mech — https://www.jstor.org/stable/24900576
@@ -78,9 +83,7 @@ class BlockSMatrix:
         for name in ("s11", "s12", "s21", "s22"):
             blk = getattr(self, name)
             if blk.shape != (n, n):
-                raise ValueError(
-                    f"S 矩阵分块 {name} 形状 {blk.shape} 与 s11 ({n},{n}) 不一致"
-                )
+                raise ValueError(f"S 矩阵分块 {name} 形状 {blk.shape} 与 s11 ({n},{n}) 不一致")
             if blk.dtype != np.complex128:
                 raise TypeError(f"S 矩阵分块 {name} 必须 complex128，实际 {blk.dtype}")
 
@@ -103,9 +106,7 @@ class BlockSMatrix:
         return np.block([[self.s11, self.s12], [self.s21, self.s22]])
 
 
-def _solve_identity_minus(
-    a: np.ndarray, b: np.ndarray
-) -> np.ndarray:
+def _solve_identity_minus(a: np.ndarray, b: np.ndarray) -> np.ndarray:
     """求解 (I - A·B)^{-1} · I = (I - A·B)^{-1}（用 solve 替代 inv）。
 
     失败即 raise（规则 14：禁止 fall-back）。
@@ -123,13 +124,23 @@ def _solve_identity_minus(
     return solve(k, eye, assume_a="gen")
 
 
-def redheffer_star_product(
-    s1: BlockSMatrix, s2: BlockSMatrix
-) -> BlockSMatrix:
-    """Redheffer 星积 S^{tot} = S1 ★ S2（C03 §6 完整公式）。
+def redheffer_star_product(s1: BlockSMatrix, s2: BlockSMatrix) -> BlockSMatrix:
+    """Redheffer 星积 S^{tot} = S1 ★ S2（C03 §6 完整公式，S1 左 S2 右）。
 
     将子系统 1 的右端口与子系统 2 的左端口连接，返回复合系统 S 矩阵。
     端口模式数必须匹配（N1 = N2 = N）。
+
+    连接条件（与 Redheffer 1959 原始定义一致）::
+
+        a_left^{(2)} = b_right^{(1)}    # 前向波从 S1 进入 S2
+        a_right^{(1)} = b_left^{(2)}   # 后向波从 S2 返回 S1
+
+    公式（前向传播子 M1 = (I - A_{22}·B_{11})⁻¹，反馈环 = A 右反射 · B 左反射）::
+
+        S11_tot = A11 + A12·B11·M1·A21
+        S12_tot = A12·M2·B12
+        S21_tot = B21·M1·A21
+        S22_tot = B22 + B21·M1·A22·B12
 
     Args:
         s1: 左子系统 S 矩阵（2N×2N 分块）。
@@ -140,7 +151,7 @@ def redheffer_star_product(
 
     Raises:
         ValueError: 端口模式数不匹配。
-        RuntimeError: 中间矩阵 (I - A_{12}·B_{21}) 奇异（规则 14）。
+        RuntimeError: 中间矩阵 (I - A_{22}·B_{11}) 奇异（规则 14）。
     """
     if s1.n_ports != s2.n_ports:
         raise ValueError(
@@ -151,14 +162,14 @@ def redheffer_star_product(
     b11, b12, b21, b22 = s2.s11, s2.s12, s2.s21, s2.s22
 
     # 中间矩阵（数值稳定关键）：用 solve 替代 inv（C03 §7.2）
-    m1 = _solve_identity_minus(a12, b21)  # M1 = (I - A12·B21)^{-1}
-    m2 = _solve_identity_minus(b21, a12)  # M2 = (I - B21·A12)^{-1}
+    m1 = _solve_identity_minus(a22, b11)  # M1 = (I - A22·B11)^{-1}（前向反馈环）
+    m2 = _solve_identity_minus(b11, a22)  # M2 = (I - B11·A22)^{-1}（后向反馈环）
 
-    # 合成四个分块（Victor Liu 2013 公式 6-9）
-    s11_tot = b11 @ m1 @ a11
-    s12_tot = b12 + b11 @ m1 @ a12 @ b22
-    s21_tot = a21 + a22 @ m2 @ b21 @ a11
-    s22_tot = a22 @ m2 @ b22
+    # 合成四个分块（Redheffer 1959 / Rumpf 2011 / Liu & Fan 2012 S4 公式）
+    s11_tot = a11 + a12 @ b11 @ m1 @ a21
+    s12_tot = a12 @ m2 @ b12
+    s21_tot = b21 @ m1 @ a21
+    s22_tot = b22 + b21 @ m1 @ a22 @ b12
     return BlockSMatrix(s11_tot, s12_tot, s21_tot, s22_tot)
 
 
@@ -207,13 +218,6 @@ def build_propagation_s(beta: np.ndarray, length: float) -> BlockSMatrix:
     if beta.ndim != 1:
         raise ValueError(f"beta 必须为 1D 向量，实际 {beta.ndim}D")
     phase = np.exp(1j * beta * length)
-    zeros = np.zeros_like(phase)
-    p_mat = np.diag(phase)
     z_mat = np.zeros((len(beta), len(beta)), dtype=np.complex128)
     # S11=0 (无左反射), S12=P (右→左透射), S21=P (左→右透射), S22=0 (无右反射)
-    s11 = z_mat
-    s12 = np.diag(phase)
-    s21 = np.diag(phase)
-    s22 = z_mat
-    _ = zeros  # 占位，保持 p_mat/z_mat 关系清晰
-    return BlockSMatrix(s11, s12, s21, s22)
+    return BlockSMatrix(z_mat, np.diag(phase), np.diag(phase), z_mat)

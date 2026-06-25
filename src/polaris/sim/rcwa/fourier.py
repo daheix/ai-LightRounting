@@ -47,6 +47,7 @@ __all__ = [
     "build_epsilon_inv_toeplitz_1d",
     "fourier_coefficients_2d",
     "build_epsilon_toeplitz_2d",
+    "build_epsilon_inv_toeplitz_2d",
     "select_rule",
 ]
 
@@ -75,9 +76,7 @@ def select_rule(is_te: bool) -> FourierRule:
     return FourierRule.NORMAL if is_te else FourierRule.INVERSE
 
 
-def fourier_coefficients_1d(
-    eps_r: np.ndarray, n_harmonics: int
-) -> np.ndarray:
+def fourier_coefficients_1d(eps_r: np.ndarray, n_harmonics: int) -> np.ndarray:
     """计算 1D 周期介电常数的傅里叶系数（A01 §3.1）。
 
     采样一个周期 $\\Lambda$，用 FFT 计算 $\\tilde{\\varepsilon}_m$，
@@ -101,9 +100,7 @@ def fourier_coefficients_1d(
     n_grid = eps_r.size
     n_need = 2 * n_harmonics + 1
     if n_grid < n_need:
-        raise ValueError(
-            f"采样点数 {n_grid} 不足，需 ≥{n_need}（2N+1，Nyquist 准则）"
-        )
+        raise ValueError(f"采样点数 {n_grid} 不足，需 ≥{n_need}（2N+1，Nyquist 准则）")
     # FFT 计算傅里叶系数：tilde_eps_m = (1/N_grid) * sum_n eps[n] * exp(-i·2π·m·n/N_grid)
     full_fft = np.fft.fft(eps_r) / n_grid
     # 取 [-N, ..., 0, ..., +N] 共 2N+1 个系数（fftshift 排列）
@@ -143,9 +140,7 @@ def toeplitz_from_coefficients(coeffs: np.ndarray) -> np.ndarray:
     return toeplitz
 
 
-def build_epsilon_toeplitz_1d(
-    eps_r: np.ndarray, n_harmonics: int
-) -> np.ndarray:
+def build_epsilon_toeplitz_1d(eps_r: np.ndarray, n_harmonics: int) -> np.ndarray:
     """构造 ε 的 Toeplitz 卷积矩阵（Li 1996 NORMAL rule，TE 偏振）。
 
     Args:
@@ -159,9 +154,7 @@ def build_epsilon_toeplitz_1d(
     return toeplitz_from_coefficients(coeffs)
 
 
-def build_epsilon_inv_toeplitz_1d(
-    eps_r: np.ndarray, n_harmonics: int
-) -> np.ndarray:
+def build_epsilon_inv_toeplitz_1d(eps_r: np.ndarray, n_harmonics: int) -> np.ndarray:
     """构造 1/ε 的 Toeplitz 卷积矩阵（Li 1996 INVERSE rule，TM 偏振）。
 
     在介电常数间断面，D = ε·E 连续（而非 E 连续），故对 TM 偏振应使用
@@ -205,9 +198,7 @@ def fourier_coefficients_2d(
     n_need_x = 2 * n_harmonics_x + 1
     n_need_y = 2 * n_harmonics_y + 1
     if nx_grid < n_need_x or ny_grid < n_need_y:
-        raise ValueError(
-            f"采样网格 ({nx_grid},{ny_grid}) 不足，需 ≥({n_need_x},{n_need_y})"
-        )
+        raise ValueError(f"采样网格 ({nx_grid},{ny_grid}) 不足，需 ≥({n_need_x},{n_need_y})")
     full_fft = np.fft.fft2(eps_r) / (nx_grid * ny_grid)
     shifted = np.fft.fftshift(full_fft)
     cx, cy = nx_grid // 2, ny_grid // 2
@@ -255,3 +246,32 @@ def build_epsilon_toeplitz_2d(
     result = np.zeros((m_total, m_total), dtype=np.complex128)
     result[valid] = coeffs_2d[dm_idx[valid], dn_idx[valid]]
     return result
+
+
+def build_epsilon_inv_toeplitz_2d(
+    eps_r: np.ndarray, n_harmonics_x: int, n_harmonics_y: int, inverse: bool = True
+) -> np.ndarray:
+    """构造 1/ε 的 2D 嵌套 Toeplitz 卷积矩阵（Li 1996 INVERSE rule，2D 矢量 RCWA）。
+
+    2D 矢量形式下，TM 分量（磁场切向连续 → D=εE 连续）使用 1/ε 的傅里叶系数
+    构造卷积矩阵。本函数为 ``build_epsilon_toeplitz_2d(inverse=True)`` 的语义
+    别名（保留 ``inverse`` 参数仅为调用方显式表达意图）。
+
+    Args:
+        eps_r: 一个周期内 ε_r 采样 (N_grid_x, N_grid_y)。
+        n_harmonics_x, n_harmonics_y: x/y 方向截断阶数。
+        inverse: 必须为 True（默认）。False 时退化为 normal rule，
+            调用方应直接使用 ``build_epsilon_toeplitz_2d``。
+
+    Returns:
+        (M, M) 复 Toeplitz 块矩阵，M = (2Nx+1)(2Ny+1)。
+
+    Raises:
+        ValueError: inverse=False（调用方应改用 ``build_epsilon_toeplitz_2d``）。
+    """
+    if not inverse:
+        raise ValueError(
+            "build_epsilon_inv_toeplitz_2d 仅支持 inverse=True；"
+            "如需 normal rule 请调用 build_epsilon_toeplitz_2d"
+        )
+    return build_epsilon_toeplitz_2d(eps_r, n_harmonics_x, n_harmonics_y, inverse=True)
