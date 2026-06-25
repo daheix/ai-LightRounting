@@ -44,7 +44,7 @@
   - [x] SubTask 6.7: 定向耦合器（DC）阵列生成器（2/4/8/16 通道）
   - [x] SubTask 6.8: WDM MUX/DEMUX 生成器（4/8/16/32 通道 AWG）
   - [x] SubTask 6.9: 光开关矩阵生成器（2x2 / 4x4 / 8x8 Benes 网络）
-  - [ ] SubTask 6.10: 调制器阵列生成器（Mach-Zehnder 调制器 4/8/16 通道）
+  - [x] SubTask 6.10: 调制器阵列生成器（Mach-Zehnder 调制器 4/8/16 通道）
   - [x] SubTask 6.11: 量子光路生成器（KLM CNOT / HOM 干涉 / 玻色采样 4/8/16 模）
   - [x] SubTask 6.12: 格栅滤波器生成器（FIR/IIR 拓扑）
   - [x] SubTask 6.13: 微环谐振器延迟线生成器（CROW / SCISSOR 拓扑）
