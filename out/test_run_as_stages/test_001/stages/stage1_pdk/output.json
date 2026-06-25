@@ -1,0 +1,1822 @@
+{
+  "device_catalog": [
+    {
+      "device_id": "soi_strip_waveguide",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "strip_waveguide",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 10.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 10.0,
+        "ymax": 0.25
+      },
+      "params": {
+        "length": 10.0,
+        "thickness_nm": 220,
+        "width_nm": 500,
+        "loss_db_cm": 3.0,
+        "wavelength_nm": 1550,
+        "mode": "TE0",
+        "pdk_reference": "SiEPIC_EBeam_PDK"
+      },
+      "source": {
+        "title": "SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
+        "authors": "SiEPIC / University of British Columbia (UBC)",
+        "year": 2024,
+        "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_rib_waveguide",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "rib_waveguide",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "rib",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 10.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "rib",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 10.0,
+        "ymax": 0.25
+      },
+      "params": {
+        "thickness_nm": 220,
+        "slab_height_nm": 90,
+        "width_nm": 500,
+        "loss_db_cm": 0.7,
+        "wavelength_nm": 1550,
+        "mode": "TE0"
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_bend",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "bend",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 5.0,
+          "y": 5.0,
+          "direction": "north",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": 0.0,
+        "xmax": 5.0,
+        "ymax": 5.0
+      },
+      "params": {
+        "radius_um": 5.0,
+        "angle_deg": 90,
+        "bend_type": "euler",
+        "euler_p": 0.5,
+        "loss_db_90": 0.05,
+        "width_nm": 500,
+        "wavelength_nm": 1550,
+        "pdk_reference": "SiEPIC_EBeam_PDK"
+      },
+      "source": {
+        "title": "SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
+        "authors": "SiEPIC / University of British Columbia (UBC)",
+        "year": 2024,
+        "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 2.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_directional_coupler",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "directional_coupler",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 0.25,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": -0.25,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 10.0,
+          "y": 0.25,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 10.0,
+          "y": -0.25,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.5,
+        "xmax": 10.0,
+        "ymax": 0.5
+      },
+      "params": {
+        "gap_nm": 200,
+        "coupling_length_um": 10.0,
+        "width_nm": 500,
+        "coupling_ratio": 0.5,
+        "loss_db": 0.2,
+        "wavelength_nm": 1550,
+        "pdk_reference": "SiEPIC_EBeam_PDK"
+      },
+      "source": {
+        "title": "SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
+        "authors": "SiEPIC / University of British Columbia (UBC)",
+        "year": 2024,
+        "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mmi_1x2",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "mmi_1x2",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 10.0,
+          "y": 0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 10.0,
+          "y": -0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.5,
+        "xmax": 10.0,
+        "ymax": 1.5
+      },
+      "params": {
+        "insertion_loss_db": 0.4,
+        "imbalance_db": 0.2,
+        "mmi_length_um": 10.0,
+        "mmi_width_um": 3.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mmi_2x2",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "mmi_2x2",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 0.5,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": -0.5,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 12.0,
+          "y": 0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 12.0,
+          "y": -0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.5,
+        "xmax": 12.0,
+        "ymax": 1.5
+      },
+      "params": {
+        "insertion_loss_db": 0.4,
+        "imbalance_db": 0.2,
+        "mmi_length_um": 12.0,
+        "mmi_width_um": 3.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mzi",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "mzi",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": -1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 120.0,
+          "y": 1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 120.0,
+          "y": -1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.25,
+        "xmax": 120.0,
+        "ymax": 1.25
+      },
+      "params": {
+        "arm_length_um": 100.0,
+        "arm_length_diff_um": 0.0,
+        "arm_gap_um": 2.0,
+        "insertion_loss_db": 1.0,
+        "fsr_nm": 10.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "AIM Photonics Passive Silicon Photonic Component Tutorial",
+        "authors": "AIM Photonics / Latitude DA",
+        "year": 2023,
+        "url": "https://www.latitudeda.com/document/716",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_ring_resonator",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "ring_resonator",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "through",
+          "x": 10.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "drop",
+          "x": 10.0,
+          "y": 11.1,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "add",
+          "x": 0.0,
+          "y": 11.1,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 10.0,
+        "ymax": 11.35
+      },
+      "params": {
+        "radius_um": 5.0,
+        "gap_nm": 50,
+        "q_factor": 10000,
+        "fsr_nm": 10.0,
+        "loss_db_cm": 3.0,
+        "wavelength_nm": 1550,
+        "pdk_reference": "SiEPIC_EBeam_PDK"
+      },
+      "source": {
+        "title": "SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
+        "authors": "SiEPIC / University of British Columbia (UBC)",
+        "year": 2024,
+        "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_grating_coupler_1d",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "grating_coupler_1d",
+      "ports": [
+        {
+          "name": "wg",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -6.0,
+        "xmax": 20.0,
+        "ymax": 6.0
+      },
+      "params": {
+        "peak_coupling_loss_db": 1.9,
+        "siepic_typical_loss_db": 4.1,
+        "bandwidth_1db_nm": 27,
+        "wavelength_nm": 1550,
+        "polarization": "TE",
+        "grating_type": "1D Si",
+        "fiber_angle_deg": -25,
+        "pdk_reference": "SiEPIC_EBeam_PDK"
+      },
+      "source": {
+        "title": "SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
+        "authors": "SiEPIC / University of British Columbia (UBC)",
+        "year": 2024,
+        "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_grating_coupler_2d",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "grating_coupler_2d",
+      "ports": [
+        {
+          "name": "wg",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": -7.5,
+        "ymin": -7.5,
+        "xmax": 7.5,
+        "ymax": 7.5
+      },
+      "params": {
+        "coupling_loss_db": 2.4,
+        "bandwidth_1db_nm": 17,
+        "wavelength_nm": 1310,
+        "polarization": "TE/TM",
+        "grating_type": "2D Si"
+      },
+      "source": {
+        "title": "三星 300mm 硅光子平台技术全披露（OFC 2026）",
+        "authors": "Samsung Foundry / 光芯 译",
+        "year": 2026,
+        "url": "https://cloud.tencent.com/developer/article/2650050",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1310
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_edge_coupler",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "edge_coupler",
+      "ports": [
+        {
+          "name": "fiber",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 3.0
+        },
+        {
+          "name": "wg",
+          "x": 200.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.5,
+        "xmax": 200.0,
+        "ymax": 1.5
+      },
+      "params": {
+        "coupling_loss_db": 2.0,
+        "optimized_loss_db": 0.5,
+        "bandwidth_nm": 200,
+        "taper_length_um": 200.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_y_branch",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "y_branch",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 20.0,
+          "y": 0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 20.0,
+          "y": -0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.75,
+        "xmax": 20.0,
+        "ymax": 0.75
+      },
+      "params": {
+        "insertion_loss_db": 0.3,
+        "imbalance_db": 0.1,
+        "bandwidth_nm": 100,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "AIM Photonics Passive Silicon Photonic Component Tutorial",
+        "authors": "AIM Photonics / Latitude DA",
+        "year": 2023,
+        "url": "https://www.latitudeda.com/document/716",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_crossing",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "crossing",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 5.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 2.5,
+          "y": 0.0,
+          "direction": "south",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 2.5,
+          "y": 5.0,
+          "direction": "north",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": 0.0,
+        "xmax": 5.0,
+        "ymax": 5.0
+      },
+      "params": {
+        "insertion_loss_db": 0.3,
+        "crosstalk_db": -30.0,
+        "crossing_size_um": 5.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_thermo_optic_phase_shifter",
+      "platform": "SOI",
+      "category": "active",
+      "name": "thermo_optic_phase_shifter",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "rib",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 100.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "rib",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 100.0,
+        "ymax": 0.25
+      },
+      "params": {
+        "ppi_mw": 20.0,
+        "insertion_loss_db": 0.1,
+        "heater_length_um": 100.0,
+        "thermo_optic_coeff_per_k": 0.00018,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mzm_modulator",
+      "platform": "SOI",
+      "category": "active",
+      "name": "mzm_modulator",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": -1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 1040.0,
+          "y": 1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 1040.0,
+          "y": -1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.25,
+        "xmax": 1040.0,
+        "ymax": 1.25
+      },
+      "params": {
+        "bandwidth_3db_ghz": 20.0,
+        "insertion_loss_db": 5.0,
+        "vpi_l_v_cm": 2.0,
+        "arm_length_um": 1000.0,
+        "modulation_mechanism": "PN junction carrier dispersion",
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mrm_modulator",
+      "platform": "SOI",
+      "category": "active",
+      "name": "mrm_modulator",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "through",
+          "x": 10.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 10.0,
+        "ymax": 5.95
+      },
+      "params": {
+        "efficiency_pm_v": 52.0,
+        "bandwidth_3db_ghz": 74.0,
+        "bandwidth_6db_ghz": 58.0,
+        "pn_junction": "vertical",
+        "radius_um": 5.0,
+        "wavelength_nm": 1310
+      },
+      "source": {
+        "title": "三星 300mm 硅光子平台技术全披露（OFC 2026）",
+        "authors": "Samsung Foundry / 光芯 译",
+        "year": 2026,
+        "url": "https://cloud.tencent.com/developer/article/2650050",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 2.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1310
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_ge_photodetector",
+      "platform": "SOI",
+      "category": "detector",
+      "name": "ge_photodetector",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 30.0,
+        "ymax": 0.25
+      },
+      "params": {
+        "bandwidth_3db_ghz": 30.0,
+        "responsivity_a_w": 0.7,
+        "dark_current_na": 100.0,
+        "detector_length_um": 30.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_double_ring_filter",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "double_ring_filter",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "through",
+          "x": 21.4,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "drop",
+          "x": 21.4,
+          "y": 21.4,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "add",
+          "x": 0.0,
+          "y": 21.4,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 21.4,
+        "ymax": 21.65
+      },
+      "params": {
+        "drop_insertion_loss_db": 1.0,
+        "bandwidth_1db_ghz": 105.0,
+        "radius_um": 10.0,
+        "gap_nm": 200,
+        "wavelength_nm": 1310
+      },
+      "source": {
+        "title": "三星 300mm 硅光子平台技术全披露（OFC 2026）",
+        "authors": "Samsung Foundry / 光芯 译",
+        "year": 2026,
+        "url": "https://cloud.tencent.com/developer/article/2650050",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 2.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1310
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_traveling_wave_mzm",
+      "platform": "SOI",
+      "category": "active",
+      "name": "traveling_wave_mzm",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": -1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 2040.0,
+          "y": 1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 2040.0,
+          "y": -1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.25,
+        "xmax": 2040.0,
+        "ymax": 1.25
+      },
+      "params": {
+        "vpi_l_v_cm": 2.0,
+        "bandwidth_3db_ghz": 40.0,
+        "electrode_type": "traveling_wave",
+        "arm_length_um": 2000.0,
+        "modulation_mechanism": "PN junction carrier dispersion",
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Silicon optical modulators",
+        "authors": "Reed et al.",
+        "year": 2010,
+        "url": "https://doi.org/10.1038/nphoton.2010.179",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_thermo_tuned_ring_modulator",
+      "platform": "SOI",
+      "category": "active",
+      "name": "thermo_tuned_ring_modulator",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "through",
+          "x": 16.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 16.0,
+        "ymax": 8.95
+      },
+      "params": {
+        "fsr_nm": 10.0,
+        "thermal_tuning_efficiency_mw_nm": 0.8,
+        "radius_um": 8.0,
+        "tuning_mechanism": "thermal",
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "A 1 km 40 Gb/s 0.7 pJ/bit CMOS-driven SOI Mach-Zehnder modulator",
+        "authors": "Timurdogan et al.",
+        "year": 2014,
+        "url": "https://doi.org/10.1109/JSTQE.2014.2332264",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 2.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_thermo_optic_switch",
+      "platform": "SOI",
+      "category": "active",
+      "name": "thermo_optic_switch",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": -1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 220.0,
+          "y": 1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 220.0,
+          "y": -1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.25,
+        "xmax": 220.0,
+        "ymax": 1.25
+      },
+      "params": {
+        "power_mw": 30.0,
+        "switching_time_us": 10.0,
+        "switching_mechanism": "thermo_optic",
+        "arm_length_um": 200.0,
+        "extinction_ratio_db": 20.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Silicon photonic wire waveguide modulators and switches",
+        "authors": "Densmore et al.",
+        "year": 2011,
+        "url": "https://doi.org/10.1364/OE.19.024551",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_avalanche_photodetector",
+      "platform": "SOI",
+      "category": "detector",
+      "name": "avalanche_photodetector",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 30.0,
+        "ymax": 0.25
+      },
+      "params": {
+        "gain": 10.0,
+        "bandwidth_3db_ghz": 10.0,
+        "detector_type": "Ge/Si APD",
+        "detector_length_um": 30.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "CMOS-integrated 40 GHz germanium waveguide photodetector",
+        "authors": "Assefa et al.",
+        "year": 2010,
+        "url": "https://doi.org/10.1038/nature09503",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mmi_1x4",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "mmi_1x4",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 20.0,
+          "y": 1.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 20.0,
+          "y": 0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out3",
+          "x": 20.0,
+          "y": -0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out4",
+          "x": 20.0,
+          "y": -1.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -3.0,
+        "xmax": 20.0,
+        "ymax": 3.0
+      },
+      "params": {
+        "insertion_loss_db": 0.4,
+        "uniformity_db": 0.4,
+        "mmi_length_um": 20.0,
+        "mmi_width_um": 6.0,
+        "num_outputs": 4,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Optical multi-mode interference devices based on self-imaging: principles and applications",
+        "authors": "Soldano et al.",
+        "year": 1995,
+        "url": "https://doi.org/10.1109/50.728752",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_mmi_4x4",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "mmi_4x4",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 1.5,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 25.0,
+          "y": 1.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": 0.5,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 25.0,
+          "y": 0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in3",
+          "x": 0.0,
+          "y": -0.5,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out3",
+          "x": 25.0,
+          "y": -0.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in4",
+          "x": 0.0,
+          "y": -1.5,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out4",
+          "x": 25.0,
+          "y": -1.5,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -3.0,
+        "xmax": 25.0,
+        "ymax": 3.0
+      },
+      "params": {
+        "insertion_loss_db": 0.8,
+        "uniformity_db": 0.6,
+        "mmi_length_um": 25.0,
+        "mmi_width_um": 6.0,
+        "num_inputs": 4,
+        "num_outputs": 4,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Optical multi-mode interference devices based on self-imaging: principles and applications",
+        "authors": "Soldano et al.",
+        "year": 1995,
+        "url": "https://doi.org/10.1109/50.728752",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_awg",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "awg",
+      "ports": [
+        {
+          "name": "in1",
+          "x": 0.0,
+          "y": 7.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out1",
+          "x": 500.0,
+          "y": 7.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in2",
+          "x": 0.0,
+          "y": 5.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out2",
+          "x": 500.0,
+          "y": 5.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in3",
+          "x": 0.0,
+          "y": 3.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out3",
+          "x": 500.0,
+          "y": 3.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in4",
+          "x": 0.0,
+          "y": 1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out4",
+          "x": 500.0,
+          "y": 1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in5",
+          "x": 0.0,
+          "y": -1.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out5",
+          "x": 500.0,
+          "y": -1.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in6",
+          "x": 0.0,
+          "y": -3.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out6",
+          "x": 500.0,
+          "y": -3.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in7",
+          "x": 0.0,
+          "y": -5.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out7",
+          "x": 500.0,
+          "y": -5.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "in8",
+          "x": 0.0,
+          "y": -7.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out8",
+          "x": 500.0,
+          "y": -7.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -25.0,
+        "xmax": 500.0,
+        "ymax": 25.0
+      },
+      "params": {
+        "num_channels": 8,
+        "channel_spacing_ghz": 100.0,
+        "channel_spacing_nm": 0.8,
+        "insertion_loss_db": 2.5,
+        "crosstalk_db": -25.0,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Silicon-based optoelectronics",
+        "authors": "Soref et al.",
+        "year": 1998,
+        "url": "https://doi.org/10.1109/2944.730511",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_photonic_crystal_waveguide",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "photonic_crystal_waveguide",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 20.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -2.0,
+        "xmax": 20.0,
+        "ymax": 2.0
+      },
+      "params": {
+        "slow_light_factor": 20.0,
+        "loss_db_cm": 5.0,
+        "lattice_type": "triangular",
+        "waveguide_type": "W1 line defect",
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Slow light in photonic crystal waveguides",
+        "authors": "Krauss et al.",
+        "year": 2008,
+        "url": "https://doi.org/10.1038/nphoton.2008.246",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 2.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_metasurface_coupler",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "metasurface_coupler",
+      "ports": [
+        {
+          "name": "wg",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": -5.0,
+        "ymin": -5.0,
+        "xmax": 5.0,
+        "ymax": 5.0
+      },
+      "params": {
+        "coupling_efficiency_percent": 80.0,
+        "insertion_loss_db": 0.97,
+        "bandwidth_nm": 200.0,
+        "design_method": "inverse_design",
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "Inverse-designed photonics: from nanophotonic structures to integrated circuits",
+        "authors": "Piggott et al.",
+        "year": 2017,
+        "url": "https://doi.org/10.1038/s41566-017-0035-1",
+        "note": ""
+      },
+      "constraints": {
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_linear_taper",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "linear_taper",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 2.0
+        },
+        {
+          "name": "out",
+          "x": 10.0,
+          "y": 0.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -1.0,
+        "xmax": 10.0,
+        "ymax": 1.0
+      },
+      "params": {
+        "length_um": 10.0,
+        "width_in_um": 2.0,
+        "width_out_um": 0.5,
+        "insertion_loss_db": 0.1,
+        "taper_type": "linear",
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "AIM Photonics Passive Silicon Photonic Component Tutorial",
+        "authors": "AIM Photonics / Latitude DA",
+        "year": 2023,
+        "url": "https://www.latitudeda.com/document/716",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_s_bend",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "s_bend",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 20.0,
+          "y": 5.0,
+          "direction": "east",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": -0.25,
+        "xmax": 20.0,
+        "ymax": 5.25
+      },
+      "params": {
+        "length_um": 20.0,
+        "offset_um": 5.0,
+        "insertion_loss_db": 0.05,
+        "curve_type": "bezier",
+        "width_nm": 500,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    },
+    {
+      "device_id": "soi_euler_bend",
+      "platform": "SOI",
+      "category": "passive",
+      "name": "euler_bend",
+      "ports": [
+        {
+          "name": "in",
+          "x": 0.0,
+          "y": 0.0,
+          "direction": "west",
+          "waveguide_type": "strip",
+          "width": 0.5
+        },
+        {
+          "name": "out",
+          "x": 5.0,
+          "y": 5.0,
+          "direction": "north",
+          "waveguide_type": "strip",
+          "width": 0.5
+        }
+      ],
+      "bbox": {
+        "xmin": 0.0,
+        "ymin": 0.0,
+        "xmax": 5.0,
+        "ymax": 5.0
+      },
+      "params": {
+        "effective_radius_um": 5.0,
+        "angle_deg": 90,
+        "insertion_loss_db": 0.02,
+        "curve_type": "euler",
+        "width_nm": 500,
+        "wavelength_nm": 1550
+      },
+      "source": {
+        "title": "硅光工艺平台比较（IMEC/AMF/AIM/Leti/IHP 等 PDK 参数）",
+        "authors": "光学小豆芽 / ICCSZ",
+        "year": 2019,
+        "url": "http://www.iccsz.com/site/cn/News/2019/05/18/20190518033317178663.htm",
+        "note": ""
+      },
+      "constraints": {
+        "min_bend_radius_um": 5.0,
+        "min_spacing_um": 1.0,
+        "wavelength_nm": 1550
+      },
+      "process_node": "220nm SOI"
+    }
+  ],
+  "platform": "SOI",
+  "n_devices": 30
+}

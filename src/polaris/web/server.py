@@ -11,6 +11,13 @@ API 端点:
 - POST /api/showcase/run                    — 启动端到端 Demo Showcase 全流程
 - GET  /api/showcase/report/{run_id}        — 查询 Showcase 汇总报告
 - GET  /api/showcase/stages/{run_id}/{stage_id} — 查询 Showcase 单阶段结果
+- POST /api/jobs                            — 提交作业（Recipe JSON 作为 body）
+- GET  /api/jobs                            — 列出所有作业（可选 ?status= 过滤）
+- GET  /api/jobs/{job_id}                   — 查询作业详情
+- GET  /api/jobs/{job_id}/status            — 查询作业状态与进度
+- POST /api/jobs/{job_id}/cancel            — 取消作业
+- GET  /api/jobs/{job_id}/stages/{stage_id} — 查询阶段输出
+- GET  /api/jobs/{job_id}/report            — 查询作业汇总报告
 
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
@@ -35,6 +42,41 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 # Showcase 运行状态字典: {run_id: {"status": str, "output_dir": str, "error": str|None}}
 _showcase_runs: dict[str, dict] = {}
+
+# 全局作业调度器与追踪器（对齐 Cadence ADE-XL 作业队列模型）
+_global_scheduler: "JobScheduler | None" = None
+_global_tracker: "JobTracker | None" = None
+
+
+def _get_scheduler() -> "JobScheduler":
+    """获取全局作业调度器（懒初始化）。
+
+    首次调用时创建 JobScheduler 实例，注入标准 10 阶段执行函数，
+    后续调用复用同一实例。对齐 Cadence ADE-XL 的全局作业队列模型。
+    """
+    global _global_scheduler
+    if _global_scheduler is None:
+        from polaris.flow.executors import STAGE_EXECUTORS
+        from polaris.flow.scheduler import JobScheduler
+
+        _global_scheduler = JobScheduler(
+            max_workers=4, stage_executors=STAGE_EXECUTORS
+        )
+    return _global_scheduler
+
+
+def _get_tracker() -> "JobTracker":
+    """获取全局作业追踪器（懒初始化）。
+
+    首次调用时创建 JobTracker 实例，扫描 out/jobs 目录，
+    后续调用复用同一实例。
+    """
+    global _global_tracker
+    if _global_tracker is None:
+        from polaris.flow.tracker import JobTracker
+
+        _global_tracker = JobTracker(base_output_dir="out/jobs")
+    return _global_tracker
 
 
 def _get_presets() -> list[dict]:
@@ -65,26 +107,33 @@ def _get_presets() -> list[dict]:
 
 
 def _mzi_circuit():
-    """构建 MZI 干涉仪电路。"""
+    """构建 MZI 干涉仪电路。
+
+    端口名对齐 PDK 定义：
+    - mmi_1x2: in, out1, out2（来源: polaris.pdk.soi.couplers._make_mmi_1x2_ports）
+    - mmi_2x2: in1, in2, out1, out2（来源: polaris.pdk.soi.couplers._make_mmi_2x2_ports）
+    """
     from polaris.data.specs import CircuitSpec, DeviceSpec
 
     return CircuitSpec(
         name="MZI",
-        canvas_w=500,
-        canvas_h=300,
+        canvas_w=1000,
+        canvas_h=600,
         devices=[
             DeviceSpec("gc1", "grating_coupler", 10, 10),
             DeviceSpec("mmi1", "mmi_1x2", 20, 10),
-            DeviceSpec("wg1", "strip_waveguide", 100, 0.5),
-            DeviceSpec("wg2", "strip_waveguide", 120, 0.5),
+            # 波导 length 参数 = width_um（光传播方向为较长维度）
+            # 来源: SiEPIC EBeam PDK strip waveguide 几何约定
+            DeviceSpec("wg1", "strip_waveguide", 100, 0.5, params={"length": 100.0, "length_um": 100.0}),
+            DeviceSpec("wg2", "strip_waveguide", 120, 0.5, params={"length": 120.0, "length_um": 120.0}),
             DeviceSpec("mmi2", "mmi_2x2", 20, 10),
         ],
         connections=[
             ("gc1", "out", "mmi1", "in"),
-            ("mmi1", "out0", "wg1", "in"),
-            ("mmi1", "out1", "wg2", "in"),
-            ("wg1", "out", "mmi2", "in0"),
-            ("wg2", "out", "mmi2", "in1"),
+            ("mmi1", "out1", "wg1", "in"),
+            ("mmi1", "out2", "wg2", "in"),
+            ("wg1", "out", "mmi2", "in1"),
+            ("wg2", "out", "mmi2", "in2"),
         ],
     )
 
@@ -95,11 +144,13 @@ def _ring_circuit():
 
     return CircuitSpec(
         name="Ring",
-        canvas_w=400,
-        canvas_h=300,
+        canvas_w=800,
+        canvas_h=600,
         devices=[
             DeviceSpec("gc1", "grating_coupler", 10, 10),
-            DeviceSpec("wg1", "strip_waveguide", 200, 0.5),
+            # 波导 length 参数 = width_um（光传播方向为较长维度）
+            # 来源: SiEPIC EBeam PDK strip waveguide 几何约定
+            DeviceSpec("wg1", "strip_waveguide", 200, 0.5, params={"length": 200.0, "length_um": 200.0}),
             DeviceSpec("ring1", "ring_resonator", 30, 30),
             DeviceSpec("gc2", "grating_coupler", 10, 10),
         ],
@@ -159,12 +210,23 @@ def _extract_paths(result) -> list[dict]:
     return paths
 
 
-def _run_pipeline(preset_id: str, router_type: str = "default") -> dict:
-    """运行布局布线流水线，返回结果 dict。"""
+def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
+    """运行布局布线流水线，返回结果 dict。
+
+    默认使用 curvy router（euler 弯曲布线），自动满足弯曲半径约束。
+    "default" 映射到 "curvy"，因为 A* 网格布线的直角弯半径 < min_bend_radius，
+    会产生 DRC 违规。curvy router 用 euler 曲线替换直角弯，损耗更低。
+
+    来源: LiDAR ISPD'25 curvy-aware routing
+      https://dl.acm.org/doi/10.1145/3698364.3705355
+    """
     from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
 
+    # "default" 映射到 "curvy"（euler 弯曲布线，满足弯曲半径约束）
+    if router_type == "default":
+        router_type = "curvy"
     circuit = _build_circuit(preset_id)
-    config = PipelineConfig(router_type=router_type)
+    config = PipelineConfig(router_type=router_type, max_sim_iterations=1)
     pipeline = IntegratedPipeline(config=config)
     result = pipeline.run(circuit)
     return {
@@ -332,6 +394,85 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
             self._send_static(_STATIC_DIR / "showcase.html")
             return
 
+        # === 作业管理 API（对齐 Cadence ADE-XL 作业队列查询）===
+        # 路由优先级：精确匹配 > 子路径（status/report/stages）> 通配 {job_id}
+        if path == "/api/jobs":
+            # 列出所有作业，可选 ?status=running 过滤
+            status_filter = (
+                parsed.query.replace("status=", "")
+                if "status=" in parsed.query
+                else None
+            )
+            jobs = _get_tracker().list_jobs(status=status_filter)
+            self._send_json({"jobs": jobs})
+            return
+        if path.startswith("/api/jobs/") and path.endswith("/status"):
+            # 查询作业状态与进度
+            job_id = path.split("/")[3]
+            job_meta = _get_tracker().get_job(job_id)
+            if job_meta is None:
+                self._send_json({"error": f"作业 {job_id} 不存在"}, code=404)
+                return
+            self._send_json({
+                "job_id": job_id,
+                "status": job_meta.get("status"),
+                "progress": job_meta.get("progress"),
+            })
+            return
+        if path.startswith("/api/jobs/") and path.endswith("/report"):
+            # 查询作业汇总报告（读取 reports/summary.json）
+            job_id = path.split("/")[3]
+            report_path = (
+                Path("out/jobs") / job_id / "reports" / "summary.json"
+            )
+            if not report_path.exists():
+                self._send_json(
+                    {"error": f"作业 {job_id} 的汇总报告不存在"}, code=404
+                )
+                return
+            try:
+                report = json.loads(
+                    report_path.read_text(encoding="utf-8")
+                )
+            except (json.JSONDecodeError, OSError) as e:
+                self._send_json(
+                    {"error": f"读取作业 {job_id} 汇总报告失败: {e}"},
+                    code=500,
+                )
+                return
+            self._send_json(report)
+            return
+        if path.startswith("/api/jobs/") and "/stages/" in path:
+            # 查询阶段输出：/api/jobs/{job_id}/stages/{stage_id}
+            parts = path.split("/")
+            job_id = parts[3]
+            try:
+                stage_id = int(parts[5])
+            except (IndexError, ValueError):
+                self._send_json(
+                    {"error": f"无效的阶段 ID: {parts[5] if len(parts) > 5 else '缺失'}"},
+                    code=400,
+                )
+                return
+            result = _get_tracker().get_stage_result(job_id, stage_id)
+            if result is None:
+                self._send_json(
+                    {"error": f"作业 {job_id} 阶段 {stage_id} 结果不存在"},
+                    code=404,
+                )
+                return
+            self._send_json(result)
+            return
+        if path.startswith("/api/jobs/"):
+            # 查询作业详情（通配，返回完整 job_dict）
+            job_id = path.split("/")[3]
+            job_meta = _get_tracker().get_job(job_id)
+            if job_meta is None:
+                self._send_json({"error": f"作业 {job_id} 不存在"}, code=404)
+                return
+            self._send_json(job_meta)
+            return
+
         if path == "/" or path == "":
             path = "/index.html"
         static_path = _STATIC_DIR / path.lstrip("/")
@@ -359,6 +500,50 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/showcase/run":
             self._handle_showcase_run()
+            return
+
+        # === 作业管理 API（对齐 Cadence ADE-XL 作业提交与取消）===
+        # 路由优先级：精确匹配 /api/jobs > 子路径 /api/jobs/{job_id}/cancel
+        if path == "/api/jobs":
+            # 提交作业：接收 Recipe JSON，创建 Job + Workspace，提交到调度器
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = (
+                self.rfile.read(content_length)
+                if content_length > 0
+                else b"{}"
+            )
+            try:
+                params = json.loads(body) if body else {}
+                from polaris.flow.job import Job
+                from polaris.flow.recipe import Recipe
+                from polaris.flow.workspace import Workspace
+
+                recipe = Recipe.from_dict(params)
+                job_id = Job.generate_job_id()
+                ws = Workspace(recipe.output_dir, job_id)
+                job = Job(job_id=job_id, recipe=recipe, workspace=ws)
+                scheduler = _get_scheduler()
+                scheduler.submit(job)
+                logger.info("作业已提交: job_id=%s", job_id)
+                self._send_json({"job_id": job_id, "status": "queued"})
+            except Exception as e:
+                logger.error(
+                    "提交作业失败: %s\n%s", e, traceback.format_exc()
+                )
+                self._send_json({"error": str(e)}, code=500)
+            return
+        if path.startswith("/api/jobs/") and path.endswith("/cancel"):
+            # 取消作业：调用 scheduler.cancel(job_id)
+            job_id = path.split("/")[3]
+            scheduler = _get_scheduler()
+            success = scheduler.cancel(job_id)
+            if success:
+                self._send_json({"job_id": job_id, "status": "cancelled"})
+            else:
+                self._send_json(
+                    {"error": f"无法取消作业 {job_id}（不存在或已终态）"},
+                    code=400,
+                )
             return
 
         self.send_error(404, "Not found")

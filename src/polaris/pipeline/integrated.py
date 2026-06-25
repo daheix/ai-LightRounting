@@ -511,6 +511,66 @@ class IntegratedPipeline:
             gds_path=gds_path,
         )
 
+    def run_as_stages(
+        self,
+        recipe: "Recipe",
+        workspace: "Workspace",
+    ) -> list["StageResult"]:
+        """阶段化执行流水线（供 JobScheduler 调用）。
+
+        按 Recipe 中启用的阶段列表顺序执行，每阶段输出持久化到 Workspace。
+        保留同步 run() 方法向后兼容。
+
+        Args:
+            recipe: 作业配方。
+            workspace: 工作空间。
+
+        Returns:
+            阶段结果列表。
+
+        Raises:
+            Exception: 阶段执行失败时向上抛出（禁止 fall-back）。
+        """
+        from datetime import datetime
+
+        from polaris.flow.executors import STAGE_EXECUTORS
+        from polaris.flow.stage import StageResult, StageStatus, get_stage
+
+        results: list[StageResult] = []
+        prev_outputs: dict = {}
+
+        for stage_id in recipe.enabled_stages:
+            stage = get_stage(stage_id)
+            result = StageResult(
+                stage_id=stage_id,
+                name=stage.name,
+                status=StageStatus.RUNNING,
+                start_time=datetime.now(),
+            )
+            try:
+                execute_fn = STAGE_EXECUTORS.get(stage_id)
+                if execute_fn is None:
+                    # 无执行函数视为跳过（非 fall-back，明确告警）
+                    result.status = StageStatus.SKIPPED
+                    result.error = f"阶段 {stage_id} 无执行函数"
+                else:
+                    output_data = execute_fn(recipe, workspace, prev_outputs)
+                    result.output.data = output_data
+                    result.status = StageStatus.COMPLETED
+                    workspace.write_stage_output(stage.slug, output_data)
+                    prev_outputs.update(output_data)
+            except Exception as e:
+                # 阶段失败：记录状态后向上抛出，禁止 fall-back
+                result.status = StageStatus.FAILED
+                result.error = str(e)
+                result.end_time = datetime.now()
+                results.append(result)
+                raise
+            result.end_time = datetime.now()
+            results.append(result)
+
+        return results
+
     def _run_sim_loop(self, circuit: CircuitSpec, cfg: PipelineConfig):
         """执行仿真回馈闭环。"""
         sim_cfg = SimLoopConfig(

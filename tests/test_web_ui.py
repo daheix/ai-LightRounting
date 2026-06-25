@@ -31,8 +31,8 @@ def test_run_pipeline_mzi():
     assert result["n_devices"] == 5
     assert result["n_paths"] >= 1
     assert len(result["placements"]) == 5
-    assert result["canvas_w"] == 500
-    assert result["canvas_h"] == 300
+    assert result["canvas_w"] == 1000
+    assert result["canvas_h"] == 600
 
 
 def test_run_pipeline_ring():
