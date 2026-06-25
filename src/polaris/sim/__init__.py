@@ -293,6 +293,16 @@ from polaris.sim.rcwa import (
     solve_rcwa_2d,
     toeplitz_from_coefficients,
 )
+from polaris.sim.eme import (
+    EmeCell,
+    EmeConfig,
+    EmeResult,
+    EmeSolver,
+    overlap_matrix as eme_overlap_matrix,
+    build_interface_smatrix as eme_build_interface_smatrix,
+    build_propagation_smatrix as eme_build_propagation_smatrix,
+    solve_eme,
+)
 from polaris.sim.siepic_netlist import (
     SIEPIC_PORT_MAP,
     SIEPIC_TYPE_MAP,
@@ -439,6 +449,15 @@ __all__ = [
     "build_homogeneous_modes_1d",
     "build_interface_smatrix",
     "build_propagation_smatrix",
+    # A02-EME 本征模展开（Sprint 1 Task 1.4，与 A04 FDE 共享模式数据结构）
+    "EmeCell",
+    "EmeConfig",
+    "EmeResult",
+    "EmeSolver",
+    "solve_eme",
+    "eme_overlap_matrix",
+    "eme_build_interface_smatrix",
+    "eme_build_propagation_smatrix",
     # 双后端支持（R01 创新点）
     "set_backend",
     "get_backend",
