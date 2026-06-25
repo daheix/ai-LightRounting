@@ -1472,3 +1472,66 @@ nohup bash -c 'while true; do date >> /tmp/keepalive.log; sleep 300; done' &
 - **禁止** 创建 `develop`、`trae/auto-commit`、`trae/solo-agent-xxx` 等冗余分支
 - **禁止** 远端存在已合并但未删除的分支
 - **禁止** 在 main 上直接开发（必须通过 dev 或临时分支）
+
+## 规则 25：Plan/Spec 自动执行纪律（强制）
+
+所有的 plan 和 spec 制定的规则与任务，**无需用户同意，立即执行**。
+
+### 25.1 核心原则
+
+- Spec 批准后直接进入实施阶段，不再询问
+- Plan 制定后直接添加所有任务到 todos 并一次性完成整个方案
+- 任务执行中途不暂停询问，失败时告警并尝试替代方案
+- 禁止过度确认，直接执行
+
+### 25.2 适用范围
+
+- 所有 spec 文档（`.trae/specs/<spec-name>/spec.md` + `tasks.md` + `checklist.md`）
+- 所有 plan 文档（包括临时方案讨论）
+- 用户直接指示的具体任务
+
+## 规则 26：不参与 GPU 计算战略决策（强制，不可撤销）
+
+### 26.1 战略决策声明
+
+**PoLaRIS 项目战略决策：不参与 GPU 计算。** 此决策由项目所有者于 2026-06-25 明确指示，覆盖以下范围：
+
+- GPU 加速（CuPy/CUDA/ROCm/AppleMetal 等所有 GPU 后端）
+- 多卡 GPU 分布式并行（多 GPU 训练/多 GPU 仿真）
+- FP16/BF16 半精度计算（GPU 专属特性）
+- 云端弹性 GPU 算力（商业云计算 GPU 集群）
+- GPU 加速 FDTD（GPUFDTDEngine/Tidy3D GPU/曼光 100× 加速等所有 GPU FDTD 方案）
+
+### 26.2 标记规范
+
+所有 GPU 相关功能点状态统一标记为 `🚫不参与`，差距说明统一使用：
+
+```
+**PoLaRIS 战略决策：不参与 GPU 计算**。<具体不适用原因>
+```
+
+### 26.3 代码保留策略
+
+- GPU 相关代码（`src/polaris/engine/gpu_backend.py`、`src/polaris/sim/tidy3d_integration.py:GPUFDTDEngine`）**保留**但**不作为发展方向**
+- 禁止新增任何 GPU 相关功能点开发任务
+- 禁止将 GPU 相关功能点计入商业对标覆盖率
+- 现有 GPU 测试可保留为实验性测试，不作为商业级验收标准
+
+### 26.4 涉及文件清单（已标记）
+
+| 文件 | GPU 相关行数 | 标记状态 |
+|------|-------------|----------|
+| `docs/polaris_feature_inventory.md` | 3 处 | ✅ 已标记🚫不参与 |
+| `docs/feature_gap_full_analysis.md` | ~43 处 | ✅ 已标记🚫不参与 |
+| `docs/year_plan_2026_06_2027_05.md` | ~7 处 | ✅ 已标记🚫取消 |
+| `AGENTS.md` | 第 16 节 | ✅ 已添加战略决策记录 |
+
+### 26.5 覆盖率计算规则
+
+商业对标覆盖率计算时，须剔除所有 `🚫不参与`（GPU 相关）和 `🚫不适用`（赛道差异）功能点：
+
+```
+实际覆盖率 = (✅已有 + ⚠️部分) / (✅已有 + ⚠️部分 + ❌缺失)
+```
+
+剔除分母中的🚫不参与和🚫不适用项，避免 GPU 不参与拉低覆盖率统计。

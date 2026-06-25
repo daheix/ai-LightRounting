@@ -144,7 +144,38 @@
 
 ---
 
-## 15. 空间清理（按需）
+## 15. 不参与 GPU 计算战略决策（规则 26，强制，不可撤销）
+
+**PoLaRIS 项目战略决策：不参与 GPU 计算。** 由项目所有者于 2026-06-25 明确指示。
+
+### 15.1 不参与范围
+- GPU 加速（CuPy/CUDA/ROCm/AppleMetal 等所有 GPU 后端）
+- 多卡 GPU 分布式并行（多 GPU 训练/多 GPU 仿真）
+- FP16/BF16 半精度计算（GPU 专属特性）
+- 云端弹性 GPU 算力（商业云计算 GPU 集群）
+- GPU 加速 FDTD（GPUFDTDEngine/Tidy3D GPU/曼光 100× 加速等）
+
+### 15.2 标记规范
+所有 GPU 相关功能点状态统一标记为 `🚫不参与`，差距说明统一使用：
+```
+**PoLaRIS 战略决策：不参与 GPU 计算**。<具体不适用原因>
+```
+
+### 15.3 代码保留策略
+- GPU 代码（`src/polaris/engine/gpu_backend.py`、`GPUFDTDEngine`）保留但不作为发展方向
+- 禁止新增 GPU 相关开发任务
+- 禁止将 GPU 功能点计入商业对标覆盖率
+- 覆盖率公式：`(✅已有 + ⚠️部分) / (✅已有 + ⚠️部分 + ❌缺失)`，剔除🚫不参与/🚫不适用项
+
+### 15.4 已标记文件清单
+- `docs/polaris_feature_inventory.md`：3 处 GPU 条目（GPUBackend/CuPyBackend/GPUFDTDEngine）
+- `docs/feature_gap_full_analysis.md`：~43 处 GPU 相关功能点
+- `docs/year_plan_2026_06_2027_05.md`：~7 处 GPU 开发计划已剔除
+- `.trae/rules/project_rules.md` 规则 26：战略决策正式记录
+
+---
+
+## 16. 空间清理（按需）
 
 若空间不够用，可删除以下冗余工具（识别主要冗余）：
 - swiftly（6.5G）

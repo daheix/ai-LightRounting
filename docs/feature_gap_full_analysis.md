@@ -57,7 +57,7 @@
 | 1.3 | 函数式模型 | ✅已有 | src/polaris/sim/models.py:159 | 10 种模型为返回 S 字典的函数 |
 | 1.4 | 标准字典 | ✅已有 | src/polaris/sim/models.py:159 | 使用标准 Python 字典 |
 | 1.5 | XLA 加速 | ✅已有 | src/polaris/sim/jax_backend.py:101 | jit_compile JIT 编译 |
-| 1.6 | GPU 加速 | ⚠️部分 | src/polaris/engine/gpu_backend.py:221 | GPUBackend CuPy 后端（实验性），非 JAX GPU |
+| 1.6 | GPU 加速 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。CuPy GPU 后端代码保留但不作为发展方向 |
 | 1.7 | 双精度支持 | ⚠️部分 | src/polaris/sim/jax_backend.py:65 | 通过 JAX 支持，无显式双精度配置入口 |
 
 ### 2.2 子网络增长算法（Subnetwork Growth）
@@ -305,8 +305,8 @@
 |---|--------|------------|----------------|----------|
 | 9.1 | SAX 模型定义 | ✅已有 | src/polaris/sim/cascade.py:397 | _cascade_with_sax SAX 后端级联 |
 | 9.2 | JAX 计算引擎 | ✅已有 | src/polaris/sim/jax_backend.py:65 | is_jax_available JAX 后端支持 |
-| 9.3 | GPU 加速 | ✅已有 | src/polaris/engine/gpu_backend.py:221 | GPUBackend CuPy GPU 后端 |
-| 9.4 | CPU 兼容 | ✅已有 | src/polaris/engine/gpu_backend.py:221 | GPUBackend 自动回退 NumPy |
+| 9.3 | GPU 加速 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPUBackend 不作为发展方向 |
+| 9.4 | CPU 兼容 | ✅已有 | src/polaris/engine/gpu_backend.py:221 | GPUBackend 自动回退 NumPy（CPU 路径保留） |
 | 9.5 | 双精度配置 | ✅已有 | src/polaris/sim/jax_backend.py:65 | jax_backend 支持双精度配置 |
 | 9.6 | jax.numpy | ✅已有 | src/polaris/sim/jax_backend.py:124 | waveguide_s_jax 使用 jax.numpy |
 | 9.7 | 可调用模型 | ✅已有 | src/polaris/sim/models.py:159-455 | S 参数模型为可调用函数 |
@@ -519,7 +519,7 @@
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| 12.1 | Tidy3D FDTD（GPU 快速） | ✅已有 | sim/tidy3d_integration.py:116 | 有 Tidy3DAdapter |
+| 12.1 | Tidy3D FDTD（GPU 快速） | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。Tidy3DAdapter 集成保留 CPU 调用路径，GPU 加速不作为发展方向 |
 | 12.2 | 材料数据库 | ❌缺失 | - | 无材料数据库 |
 | 12.3 | Component Modeler | ✅已有 | sim/tidy3d_integration.py:116 | 有 Tidy3DAdapter |
 | 12.4 | S 参数写入和文件缓存 | ✅已有 | sim/touchstone.py:184 | 有 save_touchstone |
@@ -932,11 +932,11 @@
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| 1 | GPU 加速 FDTD (GPU-accelerated FDTD) | ⚠️部分 | `src/polaris/sim/tidy3d_integration.py:382` | PoLaRIS 有 `GPUFDTDEngine`（实验性），但非 Tidy3D 级 10-5000 倍加速，规模未达商业级 |
+| 1 | GPU 加速 FDTD (GPU-accelerated FDTD) | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPUFDTDEngine 代码保留但不作为发展方向，相关功能点不计入覆盖率 |
 | 2 | 云原生架构 (Cloud-native) | ⚠️部分 | `src/polaris/web/server.py:669` | PoLaRIS 有 `WebServer` HTTP API，但非弹性云 + 动态资源分配 + 并发数百任务的云原生架构 |
-| 3 | 内存高效 FDTD 算法 (Memory-efficient) | ❌缺失 | - | PoLaRIS 无专有内存高效 FDTD 算法（针对 GPU 微调） |
+| 3 | 内存高效 FDTD 算法 (Memory-efficient) | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。针对 GPU 微调的内存高效算法不适用 |
 | 4 | Yee 网格 (Yee Lattice) | ✅已有 | `src/polaris/sim/time_domain_circuit.py:33`; `src/polaris/sim/fdtd_jax_backend.py:72` | PoLaRIS 有 `YeeGrid`（2D TMz）+ `YeeGrid3D`（3D 交错网格），基于 Yee 1966 算法 |
-| 5 | 虚拟 GPU 分配控制 (Virtual GPU Allocation) | ❌缺失 | - | PoLaRIS 无 run_async/Job/Batch 虚拟 GPU 分配控制能力 |
+| 5 | 虚拟 GPU 分配控制 (Virtual GPU Allocation) | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。run_async/Job/Batch 虚拟 GPU 分配不适用 |
 
 ### 二、网格与边界条件 — 6 功能点
 
@@ -1156,7 +1156,7 @@
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
 | 2.1 | 2D 与 3D FDTD 引擎 | ✅已有 | `sim/fdtd_simulator.py:57` | 有 FDTDBackend（MEEP/Tidy3D/ANALYTICAL 三后端） |
-| 2.2 | 多核多 CPU FDTD 计算与集群支持 | ⚠️部分 | `engine/gpu_backend.py:221` | 有 GPU 后端，无明确多核 CPU 集群支持 |
+| 2.2 | 多核多 CPU FDTD 计算与集群支持 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPU 后端不参与；CPU 集群/MPI 并行未实现，不作为发展方向 |
 | 2.3 | 原生 64 位版本 | 🚫不适用 | - | PoLaRIS 为 Python 实现，依赖底层库，无"原生 64 位"概念 |
 | 2.4 | 子网格（sub-gridding）工具 | ❌缺失 | - | 无子网格局部加密能力 |
 | 2.5 | 子网格反射系数优于 1e-8 | ❌缺失 | - | 无子网格 |
@@ -1562,7 +1562,7 @@
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
 | 12.1 | 模块算法、设计与参数扫描层面的并行计算 | ⚠️部分 | src/polaris/trainer/parallel_rollout.py:80 | PoLaRIS 有并行 rollout，但非模块/参数扫描级并行 |
-| 12.2 | 单 GPU 与多 GPU 加速计算 | ⚠️部分 | src/polaris/engine/gpu_backend.py:221 | PoLaRIS 有 GPUBackend（CuPy，实验性），非多 GPU |
+| 12.2 | 单 GPU 与多 GPU 加速计算 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。单/多 GPU 加速均不作为发展方向 |
 | 12.3 | 本地与远程仿真；仿真作业管理 | ⚠️部分 | src/polaris/flow/scheduler.py:42 | PoLaRIS 有 JobScheduler，但无远程仿真 |
 | 12.4 | 自动多维参数扫描、优化与良率估计 | ✅已有 | src/polaris/data/variant_generator.py:478; src/polaris/sim/monte_carlo.py:174 | PoLaRIS 有参数扫描变体生成 + 良率分析 |
 | 12.5 | 交互式参数调谐 | ❌缺失 | - | PoLaRIS 无交互式参数调谐 GUI |
@@ -1626,7 +1626,7 @@
 | 5 | PML 边界条件 (Perfectly Matched Layer) | ⚠️部分 | `src/polaris/sim/fdtd_simulator.py:279` | 通过 MEEP/Tidy3D 后端间接支持 PML，无独立 PML 实现与调参能力 |
 | 6 | 色散材料 (Dispersive Materials) | ❌缺失 | - | PoLaRIS 无频率相关（色散）材料建模模块，无各向异性/非线性材料库 |
 | 7 | 各向异性材料 (Anisotropic Materials) | ❌缺失 | - | PoLaRIS 无各向异性材料建模 |
-| 8 | 分布式 GPU / HPC / Cloud 计算 | ⚠️部分 | `src/polaris/engine/gpu_backend.py:221`; `src/polaris/sim/tidy3d_integration.py:382` | PoLaRIS 有 GPUBackend(CuPy,实验性) 与 GPUFDTDEngine(实验性)，但无分布式 HPC/Cloud Burst Compute，无 Ansys Cloud 集群调度 |
+| 8 | 分布式 GPU / HPC / Cloud 计算 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。分布式 GPU/HPC/Cloud Burst Compute 均不作为发展方向；CPU 端可保留单机 JAX/XLA |
 | 9 | 伴随优化 / 逆向设计 (Adjoint Optimization via Lumopt) | ✅已有 | `src/polaris/sim/adjoint_optimizer.py:204,417` | PoLaRIS 有 AdjointOptimizer(JAX 自动微分,生产可用) 与 run_adjoint_optimization 入口，对齐 Lumopt 伴随优化 |
 | 10 | 脚本 API (Scripting API) | ✅已有 | `src/polaris/pipeline/__init__.py:291` | PoLaRIS 为 Python 原生 API，有完整 CLI 入口(main)，等价于 Lumerical 脚本自动化 |
 | 11 | PyLumerical | 🚫不适用 | - | PyLumerical 为 Lumerical 自有现代化 Python API；PoLaRIS 本身即 Python 原生，无需对齐自有 API |
@@ -1775,12 +1775,12 @@
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| AC-4.1 | 多 GPU 分布式训练 | ⚠️ | src/polaris/engine/gpu_backend.py:221 | 有 `GPUBackend` CuPy GPU 后端，但非多 GPU 分布式训练 |
+| AC-4.1 | 多 GPU 分布式训练 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。多 GPU 分布式训练不作为发展方向；CPU 端 DistributedLearner（CTDE）保留 |
 | AC-4.2 | 分布式数据收集 | ✅ | src/polaris/trainer/distributed_learner.py:265 | `DistributedLearner` CTDE 中心化 learner + parallel_rollout.py:80 |
 | AC-4.3 | Reverb Replay Buffer | ⚠️ | src/polaris/trainer/ppo.py:136 | 有 `RolloutBuffer`，但非 Reverb Server |
 | AC-4.4 | Variable Container 策略分发 | ❌ | - | PoLaRIS 无 Variable Container 策略分发 |
 | AC-4.5 | 训练/收集独立扩展 | ✅ | src/polaris/trainer/distributed_learner.py:265 | DistributedLearner 训练/收集独立进程 |
-| AC-4.6 | 推荐配置 | ❌ | - | PoLaRIS 无 8-GPU global batch=1024 推荐配置 |
+| AC-4.6 | 推荐配置 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。8-GPU global batch=1024 推荐配置不适用 |
 
 ### 5. TPU 应用（v5e / v5p / Trillium / Ironwood）（7 功能点）
 
@@ -1978,7 +1978,7 @@
 | INV-9.1 | Voltus IC Power Integrity | ❌ | - | PoLaRIS 无 Voltus 电源完整性分析 |
 | INV-9.2 | 早期 IR 修复 | ❌ | - | PoLaRIS 无早期 IR/EM 修复 |
 | INV-9.3 | Voltus XM 层级建模 | ❌ | - | PoLaRIS 无层级 EM-IR 建模 |
-| INV-9.4 | 大规模仿真扩展 | ❌ | - | PoLaRIS 无 30 亿门级 GPU 仿真扩展 |
+| INV-9.4 | 大规模仿真扩展 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。30 亿门级 GPU 仿真扩展不适用 |
 
 #### 10. 拥塞预测与优化
 
@@ -2381,7 +2381,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | 1.13 | 后处理分析程序库 | ✅ | src/polaris/data/benchmark_evaluator.py:420 | `evaluate_benchmark` 综合评估 + layout_render 渲染；但无远场/Q 因子专用分析组（部分通过 Lumerical 集成） |
 | 1.14 | 扫描优化 | ✅ | src/polaris/sim/multi_objective_optimizer.py:236, src/polaris/sim/pso_optimizer.py:95, src/polaris/sim/global_optimizer.py:350 | NSGA-II/PSO/CMA-ES/L-BFGS 全栈优化器，支持参数扫描与多目标优化 |
 | 1.15 | 脚本控制 | ✅ | src/polaris/pipeline/__init__.py:156 | `cmd_run`/`cmd_train`/`cmd_catalog` CLI + Python API 全脚本控制 |
-| 1.16 | 多并行架构加速 | ⚠️ | src/polaris/engine/gpu_backend.py:221, src/polaris/sim/jax_backend.py:101 | CuPy GPU 后端（实验性）+ JAX JIT；无 MPI/CUDA 原生多 GPU 集群、无 AVX 优化 |
+| 1.16 | 多并行架构加速 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPU/CUDA/MPI/多卡分布式相关功能不作为发展方向，相关功能点不计入覆盖率 |
 | 1.17 | 实时电磁场时域场图 | ⚠️ | src/polaris/eval/layout_render.py:123 | `render_layout` 渲染布局版图，但非实时电磁场时域场图（FDTD 后端可能提供，PoLaRIS 不直接渲染） |
 | 1.18 | 高精度算法验证 | ✅ | src/polaris/data/benchmark_evaluator.py:420 | `evaluate_benchmark` 与文献基准对齐验证（TILOS/Apollo/LiDAR） |
 | 1.19 | 2D/2.5D 任意仿真平面 | ⚠️ | src/polaris/sim/fdtd_simulator.py:279 | 依赖后端，PoLaRIS 不直接管理 Solver Spatial Type |
@@ -2405,7 +2405,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | 2.10 | 频率分析与频率扫描 | ✅ | src/polaris/sim/simulator.py:357 | `analyze_dispersion` 色散分析（FSR/Q 因子）+ CircuitSimulator 频率扫描 |
 | 2.11 | 超高计算精度 | ⚠️ | src/polaris/data/benchmark_evaluator.py:420 | 与文献基准对齐验证，但未公开 0.0001% 相对误差级精度报告 |
 | 2.12 | Correct backward propagating modes | ❌ | - | PoLaRIS 无反向传输模式修正功能 |
-| 2.13 | 多并行计算 | ⚠️ | src/polaris/sim/jax_backend.py:101, src/polaris/engine/gpu_backend.py:221 | JAX JIT + CuPy 后端，无 MPI 并行模式求解 |
+| 2.13 | 多并行计算 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。JAX JIT 保留但 MPI/CuPy 多卡相关不作为发展方向 |
 
 **2.x 统计**: ✅3 / ⚠️9 / ❌1 / 🚫0 / 覆盖率 23%
 
@@ -2463,12 +2463,12 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| 6.1 | 10-100× GPU 硬件加速 | ⚠️ | src/polaris/engine/gpu_backend.py:221, src/polaris/sim/jax_backend.py:101 | CuPy + JAX 后端支持 GPU 加速（实验性），未公开 10-100× benchmark |
-| 6.2 | 8×n 多 GPU 分布式并行 | ❌ | - | PoLaRIS 无多 GPU 分布式并行（仅 trainer/distributed_learner.py 实验性 CTDE，非 FDTD 多 GPU） |
-| 6.3 | FP16 精度支持 | ❌ | - | PoLaRIS 无 FP16 半精度计算（JAX 默认 FP32） |
-| 6.4 | 多种并行计算架构 | ⚠️ | src/polaris/engine/gpu_backend.py:221, src/polaris/sim/jax_backend.py:101 | CuPy + JAX 后端，无 MPI/AVX/AppleMetal 原生支持 |
+| 6.1 | 10-100× GPU 硬件加速 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPU 加速不作为发展方向 |
+| 6.2 | 8×n 多 GPU 分布式并行 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。多卡分布式并行不作为发展方向 |
+| 6.3 | FP16 精度支持 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。FP16 半精度为 GPU 专属特性，不作为发展方向 |
+| 6.4 | 多种并行计算架构 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。MPI/CUDA/AVX/AppleMetal 等原生并行架构不作为发展方向 |
 | 6.5 | 跨平台原生支持 | ⚠️ | - | Python 跨平台（Win/Linux/macOS），但非原生编译，无 OS 特定优化 |
-| 6.6 | GPU vs CPU 性能对比 | ❌ | - | PoLaRIS 无公开 GPU vs CPU 利用率对比报告 |
+| 6.6 | GPU vs CPU 性能对比 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPU vs CPU 对比不适用 |
 
 **6.x 统计**: ✅0 / ⚠️3 / ❌3 / 🚫0 / 覆盖率 0%
 
@@ -2479,9 +2479,9 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | 7.1 | 云客户端（免费） | ❌ | - | PoLaRIS 无云客户端 GUI（仅 web/server.py:329 HTTP API） |
 | 7.2 | 完整版 | ❌ | - | PoLaRIS 无版本分级，单一开源版本 |
 | 7.3 | 企业版 | ❌ | - | PoLaRIS 无企业版（内网隔离/多节点并行） |
-| 7.4 | 云端弹性算力 | ❌ | - | PoLaRIS 无云端 GPU 集群按需调度 |
+| 7.4 | 云端弹性算力 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。云端 GPU 集群按需调度不适用；CPU 端可保留单机/web HTTP API |
 
-**7.x 统计**: ✅0 / ⚠️0 / ❌4 / 🚫0 / 覆盖率 0%
+**7.x 统计**: ✅0 / ⚠️0 / ❌3 / 🚫1 / 覆盖率 0%（4 项均不计入实际覆盖率）
 
 ### 8. 商业模式与教育计划
 
@@ -2594,8 +2594,8 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| 1.1 | GPU 加速 FDTD 仿真模块（10× 提速） | ⚠️ | src/polaris/engine/gpu_backend.py:141, sim/tidy3d_integration.py:382 | `CuPyBackend` CuPy GPU 后端 + `GPUFDTDEngine` GPU FDTD 引擎，但均为实验性，未达"10× 提速"商业级 |
-| 1.2 | 多卡 GPU 分布式并行（联动多 GPU） | ❌ | - | PoLaRIS 无多卡 GPU 分布式并行 |
+| 1.1 | GPU 加速 FDTD 仿真模块（10× 提速） | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPU 加速 FDTD 不作为发展方向 |
+| 1.2 | 多卡 GPU 分布式并行（联动多 GPU） | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。多卡 GPU 分布式并行不适用 |
 | 1.3 | Tb 级模型支持 | ❌ | - | PoLaRIS 无 Tb 级模型支持 |
 | 1.4 | 工业量产级仿真精度 | ⚠️ | src/polaris/sim/fdtd_simulator.py:279 | FDTD 仿真器生产可用，但未公开"工业量产级"精度对标验证 |
 | 1.5 | 大型仿真任务 2 小时完成 | ❌ | - | PoLaRIS 无大型仿真任务 2 小时完成的性能承诺 |
@@ -2605,7 +2605,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | 1.9 | GDS 版图导入建模（cell_name/layer_name/z 位置） | ✅ | src/polaris/data/gds_loader.py:468, expert_layout.py:146 | `load_gds_to_circuit` SiEPIC GDS 电路解析 + `load_gds_to_circuit_with_layout` 带布局加载 |
 | 1.10 | S-Matrix Sweep（S 参数扫描） | ✅ | src/polaris/sim/models.py:159, touchstone.py:133 | 10 种 S 参数模型 + `load_touchstone` Touchstone 加载，支持 S 参数扫描 |
 
-**1.FDTD 小结**: ✅3 / ⚠️4 / ❌3 / 🚫0
+**1.FDTD 小结**: ✅3 / ⚠️4 / ❌1 / 🚫2（GPU 不参与 2 项不计入覆盖率）
 
 ### 2. FDE 求解器（波导模式求解器）
 
@@ -2725,19 +2725,19 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 
 **9.RCWA 小结**: ✅0 / ⚠️0 / ❌10 / 🚫0
 
-### GPU 加速架构
+### GPU 加速架构（🚫整节不参与：PoLaRIS 战略决策不参与 GPU 计算）
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| G1 | 业界首创 GPU 加速 FDTD | 🚫 | - | "业界首创"为商业宣传定位，开源项目不适用 |
-| G2 | 多核 GPU 并行加速技术（10× 提速） | ⚠️ | src/polaris/engine/gpu_backend.py:141 | `CuPyBackend` CuPy GPU 后端，但未达 10× 提速商业级 |
-| G3 | 多卡 GPU 分布式并行（联动多 GPU） | ❌ | - | PoLaRIS 无多卡 GPU 分布式并行 |
-| G4 | 超百倍仿真提速 | ❌ | - | PoLaRIS 无超百倍提速 |
-| G5 | Tb 级模型支持 | ❌ | - | PoLaRIS 无 Tb 级模型 |
-| G6 | FP16 半精度支持 | ❌ | - | PoLaRIS 无 FP16 半精度计算 |
-| G7 | 云端弹性 GPU 算力 | ❌ | - | PoLaRIS 无云端 GPU 算力平台 |
+| G1 | 业界首创 GPU 加速 FDTD | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。"业界首创"为商业宣传定位且 GPU 加速不参与 |
+| G2 | 多核 GPU 并行加速技术（10× 提速） | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。GPU 并行加速不作为发展方向 |
+| G3 | 多卡 GPU 分布式并行（联动多 GPU） | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。多卡 GPU 分布式并行不适用 |
+| G4 | 超百倍仿真提速 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。超百倍提速依赖 GPU 集群，不适用 |
+| G5 | Tb 级模型支持 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。Tb 级模型依赖 GPU 大显存，不适用 |
+| G6 | FP16 半精度支持 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。FP16 半精度为 GPU 专属特性，不适用 |
+| G7 | 云端弹性 GPU 算力 | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。云端 GPU 算力平台不适用 |
 
-**GPU 加速架构 小结**: ✅0 / ⚠️1 / ❌5 / 🚫1
+**GPU 加速架构 小结**: ✅0 / ⚠️0 / ❌0 / 🚫不参与 7（整节不计入覆盖率）
 
 ### Python 脚本引擎（maxoptics_sdk）
 
@@ -2821,7 +2821,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
 | D1 | 单机授权（推荐方案） | 🚫 | - | 商业授权模式，开源项目不适用 |
-| D2 | 云计算版（灵活 GPU 算力） | 🚫 | - | 商业云计算服务，开源项目不适用 |
+| D2 | 云计算版（灵活 GPU 算力） | 🚫不参与 | - | **PoLaRIS 战略决策：不参与 GPU 计算**。商业云计算 + GPU 算力服务均不适用 |
 | D3 | 私有云部署（专属安全） | 🚫 | - | 商业私有云方案，开源项目不适用 |
 | D4 | 跨平台支持（Windows/Linux/Mac） | ✅ | src/polaris/ | PoLaRIS 纯 Python 跨平台，支持 Windows/Linux/Mac |
 
@@ -2855,16 +2855,16 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | 7. Circuit 求解器 | 3 | 2 | 0 | 0 | 5 |
 | 8. BPM 求解器 | 0 | 0 | 4 | 0 | 4 |
 | 9. RCWA 求解器 | 0 | 0 | 10 | 0 | 10 |
-| GPU 加速架构 | 0 | 1 | 5 | 1 | 7 |
+| GPU 加速架构 | 0 | 0 | 0 | 7 | 7（整节不参与，不计入覆盖率） |
 | Python 脚本引擎 | 4 | 2 | 2 | 0 | 8 |
 | PDK/工艺支持 | 3 | 1 | 0 | 0 | 4 |
 | 应用案例（GUI+SDK） | 11 | 1 | 10 | 0 | 22 |
 | 客户案例与生态 | 1 | 0 | 0 | 7 | 8 |
 | 部署方式 | 1 | 0 | 0 | 3 | 4 |
 | 知识产权专利 | 0 | 0 | 0 | 8 | 8 |
-| **合计** | **28** | **23** | **63** | **19** | **133** |
+| **合计** | **28** | **22** | **58** | **25** | **133** |
 
-**T15 总统计**: ✅28 / ⚠️23 / ❌63 / 🚫19 / 覆盖率（✅+⚠️）/133 = 51/133 = **38.3%**
+**T15 总统计**: ✅28 / ⚠️22 / ❌58 / 🚫25（其中 GPU 不参与 7 项） / 覆盖率（✅+⚠️）/实际可比（133-25-7=101 项计入）= 50/101 = **49.5%**（剔除🚫不参与/不适用后）
 
 ---
 
@@ -3408,7 +3408,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 
 | 模块 | 功能点 | 缺失影响 |
 |------|--------|----------|
-| FDTD | 1.2/1.3/1.5 多卡 GPU 分布式/Tb 级模型/2 小时完成 | 大规模 FDTD 仿真能力差距显著 |
+| FDTD | 1.3/1.5 Tb 级模型/2 小时完成 | 大规模 FDTD 仿真能力差距显著（1.1/1.2 GPU 不参与已剔除） |
 | FDE | 2.4 波长切换免重跑 | FDE 高效波长扫描缺失 |
 | EME | 3.1-3.5/3.7-3.10 EME 求解器全套（9 项） | 大尺寸缓变波导仿真完全缺失 |
 | 2.5D-FDTD | 4.1/4.2/4.3/4.5 2.5D-FDTD 混合算法 | 平面波导快速仿真缺失 |
@@ -3416,7 +3416,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | HEAT | 6.1-6.4/6.6-6.10 HEAT 求解器全套（9 项） | 热传导仿真完全缺失 |
 | BPM | 8.1-8.4 BPM 求解器全套（4 项） | 大尺寸光波导仿真缺失 |
 | RCWA | 9.1-9.10 RCWA 求解器全套（10 项） | 周期性结构电磁仿真完全缺失 |
-| GPU 加速 | G3-G7 多卡分布式/百倍提速/Tb 级/FP16/云端 GPU | GPU 加速能力全面落后 |
+| GPU 加速 | G1-G7 整节 7 项 | **PoLaRIS 战略决策不参与 GPU 计算**，整节剔除覆盖率计算 |
 | Python 引擎 | P6/P8 @timed 装饰器/GUI 文件生成 | SDK 易用性功能缺失 |
 | 应用案例 | C3/C5/C6/C8/C9/C12/C13/S5/S6/S8 偏振转换器/SMF-28/Single-Slot/模式重叠/Edge Coupler/宽带偏振分束/硅 PN/PSR/SSC/锗硅探测器 | 10 类器件模型缺失 |
 
@@ -3428,7 +3428,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | FDFD 求解器 | 3.1 频域 Maxwell 方程求解 | 自研 FDFD 求解器缺失 |
 | EME 求解器 | 4.4-4.11 EME 专用分析窗口/传播扫描/模式收敛/emesweep/spatial type/Display cells/EME Propagate/云端作业 | EME 完整工作流缺失 |
 | FDCharge 求解器 | 5.3/5.6 Scharfetter-Gummel 离散/云端作业 | 载流子传输求解器缺失 |
-| 平台与并行 | 6.2/6.3/6.6 多 GPU 分布式/FP16 精度/GPU vs CPU 对比 | 工程化能力缺失 |
+| 平台与并行 | 6.2/6.3/6.6 多 GPU 分布式/FP16 精度/GPU vs CPU 对比 | **PoLaRIS 战略决策不参与 GPU 计算**，已剔除覆盖率 |
 | 部署模式 | 7.1-7.4 云客户端/完整版/企业版/云端弹性算力 | 部署模式单一 |
 | 材料 | 10.2 Pole Residue Model | 材料模型缺失 |
 | 脚本 API | 11.3/11.7 SimWorks MCP/switchtodesign 命令 | 专有脚本生态缺失 |
@@ -3464,7 +3464,7 @@ PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均�
 | P1-1 | **HEAT 热传导求解器** | T15 6.1-6.10 | 热-光-电多物理场耦合完全缺失（曼光 OFC 2026 新发布） | R41 HEAT 求解器（傅里叶导热+5 类边界+光-热/电-热耦合） |
 | P1-2 | **BPM 求解器** | T15 8.1-8.4 | 大尺寸光波导仿真缺失 | R46 BPM 求解器（SVEA+玻璃基 PLC） |
 | P1-3 | **DDM 半导体器件求解器** | T15 5.1-5.10 | 有源器件（调制器/探测器）物理仿真缺失 | R42 DDM 求解器（Poisson+漂移扩散+FVM+Scharfetter-Gummel） |
-| P1-4 | **多卡 GPU 分布式并行** | T15 1.2/G3 + T16 6.2 | 大规模仿真算力差距显著 | R43 多卡 GPU 分布式 FDTD（CuPy 多卡+任务并行） |
+| ~~P1-4~~ | ~~**多卡 GPU 分布式并行**~~ | ~~T15 1.2/G3 + T16 6.2~~ | ~~大规模仿真算力差距显著~~ | **🚫取消：PoLaRIS 战略决策不参与 GPU 计算，此项剔除开发计划** |
 | P1-5 | **DSP 算法模块（FFE/FEC/TDECQ）** | T14 2.9/2.10 | 400G/800G 光模块信号处理链路缺失 | R44 DSP 算法模块（FFE 均衡+FEC 编码+TDECQ 评估） |
 | P1-6 | **非线性光纤模拟（NLS/PMD）** | T14 2.6 | 长距离光纤通信仿真缺失 | R45 非线性光纤仿真（FiberNLS_PMD） |
 
@@ -3514,17 +3514,19 @@ PoLaRIS 作为开源 AI 布局布线引擎，相对国产工具具备以下差�
 - **建议策略**：补齐 GUI + RCWA + 高速信号仿真，保持 AI/量子/逆向设计领先
 
 **T15 曼光 Max-Optics Studio 对标结论**：
-- **覆盖率 38.3%**，PoLaRIS 在求解器矩阵上存在大面积缺口
-- **核心差距**：EME/BPM/RCWA/2.5D-FDTD/HEAT 五大求解器完全缺失，DDM 半导体求解器缺失，多卡 GPU 分布式并行缺失
+- **覆盖率 49.5%**（剔除🚫不参与/不适用后），PoLaRIS 在求解器矩阵上存在大面积缺口
+- **核心差距**：EME/BPM/RCWA/2.5D-FDTD/HEAT 五大求解器完全缺失，DDM 半导体求解器缺失
+- **GPU 加速架构**：🚫PoLaRIS 战略决策不参与 GPU 计算（G1-G7 共 7 项整节剔除覆盖率计算）
 - **PoLaRIS 优势**：布局布线引擎（曼光无）、DRC/LVS 验证（曼光无）、AI 逆向设计（曼光无）、量子光子（曼光无）、PDK 桥接（曼光无）
 - **建议策略**：补齐 RCWA + EME + HEAT 三大求解器（P0/P1 优先级），保持布局布线+验证+AI 领先
 - **特别提示**：曼光 OFC 2026 发布 HEAT 模块，标志国产工具已进入多物理场耦合阶段，PoLaRIS 需加速 HEAT 求解器研发以保持竞争力
 
 **T16 SimWorks FDS 对标结论**：
 - **覆盖率 64.7%**（含 ⚠️ 部分覆盖），PoLaRIS 通过外部后端集成部分覆盖 SimWorks 五求解器
-- **核心差距**：无自研 FDTD/FDE/FDFD/EME/FDCharge 数值求解器内核（依赖 MEEP/Tidy3D/Lumerical），无多 GPU 集群/FP16/云端算力，无 GUI 兼容性
+- **核心差距**：无自研 FDTD/FDE/FDFD/EME/FDCharge 数值求解器内核（依赖 MEEP/Tidy3D/Lumerical），无 GUI 兼容性
+- **GPU 相关**：🚫PoLaRIS 战略决策不参与 GPU 计算，多 GPU 集群/FP16/云端算力均剔除覆盖率计算
 - **PoLaRIS 优势**：AI 逆向设计（Adjoint+RL+GAN+Diffusion）、多目标优化（5 种优化器）、布局布线引擎、量子光子、48 PDK 桥接
-- **建议策略**：补齐 EME 求解器（P0）+ 多卡 GPU 分布式（P1），保持 AI+优化器+布局布线领先
+- **建议策略**：补齐 EME 求解器（P0），保持 AI+优化器+布局布线领先
 
 **T17 法动 UltraEM 对标结论**：
 - **覆盖率 50.0%**（含 ⚠️ 部分覆盖），但 🚫 不适用 42 个（42.9%），反映业务范围几乎不重叠
@@ -3599,8 +3601,8 @@ PoLaRIS 作为开源 AI 布局布线引擎，相对国产工具具备以下差�
 ### 国产工具独家发现
 
 1. **T14 逍遥 PIC Studio**：PIVOT 智能变量优化（14 种优化算子）、pSim Plus 光电全链路一体化（IBIS-AMI/DSP/TDECQ）、ADK 封装设计套件、Meta Studio 超构透镜全流程、Power Studio/MEMS Studio 垂直领域拓展
-2. **T15 曼光 Max-Optics**：GPU 100× 加速 FDTD、9 大求解器矩阵（FDTD/FDE/EME/2.5D-FDTD/DDM/HEAT/Circuit/BPM/RCWA）、HEAT 多物理场耦合（OFC 2026 新发布）、8 项发明专利
-3. **T16 SimWorks**：FP16 半精度计算、AppleMetal 原生支持、教育计划（学生/教师权益）、5 求解器阵容（FDTD/FDE/FDFD/EME/FDCharge）、云端弹性算力
+2. **T15 曼光 Max-Optics**：9 大求解器矩阵（FDTD/FDE/EME/2.5D-FDTD/DDM/HEAT/Circuit/BPM/RCWA）、HEAT 多物理场耦合（OFC 2026 新发布）、8 项发明专利（GPU 100× 加速 FTD 属 GPU 范畴，PoLaRIS 不参与对标）
+3. **T16 SimWorks**：教育计划（学生/教师权益）、5 求解器阵容（FDTD/FDE/FDFD/EME/FDCharge）（FP16 半精度/AppleMetal/云端弹性算力属 GPU 范畴，PoLaRIS 不参与对标）
 4. **T17 法动 UltraEM**：AI 电磁大脑（CNN+FCell 核心专利）、可复用+参数化设计理念、射频全栈（芯片-封装-PCB-天线-IPD）、GrityDesigner 先进封装 SI/PI（2025 新推）
 
 ### PoLaRIS 优先补齐（国产工具独有且缺失）
@@ -3614,7 +3616,7 @@ PoLaRIS 作为开源 AI 布局布线引擎，相对国产工具具备以下差�
 | **P1** | GUI 原理图/版图编辑器 | T14 OpenLayout + pLogic | 用户易用性关键缺口 | R39 |
 | **P1** | IBIS-AMI 光电协同 | T14 pSim Plus | 高速 SERDES 仿真缺口 | R40 |
 | **P1** | DSP 算法（FFE/FEC/TDECQ） | T14 pSim Plus | 400G/800G 光模块缺失 | R44 |
-| **P1** | 多卡 GPU 分布式并行 | T15+T16 均有 | 大规模仿真算力差距 | R43 |
+| ~~P1~~ | ~~多卡 GPU 分布式并行~~ | ~~T15+T16 均有~~ | ~~大规模仿真算力差距~~ | **🚫取消：PoLaRIS 战略决策不参与 GPU 计算，剔除开发计划** |
 | **P2** | DDM 半导体求解器 | T15 有 | 有源器件物理仿真缺失 | R42 |
 | **P2** | 2.5D-FDTD 求解器 | T15 有 | 平面波导快速仿真缺失 | R47 |
 
