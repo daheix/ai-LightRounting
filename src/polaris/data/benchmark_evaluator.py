@@ -528,12 +528,16 @@ def grid_placement(
     # 能容纳所有模块（含 10% 间距余量）的最小画布尺寸
     min_canvas_w = cols * max_w * 1.1
     min_canvas_h = rows * max_h * 1.1
-    # 自适应扩大画布: 若原画布不够则使用最小画布尺寸
-    effective_canvas_w = max(circuit.canvas_w, min_canvas_w)
-    effective_canvas_h = max(circuit.canvas_h, min_canvas_h)
-    # 单元尺寸: 严格按有效画布分割（确保不超出画布）
-    cell_w = effective_canvas_w / cols
-    cell_h = effective_canvas_h / rows
+    # 自适应扩大画布: 若原画布不够则直接修改 circuit 画布尺寸
+    # （CircuitSpec 非 frozen，可修改；确保 evaluate_drv 等下游评估
+    #   使用与布局一致的画布尺寸，避免边界违规误报）
+    if circuit.canvas_w < min_canvas_w:
+        circuit.canvas_w = min_canvas_w
+    if circuit.canvas_h < min_canvas_h:
+        circuit.canvas_h = min_canvas_h
+    # 单元尺寸: 严格按扩大后的画布分割（确保不超出画布）
+    cell_w = circuit.canvas_w / cols
+    cell_h = circuit.canvas_h / rows
     placements: dict[str, tuple[float, float]] = {}
     for i, dev in enumerate(circuit.devices):
         row = i // cols

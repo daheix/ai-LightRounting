@@ -54,8 +54,14 @@ def _mzi_circuit() -> CircuitSpec:
         devices=[
             DeviceSpec("gc1", "grating_coupler", 10, 10),
             DeviceSpec("mmi1", "mmi_1x2", 20, 10),
-            DeviceSpec("wg1", "strip_waveguide", 100, 0.5),
-            DeviceSpec("wg2", "strip_waveguide", 120, 0.5),
+            DeviceSpec(
+                "wg1", "strip_waveguide", 100, 0.5,
+                params={"length": 100.0},
+            ),
+            DeviceSpec(
+                "wg2", "strip_waveguide", 120, 0.5,
+                params={"length": 120.0},
+            ),
             DeviceSpec("mmi2", "mmi_2x2", 20, 10),
         ],
         connections=[
@@ -123,7 +129,7 @@ def _quantum_placeholder_circuit() -> CircuitSpec:
             DeviceSpec("src1", "grating_coupler", 10, 10),
             DeviceSpec("src2", "grating_coupler", 10, 10),
             DeviceSpec("bs1", "mmi_2x2", 20, 10),
-            DeviceSpec("det1", "detector", 10, 10),
+            DeviceSpec("det1", "photodetector", 10, 10),
         ],
         connections=[
             ("src1", "out", "bs1", "in0"),
