@@ -34,6 +34,26 @@
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 """
 
+from polaris.sim.fde import (
+    FdeSolver,
+    FdeSolverConfig,
+    Mode,
+    solve_waveguide,
+)
+from polaris.sim.fdfd import (
+    DipoleSource,
+    FdfdResult,
+    FdfdSolver,
+    FdfdSolverConfig,
+    GaussianBeamSource,
+    ModeSource,
+    PlaneWaveSource,
+    PortSpec,
+    SParameters,
+    extract_s_parameters,
+    solve_fdfd,
+    verify_energy_conservation,
+)
 from polaris.sim.ai_inverse_design import (
     AdjointConfig,
     AdjointOptimizer,
@@ -335,6 +355,24 @@ __all__ = [
     # 类型
     "SDict",
     "ModelFunc",
+    # A04-FDE 本征模求解器（Sprint 0 求解器栈底座，Yee 网格共享组件）
+    "Mode",
+    "FdeSolver",
+    "FdeSolverConfig",
+    "solve_waveguide",
+    # A05-FDFD 频域有限差分（Sprint 1 频域全波路径核心，复用 FDE YeeGrid/ScPml）
+    "FdfdResult",
+    "FdfdSolver",
+    "FdfdSolverConfig",
+    "solve_fdfd",
+    "DipoleSource",
+    "GaussianBeamSource",
+    "ModeSource",
+    "PlaneWaveSource",
+    "PortSpec",
+    "SParameters",
+    "extract_s_parameters",
+    "verify_energy_conservation",
     # 双后端支持（R01 创新点）
     "set_backend",
     "get_backend",
