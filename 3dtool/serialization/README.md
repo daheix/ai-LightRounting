@@ -8,6 +8,7 @@
 
 - **用途**: 网表/配置序列化
 - **状态**: ✅ 已装 6.0.3（import 名为 `yaml`）
+- **许可**: MIT（✅可商用）
 - **来源**: https://pyyaml.org/
 - **安装**: `pip install pyyaml`
 - **项目使用**:
