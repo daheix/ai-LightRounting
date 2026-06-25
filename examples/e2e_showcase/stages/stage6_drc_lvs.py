@@ -56,8 +56,14 @@ def _mzi_circuit() -> CircuitSpec:
         devices=[
             DeviceSpec("gc1", "grating_coupler", 10, 10),
             DeviceSpec("mmi1", "mmi_1x2", 20, 10),
-            DeviceSpec("wg1", "strip_waveguide", 100, 0.5),
-            DeviceSpec("wg2", "strip_waveguide", 120, 0.5),
+            DeviceSpec(
+                "wg1", "strip_waveguide", 100, 0.5,
+                params={"length": 100.0},
+            ),
+            DeviceSpec(
+                "wg2", "strip_waveguide", 120, 0.5,
+                params={"length": 120.0},
+            ),
             DeviceSpec("mmi2", "mmi_2x2", 20, 10),
         ],
         connections=[

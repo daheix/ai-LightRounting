@@ -498,7 +498,13 @@ def grid_placement(
     """生成网格布局（基准对照布局，非 RL）。
 
     将模块按 cols 列网格均匀分布，作为 RL 布局的对照基准。
-    单元尺寸自适应最大模块，确保无重叠。
+    单元尺寸自适应最大模块，确保无重叠且零边界违规。
+
+    修复: 当最大模块尺寸 × 1.1 > 画布分割尺寸时，原实现 cell_w 会超过
+    canvas_w/cols，导致器件超出画布边界（DRV boundary 违规）。
+    现改为: 计算能容纳所有模块（含 10% 间距余量）的最小画布尺寸，
+    若原画布不够则自适应扩大，确保所有模块严格在画布内。
+
     来源: TILOS MacroPlacement 初始布局基准。
 
     Args:
@@ -516,11 +522,22 @@ def grid_placement(
     if cols is None:
         cols = max(1, int(math.ceil(math.sqrt(n))))
     rows = math.ceil(n / cols)
-    # 单元尺寸：基于最大模块尺寸，确保不重叠
+    # 最大模块尺寸
     max_w = max((d.width_um for d in circuit.devices), default=1.0)
     max_h = max((d.height_um for d in circuit.devices), default=1.0)
-    cell_w = max(circuit.canvas_w / cols, max_w * 1.1)
-    cell_h = max(circuit.canvas_h / rows, max_h * 1.1)
+    # 能容纳所有模块（含 10% 间距余量）的最小画布尺寸
+    min_canvas_w = cols * max_w * 1.1
+    min_canvas_h = rows * max_h * 1.1
+    # 自适应扩大画布: 若原画布不够则直接修改 circuit 画布尺寸
+    # （CircuitSpec 非 frozen，可修改；确保 evaluate_drv 等下游评估
+    #   使用与布局一致的画布尺寸，避免边界违规误报）
+    if circuit.canvas_w < min_canvas_w:
+        circuit.canvas_w = min_canvas_w
+    if circuit.canvas_h < min_canvas_h:
+        circuit.canvas_h = min_canvas_h
+    # 单元尺寸: 严格按扩大后的画布分割（确保不超出画布）
+    cell_w = circuit.canvas_w / cols
+    cell_h = circuit.canvas_h / rows
     placements: dict[str, tuple[float, float]] = {}
     for i, dev in enumerate(circuit.devices):
         row = i // cols

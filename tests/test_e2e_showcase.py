@@ -485,10 +485,12 @@ class TestStageFailureLogging:
 
         entry = json.loads((out / "logs" / "showcase.jsonl").read_text(encoding="utf-8").strip())
         assert "events" in entry
-        assert len(entry["events"]) == 3  # 2 info + 1 warn
-        assert entry["events"][0]["level"] == "info"
-        assert entry["events"][0]["msg"] == "步骤 1 开始"
-        assert entry["events"][2]["level"] == "warning"
+        # StageLogger 会记录阶段开始/完成等框架事件，此处仅验证用户事件被记录
+        user_events = [e for e in entry["events"] if e["msg"] in ("步骤 1 开始", "步骤 2 进行中", "发现警告")]
+        assert len(user_events) == 3  # 2 info + 1 warn
+        assert user_events[0]["level"] == "info"
+        assert user_events[0]["msg"] == "步骤 1 开始"
+        assert user_events[2]["level"] == "warning"
 
     def test_inputs_populated(self, tmp_path: Path) -> None:
         """inputs 字段应被填充。"""

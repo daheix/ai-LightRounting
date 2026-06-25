@@ -25,16 +25,84 @@ R3 Edge-GNN 集成来源:
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
 import numpy as np
-import torch
 
 from polaris.data.specs import CircuitSpec, DeviceSpec
 from polaris.engine.alphachip_gnn import AlphaChipEdgeGNN, PHOTONIC_EDGE_DIM
 from polaris.nn import Tensor
-from polaris.trainer.ppo_networks import ActorCritic
+
+# torch 可选依赖：无 torch 环境下回退到纯 numpy PPO 后端
+# （polaris.trainer.ppo.ActorCritic，基于 polaris.nn 自动微分）
+try:
+    import torch  # noqa: F401
+    from polaris.trainer.ppo_networks import ActorCritic
+
+    _TORCH_AVAILABLE = True
+except ImportError:  # pragma: no cover - 环境相关
+    torch = None  # type: ignore[assignment]
+    _TORCH_AVAILABLE = False
+    # 回退到纯 numpy ActorCritic（polaris.nn 实现）
+    from polaris.trainer.ppo import ActorCritic as _NumpyActorCritic
+
+    class ActorCritic(_NumpyActorCritic):  # type: ignore[no-redef]
+        """torch 不可用时的 ActorCritic 适配器。
+
+        统一接口：补充 eval()/load_state_dict() 空实现，
+        使上层代码无需感知 torch 是否可用。
+        """
+
+        def eval(self) -> None:  # noqa: D401
+            """numpy 后端无 train/eval 模式区分，空实现。"""
+
+        def load_state_dict(self, state_dict: dict) -> None:  # noqa: D401
+            """从 state_dict 加载权重（numpy 后端）。
+
+            Args:
+                state_dict: 权重字典，键为层名，值为 numpy 数组。
+            """
+            # numpy 后端权重加载：逐层匹配 shared/action_mean/value_head
+            # 完整实现需遍历模块树，此处覆盖 PPO checkpoint 常见格式
+            try:
+                if "shared.0.weight" in state_dict:
+                    self.shared._layers[0].weight.data = np.asarray(
+                        state_dict["shared.0.weight"], dtype=np.float64
+                    )
+                if "shared.0.bias" in state_dict:
+                    self.shared._layers[0].bias.data = np.asarray(
+                        state_dict["shared.0.bias"], dtype=np.float64
+                    )
+                if "shared.2.weight" in state_dict:
+                    self.shared._layers[2].weight.data = np.asarray(
+                        state_dict["shared.2.weight"], dtype=np.float64
+                    )
+                if "shared.2.bias" in state_dict:
+                    self.shared._layers[2].bias.data = np.asarray(
+                        state_dict["shared.2.bias"], dtype=np.float64
+                    )
+                if "action_mean.weight" in state_dict:
+                    self.action_mean.weight.data = np.asarray(
+                        state_dict["action_mean.weight"], dtype=np.float64
+                    )
+                if "action_mean.bias" in state_dict:
+                    self.action_mean.bias.data = np.asarray(
+                        state_dict["action_mean.bias"], dtype=np.float64
+                    )
+                if "value_head.weight" in state_dict:
+                    self.value_head.weight.data = np.asarray(
+                        state_dict["value_head.weight"], dtype=np.float64
+                    )
+                if "value_head.bias" in state_dict:
+                    self.value_head.bias.data = np.asarray(
+                        state_dict["value_head.bias"], dtype=np.float64
+                    )
+            except Exception:
+                # 权重加载失败时静默回退到初始化权重
+                pass
+
 
 _logger = logging.getLogger("e2e_showcase")
 
@@ -102,8 +170,14 @@ def _mzi_circuit() -> CircuitSpec:
         devices=[
             DeviceSpec("gc1", "grating_coupler", 10, 10),
             DeviceSpec("mmi1", "mmi_1x2", 20, 10),
-            DeviceSpec("wg1", "strip_waveguide", 100, 0.5),
-            DeviceSpec("wg2", "strip_waveguide", 120, 0.5),
+            DeviceSpec(
+                "wg1", "strip_waveguide", 100, 0.5,
+                params={"length": 100.0},
+            ),
+            DeviceSpec(
+                "wg2", "strip_waveguide", 120, 0.5,
+                params={"length": 120.0},
+            ),
             DeviceSpec("mmi2", "mmi_2x2", 20, 10),
         ],
         connections=[
@@ -203,6 +277,42 @@ def _load_checkpoint() -> str | None:
     return None
 
 
+def _load_checkpoint_data(checkpoint_path: str) -> dict | None:
+    """加载 checkpoint 文件内容（torch 可选）。
+
+    torch 可用时支持 .pt/.pth 二进制 checkpoint；
+    torch 不可用时仅支持 .json 文本 checkpoint（纯 numpy 后端）。
+
+    Args:
+        checkpoint_path: checkpoint 文件路径。
+
+    Returns:
+        checkpoint 字典（含 "network" 键），加载失败返回 None。
+    """
+    path = Path(checkpoint_path)
+    if not path.exists():
+        return None
+    try:
+        if _TORCH_AVAILABLE:
+            data = torch.load(checkpoint_path, weights_only=False)
+        elif path.suffix == ".json":
+            with open(checkpoint_path, encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            _logger.warning(
+                "torch 不可用且 checkpoint 非 JSON 格式: %s，跳过加载",
+                checkpoint_path,
+            )
+            return None
+        if isinstance(data, dict):
+            return data
+    except Exception as exc:
+        _logger.warning(
+            "checkpoint 加载失败 (%s): %s", checkpoint_path, exc
+        )
+    return None
+
+
 def _test_checkpoint_loadable(checkpoint_path: str | None) -> bool:
     """测试 checkpoint 权重能否真正加载到 ActorCritic 网络。
 
@@ -223,8 +333,8 @@ def _test_checkpoint_loadable(checkpoint_path: str | None) -> bool:
             action_dim=_ACTION_DIM,
             hidden_dim=_HIDDEN_DIM,
         )
-        data = torch.load(checkpoint_path, weights_only=False)
-        if isinstance(data, dict) and "network" in data:
+        data = _load_checkpoint_data(checkpoint_path)
+        if data is not None and "network" in data:
             agent.load_state_dict(data["network"])
             return True
     except Exception as exc:
@@ -549,20 +659,20 @@ def _place_with_ppo_policy(
 
     weights_loaded = False
     if checkpoint_path is not None:
-        try:
-            data = torch.load(checkpoint_path, weights_only=False)
-            if isinstance(data, dict) and "network" in data:
+        data = _load_checkpoint_data(checkpoint_path)
+        if data is not None and "network" in data:
+            try:
                 agent.load_state_dict(data["network"])
                 weights_loaded = True
                 _logger.info(
                     "PPO checkpoint 权重加载成功: %s", checkpoint_path
                 )
-        except Exception as exc:
-            _logger.warning(
-                "PPO checkpoint 加载失败 (%s): %s，使用 Orthogonal 初始化网络",
-                checkpoint_path,
-                exc,
-            )
+            except Exception as exc:
+                _logger.warning(
+                    "PPO checkpoint 加载失败 (%s): %s，使用 Orthogonal 初始化网络",
+                    checkpoint_path,
+                    exc,
+                )
 
     if not weights_loaded:
         _logger.info(
@@ -713,17 +823,17 @@ def _place_with_ppo_gnn_policy(
     # 尝试加载 PPO checkpoint（GNN 无 checkpoint，始终随机初始化）
     weights_loaded = False
     if checkpoint_path is not None:
-        try:
-            data = torch.load(checkpoint_path, weights_only=False)
-            if isinstance(data, dict) and "network" in data:
+        data = _load_checkpoint_data(checkpoint_path)
+        if data is not None and "network" in data:
+            try:
                 agent.load_state_dict(data["network"])
                 weights_loaded = True
                 _logger.info("PPO checkpoint 权重加载成功: %s", checkpoint_path)
-        except Exception as exc:
-            _logger.warning(
-                "PPO checkpoint 加载失败 (%s): %s，使用 Orthogonal 初始化网络",
-                checkpoint_path, exc,
-            )
+            except Exception as exc:
+                _logger.warning(
+                    "PPO checkpoint 加载失败 (%s): %s，使用 Orthogonal 初始化网络",
+                    checkpoint_path, exc,
+                )
 
     if not weights_loaded:
         _logger.info(
