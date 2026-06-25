@@ -13,16 +13,21 @@
 ## 2. 保活脚本（规则 23，强制，最高优先级）
 
 ### 2.1 启动要求
-- 每个会话启动后，**第一件事**必须启动保活脚本，每 5 分钟 touch 一个文件，防止会话超时断开。
-- 保活脚本命令（方案2：简单 touch 文件）：
+- 每个会话启动后，**第一件事**必须启动保活脚本：
+  - 每 5 分钟 touch 一个文件，防止会话超时断开；
+  - 每 17 分钟向前台发送一条消息："做得很好，按照计划继续执行剩余任务。"
+- 保活脚本文件：`scripts/keepalive.sh`（已 chmod +x）
+- 启动命令：
   ```bash
-  nohup bash -c 'while true; do date >> /tmp/keepalive.log; touch /tmp/keepalive_marker; sleep 300; done' > /dev/null 2>&1 &
+  nohup bash scripts/keepalive.sh > /tmp/keepalive_stdout.log 2>&1 &
   ```
-- 保活日志写入 `/tmp/keepalive.log`，标记文件为 `/tmp/keepalive_marker`。
+- 保活日志写入 `/tmp/keepalive.log`，标记文件 `/tmp/keepalive_marker`，
+  最近消息文件 `/tmp/keepalive_message.txt`，前台 stdout 重定向到 `/tmp/keepalive_stdout.log`。
 
 ### 2.2 启动验证
-- 启动后立即向用户报告："保活脚本已启动，每 5 分钟 touch 文件一次"。
-- 验证脚本运行：`ps aux | grep keepalive` 或检查 `/tmp/keepalive.log` 是否有新写入。
+- 启动后立即向用户报告："保活脚本已启动，每 5 分钟 touch 文件一次，每 17 分钟向前台发送进度消息。"
+- 验证脚本运行：`ps aux | grep keepalive.sh` 或检查 `/tmp/keepalive.log` 是否有新写入。
+- 验证消息发送：检查 `/tmp/keepalive_message.txt` 内容应为"做得很好，按照计划继续执行剩余任务。"
 
 ### 2.3 失败处理
 - 若保活脚本启动失败，立即告警并退出（禁止 fall-back 静默继续）。
