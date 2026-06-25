@@ -133,76 +133,64 @@ src/polaris/
 └── pycopy/                # 自研复刻工具（规则 4）
 ```
 
-### 3.2 三方工具清单与许可状态（实际核查 2026-06-25，同步 INVENTORY.md）
-
-> **2026-06-25 更新**：所有工具表新增"许可"和"商用状态"两列，与 [INVENTORY.md](../../3dtool/INVENTORY.md) 一致。
-> 商用状态图标：✅可商用 / ⚠️许可受限 / 🚫不可商用待复刻 / ❌缺失待实现
-> GPU 相关库按规则 26 全部标记🚫不参与。
+### 3.2 三方工具清单与安装状态（实际核查 2026-06-20）
 
 #### layout/ — 版图类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| gdsfactory | ✅ 已装 | 8.18.0 | MIT | ✅可商用 | 版图生成/PDK/GDS导出 | src/polaris/pdk/gdsfactory_integration.py |
-| klayout | ✅ 已装 | 0.30.9 | GPL-3.0+ / 商业双许可 | ⚠️许可受限 | DRC/LVS/版图查看 | src/polaris/eval/layout_render.py |
-| gdstk | ✅ 已装 | 1.0.0 | BSL-1.0 | ✅可商用 | 高性能 GDS 读写 | gdsfactory 依赖 |
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| gdsfactory | ❌ 未装 | — | 版图生成/PDK/GDS导出 | `pip install gdsfactory` | src/polaris/pdk/ 参考 |
+| klayout | ✅ 已装 | 0.30.9 | DRC/LVS/版图查看 | `pip install klayout` | src/polaris/eval/layout_render.py |
+| gdstk | ❌ 未装 | — | 高性能 GDS 读写 | `pip install gdstk` | gdsfactory 依赖 |
 
 #### simulation/ — 仿真类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| meep | ❌ 未装 | — | GPLv2+ | ⚠️许可受限 | FDTD 电磁仿真 | 器件级仿真（条件 import，未实际使用） |
-| simphony | ✅ 已装 | 0.7.3 | BSD-3-Clause | ✅可商用 | 光子电路 S 参数仿真 | src/polaris/sim/simulator.py |
-| sax | ✅ 已装 | 0.14.7 | MIT | ✅可商用 | 频率域仿真 | src/polaris/sim/cascade.py |
-| SiPANN | 🚫 已复刻 | — | LGPL | 🚫已复刻 pyCopySiPANN | 硅光器件模型 | src/polaris/sim/models.py（tensorflow 无 Py3.14） |
-| femwell | ❌ 未装 | — | GPLv3 | ⚠️许可受限 | FEM 模式求解器 | 模式求解（项目未使用） |
-| meow | ❌ 未装 | — | MIT | ✅可商用 | 模式求解器 | 模式求解（项目未使用） |
-| tidy3d | ❌ 未装 | — | 商业 | 🚫不可商用 | 云端 FDTD | 对标参考（不引入） |
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| meep | ❌ 未装 | — | FDTD 电磁仿真 | `pip install meep` | 器件级仿真 |
+| simphony | ✅ 已装 | 0.7.3 | 光子电路 S 参数仿真 | `pip install simphony` | src/polaris/sim/simulator.py |
+| sax | ✅ 已装 | 0.14.7 | 频率域仿真 | `pip install sax` | src/polaris/sim/cascade.py（有 pyCopySAX 复刻） |
+| SiPANN | ❌ 未装 | — | 硅光器件模型 | `pip install SiPANN` | src/polaris/sim/models.py（已复刻） |
+| femwell | ❌ 未装 | — | FEM 模式求解器 | `pip install femwell` | 模式求解 |
+| meow | ❌ 未装 | — | 模式求解器 | `pip install meow` | 模式求解 |
 
 #### ml/ — 机器学习类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| torch | ✅ 已装 | 2.12.1+cpu | BSD-3-Clause | ✅可商用 | GNN/PPO 神经网络 | src/polaris/trainer/ppo_torch.py |
-| gymnasium | ✅ 已装 | 1.3.0 | MIT | ✅可商用 | RL 环境 | src/polaris/engine/floorplan_env.py |
-| networkx | ✅ 已装 | 3.6.1 | BSD-3-Clause | ✅可商用 | 图算法 | src/polaris/engine/netlist.py |
-| jax | ✅ 已装 | 0.10.2 | Apache-2.0 | ✅可商用 | 自动微分 | src/polaris/sim/interconnect_jax.py |
-| cupy | 🚫 不参与 | — | MIT | 🚫规则26不参与 | GPU 加速 | — |
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| torch | ✅ 已装 | 2.12.1+cpu | GNN/PPO 神经网络 | `pip install torch` | src/polaris/trainer/ppo_torch.py |
+| gymnasium | ✅ 已装 | 1.3.0 | RL 环境 | `pip install gymnasium` | src/polaris/engine/floorplan_env.py |
+| networkx | ✅ 已装 | 3.6.1 | 图算法 | `pip install networkx` | src/polaris/engine/netlist.py |
 
 #### numeric/ — 数值计算类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| numpy | ✅ 已装 | 2.4.6 | BSD-3-Clause | ✅可商用 | 数值计算 | 全项目核心 |
-| scipy | ✅ 已装 | 1.17.1 | BSD-3-Clause | ✅可商用 | 优化求解 | src/polaris/sim/caphe_time_domain.py 等 |
-| shapely | ✅ 已装 | 2.1.2 | BSD-3-Clause | ✅可商用 | 几何运算 | gdsfactory 依赖 |
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| numpy | ✅ 已装 | 2.4.6 | 数值计算 | `pip install numpy` | 全项目核心 |
+| scipy | ✅ 已装 | 1.17.1 | 优化求解 | `pip install scipy` | 优化求解 |
+| shapely | ❌ 未装 | — | 几何运算 | `pip install shapely` | constraint_checker 用纯 Python 实现 |
 
 #### viz/ — 可视化类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| matplotlib | ✅ 已装 | 3.11.0 | PSF (Matplotlib) | ✅可商用 | 版图渲染 | src/polaris/eval/layout_render.py |
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| matplotlib | ✅ 已装 | 3.11.0 | 版图渲染 | `pip install matplotlib` | src/polaris/eval/layout_render.py |
 
 #### serialization/ — 序列化类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| pyyaml | ✅ 已装 | 6.0.3 | MIT | ✅可商用 | 网表/配置序列化 | src/polaris/engine/netlist.py 等 |
-| orjson | ✅ 已装 | 3.11.9 | Apache-2.0 / MIT | ✅可商用 | 高速 JSON | 传递依赖 |
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| pyyaml | ✅ 已装 | 6.0.3 | 网表/配置序列化 | `pip install pyyaml` | src/polaris/engine/netlist.py 等 |
 
 #### dev/ — 开发类工具
 
-| 工具 | 安装状态 | 版本 | 许可 | 商用状态 | 用途 | 项目使用位置 |
-|------|---------|------|------|---------|------|-------------|
-| pytest | ✅ 已装 | 9.1.0 | MIT | ✅可商用 | 测试框架 | tests/ |
-| ruff | ✅ 已装 | 0.15.18 | MIT | ✅可商用 | Lint + Format | 全项目 |
-| mypy | ✅ 已装 | 2.1.0 | MIT | ✅可商用 | 类型检查 | src/polaris/ |
-| wheel | ✅ 已装 | 0.47.0 | MIT | ✅可商用 | wheel 构建 | 打包 |
-| setuptools | ✅ 已装 | 82.0.1 | MIT | ✅可商用 | 构建工具 | 打包 |
-| black | ✅ 已装 | 26.5.1 | MIT | ✅可商用 | 代码格式化 | 全项目 |
-
-**完整清单与许可分析**：参见 [3dtool/INVENTORY.md](../../3dtool/INVENTORY.md)（102 库四档分类）。
-**求解器算法公式**：参见 [3dtool/ALGORITHMS.md](../../3dtool/ALGORITHMS.md)（8 个缺失求解器公式）。
+| 工具 | 安装状态 | 版本 | 用途 | 安装命令 | 项目使用位置 |
+|------|---------|------|------|----------|-------------|
+| pytest | ✅ 已装 | 9.1.0 | 测试框架 | `pip install pytest` | tests/ |
+| ruff | ✅ 已装 | 0.15.18 | Lint + Format | `pip install ruff` | 全项目 |
+| mypy | ✅ 已装 | 2.1.0 | 类型检查 | `pip install mypy` | src/polaris/ |
+| wheel | ✅ 已装 | 0.47.0 | wheel 构建 | `pip install wheel` | 打包 |
+| setuptools | ✅ 已装 | 81.0.0 | 构建工具 | `pip install setuptools` | 打包 |
 
 **注**：所有已装工具均已在 `3dtool/wheels/` 离线打包，沙箱重启后执行
 `bash 3dtool/wheels/install.sh --all` 一键恢复（70 秒，规则 5.1.1）。
