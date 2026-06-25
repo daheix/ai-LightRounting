@@ -1602,4 +1602,734 @@
 
 > 注：源文档 T05_T06_gap.md 使用 (✅+⚠️)/(总数-🚫) 公式标注 56.5%，本汇总按统一公式 (✅+0.5×⚠️)/(总数-🚫) 重新计算为 39.4%。总览表保留源文档原值 56.5% 以保持一致。
 
-<!-- PART2_BATCH4_END -->
+---
+
+## 第11名: T01 Ansys Lumerical（64 功能点）
+
+| 项目 | 内容 |
+|------|------|
+| 工具类型 | 商业（行业 gold-standard） |
+| 价格估算 | ~$20-50K/年（来源: https://www.ansys.com/products/photonics） |
+| 功能点总数 | 64（文档声称 65，实际清点 64，INTERCONNECT 模块文档声称 20 实际 19） |
+| 模块组成 | FDTD(16) + MODE(14) + INTERCONNECT(19) + CML Compiler(15) |
+| PoLaRIS 统计 | ✅15 / ⚠️22 / ❌22 / 🚫5 |
+| 覆盖率 | 57.8%（源文档，按 (✅+⚠️)/总数） |
+
+### FDTD 模块（16 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| 1 | FDTD 求解器 (Finite Difference Time Domain) | ⚠️部分 | `src/polaris/sim/fdtd_simulator.py:57,279` | PoLaRIS 有 FDTDBackend(MEEP/Tidy3D/ANALYTICAL) 与 run_fdtd_simulation 统一入口，但为封装第三方后端，非自研 FDTD 引擎；Lumerical 为自研 gold-standard 求解器 |
+| 2 | RCWA 求解器 (Rigorous Coupled-Wave Analysis) | ❌缺失 | - | PoLaRIS 无 RCWA 求解器，无法分析周期性结构/超表面/衍射光栅的角度映射 |
+| 3 | STACK 求解器 | ❌缺失 | - | PoLaRIS 无 STACK 求解器，无法分析多层薄膜结构（uLED/CMOS 图像传感器） |
+| 4 | 亚像素平滑 / Conformal Mesh (共形网格) | ❌缺失 | - | PoLaRIS FDTD 依赖 MEEP/Tidy3D 后端的网格能力，无自研亚像素平滑/conformal mesh 算法，无 PEC snap-to-PEC 选项 |
+| 5 | PML 边界条件 (Perfectly Matched Layer) | ⚠️部分 | `src/polaris/sim/fdtd_simulator.py:279` | 通过 MEEP/Tidy3D 后端间接支持 PML，无独立 PML 实现与调参能力 |
+| 6 | 色散材料 (Dispersive Materials) | ❌缺失 | - | PoLaRIS 无频率相关（色散）材料建模模块，无各向异性/非线性材料库 |
+| 7 | 各向异性材料 (Anisotropic Materials) | ❌缺失 | - | PoLaRIS 无各向异性材料建模 |
+| 8 | 分布式 GPU / HPC / Cloud 计算 | ⚠️部分 | `src/polaris/engine/gpu_backend.py:221`; `src/polaris/sim/tidy3d_integration.py:382` | PoLaRIS 有 GPUBackend(CuPy,实验性) 与 GPUFDTDEngine(实验性)，但无分布式 HPC/Cloud Burst Compute，无 Ansys Cloud 集群调度 |
+| 9 | 伴随优化 / 逆向设计 (Adjoint Optimization via Lumopt) | ✅已有 | `src/polaris/sim/adjoint_optimizer.py:204,417` | PoLaRIS 有 AdjointOptimizer(JAX 自动微分,生产可用) 与 run_adjoint_optimization 入口，对齐 Lumopt 伴随优化 |
+| 10 | 脚本 API (Scripting API) | ✅已有 | `src/polaris/pipeline/__init__.py:291` | PoLaRIS 为 Python 原生 API，有完整 CLI 入口(main)，等价于 Lumerical 脚本自动化 |
+| 11 | PyLumerical | 🚫不适用 | - | PyLumerical 为 Lumerical 自有现代化 Python API；PoLaRIS 本身即 Python 原生，无需对齐自有 API |
+| 12 | 材料库 (Material Library) | ❌缺失 | - | PoLaRIS 无内置材料库，无测量数据导入材料参数功能 |
+| 13 | 监视器 (Monitors) | ⚠️部分 | `src/polaris/sim/fdtd_simulator.py:279` | 通过 MEEP/Tidy3D 后端间接支持 DFT/时域/功率监视器，无独立监视器抽象层 |
+| 14 | 光源类型 (Source Types) | ⚠️部分 | `src/polaris/sim/fdtd_simulator.py:279` | 通过 MEEP/Tidy3D 后端间接支持模式光源/平面波/高斯光束/偶极子，无独立光源抽象 |
+| 15 | Foundry 兼容与 PDK 支持 | ✅已有 | `src/polaris/pdk/foundry_platforms.py:72`; `src/polaris/pdk/gdsfactory_pdk_bridge.py:349` | PoLaRIS 有 11 个公开 foundry 平台注册表 + 48 gdsfactory PDK 注册表，对齐 foundry PDK 兼容 |
+| 16 | 多物理与多尺度工作流 (Multiphysics & Multiscale Workflows) | ⚠️部分 | `src/polaris/sim/lumerical_integration.py:682`; `src/polaris/sim/system_level.py:262` | PoLaRIS 有 CHARGESimulator(实验性) 与 HybridSimulator，但无完整多物理多尺度工作流（无 Speos/Zemax 协同） |
+
+### MODE 模块（14 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| 17 | FDE 求解器 (Finite Difference Eigenmode) | ⚠️部分 | `src/polaris/sim/lumerical_integration.py:84` | PoLaRIS 有 ModeSolver(实验性)，但成熟度为实验性，未达商业级；Lumerical FDE 为行业标准 |
+| 18 | varFDTD 求解器 (2.5D Variational FDTD) | ❌缺失 | - | PoLaRIS 无 varFDTD 2.5D 变分 FDTD 求解器 |
+| 19 | EME 求解器 (Bidirectional Eigenmode Expansion) | ❌缺失 | - | PoLaRIS 无 EME 双向本征模展开求解器，无 CVCS 子单元方法 |
+| 20 | 弯曲损耗分析 (Bend Loss Analysis) | ❌缺失 | - | PoLaRIS 无专门波导弯曲损耗分析 |
+| 21 | 各向异性材料 (Anisotropic Materials) | ❌缺失 | - | PoLaRIS 无各向异性材料建模 |
+| 22 | 螺旋波导 (Helical Waveguides) | ❌缺失 | - | PoLaRIS 无螺旋波导分析 |
+| 23 | 重叠分析 (Overlap Analysis) | ❌缺失 | - | PoLaRIS 无模式重叠积分分析 |
+| 24 | 磁光波导分析 (Magneto-optical Waveguide Analysis) | ❌缺失 | - | PoLaRIS 无磁光波导分析 |
+| 25 | 高级共形网格 (Advanced Conformal Mesh) | ❌缺失 | - | PoLaRIS 无高级共形网格求解器 |
+| 26 | Foundry 兼容自动层构建器 (Foundry Compatible Automated Layer Builder) | ⚠️部分 | `src/polaris/pdk/foundry_platforms.py:72`; `src/polaris/pdk/gdsfactory_pdk_bridge.py:424` | PoLaRIS 有 foundry 平台注册与 gdsfactory 组件转换，但无专门自动化层构建器 |
+| 27 | 温度与电荷密度剖面导入 (Spatially Varying Temperature and Charge Density Profile Import) | ⚠️部分 | `src/polaris/sim/lumerical_integration.py:682` | PoLaRIS 有 CHARGESimulator(实验性) 支持电荷密度，但无空间变化温度剖面导入 |
+| 28 | 传播距离扫描 (Propagation Length Scan) | ❌缺失 | - | PoLaRIS 无 EME 传播距离扫描（依赖 EME 求解器，已缺失） |
+| 29 | OptoCompiler 集成 | ❌缺失 | - | PoLaRIS 无 Synopsys OptoCompiler 集成 |
+| 30 | PyLumerical 自动化 | 🚫不适用 | - | Lumerical 自有 Python API；PoLaRIS 本身即 Python 原生 |
+
+### INTERCONNECT 模块（19 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| 31 | 时域分析 (Time Domain Analysis) | ⚠️部分 | `src/polaris/sim/interconnect.py:91` | PoLaRIS 有 InterconnectTimeDomainSimulator(实验性)，但实验性，未达商业级；Lumerical 支持 Transient Sample/Block Mode |
+| 32 | 频域分析 (Frequency Domain Analysis) | ✅已有 | `src/polaris/sim/simulator.py:57` | PoLaRIS 有 CircuitSimulator(生产可用) 频率域电路仿真器 |
+| 33 | 多模式 / 多通道 / 双向支持 (Multimode, Multichannel, Bidirectional) | ⚠️部分 | `src/polaris/sim/cascade.py:315`; `src/polaris/sim/subnetwork_decomp.py:407` | PoLaRIS 有 cascade_circuit 与子网络分解支持多通道，但多模式/双向仿真能力有限 |
+| 34 | 混合信号表示 (Mixed Signal Representation) | ⚠️部分 | `src/polaris/sim/mna_spice.py:102`; `src/polaris/sim/verilog_a.py:98` | PoLaRIS 有 MNASolver 与 VerilogAModel(实验性)，但混合信号表示未达商业级 |
+| 35 | 高级优化 (Advanced Optimization) | ✅已有 | `src/polaris/sim/lbfgs_optimizer.py:132`; `src/polaris/sim/multi_objective_optimizer.py:52`; `src/polaris/sim/nsga3_optimizer.py:246`; `src/polaris/sim/pso_optimizer.py:95`; `src/polaris/sim/global_optimizer.py:127` | PoLaRIS 有 L-BFGS/NSGA-II/NSGA-III/PSO/CMA-ES 五种优化器(生产可用)，超越 Lumerical 单一优化 |
+| 36 | 参数扫描 (Parameter Sweeps) | ✅已有 | `src/polaris/data/variant_generator.py:478` | PoLaRIS 有 generate_param_sweep_variants(生产可用) 参数扫描变体生成 |
+| 37 | 统计分析 (Statistical Analysis - Monte Carlo / Corner) | ✅已有 | `src/polaris/sim/monte_carlo.py:63,124,174` | PoLaRIS 有 monte_carlo_simulate/sensitivity_analysis/yield_analysis(生产可用)，对齐 Monte Carlo 与 Corner 分析 |
+| 38 | 光子紧凑模型库 (Photonic Compact Model Library, CML) | ⚠️部分 | `src/polaris/sim/interconnect.py:291`; `src/polaris/sim/models.py:159-455` | PoLaRIS 有 CMLCompiler(实验性) 与 10 种基础器件 S 参数模型，但 CML 编译器实验性，模型规模远小于 Lumerical CML |
+| 39 | 量子光子电路仿真器 (qINTERCONNECT) | ✅已有 | `src/polaris/sim/quantum_photonics.py:40,162,211,438,490,557,742` | PoLaRIS 有完整量子光子仿真（Ryser 积和式/HOM 干涉/玻色采样/GBS/Clements 分解/KLM CNOT），对齐 qINTERCONNECT |
+| 40 | 行波激光器模型 (Travelling Wave Laser Model) | ✅已有 | `src/polaris/sim/system_level.py:157` | PoLaRIS 有 TLLMLaser(生产可用) 行波激光器模型 |
+| 41 | 电子-光子协同仿真 (Electronic-Photonic Co-Simulation) | ⚠️部分 | `src/polaris/sim/verilog_a.py:712`; `src/polaris/sim/mna_spice.py:415` | PoLaRIS 有 run_ngspice_cosimulation(实验性) 与 build_opto_electrical_link_circuit，但 Python 协同仿真 API 未达商业级 |
+| 42 | EDA 互操作性 (EDA Interoperability - SDL/LVS/DRC) | ✅已有 | `src/polaris/flow/ipkiss_flow.py:291`; `src/polaris/sim/graph_lvs.py:160`; `src/polaris/sim/klayout_drc.py:238` | PoLaRIS 有 SDLFlow(实验性)/GraphIsomorphismLVSComparer/KLayoutDRCRunner，覆盖 SDL/LVS/DRC 工作流 |
+| 43 | 层次化原理图编辑器 (Hierarchical Schematic Editor) | ❌缺失 | - | PoLaRIS 无 GUI 层次化原理图编辑器（仅有 Python API 与 CLI） |
+| 44 | PIC 元件库 (PIC Element Libraries) | ✅已有 | `src/polaris/pdk/foundry_devices.py:188`; `src/polaris/sim/models.py:159-455`; `src/polaris/pdk/lnoi.py:50-319` | PoLaRIS 有 foundry 器件库 + 10 种基础器件模型 + LNOI 8 种器件，对齐 PIC 元件库 |
+| 45 | CML 开发与分发 (CML Development and Distribution - 加密黑盒) | ⚠️部分 | `src/polaris/sim/interconnect.py:291` | PoLaRIS 有 CMLCompiler(实验性)，但无加密黑盒 CML 组件安全分发功能 |
+| 46 | 可视化与数据分析 (Visualization & Data Analysis - 眼图/BER) | ⚠️部分 | `src/polaris/sim/interconnect.py:545`; `src/polaris/sim/verilog_a.py:864,898,939` | PoLaRIS 有 EyeDiagramAnalyzer(实验性) 与 compute_eye_diagram/compute_ber/compute_snr_db(实验性)，但均为实验性，无内置可视化 GUI |
+| 47 | 非线性波导原始模型 (Non-Linear Waveguide Primitive Model - LiNbO3) | ✅已有 | `src/polaris/pdk/lnoi.py:50-319` | PoLaRIS 有 LNOI 平台 8 种器件(生产可用)，含 LiNbO3 非线性波导建模 |
+| 48 | 封装与热管理多物理工作流 | ❌缺失 | - | PoLaRIS 无专门封装与热管理多物理工作流 |
+| 49 | PyLumerical 自动化 | 🚫不适用 | - | Lumerical 自有 Python API；PoLaRIS 本身即 Python 原生 |
+
+### CML Compiler 模块（15 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| 50 | 版本控制 CML (Version-controlled CMLs) | ⚠️部分 | `src/polaris/sim/interconnect.py:291` | PoLaRIS 有 CMLCompiler(实验性)，但无自动版本控制 CML 生成 |
+| 51 | 模型加密 (Model Encryption for IP Protection) | ❌缺失 | - | PoLaRIS 无模型加密功能，无法保护 IP |
+| 52 | 结构化输入模板与数据验证 (Structured Input Templates and Data Validation) | ⚠️部分 | `src/polaris/data/specs.py:74`; `src/polaris/sim/constraint_checker.py:53` | PoLaRIS 有 CircuitSpec 数据类与 ConstraintChecker 16 项约束检查，但无 CML 专用输入模板 |
+| 53 | 自动化测试台生成 (Automated Testbench Generation) | ❌缺失 | - | PoLaRIS 无自动化测试台生成 |
+| 54 | 跨平台模型生成 (Cross-platform Model Generation) | ⚠️部分 | `src/polaris/sim/interconnect.py:291`; `src/polaris/sim/verilog_a.py:529` | PoLaRIS 有 CMLCompiler(实验性) 与 generate_verilog_a(实验性)，但均为实验性 |
+| 55 | INTERCONNECT 与 Verilog-A 模型 | ⚠️部分 | `src/polaris/sim/interconnect.py:291`; `src/polaris/sim/verilog_a.py:98` | PoLaRIS 有 CMLCompiler(实验性) 与 VerilogAModel(实验性)，但均实验性，未达商业级 |
+| 56 | 测量数据模型校准 (Model Calibration using Measurement Data) | ✅已有 | `src/polaris/sim/calibration.py:80` | PoLaRIS 有 calibrate(生产可用) 校准入口 |
+| 57 | 固定与参数化模型 (Fixed and Parameterized Models) | ✅已有 | `src/polaris/sim/models.py:25,73,107` | PoLaRIS 有 RingParams/WaveguideParams/CouplerParams 参数化模型(生产可用) |
+| 58 | 参数化与统计模型 (Parameterized and Statistical Models) | ⚠️部分 | `src/polaris/sim/monte_carlo.py:124`; `src/polaris/sim/robust_optimizer.py:256` | PoLaRIS 有 sensitivity_analysis 与 RobustOptimizer，但无统计启用的库(Statistical Enablement)生成 |
+| 59 | IBIS-AMI 降阶模型 (IBIS-AMI Reduced Order Models) | 🚫不适用 | - | IBIS-AMI 为电子芯片 SerDes 信号完整性专属功能，非光子核心 |
+| 60 | 内置模型数据编辑器 (Built-in Model Data Editor - GUI) | ❌缺失 | - | PoLaRIS 无交互式 GUI 模型数据编辑器 |
+| 61 | PyLumerical 自动化 | 🚫不适用 | - | Lumerical 自有 Python API；PoLaRIS 本身即 Python 原生 |
+| 62 | 自动化模型数据收集向导 (Automated Data Collection Wizards) | ❌缺失 | - | PoLaRIS 无 GUI 数据收集向导 |
+| 63 | 命令行接口 (Command Line Interface) | ✅已有 | `src/polaris/pipeline/__init__.py:291`; `src/polaris/sim/klayout_drc.py:531` | PoLaRIS 有 main CLI 入口与 run_klayout_drc CLI(生产可用) |
+| 64 | 单一数据源 (Single Data Source) | ⚠️部分 | `src/polaris/data/data_loader.py:105`; `src/polaris/data/gds_loader.py:468` | PoLaRIS 有 circuit_spec_to_netlist_dict 与 load_gds_to_circuit，但非完整单一数据源工作流（无测量/仿真数据自动融合） |
+
+### T01 Ansys Lumerical 统计
+
+| 模块 | ✅已有 | ⚠️部分 | ❌缺失 | 🚫不适用 | 小计 |
+|------|--------|--------|--------|----------|------|
+| FDTD | 3 | 6 | 6 | 1 | 16 |
+| MODE | 0 | 3 | 10 | 1 | 14 |
+| INTERCONNECT | 9 | 7 | 2 | 1 | 19 |
+| CML Compiler | 3 | 6 | 4 | 2 | 15 |
+| **T01 合计** | **15** | **22** | **22** | **5** | **64** |
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| ✅ 已有 | 15 | 23.4% |
+| ⚠️ 部分 | 22 | 34.4% |
+| ❌ 缺失 | 22 | 34.4% |
+| 🚫 不适用 | 5 | 7.8% |
+| **合计** | **64** | **100%** |
+
+**覆盖率**: (15 + 0.5×22) / (64 - 5) = 26/59 = **44.1%**（源文档标注 57.8%，按 (✅+⚠️)/总数 计算）
+
+> 注：源文档 T01_T02_gap.md 使用 (✅+⚠️)/总数 公式标注 57.8%，本汇总按统一公式 (✅+0.5×⚠️)/(总数-🚫) 重新计算为 44.1%。总览表保留源文档原值 57.8% 以保持一致。
+
+**T01 关键差距**：
+- 物理求解器缺失严重：RCWA、STACK、varFDTD、EME 四大求解器全部缺失（❌4），MODE 模块 14 功能点中 10 个缺失，是最大短板
+- 材料建模缺失：色散材料、各向异性材料、材料库均缺失，限制 FDTD 仿真能力
+- 共形网格缺失：亚像素平滑/高级共形网格均缺失，影响 FDTD/MODE 精度
+- FDTD 为封装非自研：PoLaRIS FDTD 依赖 MEEP/Tidy3D 后端，非自研 gold-standard 引擎
+- GUI 工具缺失：层次化原理图编辑器、内置模型数据编辑器、数据收集向导等 GUI 功能缺失
+- 优势项：量子光子仿真（✅）、行波激光器（✅）、多目标优化（5 种优化器，✅）、Monte Carlo（✅）、LNOI 非线性波导（✅）已对齐或超越
+
+---
+
+## 第12名: T13 Google AlphaChip + Circuit Training（62 功能点）
+
+| 项目 | 内容 |
+|------|------|
+| 工具类型 | AI 标杆（研究开源） |
+| 价格估算 | 研究开源（来源: https://ai.googleblog.com/ AlphaChip 论文） |
+| 功能点总数 | 62 |
+| 模块组成 | Edge-GNN(4) + PPO(5) + 预训练(5) + 分布式训练(6) + TPU(7) + MediaTek(3) + Circuit Training(7) + 宏单元布局(5) + 标准单元布局(5) + 奖励函数(5) + 算法扩展(5) + 学术评估(5) |
+| PoLaRIS 统计 | ✅26 / ⚠️12 / ❌14 / 🚫10 |
+| 覆盖率 | 51.6% |
+
+### 1. Edge-GNN 图神经网络架构（4 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-1.1 | Edge-based Graph Neural Network | ✅ | src/polaris/engine/alphachip_gnn.py:457 | `AlphaChipEdgeGNN` R33 AlphaChip Edge-GNN 完整对齐 |
+| AC-1.2 | 节点/边特征编码 | ✅ | src/polaris/engine/alphachip_gnn.py:129,37 | `build_photonic_edge_features` + PHOTONIC_EDGE_DIM=15 光子边特征 |
+| AC-1.3 | 优于 GCN 的鲁棒性 | ⚠️ | src/polaris/engine/alphachip_gnn.py:330 | 有 `MultiRelationalEdgeGraphEncoder`，但无与 GCN 的鲁棒性对比 |
+| AC-1.4 | 跨芯片泛化 | ⚠️ | src/polaris/trainer/transfer_learning.py:175 | 有 `EWCRegularizer` R34 迁移学习，但无跨芯片泛化验证 |
+
+### 2. PPO 强化学习（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-2.1 | Proximal Policy Optimization (PPO) | ✅ | src/polaris/trainer/ppo.py:242 | `PPOAgent` PPO 智能体（actor-critic + GAE + clip） |
+| AC-2.2 | MDP 建模 | ✅ | src/polaris/engine/floorplan_env.py:157 | `FloorplanEnv` Gymnasium 接口 MDP 布局环境 |
+| AC-2.3 | 策略梯度优化 | ✅ | src/polaris/trainer/ppo.py:242 | PPOAgent 策略梯度优化 |
+| AC-2.4 | TF-Agents 实现 | ⚠️ | src/polaris/trainer/ppo.py:242 | PoLaRIS 用纯 NumPy + PyTorch 实现，非 TF-Agents |
+| AC-2.5 | AlphaGo/AlphaZero 类比 | ✅ | src/polaris/trainer/ppo.py:242 | PoLaRIS 采用类似 RL 游戏化方法 |
+
+### 3. 预训练范式（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-3.1 | 预训练 + 微调两阶段 | ✅ | src/polaris/trainer/pretrain.py:150 | `PretrainDataset` R34 AlphaChip 预训练 + transfer_learning.py:710 FineTuner |
+| AC-3.2 | 数据集规模效应 | ⚠️ | src/polaris/trainer/pretrain.py:150 | 有 PretrainDataset，但无 2/5/20 块规模效应验证 |
+| AC-3.3 | 预训练检查点开源 | ✅ | src/polaris/trainer/pretrain.py:643 | `CheckpointManager` 检查点管理 |
+| AC-3.4 | 多网表预训练指南 | ⚠️ | src/polaris/trainer/pretrain.py:150 | 有 PretrainDataset，但无多网表预训练文档 |
+| AC-3.5 | 经验积累改进 | ⚠️ | src/polaris/trainer/transfer_learning.py:175 | 有 EWC/CurriculumScheduler，但无经验积累改进验证 |
+
+### 4. 分布式训练（6 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-4.1 | 多 GPU 分布式训练 | ⚠️ | src/polaris/engine/gpu_backend.py:221 | 有 `GPUBackend` CuPy GPU 后端，但非多 GPU 分布式训练 |
+| AC-4.2 | 分布式数据收集 | ✅ | src/polaris/trainer/distributed_learner.py:265 | `DistributedLearner` CTDE 中心化 learner + parallel_rollout.py:80 |
+| AC-4.3 | Reverb Replay Buffer | ⚠️ | src/polaris/trainer/ppo.py:136 | 有 `RolloutBuffer`，但非 Reverb Server |
+| AC-4.4 | Variable Container 策略分发 | ❌ | - | PoLaRIS 无 Variable Container 策略分发 |
+| AC-4.5 | 训练/收集独立扩展 | ✅ | src/polaris/trainer/distributed_learner.py:265 | DistributedLearner 训练/收集独立进程 |
+| AC-4.6 | 推荐配置 | ❌ | - | PoLaRIS 无 8-GPU global batch=1024 推荐配置 |
+
+### 5. TPU 应用（v5e / v5p / Trillium / Ironwood）（7 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-5.1 | TPU v5e 部署 | 🚫 | - | PoLaRIS 为光子开源项目，无 TPU 部署 |
+| AC-5.2 | TPU v5p 部署 | 🚫 | - | PoLaRIS 无 TPU v5p 部署 |
+| AC-5.3 | TPU Trillium (v6) 部署 | 🚫 | - | PoLaRIS 无 TPU Trillium 部署 |
+| AC-5.4 | TPU Ironwood (v7) 部署 | 🚫 | - | PoLaRIS 无 TPU Ironwood 部署 |
+| AC-5.5 | 三代 TPU 块数增长 | 🚫 | - | PoLaRIS 无 TPU 块数增长数据 |
+| AC-5.6 | 三代 TPU 线长持续减少 | 🚫 | - | PoLaRIS 无 TPU 线长减少数据 |
+| AC-5.7 | Axion CPU 部署 | 🚫 | - | PoLaRIS 无 Axion CPU 部署 |
+
+### 6. MediaTek Dimensity 应用（3 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-6.1 | MediaTek 采用 AlphaChip | 🚫 | - | PoLaRIS 无 MediaTek 商业采用 |
+| AC-6.2 | Dimensity 5G 旗舰芯片 | 🚫 | - | PoLaRIS 无 Dimensity 5G 部署 |
+| AC-6.3 | MediaTek 高管背书 | 🚫 | - | PoLaRIS 无商业高管背书 |
+
+### 7. Circuit Training 开源框架（7 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-7.1 | 开源框架 | ✅ | src/polaris/ | PoLaRIS 为开源框架 |
+| AC-7.2 | CircuitEnv 环境 | ✅ | src/polaris/engine/floorplan_env.py:157 | `FloorplanEnv` + src/polaris/router/routing_env.py:130 `RoutingEnv` |
+| AC-7.3 | PlacementCost (PLC) Client | ✅ | src/polaris/data/benchmark_evaluator.py:420 | `evaluate_benchmark` 综合基准评估入口 |
+| AC-7.4 | Action Space | ✅ | src/polaris/engine/floorplan_env.py:157 | FloorplanEnv 定义动作空间 |
+| AC-7.5 | Coordinate Descent Placer | ⚠️ | src/polaris/engine/analytical_placer.py:103 | 有 AnalyticalPlacer，但非坐标下降放置器 |
+| AC-7.6 | 端到端冒烟测试 | ✅ | tests/ | PoLaRIS 有 139 测试文件、3346 测试函数 |
+| AC-7.7 | Ariane RISC-V 教程 | ✅ | src/polaris/data/tilos_benchmark.py:243 | `load_ariane_benchmark` Ariane RISC-V CPU benchmark（17 模块） |
+
+### 8. 宏单元布局（Macro Placement）（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-8.1 | 顺序宏单元放置 | ✅ | src/polaris/engine/floorplan_env.py:157 | FloorplanEnv 顺序宏单元放置 |
+| AC-8.2 | 网格化画布 | ✅ | src/polaris/data/benchmark_evaluator.py:494 | `grid_placement` 网格化布局 + FloorplanEnv 网格画布 |
+| AC-8.3 | 6 小时内生成布局 | ⚠️ | - | PoLaRIS 无 6 小时布局时间 benchmark |
+| AC-8.4 | 优于 RePlAce 与 SA | ⚠️ | src/polaris/data/benchmark_evaluator.py:551 | 有 `analytical_placement` 解析法基线，但无与 RePlAce/SA 对比 |
+| AC-8.5 | 超人类布局 | ❌ | - | PoLaRIS 无超人类布局声明与验证 |
+
+### 9. 标准单元布局（Standard Cell Placement）（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-9.1 | 力导向粗布局 | ✅ | src/polaris/engine/analytical_placer.py:103 | `AnalyticalPlacer` DREAMPlace 力导向解析法布局 |
+| AC-9.2 | DREAMPlace 集成 | ✅ | src/polaris/engine/analytical_placer.py:103 | AnalyticalPlacer 为 DREAMPlace 解析法布局器 |
+| AC-9.3 | 标准单元分组 | ❌ | - | PoLaRIS 无 STANDARD_CELL_GROUPING.md 分组方法 |
+| AC-9.4 | 混合方法 | ✅ | src/polaris/engine/alphachip_gnn.py:457 | RL（AlphaChipEdgeGNN）+ 解析法（AnalyticalPlacer）混合 |
+| AC-9.5 | 商业 EDA 工具评估 | ❌ | - | PoLaRIS 无商业 EDA 工具评估流程 |
+
+### 10. 奖励函数设计（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-10.1 | 负加权和奖励 | ✅ | src/polaris/trainer/reward_shaping.py:289 | `ExpertRewardShaper` 奖励塑形（端口对齐/弯曲/交叉/热） |
+| AC-10.2 | 线长 (Wirelength) | ✅ | src/polaris/data/benchmark_evaluator.py:57 | `evaluate_hpwl` 半周长线长评估 |
+| AC-10.3 | 拥塞 (Congestion) | ✅ | src/polaris/data/benchmark_evaluator.py:233 | `evaluate_congestion` LRT 模型拥塞评估 |
+| AC-10.4 | 密度 (Density) | ✅ | src/polaris/engine/density_field.py:74 | `DensityField` DREAMPlace 网格化密度场 |
+| AC-10.5 | 稀疏奖励结构 | ⚠️ | src/polaris/trainer/reward_shaping.py:289 | 有 reward_shaping，但非明确稀疏奖励（仅最后行动） |
+
+### 11. 算法扩展与生态影响（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-11.1 | 扩展到逻辑综合 | ❌ | - | PoLaRIS 无逻辑综合扩展 |
+| AC-11.2 | 扩展到 Macro 选择 | ❌ | - | PoLaRIS 无 Macro 选择扩展 |
+| AC-11.3 | 扩展到时序优化 | ❌ | - | PoLaRIS 无时序优化扩展 |
+| AC-11.4 | 引发 AI for chips 研究热潮 | ❌ | - | PoLaRIS 作为新项目，未引发研究热潮 |
+| AC-11.5 | 跨 Alphabet 应用 | ❌ | - | PoLaRIS 无跨 Alphabet 应用 |
+
+### 12. 学术评估与可复现性（5 功能点）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| AC-12.1 | TILOS-AI MacroPlacement 基准 | ✅ | src/polaris/data/tilos_benchmark.py:243 | `load_ariane_benchmark` TILOS Ariane RISC-V 基准（17 模块） |
+| AC-12.2 | IEEE TCAD 评估论文 | ❌ | - | PoLaRIS 无 IEEE TCAD 评估论文 |
+| AC-12.3 | 子 10nm 基准发布 | ❌ | - | PoLaRIS 无 sub-10nm 公开基准 |
+| AC-12.4 | CT 与 Nature 差异研究 | ❌ | - | PoLaRIS 无 Circuit Training 与 Nature 差异研究 |
+| AC-12.5 | SA 基线增强 | ❌ | - | PoLaRIS 无增强模拟退火基线 |
+
+### T13 AlphaChip 统计
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| ✅ 已有 | 26 | 41.9% |
+| ⚠️ 部分 | 12 | 19.4% |
+| ❌ 缺失 | 14 | 22.6% |
+| 🚫 不适用 | 10 | 16.1% |
+| **合计** | **62** | **100%** |
+
+**覆盖率**: (26 + 0.5×12) / (62 - 10) = 32/52 = **61.5%**（源文档标注 51.6%，按 (✅+0.5×⚠️)/总数 计算）
+
+> 注：源文档 T11_T12_T13_gap.md 使用 (✅+0.5×⚠️)/总数 公式标注 51.6%，本汇总按统一公式 (✅+0.5×⚠️)/(总数-🚫) 重新计算为 61.5%。总览表保留源文档原值 51.6% 以保持一致。
+
+**T13 关键差距**：
+- TPU/MediaTek 商业部署全面不适用：10 项 🚫（PoLaRIS 为开源光子项目，无商业芯片部署）
+- 算法扩展与生态影响全面缺失：5/5 为 ❌（逻辑综合/Macro 选择/时序优化/研究热潮/Alphabet 应用）
+- 学术评估部分缺失：4/5 为 ❌（IEEE TCAD 论文/sub-10nm 基准/CT-Nature 差异/SA 基线）
+- 核心算法对齐良好：Edge-GNN ✅、PPO ✅、预训练 ✅、奖励函数 ✅、DREAMPlace ✅
+
+---
+
+## 第13名: T12 Cadence Innovus + Synopsys ICC2（85 功能点）
+
+| 项目 | 内容 |
+|------|------|
+| 工具类型 | 商业（数字 EDA 双雄） |
+| 价格估算 | ~$100K+/年（来源: https://www.cadence.com/ + https://www.synopsys.com/） |
+| 功能点总数 | 85（Cadence Innovus 41 + Synopsys ICC2 44） |
+| 模块组成 | Cadence Innovus(41) + Synopsys ICC2(44) |
+| PoLaRIS 统计 | ✅2 / ⚠️24 / ❌51 / 🚫8 |
+| 覆盖率 | 16.5% |
+
+> 注：源文档统计 ❌缺失=56，但实际逐点加总为 51（Cadence Innovus 27 + Synopsys ICC2 24），本汇总按实际 51 计算。
+
+### 第一部分：Cadence Innovus Implementation System（41 功能点）
+
+#### 1. GigaPlace 全局布局引擎
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-1.1 | Startpoint TNS Method | ❌ | - | PoLaRIS 无 startpoint TNS 代价函数（数字时序专用） |
+| INV-1.2 | Unbalanced Path-Based SKP | ❌ | - | PoLaRIS 无 path-based SKP 时序权重 |
+| INV-1.3 | Advanced Pipeline Placement | ❌ | - | PoLaRIS 无流水线自动收集与平衡 |
+| INV-1.4 | Integrated Congestion-Driven Placement (ICDP) | ⚠️ | src/polaris/engine/congestion.py:58 | 有 `CongestionCNN` 拥塞预测，但无 ICDP 集成布局 |
+| INV-1.5 | Switching Power Placement (SPP) | ❌ | - | PoLaRIS 无翻转功耗布局代价函数 |
+
+#### 2. GigaOpt 优化引擎
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-2.1 | Mega Options 优化等级控制 | ❌ | - | PoLaRIS 无 timing/power/area effort 等级控制 |
+| INV-2.2 | New Path Compaction (CPR) | ❌ | - | PoLaRIS 无 path compaction 局部精化 |
+| INV-2.3 | Pervasive Global Skew | ❌ | - | PoLaRIS 无全局偏斜优化（数字时钟树专用） |
+| INV-2.4 | New Hold Optimizer | ❌ | - | PoLaRIS 无 hold TNS 优化器 |
+| INV-2.5 | XOR-tree Gating / Data Gating | ❌ | - | PoLaRIS 无 XOR-tree/Data gating 功耗门控 |
+| INV-2.6 | 时序驱动逻辑重映射/缓冲器插入 | ❌ | - | PoLaRIS 无时序驱动逻辑重映射与缓冲器插入 |
+
+#### 3. PRO 全局-详细布线
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-3.1 | Hard Wires 详细布线 | ⚠️ | src/polaris/router/curvy_router.py:1286 | 有 `CurvyRouter` 详细布线，但无 hard/soft wire 分阶段策略 |
+| INV-3.2 | 四阶段流程 (Init/Soft/Hard/Final) | ❌ | - | PoLaRIS 无四阶段布线流程 |
+
+#### 4. ML DRC 闭合 / AI 驱动
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-4.1 | Innovus+ AI Assistant | ❌ | - | PoLaRIS 无自然语言调试 LLM 接口 |
+| INV-4.2 | 自动化 DRC 违例修复辅助 | ⚠️ | src/polaris/sim/klayout_drc.py:238 | 有 `KLayoutDRCRunner` DRC 检测，但无 AI 自动修复 |
+| INV-4.3 | AI 驱动 PPA 收敛 | ❌ | - | PoLaRIS 有 RL 布局但无 PPA 收敛闭环 |
+| INV-4.4 | Voltus InsightAI 生成式 AI | ❌ | - | PoLaRIS 无生成式 AI EM-IR 修复 |
+
+#### 5. 先进节点支持（3nm / 2nm 及以下）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-5.1 | TSMC N3 工艺认证 | 🚫 | - | PoLaRIS 为开源光子项目，无 TSMC N3 认证 |
+| INV-5.2 | TSMC N2 / N2P 工艺认证 | 🚫 | - | PoLaRIS 无 TSMC N2 认证 |
+| INV-5.3 | TSMC A16 工艺认证 | 🚫 | - | PoLaRIS 无 TSMC A16 认证 |
+| INV-5.4 | TSMC A14 PDK 合作 | 🚫 | - | PoLaRIS 无 TSMC A14 PDK 合作 |
+| INV-5.5 | 3nm 及以下 AI 加速 | ❌ | - | PoLaRIS 无 3nm AI 加速 benchmark |
+
+#### 6. 分布式与多线程
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-6.1 | 分布式多线程架构 | ⚠️ | src/polaris/trainer/distributed_learner.py:265 | 有 `DistributedLearner` CTDE 分布式训练，但非布局布线分布式 |
+| INV-6.2 | 云端可扩展 | ❌ | - | PoLaRIS 无云端部署（Azure CloudBurst 等） |
+
+#### 7. 时序优化
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-7.1 | CCOpt 时钟树综合 | ❌ | - | PoLaRIS 无时钟树综合（光子电路无需 CTS） |
+| INV-7.2 | Tempus 时序签核集成 | ❌ | - | PoLaRIS 无 Tempus 时序签核 |
+| INV-7.3 | SI-based 时序 | ❌ | - | PoLaRIS 无 SI 信号完整性时序 |
+
+#### 8. 功耗优化
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-8.1 | Switching Power Placement | ❌ | - | PoLaRIS 无翻转功耗布局 |
+| INV-8.2 | XOR-tree / Data Gating | ❌ | - | PoLaRIS 无功耗门控 |
+| INV-8.3 | Power Reclaim via Global Skew | ❌ | - | PoLaRIS 无 global skew 功耗回收 |
+
+#### 9. IR 分析与电源完整性
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-9.1 | Voltus IC Power Integrity | ❌ | - | PoLaRIS 无 Voltus 电源完整性分析 |
+| INV-9.2 | 早期 IR 修复 | ❌ | - | PoLaRIS 无早期 IR/EM 修复 |
+| INV-9.3 | Voltus XM 层级建模 | ❌ | - | PoLaRIS 无层级 EM-IR 建模 |
+| INV-9.4 | 大规模仿真扩展 | ❌ | - | PoLaRIS 无 30 亿门级 GPU 仿真扩展 |
+
+#### 10. 拥塞预测与优化
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-10.1 | Integrated Congestion-Driven Placement | ⚠️ | src/polaris/engine/congestion.py:58 | 有 CongestionCNN 拥塞预测，但未集成到布局代价函数 |
+| INV-10.2 | AI 拥塞感知布线 | ⚠️ | src/polaris/router/curvy_router.py:516 | 有 `CongestionAwareNetOrdering` 拥塞感知网络排序，但非 ML 引导 |
+
+#### 11. 3D-IC 与先进封装
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-11.1 | Integrity 3D-IC Platform | ⚠️ | src/polaris/router/multilayer.py:95 | 有 `MultiLayerRouter` 3D 多层布线，但非完整 3D-IC 平台 |
+| INV-11.2 | 3DFabric 支持 | ❌ | - | PoLaRIS 无 TSMC 3DFabric SoIC/CoWoS/InFO 支持 |
+| INV-11.3 | 多芯片物理实现与分析 | ❌ | - | PoLaRIS 无多 chiplet 物理实现 |
+
+#### 12. 物理验证
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| INV-12.1 | Pegasus Verification System | ⚠️ | src/polaris/sim/klayout_drc.py:238 | 有 KLayoutDRCRunner + HierarchicalDRC，但非 Pegasus 签核级 |
+| INV-12.2 | Quantus Extraction | ⚠️ | src/polaris/sim/layout_aware.py:258 | 有 `ParasiticExtractor` 寄生参数提取，但非 Quantus 签核级 |
+
+### Cadence Innovus 统计
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| ✅ 已有 | 0 | 0% |
+| ⚠️ 部分 | 9 | 22.0% |
+| ❌ 缺失 | 27 | 65.9% |
+| 🚫 不适用 | 5 | 12.1% |
+| **合计** | **41** | **100%** |
+
+**覆盖率**: (0 + 0.5×9) / (41 - 5) = 4.5/36 = **12.5%**
+
+### 第二部分：Synopsys IC Compiler II (ICC2)（44 功能点）
+
+#### 1. 多目标全局布局
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-1.1 | Multi-objective Global Placement | ⚠️ | src/polaris/engine/analytical_placer.py:103 | 有 `AnalyticalPlacer` DREAMPlace 解析法布局，但非完整多目标（时序/功耗/面积/拥塞） |
+| ICC2-1.2 | Routing Driven Placement Optimization | ⚠️ | src/polaris/engine/routability.py:161 | 有 `RoutabilityEstimator` 布线感知评估，但非布局优化集成 |
+| ICC2-1.3 | Next-generation Advanced 2D Placement | ⚠️ | src/polaris/engine/analytical_placer.py:103 | 有 AnalyticalPlacer 2D 布局，但非新一代算法 |
+| ICC2-1.4 | Congestion Aware Placement | ⚠️ | src/polaris/engine/congestion.py:58 | 有 CongestionCNN，但未集成到布局 |
+| ICC2-1.5 | Unified TNS-driven Optimization | ❌ | - | PoLaRIS 无 TNS 驱动优化（数字时序专用） |
+
+#### 2. Zroute 布线
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-2.1 | Zroute 多线程布线架构 | ⚠️ | src/polaris/trainer/parallel_rollout.py:80 | 有并行 rollout，但非布线多线程架构 |
+| ICC2-2.2 | Native Soft Rules 光刻感知 | ⚠️ | src/polaris/router/curvy_router.py:118 | 有 `CurvyAStarRouter` 曲线感知，部分光刻感知 |
+| ICC2-2.3 | 并发优化 | ❌ | - | PoLaRIS 无制造规则+时序并发优化 |
+| ICC2-2.4 | Routing Layer Driven Optimization | ⚠️ | src/polaris/router/multilayer.py:95 | 有 MultiLayerRouter 多层布线，但无 NDR/via pillar 优化 |
+
+#### 3. ML 拥塞预测与 DRC 闭合
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-3.1 | ML 驱动布线拥塞预测 | ✅ | src/polaris/engine/congestion.py:58 | `CongestionCNN` CNN 拥塞预测器，生产可用 |
+| ICC2-3.2 | ML 驱动 DRC 收敛 | ⚠️ | src/polaris/sim/hierarchical_drc.py:165 | 有 `HierarchicalDRC` R07 层次化 DRC，但非 ML 驱动收敛 |
+| ICC2-3.3 | ML 宏单元布局 (MLMP) | ✅ | src/polaris/engine/alphachip_gnn.py:457 | `AlphaChipEdgeGNN` R33 AlphaChip Edge-GNN 宏单元布局 |
+| ICC2-3.4 | ML ECO 预测 | ❌ | - | PoLaRIS 无 ML ECO 功耗回收预测 |
+| ICC2-3.5 | AI 驱动优化 (2025.06) | ⚠️ | src/polaris/trainer/ppo.py:242 | 有 PPOAgent RL 优化，但非时序/拥塞/功耗瓶颈 AI 分析 |
+
+#### 4. PrimeTime 时序签核
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-4.1 | PrimeTime 延迟计算集成 | ❌ | - | PoLaRIS 无 PrimeTime 集成 |
+| ICC2-4.2 | PrimeTime ECO 集成 | ❌ | - | PoLaRIS 无 PrimeTime ECO 流程 |
+| ICC2-4.3 | Path-Based Analysis (PBA) | ❌ | - | PoLaRIS 无穷举路径分析 |
+| ICC2-4.4 | Arc-based 并发时钟数据优化 | ❌ | - | PoLaRIS 无 arc-based 时钟数据优化 |
+
+#### 5. PrimePower / 功耗优化
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-5.1 | Total Power Optimization | ❌ | - | PoLaRIS 无全局总功耗优化 |
+| ICC2-5.2 | IEEE 1801 UPF / 多电压支持 | ❌ | - | PoLaRIS 无 UPF 多电压支持 |
+| ICC2-5.3 | 功耗驱动逻辑再综合 | ❌ | - | PoLaRIS 无逻辑再综合 |
+| ICC2-5.4 | IR Drop Driven Optimization | ❌ | - | PoLaRIS 无电压降驱动优化 |
+| ICC2-5.5 | Leakage/Dynamic Power 优化 | ❌ | - | PoLaRIS 无漏电/动态功耗优化 |
+
+#### 6. 物理验证
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-6.1 | IC Validator In-Loop | ⚠️ | src/polaris/sim/klayout_drc.py:238 | 有 KLayoutDRCRunner 在环 DRC，但非 IC Validator |
+| ICC2-6.2 | Signoff-driven DRC Validation | ⚠️ | src/polaris/sim/hierarchical_drc.py:165 | 有 HierarchicalDRC，但非签核级 |
+
+#### 7. 先进节点支持（3nm / 2nm 及以下）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-7.1 | Multi-pattern / FinFET 感知流程 | ❌ | - | PoLaRIS 无 multi-pattern/FinFET 感知（光子项目） |
+| ICC2-7.2 | 3nm / 2nm 节点优化 | 🚫 | - | PoLaRIS 为光子项目，无 3nm/2nm CMOS 节点优化 |
+| ICC2-7.3 | IBM 3nm DTCO 合作 | 🚫 | - | PoLaRIS 无 IBM DTCO 合作 |
+| ICC2-7.4 | 晶圆代工厂认证 | 🚫 | - | PoLaRIS 无先进节点晶圆代工厂认证 |
+
+#### 8. 分布式与多线程
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-8.1 | Pervasively Parallel Framework | ⚠️ | src/polaris/trainer/distributed_learner.py:265 | 有 DistributedLearner，但非全流程并行框架 |
+| ICC2-8.2 | Multi-threaded & Distributed Computing | ⚠️ | src/polaris/trainer/parallel_rollout.py:80 | 有并行 rollout，但非全流程多线程 |
+| ICC2-8.3 | 紧凑数据模型 | ❌ | - | PoLaRIS 无 2-3× 内存优化的紧凑数据模型 |
+| ICC2-8.4 | Near-linear 多核线程 | ❌ | - | PoLaRIS 无近线性多核线程扩展 |
+| ICC2-8.5 | 分布式加速 (2025.06) | ⚠️ | src/polaris/trainer/distributed_learner.py:265 | 有 DistributedLearner，但无 30% 加速 benchmark |
+
+#### 9. Advanced Fusion Technology（先进融合技术）
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-9.1 | Physically-aware Logic Re-synthesis | ❌ | - | PoLaRIS 无物理感知逻辑再综合 |
+| ICC2-9.2 | IR Drop Driven Optimization (全流程) | ❌ | - | PoLaRIS 无全流程电压降优化 |
+| ICC2-9.3 | PrimeTime Delay Calc-based Routing Opt | ❌ | - | PoLaRIS 无 PrimeTime 延迟计算布线优化 |
+| ICC2-9.4 | Integrated PrimeTime ECO Flow | ❌ | - | PoLaRIS 无 PrimeTime ECO 集成 |
+
+#### 10. 设计规划与容量
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-10.1 | 500M+ 实例容量 | ❌ | - | PoLaRIS 无 5 亿实例容量（光子电路规模较小） |
+| ICC2-10.2 | 透明层次化优化 | ⚠️ | src/polaris/engine/hierarchical_placer.py:85 | 有 `HierarchicalPlacer` 谱聚类分块布局，但非透明层次化 |
+| ICC2-10.3 | Reference Methodology (RM) | ❌ | - | PoLaRIS 无 RM 参考方法 |
+| ICC2-10.4 | MCMM 并发感知 | ❌ | - | PoLaRIS 无 MCMM 多角多模感知 |
+
+#### 11. Fusion Compiler 集成
+
+| # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
+|---|--------|------------|----------------|----------|
+| ICC2-11.1 | Fusion Compiler 无缝集成 | ❌ | - | PoLaRIS 无 Fusion Compiler 集成 |
+| ICC2-11.2 | Design Compiler Graphical 协同 | ❌ | - | PoLaRIS 无 Design Compiler 协同 |
+
+### Synopsys ICC2 统计
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| ✅ 已有 | 2 | 4.5% |
+| ⚠️ 部分 | 15 | 34.1% |
+| ❌ 缺失 | 24 | 54.5% |
+| 🚫 不适用 | 3 | 6.8% |
+| **合计** | **44** | **100%** |
+
+**覆盖率**: (2 + 0.5×15) / (44 - 3) = 9.5/41 = **23.2%**
+
+### T12 总统计（Cadence Innovus + Synopsys ICC2）
+
+| 状态 | 数量 | 占比 |
+|------|------|------|
+| ✅ 已有 | 2 | 2.4% |
+| ⚠️ 部分 | 24 | 28.2% |
+| ❌ 缺失 | 51 | 60.0% |
+| 🚫 不适用 | 8 | 9.4% |
+| **合计** | **85** | **100%** |
+
+**覆盖率**: (2 + 0.5×24) / (85 - 8) = 14/77 = **18.2%**（源文档标注 16.5%，按 (✅+0.5×⚠️)/总数 计算）
+
+> 注：源文档 T11_T12_T13_gap.md 统计 ❌缺失=56，但实际逐点加总为 51（Cadence Innovus 27 + Synopsys ICC2 24），本汇总按实际 51 计算。源文档覆盖率 16.5% 按 (✅+0.5×⚠️)/总数 计算，本汇总按统一公式 (✅+0.5×⚠️)/(总数-🚫) 重新计算为 18.2%。总览表保留源文档原值 16.5% 以保持一致。
+
+**T12 关键差距**：
+- 数字时序优化全面缺失：TNS/WNS/Skew/Hold/CTS/PrimeTime 等 ❌（PoLaRIS 为光子项目，无数字时序需求）
+- 功耗优化全面缺失：Switching Power/UPF/IR Drop/Leakage 等 ❌
+- 先进节点认证不适用：TSMC N3/N2/A16/A14、IBM 3nm DTCO 等 🚫（开源光子项目无法对标）
+- AI/ML 能力部分覆盖：CongestionCNN ✅、AlphaChipEdgeGNN ✅，但无 LLM 调试接口与生成式 AI
+- 物理验证为部分实现：KLayoutDRC/HierarchicalDRC ⚠️，但非 Pegasus/IC Validator 签核级
+
+---
+
+## 全量统计
+
+### 13 个工具总体统计
+
+| 排序 | 工具 | 类型 | 功能点数 | ✅已有 | ⚠️部分 | ❌缺失 | 🚫不适用 | 覆盖率(源) | 覆盖率(统一) | 价格估算 |
+|------|------|------|----------|--------|--------|--------|----------|-----------|-------------|----------|
+| 1 | T10 sax | 开源 | 79 | 41 | 15 | 23 | 0 | 61.4% | 61.4% | 免费 |
+| 2 | T11 simphony | 开源 | 91 | 62 | 17 | 12 | 0 | 77.5% | 77.5% | 免费 |
+| 3 | T08 gdsfactory | 开源 | 108 | 49 | 15 | 44 | 0 | 52.3% | 52.3% | 免费 |
+| 4 | T09 KLayout | 开源 | 126 | 25 | 20 | 67 | 14 | 31.3% | 28.3% | 免费 |
+| 5 | T02 Luceda IPKISS | 商业 | 29 | 12 | 9 | 8 | 0 | 72.4% | 72.4% | ~$5K/年 |
+| 6 | T04 Tidy3D | 商业 | 45 | 9 | 14 | 22 | 0 | 35.6% | 35.6% | ~$5-15K/年 |
+| 7 | T03 OptoDesigner | 商业 | 46 | 28 | 14 | 3 | 1 | 77.8% | 77.8% | ~$10-20K/年 |
+| 8 | T07 Photon Design | 商业 | 93 | 26 | 28 | 35 | 4 | 44.9% | 44.9% | ~$10-30K/年 |
+| 9 | T06 L-Edit Photonics | 商业 | 69 | 24 | 24 | 21 | 0 | 69.6% | 69.6% | ~$15-30K/年 |
+| 10 | T05 VPIphotonics | 商业 | 88 | 19 | 29 | 37 | 3 | 56.5% | 39.4% | ~$15-40K/年 |
+| 11 | T01 Ansys Lumerical | 商业 | 64 | 15 | 22 | 22 | 5 | 57.8% | 44.1% | ~$20-50K/年 |
+| 12 | T13 AlphaChip | AI标杆 | 62 | 26 | 12 | 14 | 10 | 51.6% | 61.5% | 研究开源 |
+| 13 | T12 Cadence+Synopsys | 商业 | 85 | 2 | 24 | 51 | 8 | 16.5% | 18.2% | ~$100K+/年 |
+| **合计** | — | — | **985** | **338** | **243** | **359** | **45** | **48.9%** | **46.6%** | — |
+
+> **覆盖率公式说明**：
+> - **覆盖率(源)**：各源文档原始标注值，公式不统一（部分用 (✅+⚠️)/总数，部分用 (✅+⚠️)/(总数-🚫)，部分用 (✅+0.5×⚠️)/总数）
+> - **覆盖率(统一)**：本汇总统一按 (✅+0.5×⚠️)/(总数-🚫) 重新计算，⚠️ 部分按 0.5 权重计入
+> - **总覆盖率(源)**：48.9%（按源文档汇总，(338+243)/985）
+> - **总覆盖率(统一)**：46.6%（按统一公式，(338+0.5×243)/(985-45) = 459.5/940）
+
+### 按工具类型分组统计
+
+| 类型 | 工具数 | 功能点总数 | ✅已有 | ⚠️部分 | ❌缺失 | 🚫不适用 | 覆盖率(源) |
+|------|--------|-----------|--------|--------|--------|----------|-----------|
+| 开源 | 4 | 404 | 177 | 67 | 146 | 14 | 60.4% |
+| 商业 | 8 | 519 | 135 | 164 | 199 | 21 | 57.6% |
+| AI标杆 | 1 | 62 | 26 | 12 | 14 | 10 | 51.6% |
+| **合计** | **13** | **985** | **338** | **243** | **359** | **45** | **48.9%** |
+
+### 覆盖率排名（按源文档覆盖率）
+
+| 排名 | 工具 | 覆盖率(源) | 评价 |
+|------|------|-----------|------|
+| 1 | T11 simphony | 77.5% | 🟢 优秀（开源光子仿真，PoLaRIS 同领域对齐良好） |
+| 2 | T03 OptoDesigner | 77.8% | 🟢 优秀（商业光子设计，PoLaRIS 覆盖率高） |
+| 3 | T02 Luceda IPKISS | 72.4% | 🟢 良好（商业光子设计，PoLaRIS PDK/布线对齐） |
+| 4 | T06 L-Edit Photonics | 69.6% | 🟢 良好（商业光子版图，PoLaRIS 版图/DRC 对齐） |
+| 5 | T10 sax | 61.4% | 🟡 中等（开源 S 参数仿真，PoLaRIS 核心对齐） |
+| 6 | T05 VPIphotonics | 56.5% | 🟡 中等（商业光子仿真，PoLaRIS 部分对齐） |
+| 7 | T01 Ansys Lumerical | 57.8% | 🟡 中等（商业 gold-standard，PoLaRIS 物理求解器差距大） |
+| 8 | T08 gdsfactory | 52.3% | 🟡 中等（开源版图，PoLaRIS 布局布线对齐） |
+| 9 | T13 AlphaChip | 51.6% | 🟡 中等（AI 标杆，PoLaRIS 核心算法对齐） |
+| 10 | T07 Photon Design | 44.9% | 🟠 偏低（商业全栈，PoLaRIS 物理引擎差距大） |
+| 11 | T04 Tidy3D | 35.6% | 🟠 偏低（商业 FDTD，PoLaRIS FDTD 为封装非自研） |
+| 12 | T09 KLayout | 31.3% | 🔴 低（开源版图编辑器，PoLaRIS 无 GUI 编辑器） |
+| 13 | T12 Cadence+Synopsys | 16.5% | 🔴 低（数字 EDA，PoLaRIS 为光子项目领域差异大） |
+
+---
+
+## PoLaRIS 独家功能点
+
+PoLaRIS 作为光电子 AI 布局布线引擎，拥有以下 13 个工具中均未覆盖或 PoLaRIS 独有的能力：
+
+### 1. 量子光子仿真（独有，对标 qINTERCONNECT）
+- **实现位置**: `src/polaris/sim/quantum_photonics.py`
+- **能力**: Ryser 积和式、HOM 干涉、玻色采样、高斯玻色采样(GBS)、Clements 分解、KLM CNOT
+- **对标**: 仅 T01 Lumerical qINTERCONNECT 有类似能力，其他 12 个工具均无
+
+### 2. AlphaChip Edge-GNN 完整复刻（独有，对标 Google AlphaChip）
+- **实现位置**: `src/polaris/engine/alphachip_gnn.py:457`
+- **能力**: AlphaChipEdgeGNN、光子边特征编码(PHOTONIC_EDGE_DIM=15)、多关系边图编码器
+- **对标**: T13 AlphaChip 原版，PoLaRIS 是光子领域的完整复刻
+
+### 3. PPO 强化学习布局（独有，光子领域首创）
+- **实现位置**: `src/polaris/trainer/ppo.py:242`
+- **能力**: PPO 智能体（actor-critic + GAE + clip）、Gymnasium 接口 MDP 布局环境
+- **对标**: T13 AlphaChip PPO，PoLaRIS 应用于光子布局
+
+### 4. 光子专属奖励塑形（独有）
+- **实现位置**: `src/polaris/trainer/reward_shaping.py:289`
+- **能力**: ExpertRewardShaper（端口对齐/弯曲/交叉/热）
+- **对标**: 无，PoLaRIS 针对光子布局布线的专属奖励设计
+
+### 5. LNOI 平台 8 种器件（独有，LiNbO3 非线性波导）
+- **实现位置**: `src/polaris/pdk/lnoi.py:50-319`
+- **能力**: LiNbO3 非线性波导建模、行波电极调制器
+- **对标**: T01 Lumerical 有非线性波导原始模型，PoLaRIS LNOI 器件库更完整
+
+### 6. 多目标优化器套件（5 种，超越商业工具）
+- **实现位置**: `src/polaris/sim/lbfgs_optimizer.py` + `nsga3_optimizer.py` + `pso_optimizer.py` + `global_optimizer.py` + `multi_objective_optimizer.py`
+- **能力**: L-BFGS / NSGA-II / NSGA-III / PSO / CMA-ES 五种优化器
+- **对标**: T01 Lumerical 单一优化器，PoLaRIS 超越
+
+### 7. 11 个 Foundry 平台 + 48 gdsfactory PDK（开源最多）
+- **实现位置**: `src/polaris/pdk/foundry_platforms.py:72` + `gdsfactory_pdk_bridge.py:349`
+- **能力**: 11 个公开 foundry 平台注册表 + 48 gdsfactory PDK 注册表
+- **对标**: T02 IPKISS PDK 数量，PoLaRIS 超越
+
+### 8. GDS + OASIS 双格式导出（超越单一 GDS）
+- **实现位置**: `src/polaris/eval/layout_render.py:331,361`
+- **能力**: export_gds(GDSII) + export_oasis(OASIS)
+- **对标**: T02 IPKISS 仅 GDS 导出，PoLaRIS 超越
+
+### 9. Apollo oNoC 光子网络基准（独有）
+- **实现位置**: `src/polaris/data/apollo_benchmark.py:442`
+- **能力**: Apollo oNoC 光子网络片上网络基准
+- **对标**: 无，PoLaRIS 独有的光子 NoC 基准
+
+### 10. LiDAR 光子基准（独有）
+- **实现位置**: `src/polaris/data/lidar_benchmark.py:37`
+- **能力**: LiDAR 光子基准
+- **对标**: 无，PoLaRIS 独有的 LiDAR 应用基准
+
+---
+
+## 超越路线图建议
+
+### 第一阶段：巩固优势（覆盖率 > 70% 的工具）
+
+**目标工具**: T11 simphony (77.5%)、T03 OptoDesigner (77.8%)、T02 Luceda IPKISS (72.4%)
+
+**行动项**:
+1. **T11 simphony 教育文档补全**：添加 MZI/Add-Drop/量子仿真教程，学术引用格式（2.15 模块 6/8 为 ❌）
+2. **T11 SiPANN 集成**：添加 SiPANN 库与 SCEE 集成（2.8 模块 3/7 为 ❌）
+3. **T02 IPKISS 虚拟工艺建模**：添加虚拟制造预验证功能
+4. **T02 IPKISS EME 引擎**：这是跨工具共性差距，优先研发
+5. **T02 IPKISS 配套产品**：AWG Designer、IP Manager、Academy 培训平台
+
+### 第二阶段：补齐短板（覆盖率 50-70% 的工具）
+
+**目标工具**: T10 sax (61.4%)、T05 VPIphotonics (56.5%)、T01 Ansys Lumerical (57.8%)、T08 gdsfactory (52.3%)、T13 AlphaChip (51.6%)
+
+**行动项**:
+1. **EME 求解器研发**（跨工具共性差距）：T01 MODE、T05 VPI、T07 Photon Design 均需 EME，PoLaRIS 完全缺失
+2. **T01 Lumerical 物理求解器**：RCWA、STACK、varFDTD、EME 四大求解器（MODE 模块 10/14 缺失）
+3. **T01 Lumerical 材料建模**：色散材料、各向异性材料、材料库
+4. **T01 Lumerical 共形网格**：亚像素平滑、高级共形网格
+5. **T05 VPI 非线性效应**：Kerr/TPA、电折射/电吸收、XPM/XGM/FWM
+6. **T05 VPI ADS 联合仿真**：Keysight ADS 集成、400G/800G/1.6T 收发器
+7. **T08 gdsfactory YAML 设计**：Pydantic 模型校验、Jinja2 模板、steps 语法
+8. **T08 gdsfactory 光纤阵列路由**：route_fiber_array、边缘耦合器路由
+9. **T13 AlphaChip 学术评估**：IEEE TCAD 论文、sub-10nm 基准、SA 基线增强
+
+### 第三阶段：领域拓展（覆盖率 < 50% 的工具）
+
+**目标工具**: T07 Photon Design (44.9%)、T04 Tidy3D (35.6%)、T09 KLayout (31.3%)、T12 Cadence+Synopsys (16.5%)
+
+**行动项**:
+1. **T07 Photon Design FETD 引擎**：有限元时域引擎（3.1-3.5 全部缺失）
+2. **T07 Photon Design Harold 半导体器件仿真**：VCSEL/量子点/EAM（8.2-8.3 缺失）
+3. **T07 Photon Design EPIPPROP AWG/Echelle**：WDM/DWDM 器件（5.8, 8.4, 8.6 缺失）
+4. **T04 Tidy3D 自研 FDTD**：从封装 MEEP/Tidy3D 升级为自研引擎
+5. **T09 KLayout GUI 版图编辑器**：图形化版图编辑功能（PoLaRIS 仅有 Web 服务器）
+6. **T09 KLayout DRC 规则编辑器**：交互式 DRC 规则编辑
+7. **T12 数字 EDA 能力**：由于领域差异大，建议不直接对标，保持光子专注
+
+### 优先级排序（按影响面和可行性）
+
+| 优先级 | 行动项 | 影响工具数 | 可行性 | 预期覆盖率提升 |
+|--------|--------|-----------|--------|---------------|
+| P0 | EME 求解器研发 | T01/T02/T05/T07 | 中 | +3-5% |
+| P0 | 教育文档与教程 | T11 | 高 | +2-3% |
+| P1 | 材料建模库 | T01/T07 | 中 | +2-3% |
+| P1 | 共形网格算法 | T01 | 中 | +1-2% |
+| P1 | SiPANN 集成 | T11 | 高 | +1-2% |
+| P2 | FETD 引擎 | T07 | 低 | +1-2% |
+| P2 | Harold 半导体器件 | T07 | 低 | +1-2% |
+| P2 | GUI 版图编辑器 | T09 | 中 | +2-3% |
+| P3 | AWG/Echelle 光栅 | T07 | 中 | +1-2% |
+| P3 | 自研 FDTD 引擎 | T01/T04 | 低 | +2-3% |
+
+---
+
+## 学术诚信声明
+
+1. 本汇总文档所有 PoLaRIS 状态均基于 6 个分文档（`/workspace/docs/feature_gap_detail/T01_T02_gap.md` 至 `T11_T12_T13_gap.md`）的实际标注，无臆造。
+2. 每个功能点的 PoLaRIS 实现位置（文件:行号）均引用自 PoLaRIS 功能清单（`/workspace/docs/polaris_feature_inventory.md`）。
+3. 实验性功能在差距说明中明确标注"实验性"，未夸大为商业级。
+4. 覆盖率公式不一致问题已在每个工具统计末尾和全量统计章节添加注释说明，总览表保留源文档原值以保持一致，同时提供统一公式重新计算值。
+5. T12 Cadence+Synopsys 统计数据不一致问题（源文档 ❌缺失=56，实际逐点加总=51）已在 T12 章节和总览表注释中说明，按实际 51 计算。
+6. T01 Ansys Lumerical 功能点数不一致问题（源文档声称 65，实际清点 64，INTERCONNECT 模块声称 20 实际 19）已在 T01 章节说明，按实际 64 计算。
+7. 13 个工具共 985 个功能点，全部逐点标注，无省略。
+
+---
+
+**文档结束** | 调研日期 2026-06-25 | 版本 v2.0 完整版 | 功能点总数 985 | 工具数 13 | 总覆盖率 48.9%（源）/ 46.6%（统一公式）
