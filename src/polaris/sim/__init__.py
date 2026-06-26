@@ -303,6 +303,14 @@ from polaris.sim.eme import (
     build_propagation_smatrix as eme_build_propagation_smatrix,
     solve_eme,
 )
+from polaris.sim.bpm import (
+    BoundaryType,
+    BpmConfig,
+    BpmResult,
+    BpmSolver,
+    Polarization as BpmPolarization,
+    solve_bpm,
+)
 from polaris.sim.siepic_netlist import (
     SIEPIC_PORT_MAP,
     SIEPIC_TYPE_MAP,
@@ -458,6 +466,13 @@ __all__ = [
     "eme_overlap_matrix",
     "eme_build_interface_smatrix",
     "eme_build_propagation_smatrix",
+    # A03-BPM 光束传播法（Sprint 2 Task 2.1，SVEA + Crank-Nicolson + ADI + TBC）
+    "BpmConfig",
+    "BpmResult",
+    "BpmSolver",
+    "solve_bpm",
+    "BoundaryType",
+    "BpmPolarization",
     # 双后端支持（R01 创新点）
     "set_backend",
     "get_backend",
