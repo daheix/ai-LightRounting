@@ -339,7 +339,7 @@ class BpmSolver:
                 raise ValueError(f"1D 仿真 n_arr 须为 1D (Nx,)，实际 {n_arr_c.ndim}D（规则 14）")
             if psi_init_c.shape[0] != n_arr_c.shape[0]:
                 raise ValueError(
-                    f"psi_init 长度 {psi_init_c.shape[0]} 与 n_arr {n_arr_c.shape[0]} 不匹配（规则 14）"
+                    f"psi_init 长度 {psi_init_c.shape[0]} 与 n_arr {n_arr_c.shape[0]} 不匹配"
                 )
             snapshots, z_coords = self._solve_1d(psi_init_c, n_arr_c)
             n_dim = 1
@@ -349,13 +349,11 @@ class BpmSolver:
             ny, nx = psi_init_c.shape
             if n_arr_c.ndim == 1:
                 if n_arr_c.shape[0] != nx:
-                    raise ValueError(
-                        f"n_arr 长度 {n_arr_c.shape[0]} 与 psi_init x 维度 {nx} 不匹配（规则 14）"
-                    )
+                    raise ValueError(f"n_arr 长度 {n_arr_c.shape[0]} 与 psi_init x 维 {nx} 不匹配")
             elif n_arr_c.ndim == 2:
                 if n_arr_c.shape != psi_init_c.shape:
                     raise ValueError(
-                        f"n_arr 形状 {n_arr_c.shape} 与 psi_init {psi_init_c.shape} 不匹配（规则 14）"
+                        f"n_arr 形状 {n_arr_c.shape} 与 psi_init {psi_init_c.shape} 不匹配"
                     )
             else:
                 raise ValueError(f"2D 仿真 n_arr 须为 1D 或 2D，实际 {n_arr_c.ndim}D（规则 14）")
