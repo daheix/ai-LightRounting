@@ -116,6 +116,17 @@ from polaris.sim.dag_scheduler import (
     flat_circuit,
     schedule_circuit,
 )
+from polaris.sim.ddm import (
+    DdmConfig,
+    DdmResult,
+    DdmSolver,
+    GummelSolver,
+    bernoulli,
+    ddm_to_heat_joule,
+    heat_to_ddm_mobility,
+    sg_current_matrix,
+    solve_ddm,
+)
 from polaris.sim.eme import (
     EmeCell,
     EmeConfig,
@@ -403,6 +414,14 @@ from polaris.sim.time_domain_circuit import (
 )
 from polaris.sim.touchstone import load_touchstone, save_touchstone
 from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
+from polaris.sim.varfdtd import (
+    EffectiveIndexResult,
+    VarFdtdConfig,
+    VarFdtdResult,
+    VarFdtdSolver,
+    compute_effective_index,
+    solve_varfdtd,
+)
 from polaris.sim.verilog_a import (
     DEFAULT_DETECTOR_RESPONSIVITY,
     DEFAULT_LOAD_RESISTANCE_OHM,
@@ -478,6 +497,23 @@ __all__ = [
     "DrudeParams",
     "DftMonitor",
     "SParamExtractor",
+    # A08-DDM 漂移扩散（Sprint 2 Task 2.5，Scharfetter-Gummel + Gummel 迭代）
+    "DdmConfig",
+    "DdmResult",
+    "DdmSolver",
+    "solve_ddm",
+    "GummelSolver",
+    "bernoulli",
+    "sg_current_matrix",
+    "ddm_to_heat_joule",
+    "heat_to_ddm_mobility",
+    # A06-VarFDTD 有效折射率法（Sprint 2 Task 2.2，2.5D EIM + 2D Yee leapfrog）
+    "VarFdtdConfig",
+    "VarFdtdResult",
+    "VarFdtdSolver",
+    "solve_varfdtd",
+    "compute_effective_index",
+    "EffectiveIndexResult",
     # A07-HEAT 热传导求解器（Sprint 2 Task 2.4，傅里叶导热 + 5 类边界）
     "HeatConfig",
     "HeatResult",
