@@ -99,9 +99,7 @@ def build_tridiag_operator(
         return build_tridiag_operator_te(n_arr, dx, k0, n_ref)
     if polarization == Polarization.TM:
         return build_tridiag_operator_tm(n_arr, dx, k0, n_ref)
-    raise ValueError(
-        f"polarization 须为 'te'/'tm'/'scalar'，实际 {polarization!r}（规则 14）"
-    )
+    raise ValueError(f"polarization 须为 'te'/'tm'/'scalar'，实际 {polarization!r}（规则 14）")
 
 
 def build_tridiag_operator_te(
@@ -252,9 +250,7 @@ def sparse_to_banded(a_sparse: sp.csr_matrix, ku: int = 1, kl: int = 1) -> np.nd
     """
     n = a_sparse.shape[0]
     if a_sparse.shape[0] != a_sparse.shape[1]:
-        raise ValueError(
-            f"稀疏矩阵须为方阵，实际 shape={a_sparse.shape}（规则 14）"
-        )
+        raise ValueError(f"稀疏矩阵须为方阵，实际 shape={a_sparse.shape}（规则 14）")
     if n < 2:
         raise ValueError(f"矩阵维度须 ≥2，实际 {n}")
     ab = np.zeros((ku + kl + 1, n), dtype=np.complex128)
@@ -286,9 +282,7 @@ def build_lhs_banded(a_banded: np.ndarray, alpha_lhs: complex) -> np.ndarray:
         ValueError: a_banded 形状非法。
     """
     if a_banded.ndim != 2 or a_banded.shape[0] != 3:
-        raise ValueError(
-            f"a_banded 须为 (3, N) 三对角 banded，实际 shape={a_banded.shape}"
-        )
+        raise ValueError(f"a_banded 须为 (3, N) 三对角 banded，实际 shape={a_banded.shape}")
     lhs = np.empty_like(a_banded)
     # 主对角：1 - α·A_main（向量化，无 Python 循环）
     lhs[1, :] = 1.0 - alpha_lhs * a_banded[1, :]

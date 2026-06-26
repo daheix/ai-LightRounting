@@ -44,7 +44,6 @@ from dataclasses import dataclass
 
 import numpy as np
 import pytest
-import scipy.sparse as sp
 
 from polaris.sim.bpm import (
     BoundaryType,
@@ -111,9 +110,7 @@ def fixture() -> _BpmFixture:
 # ---------------------------------------------------------------------------
 
 
-def _gaussian_beam(
-    x: np.ndarray, sigma: float, center: float | None = None
-) -> np.ndarray:
+def _gaussian_beam(x: np.ndarray, sigma: float, center: float | None = None) -> np.ndarray:
     """构造高斯光束初始场 ψ(x) = exp(-((x-x0)/σ)²)（向量化）。
 
     Args:
@@ -221,12 +218,8 @@ class TestOperators:
         """TM 算子含 n² 调和平均，均匀介质退化为 TE 形式。"""
         # 均匀介质（n 全相同）：TM 调和平均 n²_harm = n²，TM 应与 TE 一致
         n_arr = np.full(fixture.nx, _N_SIO2)
-        a_te = build_tridiag_operator(
-            n_arr, fixture.dx, fixture.k0, fixture.n_ref, Polarization.TE
-        )
-        a_tm = build_tridiag_operator(
-            n_arr, fixture.dx, fixture.k0, fixture.n_ref, Polarization.TM
-        )
+        a_te = build_tridiag_operator(n_arr, fixture.dx, fixture.k0, fixture.n_ref, Polarization.TE)
+        a_tm = build_tridiag_operator(n_arr, fixture.dx, fixture.k0, fixture.n_ref, Polarization.TM)
         # 均匀介质下 TE 与 TM 算子一致（n²_harm = n² → n²/n² = 1）
         assert np.allclose(a_te.toarray(), a_tm.toarray(), atol=1e-12)
 
@@ -286,9 +279,7 @@ class TestBoundary:
         kx_right = 1j * 1e5
         lhs_before = lhs_base.copy()
         inv_dx2 = 1.0 / (fixture.dx * fixture.dx)
-        apply_tbc_lhs_banded_inplace(
-            lhs_base, kx_left, kx_right, fixture.dx, alpha_lhs, inv_dx2
-        )
+        apply_tbc_lhs_banded_inplace(lhs_base, kx_left, kx_right, fixture.dx, alpha_lhs, inv_dx2)
         # 边界主对角元应被修改（与 before 不同）
         assert not np.isclose(lhs_base[1, 0], lhs_before[1, 0])
         assert not np.isclose(lhs_base[1, -1], lhs_before[1, -1])
@@ -308,9 +299,7 @@ class TestBoundary:
         kx_left = 1j * 1e5
         kx_right = 1j * 1e5
         inv_dx2 = 1.0 / (fixture.dx * fixture.dx)
-        apply_tbc_rhs_inplace(
-            rhs, psi, kx_left, kx_right, fixture.dx, alpha_rhs, inv_dx2
-        )
+        apply_tbc_rhs_inplace(rhs, psi, kx_left, kx_right, fixture.dx, alpha_rhs, inv_dx2)
         # 边界项被修改
         assert not np.isclose(rhs[0], rhs_before[0])
         assert not np.isclose(rhs[-1], rhs_before[-1])
@@ -333,8 +322,12 @@ class TestCrankNicolson:
             n_arr, fixture.dx, fixture.k0, fixture.n_ref, Polarization.TE
         )
         stepper = CrankNicolsonStepper.from_operator(
-            a_sparse, fixture.dz, fixture.a_coef, fixture.dx,
-            theta=0.5, boundary=BoundaryType.TBC,
+            a_sparse,
+            fixture.dz,
+            fixture.a_coef,
+            fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         assert stepper.alpha_lhs == 0.5 * fixture.dz / fixture.a_coef
         assert stepper.alpha_rhs == 0.5 * fixture.dz / fixture.a_coef
@@ -353,8 +346,14 @@ class TestCrankNicolson:
         )
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=1, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=1,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         # 单步后场应保持不变（偏差机器精度）
         psi1 = snaps[-1]
@@ -375,8 +374,14 @@ class TestCrankNicolson:
         sigma0 = 5e-6  # 5 微米腰宽
         psi0 = _gaussian_beam(x, sigma0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, fixture.nz_long, fixture.a_coef,
-            fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            fixture.nz_long,
+            fixture.a_coef,
+            fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         psi_final = snaps[-1]
         # 无 NaN/Inf（M1 核心）
@@ -401,8 +406,14 @@ class TestCrankNicolson:
         )
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, fixture.nz_long, fixture.a_coef,
-            fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            fixture.nz_long,
+            fixture.a_coef,
+            fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         p0 = _compute_power_1d(psi0, fixture.dx)
         p_final = _compute_power_1d(snaps[-1], fixture.dx)
@@ -424,8 +435,14 @@ class TestCrankNicolson:
         # 平面波 tilt=0° 在 Dirichlet 边界下应被反射（与 TBC 保持不变对比）
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=100, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.DIRICHLET,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=100,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.DIRICHLET,
         )
         psi_final = snaps[-1]
         # Dirichlet 边界场被反射回（无 NaN/Inf）
@@ -461,8 +478,14 @@ class TestTbcReflection:
         )
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, fixture.nz_long, fixture.a_coef,
-            fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            fixture.nz_long,
+            fixture.a_coef,
+            fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         psi_final = snaps[-1]
         # 偏差方法：TBC 完全吸收时 ψ_final ≈ ψ_initial（偏差机器精度）
@@ -478,8 +501,14 @@ class TestTbcReflection:
         )
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=100, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.DIRICHLET,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=100,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.DIRICHLET,
         )
         psi_final = snaps[-1]
         # Dirichlet 全反射：偏差接近 1.0（边界强制为零，场被反射形成驻波）
@@ -501,8 +530,14 @@ class TestTbcReflection:
         sigma0 = 2e-6  # 窄光束，确保展宽后仍不触边界
         psi0 = _gaussian_beam(x, sigma0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=50, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=50,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         psi_final = snaps[-1]
         # 无 NaN/Inf
@@ -525,8 +560,14 @@ class TestTbcReflection:
         )
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=10, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=10,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         psi_final = snaps[-1]
         refl = compute_tbc_reflection(psi0, psi_final, boundary_index=fixture.nx - 1)
@@ -549,9 +590,18 @@ class TestAdi2D:
         psi0 = np.ones((ny, nx), dtype=np.complex128)  # 平面波
         nz = 10
         snaps, z_coords = adi_propagate_2d(
-            psi0, n_arr_1d, fixture.dx, fixture.dx, fixture.dz, nz,
-            fixture.a_coef, fixture.k0, fixture.n_ref, theta=0.5,
-            polarization=Polarization.TE, boundary=BoundaryType.TBC,
+            psi0,
+            n_arr_1d,
+            fixture.dx,
+            fixture.dx,
+            fixture.dz,
+            nz,
+            fixture.a_coef,
+            fixture.k0,
+            fixture.n_ref,
+            theta=0.5,
+            polarization=Polarization.TE,
+            boundary=BoundaryType.TBC,
         )
         assert snaps.shape == (nz + 1, ny, nx)
         assert z_coords.shape == (nz + 1,)
@@ -565,9 +615,18 @@ class TestAdi2D:
         psi0 = np.ones((ny, nx), dtype=np.complex128)  # tilt=0° 平面波
         nz = 50
         snaps, _ = adi_propagate_2d(
-            psi0, n_arr_1d, fixture.dx, fixture.dx, fixture.dz, nz,
-            fixture.a_coef, fixture.k0, fixture.n_ref, theta=0.5,
-            polarization=Polarization.TE, boundary=BoundaryType.TBC,
+            psi0,
+            n_arr_1d,
+            fixture.dx,
+            fixture.dx,
+            fixture.dz,
+            nz,
+            fixture.a_coef,
+            fixture.k0,
+            fixture.n_ref,
+            theta=0.5,
+            polarization=Polarization.TE,
+            boundary=BoundaryType.TBC,
         )
         p0 = float(np.sum(np.abs(psi0) ** 2) * fixture.dx * fixture.dx)
         p_final = float(np.sum(np.abs(snaps[-1]) ** 2) * fixture.dx * fixture.dx)
@@ -584,12 +643,21 @@ class TestAdi2D:
         y = np.arange(ny) * fixture.dx
         xx, yy = np.meshgrid(x, y)
         sigma = 3e-6
-        psi0 = np.exp(-((xx - x[nx // 2]) ** 2 + (yy - y[ny // 2]) ** 2) / (sigma ** 2))
+        psi0 = np.exp(-((xx - x[nx // 2]) ** 2 + (yy - y[ny // 2]) ** 2) / (sigma**2))
         psi0 = psi0.astype(np.complex128)
         snaps, _ = adi_propagate_2d(
-            psi0, n_arr_1d, fixture.dx, fixture.dx, fixture.dz, nz=50,
-            a_coef=fixture.a_coef, k0=fixture.k0, n_ref=fixture.n_ref,
-            theta=0.5, polarization=Polarization.TE, boundary=BoundaryType.TBC,
+            psi0,
+            n_arr_1d,
+            fixture.dx,
+            fixture.dx,
+            fixture.dz,
+            nz=50,
+            a_coef=fixture.a_coef,
+            k0=fixture.k0,
+            n_ref=fixture.n_ref,
+            theta=0.5,
+            polarization=Polarization.TE,
+            boundary=BoundaryType.TBC,
         )
         assert np.all(np.isfinite(snaps[-1]))
 
@@ -600,9 +668,18 @@ class TestAdi2D:
         psi0 = np.ones((ny, nx), dtype=np.complex128)
         # 1D n_arr 应被自动广播（adi_propagate_2d 内部 np.broadcast_to）
         snaps, _ = adi_propagate_2d(
-            psi0, n_arr_1d, fixture.dx, fixture.dx, fixture.dz, nz=5,
-            a_coef=fixture.a_coef, k0=fixture.k0, n_ref=fixture.n_ref,
-            theta=0.5, polarization=Polarization.TE, boundary=BoundaryType.TBC,
+            psi0,
+            n_arr_1d,
+            fixture.dx,
+            fixture.dx,
+            fixture.dz,
+            nz=5,
+            a_coef=fixture.a_coef,
+            k0=fixture.k0,
+            n_ref=fixture.n_ref,
+            theta=0.5,
+            polarization=Polarization.TE,
+            boundary=BoundaryType.TBC,
         )
         assert snaps.shape == (6, ny, nx)
         assert np.all(np.isfinite(snaps[-1]))
@@ -664,8 +741,12 @@ class TestBpmSolver:
     def test_solver_1d_dispatch(self, fixture: _BpmFixture) -> None:
         """1D 输入场自动调度 Crank-Nicolson（n_dim=1）。"""
         cfg = BpmConfig(
-            wavelength=fixture.wavelength, dx=fixture.dx, dy=fixture.dx,
-            dz=fixture.dz, nz=50, n_ref=fixture.n_ref,
+            wavelength=fixture.wavelength,
+            dx=fixture.dx,
+            dy=fixture.dx,
+            dz=fixture.dz,
+            nz=50,
+            n_ref=fixture.n_ref,
         )
         solver = BpmSolver(config=cfg)
         n_arr = np.ones(fixture.nx) * fixture.n_ref
@@ -679,8 +760,12 @@ class TestBpmSolver:
         """2D 输入场自动调度 ADI（n_dim=2）。"""
         ny, nx = 16, 32
         cfg = BpmConfig(
-            wavelength=fixture.wavelength, dx=fixture.dx, dy=fixture.dx,
-            dz=fixture.dz, nz=20, n_ref=fixture.n_ref,
+            wavelength=fixture.wavelength,
+            dx=fixture.dx,
+            dy=fixture.dx,
+            dz=fixture.dz,
+            nz=20,
+            n_ref=fixture.n_ref,
         )
         solver = BpmSolver(config=cfg)
         n_arr = np.ones(nx) * fixture.n_ref  # 1D n 沿 y 均匀
@@ -692,8 +777,12 @@ class TestBpmSolver:
     def test_solver_result_fields(self, fixture: _BpmFixture) -> None:
         """BpmResult 含功率守恒校验字段（M2）。"""
         cfg = BpmConfig(
-            wavelength=fixture.wavelength, dx=fixture.dx, dy=fixture.dx,
-            dz=fixture.dz, nz=100, n_ref=fixture.n_ref,
+            wavelength=fixture.wavelength,
+            dx=fixture.dx,
+            dy=fixture.dx,
+            dz=fixture.dz,
+            nz=100,
+            n_ref=fixture.n_ref,
         )
         solver = BpmSolver(config=cfg)
         n_arr = np.ones(fixture.nx) * fixture.n_ref
@@ -712,8 +801,12 @@ class TestBpmSolver:
     def test_solve_bpm_entry_function(self, fixture: _BpmFixture) -> None:
         """solve_bpm 便捷入口与 BpmSolver.solve 等价。"""
         cfg = BpmConfig(
-            wavelength=fixture.wavelength, dx=fixture.dx, dy=fixture.dx,
-            dz=fixture.dz, nz=20, n_ref=fixture.n_ref,
+            wavelength=fixture.wavelength,
+            dx=fixture.dx,
+            dy=fixture.dx,
+            dz=fixture.dz,
+            nz=20,
+            n_ref=fixture.n_ref,
         )
         n_arr = np.ones(fixture.nx) * fixture.n_ref
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
@@ -725,8 +818,12 @@ class TestBpmSolver:
     def test_solver_dim_mismatch_raises(self, fixture: _BpmFixture) -> None:
         """1D 仿真传入 2D n_arr 须 raise（规则 14）。"""
         cfg = BpmConfig(
-            wavelength=fixture.wavelength, dx=fixture.dx, dy=fixture.dx,
-            dz=fixture.dz, nz=10, n_ref=fixture.n_ref,
+            wavelength=fixture.wavelength,
+            dx=fixture.dx,
+            dy=fixture.dx,
+            dz=fixture.dz,
+            nz=10,
+            n_ref=fixture.n_ref,
         )
         solver = BpmSolver(config=cfg)
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
@@ -758,8 +855,14 @@ class TestPhysicalValidation:
         psi0 = _gaussian_beam(x, sigma0)
         sigma_init = _gaussian_sigma(psi0, fixture.dx)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=500, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=500,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         sigma_final = _gaussian_sigma(snaps[-1], fixture.dx)
         # 衍射展宽：σ_final > σ_init（实测 σ_final/σ_init ≈ 1.07）
@@ -784,8 +887,14 @@ class TestPhysicalValidation:
         psi0 = _gaussian_beam(x, sigma0)
         sigma_init = _gaussian_sigma(psi0, fixture.dx)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=500, a_coef=a_coef_wg,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=500,
+            a_coef=a_coef_wg,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         sigma_final = _gaussian_sigma(snaps[-1], fixture.dx)
         # 导模不发散：σ_final/σ_init < 1.5（实测 ≈ 1.17）
@@ -805,8 +914,14 @@ class TestPhysicalValidation:
         )
         psi0 = _plane_wave(fixture.nx, tilt_deg=0.0)
         snaps, _ = crank_nicolson_propagate_1d(
-            psi0, a_sparse, fixture.dz, nz=200, a_coef=fixture.a_coef,
-            dx=fixture.dx, theta=0.5, boundary=BoundaryType.TBC,
+            psi0,
+            a_sparse,
+            fixture.dz,
+            nz=200,
+            a_coef=fixture.a_coef,
+            dx=fixture.dx,
+            theta=0.5,
+            boundary=BoundaryType.TBC,
         )
         psi_final = snaps[-1]
         # 幅值守恒（|ψ_final| ≈ |ψ_init| = 1）
