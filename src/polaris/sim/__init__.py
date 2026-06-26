@@ -92,6 +92,30 @@ from polaris.sim.caphe_time_domain import (
     CAPHEBackend,
     CAPHETimeDomainSolver,
 )
+from polaris.sim.monte_carlo import (
+    MonteCarloResult,
+    monte_carlo_simulate,
+    sensitivity_analysis,
+    waveguide_transmission_mc,
+    yield_analysis,
+)
+from polaris.sim.fde import (
+    FdeSolver,
+    FdeSolverConfig,
+    Mode,
+    solve_waveguide,
+)
+from polaris.sim.devs import (
+    Accumulator,
+    AtomicDEVS,
+    Coordinator,
+    CoupledDEVS,
+    DEVSMessage,
+    Generator,
+    INFINITY,
+    Queue,
+    Simulator,
+)
 from polaris.sim.cascade import cascade_circuit
 from polaris.sim.cascade.smatrix import (
     BlockSMatrix,
@@ -630,6 +654,27 @@ __all__ = [
     "CAPHEFrequencySolver",
     "CAPHETimeDomainSolver",
     "CAPHEBackend",
+    # C01-MonteCarlo 统计公差分析（Sprint 3 Task 3.1）
+    "MonteCarloResult",
+    "monte_carlo_simulate",
+    "sensitivity_analysis",
+    "yield_analysis",
+    "waveguide_transmission_mc",
+    # C04-FDE 有限差分本征模（Sprint 3 Task 3.4）
+    "FdeSolver",
+    "FdeSolverConfig",
+    "Mode",
+    "solve_waveguide",
+    # C05-DEVS 离散事件系统（Sprint 3 Task 3.5，Zeigler 经典 DEVS）
+    "AtomicDEVS",
+    "CoupledDEVS",
+    "Simulator",
+    "Coordinator",
+    "DEVSMessage",
+    "Generator",
+    "Queue",
+    "Accumulator",
+    "INFINITY",
     # R27+R28 Tidy3D 集成与 GPU FDTD 引擎
     "Tidy3DConfig",
     "Tidy3DAdapter",
