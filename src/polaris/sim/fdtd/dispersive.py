@@ -90,9 +90,7 @@ class DrudeParams:
         return self.eps_inf - self.omega_p**2 / (w**2 + 1j * self.gamma * w)
 
 
-def drude_ade_coefficients(
-    params: DrudeParams, dt: float
-) -> tuple[float, float]:
+def drude_ade_coefficients(params: DrudeParams, dt: float) -> tuple[float, float]:
     """计算 Drude ADE 递推系数 (α, β)（Taflove 2005 §9.3）。
 
     α = (1 - γΔt/2) / (1 + γΔt/2)
@@ -145,9 +143,7 @@ def apply_ade_drude(
         ValueError: 形状不匹配（规则 14，禁止 fall-back）。
     """
     if e_z.shape != j_polar.shape:
-        raise ValueError(
-            f"e_z 形状 {e_z.shape} 与 j_polar {j_polar.shape} 不匹配"
-        )
+        raise ValueError(f"e_z 形状 {e_z.shape} 与 j_polar {j_polar.shape} 不匹配")
     alpha, beta = drude_ade_coefficients(params, dt)
     if mask is None:
         j_polar *= alpha

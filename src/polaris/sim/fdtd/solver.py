@@ -52,8 +52,6 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from polaris.sim.fdtd.cpml import (
-    CpmlBuffers,
-    CpmlCoefficients,
     CpmlConfig,
     build_cpml,
     update_e_psi,
@@ -120,8 +118,7 @@ class FdtdConfig:
         if self.drude is not None and self.drude_mask is not None:
             if self.drude_mask.shape != self.grid.shape:
                 raise ValueError(
-                    f"drude_mask 形状 {self.drude_mask.shape} "
-                    f"与网格 {self.grid.shape} 不匹配"
+                    f"drude_mask 形状 {self.drude_mask.shape} 与网格 {self.grid.shape} 不匹配"
                 )
         nx, ny = self.grid.shape
         for src in self.dipole_sources:
@@ -135,9 +132,7 @@ class FdtdConfig:
         if self.probe_point is not None:
             ix, iy = self.probe_point
             if not (0 <= ix < nx and 0 <= iy < ny):
-                raise IndexError(
-                    f"探针 {self.probe_point} 越界 {self.grid.shape}"
-                )
+                raise IndexError(f"探针 {self.probe_point} 越界 {self.grid.shape}")
 
 
 @dataclass
@@ -180,8 +175,12 @@ class FdtdSolver:
         # CPML 预构建（依赖 grid.shape/dx/dy/dt）
         if config.cpml is not None:
             self._cx, self._cy, self._buffers = build_cpml(
-                grid.shape, grid.dx, grid.dy, grid.dt,
-                config.cpml, config.eps_r_bg,
+                grid.shape,
+                grid.dx,
+                grid.dy,
+                grid.dt,
+                config.cpml,
+                config.eps_r_bg,
             )
         else:
             self._cx = None
@@ -223,20 +222,14 @@ class FdtdSolver:
             t = n * grid.dt
             self._update_h(e_z, h_x, h_y)
             if cfg.tfsf is not None and incident is not None:
-                apply_tfsf_h_correction(
-                    h_y, cfg.tfsf, incident, self._db, self._dx
-                )
+                apply_tfsf_h_correction(h_y, cfg.tfsf, incident, self._db, self._dx)
                 src_val = float(cfg.tfsf_waveform(t))  # type: ignore[arg-type]
                 incident.step(src_val)
             self._update_e(e_z, h_x, h_y, j_polar)
             if cfg.tfsf is not None and incident is not None:
-                apply_tfsf_e_correction(
-                    e_z, cfg.tfsf, incident, self._cb, self._dx
-                )
+                apply_tfsf_e_correction(e_z, cfg.tfsf, incident, self._cb, self._dx)
             for src in cfg.dipole_sources:
-                inject_dipole(
-                    e_z, src, t, grid.dt, grid.eps_r, grid.dx, grid.dy
-                )
+                inject_dipole(e_z, src, t, grid.dt, grid.eps_r, grid.dx, grid.dy)
             if probe is not None:
                 time_series[n] = e_z[probe]
             for mon in cfg.monitors:
@@ -256,24 +249,12 @@ class FdtdSolver:
         if buf is not None:
             update_h_psi(e_z, buf, self._cx, self._cy)  # type: ignore[arg-type]
             de_dy = (e_z[:, 1:] - e_z[:, :-1]) / dy
-            h_x[:, :-1] = (
-                da[:, :-1] * h_x[:, :-1]
-                - db[:, :-1] * (de_dy + buf.psi_h_xy[:, :-1])
-            )
+            h_x[:, :-1] = da[:, :-1] * h_x[:, :-1] - db[:, :-1] * (de_dy + buf.psi_h_xy[:, :-1])
             de_dx = (e_z[1:, :] - e_z[:-1, :]) / dx
-            h_y[:-1, :] = (
-                da[:-1, :] * h_y[:-1, :]
-                + db[:-1, :] * (de_dx + buf.psi_h_yx[:-1, :])
-            )
+            h_y[:-1, :] = da[:-1, :] * h_y[:-1, :] + db[:-1, :] * (de_dx + buf.psi_h_yx[:-1, :])
         else:
-            h_x[:, :-1] = (
-                da[:, :-1] * h_x[:, :-1]
-                - db[:, :-1] * (e_z[:, 1:] - e_z[:, :-1]) / dy
-            )
-            h_y[:-1, :] = (
-                da[:-1, :] * h_y[:-1, :]
-                + db[:-1, :] * (e_z[1:, :] - e_z[:-1, :]) / dx
-            )
+            h_x[:, :-1] = da[:, :-1] * h_x[:, :-1] - db[:, :-1] * (e_z[:, 1:] - e_z[:, :-1]) / dy
+            h_y[:-1, :] = da[:-1, :] * h_y[:-1, :] + db[:-1, :] * (e_z[1:, :] - e_z[:-1, :]) / dx
 
     def _update_e(
         self,
@@ -298,9 +279,7 @@ class FdtdSolver:
         # 1. Drude 极化电流更新（须用 E^n，故在 E_z 更新前；Taflove §9.3）
         #    J^{n+1/2} = α·J^{n-1/2} + β·E^n
         if j_polar is not None and self._cfg.drude is not None:
-            apply_ade_drude(
-                e_z, j_polar, self._cfg.drude, self._dt, self._drude_mask
-            )
+            apply_ade_drude(e_z, j_polar, self._cfg.drude, self._dt, self._drude_mask)
         # 2. 旋度 (∇×H)_z = ∂H_y/∂x - ∂H_x/∂y（内部 [1:-1, 1:-1]）
         dhy_dx = (h_y[1:-1, 1:-1] - h_y[:-2, 1:-1]) / dx
         dhx_dy = (h_x[1:-1, 1:-1] - h_x[1:-1, :-2]) / dy
@@ -309,9 +288,7 @@ class FdtdSolver:
         # 3. E^{n+1} = ca·E^n + cb·curl_z (+ CPML ψ_e - cb·J_Drude)
         e_z[interior] = ca[interior] * e_z[interior] + cb[interior] * curl_z
         if buf is not None:
-            e_z[interior] += cb[interior] * (
-                buf.psi_e_xz[interior] - buf.psi_e_yz[interior]
-            )
+            e_z[interior] += cb[interior] * (buf.psi_e_xz[interior] - buf.psi_e_yz[interior])
         if j_polar is not None and self._cfg.drude is not None:
             # Drude 电场校正：E^{n+1} -= cb·J^{n+1/2}（J 已在 mask 外为 0）
             e_z[interior] -= cb[interior] * j_polar[interior]

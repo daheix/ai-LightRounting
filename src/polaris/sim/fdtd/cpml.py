@@ -138,9 +138,7 @@ class CpmlBuffers:
     psi_h_xy: np.ndarray
 
 
-def _sigma_max_gedney(
-    pml: CpmlConfig, dx: float, eps_r_bg: float
-) -> float:
+def _sigma_max_gedney(pml: CpmlConfig, dx: float, eps_r_bg: float) -> float:
     """Gedney 1996 推荐 σ_max 公式（A09 §5.3）。
 
     σ_max = (m+1) / (150·π·Δh·√ε_r)
@@ -185,17 +183,12 @@ def _build_axis_profile(
     """
     if pml.layers * 2 >= n:
         raise ValueError(
-            f"PML 层数 {pml.layers}·2 >= 网格点 {n}，无内部区域，"
-            "请减少 PML 层数或增加网格分辨率"
+            f"PML 层数 {pml.layers}·2 >= 网格点 {n}，无内部区域，请减少 PML 层数或增加网格分辨率"
         )
     sigma = np.zeros(n, dtype=np.float64)
     kappa = np.ones(n, dtype=np.float64)
     alpha = np.zeros(n, dtype=np.float64)
-    sigma_max = (
-        pml.sigma_max
-        if pml.sigma_max is not None
-        else _sigma_max_gedney(pml, dx, eps_r_bg)
-    )
+    sigma_max = pml.sigma_max if pml.sigma_max is not None else _sigma_max_gedney(pml, dx, eps_r_bg)
     layers = pml.layers
     l_pml = layers * dx
     # 左侧 PML：i=0 外边界（σ=σ_max），i=layers-1 内边界（σ≈0）
@@ -213,8 +206,12 @@ def _build_axis_profile(
     # 注：递归卷积系数 a/b 依赖 Δt，由 _fill_ab 在 build_cpml 中按 dt 计算
     # （A09 §5.3：b_x = exp(-(σ/κ+α)·Δt/ε_0)，a_x = σ/(Δx·(κ·α+σ))·(b_x-1)）
     return CpmlCoefficients(
-        sigma=sigma, kappa=kappa, alpha=alpha,
-        a=np.zeros(n), b=np.ones(n), layers=layers,
+        sigma=sigma,
+        kappa=kappa,
+        alpha=alpha,
+        a=np.zeros(n),
+        b=np.ones(n),
+        layers=layers,
     )
 
 
@@ -246,9 +243,7 @@ def build_cpml(
     """
     nx, ny = shape
     if nx < 2 * pml.layers + 1 or ny < 2 * pml.layers + 1:
-        raise ValueError(
-            f"网格 {shape} 过小，无法容纳 {pml.layers} 层 PML（每侧）"
-        )
+        raise ValueError(f"网格 {shape} 过小，无法容纳 {pml.layers} 层 PML（每侧）")
     if dt <= 0.0:
         raise ValueError(f"dt 必须为正，实际 {dt}")
     # 1D 轴系数（σ, κ, α 渐变）
@@ -283,7 +278,12 @@ def _fill_ab(coeff: CpmlCoefficients, dx: float, dt: float) -> CpmlCoefficients:
     nonzero = denom > 1e-300
     a[nonzero] = sigma[nonzero] / denom[nonzero] * (b[nonzero] - 1.0)
     return CpmlCoefficients(
-        sigma=sigma, kappa=kappa, alpha=alpha, a=a, b=b, layers=coeff.layers,
+        sigma=sigma,
+        kappa=kappa,
+        alpha=alpha,
+        a=a,
+        b=b,
+        layers=coeff.layers,
     )
 
 

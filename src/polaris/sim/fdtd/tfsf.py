@@ -133,9 +133,7 @@ class Incident1D:
         # CFL 校验（真空 1D：dt ≤ dx/c）
         dt_max = self.dx / _C0
         if self.dt > dt_max * (1.0 + 1e-12):
-            raise ValueError(
-                f"dt={self.dt:.3e} 超过 1D CFL 上限 {dt_max:.3e}"
-            )
+            raise ValueError(f"dt={self.dt:.3e} 超过 1D CFL 上限 {dt_max:.3e}")
         # 真空 leapfrog 系数（σ=0）
         self.ca = 1.0
         self.cb = self.dt / _EPS0
@@ -158,21 +156,15 @@ class Incident1D:
         # 1. 硬源（强制 E_inc[0]，仅 +x 辐射）
         self.e_inc[0] = source_value
         # 2. H_inc[i] += db * (E_inc[i+1] - E_inc[i]) / dx, i ∈ [0, nx-2]
-        self.h_inc[:-1] += self.db * (
-            self.e_inc[1:] - self.e_inc[:-1]
-        ) / self.dx
+        self.h_inc[:-1] += self.db * (self.e_inc[1:] - self.e_inc[:-1]) / self.dx
         # 3. E_inc[i] += cb * (H_inc[i] - H_inc[i-1]) / dx, i ∈ [1, nx-1]
-        self.e_inc[1:] += self.cb * (
-            self.h_inc[1:] - self.h_inc[:-1]
-        ) / self.dx
+        self.e_inc[1:] += self.cb * (self.h_inc[1:] - self.h_inc[:-1]) / self.dx
 
 
 def _check_incident_extent(tfsf: TfsfBox, incident: Incident1D) -> None:
     """校验 1D 入射网格覆盖 TFSF 所需索引（规则 14，失败 raise）。"""
     if tfsf.i1 + 1 >= incident.nx:
-        raise IndexError(
-            f"Incident1D.nx={incident.nx} 不足，需 ≥ i1+2={tfsf.i1 + 2}"
-        )
+        raise IndexError(f"Incident1D.nx={incident.nx} 不足，需 ≥ i1+2={tfsf.i1 + 2}")
     if tfsf.i0 - 1 < 0:
         raise IndexError(f"i0-1={tfsf.i0 - 1} 越界，i0 须 ≥1")
 
@@ -200,12 +192,8 @@ def apply_tfsf_h_correction(
     _check_incident_extent(tfsf, incident)
     j_sl = slice(tfsf.j0, tfsf.j1 + 1)
     inv_dx = 1.0 / dx
-    h_y[tfsf.i0 - 1, j_sl] -= (
-        db_h[tfsf.i0 - 1, j_sl] * inv_dx * incident.e_inc[tfsf.i0]
-    )
-    h_y[tfsf.i1, j_sl] += (
-        db_h[tfsf.i1, j_sl] * inv_dx * incident.e_inc[tfsf.i1 + 1]
-    )
+    h_y[tfsf.i0 - 1, j_sl] -= db_h[tfsf.i0 - 1, j_sl] * inv_dx * incident.e_inc[tfsf.i0]
+    h_y[tfsf.i1, j_sl] += db_h[tfsf.i1, j_sl] * inv_dx * incident.e_inc[tfsf.i1 + 1]
 
 
 def apply_tfsf_e_correction(
@@ -238,14 +226,10 @@ def apply_tfsf_e_correction(
     inv_dx = 1.0 / dx
     # TF 左边界：标准 leapfrog 用了散射场 H_y[i0-1]（缺入射 H_inc[i0-1]），
     # 须减去 cb·H_inc[i0-1]/dx 补齐总场旋度。
-    e_z[tfsf.i0, j_sl] -= (
-        cb_ez[tfsf.i0, j_sl] * inv_dx * incident.h_inc[tfsf.i0 - 1]
-    )
+    e_z[tfsf.i0, j_sl] -= cb_ez[tfsf.i0, j_sl] * inv_dx * incident.h_inc[tfsf.i0 - 1]
     # SF 右边界：标准 leapfrog 用了总场 H_y[i1]（含入射 H_inc[i1]），
     # 须加上 cb·H_inc[i1]/dx 剔除入射分量还原散射场旋度。
-    e_z[tfsf.i1 + 1, j_sl] += (
-        cb_ez[tfsf.i1 + 1, j_sl] * inv_dx * incident.h_inc[tfsf.i1]
-    )
+    e_z[tfsf.i1 + 1, j_sl] += cb_ez[tfsf.i1 + 1, j_sl] * inv_dx * incident.h_inc[tfsf.i1]
 
 
 def apply_tfsf_correction(

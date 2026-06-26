@@ -161,6 +161,21 @@ from polaris.sim.fdfd import (
     solve_fdfd,
     verify_energy_conservation,
 )
+from polaris.sim.fdtd import (
+    CpmlConfig,
+    DftMonitor,
+    DrudeParams,
+    FdtdConfig,
+    FdtdResult,
+    FdtdSolver,
+    GaussianPulse,
+    SParamExtractor,
+    TfsfBox,
+    YeeGridFdtd,
+    build_update_coefficients,
+    courant_dt,
+    solve_fdtd,
+)
 from polaris.sim.graph_lvs import (
     GraphIsomorphismLVSComparer,
     NetlistEdge,
@@ -168,6 +183,24 @@ from polaris.sim.graph_lvs import (
     PhotonicsLVSReport,
     PhotonicsNetlist,
     run_graph_lvs,
+)
+from polaris.sim.heat import (
+    ADIABATIC,
+    DN_DT_SI,
+    K_SILICON,
+    K_SIO2,
+    SIGMA_SB,
+    BcSpec,
+    HeatConfig,
+    HeatResult,
+    HeatSolver,
+    apply_boundary_conditions,
+    ddm_to_heat,
+    heat_to_fde,
+    solve_heat,
+)
+from polaris.sim.heat import (
+    BoundaryType as HeatBoundaryType,
 )
 from polaris.sim.hierarchical_drc import (
     HierarchicalDRC,
@@ -431,6 +464,35 @@ __all__ = [
     "SParameters",
     "extract_s_parameters",
     "verify_energy_conservation",
+    # A09-FDTD 时域有限差分（Sprint 2 Task 2.3，Yee leapfrog + CPML + TFSF + ADE + DFT）
+    "FdtdConfig",
+    "FdtdResult",
+    "FdtdSolver",
+    "solve_fdtd",
+    "YeeGridFdtd",
+    "courant_dt",
+    "build_update_coefficients",
+    "CpmlConfig",
+    "GaussianPulse",
+    "TfsfBox",
+    "DrudeParams",
+    "DftMonitor",
+    "SParamExtractor",
+    # A07-HEAT 热传导求解器（Sprint 2 Task 2.4，傅里叶导热 + 5 类边界）
+    "HeatConfig",
+    "HeatResult",
+    "HeatSolver",
+    "solve_heat",
+    "BcSpec",
+    "HeatBoundaryType",
+    "apply_boundary_conditions",
+    "heat_to_fde",
+    "ddm_to_heat",
+    "ADIABATIC",
+    "DN_DT_SI",
+    "K_SILICON",
+    "K_SIO2",
+    "SIGMA_SB",
     # C03-Redheffer 矩阵级 S 矩阵级联（Sprint 1 Task 1.3，与字典级 redheffer_star 互补）
     "BlockSMatrix",
     "redheffer_star_product",

@@ -75,9 +75,7 @@ class DftMonitor:
         if self.frequency <= 0.0:
             raise ValueError(f"frequency 须 >0，实际 {self.frequency}")
         if self.field_component != "ez":
-            raise ValueError(
-                f"2D TEz 仅支持 'ez' 分量，实际 '{self.field_component}'"
-            )
+            raise ValueError(f"2D TEz 仅支持 'ez' 分量，实际 '{self.field_component}'")
         ix, iy = self.position
         if ix < 0 or iy < 0:
             raise ValueError(f"位置索引须非负，实际 {self.position}")
@@ -164,7 +162,5 @@ class SParamExtractor:
         """
         s_in = self.input_monitor.spectrum
         if abs(s_in) == 0.0:
-            raise ValueError(
-                f"输入监视器 DFT=0，无法计算 {self.name}（检查源/位置）"
-            )
+            raise ValueError(f"输入监视器 DFT=0，无法计算 {self.name}（检查源/位置）")
         return self.output_monitor.spectrum / s_in

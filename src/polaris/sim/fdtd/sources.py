@@ -183,11 +183,7 @@ class ContinuousWave:
             ramp = np.clip(t_arr / self.ramp_time, 0.0, 1.0)
         else:
             ramp = np.where(t_arr >= 0.0, 1.0, 0.0)
-        return (
-            self.amplitude
-            * ramp
-            * np.sin(2.0 * np.pi * self.frequency * t_arr + self.phase)
-        )
+        return self.amplitude * ramp * np.sin(2.0 * np.pi * self.frequency * t_arr + self.phase)
 
 
 @dataclass(frozen=True)
@@ -295,9 +291,7 @@ def inject_dipole(
     nx, ny = e_z.shape
     ix, iy = source.position
     if not (0 <= ix < nx and 0 <= iy < ny):
-        raise IndexError(
-            f"偶极子位置 ({ix},{iy}) 越界，网格形状 {(nx, ny)}"
-        )
+        raise IndexError(f"偶极子位置 ({ix},{iy}) 越界，网格形状 {(nx, ny)}")
     j_amp = source.current_moment / (dx * dy)
     eps0 = 8.8541878128e-12
     eps = eps0 * eps_r[ix, iy]

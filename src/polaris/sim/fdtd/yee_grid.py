@@ -150,14 +150,10 @@ class YeeGridFdtd:
         # Courant 上限校验（A09 §4，规则 14 失败 raise）
         dt_max = courant_dt(self.dx, self.dy, cfl=1.0)
         if self.dt > dt_max * (1.0 + 1e-9):
-            raise ValueError(
-                f"dt={self.dt:.3e} 超过 Courant 上限 {dt_max:.3e}，leapfrog 不稳定"
-            )
+            raise ValueError(f"dt={self.dt:.3e} 超过 Courant 上限 {dt_max:.3e}，leapfrog 不稳定")
         eps_r = np.asarray(self.eps_r, dtype=np.float64)
         if eps_r.shape != (nx, ny):
-            raise ValueError(
-                f"eps_r 形状 {eps_r.shape} 与网格 {self.shape} 不匹配"
-            )
+            raise ValueError(f"eps_r 形状 {eps_r.shape} 与网格 {self.shape} 不匹配")
         if np.any(eps_r <= 0.0):
             raise ValueError("eps_r 必须严格为正（介质折射率平方）")
         self.eps_r = eps_r
@@ -181,9 +177,7 @@ class YeeGridFdtd:
         self.da_h = (1.0 - loss_h) / (1.0 + loss_h)
         self.db_h = (self.dt / mu) / (1.0 + loss_h)
 
-    def _broadcast(
-        self, arr: np.ndarray | None, name: str, default: float
-    ) -> np.ndarray:
+    def _broadcast(self, arr: np.ndarray | None, name: str, default: float) -> np.ndarray:
         """将 None 或标量广播为 (nx, ny) 数组，校验形状。"""
         nx, ny = self.shape
         if arr is None:

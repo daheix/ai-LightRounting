@@ -88,27 +88,21 @@ class SubpixelConfig:
         if self.levels < 1:
             raise ValueError(f"levels 须 ≥1，实际 {self.levels}")
         if self.method not in _METHODS:
-            raise ValueError(
-                f"method 须 ∈ {sorted(_METHODS)}，实际 '{self.method}'"
-            )
+            raise ValueError(f"method 须 ∈ {sorted(_METHODS)}，实际 '{self.method}'")
 
 
 def _coarse_shape(fine_shape: tuple[int, int], levels: int) -> tuple[int, int]:
     """由细网格形状与子采样数推得粗网格形状，校验整除性。"""
     nx_f, ny_f = fine_shape
     if nx_f % levels != 0 or ny_f % levels != 0:
-        raise ValueError(
-            f"细网格 {fine_shape} 须被 levels={levels} 整除（每方向）"
-        )
+        raise ValueError(f"细网格 {fine_shape} 须被 levels={levels} 整除（每方向）")
     return nx_f // levels, ny_f // levels
 
 
 def _reshape_blocks(arr_fine: np.ndarray, levels: int) -> np.ndarray:
     """将 (Nx·L, Ny·L) 细数组 reshape 为 (Nx, L, Ny, L) 子块视图（无拷贝）。"""
     nx, ny = _coarse_shape(arr_fine.shape, levels)
-    return arr_fine[: nx * levels, : ny * levels].reshape(
-        nx, levels, ny, levels
-    )
+    return arr_fine[: nx * levels, : ny * levels].reshape(nx, levels, ny, levels)
 
 
 def block_average(arr_fine: np.ndarray, levels: int) -> np.ndarray:
@@ -132,9 +126,7 @@ def block_average(arr_fine: np.ndarray, levels: int) -> np.ndarray:
     return blocks.mean(axis=(1, 3))
 
 
-def volume_average_permittivity(
-    eps_r_fine: np.ndarray, levels: int
-) -> np.ndarray:
+def volume_average_permittivity(eps_r_fine: np.ndarray, levels: int) -> np.ndarray:
     """体积（线性）平均 ε_r —— 切向 E 分量亚像素平滑。
 
     ε_eff = Σₖ fₖ·εₖ = (1/L²)·Σ_{子格} ε_sub
@@ -163,9 +155,7 @@ def volume_average_permittivity(
     return eps_coarse
 
 
-def harmonic_average_permittivity(
-    eps_r_fine: np.ndarray, levels: int
-) -> np.ndarray:
+def harmonic_average_permittivity(eps_r_fine: np.ndarray, levels: int) -> np.ndarray:
     """谐波平均 ε_r —— 法向 E 分量亚像素平滑。
 
     1/ε_eff = Σₖ fₖ/εₖ = (1/L²)·Σ_{子格} 1/ε_sub  ⇒  ε_eff = 1/⟨1/ε⟩
@@ -234,7 +224,7 @@ def conformal_permittivity(
     if np.any(eps <= 0.0):
         raise ValueError("eps_r_fine 须严格为正")
     pec = np.asarray(pec_mask_fine, dtype=bool)
-    eps_blk = _reshape_blocks(eps, levels)          # (Nx, L, Ny, L)
+    eps_blk = _reshape_blocks(eps, levels)  # (Nx, L, Ny, L)
     pec_blk = _reshape_blocks(pec, levels)
     n_total = float(levels * levels)
     n_pec = pec_blk.sum(axis=(1, 3)).astype(np.float64)
@@ -245,8 +235,12 @@ def conformal_permittivity(
     eps_sum = eps_blk.sum(axis=(1, 3))
     eps_diel_avg = np.where(
         n_diel > 0.0,
-        np.divide(eps_sum - (eps_blk * pec_blk).sum(axis=(1, 3)), n_diel,
-                  out=eps_sum.copy(), where=n_diel > 0.0),
+        np.divide(
+            eps_sum - (eps_blk * pec_blk).sum(axis=(1, 3)),
+            n_diel,
+            out=eps_sum.copy(),
+            where=n_diel > 0.0,
+        ),
         eps_sum / n_total,  # 完全 PEC：占位（任意 >0），pec_fraction=1 标记
     )
     eps_coarse = eps_diel_avg * f_diel

@@ -53,13 +53,11 @@ from polaris.sim.fdtd.dispersive import (
     drude_ade_coefficients,
 )
 from polaris.sim.fdtd.monitor import DftMonitor, SParamExtractor, s_param_db
-from polaris.sim.fdtd.subpixel import (
-    SubpixelConfig,
-    block_average,
-    conformal_permittivity,
-    harmonic_average_permittivity,
-    smooth_permittivity,
-    volume_average_permittivity,
+from polaris.sim.fdtd.solver import (
+    FdtdConfig,
+    FdtdResult,
+    FdtdSolver,
+    solve_fdtd,
 )
 from polaris.sim.fdtd.sources import (
     ContinuousWave,
@@ -69,11 +67,13 @@ from polaris.sim.fdtd.sources import (
     Waveform,
     inject_dipole,
 )
-from polaris.sim.fdtd.solver import (
-    FdtdConfig,
-    FdtdResult,
-    FdtdSolver,
-    solve_fdtd,
+from polaris.sim.fdtd.subpixel import (
+    SubpixelConfig,
+    block_average,
+    conformal_permittivity,
+    harmonic_average_permittivity,
+    smooth_permittivity,
+    volume_average_permittivity,
 )
 from polaris.sim.fdtd.tfsf import (
     Incident1D,
