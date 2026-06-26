@@ -40,26 +40,6 @@
 - Victor Liu 2013 Redheffer: http://victorliu.info/pdfs/Scombine.pdf
 """
 
-from polaris.sim.fde import (
-    FdeSolver,
-    FdeSolverConfig,
-    Mode,
-    solve_waveguide,
-)
-from polaris.sim.fdfd import (
-    DipoleSource,
-    FdfdResult,
-    FdfdSolver,
-    FdfdSolverConfig,
-    GaussianBeamSource,
-    ModeSource,
-    PlaneWaveSource,
-    PortSpec,
-    SParameters,
-    extract_s_parameters,
-    solve_fdfd,
-    verify_energy_conservation,
-)
 from polaris.sim.ai_inverse_design import (
     AdjointConfig,
     AdjointOptimizer,
@@ -83,6 +63,16 @@ from polaris.sim.backend_selector import (
     compute_condition_number,
     diagnose_stability,
     select_backend,
+)
+from polaris.sim.bpm import (
+    BoundaryType,
+    BpmConfig,
+    BpmResult,
+    BpmSolver,
+    solve_bpm,
+)
+from polaris.sim.bpm import (
+    Polarization as BpmPolarization,
 )
 from polaris.sim.building_block import (
     BBRegistry,
@@ -126,6 +116,22 @@ from polaris.sim.dag_scheduler import (
     flat_circuit,
     schedule_circuit,
 )
+from polaris.sim.eme import (
+    EmeCell,
+    EmeConfig,
+    EmeResult,
+    EmeSolver,
+    solve_eme,
+)
+from polaris.sim.eme import (
+    build_interface_smatrix as eme_build_interface_smatrix,
+)
+from polaris.sim.eme import (
+    build_propagation_smatrix as eme_build_propagation_smatrix,
+)
+from polaris.sim.eme import (
+    overlap_matrix as eme_overlap_matrix,
+)
 from polaris.sim.eqdrc import (
     CurvilinearLVS,
     DRCReportGenerator,
@@ -134,6 +140,26 @@ from polaris.sim.eqdrc import (
     EqDRCViolation,
     FoundryDRCCertifier,
     FoundryDRCRunset,
+)
+from polaris.sim.fde import (
+    FdeSolver,
+    FdeSolverConfig,
+    Mode,
+    solve_waveguide,
+)
+from polaris.sim.fdfd import (
+    DipoleSource,
+    FdfdResult,
+    FdfdSolver,
+    FdfdSolverConfig,
+    GaussianBeamSource,
+    ModeSource,
+    PlaneWaveSource,
+    PortSpec,
+    SParameters,
+    extract_s_parameters,
+    solve_fdfd,
+    verify_energy_conservation,
 )
 from polaris.sim.graph_lvs import (
     GraphIsomorphismLVSComparer,
@@ -159,21 +185,6 @@ from polaris.sim.jax_backend import (
     simulate_waveguide_chain_jax,
     waveguide_s_jax,
 )
-from polaris.sim.layout_aware import (
-    BBPlacement,
-    ElasticConnector,
-    LayoutAwareSimulator,
-    LayoutCircuitFeedback,
-    ParasiticExtractor,
-)
-from polaris.sim.tidy3d_integration import (
-    FDTDCrossValidator,
-    GPUFDTDConfig,
-    GPUFDTDEngine,
-    Tidy3DAdapter,
-    Tidy3DAsyncRunner,
-    Tidy3DConfig,
-)
 from polaris.sim.klayout_drc import (
     SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
@@ -181,6 +192,13 @@ from polaris.sim.klayout_drc import (
     DRCRule,
     KLayoutDRCRunner,
     run_klayout_drc,
+)
+from polaris.sim.layout_aware import (
+    BBPlacement,
+    ElasticConnector,
+    LayoutAwareSimulator,
+    LayoutCircuitFeedback,
+    ParasiticExtractor,
 )
 from polaris.sim.lumerical_integration import (
     CHARGEConfig,
@@ -293,24 +311,6 @@ from polaris.sim.rcwa import (
     solve_rcwa_2d,
     toeplitz_from_coefficients,
 )
-from polaris.sim.eme import (
-    EmeCell,
-    EmeConfig,
-    EmeResult,
-    EmeSolver,
-    overlap_matrix as eme_overlap_matrix,
-    build_interface_smatrix as eme_build_interface_smatrix,
-    build_propagation_smatrix as eme_build_propagation_smatrix,
-    solve_eme,
-)
-from polaris.sim.bpm import (
-    BoundaryType,
-    BpmConfig,
-    BpmResult,
-    BpmSolver,
-    Polarization as BpmPolarization,
-    solve_bpm,
-)
 from polaris.sim.siepic_netlist import (
     SIEPIC_PORT_MAP,
     SIEPIC_TYPE_MAP,
@@ -354,6 +354,9 @@ from polaris.sim.system_level import (
     to_time_domain,
 )
 from polaris.sim.tidy3d_integration import (
+    FDTDCrossValidator,
+    GPUFDTDConfig,
+    GPUFDTDEngine,
     Tidy3DAdapter,
     Tidy3DAsyncRunner,
     Tidy3DConfig,

@@ -216,9 +216,7 @@ def apply_tbc_lhs_banded_inplace(
         ValueError: lhs_banded 形状非法或波数非外向（规则 14）。
     """
     if lhs_banded.ndim != 2 or lhs_banded.shape[0] != 3:
-        raise ValueError(
-            f"lhs_banded 须为 (3, N)，实际 shape={lhs_banded.shape}"
-        )
+        raise ValueError(f"lhs_banded 须为 (3, N)，实际 shape={lhs_banded.shape}")
     if dx <= 0.0:
         raise ValueError(f"dx 必须为正，实际 {dx}")
     if np.real(kx_left) < 0.0 or np.real(kx_right) < 0.0:
@@ -275,13 +273,9 @@ def apply_tbc_rhs_inplace(
         ValueError: rhs/psi 形状非法或波数非外向（规则 14）。
     """
     if rhs.ndim != 1 or psi.ndim != 1:
-        raise ValueError(
-            f"rhs/psi 须为 1D，实际 rhs.ndim={rhs.ndim}, psi.ndim={psi.ndim}"
-        )
+        raise ValueError(f"rhs/psi 须为 1D，实际 rhs.ndim={rhs.ndim}, psi.ndim={psi.ndim}")
     if rhs.shape != psi.shape:
-        raise ValueError(
-            f"rhs 与 psi 形状须一致，实际 {rhs.shape} vs {psi.shape}"
-        )
+        raise ValueError(f"rhs 与 psi 形状须一致，实际 {rhs.shape} vs {psi.shape}")
     if dx <= 0.0:
         raise ValueError(f"dx 必须为正，实际 {dx}")
     if np.real(kx_left) < 0.0 or np.real(kx_right) < 0.0:
@@ -327,16 +321,13 @@ def compute_tbc_reflection(
     """
     if psi_initial.shape != psi_final.shape:
         raise ValueError(
-            f"psi_initial 与 psi_final 形状须一致，实际 "
-            f"{psi_initial.shape} vs {psi_final.shape}"
+            f"psi_initial 与 psi_final 形状须一致，实际 {psi_initial.shape} vs {psi_final.shape}"
         )
     if psi_initial.ndim != 1:
         raise ValueError(f"psi 须为 1D，实际 {psi_initial.ndim}D")
     n = psi_initial.size
     if not 0 <= boundary_index < n:
-        raise ValueError(
-            f"boundary_index {boundary_index} 越界 [0, {n})"
-        )
+        raise ValueError(f"boundary_index {boundary_index} 越界 [0, {n})")
     incident_peak = float(np.max(np.abs(psi_initial)))
     if incident_peak < 1e-300:
         raise ValueError("入射场峰值过小，无法估计反射系数（场未归一化？）")

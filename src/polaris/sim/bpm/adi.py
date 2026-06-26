@@ -56,13 +56,10 @@ from dataclasses import dataclass
 
 import numpy as np
 import scipy.linalg
-import scipy.sparse as sp
 
 from polaris.sim.bpm.boundary import BoundaryType, _force_outgoing_vec
 from polaris.sim.bpm.operators import (
     Polarization,
-    build_tridiag_operator,
-    sparse_to_banded,
 )
 
 __all__ = [
@@ -122,9 +119,7 @@ def _apply_y_stencil(psi: np.ndarray, main_y: np.ndarray, off_y: float) -> np.nd
     return result
 
 
-def _estimate_kx_boundaries_2d(
-    psi_2d: np.ndarray, dx: float
-) -> tuple[np.ndarray, np.ndarray]:
+def _estimate_kx_boundaries_2d(psi_2d: np.ndarray, dx: float) -> tuple[np.ndarray, np.ndarray]:
     """2D 场逐行估计左/右边界外向波数 kₓ（A03 §5.1 公式 F4，向量化）。
 
     Args:
@@ -148,9 +143,7 @@ def _estimate_kx_boundaries_2d(
     psi_right_in = psi_2d[:, -2]
     # 退化检测（逐行，向量化）：内点场过小则 TBC 退化
     if np.any(np.abs(psi_left_in) < 1e-300) or np.any(np.abs(psi_right_in) < 1e-300):
-        raise ValueError(
-            "TBC 退化：边界内点场过小（场已完全衰减到边界，检查窗口大小或场归一化）"
-        )
+        raise ValueError("TBC 退化：边界内点场过小（场已完全衰减到边界，检查窗口大小或场归一化）")
     kx_left = (-1j / dx) * np.log(psi_left_bnd / psi_left_in)
     kx_right = (-1j / dx) * np.log(psi_right_bnd / psi_right_in)
     # 外向强制：逐分量取模 |Re|+i·|Im|（Hadley 1992 公式 F4，保留倏逝衰减，
@@ -160,9 +153,7 @@ def _estimate_kx_boundaries_2d(
     return kx_left, kx_right
 
 
-def _estimate_ky_boundaries_2d(
-    psi_2d: np.ndarray, dy: float
-) -> tuple[np.ndarray, np.ndarray]:
+def _estimate_ky_boundaries_2d(psi_2d: np.ndarray, dy: float) -> tuple[np.ndarray, np.ndarray]:
     """2D 场逐列估计上/下边界外向波数 k_y（A03 §5.1 公式 F4，向量化）。
 
     Args:
@@ -185,9 +176,7 @@ def _estimate_ky_boundaries_2d(
     psi_bot_bnd = psi_2d[-1, :]
     psi_bot_in = psi_2d[-2, :]
     if np.any(np.abs(psi_top_in) < 1e-300) or np.any(np.abs(psi_bot_in) < 1e-300):
-        raise ValueError(
-            "TBC 退化：边界内点场过小（场已完全衰减到边界，检查窗口大小或场归一化）"
-        )
+        raise ValueError("TBC 退化：边界内点场过小（场已完全衰减到边界，检查窗口大小或场归一化）")
     ky_top = (-1j / dy) * np.log(psi_top_bnd / psi_top_in)
     ky_bottom = (-1j / dy) * np.log(psi_bot_bnd / psi_bot_in)
     # 外向强制：逐分量取模（Hadley 1992 公式 F4，保留倏逝衰减）
@@ -357,13 +346,9 @@ class AdiStepper2D:
 
     def __post_init__(self) -> None:
         if self.lhs_x_base.ndim != 3 or self.lhs_x_base.shape[1] != 3:
-            raise ValueError(
-                f"lhs_x_base 须为 (Ny, 3, Nx)，实际 shape={self.lhs_x_base.shape}"
-            )
+            raise ValueError(f"lhs_x_base 须为 (Ny, 3, Nx)，实际 shape={self.lhs_x_base.shape}")
         if self.lhs_y_base.ndim != 3 or self.lhs_y_base.shape[1] != 3:
-            raise ValueError(
-                f"lhs_y_base 须为 (Nx, 3, Ny)，实际 shape={self.lhs_y_base.shape}"
-            )
+            raise ValueError(f"lhs_y_base 须为 (Nx, 3, Ny)，实际 shape={self.lhs_y_base.shape}")
         if self.dx <= 0.0 or self.dy <= 0.0:
             raise ValueError(f"dx/dy 必须为正，实际 dx={self.dx}, dy={self.dy}")
         if self.boundary not in (
@@ -371,9 +356,7 @@ class AdiStepper2D:
             BoundaryType.DIRICHLET,
             BoundaryType.NEUMANN,
         ):
-            raise ValueError(
-                f"boundary 须为 'tbc'/'dirichlet'/'neumann'，实际 {self.boundary!r}"
-            )
+            raise ValueError(f"boundary 须为 'tbc'/'dirichlet'/'neumann'，实际 {self.boundary!r}")
 
     @classmethod
     def from_grid(
@@ -496,10 +479,8 @@ class AdiStepper2D:
         if psi_c.ndim != 2:
             raise ValueError(f"psi 须为 2D (Ny, Nx)，实际 {psi_c.ndim}D")
         ny, nx = psi_c.shape
-        if (nx, ) != (self.lhs_x_base.shape[2],):
-            raise ValueError(
-                f"psi x 维度 {nx} 与 lhs_x_base {self.lhs_x_base.shape[2]} 不匹配"
-            )
+        if (nx,) != (self.lhs_x_base.shape[2],):
+            raise ValueError(f"psi x 维度 {nx} 与 lhs_x_base {self.lhs_x_base.shape[2]} 不匹配")
 
         # === 半步 1（x 隐式）: ψ^{n+1/2} = [I - α_lhs·Ax]⁻¹·[I + α_rhs·Ay]·ψ^n ===
         # 右端：rhs1 = ψ + α_rhs·(Ay @ ψ)（向量化模板）
@@ -513,9 +494,7 @@ class AdiStepper2D:
                 lhs_x = np.broadcast_to(lhs_x, (ny, 3, nx)).copy()
             # 2D TBC 沿 x（LHS）：逐行估计 kₓ，向量化修改左/右边界
             kx_left, kx_right = _estimate_kx_boundaries_2d(psi_c, self.dx)
-            _apply_tbc_2d_x_inplace(
-                lhs_x, kx_left, kx_right, self.dx, self.alpha_lhs, self.off_x
-            )
+            _apply_tbc_2d_x_inplace(lhs_x, kx_left, kx_right, self.dx, self.alpha_lhs, self.off_x)
             # RHS TBC 修改（Bug 5 修复）：rhs1 显式算子为 Ay，须对 y 边界（上/下）TBC，
             # 使基底与 LHS 一致（否则边界行 Dirichlet 基底导致反射）
             ky_top, ky_bottom = _estimate_ky_boundaries_2d(psi_c, self.dy)
@@ -533,14 +512,10 @@ class AdiStepper2D:
             try:
                 psi_half[j] = scipy.linalg.solve_banded((1, 1), lhs_x[j], rhs1[j])
             except np.linalg.LinAlgError as exc:
-                raise RuntimeError(
-                    f"ADI x 隐式半步行 {j} 求解失败：{exc}"
-                ) from exc
+                raise RuntimeError(f"ADI x 隐式半步行 {j} 求解失败：{exc}") from exc
 
         # === 半步 2（y 隐式）: ψ^{n+1} = [I - α_lhs·Ay]⁻¹·[I + α_rhs·Ax]·ψ^{n+1/2} ===
-        rhs2 = psi_half + self.alpha_rhs * _apply_x_stencil(
-            psi_half, self.main_x, self.off_x
-        )
+        rhs2 = psi_half + self.alpha_rhs * _apply_x_stencil(psi_half, self.main_x, self.off_x)
 
         if self.boundary == BoundaryType.TBC:
             lhs_y = self.lhs_y_base.copy()
@@ -549,9 +524,7 @@ class AdiStepper2D:
                 lhs_y = np.broadcast_to(lhs_y, (nx, 3, ny)).copy()
             # 2D TBC 沿 y（LHS）：逐列估计 k_y，向量化修改上/下边界
             ky_top, ky_bottom = _estimate_ky_boundaries_2d(psi_half, self.dy)
-            _apply_tbc_2d_y_inplace(
-                lhs_y, ky_top, ky_bottom, self.dy, self.alpha_lhs, self.off_y
-            )
+            _apply_tbc_2d_y_inplace(lhs_y, ky_top, ky_bottom, self.dy, self.alpha_lhs, self.off_y)
             # RHS TBC 修改（Bug 5 修复）：rhs2 显式算子为 Ax，须对 x 边界（左/右）TBC，
             # 使基底与 LHS 一致（否则边界行 Dirichlet 基底导致反射）
             kx_left, kx_right = _estimate_kx_boundaries_2d(psi_half, self.dx)
@@ -569,9 +542,7 @@ class AdiStepper2D:
             try:
                 psi_next[:, i] = scipy.linalg.solve_banded((1, 1), lhs_y[i], rhs2[:, i])
             except np.linalg.LinAlgError as exc:
-                raise RuntimeError(
-                    f"ADI y 隐式半步列 {i} 求解失败：{exc}"
-                ) from exc
+                raise RuntimeError(f"ADI y 隐式半步列 {i} 求解失败：{exc}") from exc
         return psi_next
 
 
@@ -647,8 +618,16 @@ def adi_propagate_2d(
         raise ValueError(f"n_arr 须为 1D 或 2D，实际 {n_arr_c.ndim}D（规则 14）")
 
     stepper = AdiStepper2D.from_grid(
-        n_arr=n_arr_use, dx=dx, dy=dy, dz=dz, a_coef=a_coef, k0=k0, n_ref=n_ref,
-        theta=theta, polarization=polarization, boundary=boundary,
+        n_arr=n_arr_use,
+        dx=dx,
+        dy=dy,
+        dz=dz,
+        a_coef=a_coef,
+        k0=k0,
+        n_ref=n_ref,
+        theta=theta,
+        polarization=polarization,
+        boundary=boundary,
     )
     n_snapshots = nz // store_interval + 1
     snapshots = np.empty((n_snapshots, ny, nx), dtype=np.complex128)

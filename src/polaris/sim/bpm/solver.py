@@ -46,10 +46,9 @@ Re(kₓ)>0 外向自洽，详见 BpmConfig.a_coef）。
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import numpy as np
-import scipy.sparse as sp
 
 from polaris.sim.bpm.adi import adi_propagate_2d
 from polaris.sim.bpm.boundary import BoundaryType
@@ -155,9 +154,7 @@ class BpmConfig:
         if not 0.0 <= self.theta <= 1.0:
             raise ValueError(f"theta 须 ∈ [0, 1]，实际 {self.theta}（规则 14）")
         if self.store_interval < 1:
-            raise ValueError(
-                f"store_interval 须 ≥1，实际 {self.store_interval}（规则 14）"
-            )
+            raise ValueError(f"store_interval 须 ≥1，实际 {self.store_interval}（规则 14）")
 
     @property
     def k0(self) -> float:
@@ -219,9 +216,7 @@ class BpmResult:
                 f"snapshots 须为 2D (N,Nx) 或 3D (N,Ny,Nx)，实际 {self.snapshots.ndim}D（规则 14）"
             )
         if self.z_coords.ndim != 1:
-            raise ValueError(
-                f"z_coords 须为 1D，实际 {self.z_coords.ndim}D（规则 14）"
-            )
+            raise ValueError(f"z_coords 须为 1D，实际 {self.z_coords.ndim}D（规则 14）")
         if self.snapshots.shape[0] != self.z_coords.shape[0]:
             raise ValueError(
                 f"snapshots 快照数 {self.snapshots.shape[0]} 与 z_coords "
@@ -260,9 +255,7 @@ class BpmSolver:
                 f"a_coef 过小 |a|={abs(self.config.a_coef):.2e}（k₀·n_ref 异常？规则 14）"
             )
 
-    def _solve_1d(
-        self, psi_init: np.ndarray, n_arr: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def _solve_1d(self, psi_init: np.ndarray, n_arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """1D Crank-Nicolson 传播（A03 §7.1 伪代码）。
 
         Args:
@@ -294,9 +287,7 @@ class BpmSolver:
         )
         return snapshots, z_coords
 
-    def _solve_2d(
-        self, psi_init: np.ndarray, n_arr: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def _solve_2d(self, psi_init: np.ndarray, n_arr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """2D ADI 传播（A03 §7.2 伪代码，Peaceman & Rachford 1955）。
 
         Args:
@@ -323,9 +314,7 @@ class BpmSolver:
         )
         return snapshots, z_coords
 
-    def solve(
-        self, psi_init: np.ndarray, n_arr: np.ndarray
-    ) -> BpmResult:
+    def solve(self, psi_init: np.ndarray, n_arr: np.ndarray) -> BpmResult:
         """求解 BPM 传播（A03 §6，按输入场维度自动调度 1D/2D）。
 
         Args:
@@ -347,9 +336,7 @@ class BpmSolver:
         if psi_init_c.ndim == 1:
             # 1D 仿真：折射率须为 1D (Nx,)
             if n_arr_c.ndim != 1:
-                raise ValueError(
-                    f"1D 仿真 n_arr 须为 1D (Nx,)，实际 {n_arr_c.ndim}D（规则 14）"
-                )
+                raise ValueError(f"1D 仿真 n_arr 须为 1D (Nx,)，实际 {n_arr_c.ndim}D（规则 14）")
             if psi_init_c.shape[0] != n_arr_c.shape[0]:
                 raise ValueError(
                     f"psi_init 长度 {psi_init_c.shape[0]} 与 n_arr {n_arr_c.shape[0]} 不匹配（规则 14）"
@@ -371,25 +358,19 @@ class BpmSolver:
                         f"n_arr 形状 {n_arr_c.shape} 与 psi_init {psi_init_c.shape} 不匹配（规则 14）"
                     )
             else:
-                raise ValueError(
-                    f"2D 仿真 n_arr 须为 1D 或 2D，实际 {n_arr_c.ndim}D（规则 14）"
-                )
+                raise ValueError(f"2D 仿真 n_arr 须为 1D 或 2D，实际 {n_arr_c.ndim}D（规则 14）")
             snapshots, z_coords = self._solve_2d(psi_init_c, n_arr_c)
             n_dim = 2
             dy_for_power = self.config.dy
         else:
-            raise ValueError(
-                f"psi_init 须为 1D 或 2D，实际 {psi_init_c.ndim}D（规则 14）"
-            )
+            raise ValueError(f"psi_init 须为 1D 或 2D，实际 {psi_init_c.ndim}D（规则 14）")
 
         # 功率守恒校验（M2 验收点，A03 §7.3，向量化积分）
         final_field = snapshots[-1]
         power_initial = _compute_power(psi_init_c, self.config.dx, dy_for_power)
         power_final = _compute_power(final_field, self.config.dx, dy_for_power)
         if power_initial < 1e-300:
-            raise ValueError(
-                "初始场功率 ≈ 0，无法计算功率守恒误差（场未归一化？规则 14）"
-            )
+            raise ValueError("初始场功率 ≈ 0，无法计算功率守恒误差（场未归一化？规则 14）")
         power_conservation_error = abs(power_final - power_initial) / power_initial
 
         return BpmResult(

@@ -118,9 +118,7 @@ class CrankNicolsonStepper:
 
     def __post_init__(self) -> None:
         if self.a_sparse.shape[0] != self.a_sparse.shape[1]:
-            raise ValueError(
-                f"a_sparse 须为方阵，实际 shape={self.a_sparse.shape}"
-            )
+            raise ValueError(f"a_sparse 须为方阵，实际 shape={self.a_sparse.shape}")
         if self.dx <= 0.0:
             raise ValueError(f"dx 必须为正，实际 {self.dx}")
         if self.boundary not in (
@@ -128,9 +126,7 @@ class CrankNicolsonStepper:
             BoundaryType.DIRICHLET,
             BoundaryType.NEUMANN,
         ):
-            raise ValueError(
-                f"boundary 须为 'tbc'/'dirichlet'/'neumann'，实际 {self.boundary!r}"
-            )
+            raise ValueError(f"boundary 须为 'tbc'/'dirichlet'/'neumann'，实际 {self.boundary!r}")
 
     @classmethod
     def from_operator(
@@ -205,14 +201,10 @@ class CrankNicolsonStepper:
             kx_right = estimate_kx_right(psi_c, self.dx)
             lhs = self.lhs_base.copy()
             inv_dx2 = 1.0 / (self.dx * self.dx)
-            apply_tbc_lhs_banded_inplace(
-                lhs, kx_left, kx_right, self.dx, self.alpha_lhs, inv_dx2
-            )
+            apply_tbc_lhs_banded_inplace(lhs, kx_left, kx_right, self.dx, self.alpha_lhs, inv_dx2)
             # RHS TBC 修改（Bug 5 修复）：右端也须用 TBC 修改的算子，
             # 否则基底（Dirichlet）与 LHS 不一致，平面波也产生 ~0.96 反射
-            apply_tbc_rhs_inplace(
-                rhs, psi_c, kx_left, kx_right, self.dx, self.alpha_rhs, inv_dx2
-            )
+            apply_tbc_rhs_inplace(rhs, psi_c, kx_left, kx_right, self.dx, self.alpha_rhs, inv_dx2)
         else:
             # Dirichlet/Neumann：直接复用基底（零拷贝）
             lhs = self.lhs_base
@@ -267,9 +259,7 @@ def crank_nicolson_propagate_1d(
     if psi_init_c.ndim != 1:
         raise ValueError(f"psi_init 须为 1D，实际 {psi_init_c.ndim}D")
     if psi_init_c.shape != (a_sparse.shape[0],):
-        raise ValueError(
-            f"psi_init 长度 {psi_init_c.size} 与算子维度 {a_sparse.shape[0]} 不匹配"
-        )
+        raise ValueError(f"psi_init 长度 {psi_init_c.size} 与算子维度 {a_sparse.shape[0]} 不匹配")
     if nz < 1:
         raise ValueError(f"nz 须 ≥1，实际 {nz}")
     if store_interval < 1:
