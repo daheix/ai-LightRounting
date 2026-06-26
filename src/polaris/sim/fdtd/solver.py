@@ -214,15 +214,20 @@ class FdtdSolver:
         probe = cfg.probe_point
         time_series = np.zeros(cfg.n_steps, dtype=np.float64)
         # 时间步进（唯一不可避免的循环）
+        # TFSF 时序（Schneider 2004 完美 TFSF 对齐条件）：
+        #   H 校正须用 E_inc^n（与 H^{n+1/2} 用 E^n 更新一致）→ step 之前
+        #   E 校正须用 H_inc^{n+1/2}（与 E^{n+1} 用 H^{n+1/2} 更新一致）→ step 之后
+        # 若顺序颠倒，H 校正用 E_inc^{n+1} 偏移 1 步，在脉冲前沿产生抵消波，
+        # 抵消 TF 区入射场，导致平面波注入失败（M1 相对误差=1.0）。
         for n in range(cfg.n_steps):
             t = n * grid.dt
             self._update_h(e_z, h_x, h_y)
             if cfg.tfsf is not None and incident is not None:
-                src_val = float(cfg.tfsf_waveform(t))  # type: ignore[arg-type]
-                incident.step(src_val)
                 apply_tfsf_h_correction(
                     h_y, cfg.tfsf, incident, self._db, self._dx
                 )
+                src_val = float(cfg.tfsf_waveform(t))  # type: ignore[arg-type]
+                incident.step(src_val)
             self._update_e(e_z, h_x, h_y, j_polar)
             if cfg.tfsf is not None and incident is not None:
                 apply_tfsf_e_correction(
@@ -277,27 +282,38 @@ class FdtdSolver:
         h_y: np.ndarray,
         j_polar: np.ndarray | None,
     ) -> None:
-        """更新 E^{n+1}（向量化，含 CPML ψ_e 与 Drude -cb·J 校正，A09 §3.2/§7）。"""
+        """更新 E^{n+1}（向量化，含 CPML ψ_e 与 Drude -cb·J 校正，A09 §3.2/§7）。
+
+        时序（Taflove 2005 §9.3，二阶精度 leapfrog）：
+            1. J^{n+1/2} = α·J^{n-1/2} + β·E^n   ← 须用 E^n（旧值），故先于 E 更新
+            2. E^{n+1}   = ca·E^n + cb·(∇×H)^{n+1/2} - cb·J^{n+1/2}
+        若颠倒顺序（先更新 E 再算 J），J 将错误地使用 E^{n+1}，
+        形成 E↔J 隐式反馈环，导致 Drude 介质不响应（M3 反射率≈0）。
+        """
         ca, cb = self._ca, self._cb
         dx, dy = self._dx, self._dy
         buf = self._buffers
         if buf is not None:
             update_e_psi(h_x, h_y, buf, self._cx, self._cy)  # type: ignore[arg-type]
-        # 旋度 (∇×H)_z = ∂H_y/∂x - ∂H_x/∂y（内部 [1:-1, 1:-1]）
+        # 1. Drude 极化电流更新（须用 E^n，故在 E_z 更新前；Taflove §9.3）
+        #    J^{n+1/2} = α·J^{n-1/2} + β·E^n
+        if j_polar is not None and self._cfg.drude is not None:
+            apply_ade_drude(
+                e_z, j_polar, self._cfg.drude, self._dt, self._drude_mask
+            )
+        # 2. 旋度 (∇×H)_z = ∂H_y/∂x - ∂H_x/∂y（内部 [1:-1, 1:-1]）
         dhy_dx = (h_y[1:-1, 1:-1] - h_y[:-2, 1:-1]) / dx
         dhx_dy = (h_x[1:-1, 1:-1] - h_x[1:-1, :-2]) / dy
         curl_z = dhy_dx - dhx_dy
         interior = (slice(1, -1), slice(1, -1))
+        # 3. E^{n+1} = ca·E^n + cb·curl_z (+ CPML ψ_e - cb·J_Drude)
         e_z[interior] = ca[interior] * e_z[interior] + cb[interior] * curl_z
         if buf is not None:
             e_z[interior] += cb[interior] * (
                 buf.psi_e_xz[interior] - buf.psi_e_yz[interior]
             )
         if j_polar is not None and self._cfg.drude is not None:
-            apply_ade_drude(
-                e_z, j_polar, self._cfg.drude, self._dt, self._drude_mask
-            )
-            # Drude 电场校正：E^{n+1} -= cb·J^{n+1/2}（仅内部，J 在掩码外为 0）
+            # Drude 电场校正：E^{n+1} -= cb·J^{n+1/2}（J 已在 mask 外为 0）
             e_z[interior] -= cb[interior] * j_polar[interior]
 
     def _collect_result(

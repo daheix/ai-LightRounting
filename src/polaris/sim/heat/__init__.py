@@ -33,9 +33,9 @@
 """
 
 from polaris.sim.heat.boundary import (
+    SIGMA_SB,
     BcSpec,
     BoundaryType,
-    SIGMA_SB,
     apply_boundary_conditions,
     is_grounding_bc,
     radiative_h,

@@ -19,8 +19,8 @@ TFSF 矩形边界 TF 区 i∈[i0, i1]、j∈[j0, j1]，校正仅在 x=i0 与 x=i
 校正公式（完成标准 leapfrog 更新后追加，向量化）：
     H_y[i0-1, :] -= (db_h/dx) · E_inc[i0]       # SF 节点剔除入射 E
     H_y[i1,   :] += (db_h/dx) · E_inc[i1+1]     # TF 节点补齐入射 E
-    E_z[i0,   :] += (cb_ez/dx) · H_inc[i0-1]    # TF 节点补齐入射 H
-    E_z[i1+1, :] -= (cb_ez/dx) · H_inc[i1]      # SF 节点剔除入射 H
+    E_z[i0,   :] -= (cb_ez/dx) · H_inc[i0-1]    # TF 左边界：旋度用散射场 H，偏大，减入射 H 校正
+    E_z[i1+1, :] += (cb_ez/dx) · H_inc[i1]      # SF 右边界：旋度用总场 H，偏小，加入射 H 校正
 
 *创新*：Incident1D 复用与 2D 网格相同的 Yee 半步错位与 ca/cb 系数，
 保证 1D 与 2D 数值色散逐点一致（Schneider 2004 "perfect TFSF" 条件）。
@@ -218,8 +218,13 @@ def apply_tfsf_e_correction(
     """TFSF 电场校正（E 更新后、源注入前施加，A09 §8 / Taflove §5.5）。
 
     校正 E_z 在 TF/SF 边界 x=i0 与 x=i1+1：
-        E_z[i0,   j0:j1+1] += (cb_ez/dx) · H_inc[i0-1]   # TF 补齐入射 H
-        E_z[i1+1, j0:j1+1] -= (cb_ez/dx) · H_inc[i1]     # SF 剔除入射 H
+        E_z[i0,   j0:j1+1] -= (cb_ez/dx) · H_inc[i0-1]   # TF 补齐缺失的入射 H
+        E_z[i1+1, j0:j1+1] += (cb_ez/dx) · H_inc[i1]     # SF 剔除多余的入射 H
+
+    符号推导（无散射体守恒性校验）：E_z[i0] 左邻 H_y[i0-1] 经 H 校正后为
+    散射场（缺入射 H_inc[i0-1]），旋度 (H_y[i0]-H_y[i0-1])/dx 漏掉 -H_inc[i0-1]/dx，
+    故 E_z[i0] 须减去 cb·H_inc[i0-1]/dx；E_z[i1+1] 左邻 H_y[i1] 为总场（含入射），
+    SF 节点须剔除，故加上 cb·H_inc[i1]/dx。
 
     Args:
         e_z: 电场 E_z (Nx, Ny)，原地修改。
@@ -231,10 +236,14 @@ def apply_tfsf_e_correction(
     _check_incident_extent(tfsf, incident)
     j_sl = slice(tfsf.j0, tfsf.j1 + 1)
     inv_dx = 1.0 / dx
-    e_z[tfsf.i0, j_sl] += (
+    # TF 左边界：标准 leapfrog 用了散射场 H_y[i0-1]（缺入射 H_inc[i0-1]），
+    # 须减去 cb·H_inc[i0-1]/dx 补齐总场旋度。
+    e_z[tfsf.i0, j_sl] -= (
         cb_ez[tfsf.i0, j_sl] * inv_dx * incident.h_inc[tfsf.i0 - 1]
     )
-    e_z[tfsf.i1 + 1, j_sl] -= (
+    # SF 右边界：标准 leapfrog 用了总场 H_y[i1]（含入射 H_inc[i1]），
+    # 须加上 cb·H_inc[i1]/dx 剔除入射分量还原散射场旋度。
+    e_z[tfsf.i1 + 1, j_sl] += (
         cb_ez[tfsf.i1 + 1, j_sl] * inv_dx * incident.h_inc[tfsf.i1]
     )
 

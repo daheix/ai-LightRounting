@@ -132,9 +132,7 @@ def heat_to_fde(
     """
     T = heat_result.temperature
     if T.shape != mode.shape:
-        raise ValueError(
-            f"温度场 {T.shape} 与模式 {mode.shape} 网格不匹配，无法耦合"
-        )
+        raise ValueError(f"温度场 {T.shape} 与模式 {mode.shape} 网格不匹配，无法耦合")
     delta_n = dn_dt * (T - t_ref)
 
     # 光强权重 |E|² = |Ex|²+|Ey|²+|Ez|²
@@ -143,9 +141,7 @@ def heat_to_fde(
     if norm <= 0.0:
         raise ValueError("模式光强积分非正，无法加权平均（检查模式归一化）")
     delta_n_eff = float(np.sum(e_intensity * delta_n) / norm)
-    return ThermoOpticCorrection(
-        delta_n=delta_n, delta_n_eff=delta_n_eff, dn_dt=dn_dt, t_ref=t_ref
-    )
+    return ThermoOpticCorrection(delta_n=delta_n, delta_n_eff=delta_n_eff, dn_dt=dn_dt, t_ref=t_ref)
 
 
 def ddm_to_heat(ddm_result: DDMResult) -> np.ndarray:

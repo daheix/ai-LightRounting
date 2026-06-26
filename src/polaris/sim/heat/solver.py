@@ -104,9 +104,7 @@ class HeatConfig:
         if self.k_arr.ndim != 2:
             raise ValueError(f"k_arr 须 2D，实际 {self.k_arr.ndim}D")
         if self.k_arr.shape != self.q_arr.shape:
-            raise ValueError(
-                f"k_arr {self.k_arr.shape} 与 q_arr {self.q_arr.shape} 形状不匹配"
-            )
+            raise ValueError(f"k_arr {self.k_arr.shape} 与 q_arr {self.q_arr.shape} 形状不匹配")
         if not np.all(np.isfinite(self.k_arr)) or np.any(self.k_arr <= 0.0):
             raise ValueError("k_arr 须全为有限正值（热导率物理约束）")
         if not np.all(np.isfinite(self.q_arr)):
@@ -316,8 +314,7 @@ class HeatSolver:
             dTdy = np.zeros_like(T)
         qx = -config.k_arr * dTdx
         qy = -config.k_arr * dTdy
-        return HeatResult(temperature=T, heat_flux_x=qx, heat_flux_y=qy,
-                          dx=config.dx, dy=config.dy)
+        return HeatResult(temperature=T, heat_flux_x=qx, heat_flux_y=qy, dx=config.dx, dy=config.dy)
 
     @staticmethod
     def _check_solvability(config: HeatConfig, A: sparse.csr_matrix, b: np.ndarray) -> None:

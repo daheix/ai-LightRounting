@@ -322,6 +322,7 @@ def apply_boundary_conditions(
     vals_all: list[np.ndarray] = []
     bc_rows_all: list[np.ndarray] = []
     b_bc_all: list[np.ndarray] = []
+    bc_rows_all_dirichlet_list: list[np.ndarray] = []
 
     for side in SIDES:
         spec = config.bc_dict.get(side)
@@ -338,6 +339,14 @@ def apply_boundary_conditions(
             vals_all.append(vals)
             bc_rows_all.append(bc_rows)
             b_bc_all.append(b_vals)
+            if spec.type is BoundaryType.DIRICHLET:
+                bc_rows_all_dirichlet_list.append(bc_rows)
+
+    bc_rows_all_dirichlet = (
+        np.concatenate(bc_rows_all_dirichlet_list)
+        if bc_rows_all_dirichlet_list
+        else np.empty(0, dtype=np.int64)
+    )
 
     if not bc_rows_all:
         return A_csr, b_out
@@ -348,15 +357,52 @@ def apply_boundary_conditions(
     cols = np.concatenate(cols_all)
     vals = np.concatenate(vals_all)
 
+    # 角点冲突修复（R05 Bug）：角点被多条边共享时，Dirichlet 边应优先占有该节点。
+    # 若角点同时被 Dirichlet 和 Neumann/Robin 处理，Neumann/Robin 的三元组会污染
+    # Dirichlet 行（对角累加非 1）。修复：删除所有行索引属于 Dirichlet 集合的非 Dirichlet 三元组。
+    if bc_rows_all_dirichlet.size:
+        dirichlet_set = set(bc_rows_all_dirichlet.tolist())
+        # 标记每个三元组是否为 Dirichlet 对角（row==col 且 row 属于 Dirichlet 集合）
+        is_dirichlet_diag = np.array(
+            [r == c and int(r) in dirichlet_set for r, c in zip(rows, cols)],
+            dtype=bool,
+        )
+        # 行属于 Dirichlet 集合但不是 Dirichlet 对角 → 删除（Neumann/Robin 污染）
+        row_in_dirichlet = np.isin(rows, bc_rows_all_dirichlet)
+        to_remove = row_in_dirichlet & ~is_dirichlet_diag
+        keep_mask = ~to_remove
+        rows = rows[keep_mask]
+        cols = cols[keep_mask]
+        vals = vals[keep_mask]
+        # Dirichlet 对角去重：同 row 只保留首次
+        dr_rows = rows[np.isin(rows, bc_rows_all_dirichlet) & (rows == cols)]
+        if dr_rows.size:
+            d_mask = np.isin(rows, bc_rows_all_dirichlet) & (rows == cols)
+            _, d_first = np.unique(rows[d_mask], return_index=True)
+            # 在 d_mask 中保留首次，其余删除
+            d_indices = np.where(d_mask)[0]
+            keep_d = np.zeros(rows.size, dtype=bool)
+            keep_d[d_indices[np.sort(d_first)]] = True
+            final_mask = (~d_mask) | keep_d
+            rows = rows[final_mask]
+            cols = cols[final_mask]
+            vals = vals[final_mask]
+        # b 与 bc_rows 去重：每个 BC 行只保留首次出现
+        _, b_first = np.unique(bc_rows, return_index=True)
+        b_first = np.sort(b_first)
+        bc_rows_uq = bc_rows[b_first]
+        b_bc_uq = b_bc[b_first]
+    else:
+        bc_rows_uq = bc_rows
+        b_bc_uq = b_bc
+
     # 掩蔽矩阵 M：BC 行对角置 0，其余 1。M@A 零化 BC 行。
     keep = np.ones(n, dtype=float)
-    keep[bc_rows] = 0.0
+    keep[bc_rows_uq] = 0.0
     M = sparse.diags(keep, format="csr")
     A_zeroed = M.dot(A_csr)
 
-    B_bc = sparse.csr_matrix(
-        (vals, (rows, cols)), shape=(n, n)
-    )
+    B_bc = sparse.csr_matrix((vals, (rows, cols)), shape=(n, n))
     A_final = (A_zeroed + B_bc).tocsr()
-    b_out[bc_rows] = b_bc
+    b_out[bc_rows_uq] = b_bc_uq
     return A_final, b_out

@@ -9,6 +9,7 @@
 - tfsf        : 总场/散射场边界 + 1D 辅助入射场（Schneider 2004）
 - dispersive  : Drude ADE 色散更新（Taflove 2005 §9.3）
 - monitor     : DFT 在线监视器与 S 参数提取（Taflove 2005 §5.3）
+- subpixel    : 亚像素材料界面平滑（Yu-Mittra 2001 共形法）
 - solver      : 主求解器，编排上述模块的时间步进
 
 公开 API 别名说明（规则 9 单文件版本，复用现有高质量实现）：
@@ -52,6 +53,14 @@ from polaris.sim.fdtd.dispersive import (
     drude_ade_coefficients,
 )
 from polaris.sim.fdtd.monitor import DftMonitor, SParamExtractor, s_param_db
+from polaris.sim.fdtd.subpixel import (
+    SubpixelConfig,
+    block_average,
+    conformal_permittivity,
+    harmonic_average_permittivity,
+    smooth_permittivity,
+    volume_average_permittivity,
+)
 from polaris.sim.fdtd.sources import (
     ContinuousWave,
     DipoleSource,
@@ -121,6 +130,13 @@ __all__ = [
     "DftMonitor",
     "SParamExtractor",
     "s_param_db",
+    # subpixel
+    "SubpixelConfig",
+    "block_average",
+    "volume_average_permittivity",
+    "harmonic_average_permittivity",
+    "conformal_permittivity",
+    "smooth_permittivity",
     # solver
     "FdtdConfig",
     "FdtdResult",
