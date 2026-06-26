@@ -218,6 +218,26 @@ def _assemble_bc_rows(
     q_b = q_arr.ravel()[lin]
     n = lin.size
 
+    # Dirichlet：纯单位行 A[k,k]=1, b[k]=T_fixed，无任何邻接耦合。
+    # 必须最先处理，跳过切向/法向累加（否则行被污染，T[k] ≠ T_fixed）。
+    if spec.type is BoundaryType.DIRICHLET:
+        rows = lin.copy()
+        cols = lin.copy()
+        vals = np.ones(n, dtype=float)
+        b_vals = np.full(n, spec.value, dtype=float)
+        return rows, cols, vals, b_vals, lin.copy()
+
+    # Periodic：装配阶段已环绕索引，本函数无操作（不替换行）。
+    if spec.type is BoundaryType.PERIODIC:
+        return (
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=np.int64),
+            np.empty(0, dtype=float),
+            np.empty(0, dtype=float),
+            np.empty(0, dtype=np.int64),
+        )
+
+    # Neumann / Convective / Radiative：法向 ghost-cell 2 阶格式 + 切向传导耦合
     rows_l: list[np.ndarray] = []
     cols_l: list[np.ndarray] = []
     vals_l: list[np.ndarray] = []
@@ -237,28 +257,8 @@ def _assemble_bc_rows(
         vals_l.append(val)
         center = center + val  # 对角减去切向贡献之和
 
-    if spec.type is BoundaryType.DIRICHLET:
-        rows_l.append(lin)
-        cols_l.append(lin)
-        vals_l.append(np.ones(n))
-        b_vals = np.full(n, spec.value, dtype=float)
-        rows = np.concatenate(rows_l)
-        cols = np.concatenate(cols_l)
-        vals = np.concatenate(vals_l)
-        return rows, cols, vals, b_vals, lin.copy()
-
-    if spec.type is BoundaryType.PERIODIC:
-        # 周期：装配阶段已环绕，本函数无操作（不替换行）。
-        return (
-            np.empty(0, dtype=np.int64),
-            np.empty(0, dtype=np.int64),
-            np.empty(0, dtype=float),
-            np.empty(0, dtype=float),
-            np.empty(0, dtype=np.int64),
-        )
-
-    # Neumann / Convective / Radiative：法向 ghost-cell 2 阶格式
-    coeff_nbr = 2.0 * k_b / d**2  # 法向邻接（ghost 翻倍）
+    # 法向邻接（ghost 翻倍）
+    coeff_nbr = 2.0 * k_b / d**2
     rows_l.append(lin)
     cols_l.append(nbr)
     vals_l.append(coeff_nbr)
