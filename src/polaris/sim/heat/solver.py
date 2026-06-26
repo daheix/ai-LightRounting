@@ -187,7 +187,8 @@ def _side_applicable(side: str, nx: int, ny: int) -> bool:
 def _build_interior(config: HeatConfig) -> tuple[sparse.csr_matrix, np.ndarray]:
     """装配变系数 5 点差分内部矩阵 A 与右端 b（含周期环绕）。
 
-    向量化构造 COO 三元组，禁止逐元素循环。
+    每条内部面同时贡献两个对称非对角项 A[i,j] 与 A[j,i]，并对两端节点
+    对角各累加面热导（保证矩阵对称、行和为零）。向量化构造，禁止逐元素循环。
     """
     nx, ny = config.k_arr.shape
     n = nx * ny
@@ -206,51 +207,54 @@ def _build_interior(config: HeatConfig) -> tuple[sparse.csr_matrix, np.ndarray]:
     vals_l: list[np.ndarray] = []
     center = np.zeros(n, dtype=float)
 
-    def _add(r: np.ndarray, c: np.ndarray, v: np.ndarray) -> None:
+    def _add_face(r0: np.ndarray, r1: np.ndarray, v: np.ndarray) -> None:
+        """添加对称面：A[r0,r1]=A[r1,r0]=v，两端 center 各 += v。"""
+        rows_l.append(np.asarray(r0, dtype=np.int64).ravel())
+        cols_l.append(np.asarray(r1, dtype=np.int64).ravel())
+        vals_l.append(np.asarray(v, dtype=float).ravel())
+        rows_l.append(np.asarray(r1, dtype=np.int64).ravel())
+        cols_l.append(np.asarray(r0, dtype=np.int64).ravel())
+        vals_l.append(np.asarray(v, dtype=float).ravel())
+        nonlocal center
+        center = _accum_center(center, r0, v)
+        center = _accum_center(center, r1, v)
+
+    def _add_diag(r: np.ndarray, v: np.ndarray) -> None:
         rows_l.append(np.asarray(r, dtype=np.int64).ravel())
-        cols_l.append(np.asarray(c, dtype=np.int64).ravel())
+        cols_l.append(np.asarray(r, dtype=np.int64).ravel())
         vals_l.append(np.asarray(v, dtype=float).ravel())
 
     if nx >= 2:
-        kxe = _harmonic_mean(k[:-1, :], k[1:, :])  # east 面 (nx-1, ny)
+        kxe = _harmonic_mean(k[:-1, :], k[1:, :])  # x 面 (nx-1, ny)
         Ie, Je = np.meshgrid(np.arange(nx - 1), np.arange(ny), indexing="ij")
-        row = (Ie * ny + Je).ravel()
-        col = ((Ie + 1) * ny + Je).ravel()
-        val = (kxe / dx**2).ravel()
-        _add(row, col, val)
-        center_idx = row
-        center = _accum_center(center, center_idx, val)
+        r0 = (Ie * ny + Je).ravel()
+        r1 = ((Ie + 1) * ny + Je).ravel()
+        _add_face(r0, r1, (kxe / dx**2).ravel())
 
-    if x_per:  # 周期环绕：最东列 east 邻接指向最西列
+    if x_per:  # 周期环绕：最东列 ↔ 最西列
         kxe_w = _harmonic_mean(k[-1, :], k[0, :])
         jw = np.arange(ny)
-        row = ((nx - 1) * ny + jw).ravel()
-        col = (0 * ny + jw).ravel()
-        val = (kxe_w / dx**2).ravel()
-        _add(row, col, val)
-        center = _accum_center(center, row, val)
+        r0 = ((nx - 1) * ny + jw).ravel()
+        r1 = (0 * ny + jw).ravel()
+        _add_face(r0, r1, (kxe_w / dx**2).ravel())
 
     if ny >= 2:
-        kyn = _harmonic_mean(k[:, :-1], k[:, 1:])  # north 面 (nx, ny-1)
+        kyn = _harmonic_mean(k[:, :-1], k[:, 1:])  # y 面 (nx, ny-1)
         In, Jn = np.meshgrid(np.arange(nx), np.arange(ny - 1), indexing="ij")
-        row = (In * ny + Jn).ravel()
-        col = (In * ny + (Jn + 1)).ravel()
-        val = (kyn / dy**2).ravel()
-        _add(row, col, val)
-        center = _accum_center(center, row, val)
+        r0 = (In * ny + Jn).ravel()
+        r1 = (In * ny + (Jn + 1)).ravel()
+        _add_face(r0, r1, (kyn / dy**2).ravel())
 
     if y_per:
         kyn_w = _harmonic_mean(k[:, -1], k[:, 0])
         iw = np.arange(nx)
-        row = (iw * ny + (ny - 1)).ravel()
-        col = (iw * ny + 0).ravel()
-        val = (kyn_w / dy**2).ravel()
-        _add(row, col, val)
-        center = _accum_center(center, row, val)
+        r0 = (iw * ny + (ny - 1)).ravel()
+        r1 = (iw * ny + 0).ravel()
+        _add_face(r0, r1, (kyn_w / dy**2).ravel())
 
-    # 对角 = -邻接系数之和
+    # 对角 = -邻接系数之和（行和为零，Laplacian 性质）
     all_idx = np.arange(n)
-    _add(all_idx, all_idx, -center)
+    _add_diag(all_idx, -center)
 
     rows = np.concatenate(rows_l)
     cols = np.concatenate(cols_l)
