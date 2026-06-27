@@ -5,11 +5,17 @@
 # 安装：bash install.sh --all
 #
 # 对齐 pyproject.toml [project.dependencies] 全部 12 个核心依赖 + 3 个 dev 依赖
-# 传递依赖（jax/optax/flax 等）按需在线安装或由 sax 自动拉取
+# 传递依赖（jax/optax/flax 等）由 sax 自动拉取, 已安装到 3dtool-appimage site-packages
+#
+# 注: 以下 wheel 文件不在本目录 (3dtool/wheels/ 仅保留安装脚本)
+#     实际 wheel 已融合到 3dtool/3dtool-appimage/python/lib/python3.14/site-packages/
+#     并通过 3dtool/subrepo/3dtool (git submodule) 分片打包上传
+#     本清单仅作版本参考索引
 
 # === 核心依赖（12个，对齐 pyproject.toml dependencies）===
 # 注：torch 使用 +cpu 版本，遵守 R04 战略决策（不参与 GPU 计算）
 # 来源：https://download.pytorch.org/whl/cpu
+# 注：sax 0.18.2 在 Python 3.14 不兼容, pip 自动选择 0.14.7 (R02 学术诚信: 记录实际版本)
 numpy-2.5.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 scipy-1.18.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 networkx-3.6.1-py3-none-any.whl
@@ -19,9 +25,24 @@ matplotlib-3.11.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
 klayout-0.30.9-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
 simphony-0.7.3-py3-none-any.whl
-sax-0.18.2-py3-none-any.whl
+sax-0.14.7-py3-none-any.whl  # Python 3.14 兼容版 (原计划 0.18.2 不兼容)
 gdstk-1.0.0-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
 shapely-2.1.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
+
+# === 传递依赖（sax/jax 生态，自动安装到 3dtool-appimage site-packages）===
+jax-0.10.2-py3-none-any.whl
+jaxlib-0.10.2-cp314-cp314-manylinux_2_27_x86_64.whl
+flax-0.12.7-py3-none-any.whl
+optax-0.2.8-py3-none-any.whl
+pydantic-2.13.4-py3-none-any.whl
+xarray-2026.4.0-py3-none-any.whl
+ml_dtypes-0.5.4-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+klujax-0.5.0-cp314-cp314-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl
+tensorstore-0.1.84-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl
+orbax-checkpoint-0.12.1-py3-none-any.whl
+# 其余 27 个传递依赖 (absl-py/aiofiles/annotated-types/etils/humanize/lark/msgpack/
+#   natsort/opt_einsum/orjson/parsimonious/prometheus-client/protobuf/regex/simplejson/
+#   tabulate/treescope/typing-inspection/uvloop/wadler-lindig/zipp 等) 省略
 
 # === 开发依赖（3个，对齐 pyproject.toml optional-dependencies.dev）===
 pytest-9.1.1-py3-none-any.whl
@@ -31,6 +52,9 @@ mypy-2.1.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28
 # === 统计 ===
 # 核心依赖：12 个（100% 覆盖 pyproject.toml dependencies）
 # 开发依赖：3 个（100% 覆盖 pyproject.toml optional-dependencies.dev）
-# 总计：15 个 wheel
+# 传递依赖：37 个（jax/optax/flax 生态, 已安装到 3dtool-appimage site-packages）
+# 总计：52 个包
 # Python 版本：3.14.4
 # 平台：manylinux_2_28_x86_64（兼容 glibc 2.28+，覆盖 CentOS 8/Ubuntu 18.04+/Debian 10+）
+# 安装位置：3dtool/3dtool-appimage/python/lib/python3.14/site-packages/
+# 分片打包：3dtool/subrepo/3dtool/3dtool/appimage-parts/python-site-packages.tar.gz.part_* (8片 701M)
