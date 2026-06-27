@@ -106,16 +106,24 @@ class CAPHENode:
     """
 
     name: str
-    s_matrix: Any
+    s_matrix: Any = None
+    cell_type: str | None = None
+    params: dict = field(default_factory=dict)
     port_names: list[str] = field(default_factory=list)
     state_variables: dict = field(default_factory=dict)
     ode_func: Callable[..., np.ndarray] | None = None
     is_linear: bool = True
 
     def __post_init__(self) -> None:
-        """初始化后补全端口名与线性标志。"""
+        """初始化后补全端口名与线性标志。
+
+        端口名优先级: 显式 port_names > cell_type 默认 > ["in", "out"]。
+        """
         if not self.port_names:
-            self.port_names = ["in", "out"]
+            if self.cell_type is not None and self.cell_type in _DEFAULT_PORTS:
+                self.port_names = list(_DEFAULT_PORTS[self.cell_type])
+            else:
+                self.port_names = ["in", "out"]
         if self.ode_func is not None:
             self.is_linear = False
 
@@ -127,6 +135,8 @@ class CAPHENode:
     def get_s_matrix(self, wl: float) -> np.ndarray:
         """返回指定波长处的 S 矩阵。
 
+        优先级: s_matrix（常量/函数）> cell_type 模型查询。
+
         Args:
             wl: 波长（μm）。
 
@@ -134,17 +144,61 @@ class CAPHENode:
             复数 S 矩阵 ndarray。
 
         Raises:
-            ValueError: S 矩阵维度与端口数不匹配时。
+            ValueError: S 矩阵维度与端口数不匹配 / 无 s_matrix 且无 cell_type。
         """
-        if callable(self.s_matrix):
-            smat = np.asarray(self.s_matrix(wl), dtype=complex)
+        if self.s_matrix is not None:
+            if callable(self.s_matrix):
+                smat = np.asarray(self.s_matrix(wl), dtype=complex)
+            else:
+                smat = np.asarray(self.s_matrix, dtype=complex)
+        elif self.cell_type is not None:
+            smat = self._s_matrix_from_cell_type(wl)
         else:
-            smat = np.asarray(self.s_matrix, dtype=complex)
+            raise ValueError(
+                f"节点 '{self.name}' 无 s_matrix 且无 cell_type"
+            )
         if smat.shape != (self.n_ports, self.n_ports):
             raise ValueError(
                 f"节点 '{self.name}' S 矩阵形状 {smat.shape} 与端口数 "
                 f"{self.n_ports} 不匹配"
             )
+        return smat
+
+    def _s_matrix_from_cell_type(self, wl: float) -> np.ndarray:
+        """从 cell_type 查模型函数生成 S 矩阵。
+
+        Args:
+            wl: 波长（μm）。
+
+        Returns:
+            (n_ports, n_ports) 复数矩阵。
+
+        Raises:
+            ValueError: cell_type 未知。
+        """
+        if self.cell_type not in _MODEL_MAP:
+            raise ValueError(
+                f"节点 '{self.name}' 的 cell_type '{self.cell_type}' 未知，"
+                f"可用: {list(_MODEL_MAP.keys())}"
+            )
+        model_func = _MODEL_MAP[self.cell_type]
+        sdict = model_func(wl=np.array([wl]), **self.params)
+        return self._sdict_to_ndarray(sdict)
+
+    def _sdict_to_ndarray(self, sdict: SDict) -> np.ndarray:
+        """SDict {(p_out, p_in): array} → ndarray (n_ports, n_ports)。
+
+        按端口名顺序填充矩阵，取波长数组首元素（单波长求值）。
+        """
+        n = self.n_ports
+        smat = np.zeros((n, n), dtype=complex)
+        for (p_out, p_in), val in sdict.items():
+            if p_out not in self.port_names or p_in not in self.port_names:
+                continue
+            i = self.port_names.index(p_out)
+            j = self.port_names.index(p_in)
+            arr = np.asarray(val, dtype=complex)
+            smat[i, j] = arr.flat[0] if arr.ndim > 0 else arr
         return smat
 
     def get_state_vector(self) -> np.ndarray:
@@ -239,6 +293,109 @@ class CAPHENetwork:
                 f"节点 '{node_name}' 端口 {port_idx} 越界（共 {node.n_ports} 端口）"
             )
         self.external_ports[ext_name] = (node_name, port_idx)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """拦截 connections/ports 字典赋值，自动解析为内部格式。
+
+        兼容旧 API:
+            net.connections = {"n1,port1": "n2,port2"}
+            net.ports = {"ext": "n,port"}
+        """
+        if name == "connections" and isinstance(value, dict):
+            parsed: list[tuple] = []
+            connected = getattr(self, "_connected", set())
+            for key, val in value.items():
+                n1, p1 = self._parse_port_ref(key)
+                n2, p2 = self._parse_port_ref(val)
+                parsed.append((n1, p1, n2, p2))
+                connected.add((n1, p1))
+                connected.add((n2, p2))
+            object.__setattr__(self, "_connected", connected)
+            object.__setattr__(self, name, parsed)
+        elif name == "ports" and isinstance(value, dict):
+            parsed_ports: dict[str, tuple] = {}
+            for ext, ref in value.items():
+                n, p = self._parse_port_ref(ref)
+                parsed_ports[ext] = (n, p)
+            object.__setattr__(self, "external_ports", parsed_ports)
+        else:
+            object.__setattr__(self, name, value)
+
+    @property
+    def ports(self) -> dict[str, tuple]:
+        """外部端口别名（兼容旧 API net.ports）。"""
+        return self.external_ports
+
+    def set_port(self, ext_name: str, port_ref: str) -> None:
+        """设置外部端口（字符串引用格式 'node,port'）。
+
+        Args:
+            ext_name: 外部端口名。
+            port_ref: 端口引用 'node,port'。
+
+        Raises:
+            ValueError: 节点不存在 / 端口名无效。
+        """
+        n, p = self._parse_port_ref(port_ref)
+        self.external_ports[ext_name] = (n, p)
+
+    def _parse_port_ref(self, ref: str) -> tuple[str, int]:
+        """解析端口引用 'node,port' → (node_name, port_idx)。
+
+        Raises:
+            ValueError: 格式错误 / 节点不存在 / 端口名无效。
+        """
+        parts = ref.split(",")
+        if len(parts) != 2:
+            raise ValueError(f"端口引用格式错误: {ref!r}，应为 'node,port'")
+        node_name, port_name = parts[0], parts[1]
+        nodes = getattr(self, "nodes", {})
+        if node_name not in nodes:
+            raise ValueError(f"节点 '{node_name}' 不存在")
+        node = nodes[node_name]
+        if port_name not in node.port_names:
+            raise ValueError(
+                f"节点 '{node_name}' 无端口 '{port_name}'，"
+                f"可用: {node.port_names}"
+            )
+        return node_name, node.port_names.index(port_name)
+
+    @classmethod
+    def from_netlist(cls, netlist: dict) -> CAPHENetwork:
+        """从 SAX 网表构建 CAPHE 网络（兼容旧 API）。
+
+        网表格式::
+
+            {
+                "instances": {name: cell_type},
+                "connections": {"n1,port1": "n2,port2"},
+                "ports": {ext: "n,port"},
+            }
+
+        Args:
+            netlist: SAX 网表字典。
+
+        Returns:
+            CAPHENetwork 实例。
+
+        Raises:
+            ValueError: 实例/连接/端口格式非法。
+        """
+        net = cls()
+        for name, cell_type in netlist.get("instances", {}).items():
+            if not isinstance(cell_type, str):
+                raise ValueError(
+                    f"实例 '{name}' 的 cell_type 必须为字符串，"
+                    f"得到 {type(cell_type)}"
+                )
+            net.add_node(CAPHENode(name=name, cell_type=cell_type))
+        connections = netlist.get("connections", {})
+        if connections:
+            net.connections = connections  # 触发 __setattr__ 解析
+        ports = netlist.get("ports", {})
+        if ports:
+            net.ports = ports  # 触发 __setattr__ 解析
+        return net
 
     @property
     def n_nodes(self) -> int:
@@ -366,24 +523,41 @@ class CAPHEFrequencySolver:
 
     def solve(
         self,
+        wavelengths: list[float] | np.ndarray | None = None,
+        inputs: dict[str, complex] | None = None,
+    ) -> dict | tuple:
+        """频率域求解（双模式）。
+
+        模式 1（新 API，inputs 非空）: 对每个波长求解外部端口输出。
+            求解 ``b = (I - S·K)^{-1}·S·a_ext``。
+            返回 ``{"wavelengths": [...], "outputs": {ext_name: array}}``。
+
+        模式 2（旧 API，inputs 为空）: 波长扫描外部端口等效 S 矩阵。
+            返回 ``(wavelengths, sdict)``，sdict = {(port_out, port_in): array}。
+
+        Args:
+            wavelengths: 波长列表/数组（μm）。
+            inputs: 外部端口输入（仅新 API 模式）。
+
+        Returns:
+            新 API: 结果字典；旧 API: (wavelengths, sdict) 元组。
+
+        Raises:
+            ValueError: 输入端口不存在 / wavelengths 为空。
+            numpy.linalg.LinAlgError: 矩阵奇异。
+        """
+        if wavelengths is None:
+            raise ValueError("wavelengths 不能为 None")
+        if inputs is not None:
+            return self._solve_with_inputs(wavelengths, inputs)
+        return self._solve_sweep(wavelengths)
+
+    def _solve_with_inputs(
+        self,
         wavelengths: list[float],
         inputs: dict[str, complex],
     ) -> dict:
-        """频率域求解：对每个波长求解外部端口输出。
-
-        求解 ``b = (I - S·K)^{-1}·S·a_ext``，输出外部端口处的 b。
-
-        Args:
-            wavelengths: 波长列表（μm）。
-            inputs: 外部端口输入 ``{ext_name: amplitude}``。
-
-        Returns:
-            ``{"wavelengths": [...], "outputs": {ext_name: complex_array}}``。
-
-        Raises:
-            ValueError: 输入端口不存在。
-            numpy.linalg.LinAlgError: 矩阵奇异（电路拓扑非法）。
-        """
+        """新 API: 带输入的频域求解。"""
         ext_map = self._external_global_indices()
         n = self._n_total
         for ext_name in inputs:
@@ -411,6 +585,59 @@ class CAPHEFrequencySolver:
             for ext, vals in out_lists.items()
         }
         return {"wavelengths": wl_list, "outputs": outputs}
+
+    def _solve_sweep(
+        self,
+        wavelengths: list[float] | np.ndarray,
+    ) -> tuple[np.ndarray, dict]:
+        """旧 API: 波长扫描外部端口等效 S 矩阵。
+
+        对每个波长用 Schur 补消去内部端口，返回外部端口对之间的传输。
+
+        Returns:
+            (wavelengths, sdict)，sdict = {(port_out, port_in): array}。
+        """
+        wl_arr = np.asarray(wavelengths, dtype=float)
+        ext_names = list(self.network.external_ports.keys())
+        n_ext = len(ext_names)
+        if n_ext == 0:
+            raise ValueError("网络无外部端口，无法进行波长扫描")
+        sdict: dict[tuple[str, str], np.ndarray] = {
+            (ext_names[i], ext_names[j]): np.zeros(len(wl_arr), dtype=complex)
+            for i in range(n_ext)
+            for j in range(n_ext)
+        }
+        for k, wl in enumerate(wl_arr):
+            _, m = self._external_s_matrix_ordered(float(wl))
+            for i in range(n_ext):
+                for j in range(n_ext):
+                    sdict[(ext_names[i], ext_names[j])][k] = m[i, j]
+        return wl_arr, sdict
+
+    def _external_s_matrix_ordered(
+        self, wl: float
+    ) -> tuple[list[str], np.ndarray]:
+        """计算外部端口等效 S 矩阵（按 ext_names 顺序）。
+
+        用 Schur 补消去内部端口，重排为 external_ports 字典顺序。
+
+        Returns:
+            (ext_names, m_ordered) — ext_names 顺序与 m_ordered 行列一致。
+        """
+        ext_map = self._external_global_indices()
+        ext_names = list(self.network.external_ports.keys())
+        n_ext = len(ext_names)
+        m_reduced, _ = self.eliminate_linear_nodes(wl)
+        ext_set = set(ext_map.values())
+        ext_idx_sorted = sorted(ext_set)
+        sorted_pos = {g: pos for pos, g in enumerate(ext_idx_sorted)}
+        m_ordered = np.zeros((n_ext, n_ext), dtype=complex)
+        for i, name_i in enumerate(ext_names):
+            gi = ext_map[name_i]
+            for j, name_j in enumerate(ext_names):
+                gj = ext_map[name_j]
+                m_ordered[i, j] = m_reduced[sorted_pos[gi], sorted_pos[gj]]
+        return ext_names, m_ordered
 
 
 # ---------------------------------------------------------------------------

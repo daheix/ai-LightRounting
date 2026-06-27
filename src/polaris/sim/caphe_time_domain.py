@@ -32,6 +32,65 @@ logger = logging.getLogger(__name__)
 
 # 学术来源 URL 常量（规则 18 学术诚信）
 _URL_CAPHE_2012 = "https://biblio.ugent.be/publication/2036548/file/3146073.pdf"
+_URL_BOGAERTS_2012 = "https://doi.org/10.1002/lpor.201100017"
+
+
+def _ring_cmt_solve(
+    detuning_ghz: float = 0.0,
+    photon_lifetime_ps: float = 100.0,
+    coupling: float = 0.1,
+    t_span_ps: tuple[float, float] = (0.0, 100.0),
+    n_steps: int = 100,
+) -> dict:
+    """环谐振器 CMT 时域仿真（模块级共享函数）。
+
+    学术依据: Bogaerts et al., "Silicon microring resonators",
+    Laser & Photonics Reviews 6(1), 2012,
+    URL: https://doi.org/10.1002/lpor.201100017
+
+    全通环 CMT 方程（拆实部虚部求解）:
+        da/dt = (j·Δω - 1/τ)·a + √(2κ/τ)·s_in
+        s_through = s_in - √(2κ/τ)·a
+
+    Args:
+        detuning_ghz: 失谐（GHz）。
+        photon_lifetime_ps: 光子寿命（ps）。
+        coupling: 功率耦合比。
+        t_span_ps: 时间范围（ps）。
+        n_steps: 输出时间点数。
+
+    Returns:
+        {"time": array_ps, "output_power": array}。
+
+    Raises:
+        RuntimeError: ODE 求解失败。
+    """
+    detuning_radps = 2.0 * np.pi * detuning_ghz * 1e9  # GHz → rad/s
+    tau_s = photon_lifetime_ps * 1e-12  # ps → s
+    t0_s = float(t_span_ps[0]) * 1e-12
+    t1_s = float(t_span_ps[1]) * 1e-12
+    t_eval_s = np.linspace(t0_s, t1_s, n_steps)
+    sqrt_2k_tau = np.sqrt(2.0 * coupling / tau_s)
+
+    def ode(t: float, y: np.ndarray) -> list[float]:
+        ar, ai = y[0], y[1]
+        dar = -ar / tau_s - detuning_radps * ai + sqrt_2k_tau
+        dai = detuning_radps * ar - ai / tau_s
+        return [dar, dai]
+
+    sol = solve_ivp(
+        ode, (t0_s, t1_s), [0.0, 0.0], t_eval=t_eval_s, method="RK45"
+    )
+    if not sol.success:
+        raise RuntimeError(f"环时域 ODE 求解失败: {sol.message}")
+
+    a = sol.y[0] + 1j * sol.y[1]
+    s_through = 1.0 - sqrt_2k_tau * a
+    output_power = np.abs(s_through) ** 2
+    return {
+        "time": sol.t * 1e12,  # s → ps
+        "output_power": output_power,
+    }
 
 
 # =============================================================================
@@ -248,6 +307,43 @@ class CAPHETimeDomainSolver:
             "states": states_ts,
         }
 
+    def solve_ring(
+        self,
+        t_span_ps: tuple[float, float] = (0.0, 100.0),
+        n_steps: int = 100,
+        detuning_ghz: float = 0.0,
+        photon_lifetime_ps: float = 100.0,
+        coupling: float = 0.1,
+        **kwargs,
+    ) -> dict:
+        """环谐振器时域 CMT 仿真（兼容旧 API）。
+
+        学术依据: Bogaerts et al., "Silicon microring resonators",
+        Laser & Photonics Reviews 6(1), 2012,
+        URL: https://doi.org/10.1002/lpor.201100017
+
+        全通环 CMT 方程（Bogaerts 2012 §2.1）:
+            da/dt = (j·Δω - 1/τ)·a + √(2κ/τ)·s_in
+            s_through = s_in - √(2κ/τ)·a
+
+        Args:
+            t_span_ps: 时间范围（ps）。
+            n_steps: 输出时间点数。
+            detuning_ghz: 失谐（GHz）。
+            photon_lifetime_ps: 光子寿命（ps）。
+            coupling: 功率耦合比。
+
+        Returns:
+            {"time": array_ps, "output_power": array}。
+        """
+        return _ring_cmt_solve(
+            detuning_ghz=detuning_ghz,
+            photon_lifetime_ps=photon_lifetime_ps,
+            coupling=coupling,
+            t_span_ps=t_span_ps,
+            n_steps=n_steps,
+        )
+
 
 # =============================================================================
 # 2. CAPHEBackend — CAPHE 后端适配器（统一频域+时域接口）
@@ -261,6 +357,13 @@ class CAPHEBackend:
     提供统一的频域+时域仿真接口，并支持与 sax/simphony 后端交叉验证
     （误差 < 1e-4，来源: R26.md §1）。
 
+    兼容旧 API:
+        - ``CAPHEBackend(network=net)``: 构造时传入网络。
+        - ``CAPHEBackend.from_netlist(netlist)``: 从 SAX 网表构建。
+        - ``backend.network``: 网络属性。
+        - ``backend.frequency_domain(wavelengths=...)``: 旧 API 频域扫描。
+        - ``backend.time_domain(...)``: 旧 API 环谐振器 CMT 时域。
+
     创新点（标注"创新"）:
     - 自动稀疏化：自动检测无源线性节点并消去，无需用户手动标记。
       创新逻辑：节点实例化时自动分析是否含状态变量/ODE。
@@ -268,10 +371,78 @@ class CAPHEBackend:
       预期收益：用户无需手动标记，降低使用门槛。
     """
 
-    def __init__(self) -> None:
-        """初始化 CAPHE 后端。"""
+    def __init__(self, network: CAPHENetwork | None = None) -> None:
+        """初始化 CAPHE 后端。
+
+        Args:
+            network: 可选的 CAPHE 网络（兼容旧 API ``CAPHEBackend(network=net)``）。
+        """
+        self._network: CAPHENetwork | None = network
         self._freq_solver: object | None = None
         self._time_solver: CAPHETimeDomainSolver | None = None
+
+    @property
+    def network(self) -> CAPHENetwork | None:
+        """关联的 CAPHE 网络（兼容旧 API）。"""
+        return self._network
+
+    @classmethod
+    def from_netlist(cls, netlist: dict) -> CAPHEBackend:
+        """从 SAX 网表构建 CAPHE 后端（兼容旧 API）。
+
+        Args:
+            netlist: SAX 网表字典（见 CAPHENetwork.from_netlist）。
+
+        Returns:
+            CAPHEBackend 实例。
+        """
+        network = CAPHENetwork.from_netlist(netlist)
+        return cls(network=network)
+
+    def frequency_domain(
+        self,
+        wavelengths: list[float] | np.ndarray | None = None,
+        **kwargs,
+    ) -> tuple[np.ndarray, dict]:
+        """频域仿真（旧 API 兼容）。
+
+        对 self.network 做波长扫描，返回外部端口等效 S 参数。
+
+        Args:
+            wavelengths: 波长列表/数组（μm），或通过 kwargs 传入。
+
+        Returns:
+            (wavelengths, sdict)，sdict = {(port_out, port_in): array}。
+
+        Raises:
+            ValueError: 未提供 network / wavelengths。
+        """
+        if self._network is None:
+            raise ValueError("未提供 network，无法调用 frequency_domain")
+        from polaris.sim.caphe_backend import CAPHEFrequencySolver
+
+        wl = kwargs.get("wavelengths", wavelengths)
+        if wl is None:
+            raise ValueError("必须提供 wavelengths")
+        solver = CAPHEFrequencySolver(self._network)
+        return solver.solve(wl)  # 旧 API 模式（无 inputs）
+
+    def time_domain(self, **kwargs) -> dict:
+        """时域仿真（旧 API 兼容，环谐振器 CMT）。
+
+        学术依据: Bogaerts 2012, URL: https://doi.org/10.1002/lpor.201100017
+
+        Args:
+            detuning_ghz: 失谐（GHz）。
+            photon_lifetime_ps: 光子寿命（ps）。
+            coupling: 功率耦合比。
+            t_span_ps: 时间范围（ps）。
+            n_steps: 输出时间点数。
+
+        Returns:
+            {"time": array_ps, "output_power": array}。
+        """
+        return _ring_cmt_solve(**kwargs)
 
     def simulate_frequency(
         self,
