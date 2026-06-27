@@ -38,16 +38,18 @@ log_error() { echo -e "${RED}[ERROR]${NC} $*"; }
 log_step()  { echo -e "${BLUE}[STEP]${NC} $*"; }
 
 # 全部依赖清单（统一安装，无核心/可选之分）
+# 对齐 pyproject.toml [project.dependencies] 全部 12 个核心依赖 + 3 个 dev 依赖
 # 含 sax 完整依赖链：jax + jaxlib + optax + pydantic + pandas + xarray
 ALL_PACKAGES=(
     numpy scipy networkx torch gymnasium matplotlib pyyaml
-    klayout simphony sax
+    klayout simphony sax gdstk shapely
     pytest ruff mypy
 )
 
-# 核心依赖子集（--core 模式使用）
+# 核心依赖子集（--core 模式使用，对齐 pyproject.toml dependencies）
 CORE_PACKAGES=(
     numpy scipy networkx torch gymnasium matplotlib pyyaml
+    klayout simphony sax gdstk shapely
 )
 
 # 开发依赖子集（--dev 模式使用）
@@ -196,15 +198,23 @@ case "${MODE}" in
                 ALL_WHEELS="${ALL_WHEELS} $(find "${TMP_DIR}" -maxdepth 1 -name "*.whl" | sort)"
             fi
             # 过滤掉已安装的主包 wheel，只装传递依赖
+            FAILED_DEPS=""
             for whl in ${ALL_WHEELS}; do
                 pkg_name=$(basename "${whl}" | sed 's/-[0-9].*//')
                 # 跳过主包（已用 --no-deps 安装）
                 case "${pkg_name}" in
-                    numpy|scipy|networkx|torch|gymnasium|matplotlib|pyyaml|klayout|simphony|sax|pytest|ruff|mypy)
+                    numpy|scipy|networkx|torch|gymnasium|matplotlib|pyyaml|klayout|simphony|sax|gdstk|shapely|pytest|ruff|mypy)
                         continue ;;
                 esac
-                python3 -m pip install ${INSTALL_ARGS} --no-deps "${whl}" 2>/dev/null || true
+                if ! python3 -m pip install ${INSTALL_ARGS} --no-deps "${whl}" 2>/dev/null; then
+                    FAILED_DEPS="${FAILED_DEPS} ${pkg_name}"
+                    log_warn "传递依赖 ${pkg_name} 安装失败（记录待报告）"
+                fi
             done
+            if [[ -n "${FAILED_DEPS}" ]]; then
+                log_warn "以下传递依赖安装失败:${FAILED_DEPS}"
+                log_warn "请检查 wheel 完整性或 Python 版本兼容性"
+            fi
         fi
         ;;
 esac
