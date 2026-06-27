@@ -126,7 +126,7 @@ def build_circuit_matrix(
     # 外部端口映射中的内部端口引用已是 "inst.port" 格式，无需前缀
     ext_port_refs: list[str] = []
     if ports:
-        for ext_name, int_ref in ports.items():
+        for _ext_name, int_ref in ports.items():
             if int_ref not in all_ports:
                 all_ports.append(int_ref)
             ext_port_refs.append(int_ref)
@@ -347,8 +347,6 @@ def redheffer_star(
 
     # 构建矩阵表示
     # S1 矩阵: (n1, n1, n_freq)
-    n1 = len(ports1)
-    n2 = len(ports2)
     ports1_sorted = sorted(ports1)
     ports2_sorted = sorted(ports2)
 

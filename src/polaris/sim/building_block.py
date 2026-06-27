@@ -22,8 +22,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -55,7 +55,6 @@ from polaris.sim.models_extended import (
     taper_s,
     unitary_s,
 )
-from polaris.sim.types import SDict
 
 # 学术来源 URL 常量（规则18 学术诚信）
 _URL_ASPIE = "https://www.spiedigitallibrary.org/conference-proceedings-of-spie/9664/96641L/"

@@ -496,7 +496,6 @@ class DdmSolver:
         nx, ny = config.nx, config.ny
         vt = config.vt
         n_i = config.n_i
-        n_total = nx * ny
 
         # 预装配 Laplacian A（含 Neumann，不含 Dirichlet）——牛顿迭代中不变
         bcs_for_laplacian = [
@@ -905,7 +904,6 @@ class DdmSolver:
         σ = q·(μ_n·n + μ_p·p)（欧姆电导率）
         E = -∇φ（电场）
         """
-        nx, ny = config.nx, config.ny
         dx, dy = config.dx, config.dy
         vt = config.vt
         D_n = config.mobility_n * vt

@@ -52,17 +52,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Sequence
 
 import numpy as np
 
 from polaris.sim.cascade.smatrix import (
     BlockSMatrix,
-    cascade_redheffer,
     redheffer_star_product,
 )
-from polaris.sim.eme import EmeCell, EmeConfig as _EmeConfig, EmeSolver, overlap_matrix
+from polaris.sim.eme import EmeCell, EmeSolver, overlap_matrix
+from polaris.sim.eme import EmeConfig as _EmeConfig
 from polaris.sim.fde import FdeSolver, FdeSolverConfig, Mode
 from polaris.sim.fde.solver import Polarization
 from polaris.sim.grid.pml import ScPml
@@ -610,6 +610,6 @@ class FIMMPROPBackend:
                 results.append(self.run())
         finally:
             # 恢复原始长度
-            for sec, orig_L in zip(self._sections, original_lengths):
+            for sec, orig_L in zip(self._sections, original_lengths, strict=False):
                 sec.length = orig_L
         return results

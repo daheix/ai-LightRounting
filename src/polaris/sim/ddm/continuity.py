@@ -236,14 +236,14 @@ def _add_sg_face(
         nx = phi.shape[0]
         delta = (phi[1:, :] - phi[:-1, :]) / vt  # (nx-1, ny)
         n_edge = nx - 1
-        I, J = np.meshgrid(np.arange(n_edge), np.arange(ny), indexing="ij")
+        I, J = np.meshgrid(np.arange(n_edge), np.arange(ny), indexing="ij")  # noqa: E741  矩阵行索引
         r0 = (I * ny + J).ravel()
         r1 = ((I + 1) * ny + J).ravel()
     else:
         ny_arr = phi.shape[1]
         delta = (phi[:, 1:] - phi[:, :-1]) / vt  # (nx, ny-1)
         n_edge = ny_arr - 1
-        I, J = np.meshgrid(np.arange(phi.shape[0]), np.arange(n_edge), indexing="ij")
+        I, J = np.meshgrid(np.arange(phi.shape[0]), np.arange(n_edge), indexing="ij")  # noqa: E741  矩阵行索引
         r0 = (I * ny + J).ravel()
         r1 = (I * ny + (J + 1)).ravel()
 

@@ -29,17 +29,16 @@ P2-1 逆向设计深化：
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable
 
 import numpy as np
 
 from polaris.sim.pso_optimizer import (
     GlobalResult,
-    PSOConfig,
     ParticleSwarmOptimizer,
-    create_pso_optimizer,
+    PSOConfig,
 )
 
 

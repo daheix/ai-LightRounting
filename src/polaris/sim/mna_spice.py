@@ -58,7 +58,7 @@ class MNACircuit:
             raise ValueError(f"电容 {name} 容值必须 > 0, got {c}")
         self.capacitors.append({"name": name, "n1": n1, "n2": n2, "c": c})
 
-    def add_inductor(self, name: str, n1: int, n2: int, l: float) -> None:
+    def add_inductor(self, name: str, n1: int, n2: int, l: float) -> None:  # noqa: E741  电感 L 物理量
         """添加电感 L (H)。"""
         if l <= 0:
             raise ValueError(f"电感 {name} 感值必须 > 0, got {l}")

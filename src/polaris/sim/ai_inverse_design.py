@@ -45,8 +45,8 @@ n_i = n_low + θ_i·(n_high - n_low)，优化目标为最大化/约束目标波�
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import numpy as np
 

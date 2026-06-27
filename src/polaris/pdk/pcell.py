@@ -21,9 +21,10 @@ import re
 import types
 import typing
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import wraps
-from typing import Any, Callable, Protocol, Union, get_args, get_origin
+from typing import Any, Protocol, Union, get_args, get_origin
 
 import numpy as np
 

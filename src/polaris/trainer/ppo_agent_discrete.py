@@ -41,7 +41,7 @@ def _migrate_weight_tensor(old_tensor: torch.Tensor, new_tensor: torch.Tensor) -
     """
     result = new_tensor.clone()
     # 取各维度最小值作为复制范围
-    slices = tuple(slice(0, min(o, n)) for o, n in zip(old_tensor.shape, new_tensor.shape))
+    slices = tuple(slice(0, min(o, n)) for o, n in zip(old_tensor.shape, new_tensor.shape, strict=False))
     result[slices] = old_tensor[slices]
     return result
 

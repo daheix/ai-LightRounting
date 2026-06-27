@@ -35,8 +35,7 @@ if TYPE_CHECKING:
     # 仅用于类型注解，运行时延迟导入以避免循环导入：
     # polaris.pdk.gpic → polaris.sim.klayout_drc → polaris.pdk.layer_map
     # → polaris.pdk.__init__ → polaris.pdk.gpic
-    from polaris.sim.constraint_types import ViolationType
-    from polaris.sim.klayout_drc import DRCCheckType, DRCRule
+    pass
 
 # ---------------------------------------------------------------------------
 # 学术来源 URL 常量（规则 18 学术诚信）
@@ -677,6 +676,6 @@ __all__ = [
     "GPIC_ALIAS_MAP",
     "GPICBB",
     "GPICPDK",
-    "GPIC_DRC_RUNSET",
+    "GPIC_DRC_RUNSET",  # noqa: F822  PEP 562 __getattr__ 懒加载
     "build_gpic_pdk",
 ]

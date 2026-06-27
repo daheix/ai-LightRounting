@@ -31,8 +31,7 @@ Lumerical 的多物理场交叉验证。
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -266,7 +265,6 @@ class ModeSolver:
         n_eff_plus = self.compute_neff(width, core_index, cladding_index, wl + delta, height)
         n_eff_minus = self.compute_neff(width, core_index, cladding_index, wl - delta, height)
         n_eff_center = self.compute_neff(width, core_index, cladding_index, wl, height)
-        d2_n_eff_dwl2 = (n_eff_plus - 2.0 * n_eff_center + n_eff_minus) / delta**2
         # D = -(λ/c)·d²n_eff/dλ²，单位转换：μm→m，结果转 ps/(nm·km)
         c_m = _C0
         wl_m = wl * 1e-6

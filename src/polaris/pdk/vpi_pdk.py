@@ -20,18 +20,25 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import numpy as np
 
-from polaris.sim.types import SDict
 from polaris.sim.models import (
-    RingParams, crossing_s, directional_coupler_s, grating_coupler_s,
-    mmi_1x2_s, mmi_2x2_s, phase_shifter_s, ring_resonator_s,
-    terminator_s, waveguide_s, y_branch_s,
+    RingParams,
+    crossing_s,
+    directional_coupler_s,
+    grating_coupler_s,
+    mmi_1x2_s,
+    mmi_2x2_s,
+    phase_shifter_s,
+    ring_resonator_s,
+    terminator_s,
+    waveguide_s,
 )
 from polaris.sim.models_extended import bend_s, detector_s, modulator_s, taper_s
+from polaris.sim.types import SDict
 
 # 学术来源 URL 常量（规则18 学术诚信）
 _URL_AUGUSTIN = "https://ieeexplore.ieee.org/document/7937534"

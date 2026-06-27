@@ -348,7 +348,6 @@ class HierarchicalPlacer:
         from polaris.data.specs import CircuitSpec
 
         idx_set = set(int(i) for i in device_indices)
-        idx_to_local = {int(i): j for j, i in enumerate(device_indices)}
         sub_devices = [self.circuit.devices[int(i)] for i in device_indices]
         # 子块内连接（两端都在子块内）
         sub_connections: list[tuple[str, str, str, str]] = []

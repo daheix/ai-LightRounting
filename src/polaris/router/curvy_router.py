@@ -871,7 +871,7 @@ class OptoDesignerAutorouter:
             inserted = self._crossing_inserter.insert_crossings(
                 all_paths, crossing_bb
             )
-            for net, path in zip(ordered, inserted):
+            for net, path in zip(ordered, inserted, strict=False):
                 results[net["name"]] = path
         return results
 

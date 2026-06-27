@@ -26,14 +26,14 @@
 
 from polaris.sim.devs.solver import (
     INFINITY,
-    DEVSMessage,
+    Accumulator,
     AtomicDEVS,
-    CoupledDEVS,
-    Simulator,
     Coordinator,
+    CoupledDEVS,
+    DEVSMessage,
     Generator,
     Queue,
-    Accumulator,
+    Simulator,
 )
 
 __all__ = [

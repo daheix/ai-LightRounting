@@ -51,7 +51,7 @@ from __future__ import annotations
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from polaris.data.benchmark_report import BenchmarkReport
@@ -59,7 +59,7 @@ from polaris.data.benchmark_report import BenchmarkReport
 
 def _now_iso() -> str:
     """返回当前 UTC 时间 ISO 8601 字符串。"""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 @dataclass(frozen=True)
@@ -447,7 +447,7 @@ def _detect_trend(hpwls: list[float]) -> str:
     xs = list(range(n))
     mean_x = sum(xs) / n
     mean_y = sum(recent) / n
-    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, recent))
+    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, recent, strict=False))
     den = sum((x - mean_x) ** 2 for x in xs)
     if den == 0:
         return "stable"

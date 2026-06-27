@@ -26,9 +26,9 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
-from typing import Callable
 
 from polaris.flow.job import Job, JobStatus
 from polaris.flow.recipe import Recipe

@@ -35,9 +35,8 @@
 from __future__ import annotations
 
 import heapq
-import math
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any
 
 # 无穷大时间（表示被动状态）
 INFINITY = float("inf")
@@ -78,8 +77,8 @@ class AtomicDEVS:
 
     def __init__(self, name: str):
         self.name = name
-        self.input_ports: List[str] = []
-        self.output_ports: List[str] = []
+        self.input_ports: list[str] = []
+        self.output_ports: list[str] = []
         self.state: Any = None
         self._elapsed: float = 0.0
         self._last_time: float = 0.0
@@ -103,7 +102,7 @@ class AtomicDEVS:
         raise NotImplementedError("子类必须实现 time_advance")
 
     def external_transition(
-        self, state: Any, elapsed: float, messages: List[DEVSMessage]
+        self, state: Any, elapsed: float, messages: list[DEVSMessage]
     ) -> Any:
         """外部转移函数 δ_ext(s, e, x) → s'。
 
@@ -124,7 +123,7 @@ class AtomicDEVS:
         """
         raise NotImplementedError("子类必须实现 internal_transition")
 
-    def output_function(self, state: Any) -> List[DEVSMessage]:
+    def output_function(self, state: Any) -> list[DEVSMessage]:
         """输出函数 λ(s) → y（输出消息列表）。
 
         子类必须重写此方法。
@@ -156,13 +155,13 @@ class CoupledDEVS:
 
     def __init__(self, name: str):
         self.name = name
-        self.input_ports: List[str] = []
-        self.output_ports: List[str] = []
-        self.components: Dict[str, Union[AtomicDEVS, "CoupledDEVS"]] = {}
+        self.input_ports: list[str] = []
+        self.output_ports: list[str] = []
+        self.components: dict[str, AtomicDEVS | CoupledDEVS] = {}
         # 耦合关系: List[(src_comp, src_port, dst_comp, dst_port)]
-        self._eic: List[Tuple[str, str, str, str]] = []  # 外部输入耦合
-        self._eoc: List[Tuple[str, str, str, str]] = []  # 外部输出耦合
-        self._ic: List[Tuple[str, str, str, str]] = []   # 内部耦合
+        self._eic: list[tuple[str, str, str, str]] = []  # 外部输入耦合
+        self._eoc: list[tuple[str, str, str, str]] = []  # 外部输出耦合
+        self._ic: list[tuple[str, str, str, str]] = []   # 内部耦合
 
     def add_input_port(self, port: str) -> None:
         if port not in self.input_ports:
@@ -172,7 +171,7 @@ class CoupledDEVS:
         if port not in self.output_ports:
             self.output_ports.append(port)
 
-    def add_component(self, component: Union[AtomicDEVS, "CoupledDEVS"]) -> None:
+    def add_component(self, component: AtomicDEVS | CoupledDEVS) -> None:
         """添加子组件。"""
         if component.name in self.components:
             raise ValueError(f"组件 {component.name} 已存在")
@@ -203,14 +202,14 @@ class CoupledDEVS:
         self._ic.append((src_comp, src_port, dst_comp, dst_port))
 
     def propagate_input(
-        self, messages: List[DEVSMessage]
-    ) -> Dict[str, List[DEVSMessage]]:
+        self, messages: list[DEVSMessage]
+    ) -> dict[str, list[DEVSMessage]]:
         """将外部输入通过 EIC 传播到子组件。
 
         Returns:
             {组件名: [消息列表]} 字典。
         """
-        result: Dict[str, List[DEVSMessage]] = {}
+        result: dict[str, list[DEVSMessage]] = {}
         for msg in messages:
             for src_port, dst_comp, dst_port in self._eic:
                 if msg.port == src_port:
@@ -220,10 +219,10 @@ class CoupledDEVS:
         return result
 
     def propagate_output(
-        self, comp_outputs: Dict[str, List[DEVSMessage]]
-    ) -> List[DEVSMessage]:
+        self, comp_outputs: dict[str, list[DEVSMessage]]
+    ) -> list[DEVSMessage]:
         """将子组件输出通过 EOC 传播为耦合模型输出。"""
-        outputs: List[DEVSMessage] = []
+        outputs: list[DEVSMessage] = []
         for comp_name, msgs in comp_outputs.items():
             for msg in msgs:
                 for src_comp, src_port, dst_port in self._eoc:
@@ -232,10 +231,10 @@ class CoupledDEVS:
         return outputs
 
     def propagate_internal(
-        self, comp_outputs: Dict[str, List[DEVSMessage]]
-    ) -> Dict[str, List[DEVSMessage]]:
+        self, comp_outputs: dict[str, list[DEVSMessage]]
+    ) -> dict[str, list[DEVSMessage]]:
         """通过 IC 将子组件输出传播为其他子组件的输入。"""
-        result: Dict[str, List[DEVSMessage]] = {}
+        result: dict[str, list[DEVSMessage]] = {}
         for comp_name, msgs in comp_outputs.items():
             for msg in msgs:
                 for src_comp, src_port, dst_comp, dst_port in self._ic:
@@ -274,7 +273,7 @@ class Simulator:
         return self._current_time
 
     def inject_input(
-        self, time: float, messages: List[DEVSMessage]
+        self, time: float, messages: list[DEVSMessage]
     ) -> None:
         """注入外部输入并执行外部转移。"""
         if time < self._current_time:
@@ -294,7 +293,7 @@ class Simulator:
         self.model._elapsed = 0.0
         self._next_time = self._compute_next_time()
 
-    def run_internal(self) -> List[DEVSMessage]:
+    def run_internal(self) -> list[DEVSMessage]:
         """执行内部转移并返回输出。"""
         if self._next_time == INFINITY:
             raise RuntimeError("无内部事件可执行（被动状态）")
@@ -324,8 +323,8 @@ class Coordinator:
     ):
         self.model = coupled_model
         self._current_time = start_time
-        self._children: Dict[str, Union[Simulator, "Coordinator"]] = {}
-        self._event_heap: List[Tuple[float, str]] = []  # (time, comp_name) 最小堆
+        self._children: dict[str, Simulator | Coordinator] = {}
+        self._event_heap: list[tuple[float, str]] = []  # (time, comp_name) 最小堆
 
         # 为每个子组件创建仿真器/协调器
         for name, comp in coupled_model.components.items():
@@ -360,10 +359,10 @@ class Coordinator:
         if t_next < INFINITY:
             heapq.heappush(self._event_heap, (t_next, name))
 
-    def _imminent_components(self, time: float) -> List[str]:
+    def _imminent_components(self, time: float) -> list[str]:
         """获取所有在 time 时刻触发的组件（时间相等的）。"""
-        imminent: List[str] = []
-        temp: List[Tuple[float, str]] = []
+        imminent: list[str] = []
+        temp: list[tuple[float, str]] = []
         while self._event_heap and abs(self._event_heap[0][0] - time) < 1e-12:
             t, name = heapq.heappop(self._event_heap)
             imminent.append(name)
@@ -372,7 +371,7 @@ class Coordinator:
         return imminent
 
     def inject_input(
-        self, time: float, messages: List[DEVSMessage]
+        self, time: float, messages: list[DEVSMessage]
     ) -> None:
         """注入外部输入并传播。"""
         if time < self._current_time:
@@ -386,7 +385,7 @@ class Coordinator:
             self._update_child_time(comp_name)
         self._current_time = time
 
-    def step(self) -> Tuple[float, List[DEVSMessage]]:
+    def step(self) -> tuple[float, list[DEVSMessage]]:
         """执行一步仿真（到下一事件时间）。
 
         Returns:
@@ -402,7 +401,7 @@ class Coordinator:
         imminent = self._imminent_components(t_next)
 
         # 1. 执行所有即将触发组件的内部转移，收集输出
-        comp_outputs: Dict[str, List[DEVSMessage]] = {}
+        comp_outputs: dict[str, list[DEVSMessage]] = {}
         for name in imminent:
             child = self._children[name]
             outputs = child.run_internal()
@@ -424,13 +423,13 @@ class Coordinator:
 
         return (t_next, all_outputs)
 
-    def simulate(self, end_time: float) -> List[Tuple[float, List[DEVSMessage]]]:
+    def simulate(self, end_time: float) -> list[tuple[float, list[DEVSMessage]]]:
         """仿真到 end_time，返回所有事件记录。
 
         Returns:
             [(time, [messages]), ...] 按时间排序的事件列表。
         """
-        events: List[Tuple[float, List[DEVSMessage]]] = []
+        events: list[tuple[float, list[DEVSMessage]]] = []
         while self.next_event_time <= end_time + 1e-12:
             t, outputs = self.step()
             if outputs:

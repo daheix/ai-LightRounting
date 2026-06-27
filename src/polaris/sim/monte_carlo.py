@@ -19,8 +19,8 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -207,9 +207,9 @@ def yield_analysis(
 
 
 def waveguide_transmission_mc(
-    params: "jnp.ndarray",
-    wl: "jnp.ndarray",
-) -> "jnp.ndarray":
+    params: jnp.ndarray,
+    wl: jnp.ndarray,
+) -> jnp.ndarray:
     """波导传输蒙特卡洛仿真函数。
 
     计算波导链的传输功率，用于蒙特卡洛分析。
