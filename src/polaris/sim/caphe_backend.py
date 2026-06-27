@@ -1,40 +1,43 @@
 """CAPHE 电路仿真后端（R26 路标）。
 
-对标 CAPHE（Circuit Analysis Program for Photonic Elements）的电路级仿真
-能力，提供频率域 S 参数级联与时域 ODE 求解，作为光子电路仿真后端。
+对标 CAPHE（Circuit Analysis Program for Photonic Elements）的电路级仿真，
+提供频率域 S 参数块对角装配与 Schur 补消去求解。
 
 ## 模块组成
 
-1. ``CAPHENode`` — 电路节点（器件实例 + S 参数模型）
-2. ``CAPHENetwork`` — 电路网络（节点集合 + 连接关系）
-3. ``CAPHEFrequencySolver`` — 频率域求解器（S 参数级联）
-4. ``CAPHETimeDomainSolver`` — 时域求解器（ODE 积分，环调制/载流子动力学）
-5. ``CAPHEBackend`` — 统一后端接口（频率域 + 时域）
+1. ``CAPHENode`` — 电路节点（S 参数矩阵 + 状态变量 + ODE 函数）
+2. ``CAPHENetwork`` — 电路网络（节点 + 端口连接 + 外部端口）
+3. ``CAPHEFrequencySolver`` — 频率域求解器（块对角 S + Schur 消去）
+
+时域求解器 ``CAPHETimeDomainSolver`` 与统一后端 ``CAPHEBackend`` 见
+``caphe_time_domain.py``（规则 7.1 单文件 ≤800 行拆分）。
 
 ## 学术依据
 
-- CAPHE 电路仿真器: D. Vermeulen et al., "Efficient TDM with a silicon
-  ring resonator", OFC 2008; CAPHE 由 Ghent University / Luceda 开发
-  https://www.lucedaphotonics.com/products/caphe
-- 时域 ODE 环谐振器模型: Bogaerts et al., "Silicon microring resonators",
-  Laser & Photonics Reviews 6(1), 2012, https://doi.org/10.1002/lpor.201100017
+- CAPHE 电路仿真器: Fiers et al., "CAPHE: a circuit-level time-domain and
+  frequency-domain modeling tool for nonlinear optical components", 2012
+  URL: https://biblio.ugent.be/publication/2036548/file/3146073.pdf
+- Laporte et al., "Highly parallel simulation and optimization of photonic
+  circuits in time and frequency domain based on the deep-learning framework
+  PyTorch", Scientific Reports 2019
+  URL: https://doi.org/10.1038/s41598-019-42408-2
+- Luceda CAPHE 产品页: https://www.lucedaphotonics.com/products/caphe
 - S 参数级联子网络增长: SAX, https://flaport.github.io/sax/
+- Schur 补消去内部端口: Bogaerts et al., "Silicon microring resonators",
+  Laser & Photonics Reviews 6(1), 2012, https://doi.org/10.1002/lpor.201100017
 
-来源:
-- CAPHE: https://www.lucedaphotonics.com/products/caphe
-- SAX 级联: https://flaport.github.io/sax/
-- Simphony: https://simphonyphotonics.readthedocs.io/
+合规: 规则 14.1 禁止 fall-back；规则 18 学术诚信；规则 7.1 文件 < 800 行。
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 
-from polaris.sim.cascade import cascade_circuit
 from polaris.sim.models import (
     directional_coupler_s,
     mmi_1x2_s,
@@ -54,6 +57,7 @@ logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # 器件类型到 S 参数模型的映射（来源: polaris.sim.models）
+# 保留供外部模块使用；新 CAPHENode 直接持有 s_matrix，不再依赖 cell_type。
 # ---------------------------------------------------------------------------
 _MODEL_MAP: dict[str, ModelFunc] = {
     "waveguide": waveguide_s,
@@ -65,426 +69,612 @@ _MODEL_MAP: dict[str, ModelFunc] = {
     "phase_shifter": phase_shifter_s,
 }
 
+# cell_type → 默认端口名（必须与 polaris.sim.models 中模型函数返回的 SDict 端口名一致）
+# 来源: 各模型函数源码中 SDict 键的端口名定义
+_DEFAULT_PORTS: dict[str, list[str]] = {
+    "waveguide": ["in", "out"],
+    "y_branch": ["port_1", "port_2", "port_3"],
+    "directional_coupler": ["in1", "in2", "out1", "out2"],
+    "ring_resonator": ["in", "through"],
+    "mmi_1x2": ["in", "out1", "out2"],
+    "mmi_2x2": ["in1", "in2", "out1", "out2"],
+    "phase_shifter": ["in", "out"],
+}
+
 
 # ---------------------------------------------------------------------------
-# CAPHENode — 电路节点
+# CAPHENode — 电路节点（S 参数 + 状态变量 + ODE）
 # ---------------------------------------------------------------------------
-
-
 @dataclass
 class CAPHENode:
-    """CAPHE 电路节点（器件实例 + S 参数模型）。
+    """CAPHE 电路节点（器件实例 + S 参数 + 状态变量 + ODE）。
 
-    每个节点对应一个光子器件实例，持有器件类型、参数与端口列表，
-    可在指定波长计算 S 参数。
+    每个节点持有器件的 S 参数矩阵（常量 ndarray 或频率依赖函数
+    ``s_func(wl)->ndarray``）、端口名、状态变量初值与可选 ODE 函数。
+    含 ODE 的节点自动标记为非线性（``is_linear=False``）。
 
     学术依据: CAPHE 节点模型,
-    https://www.lucedaphotonics.com/products/caphe
+    Fiers et al. 2012, https://biblio.ugent.be/publication/2036548/file/3146073.pdf
 
     Attributes:
-        name: 节点名称（实例名）。
-        cell_type: 器件类型（如 "waveguide"、"ring_resonator"）。
-        params: 器件参数字典。
-        ports: 端口名称列表。
+        name: 节点名。
+        s_matrix: S 参数矩阵（ndarray）或频率依赖函数 ``s_func(wl)->ndarray``。
+        port_names: 端口名列表，空时默认 ``["in", "out"]``。
+        state_variables: 状态变量初值 ``{name: float}``。
+        ode_func: ODE 函数 ``ode_func(t, y, s_in)->dydt``，None 表示线性。
+        is_linear: 是否线性；ode_func 非 None 时强制 False。
     """
 
     name: str
-    cell_type: str
-    params: dict[str, Any] = field(default_factory=dict)
-    ports: list[str] = field(default_factory=list)
+    s_matrix: Any = None
+    cell_type: str | None = None
+    params: dict = field(default_factory=dict)
+    port_names: list[str] = field(default_factory=list)
+    state_variables: dict = field(default_factory=dict)
+    ode_func: Callable[..., np.ndarray] | None = None
+    is_linear: bool = True
 
     def __post_init__(self) -> None:
-        """初始化后补全端口列表。"""
-        if not self.ports:
-            self.ports = self._default_ports()
+        """初始化后补全端口名与线性标志。
 
-    @staticmethod
-    def _default_ports() -> list[str]:
-        """返回默认端口列表（单端口通用）。"""
-        return ["in", "out"]
+        端口名优先级: 显式 port_names > cell_type 默认 > ["in", "out"]。
+        """
+        if not self.port_names:
+            if self.cell_type is not None and self.cell_type in _DEFAULT_PORTS:
+                self.port_names = list(_DEFAULT_PORTS[self.cell_type])
+            else:
+                self.port_names = ["in", "out"]
+        if self.ode_func is not None:
+            self.is_linear = False
 
-    def compute_sparams(self, wl: float | np.ndarray = 1.55) -> SDict:
-        """计算节点 S 参数。
+    @property
+    def n_ports(self) -> int:
+        """端口数 = len(port_names) = S 矩阵维度。"""
+        return len(self.port_names)
+
+    def get_s_matrix(self, wl: float) -> np.ndarray:
+        """返回指定波长处的 S 矩阵。
+
+        优先级: s_matrix（常量/函数）> cell_type 模型查询。
 
         Args:
-            wl: 波长（μm）或波长数组。
+            wl: 波长（μm）。
 
         Returns:
-            S 参数字典。
+            复数 S 矩阵 ndarray。
 
         Raises:
-            ValueError: 器件类型无对应模型时。
+            ValueError: S 矩阵维度与端口数不匹配 / 无 s_matrix 且无 cell_type。
         """
-        model = _MODEL_MAP.get(self.cell_type)
-        if model is None:
+        if self.s_matrix is not None:
+            if callable(self.s_matrix):
+                smat = np.asarray(self.s_matrix(wl), dtype=complex)
+            else:
+                smat = np.asarray(self.s_matrix, dtype=complex)
+        elif self.cell_type is not None:
+            smat = self._s_matrix_from_cell_type(wl)
+        else:
             raise ValueError(
-                f"CAPHE 节点 '{self.name}' 器件类型 '{self.cell_type}' 无 S 参数模型，"
-                f"可用: {list(_MODEL_MAP)}"
+                f"节点 '{self.name}' 无 s_matrix 且无 cell_type"
             )
-        # 透传模型支持的参数
-        valid_keys = {
-            "length", "width", "radius", "gap", "coupling",
-            "insertion_loss_db", "phase_rad", "neff", "ng", "loss_db_cm",
-        }
-        kwargs = {k: v for k, v in self.params.items() if k in valid_keys}
-        return model(wl=wl, **kwargs)
+        if smat.shape != (self.n_ports, self.n_ports):
+            raise ValueError(
+                f"节点 '{self.name}' S 矩阵形状 {smat.shape} 与端口数 "
+                f"{self.n_ports} 不匹配"
+            )
+        return smat
+
+    def _s_matrix_from_cell_type(self, wl: float) -> np.ndarray:
+        """从 cell_type 查模型函数生成 S 矩阵。
+
+        Args:
+            wl: 波长（μm）。
+
+        Returns:
+            (n_ports, n_ports) 复数矩阵。
+
+        Raises:
+            ValueError: cell_type 未知。
+        """
+        if self.cell_type not in _MODEL_MAP:
+            raise ValueError(
+                f"节点 '{self.name}' 的 cell_type '{self.cell_type}' 未知，"
+                f"可用: {list(_MODEL_MAP.keys())}"
+            )
+        model_func = _MODEL_MAP[self.cell_type]
+        sdict = model_func(wl=np.array([wl]), **self.params)
+        return self._sdict_to_ndarray(sdict)
+
+    def _sdict_to_ndarray(self, sdict: SDict) -> np.ndarray:
+        """SDict {(p_out, p_in): array} → ndarray (n_ports, n_ports)。
+
+        按端口名顺序填充矩阵，取波长数组首元素（单波长求值）。
+        """
+        n = self.n_ports
+        smat = np.zeros((n, n), dtype=complex)
+        for (p_out, p_in), val in sdict.items():
+            if p_out not in self.port_names or p_in not in self.port_names:
+                continue
+            i = self.port_names.index(p_out)
+            j = self.port_names.index(p_in)
+            arr = np.asarray(val, dtype=complex)
+            smat[i, j] = arr.flat[0] if arr.ndim > 0 else arr
+        return smat
+
+    def get_state_vector(self) -> np.ndarray:
+        """返回状态变量初值数组（按 state_variables.values() 顺序）。"""
+        return np.array(list(self.state_variables.values()), dtype=float)
 
 
 # ---------------------------------------------------------------------------
-# CAPHENetwork — 电路网络
+# CAPHENetwork — 电路网络（节点 + 连接 + 外部端口）
 # ---------------------------------------------------------------------------
-
-
 @dataclass
 class CAPHENetwork:
-    """CAPHE 电路网络（节点集合 + 连接关系）。
-
-    持有多个 CAPHENode 与它们之间的端口连接关系，
-    构成完整的光子电路拓扑。
+    """CAPHE 电路网络（节点集合 + 端口连接 + 外部端口）。
 
     学术依据: CAPHE 网络拓扑,
-    https://www.lucedaphotonics.com/products/caphe
+    Fiers et al. 2012, https://biblio.ugent.be/publication/2036548/file/3146073.pdf
 
     Attributes:
         nodes: 节点字典 ``{name: CAPHENode}``。
-        connections: 连接字典 ``{"node1,port1": "node2,port2"}``。
-        ports: 外部端口字典 ``{ext_port: "node,internal_port"}``。
+        connections: 连接列表，每项 ``(name1, port1, name2, port2)``。
+        external_ports: 外部端口 ``{ext_name: (node_name, port_idx)}``。
     """
 
     nodes: dict[str, CAPHENode] = field(default_factory=dict)
-    connections: dict[str, str] = field(default_factory=dict)
-    ports: dict[str, str] = field(default_factory=dict)
+    connections: list[tuple] = field(default_factory=list)
+    external_ports: dict[str, tuple] = field(default_factory=dict)
+    # 已连接端口集合，用于 connect() 重复连接校验（私有，不参与 repr/eq）
+    _connected: set[tuple[str, int]] = field(
+        default_factory=set, repr=False, compare=False
+    )
 
     def add_node(self, node: CAPHENode) -> None:
-        """添加节点到网络。"""
+        """添加节点。
+
+        Raises:
+            ValueError: 节点名已存在。
+        """
+        if node.name in self.nodes:
+            raise ValueError(f"节点 '{node.name}' 已存在")
         self.nodes[node.name] = node
 
-    def connect(self, src: str, dst: str) -> None:
-        """连接两个端口。
+    def connect(self, name1: str, port1: int, name2: str, port2: int) -> None:
+        """连接两节点的端口（整数端口索引）。
 
         Args:
-            src: 源端口 ``"node1,port1"``。
-            dst: 目标端口 ``"node2,port2"``。
-        """
-        self.connections[src] = dst
+            name1: 节点 1 名称。
+            port1: 节点 1 端口索引。
+            name2: 节点 2 名称。
+            port2: 节点 2 端口索引。
 
-    def set_port(self, ext_name: str, internal: str) -> None:
-        """设置外部端口。
+        Raises:
+            ValueError: 节点不存在 / 端口越界 / 端口已被连接。
+        """
+        if name1 not in self.nodes:
+            raise ValueError(f"节点 '{name1}' 不存在")
+        if name2 not in self.nodes:
+            raise ValueError(f"节点 '{name2}' 不存在")
+        n1, n2 = self.nodes[name1], self.nodes[name2]
+        if not 0 <= port1 < n1.n_ports:
+            raise ValueError(
+                f"节点 '{name1}' 端口 {port1} 越界（共 {n1.n_ports} 端口）"
+            )
+        if not 0 <= port2 < n2.n_ports:
+            raise ValueError(
+                f"节点 '{name2}' 端口 {port2} 越界（共 {n2.n_ports} 端口）"
+            )
+        k1, k2 = (name1, port1), (name2, port2)
+        if k1 in self._connected or k2 in self._connected:
+            raise ValueError(f"端口 {k1}/{k2} 已被连接")
+        self.connections.append((name1, port1, name2, port2))
+        self._connected.add(k1)
+        self._connected.add(k2)
+
+    def add_external_port(
+        self, ext_name: str, node_name: str, port_idx: int
+    ) -> None:
+        """添加外部端口。
 
         Args:
             ext_name: 外部端口名。
-            internal: 内部端口 ``"node,port"``。
-        """
-        self.ports[ext_name] = internal
+            node_name: 所属节点名。
+            port_idx: 节点端口索引。
 
-    def to_netlist(self) -> dict:
-        """转换为 SAX 格式网表。
-
-        Returns:
-            SAX 格式网表 ``{instances, connections, ports}``。
+        Raises:
+            ValueError: 节点不存在 / 端口越界。
         """
-        return {
-            "instances": {n: nd.cell_type for n, nd in self.nodes.items()},
-            "connections": dict(self.connections),
-            "ports": dict(self.ports),
-        }
+        if node_name not in self.nodes:
+            raise ValueError(f"节点 '{node_name}' 不存在")
+        node = self.nodes[node_name]
+        if not 0 <= port_idx < node.n_ports:
+            raise ValueError(
+                f"节点 '{node_name}' 端口 {port_idx} 越界（共 {node.n_ports} 端口）"
+            )
+        self.external_ports[ext_name] = (node_name, port_idx)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """拦截 connections/ports 字典赋值，自动解析为内部格式。
+
+        兼容旧 API:
+            net.connections = {"n1,port1": "n2,port2"}
+            net.ports = {"ext": "n,port"}
+        """
+        if name == "connections" and isinstance(value, dict):
+            parsed: list[tuple] = []
+            connected = getattr(self, "_connected", set())
+            for key, val in value.items():
+                n1, p1 = self._parse_port_ref(key)
+                n2, p2 = self._parse_port_ref(val)
+                parsed.append((n1, p1, n2, p2))
+                connected.add((n1, p1))
+                connected.add((n2, p2))
+            object.__setattr__(self, "_connected", connected)
+            object.__setattr__(self, name, parsed)
+        elif name == "ports" and isinstance(value, dict):
+            parsed_ports: dict[str, tuple] = {}
+            for ext, ref in value.items():
+                n, p = self._parse_port_ref(ref)
+                parsed_ports[ext] = (n, p)
+            object.__setattr__(self, "external_ports", parsed_ports)
+        else:
+            object.__setattr__(self, name, value)
+
+    @property
+    def ports(self) -> dict[str, tuple]:
+        """外部端口别名（兼容旧 API net.ports）。"""
+        return self.external_ports
+
+    def set_port(self, ext_name: str, port_ref: str) -> None:
+        """设置外部端口（字符串引用格式 'node,port'）。
+
+        Args:
+            ext_name: 外部端口名。
+            port_ref: 端口引用 'node,port'。
+
+        Raises:
+            ValueError: 节点不存在 / 端口名无效。
+        """
+        n, p = self._parse_port_ref(port_ref)
+        self.external_ports[ext_name] = (n, p)
+
+    def _parse_port_ref(self, ref: str) -> tuple[str, int]:
+        """解析端口引用 'node,port' → (node_name, port_idx)。
+
+        Raises:
+            ValueError: 格式错误 / 节点不存在 / 端口名无效。
+        """
+        parts = ref.split(",")
+        if len(parts) != 2:
+            raise ValueError(f"端口引用格式错误: {ref!r}，应为 'node,port'")
+        node_name, port_name = parts[0], parts[1]
+        nodes = getattr(self, "nodes", {})
+        if node_name not in nodes:
+            raise ValueError(f"节点 '{node_name}' 不存在")
+        node = nodes[node_name]
+        if port_name not in node.port_names:
+            raise ValueError(
+                f"节点 '{node_name}' 无端口 '{port_name}'，"
+                f"可用: {node.port_names}"
+            )
+        return node_name, node.port_names.index(port_name)
 
     @classmethod
     def from_netlist(cls, netlist: dict) -> CAPHENetwork:
-        """从 SAX 格式网表构建网络。
+        """从 SAX 网表构建 CAPHE 网络（兼容旧 API）。
+
+        网表格式::
+
+            {
+                "instances": {name: cell_type},
+                "connections": {"n1,port1": "n2,port2"},
+                "ports": {ext: "n,port"},
+            }
 
         Args:
-            netlist: SAX 格式网表 ``{instances, connections, ports}``。
+            netlist: SAX 网表字典。
 
         Returns:
             CAPHENetwork 实例。
+
+        Raises:
+            ValueError: 实例/连接/端口格式非法。
         """
         net = cls()
-        for inst_name, cell_type in netlist.get("instances", {}).items():
-            net.add_node(CAPHENode(name=inst_name, cell_type=cell_type))
-        net.connections = dict(netlist.get("connections", {}))
-        net.ports = dict(netlist.get("ports", {}))
+        for name, cell_type in netlist.get("instances", {}).items():
+            if not isinstance(cell_type, str):
+                raise ValueError(
+                    f"实例 '{name}' 的 cell_type 必须为字符串，"
+                    f"得到 {type(cell_type)}"
+                )
+            net.add_node(CAPHENode(name=name, cell_type=cell_type))
+        connections = netlist.get("connections", {})
+        if connections:
+            net.connections = connections  # 触发 __setattr__ 解析
+        ports = netlist.get("ports", {})
+        if ports:
+            net.ports = ports  # 触发 __setattr__ 解析
         return net
 
+    @property
+    def n_nodes(self) -> int:
+        """节点数。"""
+        return len(self.nodes)
+
+    def get_node(self, name: str) -> CAPHENode:
+        """按名获取节点。
+
+        Raises:
+            ValueError: 节点不存在。
+        """
+        if name not in self.nodes:
+            raise ValueError(f"节点 '{name}' 不存在")
+        return self.nodes[name]
+
+    def get_nodes(self) -> list[CAPHENode]:
+        """返回所有节点列表。"""
+        return list(self.nodes.values())
+
 
 # ---------------------------------------------------------------------------
-# CAPHEFrequencySolver — 频率域求解器
+# CAPHEFrequencySolver — 频率域求解器（块对角 S + Schur 消去）
 # ---------------------------------------------------------------------------
-
-
-@dataclass
 class CAPHEFrequencySolver:
-    """CAPHE 频率域求解器（S 参数级联）。
+    """CAPHE 频率域求解器（块对角 S 矩阵 + Schur 补消去内部端口）。
 
-    对指定波长范围执行频率扫描，通过子网络增长算法级联各节点 S 参数，
-    计算电路级传输谱。
+    学术依据: CAPHE 频域求解（Fiers 2012 §III-A），
+    https://biblio.ugent.be/publication/2036548/file/3146073.pdf
 
-    学术依据: S 参数级联子网络增长算法,
-    SAX, https://flaport.github.io/sax/
-
-    Attributes:
-        network: 待求解的电路网络。
+    求解思路:
+        - 全局 S 矩阵为各节点 S 矩阵的块对角拼接。
+        - 连接约束: 互连端口处 a_i = b_j, a_j = b_i（连接矩阵 K）。
+        - 外部端口 a 已知（输入），求解 ``b = (I - S·K)^{-1}·S·a_ext``。
+        - Schur 补消去内部端口得外部端口等效 S 矩阵。
     """
 
-    network: CAPHENetwork
+    def __init__(self, network: CAPHENetwork) -> None:
+        """初始化频域求解器并构建端口全局索引。
+
+        Args:
+            network: 待求解网络。
+        """
+        self.network = network
+        self._port_offset: dict[str, int] = {}
+        offset = 0
+        for name, node in network.nodes.items():
+            self._port_offset[name] = offset
+            offset += node.n_ports
+        self._n_total: int = offset
+
+    def _global_port(self, node_name: str, port_idx: int) -> int:
+        """(节点名, 端口索引) -> 全局端口索引。"""
+        return self._port_offset[node_name] + port_idx
+
+    def build_global_matrix(self, wl: float) -> np.ndarray:
+        """构建块对角全局 S 矩阵。
+
+        Args:
+            wl: 波长（μm）。
+
+        Returns:
+            (总端口数, 总端口数) 复数矩阵。
+        """
+        n = self._n_total
+        s_global = np.zeros((n, n), dtype=complex)
+        for name, node in self.network.nodes.items():
+            off = self._port_offset[name]
+            smat = node.get_s_matrix(wl)
+            k = smat.shape[0]
+            s_global[off:off + k, off:off + k] = smat
+        return s_global
+
+    def _build_connection_matrix(self) -> np.ndarray:
+        """构建连接矩阵 K：K[g1,g2]=1 表示 a_{g1}=b_{g2}。"""
+        n = self._n_total
+        k_mat = np.zeros((n, n), dtype=complex)
+        for (n1, p1, n2, p2) in self.network.connections:
+            g1 = self._global_port(n1, p1)
+            g2 = self._global_port(n2, p2)
+            k_mat[g1, g2] = 1.0
+            k_mat[g2, g1] = 1.0
+        return k_mat
+
+    def _external_global_indices(self) -> dict[str, int]:
+        """外部端口名 -> 全局端口索引。"""
+        return {
+            ext: self._global_port(nname, pidx)
+            for ext, (nname, pidx) in self.network.external_ports.items()
+        }
+
+    def eliminate_linear_nodes(
+        self, wavelength: float
+    ) -> tuple[np.ndarray, list[int]]:
+        """Schur 补消去内部端口，返回外部端口等效 S 矩阵。
+
+        M_reduced = S_ee + S_ei · K_ii · (I - S_ii·K_ii)^{-1} · S_ie
+
+        Args:
+            wavelength: 波长（μm）。
+
+        Returns:
+            (M_reduced, eliminated_port_list): 约简矩阵与被消去端口全局索引列表。
+        """
+        s_global = self.build_global_matrix(wavelength)
+        k_mat = self._build_connection_matrix()
+        ext_map = self._external_global_indices()
+        ext_set = set(ext_map.values())
+        n = self._n_total
+        ext_idx = np.array(sorted(ext_set), dtype=int)
+        internal_idx = np.array(
+            [i for i in range(n) if i not in ext_set], dtype=int
+        )
+        if len(internal_idx) == 0:
+            return s_global[np.ix_(ext_idx, ext_idx)], []
+        s_ee = s_global[np.ix_(ext_idx, ext_idx)]
+        s_ei = s_global[np.ix_(ext_idx, internal_idx)]
+        s_ie = s_global[np.ix_(internal_idx, ext_idx)]
+        s_ii = s_global[np.ix_(internal_idx, internal_idx)]
+        k_ii = k_mat[np.ix_(internal_idx, internal_idx)]
+        eye_i = np.eye(len(internal_idx), dtype=complex)
+        a_mat = eye_i - s_ii @ k_ii
+        m_reduced = s_ee + s_ei @ k_ii @ np.linalg.solve(a_mat, s_ie)
+        return m_reduced, internal_idx.tolist()
 
     def solve(
         self,
-        wavelengths: np.ndarray | None = None,
-        **model_kwargs,
-    ) -> tuple[np.ndarray, SDict]:
-        """执行频率域求解。
+        wavelengths: list[float] | np.ndarray | None = None,
+        inputs: dict[str, complex] | None = None,
+    ) -> dict | tuple:
+        """频率域求解（双模式）。
+
+        模式 1（新 API，inputs 非空）: 对每个波长求解外部端口输出。
+            求解 ``b = (I - S·K)^{-1}·S·a_ext``。
+            返回 ``{"wavelengths": [...], "outputs": {ext_name: array}}``。
+
+        模式 2（旧 API，inputs 为空）: 波长扫描外部端口等效 S 矩阵。
+            返回 ``(wavelengths, sdict)``，sdict = {(port_out, port_in): array}。
 
         Args:
-            wavelengths: 波长数组（μm），默认 1.5-1.6μm 100点。
-            **model_kwargs: 传递给器件模型的参数。
+            wavelengths: 波长列表/数组（μm）。
+            inputs: 外部端口输入（仅新 API 模式）。
 
         Returns:
-            (波长数组, 电路级 S 参数字典)。
+            新 API: 结果字典；旧 API: (wavelengths, sdict) 元组。
+
+        Raises:
+            ValueError: 输入端口不存在 / wavelengths 为空。
+            numpy.linalg.LinAlgError: 矩阵奇异。
         """
         if wavelengths is None:
-            wavelengths = np.linspace(1.5, 1.6, 100)
-        # 计算每个节点的 S 参数
-        instance_s: dict[str, SDict] = {}
-        for name, node in self.network.nodes.items():
-            instance_s[name] = node.compute_sparams(wl=wavelengths, **{
-                k: v for k, v in model_kwargs.items()
-            })
-        # 级联
-        connections = list(self.network.connections.items())
-        ports = self.network.ports
-        s_total = cascade_circuit(instance_s, connections, ports)
-        return wavelengths, s_total
+            raise ValueError("wavelengths 不能为 None")
+        if inputs is not None:
+            return self._solve_with_inputs(wavelengths, inputs)
+        return self._solve_sweep(wavelengths)
 
-    def transmission(
+    def _solve_with_inputs(
         self,
-        out_port: str,
-        in_port: str,
-        wavelengths: np.ndarray | None = None,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """计算指定端口对的传输谱。
-
-        Args:
-            out_port: 输出端口名。
-            in_port: 输入端口名。
-            wavelengths: 波长数组。
-
-        Returns:
-            (波长数组, 传输率数组 T=|S|²)。
-        """
-        wl, s = self.solve(wavelengths)
-        key = (out_port, in_port)
-        if key not in s:
-            raise KeyError(
-                f"S 参数中无端口对 {key}，可用: {list(s.keys())}"
-            )
-        t = np.abs(s[key]) ** 2
-        return wl, t
-
-
-# ---------------------------------------------------------------------------
-# CAPHETimeDomainSolver — 时域求解器
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class CAPHETimeDomainSolver:
-    """CAPHE 时域求解器（ODE 积分）。
-
-    对环谐振器等动态器件求解时域耦合模方程（CMT）ODE，
-    模拟调制响应、载流子动力学与瞬态行为。
-
-    学术依据: Bogaerts et al., "Silicon microring resonators",
-    Laser & Photonics Reviews 6(1), 2012,
-    https://doi.org/10.1002/lpor.201100017
-
-    耦合模方程（全通环）:
-        dA/dt = (j·Δω - 1/τ)·A + κ·s_in(t)
-        s_out(t) = s_in(t) - κ*·A(t)
-    其中 A 为环内场幅度，τ 为光子寿命，κ 为耦合系数，Δω 为失谐。
-
-    Attributes:
-        network: 待求解的电路网络。
-    """
-
-    network: CAPHENetwork
-
-    def solve_ring(
-        self,
-        detuning_ghz: float = 0.0,
-        photon_lifetime_ps: float = 100.0,
-        coupling: float = 0.1,
-        t_span_ps: tuple[float, float] = (0.0, 1000.0),
-        n_steps: int = 1000,
-        input_power_mw: float = 1.0,
+        wavelengths: list[float],
+        inputs: dict[str, complex],
     ) -> dict:
-        """求解环谐振器时域响应（耦合模理论 ODE）。
-
-        使用前向欧拉法积分全通环 CMT 方程。
-
-        Args:
-            detuning_ghz: 激光-环失谐频率（GHz）。
-            photon_lifetime_ps: 环内光子寿命（ps）。
-            coupling: 总线-环功率耦合系数。
-            t_span_ps: 时间范围（ps）。
-            n_steps: 时间步数。
-            input_power_mw: 输入功率（mW）。
-
-        Returns:
-            含 ``time``（时间数组 ps）、``ring_field``（环内场幅度）、
-            ``output_power``（输出功率 mW）的字典。
-        """
-        t = np.linspace(t_span_ps[0], t_span_ps[1], n_steps)
-        dt = t[1] - t[0]
-        # 失谐角频率（rad/ps）：GHz → rad/ps = 2π·GHz·1e-3
-        delta_omega = 2.0 * np.pi * detuning_ghz * 1e-3
-        # 光子寿命倒数（1/ps）
-        gamma = 1.0 / photon_lifetime_ps
-        # 振幅耦合系数
-        kappa = np.sqrt(coupling)
-        # 输入场幅度（mW^0.5）
-        s_in = np.sqrt(input_power_mw)
-        # 前向欧拉积分
-        a = 0.0 + 0.0j  # 环内场幅度
-        ring_field = np.zeros(n_steps, dtype=complex)
-        output_power = np.zeros(n_steps)
-        for i in range(n_steps):
-            # dA/dt = (j·Δω - γ)·A + κ·s_in
-            da_dt = (1j * delta_omega - gamma) * a + kappa * s_in
-            a = a + da_dt * dt
-            ring_field[i] = a
-            # s_out = s_in - κ*·A
-            s_out = s_in - kappa * a
-            output_power[i] = np.abs(s_out) ** 2
-        return {
-            "time": t,
-            "ring_field": ring_field,
-            "output_power": output_power,
-            "detuning_ghz": detuning_ghz,
-            "photon_lifetime_ps": photon_lifetime_ps,
+        """新 API: 带输入的频域求解。"""
+        ext_map = self._external_global_indices()
+        n = self._n_total
+        for ext_name in inputs:
+            if ext_name not in ext_map:
+                raise ValueError(
+                    f"输入端口 '{ext_name}' 不存在，可用: {list(ext_map)}"
+                )
+        wl_list = list(wavelengths)
+        out_lists: dict[str, list[complex]] = {
+            ext: [] for ext in self.network.external_ports
         }
+        eye_n = np.eye(n, dtype=complex)
+        for wl in wl_list:
+            s_global = self.build_global_matrix(wl)
+            k_mat = self._build_connection_matrix()
+            a_ext = np.zeros(n, dtype=complex)
+            for ext_name, val in inputs.items():
+                a_ext[ext_map[ext_name]] = complex(val)
+            a_mat = eye_n - s_global @ k_mat
+            b_vec = np.linalg.solve(a_mat, s_global @ a_ext)
+            for ext_name in self.network.external_ports:
+                out_lists[ext_name].append(b_vec[ext_map[ext_name]])
+        outputs = {
+            ext: np.array(vals, dtype=complex)
+            for ext, vals in out_lists.items()
+        }
+        return {"wavelengths": wl_list, "outputs": outputs}
 
-    def solve_step_response(
+    def _solve_sweep(
         self,
-        detuning_ghz: float = 0.0,
-        photon_lifetime_ps: float = 100.0,
-        coupling: float = 0.1,
-        t_span_ps: tuple[float, float] = (0.0, 2000.0),
-        n_steps: int = 2000,
-    ) -> dict:
-        """求解环谐振器阶跃响应。
+        wavelengths: list[float] | np.ndarray,
+    ) -> tuple[np.ndarray, dict]:
+        """旧 API: 波长扫描外部端口等效 S 矩阵。
 
-        输入阶跃信号（t=0 时开启），观察环内场与输出的瞬态建立过程。
-
-        Args:
-            detuning_ghz: 失谐频率（GHz）。
-            photon_lifetime_ps: 光子寿命（ps）。
-            coupling: 耦合系数。
-            t_span_ps: 时间范围（ps）。
-            n_steps: 时间步数。
+        对每个波长用 Schur 补消去内部端口，返回外部端口对之间的传输。
 
         Returns:
-            含 ``time``、``ring_field``、``output_power`` 的字典。
+            (wavelengths, sdict)，sdict = {(port_out, port_in): array}。
         """
-        return self.solve_ring(
-            detuning_ghz=detuning_ghz,
-            photon_lifetime_ps=photon_lifetime_ps,
-            coupling=coupling,
-            t_span_ps=t_span_ps,
-            n_steps=n_steps,
-            input_power_mw=1.0,
-        )
+        wl_arr = np.asarray(wavelengths, dtype=float)
+        ext_names = list(self.network.external_ports.keys())
+        n_ext = len(ext_names)
+        if n_ext == 0:
+            raise ValueError("网络无外部端口，无法进行波长扫描")
+        sdict: dict[tuple[str, str], np.ndarray] = {
+            (ext_names[i], ext_names[j]): np.zeros(len(wl_arr), dtype=complex)
+            for i in range(n_ext)
+            for j in range(n_ext)
+        }
+        for k, wl in enumerate(wl_arr):
+            _, m = self._external_s_matrix_ordered(float(wl))
+            for i in range(n_ext):
+                for j in range(n_ext):
+                    sdict[(ext_names[i], ext_names[j])][k] = m[i, j]
+        return wl_arr, sdict
+
+    def _external_s_matrix_ordered(
+        self, wl: float
+    ) -> tuple[list[str], np.ndarray]:
+        """计算外部端口等效 S 矩阵（按 ext_names 顺序）。
+
+        用 Schur 补消去内部端口，重排为 external_ports 字典顺序。
+
+        Returns:
+            (ext_names, m_ordered) — ext_names 顺序与 m_ordered 行列一致。
+        """
+        ext_map = self._external_global_indices()
+        ext_names = list(self.network.external_ports.keys())
+        n_ext = len(ext_names)
+        m_reduced, _ = self.eliminate_linear_nodes(wl)
+        ext_set = set(ext_map.values())
+        ext_idx_sorted = sorted(ext_set)
+        sorted_pos = {g: pos for pos, g in enumerate(ext_idx_sorted)}
+        m_ordered = np.zeros((n_ext, n_ext), dtype=complex)
+        for i, name_i in enumerate(ext_names):
+            gi = ext_map[name_i]
+            for j, name_j in enumerate(ext_names):
+                gj = ext_map[name_j]
+                m_ordered[i, j] = m_reduced[sorted_pos[gi], sorted_pos[gj]]
+        return ext_names, m_ordered
 
 
 # ---------------------------------------------------------------------------
-# CAPHEBackend — 统一后端接口
+# 向后兼容：CAPHEBackend / CAPHETimeDomainSolver 已迁移至 caphe_time_domain.py
 # ---------------------------------------------------------------------------
+def __getattr__(name: str):
+    """PEP 562 惰性重导出。
 
-
-@dataclass
-class CAPHEBackend:
-    """CAPHE 统一仿真后端接口。
-
-    封装频率域与时域求解器，提供统一的电路仿真入口。
-
-    学术依据: CAPHE 仿真后端,
-    https://www.lucedaphotonics.com/products/caphe
-
-    Attributes:
-        network: 电路网络。
+    CAPHEBackend 与 CAPHETimeDomainSolver 已迁移至 ``caphe_time_domain.py``
+    （规则 7.1 单文件 ≤800 行）。为兼容历史导入路径
+    （``from polaris.sim.caphe_backend import CAPHEBackend``），在此惰性重导出，
+    避免模块加载期循环导入。
     """
-
-    network: CAPHENetwork | None = None
-
-    def set_network(self, network: CAPHENetwork) -> None:
-        """设置仿真网络。"""
-        self.network = network
-
-    def frequency_domain(
-        self,
-        wavelengths: np.ndarray | None = None,
-        **model_kwargs,
-    ) -> tuple[np.ndarray, SDict]:
-        """频率域仿真。
-
-        Args:
-            wavelengths: 波长数组。
-            **model_kwargs: 器件模型参数。
-
-        Returns:
-            (波长数组, S 参数字典)。
-
-        Raises:
-            RuntimeError: 未设置网络时。
-        """
-        if self.network is None:
-            raise RuntimeError("CAPHE 后端未设置网络，请先调用 set_network()")
-        solver = CAPHEFrequencySolver(network=self.network)
-        return solver.solve(wavelengths, **model_kwargs)
-
-    def time_domain(
-        self,
-        detuning_ghz: float = 0.0,
-        photon_lifetime_ps: float = 100.0,
-        coupling: float = 0.1,
-        t_span_ps: tuple[float, float] = (0.0, 1000.0),
-        n_steps: int = 1000,
-    ) -> dict:
-        """时域仿真（环谐振器 ODE）。
-
-        Args:
-            detuning_ghz: 失谐频率（GHz）。
-            photon_lifetime_ps: 光子寿命（ps）。
-            coupling: 耦合系数。
-            t_span_ps: 时间范围（ps）。
-            n_steps: 时间步数。
-
-        Returns:
-            时域求解结果字典。
-
-        Raises:
-            RuntimeError: 未设置网络时。
-        """
-        if self.network is None:
-            raise RuntimeError("CAPHE 后端未设置网络，请先调用 set_network()")
-        solver = CAPHETimeDomainSolver(network=self.network)
-        return solver.solve_ring(
-            detuning_ghz=detuning_ghz,
-            photon_lifetime_ps=photon_lifetime_ps,
-            coupling=coupling,
-            t_span_ps=t_span_ps,
-            n_steps=n_steps,
+    if name in {"CAPHEBackend", "CAPHETimeDomainSolver"}:
+        from polaris.sim.caphe_time_domain import (
+            CAPHEBackend,
+            CAPHETimeDomainSolver,
         )
+        return {
+            "CAPHEBackend": CAPHEBackend,
+            "CAPHETimeDomainSolver": CAPHETimeDomainSolver,
+        }[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-    @classmethod
-    def from_netlist(cls, netlist: dict) -> CAPHEBackend:
-        """从网表构建后端。
 
-        Args:
-            netlist: SAX 格式网表。
-
-        Returns:
-            CAPHEBackend 实例。
-        """
-        network = CAPHENetwork.from_netlist(netlist)
-        return cls(network=network)
+__all__ = [
+    "CAPHENode",
+    "CAPHENetwork",
+    "CAPHEFrequencySolver",
+    "CROSS_VALIDATE_TOL",
+    "SDict",
+    "ModelFunc",
+    "waveguide_s",
+    "y_branch_s",
+    "directional_coupler_s",
+    "ring_resonator_s",
+    "mmi_1x2_s",
+    "mmi_2x2_s",
+    "phase_shifter_s",
+]
