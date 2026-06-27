@@ -45,6 +45,12 @@ from polaris.flow.ipkiss_flow import (
     SDLFlow,
 )
 
+# === Design Intent 流程 API（来自 design_intent 模块，R20）===
+from polaris.flow.design_intent import (
+    DesignIntentEngine as DesignIntentFlowEngine,
+    IntentConfig,
+)
+
 __all__ = [
     # 作业流程系统
     "Job",
@@ -71,4 +77,7 @@ __all__ = [
     "SDLFlow",
     "ClosedLoopValidator",
     "IPKISSPDKBridge",
+    # Design Intent 流程（R20）
+    "DesignIntentFlowEngine",
+    "IntentConfig",
 ]
