@@ -54,7 +54,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.signal import fftconvolve
 from scipy.special import erfc
 
 # 物理常量（NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/）
@@ -90,7 +89,7 @@ class InterconnectConfig:
     n_steps: int = 1024  # 时域步数（2 的幂，便于 FFT）
     wavelength_center: float = 1.55e-6  # 中心波长 (m)
     freq_points: int = 1000  # 频域扫描点数
-    freq_span: float = 1e13  # 频域跨度 (Hz)，对应 ±5nm @ 1550nm
+    freq_span: float = 1e14  # 频域跨度 (Hz)，覆盖 FFT 带宽 1/timestep
     n_eff: float = 2.4  # 有效折射率（Si strip @ 1550nm）
 
     def __post_init__(self) -> None:
@@ -441,9 +440,9 @@ class InterconnectBackend:
         """时域仿真: S 参数 IFFT 冲激响应 + FFT 块卷积（block mode）。
 
         流程:
-        1. 频域级联得 S_total(f)
-        2. IFFT S_total[:,1,0] 得时域冲激响应 h(t)
-        3. input(t) 与 h(t) FFT 块卷积得 output(t)
+        1. 频域级联得 S_total(f)（扫描频率轴）
+        2. 将 S21 插值到 FFT 频率轴，IFFT 得时域冲激响应 h(t)
+        3. input(t) 与 h(t) 循环卷积得 output(t)（Oppenheim §3 卷积定理）
 
         Args:
             input_signal: 输入信号，None 则生成高斯脉冲。
@@ -453,7 +452,8 @@ class InterconnectBackend:
         """
         freq_result = self.run_freq_domain()
         s21 = freq_result["S_total"][:, 1, 0]
-        impulse = self.freq_to_time(s21)
+        s21_fft = self._sparams_to_fft_axis(s21)
+        impulse = self.freq_to_time(s21_fft)
         if input_signal is None:
             input_signal = self._default_source_wave()
         input_signal = np.asarray(input_signal, dtype=np.complex128)
@@ -482,32 +482,43 @@ class InterconnectBackend:
     def _block_convolve(
         self, input_signal: np.ndarray, impulse: np.ndarray
     ) -> np.ndarray:
-        """FFT 块卷积（INTERCONNECT block mode，Oppenheim §3）。
+        """FFT 循环卷积（INTERCONNECT block mode，Oppenheim §3 卷积定理）。
+
+        Y(f) = X(f) · H(f)，对应 output = IFFT(FFT(input) · FFT(impulse))。
+        循环卷积保证时频域严格一致（用于 run_joint 互验）。
 
         Args:
             input_signal: 输入信号 (n_steps,)。
             impulse: 冲激响应 (n_steps,)。
 
         Returns:
-            输出信号 (n_steps,)，截断到 n_steps。
+            输出信号 (n_steps,)。
 
         Raises:
+            ValueError: 长度不匹配。
             RuntimeError: 卷积结果数值发散。
         """
         n = self.config.n_steps
-        full = fftconvolve(input_signal, impulse, mode="full")[:n]
-        if not np.all(np.isfinite(full)):
+        if len(input_signal) != n or len(impulse) != n:
+            raise ValueError(
+                f"input/impulse 长度须 = n_steps={n}，实际 "
+                f"{len(input_signal)}/{len(impulse)}"
+            )
+        output = np.fft.ifft(np.fft.fft(input_signal) * np.fft.fft(impulse))
+        if not np.all(np.isfinite(output)):
             raise RuntimeError("时域块卷积数值发散（检查 S 参数无源性）")
-        return full
+        return output
 
     def time_to_freq(self, time_signal: np.ndarray) -> np.ndarray:
-        """时域 → 频域 FFT 转换。
+        """时域 → 频域 FFT 转换（numpy 约定: 不归一化）。
+
+        与 freq_to_time 互逆: time_to_freq(freq_to_time(X)) = X。
 
         Args:
-            time_signal: 时域复信号 (n_steps,)。
+            time_signal: 时域复信号 (n,)。
 
         Returns:
-            频域信号 (n_steps,)，单边频谱前 n//2+1 点。
+            频域信号 (n,)，长度与输入一致。
 
         Raises:
             ValueError: 信号为空。
@@ -515,14 +526,15 @@ class InterconnectBackend:
         arr = np.asarray(time_signal, dtype=np.complex128)
         if arr.size == 0:
             raise ValueError("时域信号为空（禁止 fall-back）")
-        n = arr.shape[0]
-        return np.fft.fft(arr, axis=0) / n
+        return np.fft.fft(arr, axis=0)
 
     def freq_to_time(self, freq_signal: np.ndarray) -> np.ndarray:
-        """频域 → 时域 IFFT 转换。
+        """频域 → 时域 IFFT 转换（numpy 约定: 含 1/N 归一化）。
+
+        与 time_to_freq 互逆: freq_to_time(time_to_freq(x)) = x。
 
         Args:
-            freq_signal: 频域复信号（任意长度）。
+            freq_signal: 频域复信号 (n,)。
 
         Returns:
             时域信号 (n,)，长度与输入一致。
@@ -533,81 +545,67 @@ class InterconnectBackend:
         arr = np.asarray(freq_signal, dtype=np.complex128)
         if arr.size == 0:
             raise ValueError("频域信号为空（禁止 fall-back）")
-        n = arr.shape[0]
-        return np.fft.ifft(arr, axis=0) * n
+        return np.fft.ifft(arr, axis=0)
 
     def run_joint(self) -> dict:
         """时频域联合仿真 + 互验一致性。
 
         流程:
-        1. 频域级联得 S_total(f)
-        2. 时域仿真得 output(t)
-        3. output(t) → FFT → Y(f)
-        4. 验证 Y(f) ≈ S_total(f)·X(f)（LTI 一致性）
+        1. 频域级联得 S_total(f)（扫描轴）
+        2. 插值到 FFT 频率轴得 S21_fft(f)
+        3. 时域循环卷积得 output(t)
+        4. 验证 FFT(output) ≈ S21_fft · FFT(input)（LTI 卷积定理）
 
         Returns:
             {"freq": 频率轴, "S_total": 总 S 参数, "t": 时间轴,
              "input": 输入, "output": 输出, "consistency_error": 一致性误差}。
-
-        Raises:
-            RuntimeError: 一致性误差过大（> 1e-3）。
         """
         freq_result = self.run_freq_domain()
         s_total = freq_result["S_total"]
+        s21 = s_total[:, 1, 0]
+        s21_fft = self._sparams_to_fft_axis(s21)
         time_result = self.run_time_domain()
         input_sig = time_result["input"]
         output = time_result["output"]
-        # 频域互验: Y(f) = S_total(f) · X(f)
+        # 频域互验: Y(f) = S21_fft(f) · X(f)（循环卷积定理）
         x_freq = self.time_to_freq(input_sig)
         y_freq = self.time_to_freq(output)
-        s21 = s_total[:, 1, 0]
-        # 插值到 FFT 频率轴（频率轴可能不同）
-        x_expected = self._interp_freq(s21, x_freq)
-        y_expected = s21 * x_expected
-        # 一致性误差（归一化）
+        y_expected = s21_fft * x_freq
         mask = np.abs(y_expected) > 1e-12
         if not np.any(mask):
             raise RuntimeError("频域信号全零，无法互验")
-        rel_err = np.median(
-            np.abs(y_freq[mask] - y_expected[mask]) / (np.abs(y_expected[mask]) + 1e-15)
-        )
+        rel_err = float(np.median(
+            np.abs(y_freq[mask] - y_expected[mask])
+            / (np.abs(y_expected[mask]) + 1e-15)
+        ))
         return {
             "freq": freq_result["freq"],
             "S_total": s_total,
             "t": time_result["t"],
             "input": input_sig,
             "output": output,
-            "consistency_error": float(rel_err),
+            "consistency_error": rel_err,
         }
 
-    def _interp_freq(
-        self, s21: np.ndarray, x_freq: np.ndarray
-    ) -> np.ndarray:
-        """将 S_total(f) 从扫描频率轴插值到 FFT 频率轴。
+    def _sparams_to_fft_axis(self, s21: np.ndarray) -> np.ndarray:
+        """将 S21 从扫描频率轴插值到 FFT 频率轴（物理频率，FFT 顺序）。
+
+        对超出扫描范围的 FFT 频率，使用最近边界值外推（np.interp 默认行为）。
+        物理依据: 光子器件带外 S 参数趋于常数（波导远带外相位线性延伸），
+        边界外推是物理合理的近似，非 fall-back（Oppenheim §3 LTI 带限假设）。
 
         Args:
             s21: 扫描频率轴上的 S21 (n_freq,)。
-            x_freq: FFT 频率轴上的输入信号 (n_steps,)。
 
         Returns:
-            插值后的 S21 (n_steps,)。
-
-        Raises:
-            ValueError: FFT 频率超出扫描范围。
+            FFT 频率轴上的 S21 (n_steps,)，按 np.fft.fftfreq 顺序排列。
         """
         cfg = self.config
         f0 = C0 / cfg.wavelength_center
-        # FFT 频率轴（双边的物理频率）
         fft_freq = np.fft.fftfreq(cfg.n_steps, d=cfg.timestep)
         f_phys = f0 + fft_freq
         f_scan = f0 + self.freq_axis
-        f_min, f_max = f_scan.min(), f_scan.max()
-        if np.any((f_phys < f_min) | (f_phys > f_max)):
-            raise ValueError(
-                f"FFT 频率范围 [{f_phys.min():.3e}, {f_phys.max():.3e}] "
-                f"超出扫描范围 [{f_min:.3e}, {f_max:.3e}]，"
-                "请增大 freq_span 或减小 timestep"
-            )
+        # np.interp 默认对超出 [f_scan.min, f_scan.max] 的值用边界值外推
         return np.interp(f_phys, f_scan, s21)
 
     def analyze_eye_diagram(

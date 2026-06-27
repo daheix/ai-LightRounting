@@ -439,25 +439,28 @@ class LumericalFDTDBackend:
     ) -> bool:
         """与 Tidy3D 3D 仿真结果交叉验证。
 
+        比较当前内存中的场（须先 run()）或监视器时序与 Tidy3D 结果的 L∞ 误差。
+
         Args:
             other_result: Tidy3D 仿真结果字典，须含 "fields"（6 分量）或
                 "monitors"（时序）。字段形状须与本地一致。
             atol: 绝对误差容限（V/m），默认 1e-3。
 
         Returns:
-            True 若全场 L∞ 误差 < atol。
+            True 若全部比较项 L∞ 误差 < atol。
 
         Raises:
-            ValueError: 结果字典缺字段或形状不匹配。
+            ValueError: 结果字典缺字段/形状不匹配 / 本地无对应数据。
+            RuntimeError: 本地未初始化（set_grid_3d 未调用）。
         """
-        if "fields" in other_result and self._ex is not None:
-            mine = self.run() if self._ex[0, 0, 0] != 0.0 or np.allclose(
-                self._ex, 0.0
-            ) else {"fields": self._fields_dict()}
+        if self._ex is None:
+            raise RuntimeError("set_grid_3d 须先调用")
+        if "fields" in other_result:
+            mine = self._fields_dict()
             for comp in ("Ex", "Ez", "Hz"):
                 if comp not in other_result["fields"]:
                     raise ValueError(f"other_result 缺场分量 {comp}")
-                a = mine["fields"][comp]
+                a = mine[comp]
                 b = other_result["fields"][comp]
                 if a.shape != b.shape:
                     raise ValueError(
@@ -467,13 +470,13 @@ class LumericalFDTDBackend:
                     return False
             return True
         if "monitors" in other_result:
+            if not self._monitor_data:
+                raise ValueError("本地无监视器数据（先 run()）")
             for name, ts in other_result["monitors"].items():
                 if name not in self._monitor_data:
                     raise ValueError(f"本地无监视器 {name}")
                 if self._monitor_data[name].shape != ts.shape:
-                    raise ValueError(
-                        f"监视器 {name} 形状不匹配"
-                    )
+                    raise ValueError(f"监视器 {name} 形状不匹配")
                 if np.max(np.abs(self._monitor_data[name] - ts)) > atol:
                     return False
             return True
@@ -569,21 +572,22 @@ class LumericalFDTDBackend:
         sx, kx, ax, bx = sigma_profile(dx)
         sy, ky, ay, by = sigma_profile(dy)
         sz, kz, az, bz = sigma_profile(dz)
-        # 6 面 σ/κ/a/b 缓冲（仅 PML 区域非零，内部为零）
+        # 6 面 σ/κ/a/b 缓冲：σ[0] = σ_max（最外层最强衰减），σ[-1] = 0（最内层）
+        # x0 与 x1 共用同一 σ 剖面，因应用时各自从外层向内递减（对称结构）
         self._cpml_sigma = {
-            "x0": sx, "x1": sx[::-1].copy(),
-            "y0": sy, "y1": sy[::-1].copy(),
-            "z0": sz, "z1": sz[::-1].copy(),
+            "x0": sx.copy(), "x1": sx.copy(),
+            "y0": sy.copy(), "y1": sy.copy(),
+            "z0": sz.copy(), "z1": sz.copy(),
         }
         self._cpml_b = {
-            "x0": bx, "x1": bx[::-1].copy(),
-            "y0": by, "y1": by[::-1].copy(),
-            "z0": bz, "z1": bz[::-1].copy(),
+            "x0": bx.copy(), "x1": bx.copy(),
+            "y0": by.copy(), "y1": by.copy(),
+            "z0": bz.copy(), "z1": bz.copy(),
         }
         self._cpml_a = {
-            "x0": ax, "x1": ax[::-1].copy(),
-            "y0": ay, "y1": ay[::-1].copy(),
-            "z0": az, "z1": az[::-1].copy(),
+            "x0": ax.copy(), "x1": ax.copy(),
+            "y0": ay.copy(), "y1": ay.copy(),
+            "z0": az.copy(), "z1": az.copy(),
         }
         # ψ 递归缓冲（6 面 × 3 分量，简化为每面 1 个标量 ψ 场）
         self._cpml_psi_e = {
@@ -604,57 +608,66 @@ class LumericalFDTDBackend:
     def _step_h_3d(self) -> None:
         """更新 H^{n+1/2}（3D Yee Faraday 旋度，向量化）。
 
-        H_x = D_a·H_x − D_bx·(∂E_z/∂y − ∂E_y/∂z)
-        H_y = D_a·H_y − D_by·(∂E_x/∂z − ∂E_z/∂x)
-        H_z = D_a·H_z − D_bz·(∂E_y/∂x − ∂E_x/∂y)
+        Faraday 定律 ∂H/∂t = -(1/μ)·∇×E，逐分量：
+        H_x = D_a·H_x + D_bx·(∂E_y/∂z − ∂E_z/∂y)
+        H_y = D_a·H_y + D_by·(∂E_z/∂x − ∂E_x/∂z)
+        H_z = D_a·H_z + D_bz·(∂E_x/∂y − ∂E_y/∂x)
+        有效范围：H_x [nx, ny-1, nz-1] / H_y [nx-1, ny, nz-1] / H_z [nx-1, ny-1, nz]。
         """
         ex, ey, ez = self._ex, self._ey, self._ez
         hx, hy, hz = self._hx, self._hy, self._hz
         da = self._da
-        dx, dy, dz = self._cfg.dx, self._cfg.dy, self._cfg.dz
-        # 内部区域 [:-1, :-1, :-1]（边界由 PML 处理）
-        dez_dy = (ez[:, 1:, :-1] - ez[:, :-1, :-1]) / dy
+        dy, dz = self._cfg.dy, self._cfg.dz
+        # H_x: ∂E_y/∂z − ∂E_z/∂y，范围 [:, :−1, :−1]
         dey_dz = (ey[:, :-1, 1:] - ey[:, :-1, :-1]) / dz
-        hx[:, :-1, :-1] = da * hx[:, :-1, :-1] - self._db_x * (dez_dy - dey_dz)
-        dex_dz = (ex[:-1, :, 1:] - ex[:-1, :, :-1]) / dz
-        dez_dx = (ez[1:, :-1, :] - ez[:-1, :-1, :]) / dx
-        hy[:-1, :, :-1] = da * hy[:-1, :, :-1] - self._db_y * (dex_dz - dez_dx)
-        dey_dx = (ey[1:, :-1, :] - ey[:-1, :-1, :]) / dx
-        dex_dy = (ex[:-1, 1:, :] - ex[:-1, :-1, :]) / dy
-        hz[:-1, :-1, :] = da * hz[:-1, :-1, :] - self._db_z * (dey_dx - dex_dy)
+        dez_dy = (ez[:, 1:, :-1] - ez[:, :-1, :-1]) / dy
+        hx[:, :-1, :-1] = da * hx[:, :-1, :-1] + self._db_x * (dey_dz - dez_dy)
+        # H_y: ∂E_z/∂x − ∂E_x/∂z，范围 [:−1, :, :−1]
+        dz_dx = (ez[1:, :, :-1] - ez[:-1, :, :-1]) / self._cfg.dx
+        de_dz = (ex[:-1, :, 1:] - ex[:-1, :, :-1]) / dz
+        hy[:-1, :, :-1] = da * hy[:-1, :, :-1] + self._db_y * (dz_dx - de_dz)
+        # H_z: ∂E_x/∂y − ∂E_y/∂x，范围 [:−1, :−1, :]
+        dx_dy = (ex[:-1, 1:, :] - ex[:-1, :-1, :]) / dy
+        de_dx = (ey[1:, :-1, :] - ey[:-1, :-1, :]) / self._cfg.dx
+        hz[:-1, :-1, :] = da * hz[:-1, :-1, :] + self._db_z * (dx_dy - de_dx)
         self._apply_cpml_3d(field_is_e=False)
 
     def _step_e_3d(self) -> None:
-        """更新 E^{n+1}（3D Yee Ampere 旋度，向量化，含 CPML ψ_e 与 Drude −cb·J）。
+        """更新 E^{n+1}（3D Yee Ampere 旋度，向量化，含 Drude −cb·J 校正）。
 
-        E_x = C_a·E_x + C_bx·(∂H_z/∂y − ∂H_y/∂z) − C_bx·J_x
-        E_y = C_a·E_y + C_by·(∂H_x/∂z − ∂H_z/∂x) − C_by·J_y
-        E_z = C_a·E_z + C_bz·(∂H_y/∂x − ∂H_x/∂y) − C_bz·J_z
+        Ampere 定律 ∂E/∂t = (1/ε)·∇×H，逐分量：
+        E_x = C_a·E_x + C_bx·(∂H_z/∂y − ∂H_y/∂z)
+        E_y = C_a·E_y + C_by·(∂H_x/∂z − ∂H_z/∂x)
+        E_z = C_a·E_z + C_bz·(∂H_y/∂x − ∂H_x/∂y)
+        有效范围：E_x [nx, ny-1, nz-1] / E_y [nx-1, ny, nz-1] / E_z [nx-1, ny-1, nz]。
         """
         hx, hy, hz = self._hx, self._hy, self._hz
         ex, ey, ez = self._ex, self._ey, self._ez
         ca, cb = self._ca, self._cb
-        dx, dy, dz = self._cfg.dx, self._cfg.dy, self._cfg.dz
-        cb_x = cb / dx
+        dy, dz = self._cfg.dy, self._cfg.dz
+        cb_x = cb / self._cfg.dx
         cb_y = cb / dy
         cb_z = cb / dz
-        dhz_dy = (hz[1:, 1:, :] - hz[1:, :-1, :]) / dy
-        dhy_dz = (hy[1:, :, 1:] - hy[1:, :, :-1]) / dz
-        ex[1:, :-1, :-1] = (
-            ca[1:, :-1, :-1] * ex[1:, :-1, :-1]
-            + cb_x[1:, :-1, :-1] * (dhz_dy[:, :, :-1] - dhy_dz[:, :-1, :])
+        # E_x: ∂H_z/∂y − ∂H_y/∂z，范围 [:, :−1, :−1]
+        dhz_dy = (hz[:, 1:, :-1] - hz[:, :-1, :-1]) / dy
+        dhy_dz = (hy[:, :-1, 1:] - hy[:, :-1, :-1]) / dz
+        ex[:, :-1, :-1] = (
+            ca[:, :-1, :-1] * ex[:, :-1, :-1]
+            + cb_x[:, :-1, :-1] * (dhz_dy - dhy_dz)
         )
-        dhx_dz = (hx[:, 1:, 1:] - hx[:, 1:, :-1]) / dz
-        dhz_dx = (hz[1:, 1:, :] - hz[:-1, 1:, :]) / dx
-        ey[:-1, 1:, :-1] = (
-            ca[:-1, 1:, :-1] * ey[:-1, 1:, :-1]
-            + cb_y[:-1, 1:, :-1] * (dhx_dz[:, :, :-1] - dhz_dx[:, :-1, :])
+        # E_y: ∂H_x/∂z − ∂H_z/∂x，范围 [:−1, :, :−1]
+        dhx_dz = (hx[:-1, :, 1:] - hx[:-1, :, :-1]) / dz
+        dhz_dx = (hz[1:, :, :-1] - hz[:-1, :, :-1]) / self._cfg.dx
+        ey[:-1, :, :-1] = (
+            ca[:-1, :, :-1] * ey[:-1, :, :-1]
+            + cb_y[:-1, :, :-1] * (dhx_dz - dhz_dx)
         )
-        dhy_dx = (hy[1:, :, 1:] - hy[:-1, :, 1:]) / dx
-        dhx_dy = (hx[:, 1:, 1:] - hx[:, :-1, 1:]) / dy
-        ez[:-1, :-1, 1:] = (
-            ca[:-1, :-1, 1:] * ez[:-1, :-1, 1:]
-            + cb_z[:-1, :-1, 1:] * (dhy_dx[:, :-1, :] - dhx_dy[:-1, :, :])
+        # E_z: ∂H_y/∂x − ∂H_x/∂y，范围 [:−1, :−1, :]
+        dhy_dx = (hy[1:, :-1, :] - hy[:-1, :-1, :]) / self._cfg.dx
+        dhx_dy = (hx[:-1, 1:, :] - hx[:-1, :-1, :]) / dy
+        ez[:-1, :-1, :] = (
+            ca[:-1, :-1, :] * ez[:-1, :-1, :]
+            + cb_z[:-1, :-1, :] * (dhy_dx - dhx_dy)
         )
         # Drude 极化电流校正（J 已在 _step_drude 用 E^n 推进）
         for idx, region in enumerate(self._disp_regions):
