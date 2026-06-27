@@ -664,10 +664,17 @@ class TestR36FeatureMatrix:
         """
         features: dict[str, bool] = {}
 
-        # AlphaChip 核心架构（3项）
-        features["edge_gnn"] = len(alpha_agent.gnn_params) > 0
-        features["policy_net"] = "W1" in alpha_agent.policy_params
-        features["value_net"] = "W1" in alpha_agent.value_params
+        # AlphaChip 核心架构（3项，D05 架构统一：gnn_params→gnn, policy/value_params→ppo）
+        features["edge_gnn"] = hasattr(alpha_agent, "gnn") and alpha_agent.gnn is not None
+        features["policy_net"] = (
+            hasattr(alpha_agent, "ppo")
+            and alpha_agent.ppo is not None
+            and hasattr(alpha_agent.ppo.ac, "action_mean")
+        )
+        features["value_net"] = (
+            hasattr(alpha_agent, "ppo")
+            and hasattr(alpha_agent.ppo.ac, "value_head")
+        )
 
         # AlphaChip 核心方法（4项）
         features["select_action"] = hasattr(alpha_agent, "select_action")
@@ -738,9 +745,13 @@ class TestR36FeatureMatrix:
         alpha_agent.circuit = photonic_circuit
         placement = alpha_agent.place(photonic_circuit)
         alpha_features = {
-            "gnn": len(alpha_agent.gnn_params) > 0,
-            "policy": "W1" in alpha_agent.policy_params,
-            "value": "W1" in alpha_agent.value_params,
+            "gnn": hasattr(alpha_agent, "gnn") and alpha_agent.gnn is not None,
+            "policy": (
+                hasattr(alpha_agent, "ppo")
+                and alpha_agent.ppo is not None
+                and hasattr(alpha_agent.ppo.ac, "action_mean")
+            ),
+            "value": hasattr(alpha_agent, "ppo") and hasattr(alpha_agent.ppo.ac, "value_head"),
             "place": len(placement) == len(photonic_circuit["devices"]),
             "reward": bool(np.isfinite(alpha_agent.compute_reward(placement))),
         }
