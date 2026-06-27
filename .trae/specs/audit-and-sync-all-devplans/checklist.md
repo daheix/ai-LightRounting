@@ -25,8 +25,8 @@
 - [ ] `src/polaris/sim/photoelectric_cosim.py` 已实现（R17 VLSIR SPICE + Verilog-A + cocotb）
 - [ ] `tests/test_photoelectric_cosim.py` ≥8 个测试全部通过
 - [ ] ≥3 个 Verilog-A 光子模型（调制器/探测器/激光器）
-- [ ] `src/polaris/sim/tidy3d_backend.py` 已实现（R27 云 API + 亚像素精度）
-- [ ] `tests/test_tidy3d_backend.py` ≥8 个测试全部通过
+- [x] `src/polaris/sim/tidy3d_backend.py` 已实现（R27 云 API + 亚像素精度）
+- [x] `tests/test_tidy3d_backend.py` ≥8 个测试全部通过
 - [ ] `src/polaris/inverse/adjoint_optimizer.py` 已实现（R28 伴随优化 + 自动微分）
 - [ ] `tests/test_adjoint_optimizer.py` ≥8 个测试全部通过
 - [ ] ≥3 个标准器件示例（MMI/光栅耦合器/模式转换器）
