@@ -77,6 +77,42 @@ __all__ = ["GummelSolver", "solve_ddm_gummel"]
 _DEFAULT_VSTEP: float = 0.2
 
 
+def _solve_carrier_with_check(
+    a_mat: sparse.csr_matrix,
+    b_vec: np.ndarray,
+    bc_idx: np.ndarray,
+    bc_vals: np.ndarray,
+    nx: int,
+    ny: int,
+    n_floor: float,
+    fail_rel_threshold: float,
+    bc_scale: float,
+    carrier_name: str,
+    n_iter: int,
+) -> np.ndarray:
+    """求解连续性方程并检查负浓度（相对判据区分噪声与 Gummel 失效）。
+
+    负浓度处理（相对判据，与 DdmSolver._run_newton n_floor 截断一致）：
+    - 浓度尺度 c_scale = max(|c_new|, bc_scale, n_floor)
+    - 若 min(c_new) < -fail_rel_threshold·c_scale（相对误差 > 阈值）：
+      Gummel 真正失效（SRH 滞后致非物理负浓度），raise RuntimeError（R03）
+    - 否则（相对误差 ≤ 阈值）：浮点舍入噪声，截断到 n_floor（非 fall-back）
+    """
+    a_mat, b_vec = _apply_dirichlet(a_mat, b_vec, bc_idx, bc_vals)
+    c_new = spsolve(a_mat.tocsc(), b_vec).reshape(nx, ny)
+    c_min = float(np.min(c_new))
+    c_scale = max(float(np.max(np.abs(c_new))), bc_scale, n_floor)
+    if c_min < -fail_rel_threshold * c_scale:
+        raise RuntimeError(
+            f"Gummel 第 {n_iter} 步{carrier_name}浓度出现物理不可行负值"
+            f"（min={c_min:.3e}，相对幅度 {abs(c_min) / c_scale:.3e} > "
+            f"{fail_rel_threshold}，SRH 滞后致 Gummel 失效，"
+            f"请改用 DdmSolver 全耦合牛顿法或减小 voltage_step）"
+        )
+    # 浮点小负值（相对幅度 ≤ 阈值）截断到 n_floor（数值噪声，非 fall-back）
+    return np.maximum(c_new, n_floor)
+
+
 class GummelSolver:
     """经典 Gummel 解耦迭代求解器（Poisson ↔ 连续性交替）。
 
@@ -201,25 +237,13 @@ class GummelSolver:
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int, bool]:
         """单步电压的 Gummel 解耦迭代主循环（Poisson↔连续性交替）。
 
-        收敛判据：|Δψ|max < config.tol（任务 spec 1e-6 V）。
-        负浓度处理（相对判据，区分浮点噪声与 Gummel 真正失效）：
-        - 浓度尺度 c_scale = max(|n_new|, |n_b|)（边界与解的最大值）
-        - 若 min(n_new) < -0.1·c_scale（相对误差 > 10%）：Gummel 真正失效
-          （SRH 滞后致非物理负浓度），raise RuntimeError（R03 禁止 fall-back）
-        - 否则（相对误差 ≤ 10%）：浮点舍入噪声（float64 精度极限 ~1e-16，
-          大数相减累加可达 1e-11 相对误差，如 n_b=1e22 时 -1e11 噪声），
-          截断到 n_floor（物理下界，本征热激发 n_floor = n_i·1e-10）。
-        该判据与 DdmSolver._run_newton 第 703 行 n_floor 截断一致（DdmSolver
-        在 Armijo 线搜索中以 n_new < 0 为物理可行性判据，本实现以相对幅度
-        区分噪声与失效，更鲁棒地处理 SG 矩阵在大 δ 下的条件数问题）。
+        收敛判据：|Δψ|max < config.tol。负浓度相对判据与欠松弛详见
+        `_solve_carrier_with_check` 与类 docstring。
         """
         nx, ny = config.nx, config.ny
         bc_idx, bc_n_vals, bc_p_vals, bcs_poisson = self._collect_bc(config, bc_specs)
-        # 浓度下界：防 SRH 分母为零（物理上 n,p 永远 > 0，本征热激发）
-        n_floor = config.n_i * 1e-10
-        # Gummel 失效相对阈值（负浓度相对幅度 > 10% 视为真正失效）
-        fail_rel_threshold = 0.1
-        # BC 浓度尺度（用于判据）
+        n_floor = config.n_i * 1e-10  # 浓度下界：防 SRH 分母为零
+        fail_rel_threshold = 0.1  # Gummel 失效相对阈值（负浓度相对幅度 > 10%）
         bc_n_scale = float(np.max(np.abs(bc_n_vals))) if bc_n_vals.size > 0 else 1.0
         bc_p_scale = float(np.max(np.abs(bc_p_vals))) if bc_p_vals.size > 0 else 1.0
 
@@ -234,46 +258,27 @@ class GummelSolver:
             )
             # 2. 电子连续性（固定 ψ_new, p_old）：L_n(ψ)·n = R(n_old,p_old)
             a_n, b_n = cont.electron_system(psi_new, n, p)
-            a_n, b_n = _apply_dirichlet(a_n, b_n, bc_idx, bc_n_vals)
-            n_new = spsolve(a_n.tocsc(), b_n).reshape(nx, ny)
-            n_min = float(np.min(n_new))
-            n_scale = max(float(np.max(np.abs(n_new))), bc_n_scale, n_floor)
-            if n_min < -fail_rel_threshold * n_scale:
-                raise RuntimeError(
-                    f"Gummel 第 {n_iter} 步电子浓度出现物理不可行负值"
-                    f"（min={n_min:.3e}，相对幅度 {abs(n_min) / n_scale:.3e} > "
-                    f"{fail_rel_threshold}，SRH 滞后致 Gummel 失效，"
-                    f"请改用 DdmSolver 全耦合牛顿法或减小 voltage_step）"
-                )
-            # 浮点小负值（相对幅度 ≤ 10%）截断到 n_floor（数值噪声，非 fall-back）
-            n_new = np.maximum(n_new, n_floor)
+            n_new = _solve_carrier_with_check(
+                a_n, b_n, bc_idx, bc_n_vals, nx, ny, n_floor,
+                fail_rel_threshold, bc_n_scale, "电子", n_iter,
+            )
             # 3. 空穴连续性（固定 ψ_new, n_new）：L_p(ψ)·p = R(n_new,p_old)
             a_p, b_p = cont.hole_system(psi_new, n_new, p)
-            a_p, b_p = _apply_dirichlet(a_p, b_p, bc_idx, bc_p_vals)
-            p_new = spsolve(a_p.tocsc(), b_p).reshape(nx, ny)
-            p_min = float(np.min(p_new))
-            p_scale = max(float(np.max(np.abs(p_new))), bc_p_scale, n_floor)
-            if p_min < -fail_rel_threshold * p_scale:
-                raise RuntimeError(
-                    f"Gummel 第 {n_iter} 步空穴浓度出现物理不可行负值"
-                    f"（min={p_min:.3e}，相对幅度 {abs(p_min) / p_scale:.3e} > "
-                    f"{fail_rel_threshold}，SRH 滞后致 Gummel 失效，"
-                    f"请改用 DdmSolver 全耦合牛顿法或减小 voltage_step）"
-                )
-            p_new = np.maximum(p_new, n_floor)
-            # 4. 收敛检查 |Δψ|max（Selberherr 1984 §6.2 收敛判据）
+            p_new = _solve_carrier_with_check(
+                a_p, b_p, bc_idx, bc_p_vals, nx, ny, n_floor,
+                fail_rel_threshold, bc_p_scale, "空穴", n_iter,
+            )
+            # 4. 收敛检查 |Δψ|max（Selberherr 1984 §6.2）+ 载流子欠松弛
             d_psi = float(np.max(np.abs(psi_new - psi)))
-            # 载流子欠松弛：n,p ← ω·n_new + (1-ω)·n_old（ψ 直接更新）
-            # *创新* under-relaxation 抑制正偏 PN 结 Gummel 第 1 步注入载流子
-            # 浓度爆炸，使迭代轨迹保持物理可行域（Bank-Rose 1983 阻尼思想）。
+            # *创新* under-relaxation：n,p ← ω·n_new + (1-ω)·n_old（ψ 直接更新），
+            # 抑制正偏 PN 结 Gummel 第 1 步注入载流子浓度爆炸（Bank-Rose 1983）
             omega = self.relaxation
             if omega < 1.0:
-                n_relaxed = omega * n_new + (1.0 - omega) * n
-                p_relaxed = omega * p_new + (1.0 - omega) * p
+                n = omega * n_new + (1.0 - omega) * n
+                p = omega * p_new + (1.0 - omega) * p
             else:
-                n_relaxed = n_new
-                p_relaxed = p_new
-            psi, n, p = psi_new, n_relaxed, p_relaxed
+                n, p = n_new, p_new
+            psi = psi_new
             if d_psi < config.tol:
                 converged = True
                 break

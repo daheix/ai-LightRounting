@@ -326,16 +326,11 @@ class DdmSolver:
     """
 
     def solve(self, config: DdmConfig) -> DdmResult:
-        """全耦合阻尼牛顿法求解 Poisson + 连续性 + 后处理。
+        """全耦合阻尼牛顿法求解 Poisson + 连续性 + 后处理（详见模块 docstring）。
 
         流程（Selberherr 1984 §6.4；Jerome 1992）：
         1. 准中性平衡初值（局部电中性近似，作为牛顿法初值）。
-        2. V=0 牛顿法求解非线性 Poisson-Boltzmann（Boltzmann 关系
-           n=n_i·exp(φ/V_T)），得到含耗尽区的真实平衡势。
-           *必须步骤*：准中性初值给 Poisson 电荷≈0→线性势（无耗尽区），
-           与真实平衡势差异巨大，导致后续牛顿迭代发散（Selberherr §6.3）。
-           牛顿法 Jacobian J = A - (q/V_T)·diag(n+p) 含 exp 线性化项，
-           比固定点迭代稳定（Bank-Rose 1983；Jerome 1992）。
+        2. V=0 牛顿法求解非线性 Poisson-Boltzmann，得含耗尽区的真实平衡势。
         3. Voltage continuation：从真实平衡态逐步加载电压，每步用耦合牛顿法。
 
         Args:
@@ -353,16 +348,9 @@ class DdmSolver:
 
         poisson = PoissonSolver()
         continuity = ContinuitySolver(
-            config.nx,
-            config.ny,
-            config.dx,
-            config.dy,
-            config.mobility_n,
-            config.mobility_p,
-            config.tau_n,
-            config.tau_p,
-            config.n_i,
-            config.temperature,
+            config.nx, config.ny, config.dx, config.dy,
+            config.mobility_n, config.mobility_p,
+            config.tau_n, config.tau_p, config.n_i, config.temperature,
         )
 
         # 步骤 2：V=0 牛顿法求解非线性 Poisson-Boltzmann，得含耗尽区的真实平衡
@@ -372,15 +360,31 @@ class DdmSolver:
         phi_eq, n_eq, p_eq, _n_iter_eq = self._solve_equilibrium(
             poisson, config, phi_eq_qn, eq_bc_specs
         )
-        # n_iter_total 仅累计耦合牛顿迭代次数（平衡牛顿不计入 M1 验收口径）
-        n_iter_total = 0
 
         # 步骤 3：Voltage continuation（从真实平衡出发，逐步加载电压 ≤ 0.2 V/步）
-        # 耦合牛顿法鲁棒性强，可用 0.2V 步长（Gummel 解耦需 ≤0.1V 仍不稳定）
+        phi, n, p, n_iter_total = self._run_voltage_continuation(
+            config, poisson, continuity, phi_eq, n_eq, p_eq
+        )
+
+        return self._postprocess(config, phi, n, p, n_iter_total)
+
+    def _run_voltage_continuation(
+        self,
+        config: DdmConfig,
+        poisson: PoissonSolver,
+        continuity: ContinuitySolver,
+        phi_eq: np.ndarray,
+        n_eq: np.ndarray,
+        p_eq: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+        """Voltage continuation：从真实平衡逐步加载电压，每步耦合牛顿法。
+
+        耦合牛顿法鲁棒性强，可用 0.2V 步长（Gummel 解耦需 ≤0.1V 仍不稳定）。
+        BC 使用真实平衡值（n_eq, p_eq, phi_eq）作为 Ohmic 接触热平衡参考。
+        """
         phi = phi_eq.copy()
         n = n_eq.copy()
         p = p_eq.copy()
-
         target_contacts = config.contacts
         max_v = max((abs(v) for v in target_contacts.values()), default=0.0)
         if max_v > 0.2:
@@ -389,19 +393,12 @@ class DdmSolver:
         else:
             v_fractions = np.array([1.0])
 
+        n_iter_total = 0
         for step_idx, v_frac in enumerate(v_fractions):
             step_contacts = {side: v * v_frac for side, v in target_contacts.items()}
-            # BC 使用真实平衡值（n_eq, p_eq, phi_eq）作为 Ohmic 接触热平衡参考
             bc_specs = self._compute_bc_specs(config, n_eq, p_eq, phi_eq, step_contacts)
-
             phi, n, p, n_iter_step, converged, d_phi, d_n, d_p = self._run_newton(
-                poisson,
-                continuity,
-                config,
-                bc_specs,
-                phi,
-                n,
-                p,
+                poisson, continuity, config, bc_specs, phi, n, p,
             )
             n_iter_total += n_iter_step
             if not converged:
@@ -411,8 +408,7 @@ class DdmSolver:
                     f"max_iter={config.max_iter}, "
                     f"最后残差 d_phi={d_phi:.3e} V, d_n={d_n:.3e}, d_p={d_p:.3e}"
                 )
-
-        return self._postprocess(config, phi, n, p, n_iter_total)
+        return phi, n, p, n_iter_total
 
     def _solve_equilibrium(
         self,
