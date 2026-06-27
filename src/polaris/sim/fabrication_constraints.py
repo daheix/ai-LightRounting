@@ -14,12 +14,19 @@ P2-2 拓扑优化深化：
 
 ## 来源
 
+- Sigmund 2001, "Topology optimization: a tool for the tailor making of materials
+  and structures", 拓扑优化综述:
+  https://www.sciencedirect.com/science/article/pii/S0045782501002784
+- Bourdin 2001, "Filters in topology optimization", 滤波/投影方法:
+  https://onlinelibrary.wiley.com/doi/10.1002/nme.160
 - Sigmund 2007 "Morphology-based black and white filters..."
   https://link.springer.com/article/10.1007/s00158-007-0198-x
 - Wang et al. 2011 "Projection-based aggregation in topology optimization"
   https://onlinelibrary.wiley.com/doi/10.1002/nme.3122
 - Lazarov & Sigmund 2011 "Filters in topology optimization"
   https://onlinelibrary.wiley.com/doi/10.1002/nme.3120
+- Wang et al. 2019, "Manufacturing-aware topology optimization", 制造感知设计:
+  https://asmedigitalcollection.asme.org/mechanicaldesign/article/141/1/011402/372349
 - Tidy3D topology optimization: https://docs.flexcompute.com/projects/tidy3d/en/latest/
 """
 
@@ -470,8 +477,7 @@ def _sigmoid(x: np.ndarray) -> np.ndarray:
     return np.where(
         x >= 0,
         1.0 / (1.0 + np.exp(-np.clip(x, -500, 500))),
-        np.exp(np.clip(x, -500, 500))
-        / (1.0 + np.exp(np.clip(x, -500, 500))),
+        np.exp(np.clip(x, -500, 500)) / (1.0 + np.exp(np.clip(x, -500, 500))),
     )
 
 

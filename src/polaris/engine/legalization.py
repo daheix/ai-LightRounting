@@ -17,11 +17,17 @@ DREAMPlace 标准流程：解析法连续优化 → 合法化（消除重叠）�
 在多行可选时，选择拥塞度最低的行，避免合法化覆盖连续优化的拥塞感知效果。
 器件的拥塞贡献 = 其所有连接对端的距离总和（LRT 模型布线需求估计）。
 
-来源:
-    - DREAMPlace Legalization (TCAD 2020 Section III.C)
-    - FFDH: Coffman et al. SIAM J. Comput. 9(4), 1980
-    - 拥塞感知合法化: Dollas & Betz FCCM 2018
-    - LRT 模型: Westra et al. ISPD 2006
+参考文献:
+    - Hill 1982, "A new algorithm for floorplan design" (DAC 1982), FFDH 算法:
+      https://dl.acm.org/doi/10.1145/800263.809254
+    - Kahng & Wang 2004, "Dragon 2005: mixed-size placement benchmark":
+      https://vlsicad.ucsd.edu/Dragon/
+    - Spindler et al. 2008, "Abacus: fast legalization of standard cell circuits":
+      https://doi.org/10.1145/1366110.1366158
+    - DREAMPlace ICCAD 2019, "DREAMPlace: Deep Learning Toolkit-Enabled GPU Acceleration":
+      https://github.com/limbo018/DREAMPlace
+    - OpenROAD Project, Open-Source EDA Layout Toolkit:
+      https://github.com/The-OpenROAD-Project/OpenROAD
 """
 
 from __future__ import annotations
@@ -101,9 +107,7 @@ def legalize_placement(
         else:
             cx, cy = _place_new_row(state.rows, w, h)
             placements[ctx.device_names[i]] = (cx, cy)
-            state.row_congestion.append(
-                _device_congestion_cost(i, pos, ctx.connections)
-            )
+            state.row_congestion.append(_device_congestion_cost(i, pos, ctx.connections))
     return placements
 
 
@@ -225,9 +229,7 @@ def _update_row_congestion(
         connections: 连接列表。
     """
     if r < len(state.row_congestion):
-        state.row_congestion[r] += _device_congestion_cost(
-            device_idx, pos, connections
-        )
+        state.row_congestion[r] += _device_congestion_cost(device_idx, pos, connections)
 
 
 def _device_congestion_cost(

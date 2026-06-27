@@ -11,6 +11,8 @@
 - Cadence ADE-XL 作业队列与 worker 池: https://docs.cadence.com/
 - Synopsys ICC2 分布式调度: https://www.synopsys.com/
 - Ansys Lumerical 并发执行: https://www.ansys.com/products/photonics
+- Apache Airflow, 工作流编排系统: https://airflow.apache.org/
+- Slurm, 高性能计算作业调度器: https://slurm.schedmd.com/
 
 调度模型:
     submit(job) → FIFO 队列 → dispatcher 线程 → ThreadPoolExecutor worker 池
@@ -30,7 +32,7 @@ from typing import Callable
 
 from polaris.flow.job import Job, JobStatus
 from polaris.flow.recipe import Recipe
-from polaris.flow.stage import STANDARD_STAGES, StageResult, StageStatus, get_stage
+from polaris.flow.stage import StageResult, StageStatus, get_stage
 from polaris.flow.workspace import Workspace
 
 logger = logging.getLogger(__name__)
@@ -64,9 +66,7 @@ class JobScheduler:
         self._lock = threading.Lock()
         self._shutdown = False
         # 启动调度线程
-        self._dispatcher_thread = threading.Thread(
-            target=self._dispatch_loop, daemon=True
-        )
+        self._dispatcher_thread = threading.Thread(target=self._dispatch_loop, daemon=True)
         self._dispatcher_thread.start()
 
     def submit(self, job: Job) -> str:
@@ -208,7 +208,9 @@ class JobScheduler:
                 # 状态转换失败时记录但不静默吞没
                 logger.error(
                     "作业 %s 状态转换失败，当前状态 %s: %s",
-                    job.job_id, job.status, re,
+                    job.job_id,
+                    job.status,
+                    re,
                 )
 
     @staticmethod
@@ -221,12 +223,8 @@ class JobScheduler:
             "completed_stages": sum(
                 1 for r in job.stage_results if r.status == StageStatus.COMPLETED
             ),
-            "failed_stages": sum(
-                1 for r in job.stage_results if r.status == StageStatus.FAILED
-            ),
-            "skipped_stages": sum(
-                1 for r in job.stage_results if r.status == StageStatus.SKIPPED
-            ),
+            "failed_stages": sum(1 for r in job.stage_results if r.status == StageStatus.FAILED),
+            "skipped_stages": sum(1 for r in job.stage_results if r.status == StageStatus.SKIPPED),
             "submit_time": job.submit_time.isoformat(),
             "start_time": job.start_time.isoformat() if job.start_time else None,
             "end_time": job.end_time.isoformat() if job.end_time else None,

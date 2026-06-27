@@ -8,6 +8,16 @@
 
 端口约定（与 device.py 一致）：端口坐标相对器件原点，``direction`` 为光波导
 出射方向（朝外，便于外部波导连接）。坐标系为标准数学坐标系（y 轴朝上）。
+
+参考文献:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Soref & Bennett 1991, "Electrooptical effects in silicon", IEEE JQE:
+      https://ieeexplore.ieee.org/document/105908
+    - Pollock & Lipson 2003, "Silicon photonics", Nature:
+      https://www.nature.com/articles/nature01939
+    - Reed et al. 2010, "Silicon photonics: past, present, and future",
+      Laser & Photonics Reviews: https://onlinelibrary.wiley.com/doi/10.1002/lpor.200900035
+    - gdsfactory SOI 器件库: https://gdsfactory.github.io/gdsfactory/components.html
 """
 
 from __future__ import annotations

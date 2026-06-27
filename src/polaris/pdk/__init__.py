@@ -14,16 +14,18 @@ PolarisPDKRegistry、反向转换、版本兼容检测。
 R11 路标：重导出版图参数化代码驱动模块（``pcell``）的公开符号，包括
 ``@polaris_cell`` 装饰器、``PCellMultiView`` 多视图 PCell、``TransformMatrix``
 仿射变换引擎、``ai_generate_pcell`` AI 辅助生成。
+
+参考文献:
+    - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - gdsfactory PDK: https://gdsfactory.github.io/gdsfactory/
+    - IPKISS PDK: https://ipkiss.lucedv.com/
+    - VPI PDK: https://www.vpiphotonics.com/
+    - Ligentec TriPleX: https://www.ligentec.com/
+    - SMART Photonics InP: https://smartphotonics.nl/
 """
 
 from polaris.pdk.catalog import DeviceCatalog, default_catalog
 from polaris.pdk.device import BoundingBox, Device
-from polaris.pdk.gpic import (
-    GPIC_ALIAS_MAP,
-    GPICBB,
-    GPICPDK,
-    build_gpic_pdk,
-)
 from polaris.pdk.gdsfactory_pdk_bridge import (
     GDSFACTORY_PDK_REGISTRY,
     PDKConflict,
@@ -44,6 +46,12 @@ from polaris.pdk.gdsfactory_pdk_bridge import (
     convert_layerstack,
     parse_pic_yaml,
     polaris_to_gdsfactory_component,
+)
+from polaris.pdk.gpic import (
+    GPIC_ALIAS_MAP,
+    GPICBB,
+    GPICPDK,
+    build_gpic_pdk,
 )
 from polaris.pdk.inp import INP_DEVICES
 from polaris.pdk.layer_map import (
@@ -72,6 +80,10 @@ from polaris.pdk.pcell import (
     clear_pcell_cache,
     polaris_cell,
 )
+from polaris.pdk.port import Direction, Port
+from polaris.pdk.sin import SIN_DEVICES
+from polaris.pdk.soi import SOI_DEVICES
+from polaris.pdk.source import Source
 from polaris.pdk.vpi_pdk import (
     PDAflowExporter,
     VPIBuildingBlock,
@@ -81,10 +93,6 @@ from polaris.pdk.vpi_pdk import (
     build_ligentec_pdk,
     build_lionix_pdk,
 )
-from polaris.pdk.port import Direction, Port
-from polaris.pdk.sin import SIN_DEVICES
-from polaris.pdk.soi import SOI_DEVICES
-from polaris.pdk.source import Source
 
 __all__ = [
     "BoundingBox",
@@ -163,5 +171,6 @@ def __getattr__(name: str):
     """
     if name == "GPIC_DRC_RUNSET":
         from polaris.pdk.gpic import GPIC_DRC_RUNSET
+
         return GPIC_DRC_RUNSET
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
