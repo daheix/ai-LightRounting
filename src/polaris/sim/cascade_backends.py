@@ -347,8 +347,6 @@ def redheffer_star(
 
     # 构建矩阵表示
     # S1 矩阵: (n1, n1, n_freq)
-    n1 = len(ports1)
-    n2 = len(ports2)
     ports1_sorted = sorted(ports1)
     ports2_sorted = sorted(ports2)
 

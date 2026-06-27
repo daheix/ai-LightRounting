@@ -136,7 +136,6 @@ def schur_complement(
     Raises:
         RuntimeError: A 奇异时告警退出（禁止 fall-back，规则 14.1）。
     """
-    na = A.shape[0]
     # 检查 A 的条件数
     # 来源: Golub & Van Loan, "Matrix Computations", §2.7
     try:
@@ -679,9 +678,7 @@ def cascade_adaptive(
     if strategy == "block_thomas":
         # 链式电路使用块 Thomas
         _, ordered = detect_block_tridiagonal(instances, connections)
-        matrix = build_block_tridiagonal_from_chain(instances, connections, ordered)
-        # 构建右端项（外部激励）
-        n = matrix.total_size
+        build_block_tridiagonal_from_chain(instances, connections, ordered)
         # 简化：使用 KLU 求解（块 Thomas 用于验证）
         from polaris.sim.cascade_backends import cascade_klu
 

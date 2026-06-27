@@ -682,7 +682,7 @@ def stage8_opto_electrical(
         含 opto_electrical 的字典。
     """
     circuit_dict = _require_input(prev_outputs, "circuit", 8)
-    placements = _require_input(prev_outputs, "placements", 8)
+    _require_input(prev_outputs, "placements", 8)
 
     logger.info("阶段 8: 光电协同仿真")
 

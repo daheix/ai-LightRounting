@@ -271,7 +271,7 @@ def benchmark_jit_vs_numpy(
         for length in lengths:
             beta = 2 * np.pi * 2.4 / wl
             total_phase_np += beta * length
-        s21_np = np.exp(1j * total_phase_np)
+        np.exp(1j * total_phase_np)
     numpy_time = (time.perf_counter() - start) / 10
 
     # JAX JIT 实现
