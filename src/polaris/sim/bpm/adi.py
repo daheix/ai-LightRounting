@@ -643,15 +643,7 @@ class AdiStepper2D:
 def _validate_adi_propagate_inputs(
     psi_init: np.ndarray, nz: int, store_interval: int
 ) -> np.ndarray:
-    """校验 adi_propagate_2d 输入并返回复数化 psi_init。
-
-    Args:
-        psi_init: 初始场 ψ(z=0) (Ny, Nx)，复数。
-        nz: z 方向步数。
-        store_interval: 快照存储间隔。
-
-    Returns:
-        psi_init_c: 复数化的初始场 (Ny, Nx) complex128。
+    """校验 adi_propagate_2d 输入并返回复数化 psi_init (Ny, Nx)。
 
     Raises:
         ValueError: 输入非法（规则 14）。
@@ -669,17 +661,8 @@ def _validate_adi_propagate_inputs(
 def _broadcast_n_arr_2d(n_arr: np.ndarray, ny: int, nx: int) -> np.ndarray:
     """将 n_arr 统一为 2D (Ny, Nx)（沿 y 均匀时展开）。
 
-    1D n_arr (Nx,) 沿 y 均匀时展开为 2D (Ny, Nx)，使 from_grid 构造的
-    lhs_y_base (Nx, 3, Ny) 含正确的次对角耦合（1/Δy²·∂²/∂y²）。
-    若保留 Ny=1 基底再广播，次对角切片 [:, 0, 1:] 为空，广播后全零，
-    丢失 y 方向拉普拉斯耦合导致发散（M1 失败）。
-
-    Args:
-        n_arr: 折射率分布，1D (Nx,) 或 2D (Ny, Nx)。
-        ny, nx: psi_init 的形状。
-
-    Returns:
-        2D n_arr (Ny, Nx)。
+    1D n_arr 展开为 2D 使 lhs_y_base 含正确的次对角耦合；保留 Ny=1 基底再广播
+    会导致次对角切片为空、丢失 y 方向拉普拉斯耦合（M1 失败）。
 
     Raises:
         ValueError: 形状不匹配或维度非法（规则 14）。
@@ -703,17 +686,7 @@ def _broadcast_n_arr_2d(n_arr: np.ndarray, ny: int, nx: int) -> np.ndarray:
 def _init_snapshots(
     psi_init_c: np.ndarray, nz: int, store_interval: int
 ) -> tuple[np.ndarray, np.ndarray]:
-    """初始化快照数组与 z 坐标数组。
-
-    Args:
-        psi_init_c: 复数化初始场 (Ny, Nx)。
-        nz: z 方向步数。
-        store_interval: 快照存储间隔。
-
-    Returns:
-        (snapshots, z_coords): snapshots (N_snapshots, Ny, Nx) complex128,
-        z_coords (N_snapshots,) float64。snapshots[0]=psi_init_c, z_coords[0]=0.0。
-    """
+    """初始化快照数组与 z 坐标数组。snapshots[0]=psi_init_c, z_coords[0]=0.0。"""
     ny, nx = psi_init_c.shape
     n_snapshots = nz // store_interval + 1
     snapshots = np.empty((n_snapshots, ny, nx), dtype=np.complex128)
@@ -734,17 +707,8 @@ def _run_adi_propagate_loop(
 ) -> tuple[np.ndarray, np.ndarray]:
     """执行 z 步进主循环并填充快照数组。
 
-    Args:
-        stepper: 已构造的 ADI 步进器。
-        psi_init_c: 复数化初始场 (Ny, Nx)。
-        nz: z 方向步数。
-        dz: z 方向步长（米）。
-        store_interval: 快照存储间隔。
-        snapshots: 预分配快照数组（snapshots[0] 已填）。
-        z_coords: 预分配 z 坐标数组（z_coords[0]=0.0 已填）。
-
-    Returns:
-        (snapshots, z_coords): 截断至实际写入长度的快照与坐标。
+    snapshots[0] 须已填为 psi_init_c，z_coords[0] 须为 0.0。
+    返回截断至实际写入长度的快照与坐标。
     """
     n_snapshots = snapshots.shape[0]
     psi = psi_init_c.copy()
