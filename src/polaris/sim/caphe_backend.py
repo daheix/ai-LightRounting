@@ -69,6 +69,18 @@ _MODEL_MAP: dict[str, ModelFunc] = {
     "phase_shifter": phase_shifter_s,
 }
 
+# cell_type → 默认端口名（必须与 polaris.sim.models 中模型函数返回的 SDict 端口名一致）
+# 来源: 各模型函数源码中 SDict 键的端口名定义
+_DEFAULT_PORTS: dict[str, list[str]] = {
+    "waveguide": ["in", "out"],
+    "y_branch": ["port_1", "port_2", "port_3"],
+    "directional_coupler": ["in1", "in2", "out1", "out2"],
+    "ring_resonator": ["in", "through"],
+    "mmi_1x2": ["in", "out1", "out2"],
+    "mmi_2x2": ["in1", "in2", "out1", "out2"],
+    "phase_shifter": ["in", "out"],
+}
+
 
 # ---------------------------------------------------------------------------
 # CAPHENode — 电路节点（S 参数 + 状态变量 + ODE）
