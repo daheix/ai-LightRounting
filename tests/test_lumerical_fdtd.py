@@ -212,9 +212,11 @@ def test_step_e_3d() -> None:
     """E 场步进：3D Yee Ampere 旋度与解析平面波对比。
 
     +x 传播平面波（E_z 偏振），由 Maxwell-Faraday 推导：
-        ∂H_y/∂t = (1/μ_0)·∂E_z/∂x  →  H_y = -E_z/η_0（负号不可省略）
+        ∂H_y/∂t = (1/μ_0)·∂E_z/∂x  →  H_y = -sin(k·x - ω·t)/η_0（负号不可省略）
     Yee 半步空间错位：H_y[i] 位于 (i+1/2)·dx。
-    单步 E 更新后 E_z^{n+1} = E_z^n + (Δt/ε_0)·∂H_y/∂x ≈ sin(kx - ω·Δt)。
+    Yee E 步进公式 E^{n+1} = E^n + (Δt/ε_0)·∂H_y^{n+1/2}/∂x，故 H_init 须取
+    t=+Δt/2 的相位 H_y = -sin(k·x - ω·Δt/2)/η_0（与 _step_h_3d 推进后的 H 一致），
+    单步 E 更新后期望 E_z(t=Δt) ≈ sin(kx - ω·Δt)。
     """
     cfg = FDTD3DConfig(dx=50e-9, dy=50e-9, dz=50e-9, n_steps=1, pml_layers=4)
     sim = LumericalFDTDBackend(cfg)
@@ -229,10 +231,10 @@ def test_step_e_3d() -> None:
     # E_z 在整数网格点 (i·dx)，t=0
     e_z_init = np.sin(k * x_idx * dx)
     sim._ez[:, :, :] = e_z_init[:, None, None]
-    # H_y 在半步空间错位 (i+1/2)·dx，Yee 时间半步错位 t=-Δt/2
+    # H_y 在半步空间错位 (i+1/2)·dx，Yee 时间半步错位 t=+Δt/2（E 步进公式要求）
     # 物理符号：H_y = -sin(k·x - ω·t)/η_0（Maxwell-Faraday 推导，+x 传播）
     x_hy = (x_idx + 0.5) * dx
-    h_y_init = -np.sin(k * x_hy + omega * dt * 0.5) / eta0
+    h_y_init = -np.sin(k * x_hy - omega * dt * 0.5) / eta0
     sim._hy[:, :, :] = h_y_init[:, None, None]
     # 单步 E 更新（仅内部区域）
     sim._step_e_3d()

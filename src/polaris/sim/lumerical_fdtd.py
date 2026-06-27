@@ -1,56 +1,41 @@
 """Lumerical FDTD 3D 全波仿真后端（R31）。
 
-对标 Ansys Lumerical FDTD，实现商业级 3D 全波电磁仿真，覆盖 6 分量 Yee
-leapfrog、6 面 CPML 吸收边界、3D TFSF 平面波注入、Drude 色散 ADE、3D S
-参数提取、与 Tidy3D 交叉验证等核心能力。
-
-R04 战略决策：🚫不参与 GPU 计算。本模块纯 NumPy/SciPy CPU 实现，
-禁止 CuPy/CUDA/ROCm/AppleMetal 等所有 GPU 后端。
+对标 Ansys Lumerical FDTD，实现商业级 3D 全波电磁仿真：6 分量 Yee leapfrog、
+6 面 CPML 吸收边界、3D TFSF 平面波注入、Drude 色散 ADE、3D S 参数提取、
+与 Tidy3D 交叉验证。R04 战略决策：🚫不参与 GPU，纯 NumPy/SciPy CPU 实现。
 
 ## 算法核心
 
 1. **3D Yee leapfrog**（Yee 1966）：6 分量 (Ex,Ey,Ez,Hx,Hy,Hz) 时空半步错位，
    二阶精度 O(Δt², Δh²)，散度条件 ∇·(∇×·)≡0 自动满足。
-2. **CPML 3D**（Roden & Gedney 2000）：6 个边界条带复坐标拉伸 PML，递归卷积
-   ψ 辅助变量，反射率 ≤ −60 dB（8 层），优于分裂场 PML（−30 dB）。
-3. **TFSF 3D**（Taflove §5.5）：1D 辅助网格产生入射场，主网格 TF/SF 边界
-   按 Huygens 等效面校正，零泄漏（Schneider 2004 网格对齐条件）。
-4. **Drude ADE 色散**（Taflove §9.3）：极化电流 J 显式 leapfrog，
-   J^{n+1/2}=α·J^{n-1/2}+β·E^n，E 更新以 −cb·J 校正。
+2. **CPML 3D**（Roden & Gedney 2000）：6 边界条带复坐标拉伸 PML，递归卷积 ψ
+   辅助变量，反射率 ≤ −60 dB（8 层），优于分裂场 PML（−30 dB）。
+3. **TFSF 3D**（Taflove §5.5）：1D 辅助网格产生入射场，TF/SF 边界 Huygens
+   等效面校正，零泄漏（Schneider 2004 网格对齐条件）。
+4. **Drude ADE 色散**（Taflove §9.3）：J^{n+1/2}=α·J^{n-1/2}+β·E^n，E 以 −cb·J 校正。
 5. **CFL 3D**（Courant 1928）：Δt ≤ 1/(c·√(1/Δx²+1/Δy²+1/Δz²))，工程取 0.99 倍。
 
 *创新*：3D Yee leapfrog + 6 面 CPML + Drude ADE + TFSF 3D 多物理场统一接口，
 单一后端支撑自由空间传播/PML 吸收/金属色散/S 参数提取四类验收场景。
-- 底层逻辑：每个子模块（CPML/Drude/TFSF/Monitor）独立 raise 校验，
-  通过 config 字段开关，核心 leapfrog 全 NumPy 向量化，仅时间步循环不可避免。
-- 支持理论：Yee 1966 leapfrog 二阶稳定；Roden & Gedney 2000 证明 CPML 反射
-  优于分裂场 PML；Taflove 2005 §3-§9 完整理论框架；Mahlau 2024 验证可微分
-  FDTD 在 3D 纳米结构逆向设计中的可行性。
-- 案例：3D 自由空间平面波传播（误差 <1e-3 vs 解析解）、SOI 波导 S21 提取
-  （vs Tidy3D 误差 <1e-3）、金 Drude 反射率（vs Palik 实测 <2%）。
+底层逻辑：每个子模块独立 raise 校验，config 字段开关，核心 leapfrog 全 NumPy
+向量化。支持理论：Yee 1966 二阶稳定；Roden & Gedney 2000 CPML 优于分裂场 PML；
+Taflove 2005 §3-§9 完整框架。案例：3D 平面波传播（<1e-3 vs 解析解）、
+SOI 波导 S21（<1e-3 vs Tidy3D）、金 Drude 反射率（<2% vs Palik 实测）。
 
 ## 文献来源（≥5，规则 18 学术诚信）
 
-1. Yee 1966 IEEE Trans Antennas Propag 14(3) 302-307 —
-   https://doi.org/10.1109/TAP.1966.1138693
+1. Yee 1966 IEEE Trans Antennas Propag 14(3) 302-307 — https://doi.org/10.1109/TAP.1966.1138693
 2. Taflove & Hagness 2005 Computational Electrodynamics 3rd ed. —
    https://www.artechhouse.com/Computational-Electrodynamics/Kane-Taflove/p/Book-927
 3. Roden & Gedney 2000 Microw. Opt. Technol. Lett. 27(5) 334-339 (CPML) —
    https://doi.org/10.1002/1098-2760(20001205)27:5%3C334::AID-MOP14%3E3.0.CO;2-A
-4. Berenger 1994 J. Comput. Phys. 114 185-200 (PML 原始) —
-   https://doi.org/10.1006/jcph.1994.1159
-5. Gedney 1996 IEEE Trans Antennas Propag 44(12) 1630-1639 (σ_max 公式) —
-   https://doi.org/10.1109/8.546242
-6. Katz, Thiele, Taflove 1994 IEEE MGWL 4(8) 268-270 (3D PML 验证) —
-   https://doi.org/10.1109/75.317835
-7. Schneider 2004 IEEE Trans AP 52(12) 3280-3287 (完美 TFSF) —
-   https://doi.org/10.1109/TAP.2004.837541
-8. Mahlau et al. 2024 arXiv:2412.12360 (可微分 3D FDTD) —
-   https://arxiv.org/abs/2412.12360
-9. Ansys Lumerical FDTD 官方文档 —
-   https://optics.ansys.com/hc/en-us/categories/1500000158001
-10. Liu & Poon 2025 arXiv:2506.16665 (Lumerical vs Tidy3D 3D 基准) —
-    https://arxiv.org/abs/2506.16665
+4. Berenger 1994 J. Comput. Phys. 114 185-200 (PML 原始) — https://doi.org/10.1006/jcph.1994.1159
+5. Gedney 1996 IEEE Trans Antennas Propag 44(12) 1630-1639 (σ_max) — https://doi.org/10.1109/8.546242
+6. Katz, Thiele, Taflove 1994 IEEE MGWL 4(8) 268-270 (3D PML 验证) — https://doi.org/10.1109/75.317835
+7. Schneider 2004 IEEE Trans AP 52(12) 3280-3287 (完美 TFSF) — https://doi.org/10.1109/TAP.2004.837541
+8. Mahlau et al. 2024 arXiv:2412.12360 (可微分 3D FDTD) — https://arxiv.org/abs/2412.12360
+9. Ansys Lumerical FDTD 官方文档 — https://optics.ansys.com/hc/en-us/categories/1500000158001
+10. Liu & Poon 2025 arXiv:2506.16665 (Lumerical vs Tidy3D) — https://arxiv.org/abs/2506.16665
 
 规则依据：R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU /
 R05 Bug 必修 / 圈复杂度 ≤15 / 函数行数 ≤80 / 文件行数 ≤800 / 覆盖率 ≥90%
@@ -58,7 +43,7 @@ R05 Bug 必修 / 圈复杂度 ≤15 / 函数行数 ≤80 / 文件行数 ≤800 /
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -638,37 +623,40 @@ class LumericalFDTDBackend:
     def _step_e_3d(self) -> None:
         """更新 E^{n+1}（3D Yee Ampere 旋度，向量化，含 Drude −cb·J 校正）。
 
-        Ampere 定律 ∂E/∂t = (1/ε)·∇×H，逐分量：
-        E_x = C_a·E_x + C_b·(∂H_z/∂y − ∂H_y/∂z)
-        E_y = C_a·E_y + C_b·(∂H_x/∂z − ∂H_z/∂x)
-        E_z = C_a·E_z + C_b·(∂H_y/∂x − ∂H_x/∂y)
-        差分已含 /dx /dy /dz，C_b = Δt/ε 体分布场。
+        Ampere 定律 ∂E/∂t = (1/ε)·∇×H，逐分量（Yee 1966 标准网格）：
+        E_x[i,j,k]@(i+1/2,j,k) ← C_a·E_x + C_b·((H_z[i,j,k]-H_z[i,j-1,k])/dy
+                                                   − (H_y[i,j,k]-H_y[i,j,k-1])/dz)
+        E_y[i,j,k]@(i,j+1/2,k) ← C_a·E_y + C_b·((H_x[i,j,k]-H_x[i,j,k-1])/dz
+                                                   − (H_z[i,j,k]-H_z[i-1,j,k])/dx)
+        E_z[i,j,k]@(i,j,k+1/2) ← C_a·E_z + C_b·((H_y[i,j,k]-H_y[i-1,j,k])/dx
+                                                   − (H_x[i,j,k]-H_x[i,j-1,k])/dy)
+        差分对 E 整数位置取 H 半步两侧后向差分（与 _step_h_3d 前向差分对称）。
         """
         hx, hy, hz = self._hx, self._hy, self._hz
         ex, ey, ez = self._ex, self._ey, self._ez
         ca, cb = self._ca, self._cb
         dy, dz = self._cfg.dy, self._cfg.dz
         dx = self._cfg.dx
-        # E_x: ∂H_z/∂y − ∂H_y/∂z，范围 [:, :−1, :−1]
-        dhz_dy = (hz[:, 1:, :-1] - hz[:, :-1, :-1]) / dy
-        dhy_dz = (hy[:, :-1, 1:] - hy[:, :-1, :-1]) / dz
-        ex[:, :-1, :-1] = (
-            ca[:, :-1, :-1] * ex[:, :-1, :-1]
-            + cb[:, :-1, :-1] * (dhz_dy - dhy_dz)
+        # E_x: ∂H_z/∂y − ∂H_y/∂z，范围 [:, 1:, 1:]（ex 在 (i+1/2,j,k)）
+        dhz_dy = (hz[:, 1:, 1:] - hz[:, :-1, 1:]) / dy
+        dhy_dz = (hy[:, 1:, 1:] - hy[:, 1:, :-1]) / dz
+        ex[:, 1:, 1:] = (
+            ca[:, 1:, 1:] * ex[:, 1:, 1:]
+            + cb[:, 1:, 1:] * (dhz_dy - dhy_dz)
         )
-        # E_y: ∂H_x/∂z − ∂H_z/∂x，范围 [:−1, :, :−1]
-        dhx_dz = (hx[:-1, :, 1:] - hx[:-1, :, :-1]) / dz
-        dhz_dx = (hz[1:, :, :-1] - hz[:-1, :, :-1]) / dx
-        ey[:-1, :, :-1] = (
-            ca[:-1, :, :-1] * ey[:-1, :, :-1]
-            + cb[:-1, :, :-1] * (dhx_dz - dhz_dx)
+        # E_y: ∂H_x/∂z − ∂H_z/∂x，范围 [1:, :, 1:]（ey 在 (i,j+1/2,k)）
+        dhx_dz = (hx[1:, :, 1:] - hx[1:, :, :-1]) / dz
+        dhz_dx = (hz[1:, :, 1:] - hz[:-1, :, 1:]) / dx
+        ey[1:, :, 1:] = (
+            ca[1:, :, 1:] * ey[1:, :, 1:]
+            + cb[1:, :, 1:] * (dhx_dz - dhz_dx)
         )
-        # E_z: ∂H_y/∂x − ∂H_x/∂y，范围 [:−1, :−1, :]
-        dhy_dx = (hy[1:, :-1, :] - hy[:-1, :-1, :]) / dx
-        dhx_dy = (hx[:-1, 1:, :] - hx[:-1, :-1, :]) / dy
-        ez[:-1, :-1, :] = (
-            ca[:-1, :-1, :] * ez[:-1, :-1, :]
-            + cb[:-1, :-1, :] * (dhy_dx - dhx_dy)
+        # E_z: ∂H_y/∂x − ∂H_x/∂y，范围 [1:, 1:, :]（ez 在 (i,j,k+1/2)）
+        dhy_dx = (hy[1:, 1:, :] - hy[:-1, 1:, :]) / dx
+        dhx_dy = (hx[1:, 1:, :] - hx[1:, :-1, :]) / dy
+        ez[1:, 1:, :] = (
+            ca[1:, 1:, :] * ez[1:, 1:, :]
+            + cb[1:, 1:, :] * (dhy_dx - dhx_dy)
         )
         # Drude 极化电流校正（J 已在 _step_drude 用 E^n 推进，Taflove §9.3）
         for idx, region in enumerate(self._disp_regions):
