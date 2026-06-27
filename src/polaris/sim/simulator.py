@@ -205,65 +205,94 @@ class CircuitSimulator:
             ImportError: JAX 未安装时告警退出（禁止 fall-back）。
             RuntimeError: 单频点仿真失败时告警退出。
         """
-        try:
-            import jax
-            import jax.numpy as jnp
-        except ImportError as e:
-            msg = (
-                "backend='jax' 需要 JAX（未安装）。"
-                "安装方式: pip install jax jaxlib。"
-                f"原始错误: {e}"
-            )
-            raise ImportError(msg) from e
-
+        jax, jnp = _import_jax()
         # 启用 64 位精度（光学仿真需要 complex128 保证 S 参数计算精度）
         # 来源: JAX 配置文档 https://jax.readthedocs.io/en/latest/configurations.html
         jax.config.update("jax_enable_x64", True)
 
         # 用首个波长点探测端口结构，确定 S 参数键顺序和输出形状
-        # 这样可以将动态 SDict 字典结构转换为固定形状的 JAX 数组
         sample_s = self.simulate(netlist, wavelengths[:1], **model_kwargs)
         sorted_keys = sorted(sample_s.keys())
         n_pairs = len(sorted_keys)
 
-        def single_wl_numpy(wl_scalar: np.ndarray) -> np.ndarray:
-            """单频点 numpy 电路仿真（返回扁平化 S 参数数组）。
-
-            将单个波长点的电路 S 参数按固定端口键顺序提取为 1D 数组，
-            使 JAX vmap 可对其向量化。
-            """
-            wl_arr = np.asarray(wl_scalar, dtype=float).reshape(1)
-            s = self.simulate(netlist, wl_arr, **model_kwargs)
-            flat = np.zeros(n_pairs, dtype=complex)
-            for i, key in enumerate(sorted_keys):
-                val = s.get(key, np.zeros(1, dtype=complex))
-                flat[i] = np.asarray(val, dtype=complex).ravel()[0]
-            return flat
-
-        wl_jax = jnp.asarray(wavelengths, dtype=jnp.float64)
-        # 输出形状描述符: (n_pairs,) complex128
-        result_shape = jax.ShapeDtypeStruct((n_pairs,), jnp.complex128)
-
-        def vmapped_sim(w: jnp.ndarray) -> jnp.ndarray:
-            """通过 jax.pure_callback 调用 numpy 单频点仿真。
-
-            vmap_method='sequential': jax.vmap 按顺序对每个波长点调用回调，
-            提供 JAX 可追踪接口以支持 autodiff 和 JIT 集成。
-            来源: https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
-            """
-            return jax.pure_callback(
-                single_wl_numpy, result_shape, w, vmap_method="sequential",
-            )
-
-        # jax.vmap 并行所有波长点（核心向量化步骤）
-        all_s = jax.vmap(vmapped_sim)(wl_jax)
-        all_s_np = np.asarray(all_s)  # shape: (n_wavelengths, n_pairs)
+        single_wl_numpy = _make_single_wl_fn(
+            self, netlist, sorted_keys, n_pairs, model_kwargs
+        )
+        all_s_np = _vmap_jax_sweep(jax, jnp, single_wl_numpy, wavelengths, n_pairs)
 
         # 重建 SDict 字典格式（与 numpy 后端一致）
         result: SDict = {}
         for i, key in enumerate(sorted_keys):
             result[key] = all_s_np[:, i]
         return result
+
+
+def _import_jax() -> tuple:
+    """导入 JAX，未安装时 raise ImportError（禁止 fall-back）。"""
+    try:
+        import jax
+        import jax.numpy as jnp
+    except ImportError as e:
+        msg = (
+            "backend='jax' 需要 JAX（未安装）。"
+            "安装方式: pip install jax jaxlib。"
+            f"原始错误: {e}"
+        )
+        raise ImportError(msg) from e
+    return jax, jnp
+
+
+def _make_single_wl_fn(
+    simulator: CircuitSimulator,
+    netlist: dict,
+    sorted_keys: list,
+    n_pairs: int,
+    model_kwargs: dict,
+):
+    """创建单频点 numpy 电路仿真函数（返回扁平化 S 参数数组）。
+
+    将单个波长点的电路 S 参数按固定端口键顺序提取为 1D 数组，
+    使 JAX vmap 可对其向量化。
+    """
+
+    def single_wl_numpy(wl_scalar: np.ndarray) -> np.ndarray:
+        wl_arr = np.asarray(wl_scalar, dtype=float).reshape(1)
+        s = simulator.simulate(netlist, wl_arr, **model_kwargs)
+        flat = np.zeros(n_pairs, dtype=complex)
+        for i, key in enumerate(sorted_keys):
+            val = s.get(key, np.zeros(1, dtype=complex))
+            flat[i] = np.asarray(val, dtype=complex).ravel()[0]
+        return flat
+
+    return single_wl_numpy
+
+
+def _vmap_jax_sweep(
+    jax,
+    jnp,
+    single_wl_numpy,
+    wavelengths: np.ndarray,
+    n_pairs: int,
+) -> np.ndarray:
+    """执行 jax.vmap 并行波长扫描，返回形状 (n_wavelengths, n_pairs) 数组。
+
+    通过 jax.pure_callback 调用 numpy 单频点仿真，vmap_method='sequential'
+    让 jax.vmap 按顺序对每个波长点调用回调，提供 JAX 可追踪接口以支持
+    autodiff 和 JIT 集成。
+    来源: https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
+    """
+    wl_jax = jnp.asarray(wavelengths, dtype=jnp.float64)
+    # 输出形状描述符: (n_pairs,) complex128
+    result_shape = jax.ShapeDtypeStruct((n_pairs,), jnp.complex128)
+
+    def vmapped_sim(w: jnp.ndarray) -> jnp.ndarray:
+        return jax.pure_callback(
+            single_wl_numpy, result_shape, w, vmap_method="sequential",
+        )
+
+    # jax.vmap 并行所有波长点（核心向量化步骤）
+    all_s = jax.vmap(vmapped_sim)(wl_jax)
+    return np.asarray(all_s)
 
 
 def default_models() -> dict[str, ModelFunc]:
@@ -512,16 +541,7 @@ def analyze_dispersion(
         色散分析结果字典 {FSR_nm, Q_factor, ER_dB, BW_3dB_nm}。
     """
     wl = np.asarray(wavelengths, dtype=float)
-    # 自动选取端口
-    if port_out is None or port_in is None:
-        for (p_out, p_in), val in sdict.items():
-            if p_out != p_in and np.any(np.asarray(val) != 0):
-                port_out = p_out if port_out is None else port_out
-                port_in = p_in if port_in is None else port_in
-                break
-    if port_out is None or port_in is None:
-        msg = "无法自动选取端口，请显式指定 port_out 和 port_in"
-        raise ValueError(msg)
+    port_out, port_in = _auto_select_ports(sdict, port_out, port_in)
     key = (port_out, port_in)
     if key not in sdict:
         msg = f"端口对 ({port_out}, {port_in}) 不存在于 S 参数字典"
@@ -533,37 +553,71 @@ def analyze_dispersion(
     peaks = _find_peaks(power)
     dips = _find_dips(power)
     # FSR: 优先用峰值间距，其次用谷值间距
-    fsr_nm = None
     if len(peaks) >= 2:
         fsr_nm = _compute_fsr(wl, peaks)
     elif len(dips) >= 2:
         fsr_nm = _compute_fsr(wl, dips)
-    # Q 因子: 取第一个谷值
-    q_factor = None
-    if len(dips) >= 1:
-        q_factor = _compute_q_factor(wl, power, dips[0])
-    # 消光比 ER: 最大功率与最小功率之比（dB）
-    if len(peaks) > 0 and len(dips) > 0:
-        p_peak = np.max(power[peaks])
-        p_dip = np.min(power[dips])
-        if p_dip > 0:
-            er_db = float(10.0 * np.log10(p_peak / p_dip))
-        else:
-            er_db = float("inf")
     else:
-        er_db = float(10.0 * np.log10(np.max(power) / (np.min(power) + 1e-15)))
-    # 3dB 带宽: 取第一个谷值的 3dB 带宽
-    bw_3db_nm = None
-    if len(dips) >= 1:
-        dip_idx = dips[0]
-        q = _compute_q_factor(wl, power, dip_idx)
-        if q is not None and q > 0:
-            wl_res = wl[dip_idx]
-            bw_3db_um = wl_res / q
-            bw_3db_nm = float(bw_3db_um * 1e3)
+        fsr_nm = None
+    # Q 因子: 取第一个谷值
+    q_factor = _compute_q_factor(wl, power, dips[0]) if len(dips) >= 1 else None
+    # 消光比 ER
+    er_db = _compute_extinction_ratio(power, peaks, dips)
+    # 3dB 带宽
+    bw_3db_nm = _compute_bw_3db(wl, power, dips)
     return {
         "FSR_nm": fsr_nm,
         "Q_factor": q_factor,
         "ER_dB": er_db,
         "BW_3dB_nm": bw_3db_nm,
     }
+
+
+def _auto_select_ports(
+    sdict: SDict,
+    port_out: str | None,
+    port_in: str | None,
+) -> tuple[str, str]:
+    """自动选取非对角且有非零响应的端口对，失败时 raise ValueError。"""
+    if port_out is None or port_in is None:
+        for (p_out, p_in), val in sdict.items():
+            if p_out != p_in and np.any(np.asarray(val) != 0):
+                port_out = p_out if port_out is None else port_out
+                port_in = p_in if port_in is None else port_in
+                break
+    if port_out is None or port_in is None:
+        msg = "无法自动选取端口，请显式指定 port_out 和 port_in"
+        raise ValueError(msg)
+    return port_out, port_in
+
+
+def _compute_extinction_ratio(
+    power: np.ndarray,
+    peaks: np.ndarray,
+    dips: np.ndarray,
+) -> float:
+    """计算消光比 ER（dB），最大功率与最小功率之比。"""
+    if len(peaks) > 0 and len(dips) > 0:
+        p_peak = np.max(power[peaks])
+        p_dip = np.min(power[dips])
+        if p_dip > 0:
+            return float(10.0 * np.log10(p_peak / p_dip))
+        return float("inf")
+    return float(10.0 * np.log10(np.max(power) / (np.min(power) + 1e-15)))
+
+
+def _compute_bw_3db(
+    wavelengths: np.ndarray,
+    power: np.ndarray,
+    dips: np.ndarray,
+) -> float | None:
+    """计算第一个谷值的 3dB 带宽（nm），无法计算时返回 None。"""
+    if len(dips) < 1:
+        return None
+    dip_idx = dips[0]
+    q = _compute_q_factor(wavelengths, power, dip_idx)
+    if q is None or q <= 0:
+        return None
+    wl_res = wavelengths[dip_idx]
+    bw_3db_um = wl_res / q
+    return float(bw_3db_um * 1e3)

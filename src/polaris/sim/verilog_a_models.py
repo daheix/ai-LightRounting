@@ -119,6 +119,69 @@ def _s_to_magnitude_phase(s_value: complex) -> tuple[float, float]:
     return float(abs(s_value)), float(np.angle(s_value))
 
 
+def _compute_waveguide_s_params(
+    length_um: float, neff: float, loss_db_cm: float, wavelength_um: float
+) -> SDict:
+    """计算波导 S 参数: S21 = exp(-α·L/2) · exp(j·2π·neff·L/λ)。
+
+    来源: Simphony waveguide 模型 https://simphonyphotonics.readthedocs.io/;
+    Chrostowski 2015 §2.3。
+    """
+    beta = 2.0 * math.pi * neff / wavelength_um
+    phase = beta * length_um
+    alpha = 10.0 ** (-loss_db_cm * length_um / 1e4 / 20.0)
+    s21 = alpha * np.exp(1j * phase)
+    return {
+        ("in", "in"): np.array(0.0, dtype=complex),
+        ("out", "in"): np.array(s21, dtype=complex),
+        ("in", "out"): np.array(s21, dtype=complex),
+        ("out", "out"): np.array(0.0, dtype=complex),
+    }
+
+
+def _render_waveguide_verilog_a_code(
+    module_name: str,
+    length_um: float,
+    neff: float,
+    ng: float,
+    loss_db_cm: float,
+    wavelength_um: float,
+) -> str:
+    """渲染波导 Verilog-A 源代码。"""
+    return f"""`include "disciplines.vams"
+`include "constants.vams"
+
+module {module_name} (in, out);
+  electrical in, out;
+  parameter real length = {length_um:.6e} from [0:inf);  // 波导长度 (m)
+  parameter real neff = {neff:.6e} from (0:inf);          // 有效折射率
+  parameter real ng = {ng:.6e} from (0:inf);              // 群折射率
+  parameter real loss_db_cm = {loss_db_cm:.6e} from [0:inf);  // 损耗 (dB/cm)
+  parameter real wavelength = {wavelength_um:.6e} from (0:inf);  // 波长 (m)
+
+  real beta;
+  real phase;
+  real alpha_linear;
+  real s21_mag;
+  real s21_phase;
+
+  analog begin
+    // 传播常数 beta = 2*pi*neff/lambda
+    beta = 2.0 * `M_PI * neff / wavelength;
+    // 相位累积
+    phase = beta * length;
+    // 损耗转线性 (dB/cm -> 振幅衰减)
+    alpha_linear = pow(10.0, -loss_db_cm * length * 1e4 / 20.0);
+    // S21 = alpha * exp(j*phase)
+    s21_mag = alpha_linear;
+    s21_phase = phase;
+    // 光功率传输（小信号线性近似）
+    V(out) <+ s21_mag * cos(s21_phase) * V(in);
+  end
+endmodule
+"""
+
+
 def generate_waveguide_verilog_a(
     module_name: str = "waveguide_soi",
     length_um: float = 100.0,
@@ -151,50 +214,10 @@ def generate_waveguide_verilog_a(
         raise ValueError(f"波导长度须 >= 0，得到 {length_um}")
     if neff <= 0:
         raise ValueError(f"neff 须 > 0，得到 {neff}")
-    # 计算 S 参数
-    beta = 2.0 * math.pi * neff / wavelength_um
-    phase = beta * length_um
-    alpha = 10.0 ** (-loss_db_cm * length_um / 1e4 / 20.0)
-    s21 = alpha * np.exp(1j * phase)
-    s_params: SDict = {
-        ("in", "in"): np.array(0.0, dtype=complex),
-        ("out", "in"): np.array(s21, dtype=complex),
-        ("in", "out"): np.array(s21, dtype=complex),
-        ("out", "out"): np.array(0.0, dtype=complex),
-    }
-    # 生成 Verilog-A 代码
-    code = f"""`include "disciplines.vams"
-`include "constants.vams"
-
-module {module_name} (in, out);
-  electrical in, out;
-  parameter real length = {length_um:.6e} from [0:inf);  // 波导长度 (m)
-  parameter real neff = {neff:.6e} from (0:inf);          // 有效折射率
-  parameter real ng = {ng:.6e} from (0:inf);              // 群折射率
-  parameter real loss_db_cm = {loss_db_cm:.6e} from [0:inf);  // 损耗 (dB/cm)
-  parameter real wavelength = {wavelength_um:.6e} from (0:inf);  // 波长 (m)
-
-  real beta;
-  real phase;
-  real alpha_linear;
-  real s21_mag;
-  real s21_phase;
-
-  analog begin
-    // 传播常数 beta = 2*pi*neff/lambda
-    beta = 2.0 * `M_PI * neff / wavelength;
-    // 相位累积
-    phase = beta * length;
-    // 损耗转线性 (dB/cm -> 振幅衰减)
-    alpha_linear = pow(10.0, -loss_db_cm * length * 1e4 / 20.0);
-    // S21 = alpha * exp(j*phase)
-    s21_mag = alpha_linear;
-    s21_phase = phase;
-    // 光功率传输（小信号线性近似）
-    V(out) <+ s21_mag * cos(s21_phase) * V(in);
-  end
-endmodule
-"""
+    s_params = _compute_waveguide_s_params(length_um, neff, loss_db_cm, wavelength_um)
+    code = _render_waveguide_verilog_a_code(
+        module_name, length_um, neff, ng, loss_db_cm, wavelength_um
+    )
     return VerilogAModel(
         module_name=module_name,
         device_type=DEVICE_TYPE_WAVEGUIDE,

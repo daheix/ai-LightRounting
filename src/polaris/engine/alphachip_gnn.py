@@ -126,6 +126,69 @@ def _get_device_param(dev, key: str, default: float) -> float:
     return default
 
 
+def _fill_one_edge_features(
+    feats: np.ndarray,
+    i: int,
+    src_dev,
+    dst_dev,
+    src_id: str,
+    dst_id: str,
+    placements: dict,
+    cfg: PhotonicEdgeFeatureConfig,
+) -> None:
+    """填充单条边的 15 维光电子边特征（*创新* R33）。
+
+    边特征维度:
+        [0] 距离（曼哈顿，μm）, [1] 带宽需求, [2] 优先级,
+        [3-6] 类型 one-hot(4), [7-9] 波段 one-hot(3),
+        [10] 折射率差, [11] 损耗, [12] 串扰, [13] 弯曲半径,
+        [14] net 关系类型。
+
+    学术依据: AlphaChip 边特征 Mirhoseini et al., Nature 2021;
+    波段划分 ITU-T G.694.1 https://www.itu.int/rec/T-REC-G.694.1。
+    """
+    # [0] 距离（曼哈顿）
+    if src_id in placements and dst_id in placements:
+        p1 = placements[src_id]
+        p2 = placements[dst_id]
+        x1, y1 = p1["x"] + p1["w"] / 2, p1["y"] + p1["h"] / 2
+        x2, y2 = p2["x"] + p2["w"] / 2, p2["y"] + p2["h"] / 2
+        feats[i, 0] = abs(x1 - x2) + abs(y1 - y2)
+    # [1] 带宽需求
+    if src_dev and dst_dev:
+        src_ports = getattr(src_dev, "ports", [])
+        dst_ports = getattr(dst_dev, "ports", [])
+        feats[i, 1] = min(len(src_ports), len(dst_ports))
+    # [2] 优先级
+    feats[i, 2] = 1.0
+    # [3-6] 类型 one-hot
+    src_cat = getattr(src_dev, "category", "other") if src_dev else "other"
+    dst_cat = getattr(dst_dev, "category", "other") if dst_dev else "other"
+    type_idx = _edge_type_index(src_cat, dst_cat)
+    feats[i, 3 + type_idx] = 1.0
+    # [7-9] 波段 one-hot（从器件参数提取波长）
+    src_wl = _get_device_param(src_dev, "wavelength", cfg.default_wavelength_um)
+    dst_wl = _get_device_param(dst_dev, "wavelength", cfg.default_wavelength_um)
+    avg_wl = (src_wl + dst_wl) / 2.0
+    band_idx = _wavelength_to_band_idx(avg_wl)
+    feats[i, 7 + band_idx] = 1.0
+    # [10] 折射率差 Δn（归一化）
+    src_neff = _get_device_param(src_dev, "neff", cfg.default_neff)
+    dst_neff = _get_device_param(dst_dev, "neff", cfg.default_neff)
+    feats[i, 10] = min(abs(src_neff - dst_neff) / 2.0, 1.0)
+    # [11] 波导损耗（归一化到 [0, 1]，最大 10 dB/cm）
+    loss = _get_device_param(src_dev, "loss_db_cm", cfg.default_loss_db_cm)
+    feats[i, 11] = min(loss / 10.0, 1.0)
+    # [12] 串扰系数（归一化到 [0, 1]，最大 40 dB）
+    xtalk = _get_device_param(src_dev, "crosstalk_db", cfg.default_crosstalk_db)
+    feats[i, 12] = min(xtalk / 40.0, 1.0)
+    # [13] 弯曲半径约束（归一化到 [0, 1]，最大 50 μm）
+    bend_r = _get_device_param(src_dev, "bend_radius", cfg.default_bend_radius_um)
+    feats[i, 13] = min(bend_r / 50.0, 1.0)
+    # [14] net 关系类型
+    feats[i, 14] = float(_infer_net_relation(src_dev, dst_dev))
+
+
 def build_photonic_edge_features(
     devices: dict,
     placements: dict,
@@ -169,52 +232,12 @@ def build_photonic_edge_features(
     n_edges = edge_index.shape[1]
     feats = np.zeros((n_edges, PHOTONIC_EDGE_DIM), dtype=np.float64)
     for i in range(n_edges):
-        src_idx = edge_index[0, i]
-        dst_idx = edge_index[1, i]
-        src_id = instance_ids[src_idx]
-        dst_id = instance_ids[dst_idx]
-        src_dev = devices.get(src_id)
-        dst_dev = devices.get(dst_id)
-        # [0] 距离（曼哈顿）
-        if src_id in placements and dst_id in placements:
-            p1 = placements[src_id]
-            p2 = placements[dst_id]
-            x1, y1 = p1["x"] + p1["w"] / 2, p1["y"] + p1["h"] / 2
-            x2, y2 = p2["x"] + p2["w"] / 2, p2["y"] + p2["h"] / 2
-            feats[i, 0] = abs(x1 - x2) + abs(y1 - y2)
-        # [1] 带宽需求
-        if src_dev and dst_dev:
-            src_ports = getattr(src_dev, "ports", [])
-            dst_ports = getattr(dst_dev, "ports", [])
-            feats[i, 1] = min(len(src_ports), len(dst_ports))
-        # [2] 优先级
-        feats[i, 2] = 1.0
-        # [3-6] 类型 one-hot
-        src_cat = getattr(src_dev, "category", "other") if src_dev else "other"
-        dst_cat = getattr(dst_dev, "category", "other") if dst_dev else "other"
-        type_idx = _edge_type_index(src_cat, dst_cat)
-        feats[i, 3 + type_idx] = 1.0
-        # [7-9] 波段 one-hot（从器件参数提取波长）
-        src_wl = _get_device_param(src_dev, "wavelength", cfg.default_wavelength_um)
-        dst_wl = _get_device_param(dst_dev, "wavelength", cfg.default_wavelength_um)
-        avg_wl = (src_wl + dst_wl) / 2.0
-        band_idx = _wavelength_to_band_idx(avg_wl)
-        feats[i, 7 + band_idx] = 1.0
-        # [10] 折射率差 Δn（归一化）
-        src_neff = _get_device_param(src_dev, "neff", cfg.default_neff)
-        dst_neff = _get_device_param(dst_dev, "neff", cfg.default_neff)
-        feats[i, 10] = min(abs(src_neff - dst_neff) / 2.0, 1.0)
-        # [11] 波导损耗（归一化到 [0, 1]，最大 10 dB/cm）
-        loss = _get_device_param(src_dev, "loss_db_cm", cfg.default_loss_db_cm)
-        feats[i, 11] = min(loss / 10.0, 1.0)
-        # [12] 串扰系数（归一化到 [0, 1]，最大 40 dB）
-        xtalk = _get_device_param(src_dev, "crosstalk_db", cfg.default_crosstalk_db)
-        feats[i, 12] = min(xtalk / 40.0, 1.0)
-        # [13] 弯曲半径约束（归一化到 [0, 1]，最大 50 μm）
-        bend_r = _get_device_param(src_dev, "bend_radius", cfg.default_bend_radius_um)
-        feats[i, 13] = min(bend_r / 50.0, 1.0)
-        # [14] net 关系类型
-        feats[i, 14] = float(_infer_net_relation(src_dev, dst_dev))
+        src_id = instance_ids[edge_index[0, i]]
+        dst_id = instance_ids[edge_index[1, i]]
+        _fill_one_edge_features(
+            feats, i, devices.get(src_id), devices.get(dst_id),
+            src_id, dst_id, placements, cfg,
+        )
     return feats
 
 

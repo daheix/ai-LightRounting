@@ -188,6 +188,83 @@ def _tangential_neighbors(side: str, nx: int, ny: int) -> list[np.ndarray]:
     return [west, east]
 
 
+def _dirichlet_triplet(
+    lin: np.ndarray, n: int, value: float
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """构造 Dirichlet 单位对角行三元组：A[k,k]=1, b[k]=T_fixed。"""
+    rows = lin.copy()
+    cols = lin.copy()
+    vals = np.ones(n, dtype=float)
+    b_vals = np.full(n, value, dtype=float)
+    return rows, cols, vals, b_vals, lin.copy()
+
+
+def _empty_triplet() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """构造空三元组（Periodic 边界 no-op，装配阶段已环绕索引）。"""
+    return (
+        np.empty(0, dtype=np.int64),
+        np.empty(0, dtype=np.int64),
+        np.empty(0, dtype=float),
+        np.empty(0, dtype=float),
+        np.empty(0, dtype=np.int64),
+    )
+
+
+def _accumulate_tangential(
+    side: str,
+    nx: int,
+    ny: int,
+    lin: np.ndarray,
+    k_b: np.ndarray,
+    is_x: bool,
+    dx: float,
+    dy: float,
+) -> tuple[list[np.ndarray], list[np.ndarray], list[np.ndarray], np.ndarray]:
+    """累加切向内邻传导耦合，返回三元组列表与对角 center 贡献。"""
+    rows_l: list[np.ndarray] = []
+    cols_l: list[np.ndarray] = []
+    vals_l: list[np.ndarray] = []
+    tnbrs = _tangential_neighbors(side, nx, ny)
+    dt = dy if is_x else dx  # 切向间距
+    k_t_face = k_b  # 切向面热导率近似取边界节点 k（角点误差可接受，常数 k 精确）
+    center = np.zeros(lin.size, dtype=float)
+    for tarr in tnbrs:
+        valid = tarr >= 0
+        col = np.where(valid, tarr, lin)  # 无效列指向自身（值 0，零贡献）
+        val = np.where(valid, k_t_face / dt**2, 0.0)
+        rows_l.append(lin)
+        cols_l.append(col)
+        vals_l.append(val)
+        center = center + val  # 对角减去切向贡献之和
+    return rows_l, cols_l, vals_l, center
+
+
+def _grounding_contribution(spec: BcSpec, d: float) -> tuple[float, float]:
+    """计算 Neumann/Convective/Radiative 的法向接地热导 h_g 与右端偏移 rhs_off。
+
+    - Neumann：h_g=0，rhs_off=+2q/d（外法向热流注入）。
+    - Convective：h_g=h，rhs_off=-2h·T_amb/d（Newton 冷却接地）。
+    - Radiative：h_g=h_rad=4εσT_amb³，rhs_off=-2h_rad·T_amb/d（线性化辐射接地）。
+
+    Args:
+        spec: 边界条件规格。
+        d: 法向网格间距。
+
+    Returns:
+        (h_g, rhs_off)：center += 2·h_g/d，b_vals = -q_b + rhs_off。
+    """
+    if spec.type is BoundaryType.NEUMANN:
+        return 0.0, 2.0 * spec.value / d
+    if spec.type is BoundaryType.CONVECTIVE:
+        if spec.h < 0.0:
+            raise ValueError(f"对流系数 h 须非负，实际 {spec.h}")
+        return spec.h, -2.0 * spec.h * spec.t_amb / d
+    if spec.type is BoundaryType.RADIATIVE:
+        h_rad = radiative_h(spec.emissivity, spec.t_amb)
+        return h_rad, -2.0 * h_rad * spec.t_amb / d
+    raise ValueError(f"未支持的边界类型 {spec.type}")
+
+
 def _assemble_bc_rows(
     side: str,
     spec: BcSpec,
@@ -221,63 +298,28 @@ def _assemble_bc_rows(
     # Dirichlet：纯单位行 A[k,k]=1, b[k]=T_fixed，无任何邻接耦合。
     # 必须最先处理，跳过切向/法向累加（否则行被污染，T[k] ≠ T_fixed）。
     if spec.type is BoundaryType.DIRICHLET:
-        rows = lin.copy()
-        cols = lin.copy()
-        vals = np.ones(n, dtype=float)
-        b_vals = np.full(n, spec.value, dtype=float)
-        return rows, cols, vals, b_vals, lin.copy()
+        return _dirichlet_triplet(lin, n, spec.value)
 
     # Periodic：装配阶段已环绕索引，本函数无操作（不替换行）。
     if spec.type is BoundaryType.PERIODIC:
-        return (
-            np.empty(0, dtype=np.int64),
-            np.empty(0, dtype=np.int64),
-            np.empty(0, dtype=float),
-            np.empty(0, dtype=float),
-            np.empty(0, dtype=np.int64),
-        )
+        return _empty_triplet()
 
     # Neumann / Convective / Radiative：法向 ghost-cell 2 阶格式 + 切向传导耦合
-    rows_l: list[np.ndarray] = []
-    cols_l: list[np.ndarray] = []
-    vals_l: list[np.ndarray] = []
+    rows_l, cols_l, vals_l, center = _accumulate_tangential(
+        side, nx, ny, lin, k_b, is_x, dx, dy
+    )
 
-    # 切向内邻（保留切向传导耦合）
-    tnbrs = _tangential_neighbors(side, nx, ny)
-    dt = dy if is_x else dx  # 切向间距
-    k_t_face = k_b  # 切向面热导率近似取边界节点 k（角点误差可接受，常数 k 精确）
-    center = np.zeros(n, dtype=float)
-
-    for tarr in tnbrs:
-        valid = tarr >= 0
-        col = np.where(valid, tarr, lin)  # 无效列指向自身（值 0，零贡献）
-        val = np.where(valid, k_t_face / dt**2, 0.0)
-        rows_l.append(lin)
-        cols_l.append(col)
-        vals_l.append(val)
-        center = center + val  # 对角减去切向贡献之和
-
-    # 法向邻接（ghost 翻倍）
+    # 法向邻接（ghost 翻倍），对角也含法向 -2k/d²
     coeff_nbr = 2.0 * k_b / d**2
     rows_l.append(lin)
     cols_l.append(nbr)
     vals_l.append(coeff_nbr)
-    center = center + coeff_nbr  # 对角也含法向 -2k/d²
+    center = center + coeff_nbr
 
-    b_vals = -q_b.copy()
-    if spec.type is BoundaryType.NEUMANN:
-        b_vals = b_vals + 2.0 * spec.value / d
-    elif spec.type is BoundaryType.CONVECTIVE:
-        if spec.h < 0.0:
-            raise ValueError(f"对流系数 h 须非负，实际 {spec.h}")
-        center = center + 2.0 * spec.h / d
-        b_vals = b_vals - 2.0 * spec.h * spec.t_amb / d
-    elif spec.type is BoundaryType.RADIATIVE:
-        h_rad = radiative_h(spec.emissivity, spec.t_amb)
-        center = center + 2.0 * h_rad / d
-        b_vals = b_vals - 2.0 * h_rad * spec.t_amb / d
-    else:  # pragma: no cover - 枚举已穷尽
-        raise ValueError(f"未支持的边界类型 {spec.type}")
+    # 法向接地贡献（Convective/Radiative 加 h_g 到 center，Neumann 仅 rhs 偏移）
+    h_g, rhs_off = _grounding_contribution(spec, d)
+    center = center + 2.0 * h_g / d
+    b_vals = -q_b.copy() + rhs_off
 
     # 对角项（负值汇总）
     rows_l.append(lin)
@@ -288,6 +330,101 @@ def _assemble_bc_rows(
     cols = np.concatenate(cols_l)
     vals = np.concatenate(vals_l)
     return rows, cols, vals, b_vals, lin.copy()
+
+
+def _collect_bc_triplets(
+    config: HeatConfig,
+) -> tuple[
+    list[np.ndarray],
+    list[np.ndarray],
+    list[np.ndarray],
+    list[np.ndarray],
+    list[np.ndarray],
+    np.ndarray,
+]:
+    """遍历 SIDES 收集所有非 Periodic 边界的三元组与 Dirichlet 行集合。
+
+    Returns:
+        (rows_all, cols_all, vals_all, bc_rows_all, b_bc_all, dirichlet_rows)。
+    """
+    rows_all: list[np.ndarray] = []
+    cols_all: list[np.ndarray] = []
+    vals_all: list[np.ndarray] = []
+    bc_rows_all: list[np.ndarray] = []
+    b_bc_all: list[np.ndarray] = []
+    dirichlet_list: list[np.ndarray] = []
+    for side in SIDES:
+        spec = config.bc_dict.get(side)
+        if spec is None:
+            continue
+        if spec.type is BoundaryType.PERIODIC:
+            continue  # 周期已在装配环绕
+        rows, cols, vals, b_vals, bc_rows = _assemble_bc_rows(
+            side, spec, config.k_arr, config.q_arr, config.dx, config.dy
+        )
+        if rows.size:
+            rows_all.append(rows)
+            cols_all.append(cols)
+            vals_all.append(vals)
+            bc_rows_all.append(bc_rows)
+            b_bc_all.append(b_vals)
+            if spec.type is BoundaryType.DIRICHLET:
+                dirichlet_list.append(bc_rows)
+    dirichlet_rows = (
+        np.concatenate(dirichlet_list)
+        if dirichlet_list
+        else np.empty(0, dtype=np.int64)
+    )
+    return rows_all, cols_all, vals_all, bc_rows_all, b_bc_all, dirichlet_rows
+
+
+def _resolve_corner_conflicts(
+    rows: np.ndarray,
+    cols: np.ndarray,
+    vals: np.ndarray,
+    bc_rows: np.ndarray,
+    b_bc: np.ndarray,
+    dirichlet_rows: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """角点冲突修复（R05 Bug）：Dirichlet 边优先占有共享角点。
+
+    角点被多条边共享时，Neumann/Robin 三元组会污染 Dirichlet 行（对角累加非 1）。
+    修复：删除所有行索引属于 Dirichlet 集合的非 Dirichlet 三元组，并对 Dirichlet
+    对角行去重（同 row 只保留首次），最后对 (bc_rows, b_bc) 去重。
+
+    Returns:
+        (rows, cols, vals, bc_rows_uq, b_bc_uq)。
+    """
+    if dirichlet_rows.size == 0:
+        return rows, cols, vals, bc_rows, b_bc
+    dirichlet_set = set(dirichlet_rows.tolist())
+    # 标记每个三元组是否为 Dirichlet 对角（row==col 且 row 属于 Dirichlet 集合）
+    is_dirichlet_diag = np.array(
+        [r == c and int(r) in dirichlet_set for r, c in zip(rows, cols, strict=False)],
+        dtype=bool,
+    )
+    # 行属于 Dirichlet 集合但不是 Dirichlet 对角 → 删除（Neumann/Robin 污染）
+    row_in_dirichlet = np.isin(rows, dirichlet_rows)
+    to_remove = row_in_dirichlet & ~is_dirichlet_diag
+    keep_mask = ~to_remove
+    rows = rows[keep_mask]
+    cols = cols[keep_mask]
+    vals = vals[keep_mask]
+    # Dirichlet 对角去重：同 row 只保留首次
+    d_mask = np.isin(rows, dirichlet_rows) & (rows == cols)
+    if d_mask.any():
+        _, d_first = np.unique(rows[d_mask], return_index=True)
+        d_indices = np.where(d_mask)[0]
+        keep_d = np.zeros(rows.size, dtype=bool)
+        keep_d[d_indices[np.sort(d_first)]] = True
+        final_mask = (~d_mask) | keep_d
+        rows = rows[final_mask]
+        cols = cols[final_mask]
+        vals = vals[final_mask]
+    # b 与 bc_rows 去重：每个 BC 行只保留首次出现
+    _, b_first = np.unique(bc_rows, return_index=True)
+    b_first = np.sort(b_first)
+    return rows, cols, vals, bc_rows[b_first], b_bc[b_first]
 
 
 def apply_boundary_conditions(
@@ -317,84 +454,23 @@ def apply_boundary_conditions(
     A_csr = A.tocsr()
     b_out = np.asarray(b, dtype=float).copy()
 
-    rows_all: list[np.ndarray] = []
-    cols_all: list[np.ndarray] = []
-    vals_all: list[np.ndarray] = []
-    bc_rows_all: list[np.ndarray] = []
-    b_bc_all: list[np.ndarray] = []
-    bc_rows_all_dirichlet_list: list[np.ndarray] = []
-
-    for side in SIDES:
-        spec = config.bc_dict.get(side)
-        if spec is None:
-            continue
-        if spec.type is BoundaryType.PERIODIC:
-            continue  # 周期已在装配环绕
-        rows, cols, vals, b_vals, bc_rows = _assemble_bc_rows(
-            side, spec, config.k_arr, config.q_arr, config.dx, config.dy
-        )
-        if rows.size:
-            rows_all.append(rows)
-            cols_all.append(cols)
-            vals_all.append(vals)
-            bc_rows_all.append(bc_rows)
-            b_bc_all.append(b_vals)
-            if spec.type is BoundaryType.DIRICHLET:
-                bc_rows_all_dirichlet_list.append(bc_rows)
-
-    bc_rows_all_dirichlet = (
-        np.concatenate(bc_rows_all_dirichlet_list)
-        if bc_rows_all_dirichlet_list
-        else np.empty(0, dtype=np.int64)
+    rows_all, cols_all, vals_all, bc_rows_all, b_bc_all, dirichlet_rows = (
+        _collect_bc_triplets(config)
     )
 
     if not bc_rows_all:
         return A_csr, b_out
 
-    bc_rows = np.concatenate(bc_rows_all)
-    b_bc = np.concatenate(b_bc_all)
     rows = np.concatenate(rows_all)
     cols = np.concatenate(cols_all)
     vals = np.concatenate(vals_all)
+    bc_rows = np.concatenate(bc_rows_all)
+    b_bc = np.concatenate(b_bc_all)
 
-    # 角点冲突修复（R05 Bug）：角点被多条边共享时，Dirichlet 边应优先占有该节点。
-    # 若角点同时被 Dirichlet 和 Neumann/Robin 处理，Neumann/Robin 的三元组会污染
-    # Dirichlet 行（对角累加非 1）。修复：删除所有行索引属于 Dirichlet 集合的非 Dirichlet 三元组。
-    if bc_rows_all_dirichlet.size:
-        dirichlet_set = set(bc_rows_all_dirichlet.tolist())
-        # 标记每个三元组是否为 Dirichlet 对角（row==col 且 row 属于 Dirichlet 集合）
-        is_dirichlet_diag = np.array(
-            [r == c and int(r) in dirichlet_set for r, c in zip(rows, cols, strict=False)],
-            dtype=bool,
-        )
-        # 行属于 Dirichlet 集合但不是 Dirichlet 对角 → 删除（Neumann/Robin 污染）
-        row_in_dirichlet = np.isin(rows, bc_rows_all_dirichlet)
-        to_remove = row_in_dirichlet & ~is_dirichlet_diag
-        keep_mask = ~to_remove
-        rows = rows[keep_mask]
-        cols = cols[keep_mask]
-        vals = vals[keep_mask]
-        # Dirichlet 对角去重：同 row 只保留首次
-        dr_rows = rows[np.isin(rows, bc_rows_all_dirichlet) & (rows == cols)]
-        if dr_rows.size:
-            d_mask = np.isin(rows, bc_rows_all_dirichlet) & (rows == cols)
-            _, d_first = np.unique(rows[d_mask], return_index=True)
-            # 在 d_mask 中保留首次，其余删除
-            d_indices = np.where(d_mask)[0]
-            keep_d = np.zeros(rows.size, dtype=bool)
-            keep_d[d_indices[np.sort(d_first)]] = True
-            final_mask = (~d_mask) | keep_d
-            rows = rows[final_mask]
-            cols = cols[final_mask]
-            vals = vals[final_mask]
-        # b 与 bc_rows 去重：每个 BC 行只保留首次出现
-        _, b_first = np.unique(bc_rows, return_index=True)
-        b_first = np.sort(b_first)
-        bc_rows_uq = bc_rows[b_first]
-        b_bc_uq = b_bc[b_first]
-    else:
-        bc_rows_uq = bc_rows
-        b_bc_uq = b_bc
+    # 角点冲突修复 + 去重
+    rows, cols, vals, bc_rows_uq, b_bc_uq = _resolve_corner_conflicts(
+        rows, cols, vals, bc_rows, b_bc, dirichlet_rows
+    )
 
     # 掩蔽矩阵 M：BC 行对角置 0，其余 1。M@A 零化 BC 行。
     keep = np.ones(n, dtype=float)

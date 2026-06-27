@@ -358,6 +358,119 @@ class AdiStepper2D:
         ):
             raise ValueError(f"boundary 须为 'tbc'/'dirichlet'/'neumann'，实际 {self.boundary!r}")
 
+    @staticmethod
+    def _validate_from_grid_inputs(
+        n_arr_c: np.ndarray, dz: float, a_coef: complex, theta: float
+    ) -> None:
+        """校验 from_grid 输入参数。
+
+        Args:
+            n_arr_c: 已复数化的折射率数组。
+            dz: z 方向步长（米）。
+            a_coef: SVEA 系数 a = 2i·k₀·n_ref。
+            theta: CN 权重。
+
+        Raises:
+            ValueError: 输入非法（规则 14）。
+        """
+        if dz <= 0.0:
+            raise ValueError(f"dz 必须为正，实际 {dz}")
+        if abs(a_coef) < 1e-300:
+            raise ValueError(f"a_coef 过小 |a|={abs(a_coef):.2e}")
+        if not 0.0 <= theta <= 1.0:
+            raise ValueError(f"theta 须 ∈ [0, 1]，实际 {theta}")
+        # 统一为 2D (Ny, Nx)。1D n_arr (Nx,) 沿 y 均匀时由调用方（adi_propagate_2d）
+        # 展开为 2D (Ny, Nx) 后传入；直接传 1D 会因 Ny=1 导致 lhs_y_base 次对角
+        # 切片 [:, 0, 1:] 为空，广播后全零，丢失 y 方向拉普拉斯耦合（M1 发散）。
+        if n_arr_c.ndim == 1:
+            raise ValueError(
+                "from_grid 须传入 2D n_arr (Ny, Nx)；1D n_arr (Nx,) 请先由 "
+                "adi_propagate_2d 自动展开为 (Ny, Nx)，或调用方自行 np.broadcast_to 展开"
+                "（规则 14：禁止 fall-back 构造残缺算子）"
+            )
+        if n_arr_c.ndim != 2:
+            raise ValueError(f"n_arr 须为 2D (Ny, Nx)，实际 {n_arr_c.ndim}D")
+        ny, nx = n_arr_c.shape
+        if nx < 3:
+            raise ValueError(f"n_arr x 维度须 ≥3，实际 {nx}")
+        if ny < 3:
+            raise ValueError(f"n_arr y 维度须 ≥3，实际 {ny}")
+
+    @staticmethod
+    def _compute_main_diagonals(
+        n_2d: np.ndarray, k0: float, n_ref: float, dx: float, dy: float
+    ) -> tuple[np.ndarray, np.ndarray, float, float, np.ndarray]:
+        """计算 Ax/Ay 主对角与折射率项。
+
+        折射率项 b[j, i] = k₀²·(n² - n_ref²)（向量化）。
+        Ax 主对角：-2/Δx² + b；Ay 主对角：-2/Δy² + b。
+
+        Args:
+            n_2d: 2D 折射率 (Ny, Nx) complex128。
+            k0: 真空波数。
+            n_ref: 参考折射率。
+            dx, dy: x/y 方向网格间距（米）。
+
+        Returns:
+            (main_x, main_y, off_x, off_y, b_field):
+                main_x/main_y: Ax/Ay 主对角 (Ny, Nx)。
+                off_x/off_y: 1/Δx², 1/Δy²。
+                b_field: 折射率项 (Ny, Nx)。
+        """
+        b_field = k0 * k0 * (n_2d * n_2d - n_ref * n_ref)
+        off_x = 1.0 / (dx * dx)
+        off_y = 1.0 / (dy * dy)
+        main_x = -2.0 * off_x + b_field
+        main_y = -2.0 * off_y + b_field
+        return main_x, main_y, off_x, off_y, b_field
+
+    @staticmethod
+    def _build_lhs_x_base(
+        main_x: np.ndarray, nx: int, alpha_lhs: complex, off_x: float
+    ) -> np.ndarray:
+        """构造 per-row lhs_x_base (Ny, 3, Nx)，Dirichlet 基底。
+
+        TM 形式下次/上对角非均匀（含调和平均），此处按 TE 处理次对角为常数 off_x
+        （TM 2D 严格实现留待后续 Sprint，当前 TE/Scalar 已覆盖 A03 弱导主场景）。
+
+        Args:
+            main_x: Ax 主对角 (Ny, Nx)，含 -2/Δx² + b。
+            nx: x 方向网格数。
+            alpha_lhs: 复系数 θ·Δz/a。
+            off_x: 1/Δx²（标量）。
+
+        Returns:
+            lhs_x_base (Ny, 3, Nx) complex128。
+        """
+        lhs_x_base = np.zeros((main_x.shape[0], 3, nx), dtype=np.complex128)
+        lhs_x_base[:, 0, 1:] = -alpha_lhs * off_x  # 上次对角（广播 over Ny）
+        lhs_x_base[:, 1, :] = 1.0 - alpha_lhs * main_x  # 主对角
+        lhs_x_base[:, 2, :-1] = -alpha_lhs * off_x  # 下次对角（广播 over Ny）
+        return lhs_x_base
+
+    @staticmethod
+    def _build_lhs_y_base(
+        main_y: np.ndarray, alpha_lhs: complex, off_y: float
+    ) -> np.ndarray:
+        """构造 per-col lhs_y_base (Nx, 3, Ny)，Dirichlet 基底。
+
+        注意维度转置：per-col 算子沿 y 作用，主对角为 main_y[:, i] 即 main_y.T[i, :]。
+
+        Args:
+            main_y: Ay 主对角 (Ny, Nx)，含 -2/Δy² + b。
+            alpha_lhs: 复系数 θ·Δz/a。
+            off_y: 1/Δy²（标量）。
+
+        Returns:
+            lhs_y_base (Nx, 3, Ny) complex128。
+        """
+        nx = main_y.shape[1]
+        lhs_y_base = np.zeros((nx, 3, main_y.shape[0]), dtype=np.complex128)
+        lhs_y_base[:, 0, 1:] = -alpha_lhs * off_y  # 上次对角（广播 over Nx）
+        lhs_y_base[:, 1, :] = 1.0 - alpha_lhs * main_y.T  # 主对角 (Nx, Ny)
+        lhs_y_base[:, 2, :-1] = -alpha_lhs * off_y  # 下次对角
+        return lhs_y_base
+
     @classmethod
     def from_grid(
         cls,
@@ -393,73 +506,22 @@ class AdiStepper2D:
         Raises:
             ValueError: 输入非法（规则 14）。
         """
-        if dz <= 0.0:
-            raise ValueError(f"dz 必须为正，实际 {dz}")
-        if abs(a_coef) < 1e-300:
-            raise ValueError(f"a_coef 过小 |a|={abs(a_coef):.2e}")
-        if not 0.0 <= theta <= 1.0:
-            raise ValueError(f"theta 须 ∈ [0, 1]，实际 {theta}")
-        # 统一为 2D (Ny, Nx)。1D n_arr (Nx,) 沿 y 均匀时由调用方（adi_propagate_2d）
-        # 展开为 2D (Ny, Nx) 后传入；直接传 1D 会因 Ny=1 导致 lhs_y_base 次对角
-        # 切片 [:, 0, 1:] 为空，广播后全零，丢失 y 方向拉普拉斯耦合（M1 发散）。
         n_arr_c = np.asarray(n_arr, dtype=np.complex128)
-        n_uniform_in_y = False
-        if n_arr_c.ndim == 1:
-            raise ValueError(
-                "from_grid 须传入 2D n_arr (Ny, Nx)；1D n_arr (Nx,) 请先由 "
-                "adi_propagate_2d 自动展开为 (Ny, Nx)，或调用方自行 np.broadcast_to 展开"
-                "（规则 14：禁止 fall-back 构造残缺算子）"
-            )
-        if n_arr_c.ndim != 2:
-            raise ValueError(f"n_arr 须为 2D (Ny, Nx)，实际 {n_arr_c.ndim}D")
+        cls._validate_from_grid_inputs(n_arr_c, dz, a_coef, theta)
         n_2d = n_arr_c
-        ny = n_2d.shape[0]
-
         nx = n_2d.shape[1]
-        if nx < 3:
-            raise ValueError(f"n_arr x 维度须 ≥3，实际 {nx}")
-        if ny < 3:
-            raise ValueError(f"n_arr y 维度须 ≥3，实际 {ny}")
-
-        # 折射率项 b[j, i] = k₀²·(n² - n_ref²)（向量化）
-        b_field = k0 * k0 * (n_2d * n_2d - n_ref * n_ref)  # (Ny, Nx) 或 (1, Nx)
-        off_x = 1.0 / (dx * dx)
-        off_y = 1.0 / (dy * dy)
-        # Ax 主对角：-2/Δx² + b；Ay 主对角：-2/Δy² + b
-        main_x = -2.0 * off_x + b_field
-        main_y = -2.0 * off_y + b_field
-
+        main_x, main_y, off_x, off_y, _b_field = cls._compute_main_diagonals(
+            n_2d, k0, n_ref, dx, dy
+        )
         alpha_lhs = theta * dz / a_coef
         alpha_rhs = (1.0 - theta) * dz / a_coef
-
-        # 构造 per-row lhs_x_base (Ny, 3, Nx)，Dirichlet 基底
-        # TM 形式下次/上对角非均匀（含调和平均），此处按 TE 处理次对角为常数 off_x
-        # （TM 2D 严格实现留待后续 Sprint，当前 TE/Scalar 已覆盖 A03 弱导主场景）
-        lhs_x_base = np.zeros((b_field.shape[0], 3, nx), dtype=np.complex128)
-        lhs_x_base[:, 0, 1:] = -alpha_lhs * off_x  # 上次对角（广播 over Ny）
-        lhs_x_base[:, 1, :] = 1.0 - alpha_lhs * main_x  # 主对角
-        lhs_x_base[:, 2, :-1] = -alpha_lhs * off_x  # 下次对角（广播 over Ny）
-
-        # 构造 per-col lhs_y_base (Nx, 3, Ny)，Dirichlet 基底
-        # 注意维度转置：per-col 算子沿 y 作用，主对角为 main_y[:, i] 即 b_field.T[i, :]
-        lhs_y_base = np.zeros((nx, 3, b_field.shape[0]), dtype=np.complex128)
-        lhs_y_base[:, 0, 1:] = -alpha_lhs * off_y  # 上次对角（广播 over Nx）
-        lhs_y_base[:, 1, :] = 1.0 - alpha_lhs * main_y.T  # 主对角 (Nx, Ny)
-        lhs_y_base[:, 2, :-1] = -alpha_lhs * off_y  # 下次对角
-
+        lhs_x_base = cls._build_lhs_x_base(main_x, nx, alpha_lhs, off_x)
+        lhs_y_base = cls._build_lhs_y_base(main_y, alpha_lhs, off_y)
         return cls(
-            lhs_x_base=lhs_x_base,
-            lhs_y_base=lhs_y_base,
-            main_x=main_x,
-            main_y=main_y,
-            off_x=off_x,
-            off_y=off_y,
-            alpha_lhs=alpha_lhs,
-            alpha_rhs=alpha_rhs,
-            dx=dx,
-            dy=dy,
-            boundary=boundary,
-            n_uniform_in_y=n_uniform_in_y,
+            lhs_x_base=lhs_x_base, lhs_y_base=lhs_y_base,
+            main_x=main_x, main_y=main_y, off_x=off_x, off_y=off_y,
+            alpha_lhs=alpha_lhs, alpha_rhs=alpha_rhs,
+            dx=dx, dy=dy, boundary=boundary, n_uniform_in_y=False,
         )
 
     def step(self, psi: np.ndarray) -> np.ndarray:
@@ -546,6 +608,132 @@ class AdiStepper2D:
         return psi_next
 
 
+def _validate_adi_propagate_inputs(
+    psi_init: np.ndarray, nz: int, store_interval: int
+) -> np.ndarray:
+    """校验 adi_propagate_2d 输入并返回复数化 psi_init。
+
+    Args:
+        psi_init: 初始场 ψ(z=0) (Ny, Nx)，复数。
+        nz: z 方向步数。
+        store_interval: 快照存储间隔。
+
+    Returns:
+        psi_init_c: 复数化的初始场 (Ny, Nx) complex128。
+
+    Raises:
+        ValueError: 输入非法（规则 14）。
+    """
+    psi_init_c = np.asarray(psi_init, dtype=np.complex128)
+    if psi_init_c.ndim != 2:
+        raise ValueError(f"psi_init 须为 2D，实际 {psi_init_c.ndim}D")
+    if nz < 1:
+        raise ValueError(f"nz 须 ≥1，实际 {nz}")
+    if store_interval < 1:
+        raise ValueError(f"store_interval 须 ≥1，实际 {store_interval}")
+    return psi_init_c
+
+
+def _broadcast_n_arr_2d(n_arr: np.ndarray, ny: int, nx: int) -> np.ndarray:
+    """将 n_arr 统一为 2D (Ny, Nx)（沿 y 均匀时展开）。
+
+    1D n_arr (Nx,) 沿 y 均匀时展开为 2D (Ny, Nx)，使 from_grid 构造的
+    lhs_y_base (Nx, 3, Ny) 含正确的次对角耦合（1/Δy²·∂²/∂y²）。
+    若保留 Ny=1 基底再广播，次对角切片 [:, 0, 1:] 为空，广播后全零，
+    丢失 y 方向拉普拉斯耦合导致发散（M1 失败）。
+
+    Args:
+        n_arr: 折射率分布，1D (Nx,) 或 2D (Ny, Nx)。
+        ny, nx: psi_init 的形状。
+
+    Returns:
+        2D n_arr (Ny, Nx)。
+
+    Raises:
+        ValueError: 形状不匹配或维度非法（规则 14）。
+    """
+    n_arr_c = np.asarray(n_arr, dtype=np.complex128)
+    if n_arr_c.ndim == 1:
+        if n_arr_c.shape[0] != nx:
+            raise ValueError(
+                f"1D n_arr 长度 {n_arr_c.shape[0]} 与 psi_init x 维度 {nx} 不匹配（规则 14）"
+            )
+        return np.broadcast_to(n_arr_c, (ny, nx)).copy()
+    if n_arr_c.ndim == 2:
+        if n_arr_c.shape != (ny, nx):
+            raise ValueError(
+                f"2D n_arr 形状 {n_arr_c.shape} 与 psi_init {(ny, nx)} 不匹配（规则 14）"
+            )
+        return n_arr_c
+    raise ValueError(f"n_arr 须为 1D 或 2D，实际 {n_arr_c.ndim}D（规则 14）")
+
+
+def _init_snapshots(
+    psi_init_c: np.ndarray, nz: int, store_interval: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """初始化快照数组与 z 坐标数组。
+
+    Args:
+        psi_init_c: 复数化初始场 (Ny, Nx)。
+        nz: z 方向步数。
+        store_interval: 快照存储间隔。
+
+    Returns:
+        (snapshots, z_coords): snapshots (N_snapshots, Ny, Nx) complex128,
+        z_coords (N_snapshots,) float64。snapshots[0]=psi_init_c, z_coords[0]=0.0。
+    """
+    ny, nx = psi_init_c.shape
+    n_snapshots = nz // store_interval + 1
+    snapshots = np.empty((n_snapshots, ny, nx), dtype=np.complex128)
+    z_coords = np.empty(n_snapshots, dtype=np.float64)
+    snapshots[0] = psi_init_c
+    z_coords[0] = 0.0
+    return snapshots, z_coords
+
+
+def _run_adi_propagate_loop(
+    stepper: AdiStepper2D,
+    psi_init_c: np.ndarray,
+    nz: int,
+    dz: float,
+    store_interval: int,
+    snapshots: np.ndarray,
+    z_coords: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """执行 z 步进主循环并填充快照数组。
+
+    Args:
+        stepper: 已构造的 ADI 步进器。
+        psi_init_c: 复数化初始场 (Ny, Nx)。
+        nz: z 方向步数。
+        dz: z 方向步长（米）。
+        store_interval: 快照存储间隔。
+        snapshots: 预分配快照数组（snapshots[0] 已填）。
+        z_coords: 预分配 z 坐标数组（z_coords[0]=0.0 已填）。
+
+    Returns:
+        (snapshots, z_coords): 截断至实际写入长度的快照与坐标。
+    """
+    n_snapshots = snapshots.shape[0]
+    psi = psi_init_c.copy()
+    snap_idx = 1
+    # z 步进主循环（python代码开发规则.md §4 唯一允许循环）
+    for n in range(nz):
+        psi = stepper.step(psi)
+        z_now = (n + 1) * dz
+        if (n + 1) % store_interval == 0:
+            if snap_idx >= n_snapshots:
+                break
+            snapshots[snap_idx] = psi
+            z_coords[snap_idx] = z_now
+            snap_idx += 1
+    if snap_idx < n_snapshots:
+        snapshots[snap_idx] = psi
+        z_coords[snap_idx] = nz * dz
+        snap_idx += 1
+    return snapshots[:snap_idx], z_coords[:snap_idx]
+
+
 def adi_propagate_2d(
     psi_init: np.ndarray,
     n_arr: np.ndarray,
@@ -588,67 +776,14 @@ def adi_propagate_2d(
 
     算法复杂度：O(nz · (Nx·Ny))（每步两次三对角求解循环 + 向量化模板）。
     """
-    psi_init_c = np.asarray(psi_init, dtype=np.complex128)
-    if psi_init_c.ndim != 2:
-        raise ValueError(f"psi_init 须为 2D，实际 {psi_init_c.ndim}D")
-    if nz < 1:
-        raise ValueError(f"nz 须 ≥1，实际 {nz}")
-    if store_interval < 1:
-        raise ValueError(f"store_interval 须 ≥1，实际 {store_interval}")
-
+    psi_init_c = _validate_adi_propagate_inputs(psi_init, nz, store_interval)
     ny, nx = psi_init_c.shape
-    # 1D n_arr (Nx,) 沿 y 均匀时，展开为 2D (Ny, Nx)，使 from_grid 构造的
-    # lhs_y_base (Nx, 3, Ny) 含正确的次对角耦合（1/Δy²·∂²/∂y²）。
-    # 若保留 Ny=1 基底再广播，次对角切片 [:, 0, 1:] 为空，广播后全零，
-    # 丢失 y 方向拉普拉斯耦合导致发散（M1 失败）。
-    n_arr_c = np.asarray(n_arr, dtype=np.complex128)
-    if n_arr_c.ndim == 1:
-        if n_arr_c.shape[0] != nx:
-            raise ValueError(
-                f"1D n_arr 长度 {n_arr_c.shape[0]} 与 psi_init x 维度 {nx} 不匹配（规则 14）"
-            )
-        n_arr_use = np.broadcast_to(n_arr_c, (ny, nx)).copy()
-    elif n_arr_c.ndim == 2:
-        if n_arr_c.shape != (ny, nx):
-            raise ValueError(
-                f"2D n_arr 形状 {n_arr_c.shape} 与 psi_init {(ny, nx)} 不匹配（规则 14）"
-            )
-        n_arr_use = n_arr_c
-    else:
-        raise ValueError(f"n_arr 须为 1D 或 2D，实际 {n_arr_c.ndim}D（规则 14）")
-
+    n_arr_use = _broadcast_n_arr_2d(n_arr, ny, nx)
     stepper = AdiStepper2D.from_grid(
-        n_arr=n_arr_use,
-        dx=dx,
-        dy=dy,
-        dz=dz,
-        a_coef=a_coef,
-        k0=k0,
-        n_ref=n_ref,
-        theta=theta,
-        polarization=polarization,
-        boundary=boundary,
+        n_arr=n_arr_use, dx=dx, dy=dy, dz=dz, a_coef=a_coef, k0=k0, n_ref=n_ref,
+        theta=theta, polarization=polarization, boundary=boundary,
     )
-    n_snapshots = nz // store_interval + 1
-    snapshots = np.empty((n_snapshots, ny, nx), dtype=np.complex128)
-    z_coords = np.empty(n_snapshots, dtype=np.float64)
-    snapshots[0] = psi_init_c
-    z_coords[0] = 0.0
-
-    psi = psi_init_c.copy()
-    snap_idx = 1
-    # z 步进主循环（python代码开发规则.md §4 唯一允许循环）
-    for n in range(nz):
-        psi = stepper.step(psi)
-        z_now = (n + 1) * dz
-        if (n + 1) % store_interval == 0:
-            if snap_idx >= n_snapshots:
-                break
-            snapshots[snap_idx] = psi
-            z_coords[snap_idx] = z_now
-            snap_idx += 1
-    if snap_idx < n_snapshots:
-        snapshots[snap_idx] = psi
-        z_coords[snap_idx] = nz * dz
-        snap_idx += 1
-    return snapshots[:snap_idx], z_coords[:snap_idx]
+    snapshots, z_coords = _init_snapshots(psi_init_c, nz, store_interval)
+    return _run_adi_propagate_loop(
+        stepper, psi_init_c, nz, dz, store_interval, snapshots, z_coords
+    )
