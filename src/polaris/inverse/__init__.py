@@ -15,8 +15,8 @@
 from polaris.inverse.adjoint_optimizer import (
     AdjointOptimizer,
     ModeOverlapObjective,
-    OptimizerConfig,
     OptimizationResult,
+    OptimizerConfig,
     example_grating_coupler,
     example_mmi_1x2,
     example_mode_converter,

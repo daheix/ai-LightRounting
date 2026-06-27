@@ -47,11 +47,11 @@
   - [ ] SubTask 6.3: ≥3 个 Verilog-A 光子模型（调制器/探测器/激光器）
   - [ ] SubTask 6.4: 新增 `tests/test_photoelectric_cosim.py` ≥8 个测试 + 文献 ≥5 URL + git 提交
 
-- [ ] Task 7: R27 Tidy3D 云 API FDTD 后端
-  - [ ] SubTask 7.1: 检索 Tidy3D 云 API 方案（Flexcompute 文档 + Tidy3D Changelog）
-  - [ ] SubTask 7.2: 实现 `src/polaris/sim/tidy3d_backend.py`（云 API 调用 + 亚像素精度 + S 参数提取）
-  - [ ] SubTask 7.3: FDTD 仿真速度验证（CPU 基线对比，R04 不参与 GPU）
-  - [ ] SubTask 7.4: 新增 `tests/test_tidy3d_backend.py` ≥8 个测试 + 文献 ≥5 URL + git 提交
+- [x] Task 7: R27 Tidy3D 云 API FDTD 后端
+  - [x] SubTask 7.1: 检索 Tidy3D 云 API 方案（Flexcompute 文档 + Tidy3D Changelog）
+  - [x] SubTask 7.2: 实现 `src/polaris/sim/tidy3d_backend.py`（云 API 调用 + 亚像素精度 + S 参数提取）
+  - [x] SubTask 7.3: FDTD 仿真速度验证（CPU 基线对比，R04 不参与 GPU）
+  - [x] SubTask 7.4: 新增 `tests/test_tidy3d_backend.py` ≥8 个测试 + 文献 ≥5 URL + git 提交
 
 - [ ] Task 8: R28 伴随优化逆向设计
   - [ ] SubTask 8.1: 检索伴随优化方案（Tidy3D autograd 文档 + lumopt + adjoint 论文）

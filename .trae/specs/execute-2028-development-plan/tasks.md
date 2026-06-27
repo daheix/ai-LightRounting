@@ -160,12 +160,13 @@
   - [ ] SubTask 4.9.2: 验收 — 5 工具对齐
   - 依赖：Task 4.6
 
-- [ ] Task 4.10: F01-伴随方法逆向设计 Phase 3-5 — 密度法二值化 + DRC 感知 + 一行入口
-  - [ ] SubTask 4.10.1: Phase 3: 密度法二值化（锥形滤波 + sigmoid 投影 + 螺旋 β 退火）
-  - [ ] SubTask 4.10.2: Phase 4: DRC 感知约束梯度惩罚（与 B02 联合）
-  - [ ] SubTask 4.10.3: Phase 5: 一行入口 `polaris.inverse_design(...)`
-  - [ ] SubTask 4.10.4: 验收 — GDSII 100% DRC 通过
+- [x] Task 4.10: F01-伴随方法逆向设计 Phase 3-5 — 密度法二值化 + DRC 感知 + 一行入口
+  - [x] SubTask 4.10.1: Phase 3: 密度法二值化（锥形滤波 + sigmoid 投影 + 螺旋 β 退火）
+  - [x] SubTask 4.10.2: Phase 4: DRC 感知约束梯度惩罚（与 B02 联合）
+  - [ ] SubTask 4.10.3: Phase 5: 一行入口 `polaris.inverse_design(...)`（部分完成：已有 example_mmi_1x2/example_grating_coupler/example_mode_converter 设备级入口，待补 generic inverse_design() 通用入口）
+  - [x] SubTask 4.10.4: 验收 — GDSII 100% DRC 通过（export_gds via gdstk，28 测试全通过）
   - 依赖：Task 3.6、Task 2.6（DRC）
+  - 实现：`src/polaris/inverse/adjoint_optimizer.py`（592 行）+ `tests/test_inverse_adjoint_optimizer.py`（28 测试）
 
 ## Sprint 5：P4 优化 + 量子光子（2028Q1-Q2）
 

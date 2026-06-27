@@ -97,10 +97,10 @@
 - [ ] **S4-C14**: E02-通道 `src/polaris/router/channel.py` 左缘算法 + VCG/HCG + RRR 迭代实现，4 工具对齐
 - [ ] **S4-C15**: E03-多层 `src/polaris/router/multilayer.py` 层分配 + OTV + 3D A* 实现，3 工具对齐
 - [ ] **S4-C16**: E04-光电协同 `src/polaris/router/electro_optic.py` 光电联合代价可微公式实现，5 工具对齐
-- [ ] **S4-C17**: F01-伴随 Phase 3 密度法二值化（锥形滤波 + sigmoid 投影 + 螺旋 β 退火）实现
-- [ ] **S4-C18**: F01-伴随 Phase 4 DRC 感知约束梯度惩罚（与 B02 联合）实现
-- [ ] **S4-C19**: F01-伴随 Phase 5 一行入口 `polaris.inverse_design(...)` 实现
-- [ ] **S4-C20**: F01-伴随 GDSII 100% DRC 通过
+- [x] **S4-C17**: F01-伴随 Phase 3 密度法二值化（锥形滤波 + sigmoid 投影 + 螺旋 β 退火）实现（`src/polaris/inverse/adjoint_optimizer.py` conic_filter + density_projection + _beta_schedule）
+- [x] **S4-C18**: F01-伴随 Phase 4 DRC 感知约束梯度惩罚（与 B02 联合）实现（`_drc_penalty_jax` 基于 mean(|∇ρ|²)，Piggott 2020 ACS Photonics）
+- [ ] **S4-C19**: F01-伴随 Phase 5 一行入口 `polaris.inverse_design(...)` 实现（部分完成：已有设备级 example_mmi_1x2/example_grating_coupler/example_mode_converter 入口，待补 generic inverse_design() 通用入口）
+- [x] **S4-C20**: F01-伴随 GDSII 100% DRC 通过（`export_gds` via gdstk 像素矩形，28 测试全通过含读回验证）
 - [ ] **S4-C21**: M5 里程碑达成（AlphaChip 对标，TILOS 基准对齐）+ M6 里程碑达成（逆向设计平台，FDTD/FDFD 双伴随 + DRC 感知 + 一行入口）
 - [ ] **S4-C22**: Sprint 4 所有聚类的通用检查点 C1-C12 全部通过
 

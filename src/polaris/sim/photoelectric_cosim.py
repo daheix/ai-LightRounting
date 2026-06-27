@@ -47,7 +47,7 @@ PoLaRIS 内一次 run_cosim 即得时域波形，无需 ngspice 实跑（无外�
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
 
@@ -380,18 +380,25 @@ class PhotoelectricCoSim:
             RuntimeError: 未在 maxiter 内收敛或求根失败。
         """
         try:
-            root: float = newton(
+            result = newton(
                 func,
                 x0=x0,
                 fprime=fprime,
                 tol=self.config.newton_tol,
+                rtol=self.config.newton_tol,
                 maxiter=self.config.newton_maxiter,
                 full_output=True,
                 disp=False,
-            )[0]
+            )
         except (RuntimeError, ValueError) as e:
-            raise RuntimeError(f"牛顿迭代未收敛: {e}") from e
-        if not math.isfinite(root):
+            raise RuntimeError(f"牛顿迭代求根失败: {e}") from e
+        root, info = result
+        if not getattr(info, "converged", False):
+            raise RuntimeError(
+                f"牛顿迭代未在 {self.config.newton_maxiter} 次内收敛 "
+                f"(flag={getattr(info, 'flag', '?')})"
+            )
+        if not math.isfinite(float(root)):
             raise RuntimeError(f"牛顿迭代得到非有限根: {root}")
         return float(root)
 
@@ -424,10 +431,16 @@ class PhotoelectricCoSim:
             if denom <= 1.0e-15:
                 return 1.0e30  # 接近激射奇异点
             s = spec.beta_sp * n * spec.tau_p / (spec.tau_n * denom)
-            return spec.eta_inj * current / q - n / spec.tau_n - spec.vg * gain * s
+            # 泵浦项须除以有源区体积 V（密度方程，Coldren 1995 §5.2）
+            pump = spec.eta_inj * current / (q * spec.active_volume)
+            return pump - n / spec.tau_n - spec.vg * gain * s
 
-        # 初值: 透明载流子密度附近（Coldren 1995 典型范围）
-        x0 = spec.n_tr * 1.1
+        # 阈值载流子密度: Γ·vg·g_th·τ_p = 1 → g_th = 1/(Γ·vg·τ_p)
+        g_th = 1.0 / (spec.gamma_confinement * spec.vg * spec.tau_p)
+        n_th = spec.n_tr + g_th / spec.gain_a
+        # 初值: 阈值以下解析解 N≈η_i·I·τ_n/(q·V)，截断至 n_th 保证稳定
+        x0_guess = spec.eta_inj * current * spec.tau_n / (q * spec.active_volume)
+        x0 = min(x0_guess, n_th * 0.99) if x0_guess > 0 else n_th * 0.5
         return self.newton_solve(residual, x0)
 
     # ------------------------------------------------------------------ Verilog-A 生成

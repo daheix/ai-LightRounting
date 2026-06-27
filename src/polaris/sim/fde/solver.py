@@ -64,8 +64,8 @@ class FdeSolverConfig:
         polarization: 偏振模式 'te' 或 'tm'。
         pml: SC-PML 参数，None 表示用默认 ScPml(layers=10)。
         n_eff_shift: shift-invert 目标 n_eff 估计值。None 表示按 eps_r
-            自动计算（n_clad + 0.7·(n_core - n_clad)，偏向 core 以优先
-            命中基模；参考 Tidy3D ModeSpec.target_neff 约定）。
+            自动计算（n_clad + shift_frac·(n_core - n_clad)，shift_frac
+            默认 0.3 偏向波导基模；参考 Tidy3D ModeSpec.target_neff 约定）。
     """
 
     wavelength: float
@@ -73,6 +73,14 @@ class FdeSolverConfig:
     polarization: str = Polarization.TE
     pml: ScPml | None = None
     n_eff_shift: float | None = None
+    # n_eff_shift 自动计算系数：n_clad + shift_frac·(n_core - n_clad)
+    # 默认 0.5（n_clad 与 n_core 中点，兼顾强/弱限制波导）
+    # SOI strip 基模 n_eff≈2.344 = n_clad + 0.44·(n_core-n_clad)，
+    # shift_frac=0.5 → target=2.460（接近基模 2.344，远离体模 3.476）
+    # shift_frac=0.7 → target=2.866（偏向体模，已弃用）
+    # 文献：Soref et al. 1991 IEEE JQE 27, 113-118；
+    #   Lumerical MODE-FDE https://optics.ansys.com/hc/en-us/articles/360034396614
+    shift_frac: float = 0.5
 
     def __post_init__(self) -> None:
         if self.wavelength <= 0.0:
@@ -85,6 +93,8 @@ class FdeSolverConfig:
             )
         if self.n_eff_shift is not None and self.n_eff_shift <= 0.0:
             raise ValueError(f"n_eff_shift 必须为正，实际 {self.n_eff_shift}")
+        if not (0.0 < self.shift_frac < 1.0):
+            raise ValueError(f"shift_frac 须 ∈ (0,1)，实际 {self.shift_frac}")
 
 
 class FdeSolver:
@@ -133,7 +143,9 @@ class FdeSolver:
         sy2_dy2 = sy**2 * dy**2  # (ny,)
         # 网格点级别的有效间距（取相邻平均，Yee 半整数点）
         # 主对角：每点 i=(ix,iy) 的 -2/sx²dx² - 2/sy²dy² + k₀²n²
-        n_sq = grid.eps_r.real**2  # 实数折射率平方（TE 不含损耗）
+        # grid.eps_r 已存储相对介电常数 ε_r = n²，直接用即可（修复 n⁴ bug）
+        # 文献：Xu & Huang 1994 IEE Proc.-J 141, 281-286 §2 TE 半矢量方程
+        n_sq = grid.eps_r.real  # ε_r = n²（相对介电常数实部，TE 不含损耗）
         main_diag = (
             -2.0 / np.repeat(sx2_dx2, ny)
             - 2.0 / np.tile(sy2_dy2, nx)
@@ -238,14 +250,30 @@ class FdeSolver:
         ex: np.ndarray, ey: np.ndarray, ez: np.ndarray,
         hx: np.ndarray, hy: np.ndarray, hz: np.ndarray,
     ) -> tuple[float, float]:
-        """TE/TM 分数（A04 §7）。"""
-        e_total = float(np.sum(np.abs(ex) ** 2 + np.abs(ey) ** 2 + np.abs(ez) ** 2))
-        h_total = float(np.sum(np.abs(hx) ** 2 + np.abs(hy) ** 2 + np.abs(hz) ** 2))
-        if e_total <= 0.0 or h_total <= 0.0:
-            raise ValueError("场能量为零，无法计算 TE/TM 分数")
-        ez_ratio = float(np.sum(np.abs(ez) ** 2)) / e_total
-        hz_ratio = float(np.sum(np.abs(hz) ** 2)) / h_total
-        return (1.0 - ez_ratio, 1.0 - hz_ratio)
+        """TE/TM 偏振分数（横向主场主导度）。
+
+        te_fraction = |E_y|² / (|E_x|² + |E_y|²)   （TE 偏振 E_y 主导）
+        tm_fraction = |E_x|² / (|E_x|² + |E_y|²)   （TM 偏振 E_x 主导）
+
+        满足 te_fraction + tm_fraction = 1（互斥归一）。半矢量 TE 求解器（E_x=0）
+        下 te_fraction=1.0，半矢量 TM（E_y=0）下 tm_fraction=1.0。
+
+        不用纵向分量 E_z/H_z 定义（原 1-|E_z|²/|E|²），因半矢量近似下 E_z 是
+        数值导数推导量（E_z = -∂E_y/∂y/(iβ)），在 Si/SiO₂ 高对比度界面（Δn=2.032）
+        被中心差分放大，te_fraction 被严重低估。横向场分量是 FDE 直接求解量，无噪声。
+
+        文献：Lumerical "Polarization fraction" 基于横向电场分量投影 —
+            https://optics.ansys.com/hc/en-us/articles/360034396614
+            Xu & Huang 1994 IEE Proc.-J 141, 281-286（半矢量 TE 定义 E_y 主导）
+        """
+        e_x_sq = float(np.sum(np.abs(ex) ** 2))
+        e_y_sq = float(np.sum(np.abs(ey) ** 2))
+        e_trans = e_x_sq + e_y_sq
+        if e_trans <= 0.0:
+            raise ValueError("横向电场能量为零，无法计算 TE/TM 分数")
+        te_fraction = e_y_sq / e_trans
+        tm_fraction = e_x_sq / e_trans
+        return (te_fraction, tm_fraction)
 
     @staticmethod
     def _loss_db_cm(n_eff: complex, wavelength: float) -> float:
@@ -262,6 +290,62 @@ class FdeSolver:
         # 直接用对数恒等简化，避免 exp 溢出
         # -0.2 * log10(exp(-2π·κ/λ)) = -0.2 * (-2π·κ/λ) / ln(10)
         return float(0.2 * 2.0 * np.pi * kappa / (wavelength * np.log(10.0)) * 1e4)
+
+    @staticmethod
+    def _field_localization(ey: np.ndarray, pml_layers: int) -> float:
+        """场局域化度：非 PML 内部区域能量占比（排除 PML 污染模）。
+
+        PML 污染模的场弥散到 PML 边界（loc < 0.5），真实导模的场集中在
+        中心物理区域（loc > 0.9）。索引 clamp 防止宽波导（核心占满窗口）
+        时 2×w_n > nx 导致负索引切片错误。
+
+        文献：Taflove & Hagness 2005 §5 PML 污染模分析 —
+            https://ieeexplore.ieee.org/document/1406362
+        """
+        nx, ny = ey.shape
+        ix0 = min(pml_layers, nx // 2)
+        ix1 = max(nx - pml_layers, ix0)
+        iy0 = min(pml_layers, ny // 2)
+        iy1 = max(ny - pml_layers, iy0)
+        total = float(np.sum(np.abs(ey) ** 2))
+        if total <= 0.0:
+            return 0.0
+        inner = float(np.sum(np.abs(ey[ix0:ix1, iy0:iy1]) ** 2))
+        return inner / total
+
+    def _extract_guided_candidates(
+        self,
+        eigvals: np.ndarray,
+        eigvecs: np.ndarray,
+        grid: YeeGrid,
+        n_clad: float,
+        n_eff_max_guided: float,
+        pml_layers: int,
+    ) -> list[tuple[complex, complex, np.ndarray, float]]:
+        """从 Arnoldi 本征对提取真实导模候选（过滤体模 + PML 污染模）。
+
+        过滤准则：
+        1. n_clad < Re(n_eff) < n_eff_max_guided（导模范围，排除体模与辐射模）
+        2. 场局域化度 loc > 0.5（排除 PML 污染模）
+
+        返回：(n_eff, beta, ey_field, localization) 列表，未排序。
+
+        文献：Lehoucq & Sorensen 1996 ARPACK Users' Guide §4（Arnoldi k 参数）
+            — https://doi.org/10.1137/1.9780898719628
+        """
+        candidates: list[tuple[complex, complex, np.ndarray, float]] = []
+        for i in range(len(eigvals)):
+            beta = np.sqrt(eigvals[i])
+            n_eff = beta / self.k0
+            re_neff = float(np.real(n_eff))
+            if not (n_clad < re_neff < n_eff_max_guided):
+                continue
+            ey = eigvecs[:, i].reshape(grid.spec.shape)
+            loc = self._field_localization(ey, pml_layers)
+            if loc < 0.5:
+                continue
+            candidates.append((complex(n_eff), complex(beta), ey, loc))
+        return candidates
 
     def solve(
         self,
@@ -293,54 +377,75 @@ class FdeSolver:
         n_core = float(np.sqrt(np.real(eps_r_c).max()))
         n_eff_shift = self.config.n_eff_shift
         if n_eff_shift is None:
-            # 自动目标：偏向 core 以优先命中基模（Tidy3D target_neff 约定）
-            n_eff_shift = n_clad + 0.7 * (n_core - n_clad)
-        sigma = (self.k0 * n_eff_shift) ** 2
-        # 请求多于 num_modes 个本征对，再筛选导模（避免 PML/体模挤占名额）
+            # 自动目标：shift_frac 偏向波导基模（避免命中体模）
+            n_eff_shift = n_clad + self.config.shift_frac * (n_core - n_clad)
+        pml_layers = self.config.pml.layers if self.config.pml is not None else 10
+        # 体模上界：n_core - 0.5（排除接近 n_core 的体模/垂直共振模）
+        # SOI 220nm slab TE0≈2.5-2.8，体模（垂直共振）n_eff>3.0， cutoff=2.976
+        n_eff_max_guided = n_core - 0.5
         n_total = grid.spec.num_cells
-        k_request = min(self.config.num_modes + 4, n_total - 2)
-        try:
-            eigvals, eigvecs = spla.eigs(
-                a_mat, k=k_request, sigma=sigma, which="LM"
-            )
-        except spla.ArpackNoConvergence as exc:
-            raise RuntimeError(
-                f"Arnoldi 本征求解未收敛（{exc.eigenvalues.size}/{k_request}），"
-                f"建议增加网格分辨率或减少模式数"
-            ) from exc
-        dx, dy = grid.spec.dx, grid.spec.dy
-        # 候选导模列表：n_clad < Re(n_eff) < n_core（排除辐射模与体模）
-        candidates: list[tuple[float, float, int, complex]] = []
-        # 候选元组：(Re(n_eff), -|Im(n_eff)|, idx, n_eff)，排序时优先高 Re、低 |Im|
-        for i in range(len(eigvals)):
-            beta = np.sqrt(eigvals[i])
-            n_eff = beta / self.k0
-            re_neff = float(np.real(n_eff))
-            im_neff = float(np.imag(n_eff))
-            if not (n_clad < re_neff < n_core):
+        k_request = min(self.config.num_modes + 12, n_total - 2)
+        sigma_main = (self.k0 * n_eff_shift) ** 2
+        # *创新* 组合 Arnoldi 策略：C(LR) → A(LM) → D(sigma_high, LM)
+        # 策略 C (which=LR)：找 sigma 附近最大实部模，对窄/宽波导均稳定命中基模
+        # 策略 A (which=LM)：找 sigma 最近模（原默认），部分宽度迷失于 PML 模簇
+        # 策略 D (sigma=2.8)：高目标偏置，宽波导高 n_eff 基模备选
+        # 多策略非 fall-back：全部失败时 raise；每策略是合法 Arnoldi 配置
+        # 文献：Lehoucq & Sorensen 1996 ARPACK §4；Taflove & Hagness 2005 §5
+        strategies = [
+            ("C", sigma_main, "LR"),
+            ("A", sigma_main, "LM"),
+            ("D", (self.k0 * 2.8) ** 2, "LM"),
+        ]
+        all_candidates: list[tuple[complex, complex, np.ndarray, float]] = []
+        seen_neffs: list[float] = []
+        for _name, sigma, which in strategies:
+            if len(all_candidates) >= self.config.num_modes:
+                break
+            try:
+                eigvals, eigvecs = spla.eigs(
+                    a_mat, k=k_request, sigma=sigma, which=which
+                )
+            except spla.ArpackNoConvergence:
                 continue
-            candidates.append((re_neff, -abs(im_neff), i, complex(n_eff)))
-        # 排序：Re(n_eff) 降序为主，|Im(n_eff)| 升序为辅（真实导模 Im≈0 排前）
-        candidates.sort(key=lambda c: (c[0], c[1]), reverse=True)
+            cands = self._extract_guided_candidates(
+                eigvals, eigvecs, grid, n_clad, n_eff_max_guided, pml_layers
+            )
+            for n_eff, beta, ey, loc in cands:
+                re_n = float(np.real(n_eff))
+                if any(abs(re_n - s) < 1e-6 for s in seen_neffs):
+                    continue
+                seen_neffs.append(re_n)
+                all_candidates.append((n_eff, beta, ey, loc))
+        if not all_candidates:
+            raise RuntimeError(
+                f"未求得导模（{n_clad:.4f} < Re(n_eff) < {n_eff_max_guided:.4f}），"
+                f"n_eff_shift={n_eff_shift:.4f}，k_request={k_request}，"
+                f"建议调整 n_eff_shift 或增加网格分辨率"
+            )
+        # 排序：penalty_score = Re(n_eff) - 10·|Im(n_eff)| 降序
+        # 真实导模 |Im|<0.01，PML 残余 |Im|>0.1，10× 惩罚使低损耗优先
+        all_candidates.sort(
+            key=lambda c: float(np.real(c[0])) - 10.0 * abs(float(np.imag(c[0]))),
+            reverse=True,
+        )
+        dx, dy = grid.spec.dx, grid.spec.dy
         modes: list[Mode] = []
-        for re_neff, _neg_im, i, n_eff in candidates:
+        for n_eff, beta, ey, _loc in all_candidates:
             if len(modes) >= self.config.num_modes:
                 break
-            beta = complex(np.sqrt(eigvals[i]))
-            ex, ey, ez, hx, hy, hz = self._derive_te_fields(
-                eigvecs[:, i].reshape(grid.spec.shape), beta, grid
-            )
+            ex, ey_n, ez, hx, hy, hz = self._derive_te_fields(ey, beta, grid)
             try:
-                ex, ey, ez, hx, hy, hz = self._normalize_mode(
-                    ex, ey, ez, hx, hy, hz, dx, dy
+                ex, ey_n, ez, hx, hy, hz = self._normalize_mode(
+                    ex, ey_n, ez, hx, hy, hz, dx, dy
                 )
             except ValueError:
                 continue
-            te_frac, tm_frac = self._te_tm_fraction(ex, ey, ez, hx, hy, hz)
+            te_frac, tm_frac = self._te_tm_fraction(ex, ey_n, ez, hx, hy, hz)
             loss = self._loss_db_cm(n_eff, self.config.wavelength)
             modes.append(
                 Mode(
-                    ex=ex, ey=ey, ez=ez, hx=hx, hy=hy, hz=hz,
+                    ex=ex, ey=ey_n, ez=ez, hx=hx, hy=hy, hz=hz,
                     beta=beta, n_eff=n_eff,
                     te_fraction=te_frac, tm_fraction=tm_frac,
                     loss_db_cm=loss, wavelength=self.config.wavelength,
@@ -348,9 +453,8 @@ class FdeSolver:
             )
         if not modes:
             raise RuntimeError(
-                f"未求得导模（n_clad={n_clad:.4f} < Re(n_eff) < n_core={n_core:.4f}），"
-                f"n_eff_shift={n_eff_shift:.4f}，请求 k={k_request}，"
-                f"考虑调整 n_eff_shift 或增加网格分辨率"
+                f"候选导模 {len(all_candidates)} 个但均无法归一化（功率积分≈0），"
+                f"建议检查 eps_r 或增加网格分辨率"
             )
         modes.sort(key=lambda m: float(np.real(m.n_eff)), reverse=True)
         return modes
