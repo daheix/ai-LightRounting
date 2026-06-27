@@ -64,7 +64,6 @@ from polaris.trainer.pretrain_tasks import (  # noqa: F401
     MaskedNodePredictionTask,
 )
 
-
 __all__ = [
     "ALL_PLATFORMS",
     "CIRCUIT_TEMPLATES",
