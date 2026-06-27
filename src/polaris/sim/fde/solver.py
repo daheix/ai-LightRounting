@@ -20,10 +20,24 @@ shift-invert 目标 σ 设在导模预期范围（n_eff ≈ 2.0），避免命�
 
 后续 Sprint 扩展为全矢量（A04 §9.2 R37-Q2 共形网格同期）。
 
-文献来源：
-- Xu CL, Huang WP, "Full-vectorial mode calculations by finite difference method,"
-  IEE Proc.-J 141, 281-286 (1994).
-- Simsek E, "Practical Vectorial Mode Solver," arXiv:2503.17746 (2025).
+文献来源（R02 学术诚信，≥5 个 URL）：
+1. Xu CL, Huang WP, "Full-vectorial mode calculations by finite difference method,"
+   IEE Proc.-J 141, 281-286 (1994) — https://digital-library.theiet.org/doi/abs/10.1049/ip-j-1.1994.0042
+2. Simsek E, "Practical Vectorial Mode Solver," arXiv:2503.17746 (2025) —
+   https://arxiv.org/abs/2503.17746
+3. Lehoucq RB, Sorensen DC, Yang C, "ARPACK Users' Guide: Solution of Large-Scale
+   Eigenvalue Problems with Implicitly Restarted Arnoldi Methods," SIAM 1998 —
+   https://doi.org/10.1137/1.9780898719628
+4. Taflove A, Hagness SC, "Computational Electrodynamics: The Finite-Difference
+   Time-Domain Method," 3rd ed., Artech House 2005（PML 污染模分析 §5）—
+   https://www.artechhouse.com/Computational-Electrodynamics/Kane-Taflove/p/Book-927
+5. Ansys Lumerical MODE-FDE Solver Introduction —
+   https://optics.ansys.com/hc/en-us/articles/360034396614
+6. Tidy3D ModeSpec (target_neff 约定) —
+   https://docs.flexcompute.com/projects/tidy3d/en/latest/api/_autosummary/tidy3d.ModeSpec.html
+7. gdsfactory photonics training FDFD mode solver notebook（SOI 220nm strip 实测
+   n_eff=2.5113 @ n_Si=3.4）—
+   https://gdsfactory.github.io/gdsfactory-photonics-training/notebooks/21_modesolver_fdfd.html
 
 规则依据：project_rules.md 规则 14（禁止 fall-back）/规则 26（纯 CPU）
 """

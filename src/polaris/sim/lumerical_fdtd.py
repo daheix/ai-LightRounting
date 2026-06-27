@@ -9,7 +9,8 @@
 1. **3D Yee leapfrog**（Yee 1966）：6 分量 (Ex,Ey,Ez,Hx,Hy,Hz) 时空半步错位，
    二阶精度 O(Δt², Δh²)，散度条件 ∇·(∇×·)≡0 自动满足。
 2. **CPML 3D**（Roden & Gedney 2000）：6 边界条带复坐标拉伸 PML，递归卷积 ψ
-   辅助变量，反射率 ≤ −60 dB（8 层），优于分裂场 PML（−30 dB）。
+   辅助变量，理论反射率 ≤ −60 dB（8 层，Roden & Gedney 2000 §III；Taflove 2005
+   §5.6 工程实践），优于分裂场 PML（−30 dB，Berenger 1994 原始 PML）。
 3. **TFSF 3D**（Taflove §5.5）：1D 辅助网格产生入射场，TF/SF 边界 Huygens
    等效面校正，零泄漏（Schneider 2004 网格对齐条件）。
 4. **Drude ADE 色散**（Taflove §9.3）：J^{n+1/2}=α·J^{n-1/2}+β·E^n，E 以 −cb·J 校正。

@@ -34,7 +34,12 @@ import traceback
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
+
+if TYPE_CHECKING:
+    from polaris.flow.scheduler import JobScheduler
+    from polaris.flow.tracker import JobTracker
 
 logger = logging.getLogger(__name__)
 

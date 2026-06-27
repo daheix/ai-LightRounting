@@ -25,15 +25,19 @@
    https://www.sciencedirect.com/book/9780123695161/nonlinear-fiber-optics
 3. Photon Design PICWave 官方文档.
    https://www.photond.com/products/picwave.htm
-4. Lin et al. 2007, Opt. Express 15(6), 3454 (Si 非线性参数).
+4. Lin et al. 2007, Opt. Express 15(6), 3454 (Si 非线性参数 n2/β_TPA).
    https://opg.optica.org/oe/abstract.cfm?uri=oe-15-6-3454
-5. Courant, Friedrichs, Lewy 1928, Math. Ann. 100, 32-74 (CFL 条件).
+5. Soref RA, Bennett BR, "Electrooptical effects in silicon," IEEE J. Quantum
+   Electron. 23(1), 123-129 (1987)（Si FCA 截面 σ_fca=1.45e-21 m² 与 FCD 系数
+   σ_fcd=1.35e-27 m³ 原始来源，Si @ 1550nm Drude 模型）—
+   https://ieeexplore.ieee.org/document/1138738
+6. Courant, Friedrichs, Lewy 1928, Math. Ann. 100, 32-74 (CFL 条件).
    https://link.springer.com/article/10.1007/BF01448839
-6. Lowery 1987, IEE Proc. J 134(5), 281 (TLLM 原始模型).
+7. Lowery 1987, IEE Proc. J 134(5), 281 (TLLM 原始模型).
    https://digital-library.theiet.org/doi/abs/10.1049/ip-j-1.1987.0062
-7. Yee 1966 IEEE TAP 14(3), 302 (数值时域方法基础).
+8. Yee 1966 IEEE TAP 14(3), 302 (数值时域方法基础).
    https://ieeexplore.ieee.org/document/1138693
-8. NIST CODATA 2018 物理常量.
+9. NIST CODATA 2018 物理常量.
    https://physics.nist.gov/cuu/Constants/
 
 *创新*：TLLM 节点模型 + Kerr/TPA/FCD 三效应耦合 RK4 步进。
@@ -85,13 +89,13 @@ class PICWaveConfig:
     wavelength: float = 1.55e-6  # 工作波长 (m)
     n_eff: float = 2.4  # 有效折射率（Si strip @ 1550nm）
     n_g: float = 4.2  # 群折射率（Si @ 1550nm）
-    n2: float = 2.4e-18  # Kerr 系数 (m²/W)，Si @ 1550nm [Lin 2007]
+    n2: float = 2.4e-18  # Kerr 系数 (m²/W)，Si @ 1550nm [Lin 2007，原始 Soref & Bennett 1987]
     beta_tpa: float = 0.8e-11  # TPA 系数 (m/W)，Si @ 1550nm [Lin 2007]
     tau_carrier: float = 1e-9  # 自由载流子寿命 (s)
     alpha_lin: float = 0.0  # 线性损耗 (1/m)
     A_eff: float = 1e-13  # 有效模场面积 (m²)
-    sigma_fca: float = 1.45e-21  # FCA 截面 (m²)，Si @ 1550nm
-    sigma_fcd: float = 1.35e-27  # FCD 系数 (m³)，Si Drude 模型
+    sigma_fca: float = 1.45e-21  # FCA 截面 (m²)，Si @ 1550nm [Soref & Bennett 1987 IEEE JQE 23(1)]
+    sigma_fcd: float = 1.35e-27  # FCD 系数 (m³)，Si Drude 模型 [Soref & Bennett 1987 IEEE JQE 23(1)]
 
     def __post_init__(self) -> None:
         """配置参数校验（禁止 fall-back，参数非法即 raise）。"""
