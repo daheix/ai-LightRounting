@@ -299,7 +299,7 @@ class PoissonSolver:
             # 法向邻接系数 +ε·ε_0/dn²（翻倍），对角 -ε·ε_0/dn²（补足）
             coef = eps_line * EPS_0 / dn**2
             # 追加 COO 贡献（向量化）
-            for k_pos, k_nbr, c in zip(idx, nbr_idx, coef):
+            for k_pos, k_nbr, c in zip(idx, nbr_idx, coef, strict=False):
                 A[k_pos, k_nbr] += c
                 A[k_pos, k_pos] -= c
             # Neumann 非零值贡献 b：west/south = +2·ε·ε_0·g/dn，east/north = -2·ε·ε_0·g/dn

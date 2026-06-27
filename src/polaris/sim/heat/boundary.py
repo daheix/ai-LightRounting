@@ -364,7 +364,7 @@ def apply_boundary_conditions(
         dirichlet_set = set(bc_rows_all_dirichlet.tolist())
         # 标记每个三元组是否为 Dirichlet 对角（row==col 且 row 属于 Dirichlet 集合）
         is_dirichlet_diag = np.array(
-            [r == c and int(r) in dirichlet_set for r, c in zip(rows, cols)],
+            [r == c and int(r) in dirichlet_set for r, c in zip(rows, cols, strict=False)],
             dtype=bool,
         )
         # 行属于 Dirichlet 集合但不是 Dirichlet 对角 → 删除（Neumann/Robin 污染）

@@ -16,7 +16,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
 
 import numpy as np
 
@@ -46,9 +45,9 @@ class YeeGrid:
     ny: int  # y 方向网格数
     dx: float  # x 方向网格尺寸 (m)
     dy: float  # y 方向网格尺寸 (m)
-    Ex: Optional[np.ndarray] = None  # x 方向电场 (nx, ny+1)
-    Ey: Optional[np.ndarray] = None  # y 方向电场 (nx+1, ny)
-    Hz: Optional[np.ndarray] = None  # z 方向磁场 (nx, ny)
+    Ex: np.ndarray | None = None  # x 方向电场 (nx, ny+1)
+    Ey: np.ndarray | None = None  # y 方向电场 (nx+1, ny)
+    Hz: np.ndarray | None = None  # z 方向磁场 (nx, ny)
 
     def __post_init__(self) -> None:
         """初始化后校验并分配场数组。"""
@@ -142,8 +141,8 @@ class FDTDSimulator:
         self,
         grid: YeeGrid,
         epsilon_r: np.ndarray,
-        mu_r: Optional[np.ndarray] = None,
-        pml: Optional[PMLBoundary] = None,
+        mu_r: np.ndarray | None = None,
+        pml: PMLBoundary | None = None,
     ) -> None:
         """初始化 FDTD 仿真器。
 
@@ -293,7 +292,7 @@ class NonlinearModel:
     beta_tpa: float = 0.8e-11  # TPA 系数 (m/W), 硅典型值
     tau_c: float = 1e-9  # 自由载流子寿命 (s)
 
-    def kerr_phase(self, I, L: float, wavelength: float):
+    def kerr_phase(self, I, L: float, wavelength: float):  # noqa: E741  光强 I 物理量
         """Kerr 自相位调制相位（支持标量/数组输入）。
 
         公式: phi_NL = 2*pi*n2*I*L / wavelength
@@ -308,7 +307,7 @@ class NonlinearModel:
             raise ValueError(f"wavelength 必须 > 0，实际 {wavelength}")
         return 2 * np.pi * self.n2 * I_arr * L / wavelength
 
-    def tpa_loss(self, I, L: float):
+    def tpa_loss(self, I, L: float):  # noqa: E741  光强 I 物理量
         """TPA 损耗系数（支持标量/数组输入）。
 
         公式: alpha_tpa = beta_tpa * I
@@ -390,7 +389,7 @@ class TimeDomainCircuitSimulator:
         input_signal: np.ndarray,
         neff: float = 2.4,
         alpha: float = 0.0,
-        nonlinear: Optional[NonlinearModel] = None,
+        nonlinear: NonlinearModel | None = None,
     ) -> np.ndarray:
         """仿真波导时域传输。
 
@@ -433,7 +432,7 @@ class TimeDomainCircuitSimulator:
         # 3. 应用非线性效应
         if nonlinear is not None and length > 0:
             wavelength = 1.55e-6  # 1.55μm（C 波段中心）
-            I = np.abs(output) ** 2  # 光强 (W/m² 简化)
+            I = np.abs(output) ** 2  # noqa: E741  光强 I 物理量 (W/m² 简化)
             # Kerr 自相位调制
             phase = nonlinear.kerr_phase(I, length, wavelength)
             output *= np.exp(1j * phase)

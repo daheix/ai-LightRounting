@@ -47,8 +47,9 @@ rip-up-reroute 冲突解决。底层逻辑:
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any
 
 from polaris.router.curvy_router import CurvyAStarConfig, CurvyAStarRouter
 
@@ -277,7 +278,7 @@ class CommercialRouter:
         sin = sorted(ports_in, key=lambda p: p["y"])  # sort_ports 逻辑
         sout = sorted(ports_out, key=lambda p: p["y"])
         results: list[list[tuple[float, float]]] = []
-        for pin, pout in zip(sin, sout):
+        for pin, pout in zip(sin, sout, strict=False):
             results.append(self.sbend_connector(pin, pout))
         return results
 

@@ -67,14 +67,19 @@ exclude = ["tests*"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B"]
 ignore = ["E501"]  # 行宽由 formatter 控制（P01 规则）
 
+[tool.ruff.lint.per-file-ignores]
+# __init__.py 使用 re-export 模式对外暴露 API，F401 为 ruff 误报
+"__init__.py" = ["F401"]
+"__init__.pyi" = ["F401"]
+
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_unused_configs = true
 ignore_missing_imports = true
 

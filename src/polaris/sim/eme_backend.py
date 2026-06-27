@@ -610,6 +610,6 @@ class FIMMPROPBackend:
                 results.append(self.run())
         finally:
             # 恢复原始长度
-            for sec, orig_L in zip(self._sections, original_lengths):
+            for sec, orig_L in zip(self._sections, original_lengths, strict=False):
                 sec.length = orig_L
         return results

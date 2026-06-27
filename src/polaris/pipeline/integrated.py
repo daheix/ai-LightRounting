@@ -29,6 +29,7 @@ from polaris.sim.sim_loop import SimLoop, SimLoopConfig
 
 if TYPE_CHECKING:
     from polaris.flow.recipe import Recipe
+    from polaris.flow.stage import StageResult
     from polaris.flow.workspace import Workspace
 
 logger = logging.getLogger(__name__)

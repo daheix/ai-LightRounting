@@ -22,13 +22,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
-from typing import Any, Callable
+from enum import StrEnum
+from typing import Any
 
 
-class StageStatus(str, Enum):
+class StageStatus(StrEnum):
     """阶段执行状态枚举"""
 
     PENDING = "pending"      # 未开始

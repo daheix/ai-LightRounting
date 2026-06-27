@@ -66,7 +66,8 @@ class BVH:
         if len(indices) <= _BVH_LEAF_SIZE:
             return BVHNode(bbox=bbox, polygons=[polygons[i] for i in indices])
         axis = 0 if (bbox[2] - bbox[0]) >= (bbox[3] - bbox[1]) else 1
-        key = lambda i: 0.5 * (bboxes[i][axis] + bboxes[i][axis + 2])
+        def key(i):
+            return 0.5 * (bboxes[i][axis] + bboxes[i][axis + 2])
         sorted_idx = sorted(indices, key=key)
         mid = len(sorted_idx) // 2
         left = self._build_recursive(sorted_idx[:mid], polygons, bboxes)

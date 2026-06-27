@@ -55,7 +55,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from polaris.data.benchmark_evaluator import (
@@ -140,7 +140,7 @@ class ComparisonReport:
 
 def _now_iso() -> str:
     """返回当前 UTC 时间 ISO 8601 字符串。"""
-    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def generate_report(

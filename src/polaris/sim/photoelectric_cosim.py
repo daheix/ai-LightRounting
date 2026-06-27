@@ -47,9 +47,9 @@ PoLaRIS 内一次 run_cosim 即得时域波形，无需 ngspice 实跑（无外�
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 from scipy.optimize import newton

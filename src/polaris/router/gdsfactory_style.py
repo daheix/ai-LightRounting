@@ -198,7 +198,7 @@ class GdsfactoryStyleRouter:
             )
         pins.sort(key=lambda p: p.y)
         pouts.sort(key=lambda p: p.y)
-        return [self.route_sbend(pin, pout) for pin, pout in zip(pins, pouts)]
+        return [self.route_sbend(pin, pout) for pin, pout in zip(pins, pouts, strict=False)]
 
     # -- 策略 2: bundle 布线 ----------------------------------------------
     def route_bundle(
@@ -223,7 +223,7 @@ class GdsfactoryStyleRouter:
             )
         pins.sort(key=lambda p: (p.y, p.x))
         pouts.sort(key=lambda p: (p.y, p.x))
-        routes = [self.route_manhattan(pin, pout) for pin, pout in zip(pins, pouts)]
+        routes = [self.route_manhattan(pin, pout) for pin, pout in zip(pins, pouts, strict=False)]
         self._verify_no_crossing(routes)
         return routes
 
@@ -308,7 +308,7 @@ class GdsfactoryStyleRouter:
             )
         gap = self.config.cpw_gap
         routes: list[list[tuple[float, float]]] = []
-        for pin, pout in zip(pins, pouts):
+        for pin, pout in zip(pins, pouts, strict=False):
             for dy in (-gap, 0.0, +gap):
                 g_pin = Port(pin.x, pin.y + dy, pin.orientation, pin.width)
                 g_pout = Port(pout.x, pout.y + dy, pout.orientation, pout.width)

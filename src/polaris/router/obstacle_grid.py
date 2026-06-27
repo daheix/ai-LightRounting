@@ -250,7 +250,7 @@ class ObstacleGrid:
         """
         if self._dense:
             ys, xs = np.where(self._array > 0)
-            return zip(xs.tolist(), ys.tolist())
+            return zip(xs.tolist(), ys.tolist(), strict=False)
         return iter(self._sparse)
 
     def memory_estimate_bytes(self) -> int:

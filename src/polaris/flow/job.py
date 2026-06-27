@@ -25,7 +25,7 @@ import random
 import string
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     from polaris.flow.workspace import Workspace
 
 
-class JobStatus(str, Enum):
+class JobStatus(StrEnum):
     """作业状态枚举（对齐 Cadence ADE-XL 的作业状态）"""
 
     QUEUED = "queued"        # 已提交，等待执行

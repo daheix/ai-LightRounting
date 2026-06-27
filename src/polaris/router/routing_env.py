@@ -380,7 +380,7 @@ class RoutingEnv(gym.Env):
         conn = self.connections[self._conn_idx]
         src, dst = conn.src_instance, conn.dst_instance
         obstacles: list = []
-        for inst_id, bbox in zip(self._obstacle_inst_ids, self._obstacle_bboxes):
+        for inst_id, bbox in zip(self._obstacle_inst_ids, self._obstacle_bboxes, strict=False):
             if inst_id == src or inst_id == dst:
                 continue
             obstacles.append(bbox)

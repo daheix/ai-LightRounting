@@ -135,7 +135,7 @@ def route_bundle(
     blocked: set[tuple[int, int]] = set()
     all_ports = set(ports1) | set(ports2)
     routes: list[list[tuple[int, int]]] = []
-    for p1, p2 in zip(sorted1, sorted2):
+    for p1, p2 in zip(sorted1, sorted2, strict=False):
         _apply_blocked_to_router(r, blocked, all_ports)
         path = r.route(p1, p2)  # 失败会 raise RuntimeError（无 fall-back）
         routes.append(path)
@@ -175,7 +175,7 @@ def route_bundle_path_length_match(
     target = max(lengths)
     detour_step = max(0.25, tolerance / 2.0)
     result: list[list[tuple[float, float]]] = []
-    for route, length in zip(float_routes, lengths):
+    for route, length in zip(float_routes, lengths, strict=False):
         if length < target - tolerance:
             result.append(equalize_length(route, target, detour_step))
         else:
@@ -217,7 +217,7 @@ def route_bundle_from_waypoints(
         return []
     r = _make_router(kwargs.get("router"), kwargs)
     routes: list[list[tuple[int, int]]] = []
-    for p1, p2 in zip(ports1, ports2):
+    for p1, p2 in zip(ports1, ports2, strict=False):
         full_wps = [p1] + list(waypoints) + [p2]
         path: list[tuple[int, int]] = []
         for i in range(len(full_wps) - 1):
