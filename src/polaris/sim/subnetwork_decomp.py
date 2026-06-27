@@ -44,7 +44,6 @@ logger = logging.getLogger(__name__)
 SCHUR_SINGULAR_THRESHOLD = 1e14  # Schur 补 A 子矩阵奇异阈值
 BLOCK_THOMAS_PIVOT_THRESHOLD = 1e-12  # 块 Thomas 对角块奇异阈值
 
-
 @dataclass
 class BlockTridiagonalMatrix:
     """块三对角矩阵数据结构。
