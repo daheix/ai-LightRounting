@@ -50,9 +50,9 @@ import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
+from polaris.sim.fde.mode import Mode
 from polaris.sim.grid.pml import ScPml, build_pml_stretch
 from polaris.sim.grid.yee import GridSpec, YeeGrid
-from polaris.sim.fde.mode import Mode
 
 __all__ = ["FdeSolverConfig", "FdeSolver", "solve_waveguide", "Polarization"]
 
