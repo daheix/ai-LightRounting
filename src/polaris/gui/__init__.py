@@ -6,8 +6,8 @@
 """
 
 from polaris.gui.layout_editor import (
-    DRCHighlight,
     DeviceInstance,
+    DRCHighlight,
     EditorConfig,
     LayoutEditor,
 )
