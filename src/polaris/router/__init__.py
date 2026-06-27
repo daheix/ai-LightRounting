@@ -45,6 +45,11 @@ from polaris.router.curvy_router import (
     OptoDesignerAutorouter,
     route_curvy_connection,
 )
+from polaris.router.gdsfactory_style import (
+    GdsfactoryStyleRouter,
+    Port as GfPort,
+    RouteConfig as GfRouteConfig,
+)
 from polaris.router.jps_router import JPSRouter
 
 __all__ = [
@@ -56,6 +61,10 @@ __all__ = [
     "route_bundle",
     "route_bundle_from_waypoints",
     "route_bundle_path_length_match",
+    # R10: gdsfactory 风格布线策略集合（fiber_array/bundle/sbend/manhattan/cpw）
+    "GdsfactoryStyleRouter",
+    "GfPort",
+    "GfRouteConfig",
     # R21: LiDAR 曲线感知 A* + OptoDesigner Autorouting 对齐
     "AdaptiveCrossingInserter",
     "CongestionAwareNetOrdering",

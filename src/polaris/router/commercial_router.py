@@ -177,6 +177,11 @@ class CommercialRouter:
         start = self._port_to_point(port_in, "port_in")
         end = self._port_to_point(port_out, "port_out")
         path = self._astar.route(start, end, obstacles or [])
+        # 对齐起终点到精确端口坐标(商业级要求端口精确连接,
+        # A* 网格 round 会引入 gs/2 误差)
+        if path:
+            path[0] = start
+            path[-1] = end
         return path
 
     def sbend_connector(
@@ -468,7 +473,11 @@ class CommercialRouter:
         obs = list(obstacles)
         for _ in range(self.config.max_ripup_iterations):
             try:
-                return self._astar.route(start, end, obs)
+                path = self._astar.route(start, end, obs)
+                if path:  # 对齐起终点到精确端口坐标
+                    path[0] = start
+                    path[-1] = end
+                return path
             except ValueError:
                 if len(obs) > 1:  # rip-up: 移除一半障碍物
                     obs = obs[: len(obs) // 2]
@@ -544,8 +553,8 @@ class CommercialRouter:
 
         def curve(t: float) -> tuple[float, float]:
             s = t * L_target
-            # 欧拉螺旋位置数值积分(单步近似,曲率小时精度足够)
-            theta = (s ** 2) / (2.0 * R * L_target) if L_target > 0 else 0.0
+            # 欧拉螺旋垂直偏移 = ∫₀ˢ θ(u) du = ∫₀ˢ u²/(2RL) du = s³/(6RL)
+            # (θ(s) = s²/(2RL) 为欧拉螺旋角度,小角度近似下垂直偏移为其积分)
             offset = (s ** 3) / (6.0 * R * L_target) if L_target > 0 else 0.0
             cos_a, sin_a = math.cos(angle), math.sin(angle)
             x = sx + s * cos_a - offset * sin_a

@@ -119,7 +119,7 @@ class RouteConfig:
 # ---------------------------------------------------------------------------
 # 辅助函数（圈复杂度 ≤ 5，单函数 ≤ 20 行）
 # ---------------------------------------------------------------------------
-def _normalize_port(port: "Port | dict | tuple | list") -> Port:
+def _normalize_port(port: Port | dict | tuple | list) -> Port:
     """将 dict/Port/tuple 归一化为 Port（非法输入 raise，禁止 fall-back）。"""
     if isinstance(port, Port):
         return port
