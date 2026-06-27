@@ -302,7 +302,7 @@ def generate_diff_summary(added: list[str], modified: list[str], deleted: list[s
     for rel in modified[:20]:
         full = REPO_DIR / rel
         if full.exists():
-            code, diff = run(["git", "diff", "--stat", "--", rel], cwd=REPO_DIR)
+            code, diff, _err = run(["git", "diff", "--stat", "--", rel], cwd=REPO_DIR)
             if code == 0 and diff.strip():
                 last = diff.splitlines()[-1].strip()
                 lines.append(f"  ~ {rel}: {last}")
