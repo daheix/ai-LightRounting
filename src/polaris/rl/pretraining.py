@@ -8,7 +8,7 @@ EWCRegularizer / FineTuner / CheckpointManager / AlphaChipAgent），
 禁止重复造轮子（规则 R09 单文件版本升级）。
 
 R04 战略决策：不参与 GPU 计算。🚫不参与 GPU 分布式（Apollo arXiv:2504.18813
-的 GPU 加速与 CTDE 多卡分布式不在 R35 范围），纯 NumPy CPU 单机实现。
+的 GPU 加速与多卡集中式训练分布式不在 R35 范围），纯 NumPy CPU 单机实现。
 
 文献来源（R02 学术诚信，≥5 个 URL）：
 1. Mirhoseini et al., Nature 2021, "A graph placement methodology for fast
@@ -417,8 +417,6 @@ class PretrainingPipeline:
         """
         if not dataset:
             raise ValueError("Fisher 计算数据集不能为空（R03 无 fall-back）")
-        from polaris.nn import Tensor
-
         agent = self._build_agent_from_pretrain()
         gnn = agent.gnn
         params = gnn.parameters()

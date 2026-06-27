@@ -31,11 +31,10 @@ import pytest
 
 from polaris.rl.pretraining import (
     GPU_DISABLED_R04,
+    R35_CURRICULUM_LEVELS,
     PretrainingConfig,
     PretrainingPipeline,
-    R35_CURRICULUM_LEVELS,
 )
-
 
 # =============================================================================
 # 辅助 fixtures
@@ -427,7 +426,7 @@ class TestPpoFinetune:
         result = pipeline.ppo_finetune(pretrain_weights, env)
         placement = result["placement"]
         assert len(placement) == 3
-        for dev_id, p in placement.items():
+        for _dev_id, p in placement.items():
             assert "x" in p and "y" in p
 
     def test_ppo_finetune_metrics_complete(self):
@@ -666,8 +665,9 @@ class TestCpuOnly:
 
     def test_no_gpu_imports(self):
         """模块不导入 GPU 库（CuPy/CUDA/ROCm/Torch GPU 后端）。"""
-        import polaris.rl.pretraining as mod
         import inspect
+
+        import polaris.rl.pretraining as mod
         source = inspect.getsource(mod)
         # 禁止出现 GPU 后端导入
         assert "import cupy" not in source
@@ -694,8 +694,9 @@ class TestCpuOnly:
 
     def test_no_distributed_training_artifacts(self):
         """无分布式训练工件（无 multi-GPU / CTDE 多卡）。"""
-        import polaris.rl.pretraining as mod
         import inspect
+
+        import polaris.rl.pretraining as mod
         source = inspect.getsource(mod)
         # 禁止分布式 GPU 训练关键词
         assert "MultiGPU" not in source
@@ -765,16 +766,18 @@ class TestNoFallBack:
 
     def test_no_bare_except_pass(self):
         """无 except: pass 静默兜底。"""
-        import polaris.rl.pretraining as mod
         import inspect
+
+        import polaris.rl.pretraining as mod
         source = inspect.getsource(mod)
         assert "except: pass" not in source
         assert "except Exception: pass" not in source
 
     def test_no_return_none_in_catch(self):
         """无 except: return None 假数据兜底。"""
-        import polaris.rl.pretraining as mod
         import inspect
+
+        import polaris.rl.pretraining as mod
         source = inspect.getsource(mod)
         assert "return None" not in source
 

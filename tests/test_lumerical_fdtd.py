@@ -211,33 +211,38 @@ def test_add_tfsf_source_3d() -> None:
 def test_step_e_3d() -> None:
     """E 场步进：3D Yee Ampere 旋度与解析平面波对比。
 
-    初始化 H_y = E_z/η_0（沿 x 传播平面波），单步 E 更新后，
-    E_z 应满足 E_z^{n+1} = E_z^n + (dt/(ε_0·dx))·(H_y[i] - H_y[i-1])。
+    +x 传播平面波（E_z 偏振），由 Maxwell-Faraday 推导：
+        ∂H_y/∂t = (1/μ_0)·∂E_z/∂x  →  H_y = -E_z/η_0（负号不可省略）
+    Yee 半步空间错位：H_y[i] 位于 (i+1/2)·dx。
+    单步 E 更新后 E_z^{n+1} = E_z^n + (Δt/ε_0)·∂H_y/∂x ≈ sin(kx - ω·Δt)。
     """
     cfg = FDTD3DConfig(dx=50e-9, dy=50e-9, dz=50e-9, n_steps=1, pml_layers=4)
     sim = LumericalFDTDBackend(cfg)
     nx = ny = nz = 20
     sim.set_grid_3d(nx, ny, nz)
-    # 沿 x 方向平面波，E_z 偏振，H_y = E_z/η_0
-    # 内部点初始化（避开 PML）
     eta0 = np.sqrt(_MU0 / _EPS0)
     x_idx = np.arange(nx)
-    k = 2.0 * np.pi / (10 * 50e-9)  # 波长 = 10·dx
-    e_z_init = np.sin(k * x_idx * 50e-9)
-    # 在 3D 中铺设（仅 x 变化，y/z 均匀）
+    dx = 50e-9
+    k = 2.0 * np.pi / (10 * dx)  # 波长 = 10·dx
+    omega = _C0 * k
+    dt = cfg.dt
+    # E_z 在整数网格点 (i·dx)，t=0
+    e_z_init = np.sin(k * x_idx * dx)
     sim._ez[:, :, :] = e_z_init[:, None, None]
-    sim._hy[:, :, :] = e_z_init[:, None, None] / eta0
+    # H_y 在半步空间错位 (i+1/2)·dx，Yee 时间半步错位 t=-Δt/2
+    # 物理符号：H_y = -sin(k·x - ω·t)/η_0（Maxwell-Faraday 推导，+x 传播）
+    x_hy = (x_idx + 0.5) * dx
+    h_y_init = -np.sin(k * x_hy + omega * dt * 0.5) / eta0
+    sim._hy[:, :, :] = h_y_init[:, None, None]
     # 单步 E 更新（仅内部区域）
     sim._step_e_3d()
-    # 解析解：平面波沿 +x 传播，E_z(t=dt) = sin(kx - ω·dt)
-    omega = _C0 * k
-    e_z_expected = np.sin(k * x_idx * 50e-9 - omega * cfg.dt)
-    # 内部区域（远离 PML 与边界）误差应较小（数值色散）
+    # 解析解：+x 传播，E_z(t=dt) = sin(kx - ω·dt)
+    e_z_expected = np.sin(k * x_idx * dx - omega * dt)
     interior = sim._ez[8:12, 8:12, 8:12]
     expected_int = e_z_expected[8:12, None, None]
-    # 数值色散 + 单步误差，容限 0.1（绝对值，单位 V/m）
+    # 单步数值色散 + Yee 时间半步错位，容限 0.1（绝对值 V/m）
     err = np.max(np.abs(interior - expected_int))
-    assert err < 0.5, f"E 步进解析解误差 {err} 过大"
+    assert err < 0.1, f"E 步进解析解误差 {err} 过大"
 
 
 def test_step_h_3d() -> None:
