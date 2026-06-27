@@ -592,80 +592,40 @@ class HierarchicalPlacer:
         Returns:
             合并后的全局坐标字典 {name: (global_x, global_y)}。
         """
-        from polaris.data.specs import CircuitSpec, DeviceSpec
-
-        k = len(cluster_centers)
-        cluster_ids = sorted(cluster_centers.keys())
-        cluster_id_to_idx = {cid: i for i, cid in enumerate(cluster_ids)}
-        # 构建子块级超图：每个子块 = 一个超节点
-        super_devices: list[DeviceSpec] = []
-        for cid in cluster_ids:
-            cx, cy = cluster_centers[cid]
-            super_devices.append(
-                DeviceSpec(
-                    name=f"cluster_{cid}",
-                    device_type="cluster",
-                    width_um=cx * 2,
-                    height_um=cy * 2,
-                )
-            )
-        # 超边：子块间连接（每对有连接的子块建一条超边）
-        inter_cluster_pairs: set[tuple[int, int]] = set()
-        for src, _sp, dst, _dp in self.circuit.connections:
-            if src in self.name_to_idx and dst in self.name_to_idx:
-                s_idx = self.name_to_idx[src]
-                d_idx = self.name_to_idx[dst]
-                s_cluster = int(labels[s_idx])
-                d_cluster = int(labels[d_idx])
-                if s_cluster != d_cluster:
-                    inter_cluster_pairs.add(
-                        (min(s_cluster, d_cluster), max(s_cluster, d_cluster))
-                    )
-        super_connections: list[tuple[str, str, str, str]] = [
-            (f"cluster_{c1}", "out", f"cluster_{c2}", "in")
-            for c1, c2 in inter_cluster_pairs
-            if c1 in cluster_id_to_idx and c2 in cluster_id_to_idx
-        ]
-        # 主画布大小（按子块数自适应）
-        main_canvas = max(2000.0, np.sqrt(k) * 800.0)
-        super_circuit = CircuitSpec(
-            name=f"{self.circuit.name}_super",
-            devices=super_devices,
-            connections=super_connections,
-            canvas_w=main_canvas,
-            canvas_h=main_canvas,
+        # 1. 构建子块级超图（每个子块 = 一个超节点）
+        super_circuit, cid2idx = self._build_super_circuit(cluster_centers, labels)
+        # 2. 用 AnalyticalPlacer 放置子块中心
+        super_placement = self._place_super_circuit(super_circuit)
+        # 3. 合并：块内局部坐标 + 子块中心偏移
+        ctx = _MergeContext(
+            placement=placement,
+            cluster_centers=cluster_centers,
+            labels=labels,
+            super_placement=super_placement,
+            cid2idx=cid2idx,
+            main_canvas=super_circuit.canvas_w,
         )
-        # 用 AnalyticalPlacer 放置子块中心
+        return self._merge_cluster_placement(ctx)
+
+    def _place_super_circuit(
+        self, super_circuit: CircuitSpec
+    ) -> dict[str, tuple[float, float]]:
+        """用 AnalyticalPlacer 放置子块级超图中心。
+
+        来源: DREAMPlace TCAD 2020，块间解析法布局。
+
+        Args:
+            super_circuit: 子块级超电路。
+
+        Returns:
+            子块中心布局字典 {cluster_name: (cx, cy)}。
+        """
         inter_config = self.config.analytical_config or AnalyticalPlacerConfig(
             max_iterations=150,
             convergence_threshold=1.0,
         )
         inter_placer = AnalyticalPlacer(super_circuit, inter_config)
-        super_placement = inter_placer.place()
-        # 合并：块内局部坐标 + 子块中心偏移
-        k_grid = int(np.ceil(np.sqrt(k)))
-        for cluster_id, (local_cx, local_cy) in cluster_centers.items():
-            super_name = f"cluster_{cluster_id}"
-            if super_name in super_placement:
-                block_cx, block_cy = super_placement[super_name]
-                block_offset_x = block_cx - local_cx
-                block_offset_y = block_cy - local_cy
-            else:
-                # 无连接的孤立子块：网格兜底
-                idx = cluster_id_to_idx.get(cluster_id, 0)
-                row = idx // k_grid
-                col = idx % k_grid
-                block_offset_x = col * (main_canvas / k_grid)
-                block_offset_y = row * (main_canvas / k_grid)
-            mask = labels == cluster_id
-            for i in np.where(mask)[0]:
-                name = self.device_names[int(i)]
-                local_x, local_y = placement[name]
-                placement[name] = (
-                    local_x + block_offset_x,
-                    local_y + block_offset_y,
-                )
-        return placement
+        return inter_placer.place()
 
     def place(self) -> dict[str, tuple[float, float]]:
         """执行分块布局。

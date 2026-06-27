@@ -140,6 +140,163 @@ class ModeSource:
             raise ValueError(f"振幅缩放必须 ≥0，实际 {self.amplitude}")
 
 
+def _build_plane_wave_source(
+    source: PlaneWaveSource,
+    nx: int,
+    ny: int,
+    dx: float,
+    dy: float,
+    origin: tuple[float, float],
+    stretch_x: np.ndarray,
+    stretch_y: np.ndarray,
+) -> np.ndarray:
+    """构造平面波源 J_z 网格。
+
+    平面波：E_z(x, y) = E_0 · exp(i·(kx·x + ky·y))。
+    仅在非 PML 区域注入（避免源在 PML 内被吸收），在 source line
+    （y = source center）附近一条线作为 J_z。
+
+    Args:
+        source: 平面波源对象。
+        nx, ny: 网格形状。
+        dx, dy: 网格间距（米）。
+        origin: 网格原点 (x0, y0)，米。
+        stretch_x, stretch_y: PML 拉伸因子。
+
+    Returns:
+        J_z 网格 (nx, ny) complex128。
+    """
+    j_z = np.zeros((nx, ny), dtype=np.complex128)
+    x = origin[0] + (np.arange(nx) + 0.5) * dx
+    y = origin[1] + (np.arange(ny) + 0.5) * dy
+    xx, yy = np.meshgrid(x, y, indexing="ij")
+    interior = _interior_mask(nx, ny, stretch_x, stretch_y)
+    field = source.amplitude * np.exp(1j * (source.kx * xx + source.ky * yy))
+    iy_center = int((source.center[1] - origin[1]) / dy)
+    iy_center = max(0, min(ny - 1, iy_center))
+    j_z[:, iy_center] = field[:, iy_center] * interior[:, iy_center]
+    return j_z
+
+
+def _build_dipole_source(
+    source: DipoleSource,
+    nx: int,
+    ny: int,
+    dx: float,
+    dy: float,
+    shape: tuple[int, int],
+) -> np.ndarray:
+    """构造电偶极子点源 J_z 网格。
+
+    δ 函数近似：将点源均匀分布在单个网格单元内，
+    J_z = I·dl / (dx·dy)（保持积分 = I·dl）。
+
+    Args:
+        source: 偶极子源对象。
+        nx, ny: 网格形状。
+        dx, dy: 网格间距（米）。
+        shape: 网格形状（用于错误信息）。
+
+    Returns:
+        J_z 网格 (nx, ny) complex128。
+
+    Raises:
+        ValueError: 偶极子位置越界（规则 14）。
+    """
+    ix, iy = source.position
+    if not (0 <= ix < nx and 0 <= iy < ny):
+        raise ValueError(f"偶极子位置 ({ix},{iy}) 越界，网格形状 {shape}")
+    j_z = np.zeros((nx, ny), dtype=np.complex128)
+    j_z[ix, iy] = source.amplitude / (dx * dy)
+    return j_z
+
+
+def _build_gaussian_beam_source(
+    source: GaussianBeamSource,
+    nx: int,
+    ny: int,
+    dx: float,
+    dy: float,
+    origin: tuple[float, float],
+    shape: tuple[int, int],
+) -> np.ndarray:
+    """构造高斯光束源 J_z 网格（傍轴近似，束腰位于 source line）。
+
+    振幅分布：E_z(x) = E_0 · exp(-(x - x_0)² / w_0²)。
+    高斯分布在垂直于传播方向的方向上。
+
+    Args:
+        source: 高斯光束源对象。
+        nx, ny: 网格形状。
+        dx, dy: 网格间距（米）。
+        origin: 网格原点 (x0, y0)，米。
+        shape: 网格形状（用于错误信息）。
+
+    Returns:
+        J_z 网格 (nx, ny) complex128。
+
+    Raises:
+        ValueError: 高斯光束中心越界（规则 14）。
+    """
+    ix_c, iy_line = source.center
+    if not (0 <= ix_c < nx and 0 <= iy_line < ny):
+        raise ValueError(f"高斯光束中心 ({ix_c},{iy_line}) 越界，网格形状 {shape}")
+    j_z = np.zeros((nx, ny), dtype=np.complex128)
+    if source.direction in ("y+", "y-"):
+        # 沿 y 传播，束腰在 x 方向
+        x = origin[0] + (np.arange(nx) + 0.5) * dx
+        profile = np.exp(-((x - (origin[0] + (ix_c + 0.5) * dx)) ** 2) / source.waist_radius**2)
+        j_z[:, iy_line] = source.amplitude * profile
+    else:  # x+/x-
+        y = origin[1] + (np.arange(ny) + 0.5) * dy
+        profile = np.exp(
+            -((y - (origin[1] + (iy_line + 0.5) * dy)) ** 2) / source.waist_radius**2
+        )
+        j_z[ix_c, :] = source.amplitude * profile
+    return j_z
+
+
+def _build_mode_source(
+    source: ModeSource,
+    nx: int,
+    ny: int,
+    shape: tuple[int, int],
+) -> np.ndarray:
+    """构造波导模注入源 J_z 网格（复用 FDE Mode 的场分布）。
+
+    源振幅取自 FDE 模式的 E_z 分量，按沿传播方向的网格线注入。
+
+    Args:
+        source: 模式源对象。
+        nx, ny: 网格形状。
+        shape: 网格形状（用于错误信息）。
+
+    Returns:
+        J_z 网格 (nx, ny) complex128。
+
+    Raises:
+        ValueError: 模式形状不匹配或注入线越界（规则 14）。
+    """
+    mode = source.mode
+    if mode.shape != shape:
+        raise ValueError(
+            f"FDE 模式形状 {mode.shape} 与 FDFD 网格 {shape} 不匹配，"
+            "请用相同 YeeGrid 重新求解 FDE 或插值"
+        )
+    j_z = np.zeros((nx, ny), dtype=np.complex128)
+    ix_or_iy = source.line_index
+    if source.direction in ("y+", "y-"):
+        if not (0 <= ix_or_iy < nx):
+            raise ValueError(f"注入线索引 {ix_or_iy} 越界（Nx={nx}），方向 {source.direction}")
+        # 沿 y 传播：注入 E_z 在 x = line_index 处
+        j_z[ix_or_iy, :] = source.amplitude * mode.ez[ix_or_iy, :]
+    else:  # x+/x-
+        if not (0 <= ix_or_iy < ny):
+            raise ValueError(f"注入线索引 {ix_or_iy} 越界（Ny={ny}），方向 {source.direction}")
+        j_z[:, ix_or_iy] = source.amplitude * mode.ez[:, ix_or_iy]
+    return j_z
+
+
 def build_source_vector(
     source: PlaneWaveSource | DipoleSource | GaussianBeamSource | ModeSource,
     shape: tuple[int, int],
@@ -171,70 +328,20 @@ def build_source_vector(
 
     Raises:
         ValueError: 源位置越界或参数非法（规则 14，无 fall-back）。
+        TypeError: 未知源类型。
     """
     nx, ny = shape
-    j_z = np.zeros((nx, ny), dtype=np.complex128)
-
     if isinstance(source, PlaneWaveSource):
-        # 平面波：E_z(x, y) = E_0 · exp(i·(kx·x + ky·y))
-        x = origin[0] + (np.arange(nx) + 0.5) * dx
-        y = origin[1] + (np.arange(ny) + 0.5) * dy
-        xx, yy = np.meshgrid(x, y, indexing="ij")
-        # 仅在非 PML 区域注入（避免源在 PML 内被吸收）
-        interior = _interior_mask(nx, ny, stretch_x, stretch_y)
-        field = source.amplitude * np.exp(1j * (source.kx * xx + source.ky * yy))
-        # 平面波注入：在 source line（y = source center）附近一条线作为 J_z
-        iy_center = int((source.center[1] - origin[1]) / dy)
-        iy_center = max(0, min(ny - 1, iy_center))
-        j_z[:, iy_center] = field[:, iy_center] * interior[:, iy_center]
-
-    elif isinstance(source, DipoleSource):
-        ix, iy = source.position
-        if not (0 <= ix < nx and 0 <= iy < ny):
-            raise ValueError(f"偶极子位置 ({ix},{iy}) 越界，网格形状 {shape}")
-        # δ 函数近似：将点源均匀分布在单个网格单元内
-        # J_z = I·dl / (dx·dy)（保持积分 = I·dl）
-        j_z[ix, iy] = source.amplitude / (dx * dy)
-
-    elif isinstance(source, GaussianBeamSource):
-        ix_c, iy_line = source.center
-        if not (0 <= ix_c < nx and 0 <= iy_line < ny):
-            raise ValueError(f"高斯光束中心 ({ix_c},{iy_line}) 越界，网格形状 {shape}")
-        x = origin[0] + (np.arange(nx) + 0.5) * dx
-        # 高斯分布在垂直于传播方向的方向上
-        if source.direction in ("y+", "y-"):
-            # 沿 y 传播，束腰在 x 方向
-            profile = np.exp(-((x - (origin[0] + (ix_c + 0.5) * dx)) ** 2) / source.waist_radius**2)
-            j_z[:, iy_line] = source.amplitude * profile
-        else:  # x+/x-
-            y = origin[1] + (np.arange(ny) + 0.5) * dy
-            profile = np.exp(
-                -((y - (origin[1] + (iy_line + 0.5) * dy)) ** 2) / source.waist_radius**2
-            )
-            j_z[ix_c, :] = source.amplitude * profile
-
-    elif isinstance(source, ModeSource):
-        mode = source.mode
-        if mode.shape != shape:
-            raise ValueError(
-                f"FDE 模式形状 {mode.shape} 与 FDFD 网格 {shape} 不匹配，"
-                "请用相同 YeeGrid 重新求解 FDE 或插值"
-            )
-        ix_or_iy = source.line_index
-        if source.direction in ("y+", "y-"):
-            if not (0 <= ix_or_iy < nx):
-                raise ValueError(f"注入线索引 {ix_or_iy} 越界（Nx={nx}），方向 {source.direction}")
-            # 沿 y 传播：注入 E_z 在 x = line_index 处
-            j_z[ix_or_iy, :] = source.amplitude * mode.ez[ix_or_iy, :]
-        else:  # x+/x-
-            if not (0 <= ix_or_iy < ny):
-                raise ValueError(f"注入线索引 {ix_or_iy} 越界（Ny={ny}），方向 {source.direction}")
-            j_z[:, ix_or_iy] = source.amplitude * mode.ez[:, ix_or_iy]
-
-    else:
-        raise TypeError(f"未知源类型 {type(source).__name__}")
-
-    return j_z
+        return _build_plane_wave_source(
+            source, nx, ny, dx, dy, origin, stretch_x, stretch_y
+        )
+    if isinstance(source, DipoleSource):
+        return _build_dipole_source(source, nx, ny, dx, dy, shape)
+    if isinstance(source, GaussianBeamSource):
+        return _build_gaussian_beam_source(source, nx, ny, dx, dy, origin, shape)
+    if isinstance(source, ModeSource):
+        return _build_mode_source(source, nx, ny, shape)
+    raise TypeError(f"未知源类型 {type(source).__name__}")
 
 
 def _interior_mask(

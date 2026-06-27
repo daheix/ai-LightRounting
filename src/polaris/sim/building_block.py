@@ -284,14 +284,11 @@ class BBRegistry:
 # ---------------------------------------------------------------------------
 
 
-def _register_all_bbs() -> None:
-    """注册全部 30 个 BuildingBlock（模块加载时自动调用）。
+def _register_passive_bbs() -> None:
+    """注册无源基础 BB（波导、分束器、MMI、交叉、终端等，共 10 个）。
 
-    BB 列表对齐 Aspic 30+ BB 库，使用 polaris.sim.models 和
-    polaris.sim.models_extended 的现有 S 参数模型函数。
-    宏模型 BB（heater/mach_zehnder 等）用基础模型包装，description 标注。
+    使用 polaris.sim.models / models_extended 的现有 S 参数模型函数。
     """
-
     bbs = [
         BuildingBlock("waveguide", waveguide_s,
                       {"length": 100.0, "neff": 2.4, "ng": 4.0, "loss_db_cm": 0.0},
@@ -299,45 +296,71 @@ def _register_all_bbs() -> None:
         BuildingBlock("y_branch", y_branch_s,
                       {"insertion_loss_db": 0.3},
                       ["port_1", "port_2", "port_3"], "Y 分支 3dB 分束器", _URL_SIMPHONY),
-        BuildingBlock("directional_coupler", directional_coupler_s,
-                      {"coupling": 0.5, "length": 10.0, "gap": 0.2},
-                      ["in1", "in2", "out1", "out2"], "定向耦合器", _URL_SIPANN),
-        BuildingBlock("ring_resonator", ring_resonator_s,
-                      {"radius": 10.0},
-                      ["in", "through"], "全通型环谐振器", _URL_SIPANN),
         BuildingBlock("mmi_1x2", mmi_1x2_s,
                       {"insertion_loss_db": 0.4},
                       ["in", "out1", "out2"], "MMI 1x2 分束器", _URL_GDSFACTORY),
         BuildingBlock("mmi_2x2", mmi_2x2_s,
                       {"insertion_loss_db": 0.5},
                       ["in1", "in2", "out1", "out2"], "MMI 2x2 分束器", _URL_GDSFACTORY),
-        BuildingBlock("grating_coupler", grating_coupler_s,
-                      {"peak_wl": 1.55, "bandwidth_3db": 0.04, "insertion_loss_db": 1.9},
-                      ["fiber", "waveguide"], "光栅耦合器（高斯型响应）", _URL_SIMPHONY),
         BuildingBlock("crossing", crossing_s,
                       {"insertion_loss_db": 0.3},
                       ["in1", "in2", "out1", "out2"], "波导交叉", _URL_GDSFACTORY),
         BuildingBlock("terminator", terminator_s,
                       {"reflection_db": -40.0},
                       ["in"], "终端吸收器", _URL_SIMPHONY),
-        BuildingBlock("phase_shifter", phase_shifter_s,
-                      {"phase_rad": 0.0, "insertion_loss_db": 0.0},
-                      ["in", "out"], "热光移相器", _URL_GDSFACTORY),
         BuildingBlock("taper", taper_s,
                       {"length": 10.0, "w1": 0.5, "w2": 0.5, "loss_db": 0.1},
                       ["in", "out"], "锥形转换器", _URL_SIMPHONY),
-        BuildingBlock("modulator", modulator_s,
-                      {"phase_rad": 0.0, "insertion_loss_db": 0.5},
-                      ["in", "out"], "MZI 调制器", _URL_SAX),
-        BuildingBlock("detector", detector_s,
-                      {"responsivity": 1.0},
-                      ["in"], "光电探测器", _URL_SIMPHONY),
         BuildingBlock("splitter", splitter_s,
                       {"insertion_loss_db": 0.0},
                       ["in", "out1", "out2"], "理想 1x2 分束器", _URL_SAX),
         BuildingBlock("combiner", combiner_s,
                       {"insertion_loss_db": 0.0},
                       ["in1", "in2", "out"], "2x1 合波器", _URL_SAX),
+        BuildingBlock("bend", bend_s,
+                      {"radius": 10.0, "angle_deg": 90.0, "neff": 2.4, "loss_db_cm": 0.5},
+                      ["in", "out"], "弯曲波导", _URL_SIEPIC),
+    ]
+    for bb in bbs:
+        BBRegistry.register(bb)
+
+
+def _register_coupling_bbs() -> None:
+    """注册耦合器与谐振器类 BB（共 5 个）。"""
+    bbs = [
+        BuildingBlock("directional_coupler", directional_coupler_s,
+                      {"coupling": 0.5, "length": 10.0, "gap": 0.2},
+                      ["in1", "in2", "out1", "out2"], "定向耦合器", _URL_SIPANN),
+        BuildingBlock("ring_resonator", ring_resonator_s,
+                      {"radius": 10.0},
+                      ["in", "through"], "全通型环谐振器", _URL_SIPANN),
+        BuildingBlock("grating_coupler", grating_coupler_s,
+                      {"peak_wl": 1.55, "bandwidth_3db": 0.04, "insertion_loss_db": 1.9},
+                      ["fiber", "waveguide"], "光栅耦合器（高斯型响应）", _URL_SIMPHONY),
+        BuildingBlock("half_ring", half_ring_s,
+                      {"radius": 10.0, "gap": 0.2, "width": 0.5, "thickness": 0.22,
+                       "neff": 2.4, "ng": 4.0, "loss_db_cm": 0.1},
+                      ["in", "through"], "全通型环谐振器（simphony 对齐）", _URL_SIMPHONY),
+        BuildingBlock("add_drop_ring", add_drop_ring_s,
+                      {"radius": 10.0, "gap": 0.2, "neff": 2.4, "ng": 4.0, "loss_db_cm": 0.0},
+                      ["in", "through", "drop", "add"], "Add-drop 型环谐振器（双总线）", _URL_YARIV),
+    ]
+    for bb in bbs:
+        BBRegistry.register(bb)
+
+
+def _register_active_bbs() -> None:
+    """注册有源与功能器件类 BB（移相/调制/探测/衰减/隔离/反射/酉变换，共 9 个）。"""
+    bbs = [
+        BuildingBlock("phase_shifter", phase_shifter_s,
+                      {"phase_rad": 0.0, "insertion_loss_db": 0.0},
+                      ["in", "out"], "热光移相器", _URL_GDSFACTORY),
+        BuildingBlock("modulator", modulator_s,
+                      {"phase_rad": 0.0, "insertion_loss_db": 0.5},
+                      ["in", "out"], "MZI 调制器", _URL_SAX),
+        BuildingBlock("detector", detector_s,
+                      {"responsivity": 1.0},
+                      ["in"], "光电探测器", _URL_SIMPHONY),
         BuildingBlock("attenuator", attenuator_s,
                       {"attenuation_db": 3.0},
                       ["in", "out"], "光衰减器", _URL_SAX),
@@ -356,17 +379,14 @@ def _register_all_bbs() -> None:
         BuildingBlock("unitary", unitary_s,
                       {"theta": 0.0, "phi": 0.0},
                       ["in1", "in2", "out1", "out2"], "酉矩阵器件（2x2 酉变换）", _URL_SAX),
-        BuildingBlock("bend", bend_s,
-                      {"radius": 10.0, "angle_deg": 90.0, "neff": 2.4, "loss_db_cm": 0.5},
-                      ["in", "out"], "弯曲波导", _URL_SIEPIC),
-        BuildingBlock("half_ring", half_ring_s,
-                      {"radius": 10.0, "gap": 0.2, "width": 0.5, "thickness": 0.22,
-                       "neff": 2.4, "ng": 4.0, "loss_db_cm": 0.1},
-                      ["in", "through"], "全通型环谐振器（simphony 对齐）", _URL_SIMPHONY),
-        BuildingBlock("add_drop_ring", add_drop_ring_s,
-                      {"radius": 10.0, "gap": 0.2, "neff": 2.4, "ng": 4.0, "loss_db_cm": 0.0},
-                      ["in", "through", "drop", "add"], "Add-drop 型环谐振器（双总线）", _URL_YARIV),
-        # 宏模型 BB（用基础模型包装，description 标注）
+    ]
+    for bb in bbs:
+        BBRegistry.register(bb)
+
+
+def _register_macro_bbs() -> None:
+    """注册宏模型 BB（基于基础模型包装，description 标注，共 6 个）。"""
+    bbs = [
         BuildingBlock("heater", phase_shifter_s,
                       {"phase_rad": 0.0, "insertion_loss_db": 0.0},
                       ["in", "out"], "热调相移器（基于 phase_shifter 模型）", _URL_SIEPIC),
@@ -386,9 +406,21 @@ def _register_all_bbs() -> None:
                       {"insertion_loss_db": 0.4},
                       ["in", "out1", "out2"], "自由传播区宏模型（基于 mmi_1x2）", _URL_ASPIE),
     ]
-
     for bb in bbs:
         BBRegistry.register(bb)
+
+
+def _register_all_bbs() -> None:
+    """注册全部 30 个 BuildingBlock（模块加载时自动调用）。
+
+    BB 列表对齐 Aspic 30+ BB 库，使用 polaris.sim.models 和
+    polaris.sim.models_extended 的现有 S 参数模型函数。
+    宏模型 BB（heater/mach_zehnder 等）用基础模型包装，description 标注。
+    """
+    _register_passive_bbs()
+    _register_coupling_bbs()
+    _register_active_bbs()
+    _register_macro_bbs()
 
 
 # 模块加载时自动注册

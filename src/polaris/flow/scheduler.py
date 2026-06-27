@@ -127,6 +127,60 @@ class JobScheduler:
             with self._lock:
                 self._running_futures[job.job_id] = future
 
+    def _execute_single_stage(
+        self, job: Job, stage_id: int, prev_outputs: dict,
+    ) -> bool:
+        """执行单个阶段。
+
+        Args:
+            job: 作业对象。
+            stage_id: 阶段 ID。
+            prev_outputs: 之前阶段输出字典（成功时会被原地更新）。
+
+        Returns:
+            True 表示阶段成功完成或正常跳过；False 表示阶段失败（已标记作业 FAILED）。
+        """
+        stage = get_stage(stage_id)
+        result = StageResult(
+            stage_id=stage_id,
+            name=stage.name,
+            status=StageStatus.RUNNING,
+            start_time=datetime.now(),
+        )
+        try:
+            execute_fn = self.stage_executors.get(stage_id)
+            if execute_fn is None:
+                result.status = StageStatus.SKIPPED
+                result.error = f"阶段 {stage_id} 无执行函数，跳过"
+                job.workspace.write_log(
+                    f"阶段 {stage_id} ({stage.name}) 无执行函数，跳过",
+                    "WARNING",
+                )
+            else:
+                output_data = execute_fn(job.recipe, job.workspace, prev_outputs)
+                result.output.data = output_data
+                result.status = StageStatus.COMPLETED
+                result.end_time = datetime.now()
+                # 持久化阶段输出
+                job.workspace.write_stage_output(stage.slug, output_data)
+                prev_outputs.update(output_data)
+                job.workspace.write_log(f"阶段 {stage_id} ({stage.name}) 完成")
+
+            job.stage_results.append(result)
+            job.current_stage = stage_id
+            job.workspace.write_job_metadata(job.to_dict())
+            return True
+        except Exception as e:
+            result.status = StageStatus.FAILED
+            result.error = str(e)
+            result.end_time = datetime.now()
+            job.stage_results.append(result)
+            job.mark_failed(f"阶段 {stage_id} ({stage.name}) 失败: {e}")
+            job.workspace.write_log(f"阶段 {stage_id} 失败: {e}", "ERROR")
+            job.workspace.write_job_metadata(job.to_dict())
+            logger.exception("作业 %s 阶段 %d 失败", job.job_id, stage_id)
+            return False
+
     def _execute_job(self, job: Job) -> None:
         """执行作业（worker 线程中运行）
 
@@ -146,46 +200,7 @@ class JobScheduler:
                         f"作业 {job.job_id} 在阶段 {stage_id} 前被取消", "WARNING"
                     )
                     return
-
-                stage = get_stage(stage_id)
-                result = StageResult(
-                    stage_id=stage_id,
-                    name=stage.name,
-                    status=StageStatus.RUNNING,
-                    start_time=datetime.now(),
-                )
-
-                try:
-                    execute_fn = self.stage_executors.get(stage_id)
-                    if execute_fn is None:
-                        result.status = StageStatus.SKIPPED
-                        result.error = f"阶段 {stage_id} 无执行函数，跳过"
-                        job.workspace.write_log(
-                            f"阶段 {stage_id} ({stage.name}) 无执行函数，跳过",
-                            "WARNING",
-                        )
-                    else:
-                        output_data = execute_fn(job.recipe, job.workspace, prev_outputs)
-                        result.output.data = output_data
-                        result.status = StageStatus.COMPLETED
-                        result.end_time = datetime.now()
-                        # 持久化阶段输出
-                        job.workspace.write_stage_output(stage.slug, output_data)
-                        prev_outputs.update(output_data)
-                        job.workspace.write_log(f"阶段 {stage_id} ({stage.name}) 完成")
-
-                    job.stage_results.append(result)
-                    job.current_stage = stage_id
-                    job.workspace.write_job_metadata(job.to_dict())
-                except Exception as e:
-                    result.status = StageStatus.FAILED
-                    result.error = str(e)
-                    result.end_time = datetime.now()
-                    job.stage_results.append(result)
-                    job.mark_failed(f"阶段 {stage_id} ({stage.name}) 失败: {e}")
-                    job.workspace.write_log(f"阶段 {stage_id} 失败: {e}", "ERROR")
-                    job.workspace.write_job_metadata(job.to_dict())
-                    logger.exception("作业 %s 阶段 %d 失败", job.job_id, stage_id)
+                if not self._execute_single_stage(job, stage_id, prev_outputs):
                     return
 
             job.current_stage = len(job.recipe.enabled_stages)

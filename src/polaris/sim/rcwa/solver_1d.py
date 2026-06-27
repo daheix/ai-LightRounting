@@ -158,6 +158,128 @@ def _build_bloch_wavevectors(
     return kx, k0, kx0
 
 
+def _build_modes_sequence(
+    layers: list[GratingLayer1D],
+    config: RcwaConfig1D,
+    kx: np.ndarray,
+    k0: float,
+) -> list[LayerModes]:
+    """构造 RCWA 本征模序列（入射半空间 + 光栅层 + 衬底半空间）。
+
+    Args:
+        layers: 光栅层列表。
+        config: 求解配置。
+        kx: 横向 Bloch 波矢 (2N+1,)。
+        k0: 真空波数。
+
+    Returns:
+        本征模列表 [inc, layer_0, ..., layer_{L-1}, sub]，长度 L+2。
+    """
+    modes_list: list[LayerModes] = []
+    # 入射半空间（齐次）
+    modes_list.append(
+        build_homogeneous_modes_1d(config.n_inc, kx, k0, config.polarization)
+    )
+    # 光栅层（傅里叶展开 + 本征值问题）
+    for layer in layers:
+        modes_list.append(
+            solve_layer_eigenmodes_1d(
+                layer.eps_r_period,
+                config.n_harmonics,
+                k0,
+                kx,
+                config.polarization,
+            )
+        )
+    # 衬底半空间（齐次）
+    modes_list.append(
+        build_homogeneous_modes_1d(config.n_sub, kx, k0, config.polarization)
+    )
+    return modes_list
+
+
+def _build_smatrix_sequence(
+    modes_list: list[LayerModes],
+    layers: list[GratingLayer1D],
+) -> list[BlockSMatrix]:
+    """构造 S 矩阵序列（界面 + 传播交替）。
+
+    Args:
+        modes_list: 本征模序列（长度 L+2）。
+        layers: 光栅层列表（长度 L）。
+
+    Returns:
+        S 矩阵列表 [interface_01, prop_1, interface_12, ..., interface_{L,L+1}]。
+    """
+    s_list: list[BlockSMatrix] = []
+    n_modes = len(modes_list)
+    for i in range(n_modes - 1):
+        # 界面 S 矩阵（层 i 与 i+1 之间）
+        s_list.append(build_interface_smatrix(modes_list[i], modes_list[i + 1]))
+        # 传播 S 矩阵（层 i+1 内，最后一层为衬底无传播）
+        if i < n_modes - 2:
+            layer_idx = i  # 光栅层索引（modes_list[1..L] 对应 layers[0..L-1]）
+            s_list.append(
+                build_propagation_smatrix(modes_list[i + 1], layers[layer_idx].thickness)
+            )
+    return s_list
+
+
+def _extract_amplitudes(
+    s_global: BlockSMatrix,
+    n_harmonics: int,
+    n_total: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """提取反射/透射振幅（入射 0 阶模式振幅=1）。
+
+    Args:
+        s_global: 全局 Redheffer 星积 S 矩阵。
+        n_harmonics: 截断阶数 N（0 阶中心索引）。
+        n_total: 总模式数 2N+1。
+
+    Returns:
+        (r_amp, t_amp)：反射 b_left = S11·a_inc，透射 a_right = S21·a_inc。
+    """
+    a_inc = np.zeros(n_total, dtype=np.complex128)
+    a_inc[n_harmonics] = 1.0  # 0 阶（中心索引 N）
+    r_amp = s_global.s11 @ a_inc
+    t_amp = s_global.s21 @ a_inc
+    return r_amp, t_amp
+
+
+def _compute_diffraction_efficiencies(
+    r_amp: np.ndarray,
+    t_amp: np.ndarray,
+    modes_list: list[LayerModes],
+    config: RcwaConfig1D,
+    is_te: bool,
+) -> tuple[np.ndarray, np.ndarray, float, np.ndarray, np.ndarray]:
+    """计算衍射效率与能量守恒校验（A01 §6）。
+
+    Args:
+        r_amp: 反射振幅。
+        t_amp: 透射振幅。
+        modes_list: 本征模序列。
+        config: 求解配置。
+        is_te: 是否 TE 偏振（TM 需阻抗比修正）。
+
+    Returns:
+        (reflection_eff, transmission_eff, energy_sum, kz_inc, kz_sub)。
+    """
+    kz_inc = modes_list[0].k_z  # 入射介质纵向波矢
+    kz_sub = modes_list[-1].k_z  # 衬底纵向波矢
+    kz_inc_0 = kz_inc[config.n_harmonics]  # 0 阶入射波矢（实数，正入射时=k0·n_inc）
+    ref_ratio = _safe_real_ratio(kz_inc, kz_inc_0)
+    # 透射效率：TM 需考虑阻抗比 (n_inc/n_sub)²
+    n_impedance_factor = 1.0 if is_te else (config.n_inc / config.n_sub) ** 2
+    trn_ratio = _safe_real_ratio(kz_sub, kz_inc_0) * n_impedance_factor
+
+    reflection_eff = np.abs(r_amp) ** 2 * ref_ratio
+    transmission_eff = np.abs(t_amp) ** 2 * trn_ratio
+    energy_sum = float(np.sum(reflection_eff) + np.sum(transmission_eff))
+    return reflection_eff, transmission_eff, energy_sum, kz_inc, kz_sub
+
+
 def solve_rcwa_1d(
     layers: list[GratingLayer1D],
     config: RcwaConfig1D,
@@ -187,58 +309,21 @@ def solve_rcwa_1d(
     rule = select_rule(is_te)
 
     # 步骤 2：各层本征模（入射半空间 + 光栅层 + 衬底半空间）
-    modes_list: list[LayerModes] = []
-    # 入射半空间（齐次）
-    modes_list.append(build_homogeneous_modes_1d(config.n_inc, kx, k0, config.polarization))
-    # 光栅层（傅里叶展开 + 本征值问题）
-    for layer in layers:
-        modes_list.append(
-            solve_layer_eigenmodes_1d(
-                layer.eps_r_period,
-                config.n_harmonics,
-                k0,
-                kx,
-                config.polarization,
-            )
-        )
-    # 衬底半空间（齐次）
-    modes_list.append(build_homogeneous_modes_1d(config.n_sub, kx, k0, config.polarization))
+    modes_list = _build_modes_sequence(layers, config, kx, k0)
 
     # 步骤 3：构造 S 矩阵序列（界面 + 传播交替）
-    s_list: list[BlockSMatrix] = []
-    for i in range(len(modes_list) - 1):
-        # 界面 S 矩阵（层 i 与 i+1 之间）
-        s_list.append(build_interface_smatrix(modes_list[i], modes_list[i + 1]))
-        # 传播 S 矩阵（层 i+1 内，最后一层为衬底无传播）
-        if i < len(modes_list) - 2:
-            layer_idx = i  # 光栅层索引（modes_list[1..L] 对应 layers[0..L-1]）
-            s_list.append(build_propagation_smatrix(modes_list[i + 1], layers[layer_idx].thickness))
+    s_list = _build_smatrix_sequence(modes_list, layers)
 
     # 步骤 4：Redheffer 星积级联（C03 共享内核）
     s_global = cascade_redheffer(s_list)
 
     # 步骤 5：提取反射/透射振幅
-    # 入射场：0 阶模式振幅=1，其余=0
-    a_inc = np.zeros(n_total, dtype=np.complex128)
-    a_inc[config.n_harmonics] = 1.0  # 0 阶（中心索引 N）
-    # 反射振幅 b_left = S11·a_inc，透射振幅 a_right = S21·a_inc
-    r_amp = s_global.s11 @ a_inc
-    t_amp = s_global.s21 @ a_inc
+    r_amp, t_amp = _extract_amplitudes(s_global, config.n_harmonics, n_total)
 
     # 步骤 6：衍射效率计算（A01 §6 公式）
-    kz_inc = modes_list[0].k_z  # 入射介质纵向波矢
-    kz_sub = modes_list[-1].k_z  # 衬底纵向波矢
-    kz_inc_0 = kz_inc[config.n_harmonics]  # 0 阶入射波矢（实数，正入射时=k0·n_inc）
-    ref_ratio = _safe_real_ratio(kz_inc, kz_inc_0)
-    # 透射效率：TM 需考虑阻抗比 (n_inc/n_sub)²
-    n_impedance_factor = 1.0
-    if not is_te:
-        n_impedance_factor = (config.n_inc / config.n_sub) ** 2
-    trn_ratio = _safe_real_ratio(kz_sub, kz_inc_0) * n_impedance_factor
-
-    reflection_eff = np.abs(r_amp) ** 2 * ref_ratio
-    transmission_eff = np.abs(t_amp) ** 2 * trn_ratio
-    energy_sum = float(np.sum(reflection_eff) + np.sum(transmission_eff))
+    reflection_eff, transmission_eff, energy_sum, kz_inc, kz_sub = (
+        _compute_diffraction_efficiencies(r_amp, t_amp, modes_list, config, is_te)
+    )
 
     return RcwaResult1D(
         reflection_eff=reflection_eff,

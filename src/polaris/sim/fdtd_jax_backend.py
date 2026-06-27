@@ -499,41 +499,22 @@ class DifferentiableFDTD:
         Hz_new = self.da * Hz - self.db * (dEy_dx - dEx_dy)
         return (Hx_new, Hy_new, Hz_new)
 
-    def run(
-        self,
-        epsilon_r: jnp.ndarray,
-        source_pos: tuple,
-        source_freq: float,
-        n_steps: int,
-        monitor_pos: tuple,
-    ) -> dict:
-        """运行 3D FDTD 时间步进（JAX 可微分）。
+    def _compute_run_coefficients(
+        self, epsilon_r: jnp.ndarray, shape: tuple
+    ) -> tuple:
+        """在 run 内重新计算 Ca/Cb/Da/Db（使 jax.grad 能追踪 epsilon_r 梯度）。
 
-        在 run 内重新计算 Ca/Cb 使 jax.grad 能追踪 epsilon_r → Ca/Cb 梯度。
-        用 jax.lax.scan 时间步进（比 Python for 循环快 100x）。
-        高斯脉冲源 + 正弦载波。
-
-        Args:
-            epsilon_r: 介电常数分布 (nx, ny, nz)。
-            source_pos: 源位置 (ix, iy, iz)。
-            source_freq: 源频率 (Hz)。
-            n_steps: 时间步数。
-            monitor_pos: 监视器位置 (ix, iy, iz)。
-
-        Returns:
-            {Ex, Ey, Ez, Hx, Hy, Hz, monitor_signal} 结果字典。
+        R2 修复: eps_r_bg = 背景值（如 eps_si），PML 区域 epsilon_r ≈ eps_r_bg，
+        cb ≈ cb_pml（不放大）；波导区域 epsilon_r > eps_r_bg，cb < cb_pml（缩小，稳定）。
+        来源: Gedney 1996 IEEE TAP §III。
         """
-        shape = (self.grid.nx, self.grid.ny, self.grid.nz)
         eps = EPS0 * jnp.asarray(epsilon_r)
         eps_r_bg = self.eps_r_bg  # R2: 用背景 eps_r（非 max），避免 PML 区域 cb 放大
-        # 在 run 内重新计算 Ca/Cb/Da/Db（使 jax.grad 能追踪 epsilon_r 梯度）
         if self.pml is not None:
             (ca_x, cb_x, ca_y, cb_y, ca_z, cb_z) = self.pml.damping_coefficients(self.dt)
             ca_pml = jnp.minimum(jnp.minimum(ca_x, ca_y), ca_z) * jnp.ones(shape)
             cb_pml = jnp.minimum(jnp.minimum(cb_x, cb_y), cb_z) * jnp.ones(shape)
             # Cb: PML 系数已含 1/eps_bg，乘 eps_bg/epsilon_r 得到 1/epsilon_r
-            # R2 修复: eps_r_bg = 背景值（如 eps_si），PML 区域 epsilon_r ≈ eps_r_bg，
-            # cb ≈ cb_pml（不放大）；波导区域 epsilon_r > eps_r_bg，cb < cb_pml（缩小，稳定）
             cb = cb_pml * eps_r_bg / jnp.asarray(epsilon_r)
             ca = ca_pml
             # 磁场 PML 阻尼（阻抗匹配: σ_m/μ = σ/ε，Gedney 1996 IEEE TAP）
@@ -544,21 +525,30 @@ class DifferentiableFDTD:
             cb = self.dt / eps  # Cb = dt/eps（含 epsilon_r 梯度追踪）
             da = jnp.ones(shape)
             db = self.dt / MU0
-        # 初始化场
-        Ex0 = jnp.zeros(shape)
-        Ey0 = jnp.zeros(shape)
-        Ez0 = jnp.zeros(shape)
-        Hx0 = jnp.zeros(shape)
-        Hy0 = jnp.zeros(shape)
-        Hz0 = jnp.zeros(shape)
-        monitor_signal0 = jnp.zeros(n_steps)
-        # 源参数：高斯脉冲 + 正弦载波
+        return ca, cb, da, db
+
+    def _build_source_waveform(self, n_steps: int, source_freq: float) -> jnp.ndarray:
+        """构建高斯脉冲 + 正弦载波源波形。"""
         t_axis = jnp.arange(n_steps) * self.dt
         tau = 10 * self.dt  # 高斯脉冲宽度（约 10 个时间步）
         gaussian_envelope = jnp.exp(-((t_axis - 5 * tau) ** 2) / (2 * tau**2))
-        source_waveform = gaussian_envelope * jnp.sin(2 * jnp.pi * source_freq * t_axis)
+        return gaussian_envelope * jnp.sin(2 * jnp.pi * source_freq * t_axis)
 
-        # jax.lax.scan 时间步进函数
+    def _make_fdtd_scan_fn(
+        self,
+        ca,
+        cb,
+        da,
+        db,
+        source_waveform,
+        source_pos: tuple,
+        monitor_pos: tuple,
+    ):
+        """创建 jax.lax.scan 循环体闭包（单步 FDTD 更新）。
+
+        封装电场更新（安培定律）+ 源注入 + 磁场更新（法拉第定律）+ 监视器记录。
+        来源: Yee 1966 IEEE TAP 差分格式。
+        """
         def scan_fn(carry, step_idx):
             """scan 循环体：单步 FDTD 更新。"""
             Ex, Ey, Ez, Hx, Hy, Hz, mon_sig = carry
@@ -592,7 +582,43 @@ class DifferentiableFDTD:
             mon_sig = mon_sig.at[step_idx].set(mon_val)
             return (Ex, Ey, Ez, Hx, Hy, Hz, mon_sig), None
 
-        carry0 = (Ex0, Ey0, Ez0, Hx0, Hy0, Hz0, monitor_signal0)
+        return scan_fn
+
+    def run(
+        self,
+        epsilon_r: jnp.ndarray,
+        source_pos: tuple,
+        source_freq: float,
+        n_steps: int,
+        monitor_pos: tuple,
+    ) -> dict:
+        """运行 3D FDTD 时间步进（JAX 可微分）。
+
+        在 run 内重新计算 Ca/Cb 使 jax.grad 能追踪 epsilon_r → Ca/Cb 梯度。
+        用 jax.lax.scan 时间步进（比 Python for 循环快 100x）。
+        高斯脉冲源 + 正弦载波。
+
+        Args:
+            epsilon_r: 介电常数分布 (nx, ny, nz)。
+            source_pos: 源位置 (ix, iy, iz)。
+            source_freq: 源频率 (Hz)。
+            n_steps: 时间步数。
+            monitor_pos: 监视器位置 (ix, iy, iz)。
+
+        Returns:
+            {Ex, Ey, Ez, Hx, Hy, Hz, monitor_signal} 结果字典。
+        """
+        shape = (self.grid.nx, self.grid.ny, self.grid.nz)
+        ca, cb, da, db = self._compute_run_coefficients(epsilon_r, shape)
+        source_waveform = self._build_source_waveform(n_steps, source_freq)
+        scan_fn = self._make_fdtd_scan_fn(
+            ca, cb, da, db, source_waveform, source_pos, monitor_pos
+        )
+        carry0 = (
+            jnp.zeros(shape), jnp.zeros(shape), jnp.zeros(shape),
+            jnp.zeros(shape), jnp.zeros(shape), jnp.zeros(shape),
+            jnp.zeros(n_steps),
+        )
         (Ex_f, Ey_f, Ez_f, Hx_f, Hy_f, Hz_f, mon_f), _ = jax.lax.scan(
             scan_fn, carry0, jnp.arange(n_steps)
         )

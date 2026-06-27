@@ -140,6 +140,57 @@ class CAPHETimeDomainSolver:
             states[name] = float(y[i])
         return states
 
+    def _build_initial_state(self, y0: list[float] | None) -> np.ndarray:
+        """构建初始状态向量。
+
+        y0 为 None 时用各节点 state_variables 默认值填充。
+
+        Raises:
+            ValueError: y0 长度与状态变量数不匹配。
+        """
+        if y0 is None:
+            y0_arr = np.zeros(self.n_states, dtype=float)
+            offset = 0
+            for node in self.network.get_nodes():
+                for _sname, val in node.state_variables.items():
+                    y0_arr[offset] = float(val)
+                    offset += 1
+            return y0_arr
+        if len(y0) != self.n_states:
+            raise ValueError(f"y0 长度 {len(y0)} != 状态变量数 {self.n_states}")
+        return np.array(y0, dtype=float)
+
+    def _solve_ode(
+        self,
+        t_span: tuple[float, float],
+        y0_arr: np.ndarray,
+        t_eval: np.ndarray,
+        inputs: Callable[[float], dict[str, complex]],
+    ):
+        """调用 scipy.integrate.solve_ivp（RK45 自适应步长）。
+
+        来源: scipy 文档
+        URL: https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
+
+        Raises:
+            RuntimeError: ODE 求解失败或未收敛。
+        """
+        try:
+            sol = solve_ivp(
+                fun=lambda t, y: self.build_ode_system(t, y, inputs),
+                t_span=t_span,
+                y0=y0_arr,
+                method="RK45",
+                t_eval=t_eval,
+                rtol=1e-6,
+                atol=1e-9,
+            )
+        except Exception as exc:
+            raise RuntimeError(f"ODE 求解失败: {exc}") from exc
+        if not sol.success:
+            raise RuntimeError(f"ODE 求解未收敛: {sol.message}")
+        return sol
+
     def solve(
         self,
         t_span: tuple[float, float],
@@ -176,20 +227,6 @@ class CAPHETimeDomainSolver:
             raise ValueError(f"t_span[0] 必须 < t_span[1]，得到 {t_span}")
         if n_points <= 0:
             raise ValueError(f"n_points 必须 > 0，得到 {n_points}")
-
-        # 构建初始状态向量
-        if y0 is None:
-            y0_arr = np.zeros(self.n_states, dtype=float)
-            offset = 0
-            for node in self.network.get_nodes():
-                for _sname, val in node.state_variables.items():
-                    y0_arr[offset] = float(val)
-                    offset += 1
-        else:
-            if len(y0) != self.n_states:
-                raise ValueError(f"y0 长度 {len(y0)} != 状态变量数 {self.n_states}")
-            y0_arr = np.array(y0, dtype=float)
-
         # 无状态变量时直接返回空解
         if self.n_states == 0:
             t_eval = np.linspace(t_span[0], t_span[1], n_points)
@@ -198,33 +235,13 @@ class CAPHETimeDomainSolver:
                 "y": np.zeros((n_points, 0), dtype=float),
                 "states": {},
             }
-
+        y0_arr = self._build_initial_state(y0)
         t_eval = np.linspace(t_span[0], t_span[1], n_points)
-
-        # 调用 scipy.integrate.solve_ivp（RK45 自适应步长）
-        # 来源: scipy 文档
-        # URL: https://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.solve_ivp.html
-        try:
-            sol = solve_ivp(
-                fun=lambda t, y: self.build_ode_system(t, y, inputs),
-                t_span=t_span,
-                y0=y0_arr,
-                method="RK45",
-                t_eval=t_eval,
-                rtol=1e-6,
-                atol=1e-9,
-            )
-        except Exception as exc:
-            raise RuntimeError(f"ODE 求解失败: {exc}") from exc
-
-        if not sol.success:
-            raise RuntimeError(f"ODE 求解未收敛: {sol.message}")
-
+        sol = self._solve_ode(t_span, y0_arr, t_eval, inputs)
         # 提取状态时间序列
-        states_ts: dict[str, np.ndarray] = {}
-        for i, name in enumerate(self._state_names):
-            states_ts[name] = sol.y[i, :]
-
+        states_ts: dict[str, np.ndarray] = {
+            name: sol.y[i, :] for i, name in enumerate(self._state_names)
+        }
         return {
             "t": sol.t,
             "y": sol.y.T,  # (n_times × n_states)

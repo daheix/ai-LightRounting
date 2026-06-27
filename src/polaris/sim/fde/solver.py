@@ -363,22 +363,20 @@ class FdeSolver:
             candidates.append((complex(n_eff), complex(beta), ey, loc))
         return candidates
 
-    def solve(
-        self,
-        eps_r: np.ndarray,
-        window_size: tuple[float, float],
-    ) -> list[Mode]:
-        """求解 FDE 本征模。
+    def _prepare_solve_inputs(
+        self, eps_r: np.ndarray, window_size: tuple[float, float]
+    ) -> tuple[YeeGrid, sp.csr_array, float, float, float, int, int, float, complex]:
+        """校验输入并构造网格、矩阵与求解参数。
 
         Args:
-            eps_r: 2D 相对介电常数分布 (Nx, Ny)，实数或复数。
-            window_size: 物理窗口尺寸 (Lx, Ly)，单位米。
+            eps_r: 2D 相对介电常数分布 (Nx, Ny)。
+            window_size: 物理窗口尺寸 (Lx, Ly)，米。
 
         Returns:
-            模式列表，按 n_eff 实部降序（基模首位），长度 ≤ num_modes。
+            (grid, a_mat, n_clad, n_eff_shift, n_eff_max_guided, pml_layers,
+             k_request, sigma_main, n_core)。
 
         Raises:
-            RuntimeError: Arnoldi 求解失败（规则 14，禁止 fall-back）。
             ValueError: 输入参数非法。
         """
         if eps_r.ndim != 2:
@@ -402,12 +400,30 @@ class FdeSolver:
         n_total = grid.spec.num_cells
         k_request = min(self.config.num_modes + 12, n_total - 2)
         sigma_main = (self.k0 * n_eff_shift) ** 2
-        # *创新* 组合 Arnoldi 策略：C(LR) → A(LM) → D(sigma_high, LM)
-        # 策略 C (which=LR)：找 sigma 附近最大实部模，对窄/宽波导均稳定命中基模
-        # 策略 A (which=LM)：找 sigma 最近模（原默认），部分宽度迷失于 PML 模簇
-        # 策略 D (sigma=2.8)：高目标偏置，宽波导高 n_eff 基模备选
-        # 多策略非 fall-back：全部失败时 raise；每策略是合法 Arnoldi 配置
-        # 文献：Lehoucq & Sorensen 1996 ARPACK §4；Taflove & Hagness 2005 §5
+        return (grid, a_mat, n_clad, n_eff_shift, n_eff_max_guided,
+                pml_layers, k_request, sigma_main, n_core)
+
+    def _run_arnoldi_strategies(
+        self,
+        a_mat: sp.csr_array,
+        grid: YeeGrid,
+        n_clad: float,
+        n_eff_max_guided: float,
+        pml_layers: int,
+        k_request: int,
+        sigma_main: complex,
+    ) -> list[tuple[complex, complex, np.ndarray, float]]:
+        """*创新* 组合 Arnoldi 策略：C(LR) → A(LM) → D(sigma_high, LM)。
+
+        策略 C (which=LR)：找 sigma 附近最大实部模，对窄/宽波导均稳定命中基模
+        策略 A (which=LM)：找 sigma 最近模（原默认），部分宽度迷失于 PML 模簇
+        策略 D (sigma=2.8)：高目标偏置，宽波导高 n_eff 基模备选
+        多策略非 fall-back：全部失败时由调用方 raise；每策略是合法 Arnoldi 配置。
+        单策略 ArpackNoConvergence 时跳过该策略（非 fall-back，是 ARPACK 数值特性）。
+
+        文献：Lehoucq & Sorensen 1996 ARPACK §4；Taflove & Hagness 2005 §5
+        """
+        # *创新* 组合 Arnoldi 策略
         strategies = [
             ("C", sigma_main, "LR"),
             ("A", sigma_main, "LM"),
@@ -433,14 +449,28 @@ class FdeSolver:
                     continue
                 seen_neffs.append(re_n)
                 all_candidates.append((n_eff, beta, ey, loc))
-        if not all_candidates:
-            raise RuntimeError(
-                f"未求得导模（{n_clad:.4f} < Re(n_eff) < {n_eff_max_guided:.4f}），"
-                f"n_eff_shift={n_eff_shift:.4f}，k_request={k_request}，"
-                f"建议调整 n_eff_shift 或增加网格分辨率"
-            )
-        # 排序：penalty_score = Re(n_eff) - 10·|Im(n_eff)| 降序
-        # 真实导模 |Im|<0.01，PML 残余 |Im|>0.1，10× 惩罚使低损耗优先
+        return all_candidates
+
+    def _build_modes_from_candidates(
+        self,
+        all_candidates: list[tuple[complex, complex, np.ndarray, float]],
+        grid: YeeGrid,
+    ) -> list[Mode]:
+        """由候选本征对构造归一化 Mode 列表。
+
+        排序：penalty_score = Re(n_eff) - 10·|Im(n_eff)| 降序（真实导模 |Im|<0.01，
+        PML 残余 |Im|>0.1，10× 惩罚使低损耗优先）。
+
+        Args:
+            all_candidates: (n_eff, beta, ey, loc) 候选列表。
+            grid: YeeGrid 对象。
+
+        Returns:
+            Mode 列表，长度 ≤ num_modes。
+
+        Raises:
+            RuntimeError: 候选均无法归一化（功率积分≈0）。
+        """
         all_candidates.sort(
             key=lambda c: float(np.real(c[0])) - 10.0 * abs(float(np.imag(c[0]))),
             reverse=True,
@@ -474,6 +504,39 @@ class FdeSolver:
             )
         modes.sort(key=lambda m: float(np.real(m.n_eff)), reverse=True)
         return modes
+
+    def solve(
+        self,
+        eps_r: np.ndarray,
+        window_size: tuple[float, float],
+    ) -> list[Mode]:
+        """求解 FDE 本征模。
+
+        Args:
+            eps_r: 2D 相对介电常数分布 (Nx, Ny)，实数或复数。
+            window_size: 物理窗口尺寸 (Lx, Ly)，单位米。
+
+        Returns:
+            模式列表，按 n_eff 实部降序（基模首位），长度 ≤ num_modes。
+
+        Raises:
+            RuntimeError: Arnoldi 求解失败（规则 14，禁止 fall-back）。
+            ValueError: 输入参数非法。
+        """
+        (grid, a_mat, n_clad, n_eff_shift, n_eff_max_guided,
+         pml_layers, k_request, sigma_main, _n_core) = self._prepare_solve_inputs(
+            eps_r, window_size
+        )
+        all_candidates = self._run_arnoldi_strategies(
+            a_mat, grid, n_clad, n_eff_max_guided, pml_layers, k_request, sigma_main
+        )
+        if not all_candidates:
+            raise RuntimeError(
+                f"未求得导模（{n_clad:.4f} < Re(n_eff) < {n_eff_max_guided:.4f}），"
+                f"n_eff_shift={n_eff_shift:.4f}，k_request={k_request}，"
+                f"建议调整 n_eff_shift 或增加网格分辨率"
+            )
+        return self._build_modes_from_candidates(all_candidates, grid)
 
 
 def solve_waveguide(
