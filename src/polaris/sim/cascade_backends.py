@@ -330,129 +330,209 @@ def redheffer_star(
     # 收集端口
     ports1 = _collect_ports_from_sdict(s1)
     ports2 = _collect_ports_from_sdict(s2)
-
     connected_1 = {c[0] for c in connections}
     connected_2 = {c[1] for c in connections}
-
     remaining_1 = sorted(ports1 - connected_1)
     remaining_2 = sorted(ports2 - connected_2)
     remaining = remaining_1 + remaining_2
-
     if not remaining:
         return {}
-
     # 频率维度
     first_val = next(iter(s1.values()))
     n_freq = len(first_val) if hasattr(first_val, "__len__") else 1
-
-    # 构建矩阵表示
-    # S1 矩阵: (n1, n1, n_freq)
+    # 构建稠密 S 矩阵
     ports1_sorted = sorted(ports1)
     ports2_sorted = sorted(ports2)
-
     S1 = _sdict_to_dense(s1, ports1_sorted, n_freq)
     S2 = _sdict_to_dense(s2, ports2_sorted, n_freq)
-
-    # 分块矩阵
-    # S1 = [[S1_rr, S1_rc], [S1_cr, S1_cc]]
-    # r = remaining_1, c = connected_1
-    r1_idx = [ports1_sorted.index(p) for p in remaining_1]
-    c1_idx = [ports1_sorted.index(p) for p in sorted(connected_1)]
-    r2_idx = [ports2_sorted.index(p) for p in remaining_2]
-    c2_idx = [ports2_sorted.index(p) for p in sorted(connected_2)]
-
-    # 提取分块
-    S1_rr = S1[np.ix_(r1_idx, r1_idx)] if r1_idx else np.zeros((0, 0, n_freq), dtype=complex)
-    S1_rc = S1[np.ix_(r1_idx, c1_idx)] if r1_idx and c1_idx else np.zeros((len(r1_idx), 0, n_freq), dtype=complex)
-    S1_cr = S1[np.ix_(c1_idx, r1_idx)] if c1_idx and r1_idx else np.zeros((0, len(r1_idx), n_freq), dtype=complex)
-    S1_cc = S1[np.ix_(c1_idx, c1_idx)] if c1_idx else np.zeros((0, 0, n_freq), dtype=complex)
-
-    S2_rr = S2[np.ix_(r2_idx, r2_idx)] if r2_idx else np.zeros((0, 0, n_freq), dtype=complex)
-    S2_rc = S2[np.ix_(r2_idx, c2_idx)] if r2_idx and c2_idx else np.zeros((len(r2_idx), 0, n_freq), dtype=complex)
-    S2_cr = S2[np.ix_(c2_idx, r2_idx)] if c2_idx and r2_idx else np.zeros((0, len(r2_idx), n_freq), dtype=complex)
-    S2_cc = S2[np.ix_(c2_idx, c2_idx)] if c2_idx else np.zeros((0, 0, n_freq), dtype=complex)
-
-    # S_feedback = S1_cc · S2_cc（连接端口间的反馈）
-    # S_through = S2_cr（从连接端口2到剩余端口2）和 S1_cr（从连接端口1到剩余端口1）
-    # S_cross = S1_rc（从剩余端口1到连接端口1）和 S2_rc（从剩余端口2到连接端口2）
-
-    # 逐频点计算
-    result: SDict = {}
-    for p_out in remaining:
-        for p_in in remaining:
-            result[(p_out, p_in)] = np.zeros(n_freq, dtype=complex)
-
+    # 构建分块索引与 3D 分块矩阵
+    blocks = _RedhefferBlocks.build(
+        S1, S2, ports1_sorted, ports2_sorted,
+        remaining_1, remaining_2, connected_1, connected_2, n_freq,
+    )
+    # 初始化结果字典
+    result: SDict = {
+        (p_out, p_in): np.zeros(n_freq, dtype=complex)
+        for p_out in remaining for p_in in remaining
+    }
+    # 逐频点计算 S_prime 并填充
     for f in range(n_freq):
-        # 提取当前频点的分块
-        s1_rr = S1_rr[:, :, f] if S1_rr.size > 0 else np.zeros((len(r1_idx), len(r1_idx)), dtype=complex)
-        s1_rc = S1_rc[:, :, f] if S1_rc.size > 0 else np.zeros((len(r1_idx), len(c1_idx)), dtype=complex)
-        s1_cr = S1_cr[:, :, f] if S1_cr.size > 0 else np.zeros((len(c1_idx), len(r1_idx)), dtype=complex)
-        s1_cc = S1_cc[:, :, f] if S1_cc.size > 0 else np.zeros((len(c1_idx), len(c1_idx)), dtype=complex)
-
-        s2_rr = S2_rr[:, :, f] if S2_rr.size > 0 else np.zeros((len(r2_idx), len(r2_idx)), dtype=complex)
-        s2_rc = S2_rc[:, :, f] if S2_rc.size > 0 else np.zeros((len(r2_idx), len(c2_idx)), dtype=complex)
-        s2_cr = S2_cr[:, :, f] if S2_cr.size > 0 else np.zeros((len(c2_idx), len(r2_idx)), dtype=complex)
-        s2_cc = S2_cc[:, :, f] if S2_cc.size > 0 else np.zeros((len(c2_idx), len(c2_idx)), dtype=complex)
-
-        # S_feedback = S1_cc · S2_cc
-        S_feedback = s1_cc @ s2_cc if c1_idx and c2_idx else np.zeros((0, 0), dtype=complex)
-
-        # (I - S_feedback)^{-1}
-        n_conn = len(c1_idx)
-        if n_conn > 0:
-            I_minus_feedback = np.eye(n_conn, dtype=complex) - S_feedback
-            # 检测奇异矩阵
-            cond = np.linalg.cond(I_minus_feedback)
-            if cond >= COND_NUM_KLU_THRESHOLD:
-                msg = (
-                    f"Redheffer 星积：反馈矩阵奇异（κ={cond:.3e} ≥ {COND_NUM_KLU_THRESHOLD:.0e}），"
-                    f"频点索引 f={f}。电路存在强谐振或反馈环路。禁止 fall-back（规则 14.1）。"
-                )
-                logger.error(msg)
-                raise RuntimeError(msg)
-            inv_feedback = np.linalg.inv(I_minus_feedback)
-        else:
-            inv_feedback = np.zeros((0, 0), dtype=complex)
-
-        # S_direct: 不经过连接端口的直接传输
-        # S_direct = [[S1_rr, 0], [0, S2_rr]]
-        n_rem = len(remaining)
-        S_direct = np.zeros((n_rem, n_rem), dtype=complex)
-        n_r1 = len(r1_idx)
-        n_r2 = len(r2_idx)
-        if n_r1 > 0:
-            S_direct[:n_r1, :n_r1] = s1_rr
-        if n_r2 > 0:
-            S_direct[n_r1:, n_r1:] = s2_rr
-
-        # S_cross: 从剩余端口到连接端口的传输
-        # S_cross = [[S1_rc], [S2_rc]]（剩余端口 → 连接端口）
-        S_cross = np.zeros((n_conn, n_rem), dtype=complex)
-        if n_conn > 0 and n_r1 > 0:
-            S_cross[:, :n_r1] = s1_rc.T if s1_rc.size > 0 else np.zeros((n_conn, n_r1), dtype=complex)
-        if n_conn > 0 and n_r2 > 0:
-            S_cross[:, n_r1:] = s2_rc.T if s2_rc.size > 0 else np.zeros((n_conn, n_r2), dtype=complex)
-
-        # S_through: 从连接端口到剩余端口的传输
-        # S_through = [[S1_cr, S2_cr]]（连接端口 → 剩余端口）
-        S_through = np.zeros((n_rem, n_conn), dtype=complex)
-        if n_conn > 0 and n_r1 > 0:
-            S_through[:n_r1, :] = s1_cr.T if s1_cr.size > 0 else np.zeros((n_r1, n_conn), dtype=complex)
-        if n_conn > 0 and n_r2 > 0:
-            S_through[n_r1:, :] = s2_cr.T if s2_cr.size > 0 else np.zeros((n_r2, n_conn), dtype=complex)
-
-        # S' = S_direct + S_through · inv_feedback · S_cross
-        if n_conn > 0:
-            S_prime = S_direct + S_through @ inv_feedback @ S_cross
-        else:
-            S_prime = S_direct
-
-        # 填充结果
+        S_prime = blocks.compute_sprime_at_freq(f)
         for i, p_out in enumerate(remaining):
             for j, p_in in enumerate(remaining):
                 result[(p_out, p_in)][f] = S_prime[i, j]
-
     return result
+
+
+@dataclass
+class _RedhefferBlocks:
+    """Redheffer 星积分块矩阵封装（重构辅助）。
+
+    S1 = [[S1_rr, S1_rc], [S1_cr, S1_cc]]，r=remaining, c=connected。
+    """
+    r1_idx: list[int]
+    c1_idx: list[int]
+    r2_idx: list[int]
+    c2_idx: list[int]
+    S1_rr: np.ndarray
+    S1_rc: np.ndarray
+    S1_cr: np.ndarray
+    S1_cc: np.ndarray
+    S2_rr: np.ndarray
+    S2_rc: np.ndarray
+    S2_cr: np.ndarray
+    S2_cc: np.ndarray
+    n_rem: int
+    n_r1: int
+    n_r2: int
+    n_conn: int
+
+    @classmethod
+    def build(
+        cls,
+        S1: np.ndarray,
+        S2: np.ndarray,
+        ports1_sorted: list[str],
+        ports2_sorted: list[str],
+        remaining_1: list[str],
+        remaining_2: list[str],
+        connected_1: set[str],
+        connected_2: set[str],
+        n_freq: int,
+    ) -> _RedhefferBlocks:
+        """构建分块索引并提取 3D 分块矩阵。"""
+        r1_idx = [ports1_sorted.index(p) for p in remaining_1]
+        c1_idx = [ports1_sorted.index(p) for p in sorted(connected_1)]
+        r2_idx = [ports2_sorted.index(p) for p in remaining_2]
+        c2_idx = [ports2_sorted.index(p) for p in sorted(connected_2)]
+        # 提取 3D 分块
+        S1_rr = _slice_block_3d(S1, r1_idx, r1_idx, n_freq)
+        S1_rc = _slice_block_3d(S1, r1_idx, c1_idx, n_freq)
+        S1_cr = _slice_block_3d(S1, c1_idx, r1_idx, n_freq)
+        S1_cc = _slice_block_3d(S1, c1_idx, c1_idx, n_freq)
+        S2_rr = _slice_block_3d(S2, r2_idx, r2_idx, n_freq)
+        S2_rc = _slice_block_3d(S2, r2_idx, c2_idx, n_freq)
+        S2_cr = _slice_block_3d(S2, c2_idx, r2_idx, n_freq)
+        S2_cc = _slice_block_3d(S2, c2_idx, c2_idx, n_freq)
+        n_r1, n_r2 = len(r1_idx), len(r2_idx)
+        return cls(
+            r1_idx=r1_idx, c1_idx=c1_idx, r2_idx=r2_idx, c2_idx=c2_idx,
+            S1_rr=S1_rr, S1_rc=S1_rc, S1_cr=S1_cr, S1_cc=S1_cc,
+            S2_rr=S2_rr, S2_rc=S2_rc, S2_cr=S2_cr, S2_cc=S2_cc,
+            n_rem=n_r1 + n_r2, n_r1=n_r1, n_r2=n_r2, n_conn=len(c1_idx),
+        )
+
+    def compute_sprime_at_freq(self, f: int) -> np.ndarray:
+        """计算单频点的 S_prime = S_direct + S_through·inv_feedback·S_cross。"""
+        # 提取当前频点的 2D 分块
+        s1_rr = _block_at_freq(self.S1_rr, self.n_r1, self.n_r1, f)
+        s1_rc = _block_at_freq(self.S1_rc, self.n_r1, self.n_conn, f)
+        s1_cr = _block_at_freq(self.S1_cr, self.n_conn, self.n_r1, f)
+        s1_cc = _block_at_freq(self.S1_cc, self.n_conn, self.n_conn, f)
+        s2_rr = _block_at_freq(self.S2_rr, self.n_r2, self.n_r2, f)
+        s2_rc = _block_at_freq(self.S2_rc, self.n_r2, self.n_conn, f)
+        s2_cr = _block_at_freq(self.S2_cr, self.n_conn, self.n_r2, f)
+        s2_cc = _block_at_freq(self.S2_cc, self.n_conn, self.n_conn, f)
+        # 反馈矩阵求逆（含奇异检测）
+        inv_feedback = _invert_redheffer_feedback(s1_cc, s2_cc, self.n_conn, f)
+        # 构建 S_direct / S_cross / S_through
+        S_direct = _build_sdirect(s1_rr, s2_rr, self.n_rem, self.n_r1, self.n_r2)
+        S_cross = _build_scross(s1_rc, s2_rc, self.n_conn, self.n_rem, self.n_r1, self.n_r2)
+        S_through = _build_sthrough(s1_cr, s2_cr, self.n_conn, self.n_rem, self.n_r1, self.n_r2)
+        # S' = S_direct + S_through · inv_feedback · S_cross
+        if self.n_conn > 0:
+            return S_direct + S_through @ inv_feedback @ S_cross
+        return S_direct
+
+
+def _slice_block_3d(
+    S: np.ndarray, rows: list[int], cols: list[int], n_freq: int
+) -> np.ndarray:
+    """从 3D 矩阵 S 提取 (rows, cols, n_freq) 分块，空索引返回零矩阵。"""
+    if rows and cols:
+        return S[np.ix_(rows, cols)]
+    return np.zeros((len(rows), len(cols), n_freq), dtype=complex)
+
+
+def _block_at_freq(
+    block_3d: np.ndarray, n_rows: int, n_cols: int, f: int
+) -> np.ndarray:
+    """提取 3D 分块在频点 f 的 2D 切片，空块返回零矩阵。"""
+    if block_3d.size > 0:
+        return block_3d[:, :, f]
+    return np.zeros((n_rows, n_cols), dtype=complex)
+
+
+def _invert_redheffer_feedback(
+    s1_cc: np.ndarray, s2_cc: np.ndarray, n_conn: int, f: int
+) -> np.ndarray:
+    """计算 (I - S1_cc·S2_cc)^{-1}，奇异时 raise（禁止 fall-back）。
+
+    来源: Golub & Van Loan "Matrix Computations" §2.3 (条件数阈值)。
+    """
+    if n_conn == 0:
+        return np.zeros((0, 0), dtype=complex)
+    S_feedback = s1_cc @ s2_cc
+    I_minus_feedback = np.eye(n_conn, dtype=complex) - S_feedback
+    cond = np.linalg.cond(I_minus_feedback)
+    if cond >= COND_NUM_KLU_THRESHOLD:
+        msg = (
+            f"Redheffer 星积：反馈矩阵奇异（κ={cond:.3e} ≥ {COND_NUM_KLU_THRESHOLD:.0e}），"
+            f"频点索引 f={f}。电路存在强谐振或反馈环路。禁止 fall-back（规则 14.1）。"
+        )
+        logger.error(msg)
+        raise RuntimeError(msg)
+    return np.linalg.inv(I_minus_feedback)
+
+
+def _build_sdirect(
+    s1_rr: np.ndarray, s2_rr: np.ndarray, n_rem: int, n_r1: int, n_r2: int
+) -> np.ndarray:
+    """构建 S_direct 块对角矩阵 [[S1_rr, 0], [0, S2_rr]]。"""
+    S_direct = np.zeros((n_rem, n_rem), dtype=complex)
+    if n_r1 > 0:
+        S_direct[:n_r1, :n_r1] = s1_rr
+    if n_r2 > 0:
+        S_direct[n_r1:, n_r1:] = s2_rr
+    return S_direct
+
+
+def _build_scross(
+    s1_rc: np.ndarray, s2_rc: np.ndarray,
+    n_conn: int, n_rem: int, n_r1: int, n_r2: int,
+) -> np.ndarray:
+    """构建 S_cross 矩阵 [[S1_rc], [S2_rc]]（剩余端口 → 连接端口）。"""
+    S_cross = np.zeros((n_conn, n_rem), dtype=complex)
+    if n_conn > 0 and n_r1 > 0:
+        S_cross[:, :n_r1] = (
+            s1_rc.T if s1_rc.size > 0
+            else np.zeros((n_conn, n_r1), dtype=complex)
+        )
+    if n_conn > 0 and n_r2 > 0:
+        S_cross[:, n_r1:] = (
+            s2_rc.T if s2_rc.size > 0
+            else np.zeros((n_conn, n_r2), dtype=complex)
+        )
+    return S_cross
+
+
+def _build_sthrough(
+    s1_cr: np.ndarray, s2_cr: np.ndarray,
+    n_conn: int, n_rem: int, n_r1: int, n_r2: int,
+) -> np.ndarray:
+    """构建 S_through 矩阵 [[S1_cr, S2_cr]]（连接端口 → 剩余端口）。"""
+    S_through = np.zeros((n_rem, n_conn), dtype=complex)
+    if n_conn > 0 and n_r1 > 0:
+        S_through[:n_r1, :] = (
+            s1_cr.T if s1_cr.size > 0
+            else np.zeros((n_r1, n_conn), dtype=complex)
+        )
+    if n_conn > 0 and n_r2 > 0:
+        S_through[n_r1:, :] = (
+            s2_cr.T if s2_cr.size > 0
+            else np.zeros((n_r2, n_conn), dtype=complex)
+        )
+    return S_through
 
 
 def _collect_ports_from_sdict(sdict: SDict) -> set[str]:

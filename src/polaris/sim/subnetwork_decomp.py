@@ -437,6 +437,21 @@ def decompose_circuit(
     Returns:
         子网络分解结果。
     """
+    nx = _import_networkx()
+    G = _build_circuit_graph(instances, connections)
+    if num_subnetworks is None:
+        num_subnetworks = _auto_determine_subnetwork_count(len(instances))
+    subnetworks = _partition_graph(nx, G, num_subnetworks, instances)
+    couplings, boundary_ports = _collect_couplings_and_boundary(connections, subnetworks)
+    return SubnetworkDecomposition(
+        subnetworks=subnetworks,
+        couplings=couplings,
+        boundary_ports=dict(boundary_ports),
+    )
+
+
+def _import_networkx():
+    """导入 networkx，失败时 raise（禁止 fall-back）。"""
     try:
         import networkx as nx
     except ImportError as e:
@@ -446,81 +461,126 @@ def decompose_circuit(
         )
         logger.error(msg)
         raise RuntimeError(msg) from e
+    return nx
 
-    # 构建电路图
+
+def _instance_of_port(port: str) -> str:
+    """从端口名 'inst.port' 提取实例名，无点则原样返回。"""
+    return port.split(".")[0] if "." in port else port
+
+
+def _build_circuit_graph(
+    instances: dict[str, SDict],
+    connections: list[tuple[str, str]],
+):
+    """构建电路图：节点=实例，边=实例间连接。"""
+    import networkx as nx
     G = nx.Graph()
     for inst_name in instances:
         G.add_node(inst_name)
     for p1, p2 in connections:
-        inst1 = p1.split(".")[0] if "." in p1 else p1
-        inst2 = p2.split(".")[0] if "." in p2 else p2
+        inst1 = _instance_of_port(p1)
+        inst2 = _instance_of_port(p2)
         if inst1 != inst2:
             G.add_edge(inst1, inst2)
+    return G
 
-    # 自动确定子网络数
-    if num_subnetworks is None:
-        n = len(instances)
-        # 每子网络约 50-100 器件
-        # 来源: 经验值，平衡并行度和子网络求解开销
-        num_subnetworks = max(1, n // 75)
-        num_subnetworks = min(num_subnetworks, 8)  # 最多 8 个（8 核 CPU）
 
-    # 使用 networkx 的 kernighan_lin_bisection 或 community 检测
+def _auto_determine_subnetwork_count(n_instances: int) -> int:
+    """自动确定子网络数（每子网络约 50-100 器件，最多 8 个）。
+
+    来源: 经验值，平衡并行度和子网络求解开销（8 核 CPU）。
+    """
+    num = max(1, n_instances // 75)
+    return min(num, 8)
+
+
+def _partition_graph(nx, G, num_subnetworks: int, instances: dict[str, SDict]) -> list[set[str]]:
+    """按目标子网络数选择分割策略并执行图分割。
+
+    - 1 个：整体作为一个子网络
+    - 2 个：Kernighan-Lin 二分
+    - >2 个：greedy_modularity_communities 多路分割
+    """
     if num_subnetworks == 1:
-        subnetworks = [set(instances.keys())]
-    elif num_subnetworks == 2:
-        # 二分图分割
+        return [set(instances.keys())]
+    if num_subnetworks == 2:
         parts = nx.algorithms.community.kernighan_lin_bisection(G)
-        subnetworks = [set(parts[0]), set(parts[1])]
-    else:
-        # 多路分割：使用 greedy_modularity_communities
-        try:
-            communities = nx.algorithms.community.greedy_modularity_communities(G)
-            subnetworks = [set(c) for c in communities[:num_subnetworks]]
-            # 合并多余的社区
-            while len(subnetworks) < num_subnetworks and len(communities) > len(subnetworks):
-                subnetworks.append(set(communities[len(subnetworks)]))
-        except Exception as e:
-            msg = (
-                f"图分割失败: {type(e).__name__}: {e}。"
-                "禁止 fall-back（规则 14.1）。"
-            )
-            logger.error(msg)
-            raise RuntimeError(msg) from e
+        return [set(parts[0]), set(parts[1])]
+    return _multiway_partition(nx, G, num_subnetworks)
 
-    # 识别子网络间耦合
+
+def _multiway_partition(nx, G, num_subnetworks: int) -> list[set[str]]:
+    """多路分割：greedy_modularity_communities + 多余社区合并。"""
+    try:
+        communities = nx.algorithms.community.greedy_modularity_communities(G)
+    except Exception as e:
+        msg = (
+            f"图分割失败: {type(e).__name__}: {e}。"
+            "禁止 fall-back（规则 14.1）。"
+        )
+        logger.error(msg)
+        raise RuntimeError(msg) from e
+    subnetworks = [set(c) for c in communities[:num_subnetworks]]
+    # 合并多余的社区
+    while len(subnetworks) < num_subnetworks and len(communities) > len(subnetworks):
+        subnetworks.append(set(communities[len(subnetworks)]))
+    return subnetworks
+
+
+def _collect_couplings_and_boundary(
+    connections: list[tuple[str, str]],
+    subnetworks: list[set[str]],
+) -> tuple[list[tuple[int, int, list[tuple[str, str]]]], dict[int, set[str]]]:
+    """识别子网络间耦合与边界端口。
+
+    Returns:
+        (couplings, boundary_ports)
+    """
     inst_to_sub: dict[str, int] = {}
     for i, sub in enumerate(subnetworks):
         for inst in sub:
             inst_to_sub[inst] = i
-
     couplings: list[tuple[int, int, list[tuple[str, str]]]] = []
     boundary_ports: dict[int, set[str]] = defaultdict(set)
     for p1, p2 in connections:
-        inst1 = p1.split(".")[0] if "." in p1 else p1
-        inst2 = p2.split(".")[0] if "." in p2 else p2
-        if inst1 != inst2:
-            sub1 = inst_to_sub.get(inst1, -1)
-            sub2 = inst_to_sub.get(inst2, -1)
-            if sub1 != sub2 and sub1 >= 0 and sub2 >= 0:
-                key = (min(sub1, sub2), max(sub1, sub2))
-                # 查找或创建耦合
-                found = False
-                for idx, (s1, s2, _) in enumerate(couplings):
-                    if (s1, s2) == key:
-                        couplings[idx][2].append((p1, p2))
-                        found = True
-                        break
-                if not found:
-                    couplings.append((key[0], key[1], [(p1, p2)]))
-                boundary_ports[sub1].add(p1)
-                boundary_ports[sub2].add(p2)
+        _maybe_add_coupling(p1, p2, inst_to_sub, couplings, boundary_ports)
+    return couplings, boundary_ports
 
-    return SubnetworkDecomposition(
-        subnetworks=subnetworks,
-        couplings=couplings,
-        boundary_ports=dict(boundary_ports),
-    )
+
+def _maybe_add_coupling(
+    p1: str,
+    p2: str,
+    inst_to_sub: dict[str, int],
+    couplings: list[tuple[int, int, list[tuple[str, str]]]],
+    boundary_ports: dict[int, set[str]],
+) -> None:
+    """若 p1-p2 跨子网络，则登记耦合与边界端口。"""
+    inst1 = _instance_of_port(p1)
+    inst2 = _instance_of_port(p2)
+    if inst1 == inst2:
+        return
+    sub1 = inst_to_sub.get(inst1, -1)
+    sub2 = inst_to_sub.get(inst2, -1)
+    if not (sub1 != sub2 and sub1 >= 0 and sub2 >= 0):
+        return
+    key = (min(sub1, sub2), max(sub1, sub2))
+    _upsert_coupling(couplings, key, (p1, p2))
+    boundary_ports[sub1].add(p1)
+    boundary_ports[sub2].add(p2)
+
+
+def _upsert_coupling(
+    couplings: list[tuple[int, int, list[tuple[str, str]]]],
+    key: tuple[int, int],
+    port_pair: tuple[str, str],
+) -> None:
+    """查找或插入耦合项（按 (s1, s2) 聚合）。"""
+    for idx, (s1, s2, _) in enumerate(couplings):
+        if (s1, s2) == key:
+            couplings[idx][2].append(port_pair)
+            return
+    couplings.append((key[0], key[1], [port_pair]))
 
 
 def solve_subnetwork(

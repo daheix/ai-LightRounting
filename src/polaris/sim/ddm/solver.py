@@ -190,18 +190,33 @@ class DdmConfig:
     tol: float = 1e-6
 
     def __post_init__(self) -> None:
+        self._validate_grid()
+        self._validate_doping()
+        self._validate_physics()
+        self._validate_iteration()
+        self._validate_contacts()
+
+    def _validate_grid(self) -> None:
+        """校验网格维度与间距。"""
         if self.nx < 1 or self.ny < 1:
             raise ValueError(f"网格须 ≥1，实际 ({self.nx},{self.ny})")
         if self.dx <= 0.0 or self.dy <= 0.0:
             raise ValueError(f"dx/dy 须 > 0，实际 dx={self.dx} dy={self.dy}")
-        if self.doping_n.shape != (self.nx, self.ny):
-            raise ValueError(f"doping_n 形状 {self.doping_n.shape} ≠ ({self.nx},{self.ny})")
-        if self.doping_p.shape != (self.nx, self.ny):
-            raise ValueError(f"doping_p 形状 {self.doping_p.shape} ≠ ({self.nx},{self.ny})")
+
+    def _validate_doping(self) -> None:
+        """校验 doping 数组形状与数值范围（非负有限）。"""
+        expected = (self.nx, self.ny)
+        if self.doping_n.shape != expected:
+            raise ValueError(f"doping_n 形状 {self.doping_n.shape} ≠ {expected}")
+        if self.doping_p.shape != expected:
+            raise ValueError(f"doping_p 形状 {self.doping_p.shape} ≠ {expected}")
         if not np.all(np.isfinite(self.doping_n)) or np.any(self.doping_n < 0.0):
             raise ValueError("doping_n 须全为非负有限值")
         if not np.all(np.isfinite(self.doping_p)) or np.any(self.doping_p < 0.0):
             raise ValueError("doping_p 须全为非负有限值")
+
+    def _validate_physics(self) -> None:
+        """校验迁移率/SRH 寿命/本征浓度/温度（物理正值约束）。"""
         if self.mobility_n <= 0.0 or self.mobility_p <= 0.0:
             raise ValueError("迁移率须 > 0")
         if self.tau_n <= 0.0 or self.tau_p <= 0.0:
@@ -210,12 +225,19 @@ class DdmConfig:
             raise ValueError("n_i 须 > 0")
         if self.temperature <= 0.0:
             raise ValueError("温度须 > 0")
+
+    def _validate_iteration(self) -> None:
+        """校验牛顿迭代参数（max_iter/tol）。"""
         if self.max_iter < 1:
             raise ValueError(f"max_iter 须 ≥ 1，实际 {self.max_iter}")
         if self.tol <= 0.0:
             raise ValueError(f"tol 须 > 0，实际 {self.tol}")
+
+    def _validate_contacts(self) -> None:
+        """校验 Ohmic 接触方向与电压有限性。"""
+        valid_sides = ("west", "east", "south", "north")
         for side, voltage in self.contacts.items():
-            if side not in ("west", "east", "south", "north"):
+            if side not in valid_sides:
                 raise ValueError(f"未知接触方向 {side}")
             if not np.isfinite(voltage):
                 raise ValueError(f"接触电压 {side} 非有限值")
