@@ -31,6 +31,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from polaris.engine.alphachip_gnn import AlphaChipEdgeGNN
 from polaris.rl.alpha_chip import (
     AlphaChipAgent,
     AlphaChipConfig,
@@ -38,6 +39,7 @@ from polaris.rl.alpha_chip import (
     PhotonicPlacementEncoder,
     PhotonicPlacementReward,
 )
+from polaris.trainer.ppo_torch import PPOAgent
 
 # ---------------------------------------------------------------------------
 # 公共 fixture
@@ -167,34 +169,64 @@ class TestAlphaChipAgent:
     """AlphaChipAgent 智能体测试。"""
 
     def test_build_gnn(self, agent: AlphaChipAgent) -> None:
-        """GNN 构建：层数与参数结构正确。"""
-        gnn = agent.gnn_params
-        assert len(gnn) == agent.config.gnn_layers
-        for layer in gnn:
-            assert "W_self" in layer
-            assert "W_neigh" in layer
-            assert "W_edge" in layer
-            assert "b" in layer
-            # 输出维度 = gnn_hidden
-            assert layer["W_self"].shape[1] == agent.config.gnn_hidden
-            assert layer["W_neigh"].shape[1] == agent.config.gnn_hidden
+        """GNN 构建：AlphaChipEdgeGNN 实例与结构正确（D05 架构统一）。
+
+        D05: 复用 ``polaris.engine.alphachip_gnn.AlphaChipEdgeGNN``
+        （Edge-GNN + 多关系边变换 + GAT + GlobalAttention 读出），
+        替代旧版自实现简化版 numpy GNN（gnn_params 已移除）。
+        """
+        gnn = agent.gnn
+        assert isinstance(gnn, AlphaChipEdgeGNN)
+        # 消息传递层数与配置对齐
+        assert gnn.num_layers == agent.config.gnn_layers
+        # GAT 注意力开关与配置对齐
+        assert gnn.use_gat == agent.config.use_attention
+        # 多关系边变换启用（光-光/光-电/电-电，*创新* 2，Schlichtkrull 2018）
+        assert gnn.use_multi_relation is True
+        # 边编码器存在（多关系 R-GCN 或单关系边编码器）
+        assert hasattr(gnn, "edge_encoder")
+        # GAT 注意力层数 = num_layers（启用时）
+        if gnn.use_gat:
+            assert len(gnn.gat_layers) == agent.config.gnn_layers
+        # 图级读出：GlobalAttention（gate + proj，*创新* 3）
+        # readout_gate: hidden_dim → 1（注意力门控）
+        assert gnn.readout_gate.out_features == 1
+        # readout_proj: hidden_dim → out_dim(=gnn_hidden)
+        assert gnn.readout_proj.out_features == agent.config.gnn_hidden
 
     def test_build_policy(self, agent: AlphaChipAgent) -> None:
-        """策略网络构建：输出维度 = grid_h * grid_w。"""
-        params = agent.policy_params
-        assert "W1" in params and "b1" in params
-        assert "W2" in params and "b2" in params
-        out_dim = agent.config.grid_size[0] * agent.config.grid_size[1]
-        assert params["W2"].shape[1] == out_dim
-        assert params["b2"].shape[0] == out_dim
+        """策略网络构建：PPO ActorCritic，连续动作维度 = 2（D05 架构统一）。
+
+        D05: 复用 ``polaris.trainer.ppo_torch.PPOAgent``（PPO clip + GAE），
+        替代旧版自实现简化版 REINFORCE（policy_params 已移除）。
+        PPO 在连续动作空间优化（归一化 x, y），select_action 内部
+        量化到离散网格位置索引（保留外部接口）。
+        """
+        ppo = agent.ppo
+        assert isinstance(ppo, PPOAgent)
+        ac = ppo.ac
+        # 共享编码器 + 策略头（ActorCritic，复刻 SB3 ActorCriticPolicy）
+        assert hasattr(ac, "shared")
+        assert hasattr(ac, "action_mean")
+        assert hasattr(ac, "action_log_std")
+        # 连续动作维度 = 2（归一化 x, y，量化到网格由 select_action 完成）
+        assert ppo.action_dim == 2
+        assert ac.action_mean.out_features == 2
+        # log_std 可学习（高斯策略，SB3 风格）
+        assert ac.action_log_std.data.shape == (2,)
 
     def test_build_value(self, agent: AlphaChipAgent) -> None:
-        """价值网络构建：输出维度 = 1（标量）。"""
-        params = agent.value_params
-        assert "W1" in params and "b1" in params
-        assert "W2" in params and "b2" in params
-        assert params["W2"].shape[1] == 1
-        assert params["b2"].shape[0] == 1
+        """价值网络构建：PPO value_head 输出维度 = 1（标量，D05 架构统一）。
+
+        D05: 价值网络集成于 PPO ActorCritic（共享编码器 → value_head），
+        替代旧版独立 value_params。value_head 输出标量 baseline。
+        """
+        ppo = agent.ppo
+        assert isinstance(ppo, PPOAgent)
+        ac = ppo.ac
+        # 价值头：共享编码器 → 标量（baseline，SB3 风格）
+        assert hasattr(ac, "value_head")
+        assert ac.value_head.out_features == 1
 
     def test_select_action(
         self, agent: AlphaChipAgent, simple_circuit: dict
@@ -479,19 +511,22 @@ class TestR34R35Integration:
         """AlphaChip 功能对齐度 ≥ 90%。
 
         检查 AlphaChip 核心功能是否实现：
-        Edge-based GNN / 策略网络 / 价值网络 / REINFORCE / 奖励 / 状态编码。
+        Edge-based GNN / 策略网络 / 价值网络 / PPO / 奖励 / 状态编码。
+
+        D05 架构统一：GNN → AlphaChipEdgeGNN，策略/价值 → PPOAgent
+        （hasattr 检查替代旧版 gnn_params/policy_params/value_params）。
         """
         features = {
-            "edge_gnn": len(agent.gnn_params) > 0,
-            "policy_net": "W1" in agent.policy_params,
-            "value_net": "W1" in agent.value_params,
+            "edge_gnn": isinstance(agent.gnn, AlphaChipEdgeGNN),
+            "policy_net": isinstance(agent.ppo, PPOAgent),
+            "value_net": hasattr(agent.ppo.ac, "value_head"),
             "select_action": hasattr(agent, "select_action"),
             "compute_reward": hasattr(agent, "compute_reward"),
             "train": hasattr(agent, "train"),
             "place": hasattr(agent, "place"),
             "encoder": hasattr(agent, "encoder"),
             "reward_fn": hasattr(agent, "reward"),
-            "reinforce_trainer": True,
+            "ppo_trainer": True,
         }
         agent.circuit = simple_circuit
         placement = agent.place(simple_circuit)
@@ -543,15 +578,27 @@ class TestR34R35Integration:
         scores: dict[str, float] = {}
         # 1. 配置正确
         scores["config"] = 1.0 if agent.config.grid_size == (8, 8) else 0.0
-        # 2. GNN 构建
-        scores["gnn"] = 1.0 if len(agent.gnn_params) == agent.config.gnn_layers else 0.0
-        # 3. 策略网络
+        # 2. GNN 构建（AlphaChipEdgeGNN 实例 + 层数对齐，D05 架构统一）
+        scores["gnn"] = (
+            1.0
+            if isinstance(agent.gnn, AlphaChipEdgeGNN)
+            and agent.gnn.num_layers == agent.config.gnn_layers
+            else 0.0
+        )
+        # 3. 策略网络（PPO ActorCritic，连续动作维度 = 2，D05 架构统一）
         out_dim = agent.config.grid_size[0] * agent.config.grid_size[1]
         scores["policy"] = (
-            1.0 if agent.policy_params["W2"].shape[1] == out_dim else 0.0
+            1.0
+            if isinstance(agent.ppo, PPOAgent) and agent.ppo.action_dim == 2
+            else 0.0
         )
-        # 4. 价值网络
-        scores["value"] = 1.0 if agent.value_params["W2"].shape[1] == 1 else 0.0
+        # 4. 价值网络（PPO value_head 输出 = 1，D05 架构统一）
+        scores["value"] = (
+            1.0
+            if isinstance(agent.ppo, PPOAgent)
+            and agent.ppo.ac.value_head.out_features == 1
+            else 0.0
+        )
         # 5. select_action
         agent.circuit = simple_circuit
         dev = simple_circuit["devices"][0]
