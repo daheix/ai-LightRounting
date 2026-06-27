@@ -34,8 +34,6 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 import numpy as np
-import scipy.sparse as sp
-import scipy.sparse.linalg as spla
 
 from polaris.sim.types import SDict
 

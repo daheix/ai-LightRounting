@@ -47,7 +47,11 @@ from polaris.router.curvy_router import (
 )
 from polaris.router.gdsfactory_style import (
     GdsfactoryStyleRouter,
+)
+from polaris.router.gdsfactory_style import (
     Port as GfPort,
+)
+from polaris.router.gdsfactory_style import (
     RouteConfig as GfRouteConfig,
 )
 from polaris.router.jps_router import JPSRouter

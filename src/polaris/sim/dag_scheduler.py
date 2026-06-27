@@ -24,11 +24,8 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict, deque
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Callable
-
-import numpy as np
 
 from polaris.sim.types import SDict
 

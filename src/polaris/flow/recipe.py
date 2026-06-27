@@ -85,7 +85,7 @@ class Recipe:
         return json.dumps(self.to_dict(), ensure_ascii=False, indent=2)
 
     @classmethod
-    def from_dict(cls, d: dict) -> "Recipe":
+    def from_dict(cls, d: dict) -> Recipe:
         """从字典反序列化"""
         sim_cfg = d.get("sim_config", {})
         return cls(
@@ -106,7 +106,7 @@ class Recipe:
         )
 
     @classmethod
-    def from_json(cls, json_str: str) -> "Recipe":
+    def from_json(cls, json_str: str) -> Recipe:
         """从 JSON 字符串反序列化"""
         return cls.from_dict(json.loads(json_str))
 
@@ -130,7 +130,7 @@ class Recipe:
         return "\n".join(lines)
 
     @classmethod
-    def from_yaml(cls, yaml_str: str) -> "Recipe":
+    def from_yaml(cls, yaml_str: str) -> Recipe:
         """YAML 反序列化（简单解析器，不依赖 PyYAML）
 
         支持本类 to_yaml 生成的格式：顶层 key、二级 key、列表项。

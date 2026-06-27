@@ -13,8 +13,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from polaris.sim.constraint_types import Violation, ViolationType
 from polaris.sim.constraint_checks_geometry import _rect_gap
+from polaris.sim.constraint_types import Violation, ViolationType
 
 
 def check_insertion_loss(

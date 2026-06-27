@@ -34,8 +34,6 @@ from polaris.trainer.bc import (  # noqa: E402
 )
 from polaris.trainer.ppo_agent_discrete import (
     PPOAgentDiscrete,
-    _migrate_state_dict,
-    _migrate_weight_tensor,
 )
 from polaris.trainer.ppo_buffers import (
     AgentSpec,

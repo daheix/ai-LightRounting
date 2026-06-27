@@ -71,8 +71,6 @@ class _CurvyRouter:
           https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
         """
         from polaris.router.waveguide_router import (
-            GridRouter,
-            RouterConstraints,
             get_platform_constraints,
         )
 

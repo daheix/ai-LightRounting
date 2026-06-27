@@ -22,11 +22,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Callable
 
 import numpy as np
-
-from polaris.sim.types import SDict, get_backend, get_xp, set_backend
 
 logger = logging.getLogger(__name__)
 
@@ -122,11 +120,11 @@ def jit_compile(func: Callable) -> Callable:
 
 
 def waveguide_s_jax(
-    wl: "jnp.ndarray",
+    wl: jnp.ndarray,
     length: float = 10.0,
     neff: float = 2.4,
     ng: float = 4.0,
-) -> dict[tuple[str, str], "jnp.ndarray"]:
+) -> dict[tuple[str, str], jnp.ndarray]:
     """JAX 实现的波导 S 参数模型（JIT 可编译）。
 
     与 polaris.sim.models.waveguide_s 功能一致，但使用 jax.numpy，
@@ -163,9 +161,9 @@ def waveguide_s_jax(
 
 
 def cascade_two_port_jax(
-    s1: dict[tuple[str, str], "jnp.ndarray"],
-    s2: dict[tuple[str, str], "jnp.ndarray"],
-) -> dict[tuple[str, str], "jnp.ndarray"]:
+    s1: dict[tuple[str, str], jnp.ndarray],
+    s2: dict[tuple[str, str], jnp.ndarray],
+) -> dict[tuple[str, str], jnp.ndarray]:
     """JAX 实现的两端口级联（JIT 可编译）。
 
     使用 Redheffer 星积公式级联两个两端口网络。
@@ -211,10 +209,10 @@ def cascade_two_port_jax(
 
 
 def simulate_waveguide_chain_jax(
-    wl: "jnp.ndarray",
-    lengths: "jnp.ndarray",
+    wl: jnp.ndarray,
+    lengths: jnp.ndarray,
     neff: float = 2.4,
-) -> "jnp.ndarray":
+) -> jnp.ndarray:
     """JAX 实现的波导链仿真（JIT 可编译，创新点）。
 
     仿真 N 段波导的级联传输，支持 JIT 编译和自动微分。

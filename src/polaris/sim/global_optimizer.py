@@ -37,9 +37,8 @@ import numpy as np
 
 from polaris.sim.pso_optimizer import (
     GlobalResult,
-    PSOConfig,
     ParticleSwarmOptimizer,
-    create_pso_optimizer,
+    PSOConfig,
 )
 
 

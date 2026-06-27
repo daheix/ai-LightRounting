@@ -18,6 +18,25 @@
 """
 
 # === 作业流程系统 API ===
+# === Design Intent 流程 API（来自 design_intent 模块，R20）===
+from polaris.flow.design_intent import (
+    DesignIntentEngine as DesignIntentFlowEngine,
+)
+from polaris.flow.design_intent import (
+    IntentConfig,
+)
+
+# === IPKISS 兼容流程 API（来自 ipkiss_flow 模块）===
+from polaris.flow.ipkiss_flow import (
+    CircuitModelView,
+    ClosedLoopValidator,
+    IPKISSPCell,
+    IPKISSPDKBridge,
+    IPKISSView,
+    LayoutView,
+    NetlistView,
+    SDLFlow,
+)
 from polaris.flow.job import Job, JobState, JobStatus
 from polaris.flow.recipe import Recipe, SimConfig
 from polaris.flow.scheduler import JobScheduler
@@ -32,24 +51,6 @@ from polaris.flow.stage import (
 )
 from polaris.flow.tracker import JobTracker
 from polaris.flow.workspace import Workspace
-
-# === IPKISS 兼容流程 API（来自 ipkiss_flow 模块）===
-from polaris.flow.ipkiss_flow import (
-    CircuitModelView,
-    ClosedLoopValidator,
-    IPKISSPCell,
-    IPKISSPDKBridge,
-    IPKISSView,
-    LayoutView,
-    NetlistView,
-    SDLFlow,
-)
-
-# === Design Intent 流程 API（来自 design_intent 模块，R20）===
-from polaris.flow.design_intent import (
-    DesignIntentEngine as DesignIntentFlowEngine,
-    IntentConfig,
-)
 
 __all__ = [
     # 作业流程系统

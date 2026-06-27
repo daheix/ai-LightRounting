@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import Callable
 
 import numpy as np
@@ -39,8 +38,8 @@ except ImportError:
 
 def compute_gradient(
     func: Callable,
-    params: "jnp.ndarray",
-) -> "jnp.ndarray":
+    params: jnp.ndarray,
+) -> jnp.ndarray:
     """计算标量函数的梯度（反向模式 AD）。
 
     使用 jax.grad 计算梯度。
@@ -67,9 +66,9 @@ def compute_gradient(
 
 def compute_vjp(
     func: Callable,
-    params: "jnp.ndarray",
-    cotangent: "jnp.ndarray",
-) -> "jnp.ndarray":
+    params: jnp.ndarray,
+    cotangent: jnp.ndarray,
+) -> jnp.ndarray:
     """计算向量-雅可比比积（VJP，反向模式 AD）。
 
     VJP = J^T · cotangent，其中 J 为雅可比矩阵。
@@ -96,9 +95,9 @@ def compute_vjp(
 
 def compute_jvp(
     func: Callable,
-    params: "jnp.ndarray",
-    tangent: "jnp.ndarray",
-) -> tuple["jnp.ndarray", "jnp.ndarray"]:
+    params: jnp.ndarray,
+    tangent: jnp.ndarray,
+) -> tuple[jnp.ndarray, jnp.ndarray]:
     """计算雅可比-向量积（JVP，前向模式 AD）。
 
     JVP = J · tangent，其中 J 为雅可比矩阵。
@@ -156,7 +155,7 @@ def finite_difference_gradient(
 
 def verify_gradient(
     func: Callable,
-    params: "jnp.ndarray",
+    params: jnp.ndarray,
     eps: float = 1e-6,
     atol: float = 1e-4,
 ) -> tuple[bool, float]:
@@ -198,9 +197,9 @@ def verify_gradient(
 
 
 def waveguide_transmission_loss(
-    params: "jnp.ndarray",
-    wl: "jnp.ndarray",
-) -> "jnp.ndarray":
+    params: jnp.ndarray,
+    wl: jnp.ndarray,
+) -> jnp.ndarray:
     """可微分的波导传输损耗函数（创新点：可微分 PDK 模型）。
 
     创新逻辑: 器件模型支持端到端梯度优化，可用于逆向设计。
@@ -235,12 +234,12 @@ def waveguide_transmission_loss(
 
 def optimize_waveguide_lengths(
     target_transmission: float,
-    initial_lengths: "jnp.ndarray",
+    initial_lengths: jnp.ndarray,
     neff: float,
-    wl: "jnp.ndarray",
+    wl: jnp.ndarray,
     learning_rate: float = 0.01,
     n_steps: int = 100,
-) -> tuple["jnp.ndarray", list[float]]:
+) -> tuple[jnp.ndarray, list[float]]:
     """梯度优化波导长度（创新点：端到端优化）。
 
     创新逻辑: 使用 JAX 自动微分计算梯度，梯度下降优化波导长度。

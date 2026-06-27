@@ -21,12 +21,6 @@
 
 from __future__ import annotations
 
-from polaris.sim.constraint_types import (
-    CheckContext,
-    ConstraintConfig,
-    Violation,
-    ViolationType,
-)
 from polaris.sim.constraint_checks_geometry import (
     check_bend_radius,
     check_coupling_gap,
@@ -47,6 +41,12 @@ from polaris.sim.constraint_checks_performance import (
     check_crosstalk,
     check_insertion_loss,
     check_thermal,
+)
+from polaris.sim.constraint_types import (
+    CheckContext,
+    ConstraintConfig,
+    Violation,
+    ViolationType,
 )
 
 

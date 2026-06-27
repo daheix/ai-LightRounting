@@ -19,12 +19,17 @@ import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from polaris.data.specs import CircuitSpec
 from polaris.pipeline.curvy_router import _CurvyRouter
 from polaris.pipeline.default_simulator import _DefaultSimulator
 from polaris.sim.constraint_checker import ConstraintConfig
 from polaris.sim.sim_loop import SimLoop, SimLoopConfig
+
+if TYPE_CHECKING:
+    from polaris.flow.recipe import Recipe
+    from polaris.flow.workspace import Workspace
 
 logger = logging.getLogger(__name__)
 
@@ -513,9 +518,9 @@ class IntegratedPipeline:
 
     def run_as_stages(
         self,
-        recipe: "Recipe",
-        workspace: "Workspace",
-    ) -> list["StageResult"]:
+        recipe: Recipe,
+        workspace: Workspace,
+    ) -> list[StageResult]:
         """阶段化执行流水线（供 JobScheduler 调用）。
 
         按 Recipe 中启用的阶段列表顺序执行，每阶段输出持久化到 Workspace。

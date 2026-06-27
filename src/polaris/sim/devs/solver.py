@@ -35,9 +35,8 @@
 from __future__ import annotations
 
 import heapq
-import math
-from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Any, Dict, List, Tuple, Union
 
 # 无穷大时间（表示被动状态）
 INFINITY = float("inf")
@@ -158,7 +157,7 @@ class CoupledDEVS:
         self.name = name
         self.input_ports: List[str] = []
         self.output_ports: List[str] = []
-        self.components: Dict[str, Union[AtomicDEVS, "CoupledDEVS"]] = {}
+        self.components: Dict[str, Union[AtomicDEVS, CoupledDEVS]] = {}
         # 耦合关系: List[(src_comp, src_port, dst_comp, dst_port)]
         self._eic: List[Tuple[str, str, str, str]] = []  # 外部输入耦合
         self._eoc: List[Tuple[str, str, str, str]] = []  # 外部输出耦合
@@ -172,7 +171,7 @@ class CoupledDEVS:
         if port not in self.output_ports:
             self.output_ports.append(port)
 
-    def add_component(self, component: Union[AtomicDEVS, "CoupledDEVS"]) -> None:
+    def add_component(self, component: Union[AtomicDEVS, CoupledDEVS]) -> None:
         """添加子组件。"""
         if component.name in self.components:
             raise ValueError(f"组件 {component.name} 已存在")
@@ -324,7 +323,7 @@ class Coordinator:
     ):
         self.model = coupled_model
         self._current_time = start_time
-        self._children: Dict[str, Union[Simulator, "Coordinator"]] = {}
+        self._children: Dict[str, Union[Simulator, Coordinator]] = {}
         self._event_heap: List[Tuple[float, str]] = []  # (time, comp_name) 最小堆
 
         # 为每个子组件创建仿真器/协调器

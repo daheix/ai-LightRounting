@@ -30,8 +30,8 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from polaris.flow.recipe import Recipe
-    from polaris.flow.workspace import Workspace
     from polaris.flow.stage import StageResult
+    from polaris.flow.workspace import Workspace
 
 
 class JobStatus(str, Enum):
@@ -89,10 +89,10 @@ class Job:
     """
 
     job_id: str  # 时间戳格式 YYYYMMDD_HHMMSS_<6位随机>
-    recipe: "Recipe"  # 前向引用
-    workspace: "Workspace"  # 前向引用
+    recipe: Recipe  # 前向引用
+    workspace: Workspace  # 前向引用
     status: JobStatus = JobStatus.QUEUED
-    stage_results: list["StageResult"] = field(default_factory=list)
+    stage_results: list[StageResult] = field(default_factory=list)
     submit_time: datetime = field(default_factory=datetime.now)
     start_time: datetime | None = None
     end_time: datetime | None = None
