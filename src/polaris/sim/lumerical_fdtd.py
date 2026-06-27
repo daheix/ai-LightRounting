@@ -523,7 +523,11 @@ class LumericalFDTDBackend:
     # ------------------------------------------------------------------
 
     def _init_update_coefficients(self) -> None:
-        """预计算 E 更新系数 C_a/C_b（依赖 ε_r）与 H 系数 D_a/D_b（μ=μ_0）。"""
+        """预计算 E 更新系数 C_a/C_b（依赖 ε_r）与 H 系数 D_a/D_b（μ=μ_0）。
+
+        系数约定：差分运算已包含 /dx /dy /dz，故 C_b/D_b 仅含 (Δt/ε) 与 (Δt/μ)，
+        不再额外除网格间距，避免重复除导致数值发散。
+        """
         if self._eps_r is None:
             raise RuntimeError("ε_r 未初始化")
         dt = self._cfg.dt
@@ -532,15 +536,13 @@ class LumericalFDTDBackend:
         # C_a = (1 - σΔt/(2ε)) / (1 + σΔt/(2ε)), C_b = (Δt/ε) / (1 + σΔt/(2ε))
         denom_e = 1.0 + sigma_e * dt / (2.0 * eps)
         self._ca = (1.0 - sigma_e * dt / (2.0 * eps)) / denom_e
-        self._cb = (dt / eps) / denom_e
-        # H 更新系数（μ=μ_0，无磁损耗；非 PML 区域 da/db 一致）
+        self._cb = (dt / eps) / denom_e  # 标量场 (nx, ny, nz)
+        # H 更新系数（μ=μ_0，无磁损耗；非 PML 区域 D_a/D_b 一致）
         sigma_m = 0.0
         mu = _MU0
         denom_h = 1.0 + sigma_m * dt / (2.0 * mu)
         self._da = (1.0 - sigma_m * dt / (2.0 * mu)) / denom_h
-        self._db_x = (dt / mu) / denom_h / self._cfg.dx
-        self._db_y = (dt / mu) / denom_h / self._cfg.dy
-        self._db_z = (dt / mu) / denom_h / self._cfg.dz
+        self._db = (dt / mu) / denom_h  # 标量（无方向）
 
     def _init_cpml_3d(self) -> None:
         """初始化 6 面 CPML σ 梯度与递归卷积 ψ 缓冲。
@@ -609,72 +611,70 @@ class LumericalFDTDBackend:
         """更新 H^{n+1/2}（3D Yee Faraday 旋度，向量化）。
 
         Faraday 定律 ∂H/∂t = -(1/μ)·∇×E，逐分量：
-        H_x = D_a·H_x + D_bx·(∂E_y/∂z − ∂E_z/∂y)
-        H_y = D_a·H_y + D_by·(∂E_z/∂x − ∂E_x/∂z)
-        H_z = D_a·H_z + D_bz·(∂E_x/∂y − ∂E_y/∂x)
-        有效范围：H_x [nx, ny-1, nz-1] / H_y [nx-1, ny, nz-1] / H_z [nx-1, ny-1, nz]。
+        H_x = D_a·H_x + D_b·(∂E_y/∂z − ∂E_z/∂y)
+        H_y = D_a·H_y + D_b·(∂E_z/∂x − ∂E_x/∂z)
+        H_z = D_a·H_z + D_b·(∂E_x/∂y − ∂E_y/∂x)
+        差分已含 /dx /dy /dz，D_b = Δt/μ 标量。
         """
         ex, ey, ez = self._ex, self._ey, self._ez
         hx, hy, hz = self._hx, self._hy, self._hz
-        da = self._da
+        da, db = self._da, self._db
         dy, dz = self._cfg.dy, self._cfg.dz
+        dx = self._cfg.dx
         # H_x: ∂E_y/∂z − ∂E_z/∂y，范围 [:, :−1, :−1]
         dey_dz = (ey[:, :-1, 1:] - ey[:, :-1, :-1]) / dz
         dez_dy = (ez[:, 1:, :-1] - ez[:, :-1, :-1]) / dy
-        hx[:, :-1, :-1] = da * hx[:, :-1, :-1] + self._db_x * (dey_dz - dez_dy)
+        hx[:, :-1, :-1] = da * hx[:, :-1, :-1] + db * (dey_dz - dez_dy)
         # H_y: ∂E_z/∂x − ∂E_x/∂z，范围 [:−1, :, :−1]
-        dz_dx = (ez[1:, :, :-1] - ez[:-1, :, :-1]) / self._cfg.dx
-        de_dz = (ex[:-1, :, 1:] - ex[:-1, :, :-1]) / dz
-        hy[:-1, :, :-1] = da * hy[:-1, :, :-1] + self._db_y * (dz_dx - de_dz)
+        dez_dx = (ez[1:, :, :-1] - ez[:-1, :, :-1]) / dx
+        dex_dz = (ex[:-1, :, 1:] - ex[:-1, :, :-1]) / dz
+        hy[:-1, :, :-1] = da * hy[:-1, :, :-1] + db * (dez_dx - dex_dz)
         # H_z: ∂E_x/∂y − ∂E_y/∂x，范围 [:−1, :−1, :]
-        dx_dy = (ex[:-1, 1:, :] - ex[:-1, :-1, :]) / dy
-        de_dx = (ey[1:, :-1, :] - ey[:-1, :-1, :]) / self._cfg.dx
-        hz[:-1, :-1, :] = da * hz[:-1, :-1, :] + self._db_z * (dx_dy - de_dx)
+        dex_dy = (ex[:-1, 1:, :] - ex[:-1, :-1, :]) / dy
+        dey_dx = (ey[1:, :-1, :] - ey[:-1, :-1, :]) / dx
+        hz[:-1, :-1, :] = da * hz[:-1, :-1, :] + db * (dex_dy - dey_dx)
         self._apply_cpml_3d(field_is_e=False)
 
     def _step_e_3d(self) -> None:
         """更新 E^{n+1}（3D Yee Ampere 旋度，向量化，含 Drude −cb·J 校正）。
 
         Ampere 定律 ∂E/∂t = (1/ε)·∇×H，逐分量：
-        E_x = C_a·E_x + C_bx·(∂H_z/∂y − ∂H_y/∂z)
-        E_y = C_a·E_y + C_by·(∂H_x/∂z − ∂H_z/∂x)
-        E_z = C_a·E_z + C_bz·(∂H_y/∂x − ∂H_x/∂y)
-        有效范围：E_x [nx, ny-1, nz-1] / E_y [nx-1, ny, nz-1] / E_z [nx-1, ny-1, nz]。
+        E_x = C_a·E_x + C_b·(∂H_z/∂y − ∂H_y/∂z)
+        E_y = C_a·E_y + C_b·(∂H_x/∂z − ∂H_z/∂x)
+        E_z = C_a·E_z + C_b·(∂H_y/∂x − ∂H_x/∂y)
+        差分已含 /dx /dy /dz，C_b = Δt/ε 体分布场。
         """
         hx, hy, hz = self._hx, self._hy, self._hz
         ex, ey, ez = self._ex, self._ey, self._ez
         ca, cb = self._ca, self._cb
         dy, dz = self._cfg.dy, self._cfg.dz
-        cb_x = cb / self._cfg.dx
-        cb_y = cb / dy
-        cb_z = cb / dz
+        dx = self._cfg.dx
         # E_x: ∂H_z/∂y − ∂H_y/∂z，范围 [:, :−1, :−1]
         dhz_dy = (hz[:, 1:, :-1] - hz[:, :-1, :-1]) / dy
         dhy_dz = (hy[:, :-1, 1:] - hy[:, :-1, :-1]) / dz
         ex[:, :-1, :-1] = (
             ca[:, :-1, :-1] * ex[:, :-1, :-1]
-            + cb_x[:, :-1, :-1] * (dhz_dy - dhy_dz)
+            + cb[:, :-1, :-1] * (dhz_dy - dhy_dz)
         )
         # E_y: ∂H_x/∂z − ∂H_z/∂x，范围 [:−1, :, :−1]
         dhx_dz = (hx[:-1, :, 1:] - hx[:-1, :, :-1]) / dz
-        dhz_dx = (hz[1:, :, :-1] - hz[:-1, :, :-1]) / self._cfg.dx
+        dhz_dx = (hz[1:, :, :-1] - hz[:-1, :, :-1]) / dx
         ey[:-1, :, :-1] = (
             ca[:-1, :, :-1] * ey[:-1, :, :-1]
-            + cb_y[:-1, :, :-1] * (dhx_dz - dhz_dx)
+            + cb[:-1, :, :-1] * (dhx_dz - dhz_dx)
         )
         # E_z: ∂H_y/∂x − ∂H_x/∂y，范围 [:−1, :−1, :]
-        dhy_dx = (hy[1:, :-1, :] - hy[:-1, :-1, :]) / self._cfg.dx
+        dhy_dx = (hy[1:, :-1, :] - hy[:-1, :-1, :]) / dx
         dhx_dy = (hx[:-1, 1:, :] - hx[:-1, :-1, :]) / dy
         ez[:-1, :-1, :] = (
             ca[:-1, :-1, :] * ez[:-1, :-1, :]
-            + cb_z[:-1, :-1, :] * (dhy_dx - dhx_dy)
+            + cb[:-1, :-1, :] * (dhy_dx - dhx_dy)
         )
-        # Drude 极化电流校正（J 已在 _step_drude 用 E^n 推进）
+        # Drude 极化电流校正（J 已在 _step_drude 用 E^n 推进，Taflove §9.3）
         for idx, region in enumerate(self._disp_regions):
             if region.model == "drude":
                 j = self._drude_J[idx]
-                # 仅校正 Ez（TFSF 平面波 E_z 偏振）
-                ez[region.mask] -= cb_z[region.mask] * j[region.mask]
+                ez[region.mask] -= cb[region.mask] * j[region.mask]
         self._apply_cpml_3d(field_is_e=True)
 
     def _apply_cpml_3d(self, field_is_e: bool) -> None:

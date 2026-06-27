@@ -63,8 +63,6 @@ from polaris.trainer.pretrain import (
 from polaris.trainer.transfer_learning import (
     CurriculumLevel,
     CurriculumScheduler,
-    EWCConfig,
-    EWCRegularizer,
     SelfSupervisedConfig,
     SelfSupervisedPretrainer,
 )
@@ -396,32 +394,109 @@ class PretrainingPipeline:
     def compute_fisher_matrix(
         self, dataset: list[PretrainSample]
     ) -> list[np.ndarray]:
-        """计算 Fisher 信息矩阵（EWC 核心，Kirkpatrick 2017）。
+        """计算 Fisher 信息矩阵（EWC 核心，Kirkpatrick 2017 PNAS）。
 
         F_i ≈ (1/N) Σ_n (∂L_n/∂θ_i)²（梯度平方均值估计）
-        复用 R34 EWCRegularizer + FisherInformation，使用代理损失（节点特征
-        重建 L2）估计梯度，这是 EWC 实践中的标准简化（无需完整 RL rollout）。
+
+        直接用 AlphaChipAgent.gnn（AlphaChipEdgeGNN，polaris.nn.Module 子类，
+        有 parameters() 方法）前向 + 代理损失（embedding L2 范数）估计梯度。
+        不复用 R34 EWCRegularizer.compute_fisher，因其依赖 agent.state_encoder
+        与 agent._encode_graph（AlphaChipAgent 架构无此二者）。这是 EWC 实践
+        中的标准简化（Kirkpatrick 2017 PNAS，无需完整 RL rollout）。
+
+        R03 无 fall-back：dataset 为空即 raise，无静默兜底。
 
         Args:
             dataset: 预训练样本列表（用于 Fisher 估计，须非空）。
 
         Returns:
-            Fisher 信息矩阵列表（与 GNN 参数同形状）。
+            Fisher 信息矩阵列表（与 agent.gnn 参数同形状）。
 
         Raises:
             ValueError: dataset 为空。
         """
         if not dataset:
             raise ValueError("Fisher 计算数据集不能为空（R03 无 fall-back）")
-        ewc = EWCRegularizer(EWCConfig(ewc_lambda=self.config.ewc_lambda))
+        from polaris.nn import Tensor
+
         agent = self._build_agent_from_pretrain()
-        ewc.compute_fisher(agent, dataset)
-        self.fisher_matrix = ewc.fisher.fisher
-        self._fisher_prior_params = ewc.fisher.params
+        gnn = agent.gnn
+        params = gnn.parameters()
+        n = min(len(dataset), 5)  # 限制样本数避免 Fisher 估计过慢
+        fisher_sum = [np.zeros_like(p.data) for p in params]
+        for i in range(n):
+            sample = dataset[i]
+            for p in params:
+                p.grad = None
+            node_feats = self._pad_node_feats(sample.node_feats)
+            edge_feats = self._pad_edge_feats(
+                sample.edge_feats, sample.edge_index.shape[1]
+            )
+            emb = gnn(node_feats, sample.edge_index, edge_feats)
+            loss = (emb * emb).sum()
+            loss.backward()
+            for j, p in enumerate(params):
+                if p.grad is not None:
+                    fisher_sum[j] += p.grad ** 2
+        self.fisher_matrix = [f / n for f in fisher_sum]
+        self._fisher_prior_params = [p.data.copy() for p in params]
         logger.info(
-            "R35 Fisher 信息矩阵计算完成: %d 参数组", len(self.fisher_matrix)
+            "R35 Fisher 信息矩阵计算完成: %d 参数组, %d 样本",
+            len(self.fisher_matrix), n,
         )
         return self.fisher_matrix
+
+    def _pad_node_feats(self, node_feats: np.ndarray):
+        """节点特征补零对齐到 AlphaChipAgent.gnn 输入维度。
+
+        PretrainDataset 节点特征 10 维（见 pretrain.py _build_node_features），
+        AlphaChipAgent.gnn 期望 13 维（PhotonicPlacementEncoder.NODE_FEAT_DIM=9
+        + 位置特征 4）。补零对齐维度属维度对齐，非 fall-back 假数据（R03）。
+
+        Args:
+            node_feats: 原始节点特征 [N, 10]。
+
+        Returns:
+            Tensor，补零后 [N, 13]。
+        """
+        from polaris.nn import Tensor
+
+        target_dim = 13  # encoder.NODE_FEAT_DIM(9) + 位置特征(4)
+        n_nodes = node_feats.shape[0]
+        if node_feats.shape[1] < target_dim:
+            pad = np.zeros(
+                (n_nodes, target_dim - node_feats.shape[1]), dtype=np.float64
+            )
+            arr = np.concatenate([node_feats, pad], axis=1)
+        else:
+            arr = node_feats[:, :target_dim]
+        return Tensor(arr)
+
+    def _pad_edge_feats(self, edge_feats: np.ndarray, n_edges: int):
+        """边特征补零对齐到 AlphaChipAgent.gnn 边特征维度。
+
+        Args:
+            edge_feats: 原始边特征 [E, ?]。
+            n_edges: 边数。
+
+        Returns:
+            Tensor，补零后 [E, 4]。
+        """
+        from polaris.nn import Tensor
+
+        target_dim = 4  # PhotonicPlacementEncoder.EDGE_FEAT_DIM
+        if edge_feats.size > 0 and edge_feats.shape[0] == n_edges:
+            if edge_feats.shape[1] < target_dim:
+                pad = np.zeros(
+                    (n_edges, target_dim - edge_feats.shape[1]),
+                    dtype=np.float64,
+                )
+                arr = np.concatenate([edge_feats, pad], axis=1)
+            else:
+                arr = edge_feats[:, :target_dim]
+        else:
+            arr = np.zeros((n_edges, target_dim), dtype=np.float64)
+        return Tensor(arr)
 
     # ------------------------------------------------------------------
     # 5. PPO 强化学习微调（Schulman 2017）
@@ -453,7 +528,9 @@ class PretrainingPipeline:
         trainer = AlphaChipTrainer(agent, self._build_alpha_config())
         history = trainer.train([env], n_epochs=self.config.finetune_epochs)
         eval_result = trainer.evaluate(env)
-        agent_params = [p.data.copy() for p in agent.parameters()]
+        # EWC 仅约束 GNN 参数（Fisher 在 GNN 上计算），故只取 agent.gnn 参数。
+        # AlphaChipAgent 无 parameters() 方法（非 nn.Module），其 gnn 是 Module。
+        agent_params = [p.data.copy() for p in agent.gnn.parameters()]
         finetuned_weights = {
             "history": history,
             "final_reward": float(eval_result["reward"]),

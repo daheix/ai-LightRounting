@@ -590,9 +590,11 @@ class InterconnectBackend:
     def _sparams_to_fft_axis(self, s21: np.ndarray) -> np.ndarray:
         """将 S21 从扫描频率轴插值到 FFT 频率轴（物理频率，FFT 顺序）。
 
+        对幅度和 unwrap 后的相位分别插值，避免复数直接插值的相位混叠
+        （波导 S21 相位在扫描范围内可能变化多个 2π 周期，复数插值失败）。
         对超出扫描范围的 FFT 频率，使用最近边界值外推（np.interp 默认行为）。
-        物理依据: 光子器件带外 S 参数趋于常数（波导远带外相位线性延伸），
-        边界外推是物理合理的近似，非 fall-back（Oppenheim §3 LTI 带限假设）。
+        物理依据: 光子器件带外 S 参数趋于常数，边界外推是物理合理的近似，
+        非 fall-back（Oppenheim §3 LTI 带限假设）。
 
         Args:
             s21: 扫描频率轴上的 S21 (n_freq,)。
@@ -605,8 +607,11 @@ class InterconnectBackend:
         fft_freq = np.fft.fftfreq(cfg.n_steps, d=cfg.timestep)
         f_phys = f0 + fft_freq
         f_scan = f0 + self.freq_axis
-        # np.interp 默认对超出 [f_scan.min, f_scan.max] 的值用边界值外推
-        return np.interp(f_phys, f_scan, s21)
+        amp = np.abs(s21)
+        phase = np.unwrap(np.angle(s21))
+        amp_fft = np.interp(f_phys, f_scan, amp)
+        phase_fft = np.interp(f_phys, f_scan, phase)
+        return amp_fft * np.exp(1j * phase_fft)
 
     def analyze_eye_diagram(
         self, time_signal: np.ndarray, bit_rate: float
