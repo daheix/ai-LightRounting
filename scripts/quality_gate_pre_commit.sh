@@ -21,6 +21,15 @@ case "$REPO_DIR" in
         ;;
 esac
 
+# === bug 3 修复: 校验远端分支可见性 (质量门禁强制校验) ===
+# 确保每次提交前 remote.origin.fetch 配置为全分支, 远端新分支可见
+EXPECTED_FETCH="+refs/heads/*:refs/remotes/origin/*"
+CURRENT_FETCH=$(git config remote.origin.fetch 2>/dev/null || echo "")
+if [ "$CURRENT_FETCH" != "$EXPECTED_FETCH" ]; then
+    git config remote.origin.fetch "$EXPECTED_FETCH"
+    echo "[quality_gate] 已配置 remote.origin.fetch 为全分支 (bug 3 修复)"
+fi
+
 # 跳过条件2: 仅文档/配置变更时不运行门禁 (加速提交)
 CHANGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|json)$' | head -20)
 if [ -z "$CHANGED_FILES" ]; then
