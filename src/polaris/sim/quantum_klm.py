@@ -180,6 +180,74 @@ def klm_cnot_circuit() -> tuple[np.ndarray, tuple[int, int], tuple[int, int]]:
     return U, (0, 1), (2, 3)
 
 
+def _post_select_and_extract_signal(
+    dist,
+    signal_modes: tuple[int, int],
+    aux_modes: tuple[int, int],
+) -> tuple[dict, float, dict[tuple[int, int], float]]:
+    """后选择辅助模式各 1 光子，并提取归一化信号模式分布。
+
+    后选择: 辅助模式 aux1, aux2 各探测到 1 个光子。
+    信号模式分布: 后选择条件下的 (control, target) 光子数分布。
+
+    来源: Ralph et al., PRA 2002, 简化 KLM CNOT 门
+      https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324
+    """
+    post_select_states: dict = {}
+    post_select_prob = 0.0
+    for out_state, prob in dist.output_prob.items():
+        if out_state[aux_modes[0]] == 1 and out_state[aux_modes[1]] == 1:
+            post_select_states[out_state] = prob
+            post_select_prob += prob
+
+    signal_dist: dict[tuple[int, int], float] = {}
+    for out_state, prob in post_select_states.items():
+        sig_state = (out_state[signal_modes[0]], out_state[signal_modes[1]])
+        signal_dist[sig_state] = signal_dist.get(sig_state, 0.0) + prob
+    # 归一化
+    if post_select_prob > 0:
+        for k in signal_dist:
+            signal_dist[k] /= post_select_prob
+    return post_select_states, float(post_select_prob), signal_dist
+
+
+def _verify_quantum_interference(
+    signal_dist: dict[tuple[int, int], float],
+) -> dict:
+    """验证信号模式分布的量子干涉特征（与经典均匀分布对比）。
+
+    经典情况: 2 光子在 2 模式中均匀分布，每个模式概率 0.25；
+    量子干涉: 分布偏离均匀，展示量子干涉特征。
+    """
+    signal_probs = list(signal_dist.values())
+    max_deviation = max(abs(p - 0.25) for p in signal_probs) if signal_probs else 0.0
+    return {
+        "signal_dist": signal_dist,
+        "max_deviation_from_classical": float(max_deviation),
+        "is_quantum": max_deviation > 0.1,  # 偏离经典均匀分布 > 10%
+        "classical_uniform_prob": 0.25,
+    }
+
+
+def _sample_klm_success_rate(
+    dist,
+    aux_modes: tuple[int, int],
+    n_shots: int,
+    seed: int | None,
+) -> float:
+    """蒙特卡洛采样验证后选择成功率。"""
+    rng = np.random.default_rng(seed)
+    states_list = list(dist.output_prob.keys())
+    probs_list = np.array([dist.output_prob[s] for s in states_list], dtype=float)
+    probs_list = probs_list / probs_list.sum()
+    sampled = rng.choice(len(states_list), size=n_shots, p=probs_list)
+    sampled_success = sum(
+        1 for idx in sampled
+        if states_list[idx][aux_modes[0]] == 1 and states_list[idx][aux_modes[1]] == 1
+    )
+    return float(sampled_success / n_shots)
+
+
 def klm_cnot_simulate(
     n_shots: int = 10000,
     seed: int | None = None,
@@ -230,67 +298,30 @@ def klm_cnot_simulate(
     """
     U, signal_modes, aux_modes = klm_cnot_circuit()
     input_state = (1, 1, 1, 1)
-
     # 计算完整输出分布
     dist = boson_sampling_distribution(U, input_state)
     total_prob = sum(dist.output_prob.values())
-
-    # 后选择: 辅助模式 aux1, aux2 各探测到 1 个光子
-    post_select_states = {}
-    post_select_prob = 0.0
-    for out_state, prob in dist.output_prob.items():
-        if out_state[aux_modes[0]] == 1 and out_state[aux_modes[1]] == 1:
-            post_select_states[out_state] = prob
-            post_select_prob += prob
-
-    # 提取后选择后的信号模式分布
-    signal_dist: dict[tuple[int, int], float] = {}
-    for out_state, prob in post_select_states.items():
-        sig_state = (out_state[signal_modes[0]], out_state[signal_modes[1]])
-        signal_dist[sig_state] = signal_dist.get(sig_state, 0.0) + prob
-
-    # 归一化信号模式分布
-    if post_select_prob > 0:
-        for k in signal_dist:
-            signal_dist[k] /= post_select_prob
-
-    # 量子干涉特征验证: 信号模式分布非均匀（经典情况下应均匀）
-    # 经典情况: 2 光子在 2 模式中均匀分布，每个模式概率 0.25
-    # 量子干涉: 分布偏离均匀，展示量子干涉特征
-    signal_probs = list(signal_dist.values())
-    max_deviation = max(abs(p - 0.25) for p in signal_probs) if signal_probs else 0.0
-    quantum_interference = {
-        "signal_dist": signal_dist,
-        "max_deviation_from_classical": float(max_deviation),
-        "is_quantum": max_deviation > 0.1,  # 偏离经典均匀分布 > 10%
-        "classical_uniform_prob": 0.25,
-    }
-
-    # 蒙特卡洛采样验证
-    rng = np.random.default_rng(seed)
-    states_list = list(dist.output_prob.keys())
-    probs_list = np.array([dist.output_prob[s] for s in states_list], dtype=float)
-    probs_list = probs_list / probs_list.sum()
-    sampled = rng.choice(len(states_list), size=n_shots, p=probs_list)
-    sampled_success = sum(
-        1 for idx in sampled
-        if states_list[idx][aux_modes[0]] == 1 and states_list[idx][aux_modes[1]] == 1
+    # 后选择 + 信号模式分布提取
+    post_select_states, post_select_prob, signal_dist = (
+        _post_select_and_extract_signal(dist, signal_modes, aux_modes)
     )
-    sampled_success_rate = sampled_success / n_shots
-
+    # 量子干涉特征验证
+    quantum_interference = _verify_quantum_interference(signal_dist)
+    # 蒙特卡洛采样验证
+    sampled_success_rate = _sample_klm_success_rate(dist, aux_modes, n_shots, seed)
     return {
         "unitary": U,
         "input_state": input_state,
         "total_prob": float(total_prob),
         "prob_sum_ok": abs(total_prob - 1.0) < 1e-6,
-        "post_select_prob": float(post_select_prob),
+        "post_select_prob": post_select_prob,
         "post_select_dist": post_select_states,
         "signal_dist": signal_dist,
         "quantum_interference": quantum_interference,
         "n_shots": n_shots,
-        "sampled_success_rate": float(sampled_success_rate),
+        "sampled_success_rate": sampled_success_rate,
         "theoretical_success_prob": 0.25,  # KLM 理论值（完整 NS gate 版本）
-        "simplified_success_prob": float(post_select_prob),  # 简化电路实际值
+        "simplified_success_prob": post_select_prob,  # 简化电路实际值
     }
 
 

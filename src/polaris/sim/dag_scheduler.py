@@ -269,34 +269,48 @@ def cascade_parallel(
     # 小规模电路不启用并行
     if n < MIN_PARALLEL_SUBNETWORKS:
         logger.info("cascade_parallel: 电路规模 %d < %d，使用串行 KLU", n, MIN_PARALLEL_SUBNETWORKS)
-        from polaris.sim.cascade_backends import cascade_klu
+        return _fallback_klu(instances, connections, ports)
 
-        return cascade_klu(instances, connections, ports)
-
-    # 创建 DAG
+    # 创建 DAG 并检测并行层级
     dag = create_dag(instances, connections)
-
-    # 检测并行层级
     try:
         levels = detect_parallel_groups(dag)
     except RuntimeError:
-        # 存在环，使用 KLU
         logger.info("cascade_parallel: 检测到环，使用 KLU 后端")
-        from polaris.sim.cascade_backends import cascade_klu
+        return _fallback_klu(instances, connections, ports)
 
-        return cascade_klu(instances, connections, ports)
-
-    # 如果只有 1 层，说明所有节点串行，使用 KLU
+    # 只有 1 层说明所有节点串行
     if len(levels) <= 1:
-        from polaris.sim.cascade_backends import cascade_klu
+        return _fallback_klu(instances, connections, ports)
 
-        return cascade_klu(instances, connections, ports)
+    # 子网络分解 + 并行求解 + 合并
+    return _parallel_solve_subnetworks(
+        instances, connections, ports, levels, max_workers
+    )
 
-    # 使用子网络分解 + 并行求解
+
+def _fallback_klu(
+    instances: dict[str, SDict],
+    connections: list[tuple[str, str]],
+    ports: dict[str, str] | None,
+) -> SDict:
+    """回退到 KLU 后端（小规模或环电路场景）。"""
+    from polaris.sim.cascade_backends import cascade_klu
+
+    return cascade_klu(instances, connections, ports)
+
+
+def _parallel_solve_subnetworks(
+    instances: dict[str, SDict],
+    connections: list[tuple[str, str]],
+    ports: dict[str, str] | None,
+    levels: list[list[str]],
+    max_workers: int | None,
+) -> SDict:
+    """子网络分解、并行求解、Schur 合并的编排函数。"""
     from polaris.sim.subnetwork_decomp import (
         decompose_circuit,
         merge_subnetworks_via_schur,
-        solve_subnetwork,
     )
 
     # 分解为子网络
@@ -305,14 +319,20 @@ def cascade_parallel(
         decomp = decompose_circuit(instances, connections, num_subnetworks=num_subs)
     except RuntimeError as e:
         logger.warning("子网络分解失败: %s，使用 KLU", e)
-        from polaris.sim.cascade_backends import cascade_klu
+        return _fallback_klu(instances, connections, ports)
 
-        return cascade_klu(instances, connections, ports)
+    sub_params = _prepare_subnetwork_params(instances, connections, decomp)
+    sub_results = _solve_subnetworks(sub_params, max_workers)
 
-    # 并行求解各子网络
-    sub_results: list[SDict] = [None] * len(decomp.subnetworks)  # type: ignore[list-item]
+    return merge_subnetworks_via_schur(sub_results, decomp.couplings)
 
-    # 准备子网络参数
+
+def _prepare_subnetwork_params(
+    instances: dict[str, SDict],
+    connections: list[tuple[str, str]],
+    decomp,
+) -> list[tuple[int, dict[str, SDict], list[tuple[str, str]]]]:
+    """准备每个子网络的 (索引, 子实例, 子连接) 参数列表。"""
     sub_params = []
     for i, sub_inst_names in enumerate(decomp.subnetworks):
         sub_instances = {k: instances[k] for k in sub_inst_names if k in instances}
@@ -322,28 +342,34 @@ def cascade_parallel(
             if p1.split(".")[0] in sub_inst_names and p2.split(".")[0] in sub_inst_names
         ]
         sub_params.append((i, sub_instances, sub_connections))
+    return sub_params
 
-    # 使用线程池（避免进程间数据拷贝）
-    # 来源: Python multiprocessing 文档；GIL 限制下 numpy 操作可并行
+
+def _solve_subnetworks(
+    sub_params: list[tuple[int, dict[str, SDict], list[tuple[str, str]]]],
+    max_workers: int | None,
+) -> list[SDict]:
+    """并行求解所有子网络，返回与 sub_params 顺序对齐的结果列表。"""
+    from polaris.sim.subnetwork_decomp import solve_subnetwork
+
+    sub_results: list[SDict] = [None] * len(sub_params)  # type: ignore[list-item]
+    # 使用线程池（避免进程间数据拷贝，numpy 操作释放 GIL）
     workers = min(len(sub_params), max_workers or DEFAULT_MAX_WORKERS)
     if workers <= 1:
         # 串行求解
         for i, sub_inst, sub_conn in sub_params:
             sub_results[i] = solve_subnetwork(sub_inst, sub_conn)
-    else:
-        # 并行求解
-        # 使用 ThreadPoolExecutor（numpy 操作释放 GIL）
-        with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {
-                executor.submit(solve_subnetwork, sub_inst, sub_conn): i
-                for i, sub_inst, sub_conn in sub_params
-            }
-            for future in as_completed(futures):
-                idx = futures[future]
-                sub_results[idx] = future.result()
-
-    # 合并子网络结果
-    return merge_subnetworks_via_schur(sub_results, decomp.couplings)
+        return sub_results
+    # 并行求解
+    with ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = {
+            executor.submit(solve_subnetwork, sub_inst, sub_conn): i
+            for i, sub_inst, sub_conn in sub_params
+        }
+        for future in as_completed(futures):
+            idx = futures[future]
+            sub_results[idx] = future.result()
+    return sub_results
 
 
 def schedule_circuit(

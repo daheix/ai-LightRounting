@@ -58,6 +58,112 @@ from polaris.sim.fde import Mode
 __all__ = ["build_interface_smatrix"]
 
 
+def _validate_modes_match(m_e: np.ndarray, m_h: np.ndarray) -> int:
+    """验证界面两侧模式数匹配，返回模式数 M。
+
+    Raises:
+        ValueError: 两侧模式数不匹配（M_E + M_H 须为方阵方可求逆）。
+    """
+    m_a, m_b = m_e.shape
+    if m_a != m_b:
+        raise ValueError(
+            f"界面两侧模式数不匹配: M_A={m_a} vs M_B={m_b}。"
+            "界面 S 矩阵要求两侧模式数一致（M_E + M_H 须为方阵方可求逆）。"
+        )
+    return m_a
+
+
+def _compute_raw_interface_blocks(
+    m_e: np.ndarray, m_h: np.ndarray, m_a: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """计算未归一化的界面 S 矩阵四个分块（A02 §7.3 公式）。
+
+        S11 = (M_E - M_H)·(M_E + M_H)^{-1}    （A 侧反射）
+        S21 = 2·(M_E + M_H)^{-1}              （A→B 透射）
+        S12 = S21^T                            （互易性，洛伦兹互易定理）
+        S22 = -S11                             （对称结构）
+
+    Args:
+        m_e, m_h: 重叠积分矩阵。
+        m_a: 模式数 M。
+
+    Returns:
+        (s11, s12, s21, s22)。
+
+    Raises:
+        RuntimeError: (M_E + M_H) 奇异（规则 14：禁止 fall-back）。
+    """
+    m_sum = m_e + m_h
+    m_diff = m_e - m_h
+    rank = np.linalg.matrix_rank(m_sum)
+    if rank < m_a:
+        raise RuntimeError(
+            f"界面 S 矩阵 (M_E + M_H) 奇异，rank={rank}/{m_a}。"
+            "检查模式正交性或界面物理合理性（介电常数对比度过大或模式简并）。"
+        )
+    inv_sum = np.linalg.inv(m_sum)
+    s11 = m_diff @ inv_sum
+    s21 = 2.0 * inv_sum
+    s12 = s21.T  # 互易性（洛伦兹互易定理）
+    s22 = -s11  # 对称结构
+    return s11, s12, s21, s22
+
+
+def _compute_energy_conservation_g(
+    s11: np.ndarray, s12: np.ndarray, s21: np.ndarray, s22: np.ndarray
+) -> np.ndarray:
+    """计算能量守恒归一化 G 矩阵（对标 Lumerical/Max-Optics "Energy Conservation"）。
+
+        G = sqrtm( (S11†·S11 + S21†·S21 + S12†·S12 + S22†·S22) / 2 )
+
+    标量下 G = sqrt(|S11|²+|S21|²)，归一化后严格 |S11|²+|S21|²=1。
+    多模下 G 为 Hermitian 正定矩阵（功率增益矩阵的对称平均），G^{-1} 为 Hermitian，
+    保持互易性 S12=S21^T。
+
+    文献：
+        Max-Optics EME Analysis "Energy Conservation: Set the norm of Page
+        S-matrix to 1" —
+        https://kb.max-optics.com/docs/tutorial/Maxoptics_GUI/8Analysis/
+        Lumerical EME Propagate（energy conservation 选项）—
+        https://optics.ansys.com/hc/en-us/articles/360034396614
+    """
+    return sqrtm(
+        0.5
+        * (
+            s11.conj().T @ s11
+            + s21.conj().T @ s21
+            + s12.conj().T @ s12
+            + s22.conj().T @ s22
+        )
+    )
+
+
+def _validate_and_clean_g(g_avg: np.ndarray, m_a: int) -> np.ndarray:
+    """验证 G 矩阵 Hermitian 性与可逆性，清洗 sqrtm 微小虚部后返回。
+
+    Hermitian 正定矩阵 sqrtm 数值上可能带微小虚部，取实部清洗；虚部过大则
+    视为非 Hermitian，raise（规则 14：禁止 fall-back）。
+
+    Raises:
+        RuntimeError: G 非 Hermitian（虚部 > 1e-9）或奇异。
+    """
+    if np.iscomplexobj(g_avg):
+        g_imag = float(np.max(np.abs(np.imag(g_avg))))
+        if g_imag > 1e-9:
+            raise RuntimeError(
+                f"能量守恒归一化 G 矩阵非 Hermitian（虚部 {g_imag:.2e}），"
+                "检查界面 S 矩阵物理合理性（规则 14）。"
+            )
+        g_avg = np.real(g_avg).astype(np.complex128)
+    g_rank = np.linalg.matrix_rank(g_avg)
+    if g_rank < m_a:
+        raise RuntimeError(
+            f"能量守恒归一化 G 矩阵奇异，rank={g_rank}/{m_a}。"
+            "检查界面 S 矩阵是否退化（规则 14：禁止 fall-back）。"
+        )
+    return g_avg
+
+
 def build_interface_smatrix(
     modes_a: list[Mode],
     modes_b: list[Mode],
@@ -81,10 +187,6 @@ def build_interface_smatrix(
 
         G = sqrtm( (S11†·S11 + S21†·S21 + S12†·S12 + S22†·S22) / 2 )
         S_ij ← G^{-1}·S_ij    （四个分块统一左乘 G^{-1}）
-
-    标量（M=1）下 G = sqrt(|S11|²+|S21|²)，归一化后严格 |S11|²+|S21|²=1。
-    多模下 G 为 Hermitian 正定矩阵（功率增益矩阵的对称平均），G^{-1} 为 Hermitian，
-    保持互易性；归一化后 S†S 的对称平均 = I（近似功率守恒，标量下严格）。
 
     要求两侧模式数相同（M_A = M_B = M），否则 M_E + M_H 非方阵无法求逆。
 
@@ -111,69 +213,15 @@ def build_interface_smatrix(
     """
     # 构造重叠积分矩阵（向量化，A02 §7.2）
     m_e, m_h = overlap_matrix(modes_a, modes_b, dx, dy)
-    m_a, m_b = m_e.shape
-    if m_a != m_b:
-        raise ValueError(
-            f"界面两侧模式数不匹配: M_A={m_a} vs M_B={m_b}。"
-            "界面 S 矩阵要求两侧模式数一致（M_E + M_H 须为方阵方可求逆）。"
-        )
-
-    # (M_E + M_H) 求逆（一次性计算，复用于 S11 与 S21，避免重复求逆）
-    m_sum = m_e + m_h
-    m_diff = m_e - m_h
-    # 检查可逆性（规则 14：奇异即 raise，禁止 fall-back）
-    rank = np.linalg.matrix_rank(m_sum)
-    if rank < m_a:
-        raise RuntimeError(
-            f"界面 S 矩阵 (M_E + M_H) 奇异，rank={rank}/{m_a}。"
-            "检查模式正交性或界面物理合理性（介电常数对比度过大或模式简并）。"
-        )
-    inv_sum = np.linalg.inv(m_sum)
+    m_a = _validate_modes_match(m_e, m_h)
 
     # 界面 S 矩阵四个分块（A02 §7.3 公式）
-    s11 = m_diff @ inv_sum
-    s21 = 2.0 * inv_sum
-    s12 = s21.T  # 互易性（洛伦兹互易定理）
-    s22 = -s11  # 对称结构
+    s11, s12, s21, s22 = _compute_raw_interface_blocks(m_e, m_h, m_a)
 
-    # 能量守恒归一化（对标 Lumerical "Energy Conservation" / Max-Optics
-    # "Energy Conservation"）。模式集不完备时界面 S 矩阵非酉（功率增益≠1），
-    # 归一化强制功率守恒。标量下严格 |S11|²+|S21|²=1；多模下对称平均酉化，
-    # 保持互易性 S12=S21^T（G Hermitian → G^{-1} Hermitian）。
-    # 文献：Max-Optics EME Analysis "Energy Conservation: Set the norm of
-    #   Page S-matrix to 1" —
-    #   https://kb.max-optics.com/docs/tutorial/Maxoptics_GUI/8Analysis/
-    #   Lumerical EME Propagate（energy conservation 选项）—
-    #   https://optics.ansys.com/hc/en-us/articles/360034396614
-    g_avg = sqrtm(
-        0.5
-        * (
-            s11.conj().T @ s11
-            + s21.conj().T @ s21
-            + s12.conj().T @ s12
-            + s22.conj().T @ s22
-        )
-    )
-    # Hermitian 正定矩阵 sqrtm 数值上可能带微小虚部，取实部清洗
-    if np.iscomplexobj(g_avg):
-        g_imag = float(np.max(np.abs(np.imag(g_avg))))
-        if g_imag > 1e-9:
-            raise RuntimeError(
-                f"能量守恒归一化 G 矩阵非 Hermitian（虚部 {g_imag:.2e}），"
-                "检查界面 S 矩阵物理合理性（规则 14）。"
-            )
-        g_avg = np.real(g_avg).astype(np.complex128)
-    # 检查 G 可逆（奇异即 raise，规则 14）
-    g_rank = np.linalg.matrix_rank(g_avg)
-    if g_rank < m_a:
-        raise RuntimeError(
-            f"能量守恒归一化 G 矩阵奇异，rank={g_rank}/{m_a}。"
-            "检查界面 S 矩阵是否退化（规则 14：禁止 fall-back）。"
-        )
+    # 能量守恒归一化（模式截断致 S 非酉，G 强制功率守恒；标量下严格，多模下对称平均酉化）
+    g_avg = _compute_energy_conservation_g(s11, s12, s21, s22)
+    g_avg = _validate_and_clean_g(g_avg, m_a)
+
     # G^{-1}·S_ij（统一左乘，保持互易性：G^{-1} Hermitian → S12=G^{-1}·S21^T=(G^{-1}·S21)^T）
     g_inv = np.linalg.inv(g_avg)
-    s11 = g_inv @ s11
-    s12 = g_inv @ s12
-    s21 = g_inv @ s21
-    s22 = g_inv @ s22
-    return BlockSMatrix(s11, s12, s21, s22)
+    return BlockSMatrix(g_inv @ s11, g_inv @ s12, g_inv @ s21, g_inv @ s22)

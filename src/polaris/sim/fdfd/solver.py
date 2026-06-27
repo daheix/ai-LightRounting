@@ -154,6 +154,97 @@ class FdfdSolver:
         sy = build_pml_stretch(ny, dy, self.config.wavelength, pml, axis="y")
         return YeeGrid(spec=spec, eps_r=eps_r, stretch_x=sx, stretch_y=sy)
 
+    @staticmethod
+    def _compute_pml_weights(
+        grid: YeeGrid,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """计算 SC-PML 半整数点拉伸权重 w_x/w_y 与介电对角。
+
+        x 方向权重 w_x = s_y / s_x 在 (i+1/2, j) 点（s_y 在 x 方向不变）。
+        y 方向权重 w_y = s_x / s_y 在 (i, j+1/2) 点（s_x 在 y 方向不变）。
+
+        Args:
+            grid: YeeGrid 对象。
+
+        Returns:
+            (w_x_2d, w_y_2d, diag_eps):
+                w_x_2d: (nx-1, ny) x 方向半整数点权重（含 1/dx²）。
+                w_y_2d: (nx, ny-1) y 方向半整数点权重（含 1/dy²）。
+                diag_eps: (nx*ny,) s_x·s_y·ε_r 主对角介电项。
+        """
+        nx, ny = grid.spec.shape
+        dx, dy = grid.spec.dx, grid.spec.dy
+        sx = grid.stretch_x  # (nx,)
+        sy = grid.stretch_y  # (ny,)
+        # 半整数点拉伸因子（Yee 棱中点）
+        sx_edge = 0.5 * (sx[:-1] + sx[1:])  # (nx-1,) at x+1/2
+        sy_edge = 0.5 * (sy[:-1] + sy[1:])  # (ny-1,) at y+1/2
+        w_x = (sy[None, :] / sx_edge[:, None]).ravel() / dx**2  # ((nx-1)*ny,)
+        w_y = (sx[:, None] / sy_edge[None, :]).ravel() / dy**2  # (nx*(ny-1),)
+        w_x_2d = w_x.reshape(nx - 1, ny)  # (nx-1, ny) w_x 在 i+1/2
+        w_y_2d = w_y.reshape(nx, ny - 1)  # (nx, ny-1) w_y 在 j+1/2
+        diag_eps = (sx[:, None] * sy[None, :] * grid.eps_r).ravel()
+        return w_x_2d, w_y_2d, diag_eps
+
+    @staticmethod
+    def _compute_main_diag(
+        nx: int,
+        ny: int,
+        w_x_2d: np.ndarray,
+        w_y_2d: np.ndarray,
+        diag_eps: np.ndarray,
+        k0_sq: float,
+    ) -> np.ndarray:
+        """计算主对角（含 x/y 方向贡献 + k₀²·s_x·s_y·ε_r）。
+
+        边界处理：超出网格的 w 取 0（Neumann 零通量自然边界）。
+
+        Args:
+            nx, ny: 网格维度。
+            w_x_2d: (nx-1, ny) x 方向权重。
+            w_y_2d: (nx, ny-1) y 方向权重。
+            diag_eps: (nx*ny,) 介电对角项。
+            k0_sq: k₀²。
+
+        Returns:
+            main_diag: (nx*ny,) 主对角元。
+        """
+        # x 方向贡献：next（i<nx-1）+ prev（i>0）
+        w_x_main = np.zeros((nx, ny), dtype=np.complex128)
+        w_x_main[:-1, :] -= w_x_2d  # next 贡献（i 从 0 到 nx-2）
+        w_x_main[1:, :] -= w_x_2d  # prev 贡献（i 从 1 到 nx-1）
+        # y 方向贡献
+        w_y_main = np.zeros((nx, ny), dtype=np.complex128)
+        w_y_main[:, :-1] -= w_y_2d  # next 贡献
+        w_y_main[:, 1:] -= w_y_2d  # prev 贡献
+        return (w_x_main + w_y_main).ravel() + k0_sq * diag_eps
+
+    @staticmethod
+    def _compute_off_diag(
+        n: int, nx: int, ny: int, w_x_2d: np.ndarray, w_y_2d: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """计算 x/y 方向次对角的行列索引与数据。
+
+        x 方向次对角（±ny）：w_x[i+1/2, j]
+        y 方向次对角（±1）：w_y[i, j+1/2]
+
+        Args:
+            n: 总网格数 nx*ny。
+            nx, ny: 网格维度。
+            w_x_2d: (nx-1, ny) x 方向权重。
+            w_y_2d: (nx, ny-1) y 方向权重。
+
+        Returns:
+            (rows_x, cols_x, data_x, rows_y, cols_y, data_y)。
+        """
+        rows_x = np.arange(n - ny)  # 行索引 (i*ny + j), i ∈ [0, nx-2]
+        cols_x = rows_x + ny  # 列索引 ((i+1)*ny + j)
+        data_x = w_x_2d.ravel()  # w_x[i+1/2, j]
+        rows_y = (np.arange(nx)[:, None] * ny + np.arange(ny - 1)[None, :]).ravel()
+        cols_y = rows_y + 1
+        data_y = w_y_2d.ravel()
+        return rows_x, cols_x, data_x, rows_y, cols_y, data_y
+
     def _assemble_operator(self, grid: YeeGrid) -> sp.csr_array:
         """组装 SC-PML 复对称稀疏算子 A（A05 §5.2 步骤 3-5）。
 
@@ -171,82 +262,26 @@ class FdfdSolver:
         """
         nx, ny = grid.spec.shape
         n = nx * ny
-        dx, dy = grid.spec.dx, grid.spec.dy
-        sx = grid.stretch_x  # (nx,)
-        sy = grid.stretch_y  # (ny,)
-        # 半整数点拉伸因子（Yee 棱中点）
-        sx_edge = 0.5 * (sx[:-1] + sx[1:])  # (nx-1,) at x+1/2
-        sy_edge = 0.5 * (sy[:-1] + sy[1:])  # (ny-1,) at y+1/2
-        # x 方向权重 w_x = s_y / s_x 在 (i+1/2, j) 点
-        # s_y 在 x 方向不变：w_x[i+1/2, j] = sy[j] / sx_edge[i]
-        # 形状 (nx-1, ny)
-        w_x = (sy[None, :] / sx_edge[:, None]).ravel() / dx**2  # ((nx-1)*ny,)
-        # y 方向权重 w_y = s_x / s_y 在 (i, j+1/2) 点
-        # s_x 在 y 方向不变：w_y[i, j+1/2] = sx[i] / sy_edge[j]
-        # 形状 (nx, ny-1)
-        w_y = (sx[:, None] / sy_edge[None, :]).ravel() / dy**2  # (nx*(ny-1),)
-        # 主对角：-w_x[i+1/2] - w_x[i-1/2] - w_y[j+1/2] - w_y[j-1/2] + k₀² s_x s_y ε_r
-        # 边界处理：超出网格的 w 取 0（Neumann 零通量自然边界）
-        # w_x_prev[i] = w_x[i-1/2]（即 sx_edge[i-1]），w_x_next[i] = w_x[i+1/2]
-        # 向量化构造：每行的主对角元
-        diag_eps = (sx[:, None] * sy[None, :] * grid.eps_r).ravel()
-        main_diag = np.full(n, 0.0, dtype=np.complex128)
-        # x 方向贡献：-w_x[i+1/2]（当前行的右上邻接）- w_x[i-1/2]（当前行的左下邻接）
-        # 第一行（i=0）无 w_x_prev，最后一行（i=nx-1）无 w_x_next
-        # w_x 数组形状 (nx-1, ny)，索引 k = i*ny + j
-        # w_x_next[i,j] = w_x[i*ny + j]  (i ∈ [0, nx-2])
-        # w_x_prev[i,j] = w_x[(i-1)*ny + j] (i ∈ [1, nx-1])
-        w_x_2d = w_x.reshape(nx - 1, ny)  # (nx-1, ny) w_x 在 i+1/2
-        # 对行 i（0 <= i <= nx-1）:
-        #   next 贡献: -w_x_2d[i, j]（若 i < nx-1）
-        #   prev 贡献: -w_x_2d[i-1, j]（若 i > 0）
-        w_x_main = np.zeros((nx, ny), dtype=np.complex128)
-        w_x_main[:-1, :] -= w_x_2d  # next 贡献（i 从 0 到 nx-2）
-        w_x_main[1:, :] -= w_x_2d  # prev 贡献（i 从 1 到 nx-1）
-        # y 方向贡献
-        w_y_2d = w_y.reshape(nx, ny - 1)  # (nx, ny-1) w_y 在 j+1/2
-        w_y_main = np.zeros((nx, ny), dtype=np.complex128)
-        w_y_main[:, :-1] -= w_y_2d  # next 贡献
-        w_y_main[:, 1:] -= w_y_2d  # prev 贡献
-        # 组装主对角
-        main_diag = (w_x_main + w_y_main).ravel() + (self.k0**2) * diag_eps
-        # x 方向次对角（±ny）：w_x[i+1/2, j]
-        rows_x = np.arange(n - ny)  # 行索引 (i*ny + j), i ∈ [0, nx-2]
-        cols_x = rows_x + ny  # 列索引 ((i+1)*ny + j)
-        data_x = w_x_2d.ravel()  # w_x[i+1/2, j]
-        # y 方向次对角（±1）：w_y[i, j+1/2]
-        rows_y = (np.arange(nx)[:, None] * ny + np.arange(ny - 1)[None, :]).ravel()
-        cols_y = rows_y + 1
-        data_y = w_y_2d.ravel()
+        w_x_2d, w_y_2d, diag_eps = self._compute_pml_weights(grid)
+        main_diag = self._compute_main_diag(
+            nx, ny, w_x_2d, w_y_2d, diag_eps, self.k0**2
+        )
+        rows_x, cols_x, data_x, rows_y, cols_y, data_y = self._compute_off_diag(
+            n, nx, ny, w_x_2d, w_y_2d
+        )
         # 拼装对称矩阵（A = A^T，复对称非 Hermitian）
         rows = np.concatenate(
-            [
-                np.arange(n),  # 主对角
-                rows_x,
-                cols_x,  # x 次对角对称
-                rows_y,
-                cols_y,  # y 次对角对称
-            ]
+            [np.arange(n), rows_x, cols_x, rows_y, cols_y]
         )
         cols = np.concatenate(
-            [
-                np.arange(n),
-                cols_x,
-                rows_x,
-                cols_y,
-                rows_y,
-            ]
+            [np.arange(n), cols_x, rows_x, cols_y, rows_y]
         )
         data = np.concatenate(
-            [
-                main_diag,
-                data_x,
-                data_x,
-                data_y,
-                data_y,
-            ]
+            [main_diag, data_x, data_x, data_y, data_y]
         )
-        return sp.coo_array((data.astype(np.complex128), (rows, cols)), shape=(n, n)).tocsr()
+        return sp.coo_array(
+            (data.astype(np.complex128), (rows, cols)), shape=(n, n)
+        ).tocsr()
 
     def _build_source_vector(
         self,
@@ -278,6 +313,141 @@ class FdfdSolver:
         b = -1j * self.omega * _MU0 * sxy * j_z.ravel()
         return b
 
+    def _normalize_and_select_method(
+        self, a_mat: sp.csr_array, b_vec: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, str]:
+        """数值归一化 A/b 并选择求解方法。
+
+        对 A 与 b 同步除以 k₀²（MaxwellFDFD/Jaxwell 标准做法），将 O(k₀²)~1e13
+        的对角元归一化至 O(1)，改善条件数。大规模（N>2e4）强制从 direct 切换到
+        bicgstab（非 fall-back，是有意选择更优算法）。
+
+        Args:
+            a_mat: 稀疏矩阵 (N, N)。
+            b_vec: 源向量 (N,)。
+
+        Returns:
+            (a_norm, b_norm, method): 归一化后的矩阵、向量与实际求解方法。
+        """
+        n = a_mat.shape[0]
+        method = self.config.method
+        k0_sq = self.k0**2
+        a_norm = a_mat / k0_sq
+        b_norm = b_vec / k0_sq
+        # 大规模回退到 bicgstab（非 fall-back，是有意选择更优算法）
+        if method == "direct" and n > 20_000:
+            method = "bicgstab"
+        return a_norm, b_norm, method
+
+    @staticmethod
+    def _solve_direct(
+        a_norm: np.ndarray, b_norm: np.ndarray
+    ) -> tuple[np.ndarray, float, int]:
+        """直接法 spsolve 求解归一化系统。
+
+        Args:
+            a_norm: 归一化稀疏矩阵。
+            b_norm: 归一化源向量。
+
+        Returns:
+            (x, residual, 0)。
+
+        Raises:
+            RuntimeError: 矩阵奇异（规则 14）。
+        """
+        try:
+            x = spla.spsolve(a_norm, b_norm)
+        except RuntimeError as exc:
+            raise RuntimeError(f"FDFD 直接求解失败（矩阵可能奇异）：{exc}") from exc
+        residual = float(
+            np.linalg.norm(a_norm @ x - b_norm) / max(np.linalg.norm(b_norm), 1e-30)
+        )
+        return x, residual, 0
+
+    def _build_ilu_preconditioner(
+        self, a_norm: sp.csr_array
+    ) -> spla.LinearOperator | None:
+        """构造 ILU 预处理算子（若配置启用）。
+
+        Args:
+            a_norm: 归一化稀疏矩阵。
+
+        Returns:
+            LinearOperator 或 None（未启用 ILU 时）。
+
+        Raises:
+            RuntimeError: ILU 分解失败（矩阵奇异或填充不足，规则 14）。
+        """
+        if not self.config.use_ilu:
+            return None
+        try:
+            ilu = spla.spilu(
+                a_norm.tocsc(),
+                drop_tol=self.config.ilu_drop_tolerance,
+                fill_factor=self.config.ilu_fill_factor,
+            )
+        except RuntimeError as exc:
+            raise RuntimeError(f"ILU 预处理失败（矩阵奇异或填充不足）：{exc}") from exc
+        return spla.LinearOperator(
+            (a_norm.shape[0], a_norm.shape[0]),
+            matvec=ilu.solve,
+            dtype=np.complex128,
+        )
+
+    def _solve_iterative(
+        self,
+        a_norm: sp.csr_array,
+        b_norm: np.ndarray,
+        method: str,
+        m_op: spla.LinearOperator | None,
+    ) -> tuple[np.ndarray, float, int]:
+        """迭代法（cg/bicgstab）求解归一化系统。
+
+        cg 对复对称系统等价 COCG（Gu 2014 推荐），bicgstab 对非对称系统更稳健。
+
+        Args:
+            a_norm: 归一化稀疏矩阵。
+            b_norm: 归一化源向量。
+            method: 'cg' 或 'bicgstab'。
+            m_op: ILU 预处理算子（None 表示无预处理）。
+
+        Returns:
+            (x, residual, iters)。
+
+        Raises:
+            RuntimeError: 未收敛或求解失败（规则 14，禁止 fall-back）。
+        """
+        counter = {"n": 0}
+
+        def _cb(_xk: np.ndarray) -> None:
+            counter["n"] += 1
+
+        solver = spla.cg if method == "cg" else spla.bicgstab
+        x, info = solver(
+            a_norm,
+            b_norm,
+            M=m_op,
+            rtol=self.config.tolerance,
+            maxiter=self.config.max_iterations,
+            callback=_cb,
+        )
+        iters = counter["n"]
+        if info != 0:
+            if info > 0:
+                raise RuntimeError(
+                    f"FDFD 迭代求解未收敛（{info}/{self.config.max_iterations} "
+                    f"迭代，方法={method}，容差={self.config.tolerance}）。"
+                    "建议：1) 增加 max_iterations；2) 启用/调整 ILU；"
+                    "3) 检查 PML 厚度（规则 14，禁止 fall-back）"
+                )
+            raise RuntimeError(
+                f"FDFD 迭代求解失败（info={info}，方法={method}），矩阵可能奇异或预处理构造失败"
+            )
+        residual = float(
+            np.linalg.norm(a_norm @ x - b_norm) / max(np.linalg.norm(b_norm), 1e-30)
+        )
+        return x, residual, iters
+
     def _solve_linear_system(
         self, a_mat: sp.csr_array, b_vec: np.ndarray
     ) -> tuple[np.ndarray, float, int]:
@@ -296,90 +466,11 @@ class FdfdSolver:
         Raises:
             RuntimeError: 求解失败（不收敛或矩阵奇异，规则 14 无 fall-back）。
         """
-        n = a_mat.shape[0]
-        method = self.config.method
-        # 数值归一化：A_norm = A / k₀²，b_norm = b / k₀²
-        # 不改变解 x（两边同除），仅改善条件数（MaxwellFDFD/Jaxwell 标准做法）
-        k0_sq = self.k0**2
-        a_norm = a_mat / k0_sq
-        b_norm = b_vec / k0_sq
-        # 小规模强制直接法（避免迭代开销）
-        if n <= 20_000 and method != "direct":
-            # 仅在用户显式指定迭代时才用迭代
-            pass
-        elif n > 20_000 and method == "direct":
-            # 大规模回退到 bicgstab（非 fall-back，是有意选择更优算法）
-            method = "bicgstab"
+        a_norm, b_norm, method = self._normalize_and_select_method(a_mat, b_vec)
         if method == "direct":
-            try:
-                x = spla.spsolve(a_norm, b_norm)
-            except RuntimeError as exc:
-                raise RuntimeError(f"FDFD 直接求解失败（矩阵可能奇异）：{exc}") from exc
-            residual = float(
-                np.linalg.norm(a_norm @ x - b_norm) / max(np.linalg.norm(b_norm), 1e-30)
-            )
-            return x, residual, 0
-        # 迭代法：bicgstab 或 cg（cg 对复对称系统等价 COCG）
-        if self.config.use_ilu:
-            try:
-                ilu = spla.spilu(
-                    a_norm.tocsc(),
-                    drop_tol=self.config.ilu_drop_tolerance,
-                    fill_factor=self.config.ilu_fill_factor,
-                )
-                m_op = spla.LinearOperator(
-                    (a_norm.shape[0], a_norm.shape[0]),
-                    matvec=ilu.solve,
-                    dtype=np.complex128,
-                )
-            except RuntimeError as exc:
-                raise RuntimeError(f"ILU 预处理失败（矩阵奇异或填充不足）：{exc}") from exc
-        else:
-            m_op = None
-        if method == "cg":
-            # 复对称系统用 cg 等价 COCG（Gu 2014 推荐）
-            counter = {"n": 0}
-
-            def _cb(_xk: np.ndarray) -> None:
-                counter["n"] += 1
-
-            x, info = spla.cg(
-                a_norm,
-                b_norm,
-                M=m_op,
-                rtol=self.config.tolerance,
-                maxiter=self.config.max_iterations,
-                callback=_cb,
-            )
-            iters = counter["n"]
-        else:  # bicgstab（通用兜底，对非对称系统更稳健）
-            counter = {"n": 0}
-
-            def _cb(_xk: np.ndarray) -> None:
-                counter["n"] += 1
-
-            x, info = spla.bicgstab(
-                a_norm,
-                b_norm,
-                M=m_op,
-                rtol=self.config.tolerance,
-                maxiter=self.config.max_iterations,
-                callback=_cb,
-            )
-            iters = counter["n"]
-        if info != 0:
-            if info > 0:
-                raise RuntimeError(
-                    f"FDFD 迭代求解未收敛（{info}/{self.config.max_iterations} "
-                    f"迭代，方法={method}，容差={self.config.tolerance}）。"
-                    "建议：1) 增加 max_iterations；2) 启用/调整 ILU；"
-                    "3) 检查 PML 厚度（规则 14，禁止 fall-back）"
-                )
-            raise RuntimeError(
-                f"FDFD 迭代求解失败（info={info}，方法={method}），矩阵可能奇异或预处理构造失败"
-            )
-        residual = float(np.linalg.norm(a_norm @ x - b_norm) / max(np.linalg.norm(b_norm), 1e-30))
-        return x, residual, iters
+            return self._solve_direct(a_norm, b_norm)
+        m_op = self._build_ilu_preconditioner(a_norm)
+        return self._solve_iterative(a_norm, b_norm, method, m_op)
 
     def _derive_h_fields(self, e_z: np.ndarray, grid: YeeGrid) -> tuple[np.ndarray, np.ndarray]:
         """由 E_z 回代 H_x, H_y（Maxwell 旋度方程）。

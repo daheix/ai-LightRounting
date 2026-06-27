@@ -173,6 +173,82 @@ def schur_complement(
     return S
 
 
+def _block_thomas_forward_elimination(
+    matrix: BlockTridiagonalMatrix,
+    rhs_blocks: list[np.ndarray],
+) -> tuple[list, list]:
+    """块 Thomas 前向消元。
+
+    D'i = Di - Li·(D'_{i-1})⁻¹·U_{i-1}
+    b'i = bi - Li·(D'_{i-1})⁻¹·b'_{i-1}
+
+    Raises:
+        RuntimeError: D'_{i-1} 奇异时告警退出（禁止 fall-back）。
+    """
+    N = matrix.num_blocks
+    D_prime = [None] * N
+    b_prime = [None] * N
+    D_prime[0] = matrix.diagonal_blocks[0].copy()
+    b_prime[0] = rhs_blocks[0].copy()
+    for i in range(1, N):
+        cond_prev = np.linalg.cond(D_prime[i - 1])
+        if cond_prev > 1.0 / BLOCK_THOMAS_PIVOT_THRESHOLD:
+            msg = (
+                f"块 Thomas: D'_{i - 1} 奇异（κ={cond_prev:.3e}），"
+                f"前向消元失败。禁止 fall-back（规则 14.1）。"
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
+        Li = matrix.lower_blocks[i - 1]  # Li (mi, m_{i-1})
+        Ui_prev = matrix.upper_blocks[i - 1]  # U_{i-1} (m_{i-1}, mi)
+        # Y = (D'_{i-1})⁻¹·U_{i-1}, Z = (D'_{i-1})⁻¹·b'_{i-1}
+        Y_U = np.linalg.solve(D_prime[i - 1], Ui_prev)
+        Z_b = np.linalg.solve(D_prime[i - 1], b_prime[i - 1])
+        # D'i = Di - Li·Y, b'i = bi - Li·Z
+        D_prime[i] = matrix.diagonal_blocks[i] - Li @ Y_U
+        b_prime[i] = rhs_blocks[i] - Li @ Z_b
+    return D_prime, b_prime
+
+
+def _block_thomas_back_substitution(
+    matrix: BlockTridiagonalMatrix,
+    D_prime: list,
+    b_prime: list,
+) -> list:
+    """块 Thomas 回代。
+
+    xN = (D'N)⁻¹·b'N
+    xi = (D'i)⁻¹·(b'i - Ui·x_{i+1})
+
+    Raises:
+        RuntimeError: D'i 奇异时告警退出（禁止 fall-back）。
+    """
+    N = matrix.num_blocks
+    x_blocks = [None] * N
+    cond_last = np.linalg.cond(D_prime[N - 1])
+    if cond_last > 1.0 / BLOCK_THOMAS_PIVOT_THRESHOLD:
+        msg = (
+            f"块 Thomas: D'_{N - 1} 奇异（κ={cond_last:.3e}），"
+            f"回代失败。禁止 fall-back（规则 14.1）。"
+        )
+        logger.error(msg)
+        raise RuntimeError(msg)
+    x_blocks[N - 1] = np.linalg.solve(D_prime[N - 1], b_prime[N - 1])
+    for i in range(N - 2, -1, -1):
+        Ui = matrix.upper_blocks[i]
+        rhs_i = b_prime[i] - Ui @ x_blocks[i + 1]
+        cond_i = np.linalg.cond(D_prime[i])
+        if cond_i > 1.0 / BLOCK_THOMAS_PIVOT_THRESHOLD:
+            msg = (
+                f"块 Thomas: D'_{i} 奇异（κ={cond_i:.3e}），"
+                f"回代失败。禁止 fall-back（规则 14.1）。"
+            )
+            logger.error(msg)
+            raise RuntimeError(msg)
+        x_blocks[i] = np.linalg.solve(D_prime[i], rhs_i)
+    return x_blocks
+
+
 def block_thomas_solve(
     matrix: BlockTridiagonalMatrix,
     rhs: np.ndarray,
@@ -210,11 +286,9 @@ def block_thomas_solve(
         msg = "块三对角矩阵为空，无法求解"
         logger.error(msg)
         raise RuntimeError(msg)
-
     # 确保 rhs 为 2D
     rhs_2d = np.atleast_2d(rhs.T).T if rhs.ndim == 1 else rhs
     is_1d = rhs.ndim == 1
-
     # 分割 rhs 为各块
     block_sizes = [block.shape[0] for block in matrix.diagonal_blocks]
     rhs_blocks = []
@@ -222,70 +296,9 @@ def block_thomas_solve(
     for sz in block_sizes:
         rhs_blocks.append(rhs_2d[idx : idx + sz])
         idx += sz
-
-    # 前向消元
-    # D'i = Di - Li·(D'_{i-1})⁻¹·U_{i-1}
-    # b'i = bi - Li·(D'_{i-1})⁻¹·b'_{i-1}
-    D_prime = [None] * N
-    b_prime = [None] * N
-    D_prime[0] = matrix.diagonal_blocks[0].copy()
-    b_prime[0] = rhs_blocks[0].copy()
-
-    for i in range(1, N):
-        # 检查 D'_{i-1} 是否奇异
-        cond_prev = np.linalg.cond(D_prime[i - 1])
-        if cond_prev > 1.0 / BLOCK_THOMAS_PIVOT_THRESHOLD:
-            msg = (
-                f"块 Thomas: D'_{i - 1} 奇异（κ={cond_prev:.3e}），"
-                f"前向消元失败。禁止 fall-back（规则 14.1）。"
-            )
-            logger.error(msg)
-            raise RuntimeError(msg)
-
-        # 求解 D'_{i-1}·Y = U_{i-1}，得到 Y = (D'_{i-1})⁻¹·U_{i-1}
-        Li = matrix.lower_blocks[i - 1]  # Li (mi, m_{i-1})
-        Ui_prev = matrix.upper_blocks[i - 1]  # U_{i-1} (m_{i-1}, mi)
-
-        # Y = (D'_{i-1})⁻¹·U_{i-1}
-        Y_U = np.linalg.solve(D_prime[i - 1], Ui_prev)
-        # Z = (D'_{i-1})⁻¹·b'_{i-1}
-        Z_b = np.linalg.solve(D_prime[i - 1], b_prime[i - 1])
-
-        # D'i = Di - Li·Y
-        D_prime[i] = matrix.diagonal_blocks[i] - Li @ Y_U
-        # b'i = bi - Li·Z
-        b_prime[i] = rhs_blocks[i] - Li @ Z_b
-
-    # 回代
-    # xN = (D'N)⁻¹·b'N
-    # xi = (D'i)⁻¹·(b'i - Ui·x_{i+1})
-    x_blocks = [None] * N
-    # 检查 D'N 是否奇异
-    cond_last = np.linalg.cond(D_prime[N - 1])
-    if cond_last > 1.0 / BLOCK_THOMAS_PIVOT_THRESHOLD:
-        msg = (
-            f"块 Thomas: D'_{N - 1} 奇异（κ={cond_last:.3e}），"
-            f"回代失败。禁止 fall-back（规则 14.1）。"
-        )
-        logger.error(msg)
-        raise RuntimeError(msg)
-
-    x_blocks[N - 1] = np.linalg.solve(D_prime[N - 1], b_prime[N - 1])
-
-    for i in range(N - 2, -1, -1):
-        # xi = (D'i)⁻¹·(b'i - Ui·x_{i+1})
-        Ui = matrix.upper_blocks[i]
-        rhs_i = b_prime[i] - Ui @ x_blocks[i + 1]
-        cond_i = np.linalg.cond(D_prime[i])
-        if cond_i > 1.0 / BLOCK_THOMAS_PIVOT_THRESHOLD:
-            msg = (
-                f"块 Thomas: D'_{i} 奇异（κ={cond_i:.3e}），"
-                f"回代失败。禁止 fall-back（规则 14.1）。"
-            )
-            logger.error(msg)
-            raise RuntimeError(msg)
-        x_blocks[i] = np.linalg.solve(D_prime[i], rhs_i)
-
+    # 前向消元 + 回代
+    D_prime, b_prime = _block_thomas_forward_elimination(matrix, rhs_blocks)
+    x_blocks = _block_thomas_back_substitution(matrix, D_prime, b_prime)
     # 合并解
     x = np.vstack(x_blocks)
     if is_1d:

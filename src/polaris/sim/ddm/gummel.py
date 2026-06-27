@@ -54,6 +54,7 @@ _compute_bc_specs（BC 规格）与 _postprocess（电流密度/电导率/电场
 from __future__ import annotations
 
 import numpy as np
+from scipy import sparse
 from scipy.sparse.linalg import spsolve
 
 from polaris.sim.ddm.continuity import ContinuitySolver

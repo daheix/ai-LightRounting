@@ -102,11 +102,8 @@ def build_circuit_matrix(
 ) -> CircuitMatrix:
     """构建电路稀疏矩阵 M = I - S_block（R03 创新点）。
 
-    将电路级联转化为线性系统 M·x = b，其中 M = I - S_block，
-    S_block 为块对角 S 参数矩阵，连接端口通过耦合项关联。
-
-    每个实例的端口名添加实例名前缀（如 "wg1.in"），避免不同实例
-    的相同端口名冲突。
+    将电路级联转化为线性系统 M·x = b，M = I - S_block，S_block 为块对角
+    S 参数矩阵，连接端口通过耦合项关联。端口名添加实例名前缀避免冲突。
 
     来源: SAX KLU Backend 文档
     https://gdsfactory.github.io/sax/nbs/internals/03_backends/
@@ -128,7 +125,11 @@ def build_circuit_matrix(
     port_idx = {p: i for i, p in enumerate(all_ports)}
 
     # 外部端口掩码与频率维度
-    external_mask = _build_external_mask(ports, ext_port_refs, port_idx, n)
+    external_mask = np.zeros(n, dtype=bool)
+    if ports:
+        for int_ref in ext_port_refs:
+            if int_ref in port_idx:
+                external_mask[port_idx[int_ref]] = True
     n_freq = _compute_n_freq_from_instances(instances)
 
     # 构建 S_block 三元组并组装稀疏矩阵
@@ -149,10 +150,7 @@ def _collect_ext_port_refs(
     ports: dict[str, str] | None,
     all_ports: list[str],
 ) -> list[str]:
-    """收集外部端口引用，未列出的内部引用追加到 all_ports。
-
-    外部端口映射中的内部端口引用已是 "inst.port" 格式，无需前缀。
-    """
+    """收集外部端口引用，未列出的内部引用追加到 all_ports（已是 "inst.port" 格式）。"""
     ext_port_refs: list[str] = []
     if ports:
         for _ext_name, int_ref in ports.items():
@@ -160,21 +158,6 @@ def _collect_ext_port_refs(
                 all_ports.append(int_ref)
             ext_port_refs.append(int_ref)
     return ext_port_refs
-
-
-def _build_external_mask(
-    ports: dict[str, str] | None,
-    ext_port_refs: list[str],
-    port_idx: dict[str, int],
-    n: int,
-) -> np.ndarray:
-    """构建外部端口掩码（True 表示外部端口）。"""
-    external_mask = np.zeros(n, dtype=bool)
-    if ports:
-        for int_ref in ext_port_refs:
-            if int_ref in port_idx:
-                external_mask[port_idx[int_ref]] = True
-    return external_mask
 
 
 def _compute_n_freq_from_instances(instances: dict[str, SDict]) -> int:
@@ -193,10 +176,7 @@ def _build_s_block_triplets(
 ) -> tuple[list[int], list[int], list[complex]]:
     """构建 S_block 稀疏矩阵的三元组 (rows, cols, vals)。
 
-    包含两部分：
-    1. 实例 S 参数填入块对角位置（单频点切片）
-    2. 连接端口双向耦合（S=1 表示完美传输）
-
+    含实例 S 参数块对角填充（单频点切片）和连接端口双向耦合（S=1）。
     connections 中的端口引用已是 "inst.port" 格式。
     """
     rows: list[int] = []
@@ -238,8 +218,8 @@ def cascade_klu(
 ) -> SDict:
     """KLU 稀疏求解后端（R03 核心交付）。
 
-    使用 scipy.sparse.linalg.splu（KLU 等价的稀疏 LU 分解）求解
-    电路矩阵 M·x = b，从根本上解决大规模电路的数值稳定性问题。
+    使用 scipy.sparse.linalg.splu（KLU 等价的稀疏 LU 分解）求解电路矩阵
+    M·x = b，从根本上解决大规模电路的数值稳定性问题。
 
     来源:
     - KLU 算法: Davis & Duff, ACM TOMS 2004
@@ -276,7 +256,12 @@ def cascade_klu(
     for freq_idx in range(n_freq):
         cm = _build_circuit_matrix_for_klu(instances, connections, ports, freq_idx)
         lu = _factorize_for_klu(cm.M, freq_idx)
-        ext_name_to_idx = _build_ext_name_to_idx(ports, cm)
+        ext_name_to_idx: dict[str, int] = {}
+        if ports:
+            port_set = set(cm.ports)
+            for ext_name, int_ref in ports.items():
+                if int_ref in port_set:
+                    ext_name_to_idx[ext_name] = cm.ports.index(int_ref)
         _solve_excitations(
             lu, cm, ext_name_to_idx, ext_port_names, result, freq_idx
         )
@@ -315,20 +300,6 @@ def _factorize_for_klu(M: sp.csr_matrix, freq_idx: int) -> spla.SuperLU:
         raise RuntimeError(msg) from e
 
 
-def _build_ext_name_to_idx(
-    ports: dict[str, str] | None,
-    cm: CircuitMatrix,
-) -> dict[str, int]:
-    """构建外部端口名 → 矩阵索引的映射。"""
-    ext_name_to_idx: dict[str, int] = {}
-    if ports:
-        port_set = set(cm.ports)
-        for ext_name, int_ref in ports.items():
-            if int_ref in port_set:
-                ext_name_to_idx[ext_name] = cm.ports.index(int_ref)
-    return ext_name_to_idx
-
-
 def _solve_excitations(
     lu: spla.SuperLU,
     cm: CircuitMatrix,
@@ -343,12 +314,9 @@ def _solve_excitations(
         if src_ext not in ext_name_to_idx:
             continue
         src_port_idx = ext_name_to_idx[src_ext]
-        # 激励向量
         b = np.zeros(n_ports, dtype=complex)
         b[src_port_idx] = 1.0
-        # 求解 M·x = b
         x = lu.solve(b)
-        # 提取外部端口的响应
         for dst_ext in ext_port_names:
             if dst_ext not in ext_name_to_idx:
                 continue
@@ -613,16 +581,7 @@ def _sdict_to_dense(
     ports: list[str],
     n_freq: int,
 ) -> np.ndarray:
-    """将 SDict 转换为稠密 3D 矩阵 (n_ports, n_ports, n_freq)。
-
-    Args:
-        sdict: S 参数字典。
-        ports: 端口名列表（确定矩阵行列顺序）。
-        n_freq: 频率维度长度。
-
-    Returns:
-        稠密 S 矩阵，形状 (n_ports, n_ports, n_freq)。
-    """
+    """将 SDict 转换为稠密 3D 矩阵 (n_ports, n_ports, n_freq)。"""
     n = len(ports)
     mat = np.zeros((n, n, n_freq), dtype=complex)
     port_idx = {p: i for i, p in enumerate(ports)}
@@ -645,8 +604,7 @@ def cascade_additive(
 ) -> SDict:
     """Additive 前向累加后端。
 
-    适用于单向传播电路（无反馈环路），通过前向累加计算 S 参数。
-    比 Filipsson-Gunnar 快，但仅适用于无反馈电路。
+    适用于单向传播电路（无反馈环路），比 Filipsson-Gunnar 快。
 
     来源: SAX Backends 文档
     https://gdsfactory.github.io/sax/nbs/internals/03_backends/
@@ -679,8 +637,7 @@ def cascade_forward_only(
 ) -> SDict:
     """Forward-only 单向传播后端。
 
-    仅计算前向传输（S21, S43 等），忽略反射（S11, S22 等）。
-    适用于快速估算或严格单向电路。
+    仅计算前向传输（S21, S43 等），忽略反射（S11, S22 等），适用于快速估算。
 
     来源: SAX Backends 文档
     https://gdsfactory.github.io/sax/nbs/internals/03_backends/
@@ -724,18 +681,12 @@ def _check_no_feedback_loops(
     instances: dict[str, SDict],
     connections: list[tuple[str, str]],
 ) -> None:
-    """检测电路是否存在反馈环路（有向图 DFS）。
+    """检测电路是否存在反馈环路（有向图 DFS，rec_stack 算法）。
 
-    将每条连接 (p1, p2) 视为有向边 inst1 → inst2（p1 为输出端口，
-    p2 为输入端口，信号方向 inst1 → inst2）。使用标准有向图 rec_stack
-    算法检测环，可正确识别两节点反馈环（A→B→A）。
+    将每条连接 (p1, p2) 视为有向边 inst1→inst2（p1 输出端口，p2 输入端口）。
+    若存在 inst1→inst2 和 inst2→inst1 两条有向边，则形成反馈环路。
 
-    物理依据: 连接 (p1, p2) 中 p1 是上游器件的输出端口，p2 是下游器件
-    的输入端口，信号流向是单向的。若存在 inst1→inst2 和 inst2→inst1
-    两条有向边，则形成反馈环路（信号在两器件间循环）。
-
-    算法来源: Cormen et al., "Introduction to Algorithms", §22.3 DFS，
-    标准有向图环检测（rec_stack 方法）。
+    算法来源: Cormen et al., "Introduction to Algorithms", §22.3 DFS。
 
     Args:
         instances: 器件实例字典。
@@ -790,10 +741,7 @@ def cascade_auto(
 ) -> SDict:
     """基于条件数自动选择后端（R03 创新点）。
 
-    选择策略:
-    - 小规模低条件数（κ < 1e6）: Filipsson-Gunnar（低开销）
-    - 大规模或高条件数（1e6 ≤ κ < 1e12）: KLU（数值稳定）
-    - κ ≥ 1e12: raise RuntimeError（矩阵奇异）
+    选择策略: κ<1e6 用 Filipsson-Gunnar；1e6≤κ<1e12 用 KLU；κ≥1e12 raise。
 
     来源:
     - 条件数理论: Golub & Van Loan, "Matrix Computations", §2.3

@@ -524,31 +524,25 @@ class AdiStepper2D:
             dx=dx, dy=dy, boundary=boundary, n_uniform_in_y=False,
         )
 
-    def step(self, psi: np.ndarray) -> np.ndarray:
-        """单步 ADI 推进 ψ^n → ψ^{n+1}（A03 §4.3 公式 F3，两个半步）。
+    def _solve_x_implicit_half_step(
+        self, psi_c: np.ndarray, ny: int, nx: int
+    ) -> np.ndarray:
+        """半步 1（x 隐式）: ψ^{n+1/2} = [I - α_lhs·Ax]⁻¹·[I + α_rhs·Ay]·ψ^n。
+
+        右端：rhs1 = ψ + α_rhs·(Ay @ ψ)（向量化模板）。
+        TBC 模式下对 lhs_x 左/右边界行 + rhs1 上/下边界项做 TBC 修改。
 
         Args:
-            psi: 当前场 ψ^n (Ny, Nx)。
+            psi_c: 当前场 ψ^n (Ny, Nx) complex128。
+            ny, nx: 网格维度。
 
         Returns:
-            下一步场 ψ^{n+1} (Ny, Nx)。
+            半步场 ψ^{n+1/2} (Ny, Nx)。
 
         Raises:
             RuntimeError: 三对角求解失败（规则 14）。
-            ValueError: 形状不匹配或 TBC 退化。
         """
-        psi_c = np.asarray(psi, dtype=np.complex128)
-        if psi_c.ndim != 2:
-            raise ValueError(f"psi 须为 2D (Ny, Nx)，实际 {psi_c.ndim}D")
-        ny, nx = psi_c.shape
-        if (nx,) != (self.lhs_x_base.shape[2],):
-            raise ValueError(f"psi x 维度 {nx} 与 lhs_x_base {self.lhs_x_base.shape[2]} 不匹配")
-
-        # === 半步 1（x 隐式）: ψ^{n+1/2} = [I - α_lhs·Ax]⁻¹·[I + α_rhs·Ay]·ψ^n ===
-        # 右端：rhs1 = ψ + α_rhs·(Ay @ ψ)（向量化模板）
         rhs1 = psi_c + self.alpha_rhs * _apply_y_stencil(psi_c, self.main_y, self.off_y)
-
-        # 左侧矩阵准备
         if self.boundary == BoundaryType.TBC:
             lhs_x = self.lhs_x_base.copy()
             # 调整 lhs_x 维度匹配实际 psi 的 ny（n_uniform_in_y 时 lhs_x_base 可能是 (1, 3, Nx)）
@@ -567,7 +561,6 @@ class AdiStepper2D:
             lhs_x = self.lhs_x_base
             if lhs_x.shape[0] != ny:
                 lhs_x = np.broadcast_to(lhs_x, (ny, 3, nx))
-
         # 三对角求解（沿行循环，A03 §8.3 允许的 solve_banded 行循环）
         psi_half = np.empty((ny, nx), dtype=np.complex128)
         for j in range(ny):
@@ -575,10 +568,27 @@ class AdiStepper2D:
                 psi_half[j] = scipy.linalg.solve_banded((1, 1), lhs_x[j], rhs1[j])
             except np.linalg.LinAlgError as exc:
                 raise RuntimeError(f"ADI x 隐式半步行 {j} 求解失败：{exc}") from exc
+        return psi_half
 
-        # === 半步 2（y 隐式）: ψ^{n+1} = [I - α_lhs·Ay]⁻¹·[I + α_rhs·Ax]·ψ^{n+1/2} ===
+    def _solve_y_implicit_half_step(
+        self, psi_half: np.ndarray, ny: int, nx: int
+    ) -> np.ndarray:
+        """半步 2（y 隐式）: ψ^{n+1} = [I - α_lhs·Ay]⁻¹·[I + α_rhs·Ax]·ψ^{n+1/2}。
+
+        右端：rhs2 = ψ^{n+1/2} + α_rhs·(Ax @ ψ^{n+1/2})。
+        TBC 模式下对 lhs_y 上/下边界行 + rhs2 左/右边界项做 TBC 修改。
+
+        Args:
+            psi_half: 半步场 ψ^{n+1/2} (Ny, Nx)。
+            ny, nx: 网格维度。
+
+        Returns:
+            下一步场 ψ^{n+1} (Ny, Nx)。
+
+        Raises:
+            RuntimeError: 三对角求解失败（规则 14）。
+        """
         rhs2 = psi_half + self.alpha_rhs * _apply_x_stencil(psi_half, self.main_x, self.off_x)
-
         if self.boundary == BoundaryType.TBC:
             lhs_y = self.lhs_y_base.copy()
             # n 沿 y 均匀时 lhs_y_base 为 (Nx, 3, 1)，需广播到实际 (Nx, 3, Ny) 才能逐列求解
@@ -598,7 +608,6 @@ class AdiStepper2D:
             # n 沿 y 均匀时广播到实际 Ny（read-only 视图，solve_banded 仅读取）
             if lhs_y.shape[2] != ny:
                 lhs_y = np.broadcast_to(lhs_y, (nx, 3, ny))
-
         psi_next = np.empty((ny, nx), dtype=np.complex128)
         for i in range(nx):
             try:
@@ -606,6 +615,29 @@ class AdiStepper2D:
             except np.linalg.LinAlgError as exc:
                 raise RuntimeError(f"ADI y 隐式半步列 {i} 求解失败：{exc}") from exc
         return psi_next
+
+    def step(self, psi: np.ndarray) -> np.ndarray:
+        """单步 ADI 推进 ψ^n → ψ^{n+1}（A03 §4.3 公式 F3，两个半步）。
+
+        Args:
+            psi: 当前场 ψ^n (Ny, Nx)。
+
+        Returns:
+            下一步场 ψ^{n+1} (Ny, Nx)。
+
+        Raises:
+            RuntimeError: 三对角求解失败（规则 14）。
+            ValueError: 形状不匹配或 TBC 退化。
+        """
+        psi_c = np.asarray(psi, dtype=np.complex128)
+        if psi_c.ndim != 2:
+            raise ValueError(f"psi 须为 2D (Ny, Nx)，实际 {psi_c.ndim}D")
+        ny, nx = psi_c.shape
+        if (nx,) != (self.lhs_x_base.shape[2],):
+            raise ValueError(f"psi x 维度 {nx} 与 lhs_x_base {self.lhs_x_base.shape[2]} 不匹配")
+        # 半步 1（x 隐式）→ 半步 2（y 隐式）
+        psi_half = self._solve_x_implicit_half_step(psi_c, ny, nx)
+        return self._solve_y_implicit_half_step(psi_half, ny, nx)
 
 
 def _validate_adi_propagate_inputs(

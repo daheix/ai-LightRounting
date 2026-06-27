@@ -130,6 +130,109 @@ def _map_device_type(siepic_type: str) -> str:
     raise KeyError(msg)
 
 
+def _load_siepic_json(path: str | Path) -> dict:
+    """加载并校验 SiEPIC JSON 根节点结构。
+
+    Args:
+        path: JSON 文件路径。
+
+    Returns:
+        解析后的 JSON 字典。
+
+    Raises:
+        FileNotFoundError: 文件不存在。
+        ValueError: JSON 根节点非字典或缺少 'devices' 字段。
+    """
+    path = Path(path)
+    if not path.exists():
+        msg = f"SiEPIC 网表文件不存在: {path}"
+        raise FileNotFoundError(msg)
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        msg = f"SiEPIC JSON 根节点必须是字典，得到 {type(data).__name__}"
+        raise ValueError(msg)
+    if "devices" not in data:
+        msg = "SiEPIC JSON 缺少 'devices' 字段"
+        raise ValueError(msg)
+    return data
+
+
+def _parse_siepic_devices(
+    devices_data: list,
+) -> tuple[dict[str, str], dict[str, str], dict[str, set[str]]]:
+    """解析 SiEPIC 器件列表。
+
+    Returns:
+        (instances, device_types, device_ports) 三元组。
+        - instances: {name: model_name}
+        - device_types: {name: siepic_type}
+        - device_ports: {name: set(pin)}
+    """
+    instances: dict[str, str] = {}
+    device_types: dict[str, str] = {}
+    device_ports: dict[str, set[str]] = {}
+    for device in devices_data:
+        name = device["name"]
+        dev_type = device["type"]
+        instances[name] = _map_device_type(dev_type)
+        device_types[name] = dev_type
+        ports = set()
+        for port_entry in device.get("ports", []):
+            if isinstance(port_entry, list) and len(port_entry) > 0:
+                ports.add(port_entry[0])
+        device_ports[name] = ports
+    return instances, device_types, device_ports
+
+
+def _parse_siepic_connections(
+    connections_data: list,
+    device_types: dict[str, str],
+) -> tuple[list[tuple[str, str]], set[str]]:
+    """解析 SiEPIC 连接列表并映射端口名。
+
+    Returns:
+        (connections, connected_ports) 二元组。
+        - connections: [(inst1.port1, inst2.port2), ...]
+        - connected_ports: 已连接端口引用集合 {dev.pin}。
+    """
+    connections: list[tuple[str, str]] = []
+    connected_ports: set[str] = set()
+    for conn in connections_data:
+        if len(conn) != 4:
+            msg = f"连接格式错误，期望 [dev1, pin1, dev2, pin2]，得到 {conn}"
+            raise ValueError(msg)
+        dev1, pin1, dev2, pin2 = conn
+        port1 = _map_port(device_types[dev1], pin1)
+        port2 = _map_port(device_types[dev2], pin2)
+        connections.append((f"{dev1}.{port1}", f"{dev2}.{port2}"))
+        connected_ports.add(f"{dev1}.{pin1}")
+        connected_ports.add(f"{dev2}.{pin2}")
+    return connections, connected_ports
+
+
+def _identify_external_ports(
+    device_types: dict[str, str],
+    device_ports: dict[str, set[str]],
+    connected_ports: set[str],
+) -> dict[str, str]:
+    """识别未连接的外部端口。
+
+    Returns:
+        {external_name: instance.port} 外部端口字典。
+    """
+    ports: dict[str, str] = {}
+    ext_idx = 0
+    for dev_name, dev_type in device_types.items():
+        for pin in device_ports[dev_name]:
+            ref = f"{dev_name}.{pin}"
+            if ref not in connected_ports:
+                port_name = _map_port(dev_type, pin)
+                ports[f"ext_{ext_idx}"] = f"{dev_name}.{port_name}"
+                ext_idx += 1
+    return ports
+
+
 def parse_siepic_json(path: str | Path) -> dict:
     """解析 SiEPIC JSON 网表文件。
 
@@ -151,62 +254,12 @@ def parse_siepic_json(path: str | Path) -> dict:
         KeyError: 器件类型未映射时告警退出（禁止 fall-back）。
         ValueError: JSON 格式错误时告警退出。
     """
-    path = Path(path)
-    if not path.exists():
-        msg = f"SiEPIC 网表文件不存在: {path}"
-        raise FileNotFoundError(msg)
-    with open(path, encoding="utf-8") as f:
-        data = json.load(f)
-    if not isinstance(data, dict):
-        msg = f"SiEPIC JSON 根节点必须是字典，得到 {type(data).__name__}"
-        raise ValueError(msg)
-    if "devices" not in data:
-        msg = "SiEPIC JSON 缺少 'devices' 字段"
-        raise ValueError(msg)
-    # 解析器件
-    instances: dict[str, str] = {}
-    device_types: dict[str, str] = {}
-    device_ports: dict[str, set[str]] = {}
-    for device in data["devices"]:
-        name = device["name"]
-        dev_type = device["type"]
-        # 映射器件类型
-        model_name = _map_device_type(dev_type)
-        instances[name] = model_name
-        device_types[name] = dev_type
-        # 收集端口
-        ports = set()
-        for port_entry in device.get("ports", []):
-            if isinstance(port_entry, list) and len(port_entry) > 0:
-                pin = port_entry[0]
-                ports.add(pin)
-        device_ports[name] = ports
-    # 解析连接
-    connections: list[tuple[str, str]] = []
-    connected_ports: set[str] = set()
-    for conn in data.get("connections", []):
-        if len(conn) != 4:
-            msg = f"连接格式错误，期望 [dev1, pin1, dev2, pin2]，得到 {conn}"
-            raise ValueError(msg)
-        dev1, pin1, dev2, pin2 = conn
-        # 映射端口名
-        port1 = _map_port(device_types[dev1], pin1)
-        port2 = _map_port(device_types[dev2], pin2)
-        connections.append((f"{dev1}.{port1}", f"{dev2}.{port2}"))
-        connected_ports.add(f"{dev1}.{pin1}")
-        connected_ports.add(f"{dev2}.{pin2}")
-    # 识别外部端口（未连接的端口）
-    # 简化: 取每个器件的第一个未连接端口作为外部端口
-    ports: dict[str, str] = {}
-    ext_idx = 0
-    for dev_name, dev_type in device_types.items():
-        for pin in device_ports[dev_name]:
-            ref = f"{dev_name}.{pin}"
-            if ref not in connected_ports:
-                port_name = _map_port(dev_type, pin)
-                ports[f"ext_{ext_idx}"] = f"{dev_name}.{port_name}"
-                ext_idx += 1
-    # 元数据
+    data = _load_siepic_json(path)
+    instances, device_types, device_ports = _parse_siepic_devices(data["devices"])
+    connections, connected_ports = _parse_siepic_connections(
+        data.get("connections", []), device_types
+    )
+    ports = _identify_external_ports(device_types, device_ports, connected_ports)
     meta = {
         "name": data.get("name", "unknown"),
         "platform": data.get("platform", "SOI"),

@@ -403,6 +403,96 @@ class GPUFDTDEngine:
     _MU0: float = field(default=4e-7 * np.pi, repr=False)
     _EPS0: float = field(default=8.8541878128e-12, repr=False)  # CODATA 2018, https://physics.nist.gov/cuu/Constants/
 
+    def _init_fdtd_grid_params(
+        self, eps_full: np.ndarray, dx_um: float | None
+    ) -> tuple[float, float, float, float, int]:
+        """初始化 FDTD 网格参数。
+
+        Returns:
+            (dx, dt, omega, period, det_idx) 五元组（均 SI 单位）。
+        """
+        if dx_um is None:
+            dx_um = self.config.dx_um
+        n_total = len(eps_full)
+        n_pad = 50  # 两侧 padding
+        dx = dx_um * 1e-6  # m
+        # CFL 稳定条件：dt <= dx / (c · n_max)，n_max = _N_SILICON
+        dt = dx / (2.0 * _C0 * _N_SILICON)
+        wl = self.config.wavelength_um * 1e-6  # m
+        freq = _C0 / wl
+        omega = 2.0 * np.pi * freq
+        period = 1.0 / freq
+        det_idx = n_total - n_pad - 5  # 探测器在出射区
+        return dx, dt, omega, period, det_idx
+
+    @staticmethod
+    def _compute_mur_abc_coeffs(
+        eps_full: np.ndarray, dt: float, dx: float
+    ) -> tuple[float, float]:
+        """计算 Mur 一阶 ABC 系数（来源: Mur 1981 IEEE EMC）。
+
+        Returns:
+            (coef_left, coef_right) 二元组。
+        """
+        n_left = float(np.sqrt(np.real(eps_full[0])))
+        n_right = float(np.sqrt(np.real(eps_full[-1])))
+        v_left = _C0 / n_left
+        v_right = _C0 / n_right
+        coef_left = (v_left * dt - dx) / (v_left * dt + dx)
+        coef_right = (v_right * dt - dx) / (v_right * dt + dx)
+        return coef_left, coef_right
+
+    @staticmethod
+    def _compute_cw_steps(period: float, dt: float) -> tuple[int, int]:
+        """计算 CW 仿真步数（100 周期，前 80 周期稳态建立，后 20 周期测量）。"""
+        steps_per_period = max(int(period / dt), 20)
+        return 100 * steps_per_period, 80 * steps_per_period
+
+    def _run_fdtd_main_loop(
+        self,
+        e: np.ndarray,
+        h: np.ndarray,
+        dt: float,
+        dx: float,
+        omega: float,
+        coef_left: float,
+        coef_right: float,
+        det_idx: int,
+        n_steps: int,
+        steady_start: int,
+        eps_full: np.ndarray,
+    ) -> tuple[float, float]:
+        """执行 FDTD 时间步进主循环，返回探测器稳态幅度峰峰极值 (det_max, det_min)。
+
+        学术依据:
+        - Mur 1981 一阶 ABC: https://doi.org/10.1109/TEMC.1981.303970
+        - Taflove & Hagness 2005 §5.6 TFSF, §5.7 稳态幅度
+        """
+        det_max = 0.0
+        det_min = 0.0
+        for step in range(n_steps):
+            t = step * dt
+            # 保存边界旧值（Mur ABC 需要 n 时刻值）
+            e_0_old = e[0]
+            e_nm1_old = e[-1]
+            e_1_old = e[1]
+            e_nm2_old = e[-2]
+            # 更新 H 场: H^{n+1/2} = H^{n-1/2} + (dt/(μ₀·dx))·(E^n[i+1] - E^n[i])
+            h += (dt / (self._MU0 * dx)) * (e[1:] - e[:-1])
+            # 更新 E 场（内部点）
+            e[1:-1] += (dt / (eps_full[1:-1] * self._EPS0 * dx)) * (h[1:] - h[:-1])
+            # Mur 一阶 ABC + 源注入（1D TFSF 简化形式，Taflove 2005 §5.6）
+            e[0] = e_1_old + coef_left * (e[1] - e_0_old) + np.sin(omega * t)
+            e[-1] = e_nm2_old + coef_right * (e[-2] - e_nm1_old)
+            # 稳态幅度测量（记录峰峰值）
+            if step >= steady_start:
+                det_val = e[det_idx]
+                if det_val > det_max:
+                    det_max = det_val
+                if det_val < det_min:
+                    det_min = det_val
+        return det_max, det_min
+
     def _run_fdtd(
         self, eps_full: np.ndarray, dx_um: float | None = None
     ) -> tuple[float, np.ndarray]:
@@ -426,68 +516,15 @@ class GPUFDTDEngine:
         Returns:
             (探测器稳态电场幅度, 最终电场分布数组)。
         """
-        if dx_um is None:
-            dx_um = self.config.dx_um
-        n_total = len(eps_full)
-        n_pad = 50  # 两侧 padding
-
-        dx = dx_um * 1e-6  # m
-        # CFL 稳定条件：dt <= dx / (c · n_max)，n_max = _N_SILICON
-        dt = dx / (2.0 * _C0 * _N_SILICON)
-        wl = self.config.wavelength_um * 1e-6  # m
-        freq = _C0 / wl
-        omega = 2.0 * np.pi * freq
-        period = 1.0 / freq
-
-        det_idx = n_total - n_pad - 5  # 探测器在出射区
-
-        # Mur 一阶 ABC 系数（来源: Mur 1981 IEEE EMC）
-        n_left = float(np.sqrt(np.real(eps_full[0])))
-        n_right = float(np.sqrt(np.real(eps_full[-1])))
-        v_left = _C0 / n_left
-        v_right = _C0 / n_right
-        coef_left = (v_left * dt - dx) / (v_left * dt + dx)
-        coef_right = (v_right * dt - dx) / (v_right * dt + dx)
-
-        # CW 仿真：100 个周期，前 80 个周期等待稳态建立，后 20 个周期测量
-        steps_per_period = max(int(period / dt), 20)
-        n_steps = 100 * steps_per_period
-        steady_start = 80 * steps_per_period
-
-        e = np.zeros(n_total)  # 电场 E_y（实数）
-        h = np.zeros(n_total - 1)  # 磁场 H_z（实数）
-
-        # 稳态幅度测量（峰峰值法）
-        det_max = 0.0
-        det_min = 0.0
-
-        for step in range(n_steps):
-            t = step * dt
-            # 保存边界旧值（Mur ABC 需要 n 时刻值）
-            e_0_old = e[0]
-            e_nm1_old = e[-1]
-            e_1_old = e[1]
-            e_nm2_old = e[-2]
-
-            # 更新 H 场: H^{n+1/2} = H^{n-1/2} + (dt/(μ₀·dx))·(E^n[i+1] - E^n[i])
-            h += (dt / (self._MU0 * dx)) * (e[1:] - e[:-1])
-            # 更新 E 场（内部点）: E^{n+1}[i] = E^n[i] + (dt/(ε[i]·ε₀·dx))·(H^{n+1/2}[i] - H^{n+1/2}[i-1])
-            e[1:-1] += (dt / (eps_full[1:-1] * self._EPS0 * dx)) * (h[1:] - h[:-1])
-
-            # Mur 一阶 ABC + 源注入（1D TFSF 简化形式，来源: Taflove 2005 §5.6）
-            # 左边界: ABC 吸收反向波 + 源注入正向波
-            e[0] = e_1_old + coef_left * (e[1] - e_0_old) + np.sin(omega * t)
-            # 右边界: ABC 吸收正向波
-            e[-1] = e_nm2_old + coef_right * (e[-2] - e_nm1_old)
-
-            # 稳态幅度测量（记录峰峰值）
-            if step >= steady_start:
-                det_val = e[det_idx]
-                if det_val > det_max:
-                    det_max = det_val
-                if det_val < det_min:
-                    det_min = det_val
-
+        dx, dt, omega, period, det_idx = self._init_fdtd_grid_params(eps_full, dx_um)
+        coef_left, coef_right = self._compute_mur_abc_coeffs(eps_full, dt, dx)
+        n_steps, steady_start = self._compute_cw_steps(period, dt)
+        e = np.zeros(len(eps_full))  # 电场 E_y（实数）
+        h = np.zeros(len(eps_full) - 1)  # 磁场 H_z（实数）
+        det_max, det_min = self._run_fdtd_main_loop(
+            e, h, dt, dx, omega, coef_left, coef_right,
+            det_idx, n_steps, steady_start, eps_full,
+        )
         det_amplitude = (det_max - det_min) / 2.0
         return det_amplitude, e.copy()
 
