@@ -146,6 +146,15 @@ class VarFdtdConfig:
     check_nan_steps: int = 50
 
     def __post_init__(self) -> None:
+        self._validate_scalars()
+        eps_r = build_eps_from_neff(self.n_eff_arr)
+        self._eps_r = eps_r
+        self._validate_grid_and_bg(eps_r)
+        self._validate_tfsf()
+        self._validate_positions(eps_r.shape)
+
+    def _validate_scalars(self) -> None:
+        """校验标量参数（波长/网格/步数/CFL/NaN 检查间隔）。"""
         if self.wavelength <= 0.0:
             raise ValueError(f"wavelength 须 >0，实际 {self.wavelength}")
         if self.dx <= 0.0:
@@ -158,33 +167,42 @@ class VarFdtdConfig:
             raise ValueError(f"cfl 须 ∈ (0, 1]，实际 {self.cfl}")
         if self.check_nan_steps <= 0:
             raise ValueError(f"check_nan_steps 须 >0，实际 {self.check_nan_steps}")
-        eps_r = build_eps_from_neff(self.n_eff_arr)
-        self._eps_r = eps_r
+
+    def _validate_grid_and_bg(self, eps_r: np.ndarray) -> None:
+        """校验网格尺寸与背景介电常数（eps_r_bg 缺省取 min(eps_r)）。"""
         nx, ny = eps_r.shape
         if nx < 5 or ny < 5:
             raise ValueError(f"n_eff_arr 网格过小 {(nx, ny)}，至少 5x5")
-        if self.tfsf_box is not None and self.tfsf_waveform is None:
-            raise ValueError("tfsf_box 非 None 时 tfsf_waveform 必填")
         if self.eps_r_bg is None:
             self.eps_r_bg = float(eps_r.min())
         if self.eps_r_bg <= 0.0:
             raise ValueError(f"eps_r_bg 须 >0，实际 {self.eps_r_bg}")
+
+    def _validate_tfsf(self) -> None:
+        """校验 TFSF 边界与波形联合约束。"""
+        if self.tfsf_box is not None and self.tfsf_waveform is None:
+            raise ValueError("tfsf_box 非 None 时 tfsf_waveform 必填")
+
+    def _validate_positions(self, shape: tuple[int, int]) -> None:
+        """校验监视器、探针、软源位置是否在网格范围内。"""
+        nx, ny = shape
         for mon in self.monitors:
-            ix, iy = mon.position
-            if not (0 <= ix < nx and 0 <= iy < ny):
-                raise IndexError(f"监视器 {mon.position} 越界 {(nx, ny)}")
+            self._check_position_in_bounds(mon.position, nx, ny, "监视器")
         if self.probe_point is not None:
-            ix, iy = self.probe_point
-            if not (0 <= ix < nx and 0 <= iy < ny):
-                raise IndexError(f"探针 {self.probe_point} 越界 {(nx, ny)}")
+            self._check_position_in_bounds(self.probe_point, nx, ny, "探针")
         if self.source is not None:
-            ix, iy = self.source.position
-            if not (0 <= ix < nx and 0 <= iy < ny):
-                raise IndexError(f"软源 {self.source.position} 越界 {(nx, ny)}")
+            self._check_position_in_bounds(self.source.position, nx, ny, "软源")
         for src in self.sources:
-            ix, iy = src.position
-            if not (0 <= ix < nx and 0 <= iy < ny):
-                raise IndexError(f"软源 {src.position} 越界 {(nx, ny)}")
+            self._check_position_in_bounds(src.position, nx, ny, "软源")
+
+    @staticmethod
+    def _check_position_in_bounds(
+        position: tuple[int, int], nx: int, ny: int, label: str
+    ) -> None:
+        """单点越界检查，越界则 raise IndexError。"""
+        ix, iy = position
+        if not (0 <= ix < nx and 0 <= iy < ny):
+            raise IndexError(f"{label} {position} 越界 {(nx, ny)}")
 
 
 @dataclass

@@ -337,79 +337,104 @@ class MNASolver:
         """
         A = np.zeros((self.size, self.size))
         z = np.zeros(self.size)
-
         # 电阻
         for r in self.circuit.resistors:
-            g = 1.0 / r["r"]
-            n1, n2 = r["n1"], r["n2"]
-            if n1 > 0:
-                A[n1 - 1, n1 - 1] += g
-            if n2 > 0:
-                A[n2 - 1, n2 - 1] += g
-            if n1 > 0 and n2 > 0:
-                A[n1 - 1, n2 - 1] -= g
-                A[n2 - 1, n1 - 1] -= g
-
+            self._stamp_resistor(A, r)
         # 电容 (后向欧拉): G_C = C/dt, I_prev = C/dt * V_prev
         for c in self.circuit.capacitors:
-            g_c = c["c"] / dt
-            n1, n2 = c["n1"], c["n2"]
-            v_prev = (x_prev[n1 - 1] - x_prev[n2 - 1]) if n1 > 0 and n2 > 0 else 0.0
-            i_prev = g_c * v_prev
-            if n1 > 0:
-                A[n1 - 1, n1 - 1] += g_c
-                z[n1 - 1] += i_prev
-            if n2 > 0:
-                A[n2 - 1, n2 - 1] += g_c
-                z[n2 - 1] -= i_prev
-            if n1 > 0 and n2 > 0:
-                A[n1 - 1, n2 - 1] -= g_c
-                A[n2 - 1, n1 - 1] -= g_c
-
+            self._stamp_capacitor(A, z, c, dt, x_prev)
         # 电感 (后向欧拉): 等效电压源 V_L = L/dt * I_prev, 系数 L/dt
         for i, ind in enumerate(self.circuit.inductors):
-            n1, n2 = ind["n1"], ind["n2"]
-            col = self.n + self.m + i
-            r_eq = ind["l"] / dt
-            # 电感等效为电阻 R_eq = L/dt + 电压源 V_prev = R_eq * I_prev
-            i_prev = x_prev[col]
-            v_prev = r_eq * i_prev
-            if n1 > 0:
-                A[n1 - 1, n1 - 1] += 1.0 / r_eq
-                A[n1 - 1, col] = 1.0
-                A[col, n1 - 1] = 1.0
-                z[n1 - 1] += v_prev / r_eq
-            if n2 > 0:
-                A[n2 - 1, n2 - 1] += 1.0 / r_eq
-                A[n2 - 1, col] = -1.0
-                A[col, n2 - 1] = -1.0
-                z[n2 - 1] -= v_prev / r_eq
-            z[col] = 0.0
-
+            self._stamp_inductor(A, z, ind, i, dt, x_prev)
         # 电压源 (支持 AC 正弦)
         for i, v in enumerate(self.circuit.vsources):
-            n1, n2 = v["n1"], v["n2"]
-            col = self.n + i
-            v_val = v["dc"]
-            if v["ac"] > 0 and v["freq"] > 0:
-                v_val += v["ac"] * np.sin(2 * np.pi * v["freq"] * t)
-            if n1 > 0:
-                A[n1 - 1, col] = 1.0
-                A[col, n1 - 1] = 1.0
-            if n2 > 0:
-                A[n2 - 1, col] = -1.0
-                A[col, n2 - 1] = -1.0
-            z[col] = v_val
-
+            self._stamp_vsource(A, z, v, i, t)
         # 电流源
         for src in self.circuit.isources:
-            n1, n2 = src["n1"], src["n2"]
-            if n1 > 0:
-                z[n1 - 1] -= src["dc"]
-            if n2 > 0:
-                z[n2 - 1] += src["dc"]
-
+            self._stamp_isource(z, src)
         return A, z
+
+    @staticmethod
+    def _stamp_resistor(A: np.ndarray, r: dict) -> None:
+        """电阻导纳 stamping（G = 1/R 注入 MNA 矩阵）。"""
+        g = 1.0 / r["r"]
+        n1, n2 = r["n1"], r["n2"]
+        if n1 > 0:
+            A[n1 - 1, n1 - 1] += g
+        if n2 > 0:
+            A[n2 - 1, n2 - 1] += g
+        if n1 > 0 and n2 > 0:
+            A[n1 - 1, n2 - 1] -= g
+            A[n2 - 1, n1 - 1] -= g
+
+    @staticmethod
+    def _stamp_capacitor(
+        A: np.ndarray, z: np.ndarray, c: dict, dt: float, x_prev: np.ndarray
+    ) -> None:
+        """电容后向欧拉 stamping：G_C=C/dt, I_prev=G_C·V_prev。"""
+        g_c = c["c"] / dt
+        n1, n2 = c["n1"], c["n2"]
+        v_prev = (x_prev[n1 - 1] - x_prev[n2 - 1]) if n1 > 0 and n2 > 0 else 0.0
+        i_prev = g_c * v_prev
+        if n1 > 0:
+            A[n1 - 1, n1 - 1] += g_c
+            z[n1 - 1] += i_prev
+        if n2 > 0:
+            A[n2 - 1, n2 - 1] += g_c
+            z[n2 - 1] -= i_prev
+        if n1 > 0 and n2 > 0:
+            A[n1 - 1, n2 - 1] -= g_c
+            A[n2 - 1, n1 - 1] -= g_c
+
+    def _stamp_inductor(
+        self, A: np.ndarray, z: np.ndarray, ind: dict, idx: int, dt: float, x_prev: np.ndarray
+    ) -> None:
+        """电感后向欧拉 stamping：R_eq=L/dt, V_prev=R_eq·I_prev。
+
+        电感等效为电阻 R_eq = L/dt 串联电压源 V_prev = R_eq * I_prev。
+        """
+        n1, n2 = ind["n1"], ind["n2"]
+        col = self.n + self.m + idx
+        r_eq = ind["l"] / dt
+        i_prev = x_prev[col]
+        v_prev = r_eq * i_prev
+        if n1 > 0:
+            A[n1 - 1, n1 - 1] += 1.0 / r_eq
+            A[n1 - 1, col] = 1.0
+            A[col, n1 - 1] = 1.0
+            z[n1 - 1] += v_prev / r_eq
+        if n2 > 0:
+            A[n2 - 1, n2 - 1] += 1.0 / r_eq
+            A[n2 - 1, col] = -1.0
+            A[col, n2 - 1] = -1.0
+            z[n2 - 1] -= v_prev / r_eq
+        z[col] = 0.0
+
+    def _stamp_vsource(
+        self, A: np.ndarray, z: np.ndarray, v: dict, idx: int, t: float
+    ) -> None:
+        """电压源 stamping（支持 AC 正弦叠加）。"""
+        n1, n2 = v["n1"], v["n2"]
+        col = self.n + idx
+        v_val = v["dc"]
+        if v["ac"] > 0 and v["freq"] > 0:
+            v_val += v["ac"] * np.sin(2 * np.pi * v["freq"] * t)
+        if n1 > 0:
+            A[n1 - 1, col] = 1.0
+            A[col, n1 - 1] = 1.0
+        if n2 > 0:
+            A[n2 - 1, col] = -1.0
+            A[col, n2 - 1] = -1.0
+        z[col] = v_val
+
+    @staticmethod
+    def _stamp_isource(z: np.ndarray, src: dict) -> None:
+        """电流源 stamping（注入 RHS）。"""
+        n1, n2 = src["n1"], src["n2"]
+        if n1 > 0:
+            z[n1 - 1] -= src["dc"]
+        if n2 > 0:
+            z[n2 - 1] += src["dc"]
 
 
 def build_opto_electrical_link_circuit(

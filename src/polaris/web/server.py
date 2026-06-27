@@ -368,116 +368,165 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
+        """HTTP GET 路由分发（重构后圈复杂度 ≤15）。
+
+        路由优先级：简单精确匹配 > showcase > 作业管理 > 静态文件兜底。
+        """
         parsed = urlparse(self.path)
         path = parsed.path
+        # 优先级 1: 简单精确匹配
+        if self._try_simple_get(path):
+            return
+        # 优先级 2: showcase 子路径
+        if self._try_showcase_get(path):
+            return
+        # 优先级 3: 作业管理 API（对齐 Cadence ADE-XL 作业队列查询）
+        if self._try_jobs_get(path, parsed):
+            return
+        # 默认: 静态文件
+        self._serve_static_index(path)
 
+    def _try_simple_get(self, path: str) -> bool:
+        """处理简单精确匹配路由，返回是否命中。"""
         if path == "/api/health":
             self._send_json({"status": "ok", "service": "PoLaRIS Web UI"})
-            return
+            return True
         if path == "/api/presets":
             self._send_json({"presets": _get_presets()})
-            return
+            return True
+        if path == "/showcase.html" or path == "/showcase":
+            self._send_static(_STATIC_DIR / "showcase.html")
+            return True
+        return False
+
+    def _try_showcase_get(self, path: str) -> bool:
+        """处理 showcase 子路径，返回是否命中。"""
         if path.startswith("/api/showcase/report/"):
             run_id = path.split("/")[-1]
             self._handle_showcase_report(run_id)
-            return
+            return True
         if path.startswith("/api/showcase/stages/"):
-            parts = path.split("/")
-            # 路径格式: /api/showcase/stages/{run_id}/{stage_id}
-            run_id = parts[-2]
-            try:
-                stage_id = int(parts[-1])
-            except ValueError:
-                self._send_json(
-                    {"success": False, "error": f"无效的阶段 ID: {parts[-1]}"},
-                    code=400,
-                )
-                return
-            self._handle_showcase_stage(run_id, stage_id)
-            return
-        if path == "/showcase.html" or path == "/showcase":
-            self._send_static(_STATIC_DIR / "showcase.html")
-            return
+            self._handle_showcase_stages_path(path)
+            return True
+        return False
 
-        # === 作业管理 API（对齐 Cadence ADE-XL 作业队列查询）===
-        # 路由优先级：精确匹配 > 子路径（status/report/stages）> 通配 {job_id}
+    def _handle_showcase_stages_path(self, path: str) -> None:
+        """解析 /api/showcase/stages/{run_id}/{stage_id} 并分发。"""
+        parts = path.split("/")
+        # 路径格式: /api/showcase/stages/{run_id}/{stage_id}
+        run_id = parts[-2]
+        try:
+            stage_id = int(parts[-1])
+        except ValueError:
+            self._send_json(
+                {"success": False, "error": f"无效的阶段 ID: {parts[-1]}"},
+                code=400,
+            )
+            return
+        self._handle_showcase_stage(run_id, stage_id)
+
+    def _try_jobs_get(self, path: str, parsed) -> bool:
+        """处理作业管理 API，返回是否命中。
+
+        路由优先级：精确匹配 > 子路径（status/report/stages）> 通配 {job_id}。
+        """
         if path == "/api/jobs":
-            # 列出所有作业，可选 ?status=running 过滤
-            status_filter = (
-                parsed.query.replace("status=", "")
-                if "status=" in parsed.query
-                else None
-            )
-            jobs = _get_tracker().list_jobs(status=status_filter)
-            self._send_json({"jobs": jobs})
-            return
-        if path.startswith("/api/jobs/") and path.endswith("/status"):
-            # 查询作业状态与进度
-            job_id = path.split("/")[3]
-            job_meta = _get_tracker().get_job(job_id)
-            if job_meta is None:
-                self._send_json({"error": f"作业 {job_id} 不存在"}, code=404)
-                return
-            self._send_json({
-                "job_id": job_id,
-                "status": job_meta.get("status"),
-                "progress": job_meta.get("progress"),
-            })
-            return
-        if path.startswith("/api/jobs/") and path.endswith("/report"):
-            # 查询作业汇总报告（读取 reports/summary.json）
-            job_id = path.split("/")[3]
-            report_path = (
-                Path("out/jobs") / job_id / "reports" / "summary.json"
-            )
-            if not report_path.exists():
-                self._send_json(
-                    {"error": f"作业 {job_id} 的汇总报告不存在"}, code=404
-                )
-                return
-            try:
-                report = json.loads(
-                    report_path.read_text(encoding="utf-8")
-                )
-            except (json.JSONDecodeError, OSError) as e:
-                self._send_json(
-                    {"error": f"读取作业 {job_id} 汇总报告失败: {e}"},
-                    code=500,
-                )
-                return
-            self._send_json(report)
-            return
-        if path.startswith("/api/jobs/") and "/stages/" in path:
-            # 查询阶段输出：/api/jobs/{job_id}/stages/{stage_id}
-            parts = path.split("/")
-            job_id = parts[3]
-            try:
-                stage_id = int(parts[5])
-            except (IndexError, ValueError):
-                self._send_json(
-                    {"error": f"无效的阶段 ID: {parts[5] if len(parts) > 5 else '缺失'}"},
-                    code=400,
-                )
-                return
-            result = _get_tracker().get_stage_result(job_id, stage_id)
-            if result is None:
-                self._send_json(
-                    {"error": f"作业 {job_id} 阶段 {stage_id} 结果不存在"},
-                    code=404,
-                )
-                return
-            self._send_json(result)
-            return
+            self._handle_jobs_list(parsed)
+            return True
         if path.startswith("/api/jobs/"):
-            # 查询作业详情（通配，返回完整 job_dict）
-            job_id = path.split("/")[3]
-            job_meta = _get_tracker().get_job(job_id)
-            if job_meta is None:
-                self._send_json({"error": f"作业 {job_id} 不存在"}, code=404)
-                return
-            self._send_json(job_meta)
-            return
+            self._route_jobs_subpath(path)
+            return True
+        return False
 
+    def _handle_jobs_list(self, parsed) -> None:
+        """列出所有作业，可选 ?status=running 过滤。"""
+        status_filter = (
+            parsed.query.replace("status=", "")
+            if "status=" in parsed.query
+            else None
+        )
+        jobs = _get_tracker().list_jobs(status=status_filter)
+        self._send_json({"jobs": jobs})
+
+    def _route_jobs_subpath(self, path: str) -> None:
+        """作业子路径分发：status/report/stages/通配。"""
+        if path.endswith("/status"):
+            self._handle_jobs_status(path)
+            return
+        if path.endswith("/report"):
+            self._handle_jobs_report(path)
+            return
+        if "/stages/" in path:
+            self._handle_jobs_stages(path)
+            return
+        # 通配：查询作业详情（返回完整 job_dict）
+        self._handle_jobs_detail(path)
+
+    def _handle_jobs_status(self, path: str) -> None:
+        """查询作业状态与进度。"""
+        job_id = path.split("/")[3]
+        job_meta = _get_tracker().get_job(job_id)
+        if job_meta is None:
+            self._send_json({"error": f"作业 {job_id} 不存在"}, code=404)
+            return
+        self._send_json({
+            "job_id": job_id,
+            "status": job_meta.get("status"),
+            "progress": job_meta.get("progress"),
+        })
+
+    def _handle_jobs_report(self, path: str) -> None:
+        """查询作业汇总报告（读取 reports/summary.json）。"""
+        job_id = path.split("/")[3]
+        report_path = Path("out/jobs") / job_id / "reports" / "summary.json"
+        if not report_path.exists():
+            self._send_json(
+                {"error": f"作业 {job_id} 的汇总报告不存在"}, code=404
+            )
+            return
+        try:
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as e:
+            self._send_json(
+                {"error": f"读取作业 {job_id} 汇总报告失败: {e}"},
+                code=500,
+            )
+            return
+        self._send_json(report)
+
+    def _handle_jobs_stages(self, path: str) -> None:
+        """查询阶段输出：/api/jobs/{job_id}/stages/{stage_id}。"""
+        parts = path.split("/")
+        job_id = parts[3]
+        try:
+            stage_id = int(parts[5])
+        except (IndexError, ValueError):
+            idx_str = parts[5] if len(parts) > 5 else "缺失"
+            self._send_json(
+                {"error": f"无效的阶段 ID: {idx_str}"},
+                code=400,
+            )
+            return
+        result = _get_tracker().get_stage_result(job_id, stage_id)
+        if result is None:
+            self._send_json(
+                {"error": f"作业 {job_id} 阶段 {stage_id} 结果不存在"},
+                code=404,
+            )
+            return
+        self._send_json(result)
+
+    def _handle_jobs_detail(self, path: str) -> None:
+        """通配查询作业详情（返回完整 job_dict）。"""
+        job_id = path.split("/")[3]
+        job_meta = _get_tracker().get_job(job_id)
+        if job_meta is None:
+            self._send_json({"error": f"作业 {job_id} 不存在"}, code=404)
+            return
+        self._send_json(job_meta)
+
+    def _serve_static_index(self, path: str) -> None:
+        """默认静态文件服务，根路径映射到 index.html。"""
         if path == "/" or path == "":
             path = "/index.html"
         static_path = _STATIC_DIR / path.lstrip("/")
