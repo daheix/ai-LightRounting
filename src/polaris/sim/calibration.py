@@ -116,7 +116,18 @@ def _collect_calibration_items(
             continue
         try:
             data = json.loads(f.read_text(encoding="utf-8"))
-        except Exception:
+        except FileNotFoundError as e:
+            # 文件在 glob 后被删除，可恢复：记录 warning 后跳过
+            logger.warning("校准文件已消失，跳过: %s (%s)", f, e)
+            continue
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            # 解析错误不可恢复：数据损坏，必须 raise 告警（规则 14.1: 无 fall-back）
+            raise ValueError(
+                f"校准数据解析失败: {f}: {e}"
+            ) from e
+        except OSError as e:
+            # 其他文件 I/O 错误（权限/IO 错误），可恢复：记录 warning 后跳过
+            logger.warning("校准文件读取失败，跳过: %s (%s)", f, e)
             continue
 
         name = data.get("name", f.stem)

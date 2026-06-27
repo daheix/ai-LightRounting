@@ -83,10 +83,16 @@ def is_available() -> bool:
             gf.gpdk.PDK.activate()
             get_active_pdk()
             return True
-        except Exception:
-            return False
-    except Exception:
-        return False
+        except (ImportError, AttributeError, RuntimeError, KeyError) as e:
+            # PDK 激活失败不可静默兜底（规则 14.1: 无 fall-back）
+            raise RuntimeError(
+                f"gdsfactory generic PDK 激活失败: {e}"
+            ) from e
+    except (ImportError, AttributeError, RuntimeError, KeyError) as e:
+        # PDK 状态检查失败不可静默兜底（规则 14.1: 无 fall-back）
+        raise RuntimeError(
+            f"gdsfactory PDK 状态检查失败: {e}"
+        ) from e
 
 
 def generate_mzi_gds(
@@ -222,10 +228,17 @@ def list_available_components() -> list[str]:
     """列出 gdsfactory 可用的器件名。
 
     Returns:
-        器件名列表。gdsfactory 不可用时返回空列表。
+        器件名列表。
+
+    Raises:
+        ImportError: gdsfactory 未安装。
+        RuntimeError: gdsfactory 器件枚举失败。
     """
     if not _HAS_GDSFACTORY:
-        return []
+        raise ImportError(
+            "gdsfactory 未安装，无法列出器件。"
+            "请执行 pip install gdsfactory 或检查 Python 版本兼容性。"
+        )
     try:
         import gdsfactory as gf
 
@@ -237,8 +250,11 @@ def list_available_components() -> list[str]:
             if not name.startswith("_") and callable(getattr(gf.components, name))
         ]
         return sorted(photonics_components)
-    except Exception:
-        return []
+    except (ImportError, AttributeError, RuntimeError) as e:
+        # 器件枚举失败不可静默兜底（规则 14.1: 无 fall-back）
+        raise RuntimeError(
+            f"gdsfactory 器件枚举失败: {e}"
+        ) from e
 
 
 # ==================== 第2轮 P0-3: PDK 桥接增强 ====================
@@ -484,14 +500,20 @@ def load_gdsfactory_pdk(
         max_components: 最大加载器件数（避免内存溢出），默认 50。
 
     Returns:
-        器件名 → Device 映射。gdsfactory 不可用或 PDK 不存在时返回空字典。
+        器件名 → Device 映射。PDK 不存在时返回空字典。
+
+    Raises:
+        ImportError: gdsfactory 未安装。
+        RuntimeError: gdsfactory PDK 加载失败。
 
     来源: gdsfactory PDK 生态
     https://gdsfactory.github.io/gdsfactory/
     """
     if not _HAS_GDSFACTORY:
-        logger.warning("gdsfactory 未安装，无法加载 PDK %s", pdk_name)
-        return {}
+        raise ImportError(
+            "gdsfactory 未安装，无法加载 PDK。"
+            "请执行 pip install gdsfactory 或检查 Python 版本兼容性。"
+        )
 
     try:
         components = _activate_gdsfactory_pdk(pdk_name)
@@ -511,9 +533,11 @@ def load_gdsfactory_pdk(
         )
         logger.info("从 gdsfactory PDK %s 加载 %d 个器件", pdk_name, len(devices))
         return devices
-    except Exception as e:
-        logger.error("加载 gdsfactory PDK %s 失败: %s", pdk_name, e)
-        return {}
+    except (ImportError, AttributeError, RuntimeError) as e:
+        # PDK 加载失败不可静默兜底（规则 14.1: 无 fall-back）
+        raise RuntimeError(
+            f"加载 gdsfactory PDK {pdk_name} 失败: {e}"
+        ) from e
 
 
 def register_gdsfactory_pdk(

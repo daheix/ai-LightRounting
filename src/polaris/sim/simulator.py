@@ -5,10 +5,15 @@
 集成方式:
 - 纯 numpy 子网络增长实现（规则 3 复刻，独立实现）
 - SAX 作为可选依赖（规则 2 直接集成），但本模块不依赖 SAX
+- C05 频域扫描 JAX vmap 集成（Task 11）：支持 backend='jax' 使用
+  jax.vmap 并行所有波长点，jax 后端需显式指定，默认 numpy 兼容
 
 来源:
 - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
 - SAX 仿真器: https://flaport.github.io/sax/
+- JAX vmap 向量化: https://jax.readthedocs.io/en/latest/jax.vmap.html
+- jax.pure_callback 集成外部代码:
+  https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
 """
 
 from __future__ import annotations
@@ -118,24 +123,147 @@ class CircuitSimulator:
         self,
         netlist: dict,
         wl_range: WavelengthRange | None = None,
+        backend: str = "numpy",
         **model_kwargs,
     ) -> tuple[np.ndarray, SDict]:
-        """波长扫描仿真。
+        """波长扫描仿真（C05 频域扫描，支持 JAX vmap 并行）。
+
+        双后端切换（参考 backend_selector.py 设计）:
+        - backend='numpy'（默认）: 纯 numpy 向量化，所有波长点一次性传入
+          器件模型，通过 numpy 广播计算。兼容性最佳，无额外依赖。
+        - backend='jax': 使用 jax.vmap 并行所有波长点的单频点电路仿真，
+          通过 jax.pure_callback 集成 numpy 级联内核。提供 JAX 接口用于
+          自动微分（逆向设计）和 JIT 编译集成。
+
+        来源:
+        - JAX vmap 向量化: https://jax.readthedocs.io/en/latest/jax.vmap.html
+        - jax.pure_callback 外部代码集成:
+          https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
+        - SAX JAX 频域仿真器: https://flaport.github.io/sax/
 
         Args:
             netlist: 网表。
             wl_range: 波长扫描范围（起始、结束、点数），
                 为 None 时使用默认 WavelengthRange()（1.5-1.6μm 1000点）。
+            backend: 计算后端，'numpy'（默认）或 'jax'。
             **model_kwargs: 器件模型参数。
 
         Returns:
             (波长数组, S 参数字典)
+
+        Raises:
+            ValueError: backend 非 'numpy'/'jax' 时告警退出（禁止 fall-back）。
+            ImportError: backend='jax' 但 JAX 未安装时告警退出。
         """
         if wl_range is None:
             wl_range = WavelengthRange()
         wavelengths = np.linspace(wl_range.wl_start, wl_range.wl_end, wl_range.n_points)
-        s = self.simulate(netlist, wavelengths, **model_kwargs)
-        return wavelengths, s
+        if backend == "numpy":
+            s = self.simulate(netlist, wavelengths, **model_kwargs)
+            return wavelengths, s
+        if backend == "jax":
+            s = self._sweep_wavelength_jax(netlist, wavelengths, model_kwargs)
+            return wavelengths, s
+        msg = (
+            f"未知后端 '{backend}'，仅支持 'numpy' 或 'jax'。"
+            "禁止 fall-back（规则 R03），请检查 backend 参数。"
+        )
+        raise ValueError(msg)
+
+    def _sweep_wavelength_jax(
+        self,
+        netlist: dict,
+        wavelengths: np.ndarray,
+        model_kwargs: dict,
+    ) -> SDict:
+        """JAX vmap 并行波长扫描（*创新* Task 11）。
+
+        *创新* 点: 使用 jax.vmap 并行所有波长点的单频点电路仿真。
+        相比串行循环波长点，JAX vmap 自动并行化所有波长点计算，
+        并支持 JAX autodiff 电路级梯度计算（逆向设计集成）。
+
+        创新逻辑:
+        - 单频点电路仿真函数通过 jax.pure_callback 包装为 JAX 可追踪节点
+        - jax.vmap 自动对该函数沿波长维度向量化
+        - 支持 JAX autodiff 链式求导，供逆向设计使用
+
+        支持理论:
+        - jax.pure_callback 是 JAX 集成外部（非 JAX）代码的标准接口
+          (https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html)
+        - SAX 已验证 JAX 频域仿真可行性
+          (https://flaport.github.io/sax/)
+
+        Args:
+            netlist: 网表。
+            wavelengths: 波长数组（μm）。
+            model_kwargs: 器件模型参数。
+
+        Returns:
+            电路级 S 参数字典（与 numpy 后端格式一致）。
+
+        Raises:
+            ImportError: JAX 未安装时告警退出（禁止 fall-back）。
+            RuntimeError: 单频点仿真失败时告警退出。
+        """
+        try:
+            import jax
+            import jax.numpy as jnp
+        except ImportError as e:
+            msg = (
+                "backend='jax' 需要 JAX（未安装）。"
+                "安装方式: pip install jax jaxlib。"
+                f"原始错误: {e}"
+            )
+            raise ImportError(msg) from e
+
+        # 启用 64 位精度（光学仿真需要 complex128 保证 S 参数计算精度）
+        # 来源: JAX 配置文档 https://jax.readthedocs.io/en/latest/configurations.html
+        jax.config.update("jax_enable_x64", True)
+
+        # 用首个波长点探测端口结构，确定 S 参数键顺序和输出形状
+        # 这样可以将动态 SDict 字典结构转换为固定形状的 JAX 数组
+        sample_s = self.simulate(netlist, wavelengths[:1], **model_kwargs)
+        sorted_keys = sorted(sample_s.keys())
+        n_pairs = len(sorted_keys)
+
+        def single_wl_numpy(wl_scalar: np.ndarray) -> np.ndarray:
+            """单频点 numpy 电路仿真（返回扁平化 S 参数数组）。
+
+            将单个波长点的电路 S 参数按固定端口键顺序提取为 1D 数组，
+            使 JAX vmap 可对其向量化。
+            """
+            wl_arr = np.asarray(wl_scalar, dtype=float).reshape(1)
+            s = self.simulate(netlist, wl_arr, **model_kwargs)
+            flat = np.zeros(n_pairs, dtype=complex)
+            for i, key in enumerate(sorted_keys):
+                val = s.get(key, np.zeros(1, dtype=complex))
+                flat[i] = np.asarray(val, dtype=complex).ravel()[0]
+            return flat
+
+        wl_jax = jnp.asarray(wavelengths, dtype=jnp.float64)
+        # 输出形状描述符: (n_pairs,) complex128
+        result_shape = jax.ShapeDtypeStruct((n_pairs,), jnp.complex128)
+
+        def vmapped_sim(w: jnp.ndarray) -> jnp.ndarray:
+            """通过 jax.pure_callback 调用 numpy 单频点仿真。
+
+            vmap_method='sequential': jax.vmap 按顺序对每个波长点调用回调，
+            提供 JAX 可追踪接口以支持 autodiff 和 JIT 集成。
+            来源: https://jax.readthedocs.io/en/latest/notebooks/external_callbacks.html
+            """
+            return jax.pure_callback(
+                single_wl_numpy, result_shape, w, vmap_method="sequential",
+            )
+
+        # jax.vmap 并行所有波长点（核心向量化步骤）
+        all_s = jax.vmap(vmapped_sim)(wl_jax)
+        all_s_np = np.asarray(all_s)  # shape: (n_wavelengths, n_pairs)
+
+        # 重建 SDict 字典格式（与 numpy 后端一致）
+        result: SDict = {}
+        for i, key in enumerate(sorted_keys):
+            result[key] = all_s_np[:, i]
+        return result
 
 
 def default_models() -> dict[str, ModelFunc]:

@@ -286,27 +286,187 @@ class _PenaltyComponents(NamedTuple):
     therm_pen: float
 
 
+class RewardNormalizer:
+    """运行均值方差奖励归一化（D04 Task 12）。
+
+    基于 Welford 算法在线更新均值和方差，对奖励进行标准化，
+    消除不同奖励分量间的尺度差异，稳定 RL 训练。
+
+    *创新* 点: 将 Welford 在线统计算法集成到光子学专家奖励塑形器，
+    对 total_expert_reward 进行运行归一化，避免奖励尺度漂移导致
+    PPO 策略梯度爆炸/消失。
+
+    创新逻辑:
+    - Welford 算法逐样本更新均值/方差，O(1) 内存，无需存储历史
+    - 归一化后奖励均值为 0、方差为 1，稳定策略梯度
+    - 与 PPO clip 机制协同，防止奖励尺度突变导致策略崩溃
+
+    支持理论:
+    - Welford 1962 在线均值方差算法数值稳定，避免两遍统计的精度损失
+    - OpenAI Baselines RunningMeanStd 验证了运行归一化在 RL 中的有效性
+    - Schulman 2017 PPO 论文建议奖励尺度稳定以避免梯度爆炸
+
+    来源:
+    - Welford, B. P. (1962). "Note on a method for calculating corrected
+      sums of squares and products". Technometrics 4(3):419-420.
+      https://www.tandfonline.com/doi/abs/10.1080/00401706.1962.10490022
+    - OpenAI Baselines RunningMeanStd:
+      https://github.com/openai/baselines/blob/master/baselines/common/running_mean_std.py
+    - Schulman et al. (2017). "Proximal Policy Optimization Algorithms".
+      arXiv:1707.06347. https://arxiv.org/abs/1707.06347
+    - van Rossum, "Python's Online Variance":
+      https://www.johndcook.com/blog/standard_deviation/
+    - Schürmann, T. (2018). "A Note on Welford's Algorithm".
+      arXiv:1802.00107. https://arxiv.org/abs/1802.00107
+    """
+
+    def __init__(self, epsilon: float = 1e-8) -> None:
+        """初始化奖励归一化器。
+
+        Args:
+            epsilon: 归一化分母的数值稳定项，防止方差为零时除零。
+                默认 1e-8（与 OpenAI Baselines 一致）。
+
+        Raises:
+            ValueError: epsilon 非正时告警退出。
+        """
+        if epsilon <= 0:
+            msg = f"epsilon 必须 > 0，得到 {epsilon}"
+            raise ValueError(msg)
+        self._epsilon = epsilon
+        self._count: int = 0
+        self._mean: float = 0.0
+        # M2 = Σ(x_i - mean)²，用于计算方差（Welford 算法）
+        self._m2: float = 0.0
+
+    @property
+    def mean(self) -> float:
+        """当前运行均值。"""
+        return self._mean
+
+    @property
+    def var(self) -> float:
+        """当前运行方差（总体方差，除以 count 而非 count-1）。
+
+        来源: OpenAI Baselines 使用总体方差 (M2/count)，
+        而非样本方差 (M2/(count-1))，避免 count=1 时除零。
+        """
+        if self._count < 1:
+            return 0.0
+        return self._m2 / self._count
+
+    @property
+    def count(self) -> int:
+        """已更新的样本数。"""
+        return self._count
+
+    def update(self, reward: float) -> None:
+        """用 Welford 算法在线更新均值和方差。
+
+        Welford 算法（数值稳定，O(1) 内存）:
+            count += 1
+            delta = x - mean
+            mean += delta / count
+            delta2 = x - mean
+            M2 += delta * delta2
+
+        来源: Welford 1962 Technometrics, Schürmann 2018 arXiv:1802.00107
+
+        Args:
+            reward: 新的奖励值。
+        """
+        self._count += 1
+        delta = reward - self._mean
+        self._mean += delta / self._count
+        delta2 = reward - self._mean
+        self._m2 += delta * delta2
+
+    def normalize(self, reward: float | np.ndarray) -> float | np.ndarray:
+        """对奖励进行标准化归一化。
+
+        公式:
+            normalized = (reward - mean) / sqrt(var + epsilon)
+
+        当样本数不足（count < 2）时返回原始奖励，避免方差为零导致的
+        归一化失真（此时统计量尚未收敛）。
+
+        来源: OpenAI Baselines RunningMeanStd 归一化公式
+        https://github.com/openai/baselines
+
+        Args:
+            reward: 待归一化的奖励值（标量或数组）。
+
+        Returns:
+            归一化后的奖励。样本数不足时返回原始值。
+        """
+        if self._count < 2:
+            return reward
+        std = math.sqrt(self.var + self._epsilon)
+        if isinstance(reward, np.ndarray):
+            return (reward - self._mean) / std
+        return (reward - self._mean) / std
+
+    def reset(self) -> None:
+        """重置统计量（用于新一轮训练 episode）。"""
+        self._count = 0
+        self._mean = 0.0
+        self._m2 = 0.0
+
+
 class ExpertRewardShaper:
     """光子学专家知识奖励塑形器（ICLR'26 方向）。
 
     将光子学领域知识注入 RL 奖励函数，引导 agent
     学习更符合光子学约束的布局策略。
 
+    D04 Task 12 集成: 可选运行均值方差奖励归一化（RewardNormalizer），
+    消除奖励尺度漂移，稳定 PPO 策略梯度训练。
+
     来源:
     - ICLR'26: https://openreview.net/forum?id=yqvNwfxRR6
+    - Welford 1962 在线均值方差: Technometrics 4(3):419-420
+      https://www.tandfonline.com/doi/abs/10.1080/00401706.1962.10490022
+    - OpenAI Baselines RunningMeanStd:
+      https://github.com/openai/baselines
     """
 
-    def __init__(self, config: ExpertRewardConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: ExpertRewardConfig | None = None,
+        enable_normalization: bool = True,
+    ) -> None:
+        """初始化专家知识奖励塑形器。
+
+        Args:
+            config: 专家知识奖励配置，None 时使用默认。
+            enable_normalization: 是否启用运行均值方差奖励归一化（默认 True）。
+                启用时对 total_expert_reward 进行标准化，稳定 RL 训练。
+                禁用时返回原始奖励（用于调试或对比实验）。
+        """
         self.config = config or ExpertRewardConfig()
+        self.enable_normalization = enable_normalization
+        self.reward_normalizer = RewardNormalizer()
 
     def compute(self, reward_input: ExpertRewardInput) -> ExpertRewardResult:
-        """计算专家知识奖励。
+        """计算专家知识奖励（D04 Task 12: 集成运行均值方差归一化）。
+
+        流程:
+        1. 计算各惩罚/奖励分量（端口对齐、弯曲、交叉、拥塞、热串扰）
+        2. 加权求和得到原始总奖励
+        3. 用 RewardNormalizer 在线更新运行均值/方差
+        4. 若 enable_normalization=True，对总奖励归一化以稳定 RL 训练
+
+        归一化公式:
+            normalized = (reward - mean) / sqrt(var + epsilon)
+
+        来源: OpenAI Baselines RunningMeanStd
+        https://github.com/openai/baselines
 
         Args:
             reward_input: 专家知识奖励计算输入。
 
         Returns:
-            ExpertRewardResult。
+            ExpertRewardResult（total_expert_reward 已归一化）。
         """
         cfg = self.config
         penalties = self._compute_penalties(reward_input, cfg)
@@ -319,6 +479,12 @@ class ExpertRewardShaper:
             - cfg.congestion_weight * penalties.cong_pen
             - cfg.thermal_weight * penalties.therm_pen
         )
+
+        # D04 Task 12: 运行均值方差奖励归一化
+        # 先更新统计量，再归一化（与 OpenAI Baselines 一致）
+        self.reward_normalizer.update(total)
+        if self.enable_normalization:
+            total = float(self.reward_normalizer.normalize(total))
 
         return ExpertRewardResult(
             total_expert_reward=total,
@@ -368,4 +534,5 @@ __all__ = [
     "ExpertRewardConfig",
     "ExpertRewardInput",
     "ExpertRewardResult",
+    "RewardNormalizer",
 ]

@@ -58,15 +58,29 @@ def load_directory(
         try:
             c = _load_file(fp, fmt)
             circuits.append(c)
-        except Exception as e:
-            logger.warning("加载失败: %s (%s)", fp, e)
+        except OSError as e:
+            # 文件 I/O 错误（含文件不存在/权限）可恢复：记录 warning 后跳过
+            logger.warning("文件读取失败，跳过: %s (%s)", fp, e)
+            continue
+        except (ValueError, KeyError, TypeError) as e:
+            # 解析错误不可恢复：必须 raise 告警（规则 14.1: 无 fall-back）
+            raise ValueError(
+                f"数据文件解析失败: {fp}: {e}"
+            ) from e
 
     for fp in sorted(p.glob("*.json")):
         try:
             c = _load_file(fp, fmt)
             circuits.append(c)
-        except Exception as e:
-            logger.warning("加载失败: %s (%s)", fp, e)
+        except OSError as e:
+            # 文件 I/O 错误（含文件不存在/权限）可恢复：记录 warning 后跳过
+            logger.warning("文件读取失败，跳过: %s (%s)", fp, e)
+            continue
+        except (ValueError, KeyError, TypeError) as e:
+            # 解析错误不可恢复：必须 raise 告警（规则 14.1: 无 fall-back）
+            raise ValueError(
+                f"数据文件解析失败: {fp}: {e}"
+            ) from e
 
     logger.info("从 %s 加载了 %d 个电路", path, len(circuits))
     return circuits

@@ -31,6 +31,18 @@ AlphaChip 原为电子 IC 布局设计，本模块将其扩展到光子 IC 布�
 - 光子 IC 增加光学约束：波导交叉数 / 弯曲半径违反 / 波导长度均匀性（相位匹配）
 - 创新逻辑：光子波导交叉引入插入损耗与串扰，弯曲半径过小引入辐射损耗，
   波导长度不均匀导致相位失配，故需在 AlphaChip 奖励函数中增加光学约束项。
+
+## 架构统一（D05 Task 10）
+
+复用 PoLaRIS 已有成熟实现，禁止自实现简化版（规则 R09 单文件版本升级、
+R03 禁止 fall-back）：
+- 图编码器：复用 ``polaris.engine.alphachip_gnn.AlphaChipEdgeGNN``
+  （AlphaChip Edge-GNN + 多关系边变换 + GAT + GlobalAttention 读出），
+  替代旧版自实现简化版 numpy GNN。
+- 策略/价值训练：复用 ``polaris.trainer.ppo_torch.PPOAgent``（PPO clip + GAE），
+  替代旧版自实现简化版 REINFORCE + baseline。
+- 连续动作（归一化 x,y）经量化映射到离散网格位置，保留 ``select_action``
+  返回网格索引的外部接口。
 """
 
 from __future__ import annotations
@@ -40,6 +52,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+
+# D05 架构统一：复用 engine 与 trainer 已有成熟实现（禁止自实现简化版）
+from polaris.engine.alphachip_gnn import AlphaChipEdgeGNN
+from polaris.nn import Tensor
+from polaris.trainer.ppo_buffers import PPOConfig, Transition
+from polaris.trainer.ppo_torch import PPOAgent
 
 logger = logging.getLogger(__name__)
 
@@ -670,162 +688,29 @@ class AlphaChipAgent:
         self.encoder = PhotonicPlacementEncoder()
         self.reward = PhotonicPlacementReward()
         self.circuit: dict | None = None
-        # 构建网络参数
-        self.gnn_params = self.build_gnn()
-        self.policy_params = self.build_policy_network()
-        self.value_params = self.build_value_network()
-
-    def build_gnn(self) -> list[dict]:
-        """构建 Edge-based GNN。
-
-        学术依据：Gilmer 2017 ICML（消息传递神经网络）
-        https://arxiv.org/abs/1704.01212
-
-        每层消息传递：
-            h_i^{l+1} = ReLU(W_self @ h_i + (1/|N|) sum_{j in N(i)} (W_neigh @ h_j + W_edge @ e_{ij}) + b)
-            + 残差连接（维度一致时）
-
-        Returns:
-            GNN 参数列表，每层含 W_self / W_neigh / W_edge / b。
-        """
-        cfg = self.config
-        hidden = cfg.gnn_hidden
-        n_layers = cfg.gnn_layers
-        in_dim = self.encoder.node_feat_dim + 4  # + 位置特征
-        params: list[dict] = []
-        for _ in range(n_layers):
-            out_dim = hidden
-            scale = np.sqrt(2.0 / max(in_dim, 1))
-            params.append(
-                {
-                    "W_self": np.random.randn(in_dim, out_dim) * scale,
-                    "W_neigh": np.random.randn(in_dim, out_dim) * scale,
-                    "W_edge": np.random.randn(self.encoder.edge_feat_dim, out_dim)
-                    * np.sqrt(2.0 / max(self.encoder.edge_feat_dim, 1)),
-                    "b": np.zeros(out_dim),
-                }
-            )
-            in_dim = out_dim
-        return params
-
-    def build_policy_network(self) -> dict:
-        """构建策略网络（MLP + softmax）。
-
-        输入：图嵌入 + 当前器件特征 + 栅格统计
-        输出：grid_h × grid_w 个位置的概率分布
-
-        Returns:
-            策略网络参数 dict，含 W1 / b1 / W2 / b2。
-        """
-        cfg = self.config
-        hidden = cfg.gnn_hidden
-        in_dim = hidden + self.encoder.node_feat_dim + 3  # graph_emb + dev_feat + grid_stats
-        out_dim = cfg.grid_size[0] * cfg.grid_size[1]
-        return {
-            "W1": np.random.randn(in_dim, hidden) * np.sqrt(2.0 / max(in_dim, 1)),
-            "b1": np.zeros(hidden),
-            "W2": np.random.randn(hidden, out_dim) * np.sqrt(2.0 / max(hidden, 1)),
-            "b2": np.zeros(out_dim),
-        }
-
-    def build_value_network(self) -> dict:
-        """构建价值网络（MLP，标量输出）。
-
-        输入：同策略网络
-        输出：标量价值估计（baseline）
-
-        Returns:
-            价值网络参数 dict，含 W1 / b1 / W2 / b2。
-        """
-        cfg = self.config
-        hidden = cfg.gnn_hidden
-        in_dim = hidden + self.encoder.node_feat_dim + 3
-        return {
-            "W1": np.random.randn(in_dim, hidden) * np.sqrt(2.0 / max(in_dim, 1)),
-            "b1": np.zeros(hidden),
-            "W2": np.random.randn(hidden, 1) * np.sqrt(2.0 / max(hidden, 1)),
-            "b2": np.zeros(1),
-        }
-
-    def _gnn_forward(
-        self,
-        node_feats: np.ndarray,
-        edge_index: np.ndarray,
-        edge_feats: np.ndarray,
-        gnn_params: list[dict],
-    ) -> np.ndarray:
-        """GNN 前向消息传递。
-
-        Args:
-            node_feats: 节点特征 [N, in_dim]。
-            edge_index: 边索引 [2, E]。
-            edge_feats: 边特征 [E, edge_feat_dim]。
-            gnn_params: GNN 参数列表。
-
-        Returns:
-            节点嵌入 [N, hidden]。
-        """
-        h = node_feats
-        n = h.shape[0]
-        for layer in gnn_params:
-            out_dim = layer["W_self"].shape[1]
-            self_msg = h @ layer["W_self"]  # [N, out_dim]
-            neigh_msg = h @ layer["W_neigh"]  # [N, out_dim]
-            if edge_index.shape[1] > 0 and n > 0:
-                srcs = edge_index[0]
-                dsts = edge_index[1]
-                edge_contrib = edge_feats @ layer["W_edge"]  # [E, out_dim]
-                msg = neigh_msg[srcs] + edge_contrib  # [E, out_dim]
-                agg = np.zeros((n, out_dim), dtype=np.float64)
-                np.add.at(agg, dsts, msg)
-                deg = np.zeros(n, dtype=np.float64)
-                np.add.at(deg, dsts, 1.0)
-                deg = np.maximum(deg, 1.0)
-                agg = agg / deg[:, None]
-            else:
-                agg = np.zeros((n, out_dim), dtype=np.float64)
-            new_h = self_msg + agg + layer["b"]
-            # 残差连接（维度一致时）
-            if h.shape[1] == out_dim:
-                new_h = new_h + h
-            h = np.maximum(0.0, new_h)  # ReLU
-        return h
-
-    def _policy_forward(self, state_vec: np.ndarray, params: dict) -> np.ndarray:
-        """策略网络前向传播。
-
-        Args:
-            state_vec: 状态向量 [in_dim]。
-            params: 策略网络参数。
-
-        Returns:
-            动作概率分布 [out_dim]。
-        """
-        z1 = state_vec @ params["W1"] + params["b1"]
-        h = np.maximum(0.0, z1)
-        logits = h @ params["W2"] + params["b2"]
-        # 数值稳定：限制 logits 范围，防止 matmul 溢出
-        logits = np.clip(logits, -50.0, 50.0)
-        # 稳定 softmax
-        shifted = logits - logits.max()
-        exp = np.exp(shifted)
-        probs = exp / exp.sum()
-        return probs
-
-    def _value_forward(self, state_vec: np.ndarray, params: dict) -> float:
-        """价值网络前向传播。
-
-        Args:
-            state_vec: 状态向量 [in_dim]。
-            params: 价值网络参数。
-
-        Returns:
-            价值估计（标量）。
-        """
-        z1 = state_vec @ params["W1"] + params["b1"]
-        h = np.maximum(0.0, z1)
-        v = (h @ params["W2"] + params["b2"])[0]
-        return float(v)
+        # D05 架构统一：复用 AlphaChipEdgeGNN（替代自实现简化版 GNN）
+        # in_dim = 节点特征(9) + 位置特征(4) = 13
+        in_dim = self.encoder.node_feat_dim + 4
+        self.gnn = AlphaChipEdgeGNN(
+            in_dim=in_dim,
+            edge_feat_dim=self.encoder.edge_feat_dim,
+            hidden_dim=config.gnn_hidden,
+            out_dim=config.gnn_hidden,
+            num_layers=config.gnn_layers,
+            use_gat=config.use_attention,
+            use_multi_relation=True,
+        )
+        # D05 架构统一：复用 PPOAgent（替代自实现简化版 REINFORCE）
+        # PPO 在连续动作空间优化，动作 = 归一化 (x, y)，
+        # select_action 内部量化到离散网格位置（保留外部接口）。
+        obs_dim = config.gnn_hidden + self.encoder.node_feat_dim + 3
+        self.ppo = PPOAgent(
+            obs_dim=obs_dim,
+            action_dim=2,
+            config=PPOConfig(lr=config.learning_rate),
+            hidden_dim=config.gnn_hidden,
+        )
+        self._last_continuous_action: np.ndarray | None = None
 
     def _build_occupancy_grid(self, placement: dict, circuit: dict) -> np.ndarray:
         """构建占用栅格。
@@ -900,10 +785,11 @@ class AlphaChipAgent:
         node_feats = self.encoder.encode_placement(placement, circuit)
         graph = self.encoder.encode_circuit(circuit)
         if node_feats.shape[0] > 0:
-            embedding = self._gnn_forward(
-                node_feats, graph["edge_index"], graph["edge_feats"], self.gnn_params
-            )
-            graph_emb = embedding.mean(axis=0)
+            # D05: 复用 AlphaChipEdgeGNN（GlobalAttention 读出图级嵌入）
+            node_feats_t = Tensor(node_feats)
+            edge_feats_t = Tensor(graph["edge_feats"])
+            graph_emb_t = self.gnn(node_feats_t, graph["edge_index"], edge_feats_t)
+            graph_emb = np.asarray(graph_emb_t.data).ravel()
         else:
             graph_emb = np.zeros(self.config.gnn_hidden, dtype=np.float64)
         dev_feat = self.encoder.compute_features(current_dev)
@@ -924,27 +810,74 @@ class AlphaChipAgent:
     def select_action(self, state: dict) -> tuple:
         """选择动作（器件放置位置）。
 
+        D05: 复用 PPOAgent 在连续动作空间采样（归一化 x,y），
+        量化映射到离散网格位置索引（保留外部接口）。
+
         Args:
             state: 状态 dict。
 
         Returns:
             (action, logprob, value) 元组。action 为网格位置索引，
-            logprob 为对数概率，value 为价值估计。
+            logprob 为连续动作对数概率，value 为价值估计。
         """
-        state_vec = state["embedding"]
-        probs = self._policy_forward(state_vec, self.policy_params)
-        # 应用动作掩码
-        mask = state["mask"]
-        probs = probs * mask
-        total = probs.sum()
-        if total > 1e-10:
-            probs = probs / total
-        else:
-            probs = np.ones_like(probs) / len(probs)
-        action = int(np.random.choice(len(probs), p=probs))
-        logprob = float(np.log(probs[action] + 1e-10))
-        value = self._value_forward(state_vec, self.value_params)
-        return action, logprob, value
+        action_cont, logprob, value = self._select_continuous_action(state)
+        action = self._quantize_action(action_cont, state["mask"])
+        self._last_continuous_action = np.asarray(action_cont, dtype=np.float64)
+        return action, float(logprob), float(value)
+
+    def _select_continuous_action(self, state: dict) -> tuple:
+        """连续动作采样（D05: 复用 PPOAgent.get_action）。
+
+        Args:
+            state: 状态 dict。
+
+        Returns:
+            (action_cont, logprob, value)，action_cont 为 [2] 连续动作。
+        """
+        state_vec = np.asarray(state["embedding"], dtype=np.float64)
+        action_cont, logprob, value = self.ppo.get_action(state_vec)
+        return np.asarray(action_cont, dtype=np.float64), float(logprob), float(value)
+
+    def _quantize_action(self, action_cont: np.ndarray, mask: np.ndarray) -> int:
+        """将连续动作量化到离散网格位置。
+
+        连续动作经 sigmoid 压缩到 [0,1]，映射到 (row, col)，
+        action = row * grid_w + col。被掩码的位置就近偏移到最近可用位置。
+
+        Args:
+            action_cont: 连续动作 [2]。
+            mask: 动作掩码 [grid_h * grid_w]，0 表示不可用。
+
+        Returns:
+            网格位置索引。
+        """
+        grid_h, grid_w = self.config.grid_size
+        norm = 1.0 / (1.0 + np.exp(-np.asarray(action_cont, dtype=np.float64)))
+        row = int(np.clip(norm[0] * grid_h, 0, grid_h - 1))
+        col = int(np.clip(norm[1] * grid_w, 0, grid_w - 1))
+        action = row * grid_w + col
+        if mask[action] <= 0.0:
+            action = self._nearest_available(action, mask)
+        return int(action)
+
+    @staticmethod
+    def _nearest_available(action: int, mask: np.ndarray) -> int:
+        """就近搜索可用网格位置（掩码屏蔽时）。
+
+        Args:
+            action: 原始网格索引。
+            mask: 动作掩码。
+
+        Returns:
+            最近可用网格索引；若全部占用，返回原始索引。
+        """
+        n = len(mask)
+        for radius in range(1, n):
+            for delta in (-radius, radius):
+                idx = action + delta
+                if 0 <= idx < n and mask[idx] > 0.0:
+                    return int(idx)
+        return int(action)
 
     def compute_reward(self, placement: dict) -> float:
         """计算奖励。
@@ -960,69 +893,6 @@ class AlphaChipAgent:
         assert self.circuit is not None, "agent.circuit 未设置"
         result = self.reward.compute(placement, self.circuit)
         return result["reward"]
-
-    def _policy_backward(self, state: dict, action: int) -> dict:
-        """策略网络反向传播（返回 ∇log π(a|s)）。
-
-        Args:
-            state: 状态 dict。
-            action: 选择的动作。
-
-        Returns:
-            参数梯度 dict。
-        """
-        x = state["embedding"]
-        params = self.policy_params
-        z1 = x @ params["W1"] + params["b1"]
-        h = np.maximum(0.0, z1)
-        logits = h @ params["W2"] + params["b2"]
-        # 数值稳定：限制 logits 范围（与 forward 一致），防止 matmul 溢出
-        logits = np.clip(logits, -50.0, 50.0)
-        shifted = logits - logits.max()
-        exp = np.exp(shifted)
-        probs = exp / exp.sum()
-        # ∇logits log π(a|s) = e_a - probs
-        e_a = np.zeros_like(probs)
-        e_a[action] = 1.0
-        dlogits = e_a - probs
-        # ∇W2 = outer(h, dlogits)，形状 [hidden, out] 与 W2 一致
-        dW2 = np.outer(h, dlogits)
-        db2 = dlogits
-        # ∇h = W2 @ dlogits，形状 [hidden]
-        dh = params["W2"] @ dlogits
-        dz1 = dh * (z1 > 0)
-        # ∇W1 = outer(x, dz1)，形状 [in, hidden] 与 W1 一致
-        dW1 = np.outer(x, dz1)
-        db1 = dz1
-        return {"W1": dW1, "b1": db1, "W2": dW2, "b2": db2}
-
-    def _value_backward(self, state: dict, target: float) -> dict:
-        """价值网络反向传播（返回 ∇L_vf，L = (target - v)^2）。
-
-        Args:
-            state: 状态 dict。
-            target: 目标值（回报）。
-
-        Returns:
-            参数梯度 dict。
-        """
-        x = state["embedding"]
-        params = self.value_params
-        z1 = x @ params["W1"] + params["b1"]
-        h = np.maximum(0.0, z1)
-        v = float((h @ params["W2"] + params["b2"])[0])
-        # ∇v L = -2 * (target - v)
-        dv = -2.0 * (target - v)
-        # ∇W2 = outer(h, [dv])，形状 [hidden, 1] 与 W2 一致
-        dW2 = np.outer(h, np.array([dv]))
-        db2 = np.array([dv])
-        # ∇h = dv * W2[:,0]，形状 [hidden]
-        dh = dv * params["W2"][:, 0]
-        dz1 = dh * (z1 > 0)
-        # ∇W1 = outer(x, dz1)，形状 [in, hidden] 与 W1 一致
-        dW1 = np.outer(x, dz1)
-        db1 = dz1
-        return {"W1": dW1, "b1": db1, "W2": dW2, "b2": db2}
 
     def train(self, circuit: dict) -> dict:
         """训练 AlphaChip agent。
@@ -1069,14 +939,13 @@ class AlphaChipAgent:
 class AlphaChipTrainer:
     """AlphaChip 训练器。
 
-    学术依据：PPO 算法（Schulman 2017 arXiv:1707.06347）
-    本模块使用简化版 REINFORCE + baseline（Sutton & Barto 2018 §13），
-    保持轻量（纯 numpy 实现，不依赖 PyTorch）。
+    D05 架构统一：复用 PPOAgent（PPO clip + GAE），替代旧版自实现
+    简化版 REINFORCE + baseline。
 
-    REINFORCE + baseline 策略梯度：
-        ∇J = E[∇log π(a|s) · (R_t - V(s_t))]
-    价值回归：
-        L_vf = (R_t - V(s_t))²
+    学术依据：
+    - PPO 算法（Schulman 2017 arXiv:1707.06347）
+    - GAE 优势估计（Schulman 2015 arXiv:1506.02438）
+    - Sutton & Barto 2018 §13（策略梯度）
     """
 
     def __init__(self, agent: AlphaChipAgent, config: AlphaChipConfig) -> None:
@@ -1090,9 +959,10 @@ class AlphaChipTrainer:
         self.config = config
 
     def collect_trajectory(self, circuit: dict) -> dict:
-        """收集一条轨迹。
+        """收集一条轨迹（D05: 复用 PPOAgent.store 存储连续动作转移）。
 
-        顺序放置所有器件，记录每步的状态、动作、奖励、对数概率、价值。
+        顺序放置所有器件，记录每步状态/动作/奖励/对数概率/价值，
+        并将连续动作转移存入 PPOAgent 缓冲区供 PPO 更新。
 
         Args:
             circuit: 电路描述 dict。
@@ -1112,11 +982,15 @@ class AlphaChipTrainer:
             "values": [],
         }
         prev_reward = 0.0
-        for dev in circuit["devices"]:
+        n_devs = len(circuit["devices"])
+        for step, dev in enumerate(circuit["devices"]):
             state = self.agent._build_state(placement, circuit, dev)
-            action, logprob, value = self.agent.select_action(state)
-            row = action // grid_w
-            col = action % grid_w
+            # D05: 连续动作采样 + 网格量化（连续动作存入 PPO 缓冲区）
+            action_cont, logprob, value = self.agent._select_continuous_action(state)
+            grid_action = self.agent._quantize_action(action_cont, state["mask"])
+            self.agent._last_continuous_action = np.asarray(action_cont, dtype=np.float64)
+            row = grid_action // grid_w
+            col = grid_action % grid_w
             placement[dev["id"]] = {
                 "x": float(col * _GRID_CELL_SIZE),
                 "y": float(row * _GRID_CELL_SIZE),
@@ -1126,8 +1000,19 @@ class AlphaChipTrainer:
             cur_reward = self.agent.compute_reward(placement)
             step_reward = cur_reward - prev_reward
             prev_reward = cur_reward
+            done = step == n_devs - 1
+            self.agent.ppo.store(
+                Transition(
+                    obs=np.asarray(state["embedding"], dtype=np.float64),
+                    action=np.asarray(action_cont, dtype=np.float64),
+                    reward=float(step_reward),
+                    logprob=float(logprob),
+                    value=float(value),
+                    done=bool(done),
+                )
+            )
             trajectory["states"].append(state)
-            trajectory["actions"].append(action)
+            trajectory["actions"].append(grid_action)
             trajectory["rewards"].append(float(step_reward))
             trajectory["logprobs"].append(logprob)
             trajectory["values"].append(value)
@@ -1137,7 +1022,10 @@ class AlphaChipTrainer:
         return trajectory
 
     def update_policy(self, trajectories: list) -> dict:
-        """REINFORCE + baseline 策略更新。
+        """PPO 策略更新（D05: 复用 PPOAgent.update）。
+
+        替代旧版自实现 REINFORCE + baseline，使用 PPO clip + GAE
+        （转移已由 collect_trajectory 存入 PPOAgent 缓冲区）。
 
         Args:
             trajectories: 轨迹列表。
@@ -1145,54 +1033,15 @@ class AlphaChipTrainer:
         Returns:
             训练指标 dict，含 policy_loss / value_loss / n_updates。
         """
-        lr = self.config.learning_rate
-        gamma = self.config.gamma
-        total_policy_loss = 0.0
-        total_value_loss = 0.0
-        n_updates = 0
-        for traj in trajectories:
-            rewards = traj["rewards"]
-            values = traj["values"]
-            actions = traj["actions"]
-            states = traj["states"]
-            logprobs = traj["logprobs"]
-            n = len(rewards)
-            if n == 0:
-                continue
-            # 计算回报（累积奖励，从后往前）
-            returns = np.zeros(n, dtype=np.float64)
-            g = 0.0
-            for t in range(n - 1, -1, -1):
-                g = rewards[t] + gamma * g
-                returns[t] = g
-            # 计算优势
-            advantages = returns - np.array(values, dtype=np.float64)
-            # 标准化优势
-            adv_std = advantages.std()
-            if adv_std > 1e-8:
-                advantages = (advantages - advantages.mean()) / (adv_std + 1e-8)
-            # 策略梯度 + 价值回归更新
-            for t in range(n):
-                state = states[t]
-                action = actions[t]
-                advantage = float(advantages[t])
-                # 策略梯度上升
-                policy_grads = self.agent._policy_backward(state, action)
-                for name, grad in policy_grads.items():
-                    self.agent.policy_params[name] += lr * advantage * grad
-                # 价值回归下降
-                value_grads = self.agent._value_backward(state, float(returns[t]))
-                for name, grad in value_grads.items():
-                    self.agent.value_params[name] -= lr * grad
-                total_policy_loss += -logprobs[t] * advantage
-                total_value_loss += (float(returns[t]) - values[t]) ** 2
-                n_updates += 1
-        if n_updates == 0:
-            return {"policy_loss": 0.0, "value_loss": 0.0, "n_updates": 0}
+        # 最后一帧价值作为 bootstrap（GAE 末端价值估计）
+        last_value = 0.0
+        if trajectories and trajectories[-1]["values"]:
+            last_value = float(trajectories[-1]["values"][-1])
+        metrics = self.agent.ppo.update(last_value=last_value)
         return {
-            "policy_loss": float(total_policy_loss / n_updates),
-            "value_loss": float(total_value_loss / n_updates),
-            "n_updates": n_updates,
+            "policy_loss": float(metrics.get("policy_loss", 0.0)),
+            "value_loss": float(metrics.get("value_loss", 0.0)),
+            "n_updates": len(trajectories),
         }
 
     def train(self, circuits: list, n_epochs: int = 100) -> dict:
