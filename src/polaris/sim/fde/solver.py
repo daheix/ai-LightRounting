@@ -75,11 +75,13 @@ class FdeSolverConfig:
     n_eff_shift: float | None = None
     # n_eff_shift 自动计算系数：n_clad + shift_frac·(n_core - n_clad)
     # 默认 0.5（n_clad 与 n_core 中点，兼顾强/弱限制波导）
-    # SOI strip 基模 n_eff≈2.344 = n_clad + 0.44·(n_core-n_clad)，
-    # shift_frac=0.5 → target=2.460（接近基模 2.344，远离体模 3.476）
-    # shift_frac=0.7 → target=2.866（偏向体模，已弃用）
-    # 文献：Soref et al. 1991 IEEE JQE 27, 113-118；
-    #   Lumerical MODE-FDE https://optics.ansys.com/hc/en-us/articles/360034396614
+    # SOI 220nm strip × 500nm TE0 权威实测 n_eff ≈ 2.5113（Tidy3D，n_Si=3.4）—
+    #   https://gdsfactory.github.io/gdsfactory-photonics-training/notebooks/21_modesolver_fdfd.html
+    # 本项目 n_Si=3.476（高 2.24%），2D FDE 实测 n_eff ≈ 2.6727（80×80 网格）。
+    # shift_frac=0.5 → target=2.460（落在导模范围中段，远离体模 3.476）
+    # 文献：Soref et al. 1991 IEEE JQE 27, 113-118（1D slab EIM，仅参考）；
+    #   Lumerical MODE-FDE https://optics.ansys.com/hc/en-us/articles/360034396614；
+    #   sipkit https://sipkit.readthedocs.io/en/docs-updates-1/1-%20Effective%20Index.html
     shift_frac: float = 0.5
 
     def __post_init__(self) -> None:
@@ -381,7 +383,7 @@ class FdeSolver:
             n_eff_shift = n_clad + self.config.shift_frac * (n_core - n_clad)
         pml_layers = self.config.pml.layers if self.config.pml is not None else 10
         # 体模上界：n_core - 0.5（排除接近 n_core 的体模/垂直共振模）
-        # SOI 220nm slab TE0≈2.5-2.8，体模（垂直共振）n_eff>3.0， cutoff=2.976
+        # SOI 220nm strip TE0 实测 2.51-2.67（Tidy3D/sipkit），体模 n_eff>3.0，cutoff=2.976
         n_eff_max_guided = n_core - 0.5
         n_total = grid.spec.num_cells
         k_request = min(self.config.num_modes + 12, n_total - 2)
