@@ -49,11 +49,11 @@ _STATIC_DIR = Path(__file__).parent / "static"
 _showcase_runs: dict[str, dict] = {}
 
 # 全局作业调度器与追踪器（对齐 Cadence ADE-XL 作业队列模型）
-_global_scheduler: "JobScheduler | None" = None
-_global_tracker: "JobTracker | None" = None
+_global_scheduler: JobScheduler | None = None
+_global_tracker: JobTracker | None = None
 
 
-def _get_scheduler() -> "JobScheduler":
+def _get_scheduler() -> JobScheduler:
     """获取全局作业调度器（懒初始化）。
 
     首次调用时创建 JobScheduler 实例，注入标准 10 阶段执行函数，
@@ -70,7 +70,7 @@ def _get_scheduler() -> "JobScheduler":
     return _global_scheduler
 
 
-def _get_tracker() -> "JobTracker":
+def _get_tracker() -> JobTracker:
     """获取全局作业追踪器（懒初始化）。
 
     首次调用时创建 JobTracker 实例，扫描 out/jobs 目录，
