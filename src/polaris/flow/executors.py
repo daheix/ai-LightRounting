@@ -67,8 +67,8 @@ from __future__ import annotations
 # Facade re-export：实际实现见各 stage_* 子模块。
 # noqa: F401 表示这些符号仅用于 re-export，本模块内不直接使用。
 from polaris.flow.stage_advanced import (  # noqa: F401
-    stage10_inverse,
     stage9_quantum,
+    stage10_inverse,
 )
 from polaris.flow.stage_input import (  # noqa: F401
     stage1_pdk,
@@ -93,7 +93,6 @@ from polaris.flow.stage_verification import (  # noqa: F401
     stage5_simulation,
     stage6_drc_lvs,
 )
-
 
 # =============================================================================
 # STAGE_EXECUTORS 字典
