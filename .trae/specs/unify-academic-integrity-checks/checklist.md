@@ -25,10 +25,10 @@
 - [ ] sim/（161 文件 58,325 行）— 12 子目录全覆盖
 - [ ] pdk/（46 文件 13,167 行）— 顶层 + soi/sin/inp + optodesigner
 - [x] trainer/（29 文件 7,908 行）— PPO/BC/GNN-PPO/预训练/迁移学习（v3.1 完成）
-- [ ] router/（22 文件 7,919 行）— curvy/global/hybrid/multilayer
+- [x] router/（22 文件 7,919 行）— curvy/global/hybrid/multilayer（v3.2 完成，修复 Bug #v3.2-1 Euler 弯曲公式）
 - [ ] data/（17 文件 6,250 行）— dataset/benchmark/specs
 - [ ] flow/（16 文件 3,599 行）— stage/scheduler/job
-- [ ] engine/（15 文件 6,071 行）— gnn/alphachip_gnn/floorplan_env
+- [x] engine/（15 文件 6,071 行）— gnn/alphachip_gnn/floorplan_env（v3.2 完成，R04 标记 gpu_*.py 🚫不参与）
 - [x] rl/（9 文件 2,815 行）— alpha_chip/edge_gnn/pretraining（v3.1 完成）
 - [ ] io/（8 文件 1,688 行）— GDS/OASIS/CIF/DXF/Gerber/LEF-DEF/ODB++/OpenAccess
 - [ ] pipeline/（6 文件 2,371 行）— integrated/curvy_router/training

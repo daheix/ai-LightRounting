@@ -34,10 +34,10 @@
   - [x] SubTask 5.1: trainer/ppo*.py + bc.py + gnn_ppo.py（PPO/BC/GNN-PPO）— v3.1 完成，PPO-Clip 公式 4 文件一致 ✅
   - [x] SubTask 5.2: trainer/pretrain*.py + transfer_learning*.py（预训练/迁移学习）— v3.1 完成，EWC/课程学习/GraphMAE 文献溯源 ✅
   - [x] SubTask 5.3: rl/alpha_chip*.py + edge_gnn.py + pretraining.py（AlphaChip 对齐）— v3.1 完成，R-GCN+GAT+GlobalAttention 3 创新点验证 ✅，修复 Bug #v3.1-1（_build_action_mask 边界 +1 不一致）
-- [ ] Task 6: 审查 router/ + engine/ 子包（37 文件 13,990 行，布局布线）
-  - [ ] SubTask 6.1: router/curvy_*.py + advanced_connectors.py（曲线布线）
-  - [ ] SubTask 6.2: router/global_router.py + hybrid_router.py + multilayer.py（全局布线）
-  - [ ] SubTask 6.3: engine/gnn.py + alphachip_gnn.py + floorplan_env.py（布局引擎）
+- [x] Task 6: 审查 router/ + engine/ 子包（37 文件 13,990 行，布局布线）
+  - [x] SubTask 6.1: router/curvy_*.py + advanced_connectors.py（曲线布线）
+  - [x] SubTask 6.2: router/global_router.py + hybrid_router.py + multilayer.py（全局布线）
+  - [x] SubTask 6.3: engine/gnn.py + alphachip_gnn.py + floorplan_env.py（布局引擎）
 - [ ] Task 7: 审查 verification/ + verify/ + inverse/ 子包（7 文件 3,246 行）
   - [ ] SubTask 7.1: verification/drc_curvilinear_18rules.py + statistical_yield.py
   - [ ] SubTask 7.2: verify/calibre_interface.py
