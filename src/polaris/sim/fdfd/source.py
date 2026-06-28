@@ -58,8 +58,8 @@ class PlaneWaveSource:
     def __post_init__(self) -> None:
         if self.polarization != "ez":
             raise ValueError(f"2D FDFD 仅支持 TEz (ez) 偏振，实际 {self.polarization}")
-        if abs(self.amplitude) < 0.0:
-            raise ValueError(f"振幅绝对值必须 ≥0，实际 {self.amplitude}")
+        if not np.isfinite(self.amplitude):
+            raise ValueError(f"振幅必须为有限值（禁止 NaN/Inf），实际 {self.amplitude}")
         if abs(self.kx) + abs(self.ky) < 1e-30:
             raise ValueError("波矢分量全为零，平面波未定义")
 
