@@ -39,6 +39,7 @@ from polaris.sim.pso_optimizer import (
     GlobalResult,
     ParticleSwarmOptimizer,
     PSOConfig,
+    create_pso_optimizer,
 )
 
 
