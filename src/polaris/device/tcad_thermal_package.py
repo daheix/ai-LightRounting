@@ -5,6 +5,15 @@
 学术依据:
 - Coenen et al., "A Critical Analysis of the Thermo-Optic Time Constant in Si Photonic Devices",
   Photonics 2024, 11, 603. https://doi.org/10.3390/photonics11070603
+- Cocorullo et al., "Silicon thermooptical modulator with guide...", Electron. Lett. 1999, 35(6)
+  https://ieeexplore.ieee.org/document/754948 (Si 热光系数 Δn/ΔT≈1.86e-4 K⁻¹)
+- Sze & Ng, "Physics of Semiconductor Devices", 3rd ed., Wiley 2006 (PN 结/耗尽层物理)
+  URL: https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
+- Taflove & Hagness, "Computational Electrodynamics: The FDTD Method", 3rd ed., Artech 2005
+  URL: https://us.artechhouse.com/Computational-Electrodynamics-The-FDTD-Method-Third-Edition-P1815.aspx
+  (有限差分离散原理适用于热传导 FDM 求解)
+- Carslaw & Jaeger, "Conduction of Heat in Solids", 2nd ed., Oxford 1959, §10.4
+  (2D 线热源 Green's 函数 ΔT=(P'/2πk)·ln(r_ref/r))
 - Lumerical HEAT - Modeling thermal crosstalk in photonic circuit simulation
   URL: https://optics.ansys.com/hc/en-us/articles/47617107334291
 - Photon Design FIMMWAVE Thermo-Optic Solver
@@ -29,6 +38,8 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
+from scipy import sparse
+from scipy.sparse.linalg import spsolve
 
 
 # =============================================================================
