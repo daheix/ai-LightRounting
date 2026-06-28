@@ -23,8 +23,8 @@
   - [ ] SubTask 3.2: sim/fde/ + sim/eme/ + sim/rcwa/ + sim/bpm/（模式求解器）
   - [ ] SubTask 3.3: sim/fdfd/ + sim/varfdtd/ + sim/fetd/（频域求解器）
   - [ ] SubTask 3.4: sim/ddm/ + sim/heat/ + sim/multiphysics/（多物理场）
-  - [ ] SubTask 3.5: sim/quantum_*.py（6 个量子模块）
-  - [ ] SubTask 3.6: sim/ 顶层（lumerical_*/tidy3d_*/caphe_*/interconnect_*/cml_*）
+  - [x] SubTask 3.5: sim/quantum_*.py（6 个量子模块）— 已审查 6 模块，修复 quantum_lossy.py R02 学术诚信违规（García-Patrón 论文年份/定理修正）
+  - [x] SubTask 3.6: sim/ 顶层（lumerical_*/tidy3d_*/caphe_*/interconnect_*/cml_*）— 已审查 17 模块，修复 lumerical_mode/interconnect/charge 11 处 fall-back + charge R02 Soref 1987 溯源 + tidy3d_integration R04 合规声明
   - [ ] SubTask 3.7: sim/ 其他（verilog_a/mna_spice/monte_carlo/layout_aware 等）
 - [ ] Task 4: 审查 pdk/ 子包（46 文件 13,167 行）
   - [ ] SubTask 4.1: pdk/ 顶层（catalog/foundry_*/module_library/awg_ip_materials 等）
