@@ -228,6 +228,43 @@ class TestAlphaChipAgent:
         assert hasattr(ac, "value_head")
         assert ac.value_head.out_features == 1
 
+    def test_action_mask_occupancy_grid_consistency(
+        self, agent: AlphaChipAgent, simple_circuit: dict
+    ) -> None:
+        """回归测试：动作掩码与占用栅格边界一致（R05 Bug 修复）。
+
+        Bug 根因: ``_build_action_mask`` 曾在 ``np.ceil(...)`` 后多加 ``+1``，
+        导致掩码屏蔽范围超出器件实际占地一格，与 ``_build_occupancy_grid``
+        的占用标记不一致。这会造成状态表示（grid_stats）与动作约束（mask）
+        矛盾，并过度保守地限制动作空间。
+
+        修复: 移除 ``_build_action_mask`` 中的 ``+1``，使两方法边界计算一致。
+        本测试验证两者覆盖完全相同的栅格单元。
+        """
+        grid_h, grid_w = agent.config.grid_size
+        # 构造布局：3 个器件放置在不同位置
+        placement = {
+            "d0": {"x": 0.0, "y": 0.0, "rotation": 0.0},
+            "d1": {"x": 200.0, "y": 100.0, "rotation": 0.0},
+            "d2": {"x": 400.0, "y": 300.0, "rotation": 0.0},
+        }
+        grid = agent._build_occupancy_grid(placement, simple_circuit)
+        mask = agent._build_action_mask(placement, simple_circuit)
+        # mask 展平顺序 = row-major（r * grid_w + c），与 grid.ravel() 一致
+        grid_flat = grid.ravel()
+        # 占用栅格中 1.0 的位置，掩码必须为 0.0（不可用）
+        occupied = grid_flat > 0.5
+        assert np.all(mask[occupied] == 0.0), "占用栅格标记的位置在掩码中必须为 0"
+        # 未占用的位置，掩码必须为 1.0（可用）— 防止过度保守屏蔽
+        free = ~occupied
+        assert np.all(mask[free] == 1.0), (
+            "未占用栅格的位置在掩码中必须为 1（修复前 +1 会过度屏蔽）"
+        )
+        # 占用栅格的非零单元数 == 掩码中 0 的数量
+        assert grid_flat.sum() == np.sum(mask == 0.0), (
+            "占用单元数必须等于掩码屏蔽数（边界完全一致）"
+        )
+
     def test_select_action(
         self, agent: AlphaChipAgent, simple_circuit: dict
     ) -> None:

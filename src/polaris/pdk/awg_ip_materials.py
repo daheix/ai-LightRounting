@@ -6,7 +6,9 @@
 - Lumerical AWG: https://optics.ansys.com/hc/en-us/articles/360042800633-Arrayed-waveguide-grating-AWG-
 - IPKISS IP Manager: http://docs.lucedaphotonics.com.s3-website-us-west-1.amazonaws.com/modules/ip_manager/index.html
 - 材料参数: Palik, Handbook of Optical Constants of Solids, Academic Press 1998
-- AES-256 加密: FIPS 197, https://csrc.nist.gov/publications/fips/fips197/fips-197.pdf
+- SHA-256 密钥派生 + HMAC-SHA256 完整性校验:
+  NIST FIPS 180-4 (SHA-256) / NIST FIPS 198-1 (HMAC),
+  https://csrc.nist.gov/publications/detail/fips/180/4/final
 - AWG 设计理论: Smit & Dam, "PHASAR-based WDM-devices: principles, design and applications", IEEE JQE 1996
 - Si3N4 超低损耗: Bauters et al., Opt. Express 19(4), 3163-3174 (2011)
 - 薄膜铌酸锂: CSEM TFLN PIC PDK, https://horizon-de-lolipop.eu/wp-content/uploads/2025/07/OFC-poster.pdf
@@ -113,8 +115,10 @@ class AWGDesigner:
     def estimate_crosstalk_db(self, neff_slab: float = 2.83) -> float:
         """估算相邻信道串扰 (dB)。
 
-        基于高斯近似: 串扰 = -13.3 × (N / (m × π))²
-        来源: Smit & Dam 1996
+        基于高斯近似（阵列有限数截断误差）：
+            串扰 (dB) = -10 × log10[(N / (m × π))²] = -20 × log10(N / (m × π))
+        其中 N 为阵列波导数，m 为光栅阶数。
+        来源: Smit & Dam, IEEE JQE 1996 §IV-B（与 Cheben et al. OE 2006 一致）。
         """
         m = self.calculate_grating_order(neff_slab)
         N = self.spec.n_array_waveguides
@@ -451,16 +455,21 @@ IP_MANAGER = IPManager()
 
 
 # =============================================================================
-# 4. 模型加密 — AES-256 IP 模型保护
+# 4. 模型加密 — SHA-256 CTR + HMAC-SHA256 IP 模型保护
 # =============================================================================
 
 class ModelEncryptor:
-    """IP 模型加密保护（AES-256-GCM）。
+    """IP 模型加密保护（SHA-256 CTR 流加密 + HMAC-SHA256 Encrypt-then-MAC）。
 
     对齐 PDK 模型加密需求（foundry 黑盒模型保护）。
-    使用 Python 标准库 + 简单 XOR 流加密作为替代（避免外部依赖）。
-    *创新*: 结合 SHA-256 密钥派生 + HMAC 完整性校验的轻量加密方案，
-    适合光子 IP 模型保护场景。
+    使用 Python 标准库实现的轻量加密方案（避免外部依赖 cryptography/pycryptodome）：
+    - 密钥派生: SHA-256(passphrase) → 32B 密钥（NIST FIPS 180-4）
+    - 密钥流生成: SHA-256(key ‖ nonce ‖ counter) 拼接构造 CTR 模式流
+    - 完整性校验: HMAC-SHA256(key, nonce ‖ ciphertext) Encrypt-then-MAC（NIST FIPS 198-1）
+    - 时序攻击防护: hmac.compare_digest 常时比较
+    *创新*: 无外部依赖的轻量 Encrypt-then-MAC 方案，适合光子 IP 模型保护场景。
+    安全性边界: 适合 PDK IP 模型保护（中等敏感等级），不替代 AES-256-GCM 处理
+    高密级数据；如需 AES-256-GCM，需安装 cryptography 包。
     """
 
     def __init__(self, key: str | bytes) -> None:
@@ -477,7 +486,7 @@ class ModelEncryptor:
     def encrypt_bytes(self, plaintext: bytes, nonce: bytes | None = None) -> bytes:
         """加密字节流。
 
-        使用 ChaCha20 风格的流加密（简化版）+ HMAC-SHA256 认证。
+        使用 SHA-256 CTR 模式流加密（标准库实现）+ HMAC-SHA256 Encrypt-then-MAC 认证。
         结构: [16B nonce][32B HMAC][ciphertext]
         """
         if nonce is None:
