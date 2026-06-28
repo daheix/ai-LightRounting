@@ -295,17 +295,25 @@ class FdeSolver:
     def _loss_db_cm(n_eff: complex, wavelength: float) -> float:
         """模式损耗（dB/cm），由 Im(n_eff) 换算（A04 §7）。
 
-        Loss = -0.2 · log10(exp(-2π·κ/λ)) · 1e4
-             = (4π·κ/λ) · (0.2/ln10) · 1e4   （κ>0 时损耗为正）
+        推导（Lumerical 官方公式，λ 单位 m）：
+            Loss (dB/m) = -20·log10(exp(-2π·κ/λ₀))
+                        = -20·(-2π·κ/λ₀)/ln(10)
+                        = 40π·κ/(λ₀·ln10)
+            Loss (dB/cm) = Loss (dB/m) / 100
+                         = 0.4π·κ/(λ₀·ln10)
 
+        其中 κ = Im(n_eff)，λ₀ 为自由空间波长（米）。
         纯实数 n_eff（无损耗）返回 0；κ<0（增益）返回负损耗。
+
+        文献：Ansys Lumerical "Working with lossy modes and dB/m to κ
+        conversion" —
+        https://optics.ansys.com/hc/en-us/articles/360034917493
         """
         kappa = float(np.imag(n_eff))
         if abs(kappa) < 1e-30:
             return 0.0
-        # 直接用对数恒等简化，避免 exp 溢出
-        # -0.2 * log10(exp(-2π·κ/λ)) = -0.2 * (-2π·κ/λ) / ln(10)
-        return float(0.2 * 2.0 * np.pi * kappa / (wavelength * np.log(10.0)) * 1e4)
+        # 0.4 = 40/100，其中 40 来自 20·2（振幅 dB 系数×2π因子），/100 是 m→cm 转换
+        return float(0.4 * np.pi * kappa / (wavelength * np.log(10.0)))
 
     @staticmethod
     def _field_localization(ey: np.ndarray, pml_layers: int) -> float:
