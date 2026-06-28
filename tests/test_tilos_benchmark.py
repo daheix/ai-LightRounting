@@ -20,7 +20,6 @@ from polaris.data.benchmark_evaluator import (
     BenchmarkResult,
     evaluate_area_utilization,
     evaluate_benchmark,
-    evaluate_drv,
     evaluate_hpwl,
     evaluate_overlap,
     grid_placement,

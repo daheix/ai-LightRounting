@@ -156,10 +156,10 @@ class TestNonlinearModel:
         来源: Boyd, Nonlinear Optics, 4th ed., Eq.(4.1-5)
         """
         nl = NonlinearModel(n2=6e-18)
-        I = 1e10  # 10 GW/m²
+        intensity = 1e10  # 10 GW/m²
         L = 1e-3  # 1mm
         wl = 1.55e-6  # 1.55μm
-        phase = nl.kerr_phase(I, L, wl)
+        phase = nl.kerr_phase(intensity, L, wl)
         expected = 2 * np.pi * 6e-18 * 1e10 * 1e-3 / 1.55e-6
         assert np.isclose(phase, expected, rtol=1e-10)
         assert phase > 0  # 正相位
@@ -171,9 +171,9 @@ class TestNonlinearModel:
         来源: Lin et al., Opt. Express 2007
         """
         nl = NonlinearModel(beta_tpa=0.8e-11)
-        I = 1e10  # 10 GW/m²
+        intensity = 1e10  # 10 GW/m²
         L = 1e-3
-        alpha = nl.tpa_loss(I, L)
+        alpha = nl.tpa_loss(intensity, L)
         expected = 0.8e-11 * 1e10
         assert np.isclose(alpha, expected, rtol=1e-10)
         assert alpha > 0  # 正损耗

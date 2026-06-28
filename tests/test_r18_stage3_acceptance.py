@@ -32,7 +32,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import pytest
 
 from polaris.pdk import (
     PDAflowExporter,
@@ -59,10 +58,10 @@ from polaris.sim import (
     ParasiticExtractor,
     PMLBoundary,
     SignalFlowGraph,
-    TLLMLaser,
-    TMatrix,
     TimeDomainCircuitSimulator,
     TimeDomainSimulator,
+    TLLMLaser,
+    TMatrix,
     VirtualExperiment,
     YeeGrid,
     s_to_t,
@@ -740,11 +739,6 @@ class TestR18RegressionCheck:
             "src/polaris/sim/layout_aware.py",        # R17
         ]
         workspace = Path(__file__).resolve().parent.parent
-        forbidden_patterns = [
-            r"except.*:\s*return\s+None",  # except 后返回 None（fall-back）
-            r"except.*:\s*pass",           # except 后 pass（静默吞异常）
-            r"try:\s*.*\nexcept.*:\s*continue",  # except 后 continue
-        ]
         issues = []
         for rel_path in stage3_files:
             file_path = workspace / rel_path
@@ -778,7 +772,7 @@ class TestR18RegressionCheck:
                             f"{rel_path}:{i}: 可能的 fall-back 实现: {line.strip()}"
                         )
         assert not issues, (
-            f"R13-R17 模块发现可能的 fall-back 设计:\n" + "\n".join(issues)
+            "R13-R17 模块发现可能的 fall-back 设计:\n" + "\n".join(issues)
         )
 
     def test_all_stage3_tests_pass(self):

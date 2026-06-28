@@ -284,7 +284,7 @@ class TestPretrainDataset:
         ds2 = PretrainDataset(n_per_platform=3, seed=42)
         ds2.generate()
         assert len(ds1) == len(ds2)
-        for s1, s2 in zip(ds1.samples, ds2.samples):
+        for s1, s2 in zip(ds1.samples, ds2.samples, strict=False):
             assert s1.circuit_name == s2.circuit_name
             np.testing.assert_array_equal(s1.node_feats, s2.node_feats)
 

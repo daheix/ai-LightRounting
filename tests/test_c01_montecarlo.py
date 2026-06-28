@@ -34,12 +34,13 @@ _HAS_JAX = is_jax_available()
 
 if _HAS_JAX:
     import jax.numpy as jnp
+
     from polaris.sim.monte_carlo import (
         MonteCarloResult,
         monte_carlo_simulate,
         sensitivity_analysis,
-        yield_analysis,
         waveguide_transmission_mc,
+        yield_analysis,
     )
 
 

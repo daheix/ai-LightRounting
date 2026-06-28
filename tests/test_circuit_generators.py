@@ -253,7 +253,7 @@ def test_generator_circuit_parseable_by_build_circuit_spec(
     )
 
     # 验证每个 DeviceSpec 的关键字段
-    for dev_spec, dev_dict in zip(spec.devices, circuit.get("devices", [])):
+    for dev_spec, dev_dict in zip(spec.devices, circuit.get("devices", []), strict=False):
         assert dev_spec.name == dev_dict["name"], (
             f"拓扑 {topo_name}: DeviceSpec.name 不一致"
         )

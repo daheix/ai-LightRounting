@@ -29,16 +29,14 @@ import pytest
 
 from polaris.sim.devs import (
     INFINITY,
-    DEVSMessage,
-    AtomicDEVS,
-    CoupledDEVS,
-    Simulator,
+    Accumulator,
     Coordinator,
+    CoupledDEVS,
+    DEVSMessage,
     Generator,
     Queue,
-    Accumulator,
+    Simulator,
 )
-
 
 # ============================================================
 # M1: 经典 DEVS 原子模型时间推进正确
@@ -349,7 +347,7 @@ class TestQueueModel:
         q = Queue("q", processing_time=1.0)
         ta = q.time_advance(q.state)
         assert ta == INFINITY
-        assert q.state["busy"] == False
+        assert not q.state["busy"]
         assert len(q.state["items"]) == 0
 
     def test_queue_receives_item_becomes_busy(self):
@@ -359,7 +357,7 @@ class TestQueueModel:
 
         sim.inject_input(1.0, [DEVSMessage(port="in", value="job1")])
 
-        assert q.state["busy"] == True
+        assert q.state["busy"]
         assert len(q.state["items"]) == 1
         assert sim.next_event_time == pytest.approx(3.0)  # 1.0 + 2.0
 
@@ -375,7 +373,7 @@ class TestQueueModel:
         assert outputs[0].port == "out"
         assert outputs[0].value == "A"
         # 处理完成后 busy=False
-        assert q.state["busy"] == False
+        assert not q.state["busy"]
         # 但 items 里还有（直到收到 done）
         # 注意：当前 Queue 实现在 internal_transition 只把 busy 设为 False
         # items 要等 done 消息才弹出

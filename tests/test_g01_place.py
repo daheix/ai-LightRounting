@@ -25,20 +25,17 @@ from polaris.engine.analytical_placer import (
     warm_start_placement,
 )
 from polaris.engine.floorplan_geometry import (
-    count_overlaps,
+    _bbox_overlap,
     _count_overlaps_brute_force,
     _count_overlaps_spatial_hash,
-    _bbox_overlap,
     hpwl,
-    count_spacing_violations,
 )
 from polaris.engine.legalization import (
     LegalizationContext,
     RowState,
-    legalize_placement,
     _find_candidate_rows,
-    _place_in_row,
     _place_new_row,
+    legalize_placement,
 )
 
 
@@ -178,7 +175,7 @@ class TestAnalyticalPlacer:
         )
         placer = AnalyticalPlacer(circuit)
         result = placer.place()
-        for name, (x, y) in result.items():
+        for _name, (x, y) in result.items():
             assert 0.0 <= x <= placer.canvas_w
             assert 0.0 <= y <= placer.canvas_h
 
@@ -302,7 +299,7 @@ class TestOverlapDetection:
         rng = np.random.default_rng(42)
         n = 100
         rects = []
-        for i in range(n):
+        for _i in range(n):
             x = rng.uniform(0, 90)
             y = rng.uniform(0, 90)
             w = rng.uniform(2, 8)

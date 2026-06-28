@@ -25,7 +25,6 @@ from polaris.rl.edge_gnn import (
     EdgeGNNConfig,
 )
 
-
 # =============================================================================
 # 测试辅助
 # =============================================================================
@@ -185,7 +184,7 @@ def test_predict_placement(gnn: EdgeGNN, small_graph: dict):
     """测试布局预测（坐标归一化到 [0,1]）。"""
     placement = gnn.predict_placement(small_graph)
     assert len(placement) == small_graph["node_feats"].shape[0]
-    for nid, (x, y) in placement.items():
+    for _nid, (x, y) in placement.items():
         assert 0.0 <= x <= 1.0
         assert 0.0 <= y <= 1.0
     # 空图 raise

@@ -15,38 +15,33 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from polaris.flow.ipkiss_flow import (
+    CircuitModelView,
+    ClosedLoopValidator,
     IPKISSPCell,
     IPKISSView,
-    NetlistView,
     LayoutView,
-    CircuitModelView,
+    NetlistView,
     SDLFlow,
-    ClosedLoopValidator,
-    IPKISSPDKBridge,
 )
 from polaris.pdk.gdsfactory_pdk_bridge import (
     GDSFACTORY_PDK_REGISTRY,
+    PDKConflict,
     PDKInfo,
-    PolarisLayerStack,
-    PolarisLayerLevel,
-    PolarisCrossSection,
-    PolarisSection,
-    PicYamlSpec,
-    PicYamlInstance,
     PicYamlConnection,
+    PicYamlInstance,
+    PicYamlSpec,
+    PolarisCrossSection,
+    PolarisLayerLevel,
+    PolarisLayerStack,
     PolarisPDK,
     PolarisPDKRegistry,
-    PDKConflict,
-    parse_pic_yaml,
+    PolarisSection,
     check_gdsfactory_version_compatibility,
+    parse_pic_yaml,
 )
-
 
 # =============================================================================
 # M1: IPKISS/GDSFactory 桥接测试
@@ -313,8 +308,8 @@ class TestRoundTripAndRegistry:
 
     def test_pdk_conflict_detection(self):
         """PDK 冲突检测。"""
-        from polaris.pdk.device import Device, BoundingBox
-        from polaris.pdk.port import Port, Direction
+        from polaris.pdk.device import BoundingBox, Device
+        from polaris.pdk.port import Direction, Port
 
         registry1 = PolarisPDKRegistry()
         pdk1 = PolarisPDK(name="pdk_a", platform="SOI", process_node="220nm")

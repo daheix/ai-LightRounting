@@ -16,7 +16,6 @@ from __future__ import annotations
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from polaris.data.gds_loader import (
@@ -283,7 +282,7 @@ class TestGDSReadWriteRoundTrip:
             gds_path = Path(tmpdir) / "dbu_test.gds"
             ly = db.Layout()
             ly.dbu = 0.001
-            top = ly.create_cell("DBU_TEST")
+            ly.create_cell("DBU_TEST")
             ly.write(str(gds_path))
             read_back = db.Layout()
             read_back.read(str(gds_path))

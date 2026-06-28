@@ -21,7 +21,6 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 
 import numpy as np
 import pytest
@@ -30,7 +29,6 @@ from polaris.data.specs import CircuitSpec, DeviceSpec
 from polaris.pdk import (
     GDSFACTORY_PDK_REGISTRY,
     SOI_DEVICES,
-    PCellCache,
     PCellMultiView,
     TransformMatrix,
     ai_generate_pcell,
@@ -52,24 +50,18 @@ from polaris.router import (
     route_bundle_from_waypoints,
     route_bundle_path_length_match,
 )
-from polaris.router.path_geometry import arc_bend, euler_bend, path_length, s_bend
 from polaris.sim import (
+    SIEPIC_EBEAM_DRC_RUNSET,
     DRCCheckType,
     DRCRule,
     GraphIsomorphismLVSComparer,
-    HierarchicalDRC,
-    KLayoutDRCRunner,
     NetlistEdge,
     NetlistNode,
-    PhotonicsLVSReport,
     PhotonicsNetlist,
-    SIEPIC_EBEAM_DRC_RUNSET,
     circuit_spec_to_netlist,
     compare_netlists,
     run_graph_lvs,
     run_hierarchical_drc,
-    run_klayout_drc,
-    run_lvs,
 )
 
 
@@ -254,7 +246,7 @@ class TestR12PerformanceBenchmark:
 
         # PoLaRIS 层次化 DRC（BVH 加速）
         t0 = time.perf_counter()
-        violations_hier = run_hierarchical_drc(layout, rules, hierarchical=True)
+        run_hierarchical_drc(layout, rules, hierarchical=True)
         t_polaris = time.perf_counter() - t0
 
         # PoLaRIS flat 模式作为基线（模拟 KLayout flat）

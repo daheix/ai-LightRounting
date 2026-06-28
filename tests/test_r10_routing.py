@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import ast
 import math
-import os
 
 import pytest
 
@@ -200,7 +199,7 @@ class TestRouteBundlePathLengthMatch:
         )
         assert len(routes) == 2
         lengths = [path_length(r) for r in routes]
-        assert all(l > 0 for l in lengths)
+        assert all(length > 0 for length in lengths)
 
     def test_empty_ports(self):
         """空端口列表返回空列表。"""

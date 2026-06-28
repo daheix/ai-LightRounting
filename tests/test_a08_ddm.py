@@ -250,7 +250,7 @@ class TestPoisson:
         phi_left = float(np.mean(phi[: mid // 2, :]))
         phi_right = float(np.mean(phi[mid + mid // 2 :, :]))
         assert phi_right > phi_left
-        v_bi = _builtin_potential(na, nd, n_i, vt)
+        _builtin_potential(na, nd, n_i, vt)
         dphi = phi_right - phi_left
         assert 0.1 < dphi < 2.0
 

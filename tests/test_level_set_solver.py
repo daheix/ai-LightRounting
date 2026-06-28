@@ -262,7 +262,7 @@ class TestNormalVector(unittest.TestCase):
         n = compute_normal_vector(phi)
         # 边界附近法向量应指向内（与径向反向）
         boundary = np.abs(phi) < 0.05
-        for i, j in zip(*np.where(boundary)):
+        for i, j in zip(*np.where(boundary), strict=False):
             if abs(xx[i, j]) < 1e-6 and abs(yy[i, j]) < 1e-6:
                 continue
             radial = np.array([xx[i, j], yy[i, j]])
@@ -513,7 +513,7 @@ class TestCommercialGapReduction(unittest.TestCase):
         boundary = np.abs(phi) < 0.05
         correct = 0
         total = 0
-        for i, j in zip(*np.where(boundary)):
+        for i, j in zip(*np.where(boundary), strict=False):
             r = np.array([xx[i, j], yy[i, j]])
             r_norm = np.linalg.norm(r)
             if r_norm < 1e-6:

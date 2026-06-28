@@ -24,8 +24,8 @@ import numpy as np
 import pytest
 
 from polaris.sim.lbfgs_optimizer import (
-    LBFGSOptimizer,
     LBFGSConfig,
+    LBFGSOptimizer,
     LBFGSResult,
     PointState,
     create_lbfgs_optimizer,

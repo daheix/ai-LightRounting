@@ -15,12 +15,13 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
 from polaris.data.specs import CircuitSpec, DeviceSpec
+from polaris.flow.recipe import Recipe
+from polaris.flow.stage import StageStatus
+from polaris.flow.workspace import Workspace
+from polaris.pipeline.curvy_router import _CurvyRouter
 from polaris.pipeline.integrated import (
     IntegratedPipeline,
     PipelineConfig,
@@ -28,11 +29,6 @@ from polaris.pipeline.integrated import (
     _DefaultPlacer,
     _DefaultRouter,
 )
-from polaris.pipeline.curvy_router import _CurvyRouter
-from polaris.flow.recipe import Recipe
-from polaris.flow.workspace import Workspace
-from polaris.flow.stage import StageStatus
-
 
 # =============================================================================
 # 辅助函数
@@ -220,7 +216,7 @@ class TestEndToEndWorkflow:
         pipeline = IntegratedPipeline(cfg)
         recipe = _make_recipe_from_circuit(circuit)
         ws = Workspace(str(tmp_path), "stages_sim_1")
-        results = pipeline.run_as_stages(recipe, ws)
+        pipeline.run_as_stages(recipe, ws)
         sim_result = ws.read_stage_output("stage5_simulation")
         assert sim_result is not None
         assert "sparams" in sim_result
@@ -242,7 +238,7 @@ class TestDataFlow:
         placements = placer.place(circuit)
         assert isinstance(placements, dict)
         assert len(placements) == len(circuit.devices)
-        for name, pl in placements.items():
+        for _name, pl in placements.items():
             assert isinstance(pl["x"], float)
             assert isinstance(pl["y"], float)
             assert isinstance(pl["w"], float)
@@ -256,7 +252,7 @@ class TestDataFlow:
         router = _DefaultRouter()
         paths = router.route(circuit, placements)
         assert isinstance(paths, dict)
-        for key, path in paths.items():
+        for _key, path in paths.items():
             assert isinstance(path, list)
             assert len(path) >= 2
             for point in path:
@@ -270,7 +266,7 @@ class TestDataFlow:
         router = _CurvyRouter(curve_type="euler")
         paths = router.route(circuit, placements)
         assert isinstance(paths, dict)
-        for key, path in paths.items():
+        for _key, path in paths.items():
             assert isinstance(path, list)
             assert len(path) >= 2
 
@@ -279,7 +275,7 @@ class TestDataFlow:
         circuit = _make_simple_circuit()
         placer = _DefaultPlacer(mode="random")
         placements = placer.place(circuit)
-        for name, pl in placements.items():
+        for _name, pl in placements.items():
             assert pl["x"] >= 0
             assert pl["y"] >= 0
             assert pl["x"] + pl["w"] <= circuit.canvas_w + 1e-6
@@ -411,5 +407,5 @@ class TestErrorHandling:
             enabled_stages=[999],
         )
         ws = Workspace(str(tmp_path), "invalid_stage_1")
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             pipeline.run_as_stages(recipe, ws)

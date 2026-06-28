@@ -9,11 +9,10 @@
 
 from __future__ import annotations
 
-import numpy as np
 import pytest
 
-from polaris.sim.subcircuit import Connector, Subcircuit, Term
 from polaris.sim.models import waveguide_s
+from polaris.sim.subcircuit import Connector, Subcircuit, Term
 
 
 class TestTerm:

@@ -15,17 +15,19 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 
+from polaris.flow.ipkiss_flow import (
+    CircuitModelView,
+    IPKISSPCell,
+    IPKISSPDKBridge,
+    LayoutView,
+    NetlistView,
+)
 from polaris.flow.workspace import Workspace
-from polaris.flow.ipkiss_flow import IPKISSPCell, IPKISSPDKBridge, NetlistView, LayoutView, CircuitModelView
 from polaris.pdk.catalog import DeviceCatalog
-from polaris.pdk.device import Device, BoundingBox
-from polaris.pdk.port import Port, Direction
-
+from polaris.pdk.device import BoundingBox, Device
+from polaris.pdk.port import Direction, Port
 
 # =============================================================================
 # M1: Workspace 目录结构测试
@@ -42,7 +44,7 @@ class TestWorkspaceDirectoryStructure:
 
     def test_workspace_creates_all_subdirs(self, tmp_path):
         """Workspace 创建所有必需子目录。"""
-        ws = Workspace(str(tmp_path), "ip_test_2")
+        Workspace(str(tmp_path), "ip_test_2")
         base = tmp_path / "ip_test_2"
         required_dirs = [
             "inputs",
@@ -56,7 +58,7 @@ class TestWorkspaceDirectoryStructure:
 
     def test_workspace_creates_all_stage_dirs(self, tmp_path):
         """Workspace 创建所有 10 个阶段子目录。"""
-        ws = Workspace(str(tmp_path), "ip_test_3")
+        Workspace(str(tmp_path), "ip_test_3")
         stages_dir = tmp_path / "ip_test_3" / "stages"
         expected_slugs = [
             "stage1_pdk", "stage2_circuit", "stage3_placement", "stage4_routing",

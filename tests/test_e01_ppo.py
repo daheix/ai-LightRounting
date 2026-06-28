@@ -16,7 +16,6 @@
 """
 
 import numpy as np
-import pytest
 
 from polaris.trainer.ppo import (
     ActorCritic,
@@ -315,7 +314,7 @@ class TestPPOAgent:
         agent2.load(path)
         params1 = [p.data for p in agent.ac.parameters()]
         params2 = [p.data for p in agent2.ac.parameters()]
-        for p1, p2 in zip(params1, params2):
+        for p1, p2 in zip(params1, params2, strict=False):
             np.testing.assert_array_equal(p1, p2)
 
     def test_agent_metrics_history(self):

@@ -21,13 +21,13 @@ import pytest
 from polaris.trainer.pretrain import (
     ALL_PLATFORMS,
     CIRCUIT_TEMPLATES,
+    PLATFORM_PHYSICAL_PARAMS,
+    PLATFORM_SOI,
     CheckpointManager,
     CosineAnnealingLR,
     DataAugmentor,
     EdgeTypePredictionTask,
     MaskedNodePredictionTask,
-    PLATFORM_PHYSICAL_PARAMS,
-    PLATFORM_SOI,
     PretrainDataset,
     PretrainSample,
 )
@@ -35,15 +35,10 @@ from polaris.trainer.transfer_learning import (
     DEFAULT_CURRICULUM,
     CurriculumLevel,
     CurriculumScheduler,
-    EWCConfig,
     EWCRegularizer,
-    FineTuneConfig,
     FineTuner,
     FisherInformation,
     PlatformTransferLearner,
-    SelfSupervisedConfig,
-    SelfSupervisedPretrainer,
-    TransferResult,
 )
 
 
@@ -443,7 +438,7 @@ class TestCheckpointManager:
     def test_init_creates_dir(self, tmp_path):
         """M1: 初始化创建 checkpoint 目录。"""
         ckpt_dir = tmp_path / "checkpoints"
-        manager = CheckpointManager(checkpoint_dir=ckpt_dir)
+        CheckpointManager(checkpoint_dir=ckpt_dir)
         assert ckpt_dir.exists()
 
     def test_save_requires_save_method(self):

@@ -23,7 +23,6 @@ from polaris.sim.cascade_backends import (
     redheffer_star,
 )
 from polaris.sim.models import waveguide_s
-from polaris.sim.models_extended import half_ring_s
 
 
 def _make_waveguide_sdict(wl, length=10.0, neff=2.4):
@@ -82,7 +81,7 @@ class TestRedhefferStar:
         """测试反馈矩阵奇异时 raise RuntimeError（禁止 fall-back）。"""
         # 构造 S_feedback = I 的极端情况（S_AB·S_BA = 1）
         # 创建一个反射率为 1 的"镜子"网络
-        wl = np.array([1.55])
+        np.array([1.55])
         # S1: 完全反射 (out→out 反射 = 1)
         s1 = {("in", "in"): np.array([0.0], dtype=complex),
               ("out", "out"): np.array([1.0], dtype=complex),
@@ -199,7 +198,7 @@ class TestCascadeKLU:
     def test_cascade_klu_singular_matrix_raises(self):
         """测试奇异矩阵 KLU 求解 raise RuntimeError（禁止 fall-back）。"""
         # 构造一个会导致奇异矩阵的电路
-        wl = np.array([1.55])
+        np.array([1.55])
         # 零 S 参数（所有传输为零）
         s_zero = {("in", "in"): np.array([0.0], dtype=complex),
                   ("out", "out"): np.array([0.0], dtype=complex),

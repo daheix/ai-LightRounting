@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import time
 
 import numpy as np
 import pytest
@@ -62,9 +61,9 @@ from polaris.sim.ai_inverse_design import (
 )
 from polaris.sim.caphe_backend import (
     CAPHEBackend,
+    CAPHEFrequencySolver,
     CAPHENetwork,
     CAPHENode,
-    CAPHEFrequencySolver,
     CAPHETimeDomainSolver,
 )
 from polaris.sim.tidy3d_integration import (
@@ -75,7 +74,6 @@ from polaris.sim.tidy3d_integration import (
     Tidy3DAsyncRunner,
     Tidy3DConfig,
 )
-
 
 # ---------------------------------------------------------------------------
 # 公共 fixture
@@ -226,7 +224,7 @@ class TestR30ModuleIntegration:
         # 闭环验证
         validator = ClosedLoopValidator()
         validator.set_schematic(schematic)
-        extracted = validator.extract_from_layout(layout)
+        validator.extract_from_layout(layout)
         result = validator.validate()
         # 实例应匹配
         assert result["instance_match"] is True
@@ -600,8 +598,8 @@ class TestR30ComprehensiveScore:
         wl2, s2 = backend2.frequency_domain(wavelengths=np.array([1.55]))
         scores["interop"] = 1.0 if len(wl2) == 1 else 0.0
         # 10. 学术依据标注
-        from polaris.sim import tidy3d_integration as t_mod
         from polaris.sim import ai_inverse_design as a_mod
+        from polaris.sim import tidy3d_integration as t_mod
         all_doc = (t_mod.__doc__ or "") + (a_mod.__doc__ or "")
         scores["academic"] = 1.0 if "doi.org" in all_doc or "arxiv.org" in all_doc else 0.0
         total = round(sum(scores.values()), 2)
@@ -678,7 +676,7 @@ class TestR30RegressionCheck:
                     if not any(ac in context for ac in allowed_contexts):
                         violations.append(f"{mf}: 发现 '{pattern}' (上下文: ...{context}...)")
 
-        assert len(violations) == 0, f"发现 fall-back/假数据违规:\n" + "\n".join(violations)
+        assert len(violations) == 0, "发现 fall-back/假数据违规:\n" + "\n".join(violations)
 
     def test_all_modules_import_cleanly(self) -> None:
         """验证 R25-R29 所有模块可无错误导入。
@@ -687,41 +685,23 @@ class TestR30RegressionCheck:
         """
         # R25
         from polaris.flow.ipkiss_flow import (
-            CircuitModelView,
-            ClosedLoopValidator,
             IPKISSPCell,
-            IPKISSPDKBridge,
-            IPKISSView,
-            LayoutView,
-            NetlistView,
-            SDLFlow,
         )
-        # R26
-        from polaris.sim.caphe_backend import (
-            CAPHEBackend,
-            CAPHENetwork,
-            CAPHENode,
-            CAPHEFrequencySolver,
-            CAPHETimeDomainSolver,
-        )
-        # R27+R28
-        from polaris.sim.tidy3d_integration import (
-            FDTDCrossValidator,
-            GPUFDTDConfig,
-            GPUFDTDEngine,
-            Tidy3DAdapter,
-            Tidy3DAsyncRunner,
-            Tidy3DConfig,
-        )
+
         # R29
         from polaris.sim.ai_inverse_design import (
             AdjointConfig,
-            AdjointOptimizer,
-            GANDesigner,
-            ManufactureAwareOptimizer,
-            MultiObjectiveOptimizer,
-            RLDesignConfig,
-            RLInverseDesigner,
+        )
+
+        # R26
+        from polaris.sim.caphe_backend import (
+            CAPHENetwork,
+        )
+
+        # R27+R28
+        from polaris.sim.tidy3d_integration import (
+            GPUFDTDConfig,
+            Tidy3DConfig,
         )
         # 验证类可实例化
         assert IPKISSPCell(name="test", cell_type="waveguide")

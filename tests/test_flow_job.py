@@ -23,26 +23,13 @@ import json
 import os
 import re
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime
 from pathlib import Path
 
 import pytest
 
-# === polaris.flow API ===
-from polaris.flow.job import Job, JobState, JobStatus
-from polaris.flow.recipe import Recipe, SimConfig
-from polaris.flow.scheduler import JobScheduler
-from polaris.flow.stage import (
-    STANDARD_STAGES,
-    Stage,
-    StageResult,
-    StageStatus,
-    get_stage,
-)
-from polaris.flow.tracker import JobTracker
-from polaris.flow.workspace import Workspace
 from polaris.flow.executors import (
     STAGE_EXECUTORS,
     stage1_pdk,
@@ -53,12 +40,24 @@ from polaris.flow.executors import (
     stage6_drc_lvs,
 )
 
+# === polaris.flow API ===
+from polaris.flow.job import Job, JobState, JobStatus
+from polaris.flow.recipe import Recipe, SimConfig
+from polaris.flow.scheduler import JobScheduler
+from polaris.flow.stage import (
+    STANDARD_STAGES,
+    StageResult,
+    StageStatus,
+    get_stage,
+)
+from polaris.flow.tracker import JobTracker
+from polaris.flow.workspace import Workspace
+
 # === IntegratedPipeline ===
 from polaris.pipeline.integrated import IntegratedPipeline, PipelineResult
 
 # === Web Server ===
 from polaris.web.server import WebServer
-
 
 # =============================================================================
 # 辅助函数
@@ -400,7 +399,7 @@ class TestWorkspace:
 
     def test_workspace_init(self, tmp_path):
         """测试目录结构创建（inputs/logs/stages/reports/gds + 10 阶段子目录）。"""
-        ws = Workspace(str(tmp_path), "ws_job_001")
+        Workspace(str(tmp_path), "ws_job_001")
         base = tmp_path / "ws_job_001"
         # 主目录
         assert (base / "inputs").is_dir()
@@ -452,7 +451,7 @@ class TestWorkspace:
         log_path = tmp_path / "ws_job_005" / "logs" / "job.jsonl"
         assert log_path.exists()
         content = log_path.read_text(encoding="utf-8")
-        lines = [l for l in content.strip().split("\n") if l]
+        lines = [line for line in content.strip().split("\n") if line]
         assert len(lines) == 3
         for line in lines:
             entry = json.loads(line)
@@ -759,7 +758,7 @@ class TestStageExecutors:
         result = stage3_placement(recipe, ws, prev)
         assert "placements" in result
         assert result["n_placed"] > 0
-        for name, pl in result["placements"].items():
+        for _name, pl in result["placements"].items():
             assert "x" in pl
             assert "y" in pl
             assert "w" in pl
@@ -1072,6 +1071,7 @@ class TestWebAPIJobs:
     def test_post_job_cancel(self, web_env, monkeypatch):
         """测试 POST /api/jobs/{job_id}/cancel 取消作业。"""
         import threading
+
         import polaris.web.server as server_module
         url = web_env["url"]
 

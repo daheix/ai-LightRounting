@@ -18,6 +18,15 @@
 import numpy as np
 import pytest
 
+from polaris.sim.eqdrc import (
+    EqDRCEngine,
+    EqDRCRule,
+    EqDRCViolation,
+    FoundryDRCCertifier,
+    FoundryDRCRunset,
+    _point_segment_distance,
+    _polygon_area,
+)
 from polaris.sim.fabrication_constraints import (
     ConnectivityConstraint,
     ConstraintMetrics,
@@ -26,16 +35,6 @@ from polaris.sim.fabrication_constraints import (
     FabricationConfig,
     FabricationConstraints,
     ProjectionConstraint,
-)
-from polaris.sim.eqdrc import (
-    EqDRCEngine,
-    EqDRCRule,
-    EqDRCViolation,
-    FoundryDRCCertifier,
-    FoundryDRCRunset,
-    _polygon_area,
-    _point_segment_distance,
-    _polygon_min_width,
 )
 
 
@@ -63,7 +62,7 @@ class TestFabricationConfig:
     def test_frozen(self):
         """M1: 配置为 frozen dataclass。"""
         cfg = FabricationConfig()
-        with pytest.raises(Exception):
+        with pytest.raises(AttributeError):
             cfg.min_feature_size = 5.0
 
 

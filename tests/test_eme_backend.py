@@ -34,7 +34,6 @@ import pytest
 
 from polaris.sim.cascade.smatrix import (
     BlockSMatrix,
-    build_propagation_s,
     redheffer_star_product,
 )
 from polaris.sim.eme import build_interface_smatrix, build_propagation_smatrix

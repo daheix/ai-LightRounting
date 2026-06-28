@@ -83,7 +83,7 @@ class TestGroupDelay:
         tau_g = group_delay(s, wavelengths, port_out="out", port_in="in")
         # 解析解: τ_g = n_g·L/c（有色散情况）
         length_m = length_um * 1e-6
-        tau_expected = ng * length_m / SPEED_OF_LIGHT
+        ng * length_m / SPEED_OF_LIGHT
         # 验证（中心区域，允许较大误差因 Sellmeier 参数为近似值）
         mid_idx = len(tau_g) // 2
         # 有色散波导的群延迟应大于无色散情况

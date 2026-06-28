@@ -31,35 +31,27 @@ import numpy as np
 import pytest
 
 from polaris.sim import (
-    CircuitDAG,
     CircuitMatrix,
     CircuitSimulator,
     JAXConfig,
     MonteCarloResult,
     SDict,
-    SubnetworkDecomposition,
     block_thomas_solve,
     build_circuit_matrix,
     cascade_adaptive,
-    cascade_auto,
     cascade_klu,
     cascade_parallel,
     compute_gradient,
     create_dag,
     decompose_circuit,
-    detect_block_tridiagonal,
-    detect_parallel_groups,
-    flat_circuit,
     is_jax_available,
     jit_compile,
     monte_carlo_simulate,
     redheffer_star,
-    schedule_circuit,
     schur_complement,
     select_strategy,
     simulate_waveguide_chain_jax,
     waveguide_s,
-    waveguide_s_jax,
 )
 
 
@@ -225,6 +217,7 @@ class TestR06Stage1JAXIntegration:
     def test_autodiff_gradient_verification(self):
         """验收: 自动微分梯度验证。"""
         import jax.numpy as jnp
+
         from polaris.sim.autodiff import verify_gradient
 
         def func(x):

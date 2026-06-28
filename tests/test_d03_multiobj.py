@@ -22,8 +22,15 @@
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
+from polaris.sim.nsga2_operators import (
+    Individual,
+    Objective,
+    ObjectiveType,
+    compute_crowding_distance,
+    dominates,
+    fast_non_dominated_sort,
+)
 from polaris.sim.nsga3_optimizer import (
     NSGA3Config,
     NSGA3Optimizer,
@@ -33,14 +40,6 @@ from polaris.sim.nsga3_optimizer import (
     generate_reference_points,
     normalize_objectives,
     run_nsga3_optimization,
-)
-from polaris.sim.nsga2_operators import (
-    Individual,
-    Objective,
-    ObjectiveType,
-    dominates,
-    fast_non_dominated_sort,
-    compute_crowding_distance,
 )
 
 

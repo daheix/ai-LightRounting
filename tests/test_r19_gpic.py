@@ -18,7 +18,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import klayout.db as db
@@ -26,8 +25,6 @@ import pytest
 
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
-    GPICBB,
-    GPICPDK,
     GPIC_DRC_RUNSET,
     build_gpic_pdk,
 )
@@ -323,11 +320,11 @@ class TestR19Integration:
     def test_gpic_with_polaris_catalog(self):
         """GPIC 与 PoLaRIS catalog 互操作。"""
         from polaris.pdk.catalog import default_catalog
-        pdk = build_gpic_pdk()
+        build_gpic_pdk()
         catalog = default_catalog()
         catalog_names = set(catalog.names())
         mapped = 0
-        for gpic_name, polaris_name in GPIC_ALIAS_MAP.items():
+        for _gpic_name, polaris_name in GPIC_ALIAS_MAP.items():
             if polaris_name in catalog_names:
                 mapped += 1
         assert mapped >= 8

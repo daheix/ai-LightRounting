@@ -16,7 +16,6 @@
 """
 
 import numpy as np
-import pytest
 
 from polaris.trainer.expert_dataset import (
     ACTION_DIM,

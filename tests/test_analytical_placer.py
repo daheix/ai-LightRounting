@@ -282,7 +282,7 @@ class TestPlace:
         placements = placer.place()
         assert len(placements) == 5
         # 合法化后所有模块应在画布内
-        for name, (cx, cy) in placements.items():
+        for _name, (cx, cy) in placements.items():
             assert 0 <= cx <= star_circuit.canvas_w
             assert 0 <= cy <= star_circuit.canvas_h
         # 合法化后应无重叠

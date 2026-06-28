@@ -351,7 +351,7 @@ class TestM2ModeNormalizationOrthogonality:
             eps_r, wavelength=_WAVELENGTH, window_size=window, num_modes=1,
         )
         assert len(modes) >= 1
-        assert modes[0].normalized == True
+        assert modes[0].normalized
 
 
 # ============================================================

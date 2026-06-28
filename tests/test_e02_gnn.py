@@ -16,7 +16,6 @@
 """
 
 import numpy as np
-import pytest
 
 from polaris.engine.gnn import (
     EdgeEncoderConfig,

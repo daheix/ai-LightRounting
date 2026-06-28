@@ -33,7 +33,6 @@ import pytest
 
 from polaris.sim.interconnect_backend import (
     C0,
-    Component,
     InterconnectBackend,
     InterconnectConfig,
 )

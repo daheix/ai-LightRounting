@@ -22,11 +22,10 @@ import numpy as np
 import pytest
 
 from polaris.flow.ipkiss_flow import (
-    ClosedLoopValidator,
     CircuitModelView,
+    ClosedLoopValidator,
     IPKISSPCell,
     IPKISSPDKBridge,
-    IPKISSView,
     LayoutView,
     NetlistView,
     SDLFlow,
@@ -34,7 +33,6 @@ from polaris.flow.ipkiss_flow import (
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
 from polaris.sim.models import mmi_1x2_s, mmi_2x2_s, waveguide_s
-
 
 # ---------------------------------------------------------------------------
 # 测试辅助函数

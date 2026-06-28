@@ -20,12 +20,9 @@
 
 from __future__ import annotations
 
-import math
-
 import pytest
 
 from polaris.flow.design_intent import DesignIntentEngine, IntentConfig
-
 
 # ---------------------------------------------------------------------------
 # 测试夹具：MZI 原理图 + PDK 库 + 设计规则
@@ -278,7 +275,7 @@ class TestRoutingIntent:
         engine.generate_layout_intent(parsed)
         routing = engine.generate_routing_intent(parsed["connections"])
         assert len(routing) == 6
-        for net_id, route in routing.items():
+        for _net_id, route in routing.items():
             assert len(route["path"]) == 3  # L 形: 3 个点
             assert route["bend_radius"] == 5.0
             assert "min_bend_radius" in route["constraints"]
@@ -383,7 +380,7 @@ class TestPropagateConstraints:
         assert "min_width" in rules
         assert "min_spacing" in rules
         # 所有器件应有 min_spacing 约束
-        for dev_id, dev_constraints in propagated.items():
+        for _dev_id, dev_constraints in propagated.items():
             rule_names = [c["rule"] for c in dev_constraints]
             assert "min_spacing" in rule_names
 

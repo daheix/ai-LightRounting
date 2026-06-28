@@ -35,8 +35,7 @@ from polaris.pdk.vpi_pdk import (
     build_ligentec_pdk,
     build_lionix_pdk,
 )
-from polaris.sim.models import RingParams, waveguide_s
-
+from polaris.sim.models import waveguide_s
 
 # ---------------------------------------------------------------------------
 # 1. TestVPIBuildingBlock — BB 一体化

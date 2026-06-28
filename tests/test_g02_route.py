@@ -15,19 +15,9 @@
   https://www.redblobgames.com/pathfinding/a-star/implementation.html
 """
 
-import math
 
-import numpy as np
 import pytest
 
-from polaris.router.waveguide_router import (
-    GridRouter,
-    PLATFORM_CONSTRAINTS,
-    RouterConstraints,
-    WaveguidePath,
-    auto_grid_size,
-    get_platform_constraints,
-)
 from polaris.router.obstacle_grid import ObstacleGrid
 from polaris.router.path_geometry import (
     arc_bend,
@@ -38,6 +28,14 @@ from polaris.router.path_geometry import (
     path_length,
     path_loss,
     s_bend,
+)
+from polaris.router.waveguide_router import (
+    PLATFORM_CONSTRAINTS,
+    GridRouter,
+    RouterConstraints,
+    WaveguidePath,
+    auto_grid_size,
+    get_platform_constraints,
 )
 
 

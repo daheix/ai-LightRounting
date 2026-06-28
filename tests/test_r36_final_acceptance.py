@@ -62,8 +62,6 @@ from polaris.rl import (
     AlphaChipAgent,
     AlphaChipConfig,
     AlphaChipTrainer,
-    PhotonicPlacementEncoder,
-    PhotonicPlacementReward,
 )
 from polaris.sim import (
     CHARGEConfig,
@@ -74,7 +72,6 @@ from polaris.sim import (
     ModeConfig,
     ModeSolver,
 )
-
 
 # ---------------------------------------------------------------------------
 # 公共 fixture
@@ -521,7 +518,7 @@ class TestR36EndToEndExamples:
 
         # 4. 验证布局位置在网格范围内
         grid_h, grid_w = alpha_agent.config.grid_size
-        for dev_id, p in placement.items():
+        for _dev_id, p in placement.items():
             assert p["x"] >= 0
             assert p["y"] >= 0
             assert p["x"] < grid_w * 100.0  # _GRID_CELL_SIZE = 100.0
@@ -767,8 +764,8 @@ class TestR36FeatureMatrix:
         )
 
         # 4. 学术依据标注验证
-        from polaris.sim import lumerical_integration as lum_mod
         from polaris.rl import alpha_chip as alpha_mod
+        from polaris.sim import lumerical_integration as lum_mod
 
         lum_doc = lum_mod.__doc__ or ""
         alpha_doc = alpha_mod.__doc__ or ""

@@ -23,7 +23,6 @@ from polaris.sim.building_block import (
     BBRegistry,
     BuildingBlock,
     ModelCard,
-    TMatrix,
     VirtualExperiment,
     s_to_t,
     t_to_s,
@@ -34,7 +33,6 @@ from polaris.sim.models import (
     phase_shifter_s,
     ring_resonator_s,
     waveguide_s,
-    y_branch_s,
 )
 from polaris.sim.types import SDict
 
@@ -242,7 +240,7 @@ class TestVirtualExperiment:
         results = vexp.run()
         assert len(results) == 3
         # 验证每个结果都是有效 SDict
-        for radius, sdict in results.items():
+        for _radius, sdict in results.items():
             assert ("through", "in") in sdict
             assert len(sdict[("through", "in")]) == 200
 

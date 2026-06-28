@@ -14,7 +14,6 @@ import pytest
 from polaris.sim.jax_backend import (
     JAXConfig,
     benchmark_jit_vs_numpy,
-    cascade_two_port_jax,
     enable_float64,
     get_jax_devices,
     is_jax_available,

@@ -21,8 +21,6 @@ from __future__ import annotations
 
 import math
 
-import pytest
-
 from polaris.router.advanced_connectors import (
     BusRouter,
     EulerBend,
@@ -191,8 +189,8 @@ class TestPhaseMatchedRouter:
         paths = router.route_differential_pair(pairs)
         assert len(paths) == 3
         lengths = [_path_length(p) for p in paths]
-        for l in lengths:
-            assert round(l, 4) == round(lengths[0], 4)
+        for length in lengths:
+            assert round(length, 4) == round(lengths[0], 4)
 
     def test_compute_phase_mismatch(self):
         """相位失配计算：Δφ = (2π/λ) * neff * ΔL。"""

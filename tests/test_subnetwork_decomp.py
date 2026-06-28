@@ -16,16 +16,12 @@ import pytest
 from polaris.sim.subnetwork_decomp import (
     BlockTridiagonalMatrix,
     SubnetworkCache,
-    SubnetworkDecomposition,
     block_thomas_solve,
-    build_block_tridiagonal_from_chain,
     cascade_adaptive,
     decompose_circuit,
     detect_block_tridiagonal,
-    merge_subnetworks_via_schur,
     schur_complement,
     select_strategy,
-    solve_subnetwork,
 )
 
 
@@ -127,7 +123,7 @@ class TestBlockThomasSolve:
 
         # 验证 M·x = b
         M = matrix.to_dense()
-        assert np.allclose(M @ x, b), f"块 Thomas 求解错误: M·x != b"
+        assert np.allclose(M @ x, b), "块 Thomas 求解错误: M·x != b"
 
     def test_block_thomas_three_blocks(self):
         """测试三块三对角矩阵。"""
@@ -377,11 +373,11 @@ class TestSubnetworkCache:
             return sdict
 
         # 第一次调用: 缓存未命中
-        result1 = cache.get_or_compute("sub1", compute_fn, {"wg1"}, {"wg1": sdict})
+        cache.get_or_compute("sub1", compute_fn, {"wg1"}, {"wg1": sdict})
         assert call_count == 1
 
         # 第二次调用: 缓存命中
-        result2 = cache.get_or_compute("sub1", compute_fn, {"wg1"}, {"wg1": sdict})
+        cache.get_or_compute("sub1", compute_fn, {"wg1"}, {"wg1": sdict})
         assert call_count == 1  # 未重新计算
 
     def test_cache_invalidation(self):
@@ -472,7 +468,7 @@ class TestR04Integration:
         S = schur_complement(A, B, C, D)
 
         # 直接求解验证: M = [A B; C D]
-        M = np.block([[A, B], [C, D]])
+        np.block([[A, B], [C, D]])
         # Schur 补应等于 D - C·A⁻¹·B
         S_direct = D - C @ np.linalg.solve(A, B)
 
@@ -485,7 +481,6 @@ class TestR04Integration:
 
         注: 由于 numpy 优化，小矩阵可能差距不大，主要验证正确性。
         """
-        import time
 
         # 构建 10 块三对角矩阵，每块 4x4
         np.random.seed(42)

@@ -31,9 +31,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import numpy as np
-import pytest
-
 from polaris.pdk import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -49,19 +46,14 @@ from polaris.pdk import (
     build_gpic_pdk,
 )
 from polaris.router import (
-    AdaptiveCrossingInserter,
     BusRouter,
-    CongestionAwareNetOrdering,
     CurvyAStarConfig,
     CurvyAStarRouter,
     DRVFreeValidator,
     EulerBend,
     EulerBendConfig,
     HighOrderBezierConnector,
-    LengthDefinedConnector,
-    OptoDesignerAutorouter,
     PhaseMatchedRouter,
-    RFGSGRouter,
 )
 from polaris.sim import (
     CurvilinearLVS,
@@ -386,7 +378,7 @@ class TestR24EndToEndExamples:
         factory = PyCellFactory()
         n_rings = 4
         rings = []
-        for i in range(n_rings):
+        for _ in range(n_rings):
             ring = factory.ring_resonator(radius=10.0, gap=0.2, width=0.5)
             assert ring.name == "ring_resonator"
             assert len(ring.ports) == 2  # in, through
@@ -949,7 +941,7 @@ class TestR24RegressionCheck:
                             f"{rel_path}:{i}: 可能的 fall-back 实现: {line.strip()}"
                         )
         assert not issues, (
-            f"R19-R23 模块发现可能的 fall-back 设计:\n" + "\n".join(issues)
+            "R19-R23 模块发现可能的 fall-back 设计:\n" + "\n".join(issues)
         )
 
     def test_all_stage4_tests_pass(self):

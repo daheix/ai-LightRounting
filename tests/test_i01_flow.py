@@ -25,7 +25,6 @@ from polaris.flow.recipe import Recipe, SimConfig
 from polaris.flow.scheduler import JobScheduler
 from polaris.flow.stage import (
     STANDARD_STAGES,
-    Stage,
     StageInput,
     StageOutput,
     StageResult,
@@ -34,7 +33,6 @@ from polaris.flow.stage import (
 )
 from polaris.flow.tracker import JobTracker
 from polaris.flow.workspace import Workspace
-
 
 # =============================================================================
 # 辅助函数
@@ -396,7 +394,7 @@ class TestWorkspaceAndTracker:
 
     def test_workspace_creates_directory_structure(self, tmp_path):
         """Workspace 创建标准目录结构。"""
-        ws = Workspace(str(tmp_path), "ws_test_1")
+        Workspace(str(tmp_path), "ws_test_1")
         base = tmp_path / "ws_test_1"
         assert (base / "inputs").is_dir()
         assert (base / "logs").is_dir()

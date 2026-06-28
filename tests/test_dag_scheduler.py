@@ -249,7 +249,7 @@ class TestScheduleCircuit:
         ports = {"in": "wg1.in", "out": "wg2.out"}
 
         result = schedule_circuit(instances, connections, ports, parallel=False)
-        for key, val in result.items():
+        for _key, val in result.items():
             arr = np.asarray(val)
             assert not np.any(np.isnan(arr))
 
@@ -261,7 +261,7 @@ class TestScheduleCircuit:
         ports = {"in": "wg0.in", "out": "wg9.out"}
 
         result = schedule_circuit(instances, connections, ports, parallel=True)
-        for key, val in result.items():
+        for _key, val in result.items():
             arr = np.asarray(val)
             assert not np.any(np.isnan(arr))
 

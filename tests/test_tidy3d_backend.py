@@ -9,15 +9,11 @@ CPML 吸收（反射 ≤-50dB）、亚像素平滑精度、S 参数 DFT 提取�
 
 from __future__ import annotations
 
-import os
-
 import numpy as np
 import pytest
 
 from polaris.sim.tidy3d_backend import (
     FDTDConfig,
-    Monitor,
-    Source,
     Tidy3DBackend,
 )
 

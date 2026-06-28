@@ -25,7 +25,6 @@ from polaris.pdk.layer_map import (
     get_layer_tuple,
 )
 from polaris.pdk.pcell import (
-    PCellCache,
     PCellMultiView,
     TransformMatrix,
     clear_pcell_cache,

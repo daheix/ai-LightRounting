@@ -25,17 +25,15 @@ import numpy as np
 import pytest
 
 from polaris.sim.caphe_backend import (
+    CAPHEFrequencySolver,
     CAPHENetwork,
     CAPHENode,
-    CAPHEFrequencySolver,
 )
 from polaris.sim.caphe_time_domain import (
     CAPHEBackend,
     CAPHETimeDomainSolver,
 )
-from polaris.sim.cascade import cascade_circuit
 from polaris.sim.models import waveguide_s
-
 
 # ---------------------------------------------------------------------------
 # 测试辅助函数
@@ -350,7 +348,7 @@ class TestCAPHEFrequencySolver:
         )
 
         # sax 求解（等价电路）
-        wg_sdict = waveguide_s(
+        waveguide_s(
             wl=np.array(wavelengths), length=50.0, neff=2.4, ng=4.0
         )
         # 两段波导级联 = 一段 100μm 波导
@@ -388,7 +386,8 @@ class TestCAPHETimeDomainSolver:
 
         # 构建初始状态导数
         y0 = np.array([0.0, 0.0])
-        inputs = lambda t: {"in": 1.0 + 0.0j}
+        def inputs(t):
+            return {"in": 1.0 + 0.0j}
         dydt = solver.build_ode_system(0.0, y0, inputs)
         assert len(dydt) == 2
         # dN/dt 应为正（泵浦注入）
