@@ -24,12 +24,12 @@
 
 - [ ] sim/（161 文件 58,325 行）— 12 子目录全覆盖
 - [ ] pdk/（46 文件 13,167 行）— 顶层 + soi/sin/inp + optodesigner
-- [ ] trainer/（29 文件 7,908 行）— PPO/BC/GNN-PPO/预训练/迁移学习
+- [x] trainer/（29 文件 7,908 行）— PPO/BC/GNN-PPO/预训练/迁移学习（v3.1 完成）
 - [ ] router/（22 文件 7,919 行）— curvy/global/hybrid/multilayer
 - [ ] data/（17 文件 6,250 行）— dataset/benchmark/specs
 - [ ] flow/（16 文件 3,599 行）— stage/scheduler/job
 - [ ] engine/（15 文件 6,071 行）— gnn/alphachip_gnn/floorplan_env
-- [ ] rl/（9 文件 2,815 行）— alpha_chip/edge_gnn/pretraining
+- [x] rl/（9 文件 2,815 行）— alpha_chip/edge_gnn/pretraining（v3.1 完成）
 - [ ] io/（8 文件 1,688 行）— GDS/OASIS/CIF/DXF/Gerber/LEF-DEF/ODB++/OpenAccess
 - [ ] pipeline/（6 文件 2,371 行）— integrated/curvy_router/training
 - [ ] nn/（4 文件 1,236 行）— attention/conv/functional
@@ -65,10 +65,10 @@
 - [ ] KLM 线性光学量子计算（Knill, Laflamme, Milburn, Nature 2001）
 - [ ] HOM 双光子干涉（Hong, Ou, Mandel, PRL 1987）
 - [ ] BB84 量子密钥分发（Bennett & Brassard 1984）
-- [ ] PPO 近端策略优化（Schulman et al. 2017）
-- [ ] GAE 广义优势估计（Schulman et al. ICLR 2016）
-- [ ] Adam 优化器（Kingma & Ba, ICLR 2015）
-- [ ] AlphaChip Edge-GNN（Mirhoseini et al. Nature 2021）
+- [x] PPO 近端策略优化（Schulman et al. 2017）— v3.1 验证 4 文件一致
+- [x] GAE 广义优势估计（Schulman et al. ICLR 2016）— v3.1 验证 2 文件一致
+- [x] Adam 优化器（Kingma & Ba, ICLR 2015）— v3.1 验证偏置修正 + 一阶/二阶矩
+- [x] AlphaChip Edge-GNN（Mirhoseini et al. Nature 2021）— v3.1 验证 R-GCN+GAT+GlobalAttention 3 创新点
 - [ ] Si 等离子体色散（Soref & Bennett, IEEE JQE 1987）
 - [ ] CODATA 2018 物理常数（c/h/q/k_B/ε_0）
 
