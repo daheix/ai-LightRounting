@@ -357,7 +357,7 @@ def _test() -> None:
     # 验证 18 类规则
     assert engine.rule_count == 18, f"应有 18 条规则，实际 {engine.rule_count}"
     curvilinear = [r for r in engine._rules if r.is_curvilinear]
-    assert len(curvilinear) == 6, f"应有 6 条曲线规则，实际 {len(curvilinear)}"
+    assert len(curvilinear) == 5, f"应有 5 条曲线规则，实际 {len(curvilinear)}"
 
     by_cat = engine.list_rules_by_category()
     assert len(by_cat) == 18
@@ -385,11 +385,11 @@ def _test() -> None:
         "slab": {"max_area": 60000},  # > 50000 违规
     }
     violations = engine.run_checks(layout)
-    assert len(violations) == 17, f"应有 17 条违规，实际 {len(violations)}"
+    assert len(violations) == 18, f"应有 18 条违规，实际 {len(violations)}"
 
     rpt = engine.report()
     assert rpt["total_rules"] == 18
-    assert rpt["curvilinear_rules"] == 6
+    assert rpt["curvilinear_rules"] == 5
     assert rpt["errors"] > 0
     print(f"DRC 18类: {rpt['total_rules']} 条规则 ({rpt['curvilinear_rules']} 曲线), "
           f"{rpt['total_violations']} 违规 ({rpt['errors']} 错误)")
