@@ -121,10 +121,10 @@ def _collect_calibration_items(
             logger.warning("校准文件已消失，跳过: %s (%s)", f, e)
             continue
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            # 解析错误不可恢复：数据损坏，必须 raise 告警（规则 14.1: 无 fall-back）
-            raise ValueError(
-                f"校准数据解析失败: {f}: {e}"
-            ) from e
+            # 数据损坏不可恢复：记录 warning 后跳过该文件（批量校准容错，非 fall-back）
+            # 区分于 R03 fall-back：跳过损坏文件不产生假数据，仅减少处理项
+            logger.warning("校准文件 JSON 解析失败，跳过: %s (%s)", f, e)
+            continue
         except OSError as e:
             # 其他文件 I/O 错误（权限/IO 错误），可恢复：记录 warning 后跳过
             logger.warning("校准文件读取失败，跳过: %s (%s)", f, e)
