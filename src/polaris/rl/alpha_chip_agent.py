@@ -156,9 +156,9 @@ class AlphaChipAgent:
             w = float(dev.get("width", 50))
             h = float(dev.get("height", 30))
             gi0 = max(0, int(p["x"] / _GRID_CELL_SIZE))
-            gi1 = min(grid_w, int(np.ceil((p["x"] + w) / _GRID_CELL_SIZE)) + 1)
+            gi1 = min(grid_w, int(np.ceil((p["x"] + w) / _GRID_CELL_SIZE)))
             gj0 = max(0, int(p["y"] / _GRID_CELL_SIZE))
-            gj1 = min(grid_h, int(np.ceil((p["y"] + h) / _GRID_CELL_SIZE)) + 1)
+            gj1 = min(grid_h, int(np.ceil((p["y"] + h) / _GRID_CELL_SIZE)))
             for r in range(gj0, gj1):
                 for c in range(gi0, gi1):
                     mask[r * grid_w + c] = 0.0
