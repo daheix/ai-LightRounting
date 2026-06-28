@@ -4,18 +4,35 @@
 支持 ChipletFormer 风格的全局上下文建模。
 
 修复 P0-C: 原实现 MultiHeadAttention.forward / TransformerBlock.forward
-大量使用 ``.data`` 截断自动微分计算图，导致 w_q/w_k/w_v 参数无法接收梯度。
-现实现自定义可微 attention op（手动前向+反向），保留完整计算图。
+大量使用 ``.data`` 截断自动微分计算图，导致 w_q/w_k/w_v 参数无法接收梯度，
+是 R03 禁止的假实现/fall-back。现实现自定义可微 attention op
+（手动前向+反向，softmax/QK^T/V 反向公式），保留完整计算图，
+w_q/w_k/w_v/w_o 全部可接收非零梯度，残差连接梯度可流回输入。
 
-来源:
+文献溯源（R02 学术诚信，公式/算法均可溯源）:
 - Vaswani et al., 2017, "Attention Is All You Need", NeurIPS
   https://arxiv.org/abs/1706.03762
+  （Scaled Dot-Product Attention、Multi-Head Attention、TransformerBlock
+   编码器结构、1/sqrt(d_k) 缩放因子来源）
+- Bahdanau et al., 2015, "Neural Machine Translation by Jointly Learning to
+  Align and Translate", ICLR, https://arxiv.org/abs/1409.0473
+  （注意力机制起源，additive attention → dot-product attention 演进）
+- Kingma & Ba, 2015, "Adam: A Method for Stochastic Optimization", ICLR
+  https://arxiv.org/abs/1412.6980
+  （Adam 优化器，与本层配合训练时的默认 eps=1e-8/betas=(0.9,0.999) 一致）
+- Glorot & Bengio, 2010, "Understanding the difficulty of training deep
+  feedforward neural networks", AISTATS
+  http://proceedings.mlr.press/v9/glorot10a/glorot10a.pdf
+  （Xavier 初始化，w_q/w_k/w_v/w_o 投影矩阵方差稳定理论基础）
+- Ba et al., 2016, "Layer Normalization", https://arxiv.org/abs/1607.06450
+  （LayerNorm，TransformerBlock 残差后归一化的来源）
+- Goodfellow et al., 2016, "Deep Learning" §6.2.2 softmax 反向
+  https://www.deeplearningbook.org/
+  （softmax 反向梯度公式 d_scores = attn ⊙ (d_attn - Σ(d_attn⊙attn))）
+- PyTorch MultiheadAttention 实现参考:
+  https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention
 - ChipletFormer (NeurIPS 2024): Transformer + GNN 融合布局布线
   https://mlforsystems.org/assets/papers/neurips2024/paper22.pdf
-- PyTorch MultiheadAttention:
-  https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention
-- softmax 反向梯度: Goodfellow et al. 2016 "Deep Learning" §6.2.2
-  https://www.deeplearningbook.org/
 """
 
 from __future__ import annotations
