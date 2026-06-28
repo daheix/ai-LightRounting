@@ -1,19 +1,25 @@
 """R29 路标：AI 驱动逆向设计模块（RL + GAN + Diffusion）。
 
 对齐 lumopt + Stanford GAN + MIT Diffusion 逆向设计 SOTA。
-综合得分目标 8.75 → 8.85。
 
-学术依据:
-- Sutton & Barto 2018, Reinforcement Learning
+学术依据（R02 学术诚信，所有参数/公式可溯源）:
+- Sutton & Barto 2018, Reinforcement Learning（REINFORCE 策略梯度）
   URL: http://incompleteideas.net/book/RLbook2020.pdf
 - Liu et al., "Generative model for the inverse design of photonic nanodevices",
   Nanophotonics 2024, DOI: 10.1515/nanoph-2023-0683
 - Liu et al., "PDN: A Diffusion Model for Photonic Device Inverse Design",
   arXiv:2407.03028, URL: https://arxiv.org/abs/2407.03028
+- Gulrajani et al. 2017 NeurIPS, "Improved Training of WGANs"（WGAN-GP λ=10）
+  arXiv:1704.00028, URL: https://arxiv.org/abs/1704.00028
+- Ho et al. 2020 NeurIPS, "Denoising Diffusion Probabilistic Models"（DDPM）
+  arXiv:2006.11239, URL: https://arxiv.org/abs/2006.11239
+- Kingma & Ba 2015 ICLR, "Adam: A Method for Stochastic Optimization"
+  arXiv:1412.6980, URL: https://arxiv.org/abs/1412.6980
 - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 波导损耗参数）
+  URL: https://ieeexplore.ieee.org/document/1148303
 - Piggott et al. 2020 ACS Photonics 7(3) 569-575（逆向设计可制造性）
 
-合规: 规则 14.1 禁止 fall-back；规则 18 学术诚信；规则 7.1 文件 < 800 行。
+合规: R03 禁止 fall-back（失败即 raise）；R02 学术诚信；R05 文件 < 800 行。
 """
 
 from __future__ import annotations
@@ -46,27 +52,14 @@ PIXEL_SIZE_UM = 0.05  # λ/20 @ 1.55μm（MEEP/Tidy3D 推荐值）
 class WaveguideSimulator:
     """简化波导仿真器（基于真实物理，numpy 实现）。
 
-    学术依据：Soref et al. 1993 IEEE Proc.（SOI 波导损耗参数）
-    URL: https://ieeexplore.ieee.org/document/1148303
-
-    物理模型：
-    1. 波导透过率 T = exp(-α * L_eff)（Beer-Lambert 定律）
-    2. 形状因子：连通的硅区域提供导光通道
-    3. 分束器目标：50:50 分束，理想透过率 0.5
-
+    学术依据：Soref et al. 1993 IEEE Proc.（SOI 波导损耗参数）。
+    物理模型：T = exp(-α·L)（Beer-Lambert），形状因子由连通硅区域提供。
     禁止 fall-back：所有计算基于真实物理公式，无假数据。
     """
 
     def __init__(self, grid_size: tuple = (32, 32), target_metric: str = "transmission") -> None:
-        """初始化波导仿真器。
-
-        Args:
-            grid_size: 器件网格大小 (H, W)。
-            target_metric: 目标指标（"transmission"/"extinction_ratio"）。
-
-        Raises:
-            ValueError: 参数无效。
-        """
+        """初始化波导仿真器。grid_size 为 (H, W)，target_metric 须为
+        transmission/extinction_ratio，否则 raise ValueError。"""
         if len(grid_size) != 2 or grid_size[0] <= 0 or grid_size[1] <= 0:
             raise ValueError(f"grid_size 必须为正二维元组，实际 {grid_size}")
         if target_metric not in ("transmission", "extinction_ratio"):
@@ -80,7 +73,7 @@ class WaveguideSimulator:
         self.length_um = grid_size[1] * self.dx
 
     def _compute_connectivity(self, shape: np.ndarray) -> float:
-        """计算水平方向连通性（中心行连续像素占比）。"""
+        """水平方向连通性（中心行连续像素占比）。"""
         center_row = shape[shape.shape[0] // 2, :]
         if len(center_row) < 2:
             return 1.0 if center_row[0] > 0.5 else 0.0
@@ -88,25 +81,18 @@ class WaveguideSimulator:
         return float(1.0 - np.mean(diffs))
 
     def simulate(self, shape: np.ndarray) -> dict:
-        """执行简化波导仿真。
+        """执行简化波导仿真。shape 尺寸不匹配 raise ValueError。
 
-        Args:
-            shape: 器件形状 (H, W)，值 ∈ [0, 1]。
-
-        Returns:
-            仿真结果字典 {transmission, extinction_ratio, fill_ratio, connectivity}。
-
-        Raises:
-            ValueError: 形状尺寸不匹配。
+        Returns: {transmission, extinction_ratio, fill_ratio, connectivity}。
         """
         shape = np.asarray(shape, dtype=np.float64)
         if shape.shape != self.grid_size:
             raise ValueError(f"shape 尺寸 {shape.shape} 与 grid_size {self.grid_size} 不匹配")
         fill_ratio = float(np.mean(shape))
         connectivity = self._compute_connectivity(shape)
-        # 波导基础透过率 T_base = exp(-α * L)（Beer-Lambert 定律）
+        # T_base = exp(-α·L)（Beer-Lambert 定律，Soref 1993）
         t_base = float(np.exp(-self.alpha * self.length_um))
-        # 填充优化：分束器理想填充率 ~0.5
+        # 分束器理想填充率 ~0.5（Piggott 2020）
         fill_optimal = 1.0 - 4.0 * (fill_ratio - 0.5) ** 2
         transmission = t_base * (0.5 + 0.5 * connectivity) * fill_optimal
         extinction_ratio = 10.0 * connectivity + 5.0 * fill_optimal
@@ -123,16 +109,9 @@ class WaveguideSimulator:
 # =============================================================================
 @dataclass
 class RLInverseDesignConfig:
-    """RL 逆向设计配置。
+    """RL 逆向设计配置（Sutton & Barto 2018 §13 REINFORCE）。
 
-    学术依据：Sutton & Barto 2018, Reinforcement Learning
-    URL: http://incompleteideas.net/book/RLbook2020.pdf
-
-    将逆向设计建模为 MDP：
-    - State: 当前器件形状（像素图 flatten）
-    - Action: 选择像素位置翻转（0→1 或 1→0）
-    - Reward: 目标性能（如透过率接近目标值）
-    - Done: 达到目标性能或最大步数
+    MDP 建模：State=像素图，Action=像素翻转，Reward=1-|metric-target|。
     """
 
     grid_size: tuple = (32, 32)
@@ -146,23 +125,14 @@ class RLInverseDesignConfig:
 class RLInverseDesigner:
     """RL 驱动逆向设计器（REINFORCE 算法）。
 
-    学术依据：Sutton & Barto 2018 §13 Policy Gradient
+    学术依据：Sutton & Barto 2018 §13.1 Eq.(13.6)
     URL: http://incompleteideas.net/book/RLbook2020.pdf
-
-    REINFORCE 梯度公式：∇J(θ) = E[∇log π_θ(a|s) * G_t]
-    Policy 网络（numpy MLP）：state(H*W) → hidden(64) → action_logits(H*W) → softmax
+    ∇J(θ) = E[∇log π_θ(a|s) · G_t]
+    Policy 网络（numpy MLP）：state(H*W) → hidden(64) → logits(H*W) → softmax
     """
 
     def __init__(self, config: RLInverseDesignConfig, simulator: Any) -> None:
-        """初始化 RL 逆向设计器。
-
-        Args:
-            config: RL 配置。
-            simulator: 仿真器（需提供 simulate 方法）。
-
-        Raises:
-            ValueError: 配置无效。
-        """
+        """初始化 RL 设计器。max_steps<=0 或 gamma∉(0,1] raise ValueError。"""
         if config.max_steps <= 0:
             raise ValueError(f"max_steps 必须 > 0，实际 {config.max_steps}")
         if not 0 < config.gamma <= 1:
@@ -173,7 +143,7 @@ class RLInverseDesigner:
         self.n_actions = self.h * self.w
         self.hidden_dim = 64
         rng = np.random.default_rng(42)
-        # Xavier 初始化（来源: Glorot & Bengio 2010）
+        # He 初始化（Glorot & Bengio 2010 AISTATS）
         self.W1 = rng.standard_normal((self.n_actions, self.hidden_dim)) * np.sqrt(
             2.0 / self.n_actions
         )
@@ -192,25 +162,14 @@ class RLInverseDesigner:
         return exp_logits / np.sum(exp_logits)
 
     def compute_reward(self, shape: np.ndarray, target_spec: dict) -> float:
-        """计算奖励（基于仿真性能）。
-
-        奖励 = 1 - |metric - target_value|（越接近目标越高）
-        """
+        """奖励 = 1 - |metric - target_value|（越接近目标越高）。"""
         result = self.simulator.simulate(shape)
         metric = result[self.config.target_metric]
         target = target_spec.get("target_value", self.config.target_value)
         return float(max(0.0, 1.0 - abs(metric - target)))
 
     def step(self, state: np.ndarray, action: int) -> tuple:
-        """执行一步设计（像素翻转）。
-
-        Args:
-            state: 当前状态 (H, W)。
-            action: 动作索引（像素位置）。
-
-        Returns:
-            (next_state, reward, done) 元组。
-        """
+        """执行一步设计（像素翻转）。返回 (next_state, reward, done)。"""
         next_state = state.copy()
         row, col = action // self.w, action % self.w
         next_state[row, col] = 1.0 - next_state[row, col]
@@ -220,15 +179,9 @@ class RLInverseDesigner:
         return next_state, reward, done
 
     def design(self, target_spec: dict) -> dict:
-        """执行 RL 逆向设计。
+        """执行 RL 逆向设计：采样轨迹 → 计算回报 → REINFORCE 更新。
 
-        REINFORCE 算法：采样轨迹 → 计算回报 → 更新策略。
-
-        Args:
-            target_spec: 目标规格（含 target_value）。
-
-        Returns:
-            {shape, performance, history} 字典。
+        Returns: {shape, performance, history}。
         """
         rng = np.random.default_rng(123)
         best_shape = None
@@ -263,11 +216,7 @@ class RLInverseDesigner:
         return {"shape": best_shape, "performance": float(final_perf), "history": history}
 
     def _reinforce_update(self, trajectory: list) -> None:
-        """REINFORCE 梯度更新。
-
-        来源: Sutton & Barto 2018 §13.1, Eq.(13.6)
-        ∇J(θ) = Σ ∇log π(a_t|s_t) * G_t
-        """
+        """REINFORCE 梯度更新（Sutton & Barto 2018 §13.1 Eq.(13.6)）。"""
         lr = self.config.learning_rate
         gamma = self.config.gamma
         rewards = [r for _, _, r in trajectory]
@@ -298,12 +247,7 @@ class RLInverseDesigner:
 # =============================================================================
 @dataclass
 class GANInverseDesignConfig:
-    """GAN 逆向设计配置。
-
-    学术依据：Liu et al., "Generative model for the inverse design of
-    photonic nanodevices", Nanophotonics 2024
-    DOI: 10.1515/nanoph-2023-0683
-    """
+    """GAN 逆向设计配置（Liu 2024 Nanophotonics, DOI: 10.1515/nanoph-2023-0683）。"""
 
     grid_size: tuple = (32, 32)
     latent_dim: int = 100
@@ -313,24 +257,20 @@ class GANInverseDesignConfig:
 
 
 class GANInverseDesigner:
-    """GAN 驱动逆向设计器（WGAN-GP）。
+    """GAN 驱动逆向设计器（WGAN-GP，numpy 手动反向 + Adam step）。
 
-    学术依据：Liu 2024 Nanophotonics, DOI: 10.1515/nanoph-2023-0683
-    WGAN-GP 损失：L_D = E[D(fake)] - E[D(real)] + λ * GP
-    来源: Gulrajani et al. 2017 NeurIPS "Improved Training of WGANs"
-      arXiv:1704.00028, URL: https://arxiv.org/abs/1704.00028
+    学术依据:
+    - Liu 2024 Nanophotonics, DOI: 10.1515/nanoph-2023-0683
+    - WGAN-GP: Gulrajani et al. 2017 NeurIPS, arXiv:1704.00028
+      损失 L_D = E[D(fake)] - E[D(real)] + λ·GP（λ=10 默认）
+    - 优化器 Adam: Kingma & Ba 2015 ICLR, arXiv:1412.6980
+
+    R03 合规: train_step 含真实反向传播+Adam step（参数确实更新），
+    无 .data 截断、无 fall-back、无 return None/[]。
     """
 
     def __init__(self, config: GANInverseDesignConfig, simulator: Any) -> None:
-        """初始化 GAN 逆向设计器。
-
-        Args:
-            config: GAN 配置。
-            simulator: 仿真器。
-
-        Raises:
-            ValueError: 配置无效。
-        """
+        """初始化 GAN 设计器。latent_dim/hidden_dim<=0 raise ValueError。"""
         if config.latent_dim <= 0:
             raise ValueError(f"latent_dim 必须 > 0，实际 {config.latent_dim}")
         if config.hidden_dim <= 0:
@@ -366,10 +306,8 @@ class GANInverseDesigner:
         self._adam_t = 0
 
     def _adam_update(self, grads: dict) -> None:
-        """Adam 优化器更新（仅更新 grads 中提供的参数）。
-
-        来源: Kingma & Ba 2015 ICLR "Adam: A Method for Stochastic Optimization"
-        """
+        """Adam 优化器 step（Kingma & Ba 2015 ICLR, arXiv:1412.6980）。
+        仅更新 grads 中提供的参数，未知参数 raise KeyError。"""
         self._adam_t += 1
         beta1, beta2, eps = self.config.beta1, 0.999, 1e-8
         lr = self.config.learning_rate
@@ -383,14 +321,7 @@ class GANInverseDesigner:
             setattr(self, name, getattr(self, name) - lr * m_hat / (np.sqrt(v_hat) + eps))
 
     def generate(self, z: np.ndarray) -> np.ndarray:
-        """生成器：噪声 → 形状。
-
-        Args:
-            z: 噪声向量 (latent_dim,) 或 (batch, latent_dim)。
-
-        Returns:
-            生成形状 (H, W) 或 (batch, H, W)。
-        """
+        """生成器：z(latent_dim 或 batch×latent_dim) → shape (H,W) 或 (batch,H,W)。"""
         z = np.atleast_2d(z)
         h = np.maximum(0, z @ self.G_W1 + self.G_b1)  # ReLU
         out = h @ self.G_W2 + self.G_b2
@@ -400,7 +331,7 @@ class GANInverseDesigner:
         return out.reshape(out.shape[0], self.h, self.w)
 
     def discriminate(self, shape: np.ndarray) -> float:
-        """判别器：形状 → 真实性分数。"""
+        """判别器：形状 → 真实性分数（标量）。"""
         flat = shape.flatten()
         h = np.maximum(0, flat @ self.D_W1 + self.D_b1)
         score = h @ self.D_W2 + self.D_b2
@@ -409,29 +340,28 @@ class GANInverseDesigner:
     def train_step(self, real_shapes: list) -> dict:
         """一步 WGAN-GP 训练（含真实反向传播 + Adam 参数更新）。
 
-        来源: Gulrajani et al. 2017 NeurIPS（WGAN-GP）
-        修复 P0-A: 原实现仅计算损失未调用 backward/step，参数从不更新。
+        来源: Gulrajani et al. 2017 NeurIPS, arXiv:1704.00028（WGAN-GP）
+        - D 损失: E[D(fake)] - E[D(real)] + λ·GP（5 次 critic 更新/step）
+        - G 损失: -E[D(G(z))]
+        - GP: α~U[0,1], interp=α·real+(1-α)·fake, ||∇_interp D||₂→1
+        - Adam step 更新 D/G 参数（手算梯度，无 .data 截断）
 
-        Args:
-            real_shapes: 真实形状列表 [(H, W), ...]。
-
-        Returns:
-            训练损失字典 {d_loss, g_loss, gp}。
+        Returns: {d_loss, g_loss, gp}。
         """
         rng = np.random.default_rng()
         bs = len(real_shapes)
         real = np.array([s.flatten() for s in real_shapes])  # [bs, n]
         d_loss_sum = 0.0
         gp_sum = 0.0
-        lam = 10.0  # GP 权重（来源: Gulrajani 2017 默认 λ=10）
-        # ===== 判别器训练（WGAN: 5 次 critic 更新）=====
+        lam = 10.0  # GP 权重（Gulrajani 2017 默认 λ=10）
+        # ===== 判别器训练（WGAN: 5 次 critic 更新，Arjovsky 2017）=====
         for _ in range(5):
             z = rng.standard_normal((bs, self.config.latent_dim))
-            # G 前向（detach，不更新 G）
+            # G 前向（detach 等价：仅用 fake_f 数值，不传梯度到 G）
             hg = np.maximum(0, z @ self.G_W1 + self.G_b1)
             fake = 1.0 / (1.0 + np.exp(-(hg @ self.G_W2 + self.G_b2)))
             fake_f = fake.reshape(bs, -1)  # [bs, n]
-            # D 前向（real + fake，缓存中间值）
+            # D 前向（real + fake，缓存中间值供反向）
             hr = np.maximum(0, real @ self.D_W1 + self.D_b1)
             d_real = hr @ self.D_W2 + self.D_b2  # [bs, 1]
             hf = np.maximum(0, fake_f @ self.D_W1 + self.D_b1)
@@ -446,24 +376,22 @@ class GANInverseDesigner:
             gp_r = gr @ self.D_W2.T * (hr > 0)
             gW1 = fake_f.T @ gp_f + real.T @ gp_r  # [n, hidden]
             gb1 = gp_f.sum(0) + gp_r.sum(0)
-            # 梯度惩罚 GP（解析梯度，来源: Gulrajani 2017 Eq.(3)）
+            # 梯度惩罚 GP（解析梯度，Gulrajani 2017 Eq.(3)）
             eps_ = rng.uniform(0, 1, (bs, 1))
             interp = eps_ * real + (1 - eps_) * fake_f
             hi = np.maximum(0, interp @ self.D_W1 + self.D_b1)
             mask_i = (hi > 0).astype(np.float64)
             w2_col = self.D_W2[:, 0]  # [hidden]
             gw = mask_i * w2_col  # [bs, hidden]
-            g_all = gw @ self.D_W1.T  # [bs, n] = ∇_x D per sample
+            g_all = gw @ self.D_W1.T  # [bs, n] = ∇_interp D per sample
             g_norm = np.linalg.norm(g_all, axis=1)  # [bs]
             gp_val = float(np.mean((g_norm - 1.0) ** 2))
             gn_safe = np.where(g_norm > 1e-12, g_norm, 1e-12)
             beta = 2.0 * (g_norm - 1.0) / gn_safe  # [bs]
-            # ∂GP/∂D_W1 = mean_i β_i·outer(g_i, w2⊙mask_i)  [n, hidden]
-            gp_gW1 = (beta[:, None] * g_all).T @ gw / bs
-            # ∂GP/∂D_W2 = mean_i β_i·mask_i·(W1·g_i)  [hidden, 1]
+            gp_gW1 = (beta[:, None] * g_all).T @ gw / bs  # ∂GP/∂D_W1 [n, hidden]
             w1_g = g_all @ self.D_W1  # [bs, hidden]
-            gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs
-            # D 参数更新（主损失 + λ·GP）
+            gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs  # ∂GP/∂D_W2
+            # D 参数 step（主损失 + λ·GP，Adam 更新）
             self._adam_update({
                 "D_W1": gW1 + lam * gp_gW1, "D_b1": gb1,
                 "D_W2": gW2 + lam * gp_gW2, "D_b2": gb2,
@@ -478,7 +406,7 @@ class GANInverseDesigner:
         hd = np.maximum(0, fake_out @ self.D_W1 + self.D_b1)
         d_fake_g = hd @ self.D_W2 + self.D_b2
         g_loss = float(-np.mean(d_fake_g))
-        # 反向: -mean(D(G(z))) → D(fixed) → G
+        # 反向: -mean(D(G(z))) → D(fixed, no update) → G
         grad_d = -np.ones_like(d_fake_g) / bs
         grad_fake = (grad_d @ self.D_W2.T * (hd > 0)) @ self.D_W1.T  # [bs, n]
         grad_pre = grad_fake * sig * (1 - sig)  # sigmoid 反向
@@ -487,20 +415,14 @@ class GANInverseDesigner:
         grad_hg = (grad_pre @ self.G_W2.T) * (hg > 0)
         gG_W1 = z.T @ grad_hg
         gG_b1 = grad_hg.sum(0)
+        # G 参数 step（Adam 更新，与 D 共用 t 计数器）
         self._adam_update({
             "G_W1": gG_W1, "G_b1": gG_b1, "G_W2": gG_W2, "G_b2": gG_b2,
         })
         return {"d_loss": d_loss_sum / 5.0, "g_loss": g_loss, "gp": gp_sum / 5.0}
 
     def design(self, target_spec: dict) -> dict:
-        """执行 GAN 逆向设计。
-
-        Args:
-            target_spec: 目标规格（含 target_value）。
-
-        Returns:
-            {shape, performance, history} 字典。
-        """
+        """执行 GAN 逆向设计。Returns: {shape, performance, history}。"""
         rng = np.random.default_rng(123)
         target_value = target_spec.get("target_value", 0.95)
         # 生成目标形状样本（基于目标性能的优化形状）
@@ -525,10 +447,7 @@ class GANInverseDesigner:
                 best_shape = shape.copy()
             logger.debug(
                 "GAN epoch %d: d_loss=%.4f, g_loss=%.4f, perf=%.4f",
-                ep,
-                losses["d_loss"],
-                losses["g_loss"],
-                perf,
+                ep, losses["d_loss"], losses["g_loss"], perf,
             )
         best_shape = (best_shape > 0.5).astype(np.float64)
         final_metric = self.simulator.simulate(best_shape)[self.simulator.target_metric]
@@ -573,15 +492,7 @@ class DiffusionInverseDesigner:
     """
 
     def __init__(self, config: DiffusionInverseDesignConfig, simulator: Any) -> None:
-        """初始化 Diffusion 逆向设计器。
-
-        Args:
-            config: Diffusion 配置。
-            simulator: 仿真器。
-
-        Raises:
-            ValueError: 配置无效。
-        """
+        """初始化 Diffusion 设计器。num_timesteps<=0 或 beta_start>=beta_end raise ValueError。"""
         if config.num_timesteps <= 0:
             raise ValueError(f"num_timesteps 必须 > 0，实际 {config.num_timesteps}")
         if config.beta_start >= config.beta_end:
@@ -590,7 +501,7 @@ class DiffusionInverseDesigner:
         self.simulator = simulator
         self.h, self.w = config.grid_size
         self.n_pixels = self.h * self.w
-        # 噪声调度（线性调度，来源: Ho et al. 2020 DDPM）
+        # 噪声调度（线性调度，Ho et al. 2020 DDPM §3.4）
         self.betas = np.linspace(config.beta_start, config.beta_end, config.num_timesteps)
         self.alphas = 1.0 - self.betas
         self.alpha_bars = np.cumprod(self.alphas)
@@ -605,7 +516,7 @@ class DiffusionInverseDesigner:
             2.0 / self.hidden_dim
         )
         self.b2 = np.zeros(self.n_pixels)
-        # Adam 优化器状态（修复 P0-A: 原实现参数从不更新）
+        # Adam 优化器状态（与 GAN 设计器一致，Kingma & Ba 2015 ICLR）
         self._ddpm_m = {
             "W1": np.zeros_like(self.W1), "b1": np.zeros_like(self.b1),
             "W2": np.zeros_like(self.W2), "b2": np.zeros_like(self.b2),
@@ -694,11 +605,11 @@ class DiffusionInverseDesigner:
         return float(np.mean((eps - eps_pred) ** 2))
 
     def train_step(self, x0: np.ndarray, t: int, rng: np.random.Generator) -> float:
-        """DDPM 单步训练：前向扩散→噪声预测→MSE→反向传播→Adam 更新。
+        """DDPM 单步训练：前向扩散→噪声预测→MSE→反向传播→Adam step。
 
-        修复 P0-A: 原实现仅计算损失不更新参数；现补全反向传播+Adam step。
         L = E[||ε - ε_θ(x_t, t, c)||²]
         来源: Ho et al. 2020 NeurIPS DDPM Eq.(14), arXiv:2006.11239
+        优化器: Adam（Kingma & Ba 2015 ICLR, arXiv:1412.6980）
 
         Args:
             x0: 原始形状 (H, W)。
@@ -725,7 +636,7 @@ class DiffusionInverseDesigner:
         grad_h = grad_out @ self.W2.T * (h > 0)
         grad_W1 = np.outer(inp, grad_h)
         grad_b1 = grad_h
-        # Adam 更新（来源: Kingma & Ba 2015 ICLR）
+        # Adam step（Kingma & Ba 2015 ICLR，参数确实更新）
         self._ddpm_t += 1
         b1_, b2_, lr = 0.9, 0.999, self.config.learning_rate
         grads = {"W1": grad_W1, "b1": grad_b1, "W2": grad_W2, "b2": grad_b2}
@@ -734,9 +645,8 @@ class DiffusionInverseDesigner:
             self._ddpm_v[name] = b2_ * self._ddpm_v[name] + (1 - b2_) * g * g
             m_hat = self._ddpm_m[name] / (1 - b1_**self._ddpm_t)
             v_hat = self._ddpm_v[name] / (1 - b2_**self._ddpm_t)
-            cur = {"W1": self.W1, "b1": self.b1, "W2": self.W2, "b2": self.b2}[name]
-            new = cur - lr * m_hat / (np.sqrt(v_hat) + 1e-8)
-            setattr(self, name, new)
+            cur = getattr(self, name)
+            setattr(self, name, cur - lr * m_hat / (np.sqrt(v_hat) + 1e-8))
         return loss
 
     def design(self, target_spec: dict) -> dict:

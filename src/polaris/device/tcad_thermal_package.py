@@ -237,11 +237,14 @@ class ThermalLayer:
 
 
 class ThermalSolver2D:
-    """2D 热传导方程求解器（有限差分法）。
+    """2D 稳态热传导方程求解器（真有限差分法，5 点中心差分）。
 
-    求解: ∇·(k∇T) + Q = 0 (稳态)
-    边界: 底部固定温度 T_sub, 顶部对流, 侧面绝热
-    来源: FIMMWAVE Thermo-Optic Solver / Lumerical HEAT
+    求解: ∇·(k∇T) + Q = 0 (稳态 Poisson 方程)
+    离散: 5 点中心差分 + 界面调和平均热导率 k_face = 2·k_a·k_b/(k_a+k_b)
+          (Incropera §4.4 / Scharfetter-Gummel 1969 同构思想)
+    求解: scipy.sparse.linalg.spsolve 稀疏直接解
+    边界: 底部 (z=0) Dirichlet T = T_sub；顶部/左右 Neumann 绝热。
+    来源: FIMMWAVE Thermo-Optic Solver / Lumerical HEAT / Taflove 2005 §4。
     """
 
     def __init__(
@@ -250,106 +253,200 @@ class ThermalSolver2D:
         width_um: float = 30.0,
         substrate_temp_k: float = 300.0,
         nx: int = 60,
+        heater_width_um: float = 1.0,
     ) -> None:
+        if not layers:
+            raise ValueError("layers 不可为空")
+        if width_um <= 0.0:
+            raise ValueError(f"width_um 须 > 0，实际 {width_um}")
+        if nx < 3:
+            raise ValueError(f"nx 须 ≥ 3，实际 {nx}")
+        if heater_width_um <= 0.0:
+            raise ValueError(f"heater_width_um 须 > 0，实际 {heater_width_um}")
         self.layers = layers
         self.width_um = width_um
         self.T_sub = substrate_temp_k
         self.nx = nx
-        self.nz = sum(1 for _ in layers)
+        self.heater_width_um = heater_width_um
+        self.nz = len(self.layers) * 3
+        if self.nz < 3:
+            raise ValueError(f"nz 须 ≥ 3，实际 {self.nz}（层数太少）")
         self._T: NDArray[np.float64] = np.array([])
         self._build_grid()
 
     def _build_grid(self) -> None:
-        self.nz = len(self.layers) * 3
-        self._T = np.ones((self.nz, self.nx)) * self.T_sub
+        """初始化温度场为衬底温度（求解前的占位场）。"""
+        self._T = np.ones((self.nz, self.nx), dtype=float) * self.T_sub
+
+    def _layer_index_of_z(self, z_node_m: NDArray[np.float64]) -> NDArray[np.int64]:
+        """每个 z 节点所属层的索引（按层界 searchsorted）。
+
+        Args:
+            z_node_m: z 节点坐标 [m]，长度 nz。
+        Returns:
+            layer_idx: 每个节点所属层的索引，shape (nz,)。
+        """
+        bounds_m: list[float] = [0.0]
+        for layer in self.layers:
+            bounds_m.append(bounds_m[-1] + layer.thickness_um * 1e-6)
+        interior = bounds_m[1:-1]
+        idx = np.searchsorted(interior, z_node_m, side="right")
+        return np.clip(idx, 0, len(self.layers) - 1).astype(np.int64)
+
+    def _build_physical_fields(
+        self,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64], float, float]:
+        """构建热导率场 k_arr 与体积热源场 q_arr [W/m³]，及网格间距 dx, dz [m]。
+
+        - k_arr[i, j]: 由 z 节点所属层热导率填充（变系数，材料界面调和平均在装配阶段处理）。
+        - q_arr[i, j]: 加热器层 + 加热器横向宽度内均匀注入体积热源，总功率守恒：
+          线功率 P' [W/m] = heater_power_mw_per_um × 1e3 (1 mW/μm = 1000 W/m)
+          体积密度 q = P' / (n_z_layer × n_x_heater × dx × dz) [W/m³]
+        """
+        nx, nz = self.nx, self.nz
+        dz_total_m = sum(l.thickness_um for l in self.layers) * 1e-6
+        width_m = self.width_um * 1e-6
+        dx = width_m / (nx - 1)
+        dz = dz_total_m / (nz - 1)
+        if dx <= 0.0 or dz <= 0.0:
+            raise ValueError(f"网格间距非正: dx={dx}, dz={dz}")
+
+        z_node = np.linspace(0.0, dz_total_m, nz)
+        layer_idx = self._layer_index_of_z(z_node)
+
+        k_arr = np.zeros((nz, nx), dtype=float)
+        for i in range(nz):
+            k_arr[i, :] = self.layers[int(layer_idx[i])].thermal_conductivity_w_mk
+
+        q_arr = np.zeros((nz, nx), dtype=float)
+        x_node = np.linspace(-width_m / 2.0, width_m / 2.0, nx)
+        w_h_m = self.heater_width_um * 1e-6
+        heater_x_mask = np.abs(x_node) <= w_h_m / 2.0
+        if not heater_x_mask.any():
+            heater_x_mask[int(np.argmin(np.abs(x_node)))] = True
+        n_x_h = int(heater_x_mask.sum())
+
+        heater_layer_ids = [
+            k for k, l in enumerate(self.layers)
+            if l.is_heater and l.heater_power_mw_per_um > 0.0
+        ]
+        for li in heater_layer_ids:
+            z_in_layer = (layer_idx == li)
+            n_z_l = int(z_in_layer.sum())
+            if n_z_l == 0:
+                continue
+            p_lin_w_m = self.layers[li].heater_power_mw_per_um * 1e3  # W/m
+            total_vol = n_z_l * n_x_h * dx * dz  # 单位长度 (y=1m) 体积 [m³]
+            if total_vol <= 0.0:
+                continue
+            q_density = p_lin_w_m / total_vol  # W/m³
+            for i in np.where(z_in_layer)[0]:
+                q_arr[i, heater_x_mask] = q_density
+        return k_arr, q_arr, dx, dz
+
+    def _assemble_fdm_system(
+        self,
+        k_arr: NDArray[np.float64],
+        q_arr: NDArray[np.float64],
+        dx: float,
+        dz: float,
+    ) -> tuple[sparse.csr_matrix, NDArray[np.float64]]:
+        """装配 5 点有限差分稀疏系统 A·T = b（含边界条件注入）。
+
+        - 内部节点: 调和平均面热导 k_face = 2·k_a·k_b/(k_a+k_b) (Incropera §4.4)
+          对角 A[r,r] = -Σ 邻接系数；邻接 A[r,nb] = k_face / d²；右端 b[r] = -q[r]
+        - 底部 (i=0): Dirichlet T = T_sub，行替换 A[r,r]=1, b[r]=T_sub
+        - 顶部/左右: Neumann 绝热（无贡献，自然满足零法向通量）
+        """
+        nx, nz = self.nx, self.nz
+        n = nx * nz
+        dx2 = dx * dx
+        dz2 = dz * dz
+
+        def idx(i: int, j: int) -> int:
+            return i * nx + j
+
+        rows: list[int] = []
+        cols: list[int] = []
+        vals: list[float] = []
+
+        for i in range(nz):
+            for j in range(nx):
+                r = idx(i, j)
+                if i == 0:
+                    # 底部 Dirichlet T = T_sub（行替换）
+                    rows.append(r); cols.append(r); vals.append(1.0)
+                    continue
+                k_c = float(k_arr[i, j])
+                coefs: list[tuple[int, float]] = []
+                if i > 0:
+                    k_n = float(k_arr[i - 1, j])
+                    k_f = 2.0 * k_c * k_n / (k_c + k_n)
+                    coefs.append((idx(i - 1, j), k_f / dz2))
+                if i < nz - 1:
+                    k_n = float(k_arr[i + 1, j])
+                    k_f = 2.0 * k_c * k_n / (k_c + k_n)
+                    coefs.append((idx(i + 1, j), k_f / dz2))
+                if j > 0:
+                    k_n = float(k_arr[i, j - 1])
+                    k_f = 2.0 * k_c * k_n / (k_c + k_n)
+                    coefs.append((idx(i, j - 1), k_f / dx2))
+                if j < nx - 1:
+                    k_n = float(k_arr[i, j + 1])
+                    k_f = 2.0 * k_c * k_n / (k_c + k_n)
+                    coefs.append((idx(i, j + 1), k_f / dx2))
+                diag = -sum(c for _, c in coefs)
+                rows.append(r); cols.append(r); vals.append(diag)
+                for nb, c in coefs:
+                    rows.append(r); cols.append(nb); vals.append(c)
+
+        A = sparse.csr_matrix((vals, (rows, cols)), shape=(n, n))
+        b = -q_arr.ravel().astype(float, copy=True)
+        # 底部 Dirichlet 右端（idx(0, j) = j，即前 nx 个）
+        b[:nx] = self.T_sub
+        return A, b
 
     def solve_steady_state(self, max_iter: int = 10000, tol: float = 1e-4) -> NDArray[np.float64]:
-        """稳态热传导求解 (1D 多层热阻 + 2D 高斯横向扩展)。
+        """稳态 2D 热扩散有限差分求解（真 FDM，非解析近似）。
 
-        方法:
-        - 深度方向: 多层介质热阻串联 R_total = Σ t_i / k_i
-        - 横向扩散: 高斯函数近似 (σ ≈ √(2 × t_box × W_heater))
-        来源: FIMMWAVE Thermo-Optic Solver / Lumerical HEAT / Coenen et al. Photonics 2024
+        控制方程: ∇·(k∇T) + Q = 0  （变系数 Poisson 方程，5 点中心差分）
+        离散: T[i,j] 中心差分 + 界面调和平均热导率 k_face = 2·k_a·k_b/(k_a+k_b)
+              (Incropera §4.4 / Scharfetter-Gummel 1969 同构思想)
+        求解: scipy.sparse.linalg.spsolve 稀疏直接解（单步收敛，无迭代）
+        边界: 底部 (z=0) Dirichlet T = T_sub；顶部/左右 Neumann 绝热。
+
+        max_iter/tol 保留 API 兼容（直接解法器不使用，单步求解即精确解）。
+
+        文献溯源:
+        - Cocorullo 1999 Electronics Letters 35(6) 453-455
+          https://doi.org/10.1049/el:19990151 (Si 热光系数与自热建模)
+        - Sze & Ng, Physics of Semiconductor Devices 3rd ed. 2006
+          https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
+        - Taflove & Hagness, Computational Electrodynamics 3rd ed. 2005 §4
+          https://us.artechhouse.com/Computational-Electrodynamics-The-FDTD-Method-Third-Edition-P1815.aspx
+        - Scharfetter & Gummel 1969 IEEE TED 16(1) 64-77
+          https://doi.org/10.1109/T-ED.1969.16767 (界面变量连续的差分离散)
+        - Selberherr 1984 Analysis and Simulation of Semiconductor Devices
+          https://link.springer.com/book/10.1007/978-3-7091-8752-4
+        - Incropera & DeWitt, Fundamentals of Heat and Mass Transfer §4.4
+          https://www.wiley.com/en-us/Fundamentals+of+Heat+and+Mass+Transfer
+        - scipy.sparse.linalg.spsolve
+          https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
         """
-        dz_total = sum(l.thickness_um for l in self.layers)
+        nx, nz = self.nx, self.nz
+        if nx < 3 or nz < 3:
+            raise ValueError(f"网格太稀疏: nx={nx}, nz={nz}, 须 ≥3")
 
-        # 层索引映射
-        z_cum = 0.0
-        layer_z_indices: list[tuple[int, int, ThermalLayer]] = []
-        for layer in self.layers:
-            z_start_idx = int(z_cum / dz_total * (self.nz - 1))
-            z_cum += layer.thickness_um
-            z_end_idx = min(int(z_cum / dz_total * (self.nz - 1)), self.nz - 1)
-            layer_z_indices.append((z_start_idx, z_end_idx, layer))
-
-        T_1d = np.ones(self.nz) * self.T_sub
-
-        # 总加热功率 (单位长度 W/m)
-        total_power_per_um = sum(
-            l.heater_power_mw_per_um for l in self.layers if l.is_heater
-        )  # mW/μm
-
-        if total_power_per_um > 0:
-            # 热阻计算: 解析近似 + 实验校准
-            # R_th = t_box / (k_box × W_heater) × f_spreading
-            # 扩展因子 f 考虑 Si 衬底内热扩散
-            # 校准: 2μm BOX, 1μm 宽加热器 → ~1 K·m/W (Coenen et al. 2024)
-            W_heater_um = 1.0
-            t_box = sum(l.thickness_um for l in self.layers
-                        if l.thermal_conductivity_w_mk < 5.0)
-            k_box = 1.4  # SiO2
-            # BOX 层热阻 (K·m/W, 单位长度)
-            R_box = (t_box * 1e-6) / (k_box * W_heater_um * 1e-6)
-            # 衬底扩展修正 (热扩散到大面积，热阻降低)
-            k_sub = 148.0
-            t_sub = sum(l.thickness_um for l in self.layers
-                        if l.thermal_conductivity_w_mk >= 100.0)
-            # 衬底热扩散长度 ~ 衬底厚度 (经验)
-            spreading_factor = min(t_sub / t_box * 0.15, 5.0)
-            R_sub = R_box / spreading_factor if spreading_factor > 0 else R_box
-            R_th_total = R_box + R_sub  # K·m/W
-
-            # 找到 heater 层索引
-            heater_idx = 0
-            for i, (zs, ze, layer) in enumerate(layer_z_indices):
-                if layer.is_heater:
-                    heater_idx = i
-                    break
-
-            # 1D 温度分布
-            dT_center = total_power_per_um * R_th_total  # K
-
-            # 1D 温度分布（指数衰减，从热源向衬底）
-            T_1d = np.ones(self.nz) * self.T_sub
-            heater_z_idx = layer_z_indices[heater_idx][1]
-            # 热源处温度最高
-            T_1d[heater_z_idx] = self.T_sub + dT_center
-            # 向衬底方向衰减
-            for i in range(heater_z_idx - 1, -1, -1):
-                # 按热阻比例衰减
-                ratio = (heater_z_idx - i) / max(heater_z_idx, 1)
-                T_1d[i] = self.T_sub + dT_center * (1 - ratio * 0.9)
-            # 向上方向（远离衬底）温度稍低
-            for i in range(heater_z_idx + 1, self.nz):
-                ratio = (i - heater_z_idx) / max(self.nz - heater_z_idx - 1, 1)
-                T_1d[i] = self.T_sub + dT_center * (0.6 - ratio * 0.5)
-
-        # 2D 横向扩展: 高斯分布
-        x_centers = np.linspace(-self.width_um / 2, self.width_um / 2, self.nx)
-        box_thickness = sum(
-            l.thickness_um for l in self.layers
-            if l.thermal_conductivity_w_mk < 5.0
-        )
-        sigma_thermal = max(box_thickness * 1.5, 2.0)  # μm
-        lateral_profile = np.exp(-x_centers ** 2 / (2 * sigma_thermal ** 2))
-
-        T_2d = np.zeros((self.nz, self.nx))
-        for i in range(self.nz):
-            dT = T_1d[i] - self.T_sub
-            T_2d[i, :] = self.T_sub + dT * lateral_profile
-
-        self._T = T_2d
-        return T_2d
+        k_arr, q_arr, dx, dz = self._build_physical_fields()
+        A, b = self._assemble_fdm_system(k_arr, q_arr, dx, dz)
+        T_vec = spsolve(A, b)
+        if not np.all(np.isfinite(T_vec)):
+            raise RuntimeError(
+                "FDM 求解产生非有限值（系统奇异或边界条件不一致）"
+            )
+        T = T_vec.reshape(nz, nx)
+        self._T = T
+        return T
 
     def max_temperature_k(self) -> float:
         if self._T.size == 0:
@@ -360,14 +457,14 @@ class ThermalSolver2D:
         """指定层的平均温度。"""
         if self._T.size == 0:
             raise RuntimeError("请先求解")
-        dz_total = sum(l.thickness_um for l in self.layers)
-        z = 0.0
-        for layer in self.layers:
-            z_start_idx = int(z / dz_total * (self.nz - 1))
-            z += layer.thickness_um
-            z_end_idx = min(int(z / dz_total * (self.nz - 1)), self.nz - 1)
+        z_node = np.linspace(0.0, sum(l.thickness_um for l in self.layers) * 1e-6, self.nz)
+        layer_idx = self._layer_index_of_z(z_node)
+        for k, layer in enumerate(self.layers):
             if layer.name == layer_name:
-                return float(np.mean(self._T[z_start_idx:z_end_idx + 1, :]))
+                mask = (layer_idx == k)
+                if not mask.any():
+                    raise KeyError(f"层 {layer_name} 在网格中无节点")
+                return float(np.mean(self._T[mask, :]))
         raise KeyError(f"层 {layer_name} 不存在")
 
     def thermal_crosstalk_matrix(
@@ -377,19 +474,52 @@ class ThermalSolver2D:
         heater_power_mw: float = 10.0,
         heater_length_um: float = 50.0,
     ) -> NDArray[np.float64]:
-        """计算热串扰矩阵 (n_heaters × n_devices)。
+        """计算热串扰矩阵 (n_heaters × n_devices) [K]。
 
-        来源: Lumerical INTERCONNECT - Modeling thermal crosstalk。
+        *创新*: 基于 Carslaw & Jaeger §10.4 的 2D 线热源 Green's 函数解析解，
+        替代原高斯近似 + 魔法数 0.5/15.0。底层逻辑：
+        - SOI 衬底近似为半无限大 Si 介质（k = 148 W/(m·K)，Cocorullo 1999 / Incropera）
+        - 单位长度线热源 P' [W/m] 在距离 r 处产生的稳态温升：
+            ΔT(r) = (P' / (2π·k)) · ln(r_ref / r)   (r > 0)
+          其中 r_ref 为远场参考距离（衬底厚度），由 Carslaw & Jaeger §10.4 给出。
+        - 创新点：r_ref 取实际衬底层厚度（物理意义：远场散热锚定深度），
+          替代原 sigma_um = 15.0 的无溯源魔法数。
+
+        文献: Carslaw & Jaeger, "Conduction of Heat in Solids", 2nd ed.,
+              Oxford 1959, §10.4 (line-source Green's function)
+              https://global.oup.com/academic/product/conduction-of-heat-in-solids-9780198533689
+              Cocorullo 1999 (Si 热导率 148 W/(m·K))
+              https://doi.org/10.1049/el:19990151
         """
-        # 简化: 1D 高斯型热扩散近似
-        sigma_um = 15.0  # 热扩散特征长度
-        matrix = np.zeros((len(heater_positions_um), len(device_positions_um)))
+        k_si = 148.0  # Si 衬底热导率 [W/(m·K)] (Cocorullo 1999 / Incropera)
+        sub_layers = [l for l in self.layers if l.thermal_conductivity_w_mk >= 100.0]
+        if not sub_layers:
+            raise ValueError(
+                "缺少 Si 衬底层 (k ≥ 100 W/(m·K))，无法应用 Carslaw-Jaeger 线热源模型"
+            )
+        r_ref_um = sum(l.thickness_um for l in sub_layers)
+        if r_ref_um <= 0.0:
+            raise ValueError(f"衬底厚度非正: {r_ref_um}")
+
+        # 单位长度功率 P' [W/m]: 1 mW / 1 μm = 1e-3 W / 1e-6 m = 1e3 W/m
+        if heater_length_um <= 0.0:
+            raise ValueError(f"heater_length_um 须 > 0，实际 {heater_length_um}")
+        p_lin_w_m = heater_power_mw * 1e-3 / (heater_length_um * 1e-6)
+
+        matrix = np.zeros(
+            (len(heater_positions_um), len(device_positions_um)), dtype=float
+        )
         for i, h_pos in enumerate(heater_positions_um):
-            dT_heater_center = heater_power_mw * 0.5  # 简化: 中心升温
             for j, d_pos in enumerate(device_positions_um):
-                dist = abs(h_pos - d_pos)
-                dT = dT_heater_center * np.exp(-dist ** 2 / (2 * sigma_um ** 2))
-                matrix[i, j] = dT
+                r_um = abs(h_pos - d_pos)
+                if r_um <= 0.0:
+                    # 同位置：取 1 个网格间距作正则化（避免 ln(0) 奇点）
+                    r_um = max(self.width_um / max(self.nx - 1, 1), 1e-3)
+                if r_um >= r_ref_um:
+                    matrix[i, j] = 0.0  # 超出扩散长度视为零串扰
+                    continue
+                dT = (p_lin_w_m / (2.0 * np.pi * k_si)) * np.log(r_ref_um / r_um)
+                matrix[i, j] = float(max(dT, 0.0))
         return matrix
 
 
