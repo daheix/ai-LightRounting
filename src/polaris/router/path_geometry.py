@@ -57,6 +57,12 @@ def euler_bend(
     欧拉弯曲（clothoid）曲率从 0 线性增加到 1/R，过渡平滑，
     是低损耗波导弯曲的标准选择。
 
+    弧长公式推导（clothoid 数学定义）:
+        曲率 k(s) = s / (R*L)，在 s=L 时 k=1/R
+        总转角 θ = ∫₀^L k(s) ds = L²/(2*R*L) = L/(2R)
+        求解 L: L = 2*R*θ （θ 为目标转角，弧度）
+        对 90° 弯曲 (θ=π/2): L = π*R ≈ 3.14159*R
+
     来源:
     - Fujisawa et al., Opt. Express 25, 9150 (2017) 首次将 clothoid 曲线
       用于硅波导 90° 弯曲，损耗显著低于圆弧弯曲
@@ -64,10 +70,14 @@ def euler_bend(
     - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件
       制造鲁棒性（RAMZI 交错滤波器）
       https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
+    - Flexcompute Tidy3D EulerWaveguideBend: clothoid 公式 RL=A², θ=L/(2R)
+      https://docs.flexcompute.com/projects/tidy3d/en/v2.9.2/notebooks/EulerWaveguideBend.html
+    - Levien "The Euler spiral: a mathematical history" UC Berkeley EECS-2008-111
+      https://www2.eecs.berkeley.edu/Pubs/TechRpts/2008/Archive/EECS-2008-111.pdf
     """
     angle = math.radians(angle_deg)
-    # 欧拉螺旋参数
-    L = radius_um * math.sqrt(angle)  # 近似弧长
+    # 单段 clothoid 弧长: L = 2*R*θ（使 k 从 0 线性增至 1/R 时恰好转过 θ）
+    L = 2.0 * radius_um * angle
     pts = []
     s = 0.0
     ds = L / n_points
@@ -76,7 +86,7 @@ def euler_bend(
     for _ in range(n_points + 1):
         # 先记录当前点（保证起点为 (0, 0)），再积分前进一步
         pts.append((x, y))
-        # 曲率 k = s / (R * L) 线性增长
+        # 曲率 k = s / (R * L) 线性增长（clothoid 定义 A² = R*L）
         k = (s / L) / radius_um if L > 0 else 0.0
         theta += k * ds
         x += ds * math.cos(theta)

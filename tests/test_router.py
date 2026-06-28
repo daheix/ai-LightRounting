@@ -74,6 +74,40 @@ def test_euler_bend_points():
     assert pts[0] == (0, 0)
 
 
+def test_euler_bend_90deg_turn_angle_regression():
+    """回归测试：90° Euler 弯曲必须实际转过 90°（弧长 ≈ π*R）。
+
+    历史 Bug: 旧公式 L = R*sqrt(angle) 对 90° 弯曲只转 35.9°（数学错误）。
+    正确公式（clothoid 定义）: k(s)=s/(R*L), θ=L/(2R), 故 L=2*R*θ。
+    对 90° (θ=π/2): L = π*R ≈ 3.14159*R。
+
+    来源:
+    - Flexcompute Tidy3D EulerWaveguideBend: clothoid 公式 RL=A², θ=L/(2R)
+      https://docs.flexcompute.com/projects/tidy3d/en/v2.9.2/notebooks/EulerWaveguideBend.html
+    - R05 发现 Bug 必须修复并附回归测试
+    """
+    import math
+
+    R = 5.0
+    pts = euler_bend(R, 90.0, n_points=200)
+    # 弧长 ≈ π*R
+    arc = sum(
+        math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+        for i in range(len(pts) - 1)
+    )
+    expected_L = math.pi * R
+    assert abs(arc - expected_L) / expected_L < 0.02, (
+        f"90° Euler 弧长 {arc:.4f} 偏离 π*R={expected_L:.4f} 超过 2%"
+    )
+    # 终点切线方向应接近 90°
+    dx = pts[-1][0] - pts[-2][0]
+    dy = pts[-1][1] - pts[-2][1]
+    final_angle = math.degrees(math.atan2(dy, dx))
+    assert abs(final_angle - 90.0) < 3.0, (
+        f"90° Euler 终点切线 {final_angle:.2f}° 偏离 90° 超过 3°"
+    )
+
+
 def test_arc_bend_endpoints():
     pts = arc_bend(5.0, 90.0, n_points=20)
     assert pts[0] == (0, 0)
@@ -135,9 +169,17 @@ def test_get_platform_constraints():
     soi = get_platform_constraints("SOI")
     assert soi["min_bend_radius_um"] == 5.0
     sin = get_platform_constraints("SiN")
-    assert sin["min_bend_radius_um"] == 50.0
+    # SiN: LIGENTEC AN800 SiN 平台弯曲半径 ≥100μm
+    # 来源: waveguide_router.py PLATFORM_CONSTRAINTS 注释（文献溯源）
+    assert sin["min_bend_radius_um"] == 100.0
     inp = get_platform_constraints("InP")
-    assert inp["min_bend_radius_um"] == 100.0
+    # InP: InP 有源波导低折射率差平台弯曲半径 ≥250μm
+    # 来源: Soares et al., Appl. Sci. 2019, https://doi.org/10.3390/app9081588
+    assert inp["min_bend_radius_um"] == 250.0
+    lnoi = get_platform_constraints("LNOI")
+    # LNOI: HyperLight LNOI X-cut 产品规格保守值 80μm
+    # 来源: https://www.hyperlightcorp.com/; doi:10.1038/s41377-024-01389-6
+    assert lnoi["min_bend_radius_um"] == 80.0
 
 
 def test_route_connection_basic():
@@ -206,8 +248,8 @@ def test_auto_grid_size_large_canvas():
 def test_auto_grid_size_sin_platform():
     """SiN 平台弯曲半径更大，grid_size 应更大。"""
     gs = auto_grid_size(canvas_w=5000.0, canvas_h=5000.0, platform="SiN")
-    # SiN: w=1.0, R=50 → max(1.2, 25.0, 2.5) = 25.0
-    assert gs == pytest.approx(25.0)
+    # SiN: w=1.0, R=100（LIGENTEC AN800 SiN 平台，文献溯源）→ max(1.2, 50.0, 5.0) = 50.0
+    assert gs == pytest.approx(50.0)
 
 
 def test_auto_grid_size_invalid_canvas():
