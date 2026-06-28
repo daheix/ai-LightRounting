@@ -471,23 +471,54 @@ def _check_device_overlaps(pls: list, min_spacing_um: float) -> tuple[int, int, 
 
 
 def _check_bend_radius(paths: dict, min_bend_radius_um: float) -> tuple[int, list[str]]:
-    """检查波导路径弯曲半径违规，返回 (违规数, 详情列表)。"""
+    """检查波导路径弯曲半径违规，返回 (违规数, 详情列表)。
+
+    修复 P0-D: 原算法错误地用"段长 < min_bend_radius"判断违规，物理错误。
+    现采用三点圆弧外接圆半径公式（正确物理定义）：
+
+        R = |P1P2| · |P2P3| · |P1P3| / (4 · S)
+
+    其中 S 为三点构成三角形的面积（叉积一半）。三点共线时 R = ∞（无弯曲）。
+
+    等价形式（夹角法，验证用）：
+        R = L / (2 · sin(θ))，θ 为 P1P2 与 P2P3 夹角，L 为相邻段长
+
+    学术依据:
+    - Fujisawa et al., "Design and fabrication of silicon photonic wires",
+      Photonics 2017, https://www.mdpi.com/2304-6732/4/4/46
+    - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 波导损耗参数）
+      https://ieeexplore.ieee.org/document/1148303
+    - 三点外接圆半径公式: 任意解析几何教材（Coxeter "Introduction to Geometry"）
+    """
     violations = 0
     details: list[str] = []
     for conn_idx, wp in paths.items():
+        if len(wp.points) < 3:
+            continue
         for i in range(1, len(wp.points) - 1):
-            dx1 = wp.points[i][0] - wp.points[i - 1][0]
-            dy1 = wp.points[i][1] - wp.points[i - 1][1]
-            dx2 = wp.points[i + 1][0] - wp.points[i][0]
-            dy2 = wp.points[i + 1][1] - wp.points[i][1]
-            if abs(dx1 - dx2) > 1e-9 or abs(dy1 - dy2) > 1e-9:
-                seg1_len = (dx1**2 + dy1**2) ** 0.5
-                if seg1_len < min_bend_radius_um:
-                    violations += 1
-                    details.append(
-                        f"弯曲半径不足: 连接 {conn_idx} 在 {wp.points[i]} "
-                        f"段长 {seg1_len:.3f}μm < {min_bend_radius_um}μm"
-                    )
+            p1 = wp.points[i - 1]
+            p2 = wp.points[i]
+            p3 = wp.points[i + 1]
+            # 三段长
+            a = ((p2[0] - p1[0]) ** 2 + (p2[1] - p1[1]) ** 2) ** 0.5  # |P1P2|
+            b = ((p3[0] - p2[0]) ** 2 + (p3[1] - p2[1]) ** 2) ** 0.5  # |P2P3|
+            c = ((p3[0] - p1[0]) ** 2 + (p3[1] - p1[1]) ** 2) ** 0.5  # |P1P3|
+            # 三角形面积（叉积一半，绝对值）
+            cross = (p2[0] - p1[0]) * (p3[1] - p1[1]) - (p3[0] - p1[0]) * (
+                p2[1] - p1[1]
+            )
+            area = abs(cross) / 2.0
+            # 共线（area ≈ 0）→ 直线，无弯曲，R = ∞，跳过
+            if area < 1e-12:
+                continue
+            # 三点外接圆半径 R = abc / (4·S)
+            radius = (a * b * c) / (4.0 * area)
+            if radius < min_bend_radius_um:
+                violations += 1
+                details.append(
+                    f"弯曲半径不足: 连接 {conn_idx} 在 {p2} "
+                    f"R={radius:.3f}μm < {min_bend_radius_um}μm"
+                )
     return violations, details
 
 
