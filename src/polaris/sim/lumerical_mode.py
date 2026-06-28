@@ -177,13 +177,14 @@ class ModeSolver:
         mask = (n_eff_sq > cladding_index**2) & (n_eff_sq < core_index**2)
         valid_indices = np.where(mask)[0]
         if len(valid_indices) == 0:
-            logger.warning("未找到导模，请检查波导参数。")
-            return {
-                "n_eff": cladding_index,
-                "mode_profile": np.zeros((self.nx, self.ny)),
-                "n_group": cladding_index,
-                "dispersion": 0.0,
-            }
+            # R03 禁止 fall-back：未找到导模即告警退出，禁止返回 cladding_index
+            # + 零模式分布等假数据让程序"跑通"。
+            msg = (
+                f"未找到导模（n_clad={cladding_index}, n_core={core_index}, "
+                f"w={width}μm, h={height}μm, λ={self.wavelength}μm），"
+                f"请检查波导参数是否满足单模条件 n_core > n_clad 且尺寸足够。"
+            )
+            raise ValueError(msg)
         # 取最大的 n_modes 个特征值（对应最高 n_eff）
         valid_indices = valid_indices[np.argsort(-eigenvalues[valid_indices])][
             : self.config.n_modes
