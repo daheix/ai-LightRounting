@@ -118,3 +118,135 @@ def test_module_parameters():
     model = Sequential(Linear(2, 3), ReLU(), Linear(3, 1))
     params = model.parameters()
     assert len(params) >= 4  # 2 weights + 2 biases
+
+
+# ---------------------------------------------------------------------------
+# P0-C 回归测试：attention.py 移除 .data 截断，实现可微多头注意力
+# 修复前 bug: MultiHeadAttention.forward / TransformerBlock.forward
+#   大量使用 .data 截断计算图，w_q/w_k/w_v 参数无法接收梯度
+# 修复后: 自定义可微 _multi_head_attention_op，保留完整计算图
+# 学术依据: Vaswani 2017 NeurIPS / Goodfellow 2016 §6.2.2 softmax 反向
+# ---------------------------------------------------------------------------
+
+import ast
+import inspect
+import textwrap
+
+from polaris.nn.attention import MultiHeadAttention, TransformerBlock
+
+
+class TestP0CAttentionDifferentiable:
+    """P0-C 回归测试：多头注意力可微性验证。"""
+
+    def test_mha_forward_shape(self) -> None:
+        """MultiHeadAttention 前向应输出正确 shape。"""
+        mha = MultiHeadAttention(embed_dim=8, num_heads=2)
+        x = Tensor(np.random.randn(4, 8))
+        out = mha(x)
+        assert out.shape == (4, 8)
+
+    def test_mha_backward_populates_w_qkv_grads(self) -> None:
+        """backward 应填充 w_q/w_k/w_v 权重梯度（非 None）。
+
+        修复前: .data 截断计算图，w_q.grad 永远为 None。
+        """
+        mha = MultiHeadAttention(embed_dim=8, num_heads=2)
+        x = Tensor(np.random.randn(4, 8))
+        out = mha(x)
+        loss = out.sum()
+        loss.backward()
+        # w_q/w_k/w_v 权重梯度必须非 None（P0-C 核心：梯度能流回参数）
+        assert mha.w_q.weight.grad is not None, "w_q.weight.grad 为 None（P0-C bug 复现）"
+        assert mha.w_k.weight.grad is not None, "w_k.weight.grad 为 None（P0-C bug 复现）"
+        assert mha.w_v.weight.grad is not None, "w_v.weight.grad 为 None（P0-C bug 复现）"
+        assert mha.w_o.weight.grad is not None, "w_o.weight.grad 为 None"
+
+    def test_mha_gradient_nonzero(self) -> None:
+        """w_q 权重梯度应有非零值（不是全 0 的假梯度）。"""
+        mha = MultiHeadAttention(embed_dim=8, num_heads=2)
+        x = Tensor(np.random.randn(4, 8))
+        out = mha(x)
+        loss = out.sum()
+        loss.backward()
+        assert np.any(mha.w_q.weight.grad != 0.0), "w_q 梯度全 0，未真正传播"
+
+    def test_mha_gradient_numerical_check(self) -> None:
+        """解析梯度应与数值有限差分一致（atol=1e-4）。
+
+        修复前: .data 截断，解析梯度全 0，与数值梯度严重不符。
+        """
+        np.random.seed(42)
+        mha = MultiHeadAttention(embed_dim=4, num_heads=2)
+        x_np = np.random.randn(3, 4)
+        x = Tensor(x_np)
+
+        # 前向 + 反向
+        out = mha(x)
+        loss = out.sum()
+        loss.backward()
+        analytic_grad = mha.w_q.weight.grad.copy()
+
+        # 数值梯度（中心差分）
+        eps = 1e-6
+        w0 = mha.w_q.weight.data.copy()
+        num_grad = np.zeros_like(w0)
+        for i in range(w0.shape[0]):
+            for j in range(w0.shape[1]):
+                mha.w_q.weight.data = w0.copy()
+                mha.w_q.weight.data[i, j] += eps
+                l1 = mha(x).sum().data
+                mha.w_q.weight.data[i, j] -= 2 * eps
+                l2 = mha(x).sum().data
+                num_grad[i, j] = (l1 - l2) / (2 * eps)
+        mha.w_q.weight.data = w0
+        assert np.allclose(analytic_grad, num_grad, atol=1e-4), (
+            f"解析梯度与数值梯度不一致:\n analytic={analytic_grad}\n numeric={num_grad}"
+        )
+
+    def test_transformer_block_backward_all_params(self) -> None:
+        """TransformerBlock backward 应填充所有子层参数梯度。
+
+        修复前: 残差 Tensor(x.data + sublayer(x).data) 截断计算图。
+        """
+        block = TransformerBlock(embed_dim=8, num_heads=2)
+        x = Tensor(np.random.randn(4, 8))
+        out = block(x)
+        loss = out.sum()
+        loss.backward()
+        # 所有子层参数梯度应非 None
+        for name in ("w_q", "w_k", "w_v", "w_o"):
+            w = getattr(block.attn, name)
+            assert w.weight.grad is not None, f"attn.{name}.weight.grad 为 None"
+        assert block.ff1.weight.grad is not None, "ff1.weight.grad 为 None"
+        assert block.ff2.weight.grad is not None, "ff2.weight.grad 为 None"
+
+    def test_no_data_in_forward_methods(self) -> None:
+        """AST 检查: MultiHeadAttention.forward / TransformerBlock.forward
+        不应包含 .data 属性访问（P0-C 根因）。
+
+        修复前: forward 中大量使用 x.data / sublayer(x).data 截断计算图。
+        """
+        # 检查 MultiHeadAttention.forward
+        src_mha = textwrap.dedent(inspect.getsource(MultiHeadAttention.forward))
+        tree_mha = ast.parse(src_mha)
+        data_accesses_mha = [
+            n
+            for n in ast.walk(tree_mha)
+            if isinstance(n, ast.Attribute) and n.attr == "data"
+        ]
+        assert len(data_accesses_mha) == 0, (
+            f"MultiHeadAttention.forward 仍含 .data 访问（P0-C bug）: "
+            f"{len(data_accesses_mha)} 处"
+        )
+        # 检查 TransformerBlock.forward
+        src_tb = textwrap.dedent(inspect.getsource(TransformerBlock.forward))
+        tree_tb = ast.parse(src_tb)
+        data_accesses_tb = [
+            n
+            for n in ast.walk(tree_tb)
+            if isinstance(n, ast.Attribute) and n.attr == "data"
+        ]
+        assert len(data_accesses_tb) == 0, (
+            f"TransformerBlock.forward 仍含 .data 访问（P0-C bug）: "
+            f"{len(data_accesses_tb)} 处"
+        )
