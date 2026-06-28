@@ -294,8 +294,8 @@ class M5Deliverable:
             "R27/亚像素精度": True,                  # fdtd_tidy3d_backend.py 实现
             # 注意：R04 战略决策不参与 GPU，100× 加速指标标记为 False
             "R27/100×加速(vs CPU, GPU)": False,      # R04 不参与 GPU，无法达成
-            # R28: 伴随优化（src/polaris/inverse/adjoint_optimizer.py 存在）
-            "R28/adjoint_optimizer.py": True,        # inverse/adjoint_optimizer.py
+            # R28: 伴随优化（R09 重构：adjoint_optimizer.py → topology_adjoint_optimizer.py）
+            "R28/topology_adjoint_optimizer.py": True,  # inverse/topology_adjoint_optimizer.py
             "R28/3+标准器件示例": True,
             "R28/性能提升≥10%": True,
             # R29: 拓扑优化（src/polaris/inverse/topology_adjoint_optimizer.py 存在）

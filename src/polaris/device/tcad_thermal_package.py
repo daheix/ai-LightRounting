@@ -6,13 +6,21 @@
 - Coenen et al., "A Critical Analysis of the Thermo-Optic Time Constant in Si Photonic Devices",
   Photonics 2024, 11, 603. https://doi.org/10.3390/photonics11070603
 - Cocorullo et al., "Silicon thermooptical modulator with guide...", Electron. Lett. 1999, 35(6)
-  https://ieeexplore.ieee.org/document/754948 (Si 热光系数 Δn/ΔT≈1.86e-4 K⁻¹)
+  453-455. https://doi.org/10.1049/el:19990151 (Si 热光系数 Δn/ΔT≈1.86e-4 K⁻¹)
 - Sze & Ng, "Physics of Semiconductor Devices", 3rd ed., Wiley 2006 (PN 结/耗尽层物理)
   URL: https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
 - Taflove & Hagness, "Computational Electrodynamics: The FDTD Method", 3rd ed., Artech 2005
   URL: https://us.artechhouse.com/Computational-Electrodynamics-The-FDTD-Method-Third-Edition-P1815.aspx
   (有限差分离散原理适用于热传导 FDM 求解)
+- Scharfetter & Gummel, "Large-signal analysis of a silicon Read diode oscillator",
+  IEEE Trans. Electron Devices 1969, 16(1) 64-77.
+  https://doi.org/10.1109/T-ED.1969.16767 (界面变量连续的差分离散思想)
+- Selberherr, "Analysis and Simulation of Semiconductor Devices", Springer 1984
+  URL: https://link.springer.com/book/10.1007/978-3-7091-8752-4 (变系数扩散方程 FDM)
+- Incropera & DeWitt, "Fundamentals of Heat and Mass Transfer", Wiley
+  URL: https://www.wiley.com/en-us/Fundamentals+of+Heat+and+Mass+Transfer (§4.4 界面调和平均)
 - Carslaw & Jaeger, "Conduction of Heat in Solids", 2nd ed., Oxford 1959, §10.4
+  URL: https://global.oup.com/academic/product/conduction-of-heat-in-solids-9780198533689
   (2D 线热源 Green's 函数 ΔT=(P'/2πk)·ln(r_ref/r))
 - Lumerical HEAT - Modeling thermal crosstalk in photonic circuit simulation
   URL: https://optics.ansys.com/hc/en-us/articles/47617107334291
@@ -21,12 +29,16 @@
 - Radulaski et al., "Thermally tunable hybrid photonic architecture", arXiv:1803.03591 2018
 - Synopsys TCAD Sentaurus Device
   URL: https://www.synopsys.com/silicon/tcad/device-simulation.html
+- scipy.sparse.linalg.spsolve
+  URL: https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
 - IEEE P1687 IJTAG test infrastructure
   URL: https://standards.ieee.org/standard/1687-2014.html
 - JEDEC JESD22 可靠性测试标准
   URL: https://www.jedec.org/standards-documents/results/term/213
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
+v3.3-P0-B 修复: ThermalSolver2D.solve_steady_state 实现真 2D 稳态 FDM（替换虚标解析近似），
+thermal_crosstalk_matrix 用 Carslaw-Jaeger 线热源 Green's 函数（替换魔法数 0.5/15.0）。
 """
 
 from __future__ import annotations

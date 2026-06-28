@@ -14,9 +14,9 @@
 - ∂φ/∂t = -v(x, y) * |∇φ|
 - v(x, y) = 速度场（由 adjoint 梯度决定）
 
-## 与 adjoint_optimizer.py 的区别
+## 与 topology_adjoint_optimizer.py 的区别
 
-| 特性 | adjoint_optimizer.py（P2-1） | topology_optimizer.py（P2-2） |
+| 特性 | topology_adjoint_optimizer.py（P2-1） | topology_optimizer.py（P2-2） |
 |------|------------------------------|-------------------------------|
 | 参数化 | 显式参数（多边形顶点） | 隐式参数（水平集函数） |
 | 形状 | 固定拓扑 | 可变拓扑（可生成孔洞） |
