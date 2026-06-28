@@ -28,8 +28,19 @@
 set -euo pipefail
 
 # ===== 核心变量 =====
+# AppImage 工作目录优先级：
+#   1. 3dtool/3dtool-appimage（restore_3dtool_appimage.sh 的默认输出位置，README 推荐）
+#   2. 3dtool/subrepo/3dtool/3dtool-appimage（子仓库内，兼容旧 spec 假设）
+# 来源：3dtool/subrepo/3dtool/3dtool/README.md（daheix/3dtool 仓库）
 POLARIS_3DTOOL_HOME="/workspace/3dtool/subrepo/3dtool"
-POLARIS_3DTOOL_APPIMAGE="${POLARIS_3DTOOL_HOME}/3dtool-appimage"
+if [ -x "/workspace/3dtool/3dtool-appimage/AppRun" ]; then
+    POLARIS_3DTOOL_APPIMAGE="/workspace/3dtool/3dtool-appimage"
+elif [ -x "${POLARIS_3DTOOL_HOME}/3dtool-appimage/AppRun" ]; then
+    POLARIS_3DTOOL_APPIMAGE="${POLARIS_3DTOOL_HOME}/3dtool-appimage"
+else
+    # 默认值（--check 模式会报告未安装）
+    POLARIS_3DTOOL_APPIMAGE="/workspace/3dtool/3dtool-appimage"
+fi
 POLARIS_3DTOOL_APPRUN="${POLARIS_3DTOOL_APPIMAGE}/AppRun"
 
 # ===== 颜色定义（ANSI） =====
@@ -112,13 +123,13 @@ run_setup() {
     _echo_blue "[INFO] POLARIS_3DTOOL_APPIMAGE=${POLARIS_3DTOOL_APPIMAGE}"
     _echo_blue "[INFO] PATH 前缀=${POLARIS_3DTOOL_APPIMAGE}/bin"
 
-    # 工具版本信息（辅助输出，失败告警不退出，环境已配置完成）
-    local version_out
-    if version_out=$("${POLARIS_3DTOOL_APPRUN}" --version 2>&1); then
-        _echo_blue "[INFO] 工具版本: ${version_out}"
+    # 工具版本信息（辅助输出，调用 AppRun check 获取汇总，失败告警不退出）
+    # AppRun 不支持 --version，改用 check 输出最后两行汇总
+    local check_out
+    if check_out=$("${POLARIS_3DTOOL_APPRUN}" check 2>&1 | tail -2); then
+        _echo_blue "[INFO] 工具自检: ${check_out}"
     else
-        _echo_yellow "[WARN] AppRun --version 调用失败（环境已配置，版本信息不可用）"
-        _echo_yellow "[WARN] 失败输出: ${version_out}"
+        _echo_yellow "[WARN] AppRun check 调用失败（环境已配置，自检不可用）"
     fi
 
     if _is_sourced; then

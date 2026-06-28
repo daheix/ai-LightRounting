@@ -27,8 +27,15 @@
 
 set -euo pipefail
 
-# ===== 路径常量 =====
-POLARIS_3DTOOL_APPRUN="/workspace/3dtool/subrepo/3dtool/3dtool-appimage/AppRun"
+# ===== 路径常量（自适应：优先 restore 脚本默认输出位置）=====
+# 来源：3dtool/subrepo/3dtool/3dtool/README.md（daheix/3dtool 仓库）
+if [ -x "/workspace/3dtool/3dtool-appimage/AppRun" ]; then
+    POLARIS_3DTOOL_APPRUN="/workspace/3dtool/3dtool-appimage/AppRun"
+elif [ -x "/workspace/3dtool/subrepo/3dtool/3dtool-appimage/AppRun" ]; then
+    POLARIS_3DTOOL_APPRUN="/workspace/3dtool/subrepo/3dtool/3dtool-appimage/AppRun"
+else
+    POLARIS_3DTOOL_APPRUN="/workspace/3dtool/3dtool-appimage/AppRun"
+fi
 
 # ===== 颜色（ANSI） =====
 RED='\033[0;31m'
