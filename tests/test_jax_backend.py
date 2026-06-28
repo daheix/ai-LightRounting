@@ -165,12 +165,14 @@ class TestSetJAXBackend:
         set_jax_backend("cpu")
 
     def test_set_gpu_backend_no_gpu_raises(self):
-        """测试无 GPU 时设置 GPU 后端 raise。"""
-        devices = get_jax_devices()
-        has_gpu = any("gpu" in d.lower() for d in devices)
-        if not has_gpu:
-            with pytest.raises(RuntimeError, match="GPU 不可用"):
-                set_jax_backend("gpu")
+        """测试设置 GPU 后端 raise（R04 不参与 GPU，即使有 GPU 也禁止）。
+
+        修复 P0-E: R04 战略决策，PoLaRIS 不参与 GPU 计算。
+        set_jax_backend("gpu") 必须永远 raise（无论 GPU 是否存在）。
+        """
+        # R04: 即使存在 GPU 也禁止启用，必须 raise ValueError
+        with pytest.raises(ValueError, match="R04"):
+            set_jax_backend("gpu")
 
     def test_set_unknown_backend_raises(self):
         """测试未知平台 raise。"""
@@ -211,3 +213,65 @@ class TestR05JAXIntegration:
         assert fallback_count == 0, (
             f"发现 {fallback_count} 个 except:pass fall-back，违反规则 14.1"
         )
+
+
+class TestP0ERegressionBenchmarkNoFakeData:
+    """P0-E 回归测试：benchmark 不得返回 -1 假数据（R03 禁止 fall-back）。
+
+    修复 P0-E: 原实现 JAX 不可用时返回 {"jit_time": -1, "speedup": -1}，
+    违反 R03 禁止 fall-back。现改为 raise RuntimeError。
+    """
+
+    def test_benchmark_no_negative_one_in_source(self):
+        """源码 AST 检查：benchmark_jit_vs_numpy 不得含 return -1 假数据。"""
+        import ast
+
+        with open("src/polaris/sim/jax_backend.py") as f:
+            source = f.read()
+        tree = ast.parse(source)
+
+        # 查找 benchmark_jit_vs_numpy 函数定义
+        benchmark_func = None
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.FunctionDef)
+                and node.name == "benchmark_jit_vs_numpy"
+            ):
+                benchmark_func = node
+                break
+        assert benchmark_func is not None, "未找到 benchmark_jit_vs_numpy 函数"
+
+        # 遍历函数体内所有 Return 语句，验证返回字典不含 -1 假数据
+        fake_data_count = 0
+        for node in ast.walk(benchmark_func):
+            if isinstance(node, ast.Return) and isinstance(node.value, ast.Dict):
+                for value in node.value.values:
+                    if isinstance(value, ast.UnaryOp) and isinstance(
+                        value.op, ast.USub
+                    ):
+                        if isinstance(value.operand, ast.Constant) and value.operand.value == 1:
+                            fake_data_count += 1
+        assert fake_data_count == 0, (
+            f"发现 {fake_data_count} 处 return -1 假数据，违反 R03 禁止 fall-back"
+        )
+
+    def test_benchmark_raises_when_jax_unavailable(self, monkeypatch):
+        """JAX 不可用时 benchmark 必须 raise RuntimeError（不返回假数据）。"""
+        from polaris.sim import jax_backend
+
+        # 模拟 JAX 不可用
+        monkeypatch.setattr(jax_backend, "_HAS_JAX", False)
+        wl = np.linspace(1.5, 1.6, 10)
+        with pytest.raises(RuntimeError, match="JAX 不可用"):
+            jax_backend.benchmark_jit_vs_numpy(wl, n_wg=5)
+
+
+class TestP0ERegressionGPUDenied:
+    """P0-E 回归测试：R04 不参与 GPU，set_jax_backend("gpu") 必须 raise。"""
+
+    def test_gpu_always_denied(self):
+        """R04: 即使存在 GPU，set_jax_backend('gpu') 也必须 raise ValueError。"""
+        from polaris.sim.jax_backend import set_jax_backend
+
+        with pytest.raises(ValueError, match="R04"):
+            set_jax_backend("gpu")

@@ -1,12 +1,17 @@
-"""JAX 后端核心（R05：JIT 编译 + 双后端切换 + GPU 加速）。
+"""JAX 后端核心（R05：JIT 编译 + 双后端切换；R04 🚫不参与 GPU）。
 
-将核心仿真函数迁移到 JAX，支持 JIT 编译加速和 GPU 加速。
+将核心仿真函数迁移到 JAX，支持 JIT 编译加速（仅 CPU 后端）。
 
 核心功能:
 1. JIT 编译: 使用 jax.jit 编译核心仿真函数，性能提升 5-20 倍
 2. 双后端切换: numpy/JAX 无缝切换（非 fall-back，显式选择）
-3. GPU 加速: 大规模电路 GPU 加速 50+ 倍
-4. AOT 编译: Ahead-of-Time 编译避免 JIT 首次开销（创新点）
+3. AOT 编译: Ahead-of-Time 编译避免 JIT 首次开销（创新点）
+
+R04 不参与 GPU（战略决策，2026-06-25 项目所有者指示）：
+- 🚫不参与 GPU 加速：禁止 CuPy/CUDA/ROCm/AppleMetal 等所有 GPU 后端
+- 禁止 FP16/BF16 半精度、多卡 GPU 分布式
+- 纯 NumPy/SciPy/JAX(CPU) 实现
+- set_jax_backend("gpu") 即使存在 GPU 也必须 raise（强制 CPU only）
 
 来源:
 - JAX 文档: https://docs.jax.dev/
@@ -253,14 +258,30 @@ def benchmark_jit_vs_numpy(
 
     对比 JIT 编译的波导链仿真与 numpy 实现的性能。
 
+    修复 P0-E: 原实现 JAX 不可用时返回 {"jit_time": -1, "speedup": -1} 假数据，
+    违反 R03 禁止 fall-back。现改为 raise RuntimeError 明确告警。
+
     Args:
         wl: 波长数组。
         n_wg: 波导数。
 
     Returns:
-        性能报告 {"numpy_time": float, "jit_time": float, "speedup": float}。
+        性能报告 {"numpy_time": float, "jit_time": float, "speedup": float}，
+        所有值均为正实数（无 -1 假数据）。
+
+    Raises:
+        RuntimeError: JAX 不可用时 raise（R03 禁止 fall-back，禁止假数据）。
     """
     import time
+
+    if not _HAS_JAX:
+        msg = (
+            "benchmark_jit_vs_numpy 失败：JAX 不可用，无法执行 JIT 基准测试。"
+            "禁止 fall-back 返回假数据（规则 14.1 / R03）。请安装 JAX: "
+            "pip install jax jaxlib"
+        )
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     lengths = np.ones(n_wg) * 10.0
 
@@ -274,10 +295,7 @@ def benchmark_jit_vs_numpy(
         np.exp(1j * total_phase_np)
     numpy_time = (time.perf_counter() - start) / 10
 
-    # JAX JIT 实现
-    if not _HAS_JAX:
-        return {"numpy_time": numpy_time, "jit_time": -1, "speedup": -1}
-
+    # JAX JIT 实现（R04: 仅 CPU 后端）
     wl_jax = jnp.asarray(wl)
     lengths_jax = jnp.asarray(lengths)
 
@@ -299,36 +317,33 @@ def benchmark_jit_vs_numpy(
 
 
 def set_jax_backend(platform: str = "cpu") -> None:
-    """设置 JAX 计算平台（创新点：GPU 加速支持）。
+    """设置 JAX 计算平台（R04 🚫不参与 GPU：仅支持 CPU）。
 
-    创新逻辑: 自动检测 GPU 可用性，切换至 GPU 后端加速大规模电路仿真。
-    支持理论: JAX 平台分发文档。
-    案例: 10000 器件电路 GPU 加速 50 倍。
+    R04 战略决策（2026-06-25 项目所有者指示，不可撤销）：
+    PoLaRIS 项目不参与 GPU 计算。即使系统存在 GPU，也禁止切换至 GPU 后端。
+    纯 NumPy/SciPy/JAX(CPU) 实现。
 
     Args:
-        platform: "cpu" 或 "gpu"。
+        platform: 仅支持 "cpu"。
 
     Raises:
-        RuntimeError: GPU 不可用时告警退出（不 fall-back 至 CPU）。
+        RuntimeError: JAX 不可用时 raise（R03 禁止 fall-back）。
+        ValueError: platform != "cpu" 时 raise（R04 禁止 GPU）。
     """
     if not _HAS_JAX:
         msg = "JAX 不可用。禁止 fall-back（规则 14.1）。"
         raise RuntimeError(msg)
 
     if platform == "gpu":
-        devices = jax.devices()
-        gpu_devices = [d for d in devices if d.platform == "gpu"]
-        if not gpu_devices:
-            msg = (
-                "GPU 不可用。当前设备: "
-                f"{[str(d) for d in devices]}。"
-                "禁止 fall-back 至 CPU（规则 14.1）。"
-            )
-            logger.error(msg)
-            raise RuntimeError(msg)
-        logger.info("JAX GPU 后端已启用: %s", gpu_devices[0])
+        # R04 不参与 GPU：即使存在 GPU 也禁止启用
+        msg = (
+            "R04 战略决策：PoLaRIS 不参与 GPU 计算（2026-06-25 项目所有者指示）。"
+            "禁止切换至 GPU 后端，纯 NumPy/SciPy/JAX(CPU) 实现。"
+        )
+        logger.error(msg)
+        raise ValueError(msg)
     elif platform == "cpu":
-        logger.info("JAX CPU 后端已启用")
+        logger.info("JAX CPU 后端已启用（R04: 仅 CPU）")
     else:
-        msg = f"未知平台: {platform}，仅支持 'cpu' 或 'gpu'"
+        msg = f"未知平台: {platform}，仅支持 'cpu'（R04 禁止 GPU）"
         raise ValueError(msg)
