@@ -318,6 +318,7 @@ class GANInverseDesigner:
     学术依据：Liu 2024 Nanophotonics, DOI: 10.1515/nanoph-2023-0683
     WGAN-GP 损失：L_D = E[D(fake)] - E[D(real)] + λ * GP
     来源: Gulrajani et al. 2017 NeurIPS "Improved Training of WGANs"
+      arXiv:1704.00028, URL: https://arxiv.org/abs/1704.00028
     """
 
     def __init__(self, config: GANInverseDesignConfig, simulator: Any) -> None:
@@ -564,7 +565,8 @@ class DiffusionInverseDesigner:
     学术依据：Liu 2024 arXiv:2407.03028
     URL: https://arxiv.org/abs/2407.03028
 
-    数学原理（来源: Ho et al. 2020 NeurIPS DDPM）：
+    数学原理（来源: Ho et al. 2020 NeurIPS DDPM, arXiv:2006.11239）：
+    URL: https://arxiv.org/abs/2006.11239
     1. 前向: x_t = sqrt(ᾱ_t)*x_0 + sqrt(1-ᾱ_t)*ε
     2. 反向: x_{t-1} = (1/sqrt(α_t)) * (x_t - (β_t/sqrt(1-ᾱ_t)) * ε_θ)
     3. 训练: L = E[||ε - ε_θ(x_t, t, c)||²]
@@ -664,12 +666,39 @@ class DiffusionInverseDesigner:
             mean = mean + noise
         return mean.reshape(self.h, self.w)
 
+    def compute_loss(self, x0: np.ndarray, t: int) -> float:
+        """计算 DDPM 训练损失（纯前向，不更新参数，用于评估/监控）。
+
+        L = E[||ε - ε_θ(x_t, t, c)||²]
+        来源: Ho et al. 2020 NeurIPS DDPM Eq.(14), arXiv:2006.11239
+
+        Args:
+            x0: 原始形状 (H, W)。
+            t: 时间步。
+
+        Returns:
+            MSE 损失值（非负有限数）。
+
+        Raises:
+            ValueError: 时间步越界。
+        """
+        if not 0 <= t < self.config.num_timesteps:
+            raise ValueError(f"t 须在 [0, {self.config.num_timesteps})，实际 {t}")
+        x0_flat = x0.flatten()
+        alpha_bar = self.alpha_bars[t]
+        rng = np.random.default_rng(t)  # 确定性种子，保证评估可复现
+        eps = rng.standard_normal(x0_flat.shape)
+        x_t = np.sqrt(alpha_bar) * x0_flat + np.sqrt(1 - alpha_bar) * eps
+        cond_val = self.simulator.simulate(x0)[self.simulator.target_metric]
+        eps_pred = self._noise_predict(x_t, t, cond_val)
+        return float(np.mean((eps - eps_pred) ** 2))
+
     def train_step(self, x0: np.ndarray, t: int, rng: np.random.Generator) -> float:
         """DDPM 单步训练：前向扩散→噪声预测→MSE→反向传播→Adam 更新。
 
-        修复 P0-A: 原实现 compute_loss 仅计算损失不更新参数。
+        修复 P0-A: 原实现仅计算损失不更新参数；现补全反向传播+Adam step。
         L = E[||ε - ε_θ(x_t, t, c)||²]
-        来源: Ho et al. 2020 NeurIPS DDPM Eq.(14)
+        来源: Ho et al. 2020 NeurIPS DDPM Eq.(14), arXiv:2006.11239
 
         Args:
             x0: 原始形状 (H, W)。
