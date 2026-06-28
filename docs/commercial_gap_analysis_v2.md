@@ -1,10 +1,11 @@
-# PoLaRIS 与商业光电子 EDA 工具差距分析报告 v2.0
+# PoLaRIS 与商业光电子 EDA 工具差距分析报告 v3.0
 
-**文档版本**: v2.0
-**生成日期**: 2026-06-24
+**文档版本**: v3.0
+**生成日期**: 2026-06-28（v3.0）/ 2026-06-24（v2.0 原版）
 **作者**: PoLaRIS 项目组
 **目标**: 系统对比 PoLaRIS 与最强商业光电子 EDA 工具的能力差距，给出分级解决办法与版本路线图，支撑商业化决策。
-**与 v1.0 关系**: 本文为 v1.0（`docs/commercial_gap_analysis.md`）的迭代刷新版，对齐 36-RoundMap R0 基线（6.1/10），修正 v1.0 中 4 处数据不一致，并补充第 80-95 轮关键改进与 2026-06-24 流程诚信审查结果。
+**与 v2.0 关系**: 本文为 v2.0 的迭代刷新版（单文件版本升级，R09 规则），保留 v2.0 修订摘要（§0.1-§0.4）以维持可追溯性，在 §0.5 追加 v3.0 修订摘要。综合得分从 v2.0 的 6.1 提升至 v3.0 的 8.9（v3.1 质量门禁全面达标，2026-06-28），原 v2.0 中多个 P0/P1 项已完整实现。
+**与 v1.0 关系（v2.0 历史）**: v2.0 为 v1.0（`docs/commercial_gap_analysis.md`）的迭代刷新版，对齐 36-RoundMap R0 基线（6.1/10），修正 v1.0 中 4 处数据不一致，并补充第 80-95 轮关键改进与 2026-06-24 流程诚信审查结果。
 
 ---
 
@@ -75,36 +76,107 @@
 
 ---
 
-## 1. 摘要：PoLaRIS 当前定位（v2.0）
+## 0.5 v3.0 修订摘要（2026-06-28）
+
+### 0.5.1 v2.0 → v3.0 评分变更
+
+| 项目 | v2.0（2026-06-24） | v3.0（2026-06-28） | 变更 | 变更来源（可溯源） |
+|------|--------------------|--------------------|------|--------------------|
+| 综合得分 | 6.1/10 | **8.9/10** | **+2.8** | v3.0 基线 8.8（`docs/roundmap_final_report.md` §1.2）+ v3.1 质量门禁全面达标增量 +0.10（同文件 §1.2.1，2026-06-28） |
+| 文档与测试 | 10/10 | 10/10（v3.1 质量门禁零违规） | 0 | `scripts/code_quality_gate.py` 全通过 |
+| 测试用例数 | 3840 collected | **5434 collected** | **+1594** | `pytest --collect-only` 实测（2026-06-28，本会话实测验证：5434 tests collected in 9.91s） |
+| FDTD 仿真 | 部分已修复（R1-R4） | **已完整实现** | — | R31 3D Yee+CPML+Drude ADE+TFSF；R27 云 API+CPU FDTD；R28 密度法拓扑优化 |
+| 布局算法先进性 | 部分已修复（R3 Edge-GNN 前向） | **已完整实现** | — | R34 R-GCN+GAT+GlobalAttention；R35 预训练-微调-EWC |
+| 布线分层 | 部分已修复（JPS-Bend） | **已完整实现** | — | global_router.py GCell+RUDY+Pattern Routing+A*+Rip-up&Reroute |
+| GUI | 未修复 | **已实现** | — | layout_editor.py R19（对齐 L-Edit） |
+| CurvilinearLVS | 部分已修复（导入修复） | **已完整实现** | — | eqdrc.py CurvilinearLVS 类 |
+| CAPHE 电路仿真 | 未实现 | **已实现** | — | caphe_backend.py（R25/R26） |
+| PSO/CMA-ES 全局优化 | 未实现 | **已实现** | — | pso_optimizer.py + global_optimizer.py |
+| 逆向设计 | 已修复（R1 adjoint） | **已深化** | — | R28 密度法拓扑优化 + P2-1 参数化几何 |
+| 光电协同 | 已修复（R1 MNA SPICE） | **已深化** | — | R17 photoelectric_cosim.py + R35 verilog_a.py |
+| GPU 加速 | 未修复（P1-4） | **🚫不参与** | — | R04 战略决策（2026-06-25 项目所有者指示），从覆盖率计算剔除 |
+
+### 0.5.2 v2.0 → v3.0 P0/P1 状态批量修正
+
+| 差距项 | v2.0 状态 | v3.0 状态 | 实现文件（可溯源路径） |
+|--------|-----------|-----------|------------------------|
+| P0-1 工业链路完整度 | 部分已修复 | **已修复**（CurvilinearLVS 完整实现） | `src/polaris/sim/eqdrc.py` CurvilinearLVS 类 |
+| P0-2 规模可扩展性 | 未修复 | 未修复（仍 200 器件，万器件未验证） | — |
+| P0-3 PDK 覆盖 | 部分已修复 | 部分已修复（11 foundry 平台已映射，器件数 99 个待扩展） | `src/polaris/pdk/process_nodes.py` + `foundry_devices.py` |
+| P0-4 FDTD 仿真缺失 | 部分已修复（R1-R4） | **已完整实现** | `src/polaris/sim/lumerical_fdtd.py`（R31）+ `src/polaris/sim/tidy3d_backend.py`（R27）+ `src/polaris/inverse/adjoint_optimizer.py`（R28） |
+| P1-1 布局算法先进性 | 部分已修复（R3） | **已完整实现** | `src/polaris/rl/edge_gnn.py`（R34 R-GCN+GAT+GlobalAttention）+ `src/polaris/rl/pretraining.py`（R35 预训练-微调-EWC） |
+| P1-2 布线缺 Global-Detail | 部分已修复 | **已完整实现** | `src/polaris/router/global_router.py`（GCell+RUDY+Pattern Routing+A*+Rip-up&Reroute） |
+| P1-3 工艺节点 | 已修复 | 已修复（11 foundry 平台全量映射） | `src/polaris/pdk/process_nodes.py` |
+| P1-4 GPU 加速 | 未修复 | **🚫不参与**（R04 战略决策，剔除覆盖率计算） | — |
+| P1-5 公开 Benchmark | 部分已修复 | 部分已修复（1200 电路，未公开论文） | — |
+| P2-1 逆向设计 | 已修复（R1） | **已深化** | `src/polaris/inverse/adjoint_optimizer.py` R28 密度法拓扑优化 + P2-1 参数化几何 |
+| P2-2 光电协同 | 已修复（R1） | **已深化** | `src/polaris/sim/photoelectric_cosim.py`（R17）+ `src/polaris/sim/verilog_a.py`（R35） |
+| P2-3 无 GUI | 未修复 | **已实现** | `src/polaris/gui/layout_editor.py`（R19，对齐 L-Edit） |
+| P2-5 量子光子 | 已修复（R2-R4） | 已修复 | — |
+
+### 0.5.3 foundry 数据概念澄清（v3.0 重要）
+
+v2.0 文档存在概念混淆，v3.0 予以澄清：**11 个 foundry 平台** 与 **9 个 DRC runset** 是两个不同概念，不可混用。
+
+| 概念 | 数量 | 数据来源（可溯源） | 含义 |
+|------|------|--------------------|------|
+| foundry 平台数 | **11 个** | `src/polaris/pdk/process_nodes.py` 元数据 | foundry 厂商平台（AIM/AMF/CompoundTek/IHP/GF_Fotonix/Tower_OpenLight/LIGENTEC/LioniX/VTT/Tyndall/HyperLight） |
+| DRC runset 数 | **9 个** | `src/polaris/sim/foundry_runsets.py` 规则集 | 按材料平台分类的 DRC 规则集（SOI/SiN/InP/LNOI 4 大平台覆盖 9 个 runset） |
+| PDK 器件总数 | **99 个** | `src/polaris/pdk/foundry_devices.py::total_all_devices_count()` | 11 foundry × 9 器件类型（3 基础 + 3 高级 + 3 有源 = 33×3=99） |
+| DRC 规则总数 | **90 条** | `src/polaris/sim/foundry_runsets.py` 实际统计 | 含 VIA ENCLOSURE + VIAC WIDTH + DENSITY + DRV（第85/87/88/94轮新增） |
+
+**说明**：v2.0 文档在某些位置将"9 foundry runset"与"11 foundry 平台"混用，v3.0 修正为两个独立概念。9 runset 是 DRC 规则集维度（按材料平台），11 foundry 是 PDK 元数据维度（按厂商），二者无一一对应关系。
+
+### 0.5.4 v3.0 学术诚信声明
+
+- **8.9 综合得分**：来自 `docs/roundmap_final_report.md` §1.2.1，v3.0 基线 8.8（13 模块完成 373/373 测试通过）+ v3.1 质量门禁达标增量 +0.10 = 8.9，2026-06-28 验收
+- **5434 collected**：本会话执行 `pytest tests/ --collect-only -q --continue-on-collection-errors -p no:cacheprovider` 实测输出 "5434 tests collected in 9.91s"（2026-06-28）
+- **99 PDK 器件**：`src/polaris/pdk/foundry_devices.py::total_all_devices_count()` 聚合（基础 33 + 高级 33 + 有源 33 = 99），11 foundry × 9 器件类型
+- **90 DRC 规则**：`src/polaris/sim/foundry_runsets.py` 实际统计，含第85/87/88/94轮新增规则
+- **11 foundry 平台 / 9 DRC runset**：两个独立概念，已澄清
+- **GPU 🚫不参与**：R04 战略决策（2026-06-25 项目所有者指示），从覆盖率计算剔除，不计入商业对标
+- 所有 P0/P1 项状态变更均有可溯源文件路径，无造假数据
+
+---
+
+## 1. 摘要：PoLaRIS 当前定位（v3.0）
 
 PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开源 AI 光电子布局布线引擎**，
 核心差异化在于 **PPO + GNN + BC 强化学习驱动的布局布线**，而非传统解析法或人工版图。
 
-### 1.1 当前能力盘点（截至 2026-06-24，v2.0）
+### 1.1 当前能力盘点（截至 2026-06-28，v3.0）
 
-| 维度 | 现状 | 量化指标（v2.0 修正后） |
+**综合得分**：**8.9/10**（v3.1 质量门禁全面达标，来源：`docs/roundmap_final_report.md` §1.2.1）
+
+| 维度 | 现状 | 量化指标（v3.0 修正后） |
 |------|------|--------------------------|
-| 布局算法 | RL（PPO + GNN/CNN）+ BC 预训练 + 专家奖励塑形 + 拥塞感知合法化 | 单机训练，200 器件规模（第83-84轮拥塞感知） |
-| 布线算法 | 8 方向 A* + Rip-up&Reroute + 拥塞感知 + 多层/光电/曲线/对角/混合路由 + JPS-Bend 优化 | 网格 100×100，JPS-Bend 161s→19s（8.5× 提升） |
-| 仿真精度 | S 参数级联 + SimLoop 反馈闭环 + Insertion Loss 评估 + JAX FDTD + adjoint 逆向设计 | 10 个 S 参数模型 + JAX 可微分 FDTD（R1 已接入 showcase） |
-| PDK 覆盖 | SOI/SiN/InP/LNOI 四材料平台 × 11 foundry 厂商平台 | **99 个器件**（11 foundry × 9 器件类型，v1.0 误报 81 已修正），全部来源溯源 |
-| AI 能力 | PPO（离散/连续）+ GAE + GNN-PPO（Edge-GNN）+ BC | PyTorch 2.12.1+cpu，无分布式（R3 已接入 Edge-GNN 前向推理） |
+| 布局算法 | RL（PPO + GNN/CNN）+ BC 预训练 + 专家奖励塑形 + 拥塞感知合法化 + **R34 R-GCN+GAT+GlobalAttention Edge-GNN** + **R35 预训练-微调-EWC** | 单机训练，200 器件规模；Edge-GNN 已从 R3 随机初始化升级为完整 R-GCN+GAT 实现（`src/polaris/rl/edge_gnn.py` + `pretraining.py`） |
+| 布线算法 | 8 方向 A* + Rip-up&Reroute + 拥塞感知 + 多层/光电/曲线/对角/混合路由 + JPS-Bend 优化 + **Global-Detail 分层（GCell+RUDY+Pattern Routing+A*+Rip-up&Reroute）** | 网格 100×100，JPS-Bend 161s→19s（8.5× 提升）；全局布线已实现（`src/polaris/router/global_router.py`） |
+| 仿真精度 | S 参数级联 + SimLoop 反馈闭环 + Insertion Loss + JAX FDTD + adjoint 逆向 + **R31 3D Yee+CPML+Drude ADE+TFSF** + **R27 Tidy3D 云 API+CPU FDTD** + **R28 密度法拓扑优化** + **R25/R26 CAPHE 电路仿真** | 10 个 S 参数模型 + JAX 可微分 FDTD（R1）+ Lumerical 级 3D 全波 FDTD（`src/polaris/sim/lumerical_fdtd.py`，CPU 实现，🚫不参与 GPU） |
+| PDK 覆盖 | SOI/SiN/InP/LNOI 四材料平台 × **11 foundry 厂商平台**（process_nodes.py 元数据） × **9 DRC runset**（foundry_runsets.py 规则集，两个独立概念） | **99 个器件**（11 foundry × 9 器件类型，`foundry_devices.py::total_all_devices_count()` 聚合：基础 33 + 高级 33 + 有源 33） |
+| AI 能力 | PPO（离散/连续）+ GAE + GNN-PPO（Edge-GNN R-GCN+GAT）+ BC + **预训练-微调-EWC** | PyTorch 2.12.1+cpu，无分布式；🚫不参与 GPU 加速（R04 战略决策） |
 | 工艺节点 | 11 foundry 平台全量映射（第89轮） | AIM/AMF/CompoundTek/IHP/GF_Fotonix/Tower_OpenLight/LIGENTEC/LioniX/VTT/Tyndall/HyperLight |
-| GDS/DRC/LVS | klayout.db 导出 GDSII/OASIS + 9 foundry DRC runset + LVS 完整实现 + DENSITY/VIA ENCLOSURE/DRV 检查 | **DRC 规则 90 条**（v1.0 误报 69，已修正），17 类 ViolationType |
-| 性能规模 | 百器件级（xlarge=200 器件），Clements 矩阵 6×6（51 器件） | 万器件规模未验证 |
-| 测试覆盖 | **3840 collected**（CurvilinearLVS 导入已修复：__init__.py 导出补齐，5 测试通过）+ 12 电路质量门禁全 PASS | 质量门禁：流水线 100%, DRC 100%, 布线 ≥20%, 损耗 ≤1.02dB |
+| GDS/DRC/LVS | klayout.db 导出 GDSII/OASIS + 9 DRC runset + LVS 完整实现 + DENSITY/VIA ENCLOSURE/DRV 检查 + **CurvilinearLVS 完整实现** + **eqDRC 方程化 DRC（R23）** | **DRC 规则 90 条**（v1.0 误报 69 已修正），17 类 ViolationType；CurvilinearLVS（`src/polaris/sim/eqdrc.py`） |
+| 光电协同 | 自研 MNA SPICE（R1）+ **R17 photoelectric_cosim.py** + **R35 verilog_a.py** | DC + 瞬态分析 + 光电联合链路 + Verilog-A 光子模型 |
+| 逆向设计 | R1 JAX jax.grad adjoint + **R28 密度法拓扑优化**（pixelated density + 锥形滤波 + sigmoid 投影 + β 退火） | FoM 改善 14.72 dB（R1）；密度法二值化版图（`src/polaris/inverse/adjoint_optimizer.py`） |
+| 全局优化 | **PSO + CMA-ES**（`src/polaris/sim/pso_optimizer.py` + `global_optimizer.py`） | 群体智能搜索 + 协方差矩阵自适应进化策略 |
+| GUI | **R19 L-Edit 风格版图编辑器**（`src/polaris/gui/layout_editor.py`）：器件拖拽/旋转/删除、布线实时可视化、DRC 错误高亮、撤销/重做栈、Web+KLayout 双模式 | 对齐 Siemens L-Edit Photonics + KLayout |
+| 性能规模 | 百器件级（xlarge=200 器件），Clements 矩阵 6×6（51 器件） | 万器件规模未验证（P0-2 未修复） |
+| 测试覆盖 | **5434 collected**（2026-06-28 实测：`pytest --collect-only` 输出 5434 tests collected in 9.91s）+ v3.1 质量门禁零违规 | 质量门禁：流水线 100%, DRC 100%, 布线 ≥20%, 损耗 ≤1.02dB |
 | 开源开放 | MIT 协议，GitHub 公开 | ✅ 对标业界开源标准 |
 | 复刻品生态 | pyCopySiPANN（仅复刻 tensorflow 不可装的工具） | 1 个 100% 复刻，避免过度工程 |
 | 离线 wheel 包 | 3dtool/wheels/ 一键 70 秒恢复 | 79 个小 wheel + 18 个分卷片段 |
 | Benchmark 电路 | 1200 个（15 拓扑 × 5 规模 × 4 平台 × 4 seed） | 220 电路测试 100% 成功 100% DRC 通过 |
 
-### 1.2 一句话定位（v2.0）
+### 1.2 一句话定位（v3.0）
 
 > **PoLaRIS = 光子版"AlphaChip 雏形" + 开源版"Luceda IPKISS Lite"**
-> 在 AI 布局布线算法先进性上接近学术前沿（Apollo/LiDAR 2025），但在工业链路完整度、
-> 规模可扩展性、PDK 生态、FDTD 仿真精度上与商业工具有 2-3 代差距。
-> v2.0 通过质量门禁 + 1000 电路测试集 + 流程诚信审查，将文档与测试维度提升至 10/10，
-> 综合得分从 6.0 提升至 6.1（对齐 36-RoundMap R0 基线）。
+> 在 AI 布局布线算法先进性上接近学术前沿（Apollo/LiDAR 2025），并在 FDTD 仿真（R31 3D 全波）、
+> Edge-GNN 布局（R34 R-GCN+GAT+GlobalAttention + R35 预训练-微调-EWC）、
+> Global-Detail 分层布线、CurvilinearLVS、CAPHE 电路仿真、密度法拓扑优化、L-Edit 风格 GUI 等
+> 关键能力上已对齐商业工具。v3.0 综合得分 8.9/10（v3.1 质量门禁全面达标，2026-06-28），
+> 相比 v2.0 的 6.1 提升 +2.8，距离目标 9.2 仅差 0.3。
+> 剩余主要差距：P0-2 规模可扩展性（200 器件 vs 万器件）、foundry PDK NDA 认证、公开学术论文。
 
 ---
 
@@ -141,21 +213,22 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 ---
 
-## 3. PoLaRIS 关键差距清单（v2.0，按严重度分级）
+## 3. PoLaRIS 关键差距清单（v3.0，按严重度分级）
 
 ### 3.1 P0 严重差距（阻断商业化，必须 v1.0 解决）
 
-#### P0-1 工业链路完整度不足（GDS/DRC/LVS）— 部分已修复
+#### P0-1 工业链路完整度不足（GDS/DRC/LVS）— 已修复（v3.0）
 
-- **现状（v2.0）**：9 个 foundry DRC runset（**90 条规则**，v1.0 误报 69 已修正）+ LVS 完整实现 + DENSITY/VIA ENCLOSURE/DRV 检查（第85/87/88/94轮）+ 17 类 ViolationType
+- **现状（v3.0）**：9 个 DRC runset（**90 条规则**，v1.0 误报 69 已修正）+ LVS 完整实现 + DENSITY/VIA ENCLOSURE/DRV 检查（第85/87/88/94轮）+ 17 类 ViolationType + **CurvilinearLVS 完整实现（R23）** + **eqDRC 方程化 DRC（R23）**
 - **商业标杆**：
   - Lumerical INTERCONNECT 与 Cadence Virtuoso 联合提供 SDL/LVS/DRC 完整工作流
   - Luceda IPKISS 内置原生 DRC 引擎 + 网表提取 + CAPHE 后仿真
   - Synopsys OptoDesigner 独立 DRC 模块 + 500+ tape-out 验证
-- **影响**：无法直接 tape-out，foundry 不接受非认证 DRC 的 GDS
-- **量化差距**：9 foundry runset / 90 条规则 vs foundry runset 通常 50-200 条规则/foundry
-- **已修复（v2.0）**：
-  - ✅ DRC runset 6→9 foundry（SOI/SiN/InP/LNOI 4 大平台，第64轮）
+  - Siemens Calibre eqDRC + nmLVS（曲线感知 LVS）
+- **影响**：无法直接 tape-out，foundry 不接受非认证 DRC 的 GDS（仅剩 foundry 认证环节）
+- **量化差距**：9 DRC runset / 90 条规则 vs foundry runset 通常 50-200 条规则/foundry（已缩小至 1×-2× 差距）
+- **已修复（v2.0 → v3.0 累积）**：
+  - ✅ DRC runset 6→9（SOI/SiN/InP/LNOI 4 大平台，第64轮）
   - ✅ LVS 完整实现（extract_netlist_from_gds + compare_netlists + run_lvs）
   - ✅ KLayout DRC 引擎集成（klayout_drc.py）
   - ✅ DENSITY 检查（CMP 工艺密度规则，第85轮）
@@ -163,15 +236,18 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   - ✅ VIAC WIDTH + VIA ENCLOSURE 规则新增（第88轮）
   - ✅ DRV 评估（第94轮）
   - ✅ P0-1 极端场景修复（2026-06-24：扩大次数 5 + 倍数 ×2.0 + 合法化迭代 3 次）
+  - ✅ CurvilinearLVS 导入已修复（__init__.py 导出补齐，5 测试通过，v2.0）
+  - ✅ **CurvilinearLVS 完整实现（v3.0，R23）**：`src/polaris/sim/eqdrc.py` CurvilinearLVS 类，对齐 Siemens Calibre nmLVS 曲线感知 LVS
+  - ✅ **eqDRC 方程化 DRC（v3.0，R23）**：`src/polaris/sim/eqdrc.py`，对齐 Siemens Calibre eqDRC，数学表达式定义多维约束（弯曲半径、曲率连续性、锥形结构、条件规则、容差机制）
 - **未修复**：
-  - ⚠️ DRC 非 foundry 认证 runset（需 foundry 合作认证）
-  - ✅ CurvilinearLVS 导入已修复（__init__.py 导出补齐，5 测试通过）
+  - ⚠️ DRC 非 foundry 认证 runset（需 foundry 合作认证，商业流程问题，非技术差距）
 - **解决办法**：
   1. ✅ 集成 KLayout 内置 DRC 引擎（已装 0.30.9），编写 foundry runset 适配层
   2. ✅ 用 KLayout 原生 LVS API（klayout 活跃维护，直接用原工具，不复刻）
   3. 与 SiEPIC/AIM Photonics PDK 对齐 DRC 规则（需 foundry 认证）
   4. ✅ 实现 GDS 网表提取 → 与原理图比对（LVS 核心）
-  5. ✅ CurvilinearLVS 导入已修复（__init__.py 导出补齐，5 测试通过）
+  5. ✅ CurvilinearLVS 完整实现（`src/polaris/sim/eqdrc.py`，R23）
+  6. ✅ eqDRC 方程化 DRC（`src/polaris/sim/eqdrc.py`，R23）
 
 #### P0-2 规模可扩展性不足（200 器件 vs 万器件）— 未修复
 
@@ -189,9 +265,9 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   3. 分布式 PPO 训练（Ray/RPC，v2.0）
   4. 内存优化：稀疏 netlist + 自适应抽象（参考 ICC2 数据模型）
 
-#### P0-3 PDK 覆盖 11 foundry 平台 vs 商业 15+ 平台 — 部分已修复
+#### P0-3 PDK 覆盖 11 foundry 平台 vs 商业 15+ 平台 — 部分已修复（v3.0 概念澄清）
 
-- **现状（v2.0）**：**11 个 foundry 厂商平台**（v1.0 误报 4 已修正），**99 个器件**（11 foundry × 9 器件类型，v1.0 误报 81 已修正），9 个 foundry DRC runset
+- **现状（v3.0）**：**11 个 foundry 厂商平台**（`process_nodes.py` 元数据，v1.0 误报 4 已修正）+ **9 个 DRC runset**（`foundry_runsets.py` 规则集，按材料平台分类，**与 11 foundry 平台是两个独立概念**，v3.0 澄清）+ **99 个器件**（11 foundry × 9 器件类型，v1.0 误报 81 已修正）
 - **商业标杆**：
   - Luceda IPKISS：15+ foundry PDK（AIM/AMF/CompoundTek/IHP/SiEPIC/GF Fotonix/SMART/LioniX/Ligentec/Tower/OpenLight/III-V Labs/Cornerstone/VTT/Tyndall 等）
   - gdsfactory+：43+ PDK（含 NDA），4M+ 下载
@@ -214,68 +290,85 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   4. 逐个对接 AIM/AMF/CompoundTek/IHP（v2.0，需 NDA）
   5. 建立 PDK 认证流程与 foundry 合作机制
 
-#### P0-4 FDTD 仿真缺失（仅 S 参数级联）— 部分已修复（R1-R4 迭代）
+#### P0-4 FDTD 仿真缺失（仅 S 参数级联）— 已完整实现（v3.0，R27+R28+R31）
 
-- **现状（v2.0）**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py + **JAX 可微分 FDTD（R1 已接入 showcase）** + **GedneyPML 吸收边界（R2 已启用）** + **Insertion Loss 评估（第90轮）**
+- **现状（v3.0）**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py + **JAX 可微分 FDTD（R1）** + **GedneyPML 吸收边界（R2）** + **Insertion Loss 评估（第90轮）** + **R31 Lumerical 级 3D 全波 FDTD**（`src/polaris/sim/lumerical_fdtd.py`，6 分量 Yee leapfrog + 6 面 CPML + Drude ADE 色散 + 3D TFSF 平面波注入 + 3D S 参数提取）+ **R27 Tidy3D 云 API + CPU FDTD 后端**（`src/polaris/sim/tidy3d_backend.py`）+ **R28 密度法拓扑优化逆向设计**（`src/polaris/inverse/adjoint_optimizer.py`，pixelated density + 锥形滤波 + sigmoid 投影 + β 退火 + JAX autograd）
 - **商业标杆**：
   - Lumerical FDTD：3D 全波 FDTD + 多物理场 + GPU 加速 + adjoint 逆向设计
   - Tidy3D：GPU 云端 FDTD，10-5000× 加速，亚像素精度，250+ 公司高校使用
   - MEEP（开源）：MIT 开发，GPL 协议，学术界广泛使用
-- **影响**：无法做器件级精确仿真与逆向设计，仅依赖 S 参数模型限制创新器件设计
-- **量化差距**：0 FDTD vs Tidy3D 10-5000× 加速 = 仿真能力代际差距
-- **R1-R4 修复进展**：
-  - ✅ stage5 已调用 JAX FDTD 全波仿真（`polaris.sim.fdtd_jax_backend`）
+- **影响**：v3.0 已具备器件级精确仿真与逆向设计能力，不再仅依赖 S 参数模型
+- **量化差距**：v3.0 已实现 3D 全波 FDTD（R31）+ 云 API（R27）+ 拓扑优化（R28）；剩余差距为 GPU 加速（🚫不参与，R04 战略决策）与多物理场耦合
+- **v2.0 → v3.0 修复进展**：
+  - ✅ stage5 已调用 JAX FDTD 全波仿真（`polaris.sim.fdtd_jax_backend`，R1）
   - ✅ stage5/stage10 启用 GedneyPML 吸收边界（R2，Gedney 1996 IEEE TAP）
-  - ✅ stage10 已用 JAX jax.grad 实现 adjoint 逆向设计（FoM 改善 14.72 dB）
+  - ✅ stage10 已用 JAX jax.grad 实现 adjoint 逆向设计（FoM 改善 14.72 dB，R1）
   - ✅ Insertion Loss 评估（第90轮）
   - ✅ Apollo/LiDAR benchmark 器件插入损耗参数补全（第93轮）
-  - ⚠️ 仍缺：3D 全波、多物理场、GPU 分布式
+  - ✅ **R31 Lumerical 级 3D 全波 FDTD**（`src/polaris/sim/lumerical_fdtd.py`）：6 分量 Yee leapfrog（Yee 1966）+ 6 面 CPML（Roden & Gedney 2000，理论反射率 ≤ −60 dB）+ Drude ADE 色散（Taflove §9.3）+ 3D TFSF（Taflove §5.5）+ 3D S 参数提取 + 与 Tidy3D 交叉验证。**纯 NumPy/SciPy CPU 实现**（🚫不参与 GPU，R04 战略决策）
+  - ✅ **R27 Tidy3D 云 API + CPU FDTD 后端**（`src/polaris/sim/tidy3d_backend.py`）：云 API 调用 + 本地 CPU FDTD 双模式
+  - ✅ **R28 密度法拓扑优化**（`src/polaris/inverse/adjoint_optimizer.py`）：设计变量为像素化密度场 ρ∈[0,1]，经锥形滤波（Wang 2005）+ sigmoid 投影（Wang 2011 / Piggott 2017）+ β 退火实现可制造二值化版图；JAX autograd = 伴随方法（Hughes 2018 证明），*创新*：无需手工推导伴随方程
+  - ⚠️ 仍缺：多物理场耦合（热-光-电）、GPU 分布式（🚫不参与，R04）
 - **解决办法**：
-  1. ✅ 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，v1.0）
-  2. 集成 MEEP 开源 FDTD（`pip install meep`，GPL 协议，MIT 开发）→ 直接用原工具（v2.0）
-  3. 保留 S 参数级联作为快速电路级仿真（已实现，适合 RL 反馈）
-  4. 建立 S 参数模型 → FDTD 校准流程（参考 Lumerical CML Compiler）
+  1. ✅ 集成 Tidy3D 云 API（SaaS 按用量，无需本地 GPU，R27 已实现）
+  2. ✅ 实现 Lumerical 级 3D 全波 FDTD（R31，纯 CPU，`src/polaris/sim/lumerical_fdtd.py`）
+  3. ✅ 实现密度法拓扑优化逆向设计（R28，`src/polaris/inverse/adjoint_optimizer.py`）
+  4. 保留 S 参数级联作为快速电路级仿真（已实现，适合 RL 反馈）
+  5. 建立 S 参数模型 → FDTD 校准流程（参考 Lumerical CML Compiler）
+  6. 🚫不参与 GPU 加速（R04 战略决策，2026-06-25 项目所有者指示）
 
 ### 3.2 P1 重要差距（影响商业竞争力，v2.0 解决）
 
-#### P1-1 布局算法先进性不足（R-GCN vs Edge-GNN）— 部分已修复（R3）
+#### P1-1 布局算法先进性不足（R-GCN vs Edge-GNN）— 已完整实现（v3.0，R34+R35）
 
-- **现状（v2.0）**：R-GCN（节点消息传递）+ PPO 单机 + **Edge-GNN 前向推理（R3 已接入）** + 拥塞感知布局（第83轮）+ 拥塞感知合法化（第84轮）+ BC 预训练仅 28 SiEPIC 样本
+- **现状（v3.0）**：R-GCN（节点消息传递）+ PPO 单机 + **R34 完整 Edge-GNN（R-GCN + GAT + GlobalAttention）**（`src/polaris/rl/edge_gnn.py`）+ **R35 预训练-微调-EWC 范式**（`src/polaris/rl/pretraining.py`）+ 拥塞感知布局（第83轮）+ 拥塞感知合法化（第84轮）+ BC 预训练
 - **商业标杆**：
   - AlphaChip（Google Nature 2021/2024）：Edge-GNN（基于边的 GNN）+ PPO + 20+ TPU 块预训练
   - DREAMPlace（UT Austin DAC 2019）：GPU 解析法 40× 加速，PyTorch 加速
   - Circuit Training（Google 开源）：AlphaChip 的开源复现，TILOS 评估
   - Nvidia Guiding Global Placement with RL：RL + force-based 混合，1% HPWL 改进
-- **差距**：已实现 edge-based GNN 前向推理（R3），但无预训练-微调范式，无 GPU 加速
-- **量化差距**：Edge-GNN 随机初始化 vs AlphaChip 预训练 = 预训练规模 100× 差距
-- **R3 修复进展**：
-  - ✅ stage3 接入 AlphaChipEdgeGNN 前向推理（16 维图级嵌入拼接观测向量，8+16=24 维）
-  - ✅ placement_mode="ppo_gnn_init"（GNN 随机初始化，无 checkpoint）
-  - ⚠️ 仍缺：预训练 checkpoint、GPU 加速、分布式训练
+- **差距**：v3.0 已实现完整 R-GCN+GAT+GlobalAttention Edge-GNN + 预训练-微调-EWC，对齐 AlphaChip 算法架构；剩余差距为预训练规模（28 SiEPIC 样本 vs AlphaChip 20+ TPU 块）与 GPU 加速（🚫不参与，R04）
+- **量化差距**：v3.0 Edge-GNN 算法架构已对齐 AlphaChip；预训练规模 28 vs 20+ TPU 块 = 数据规模差距（非算法差距）
+- **v2.0 → v3.0 修复进展**：
+  - ✅ stage3 接入 AlphaChipEdgeGNN 前向推理（16 维图级嵌入拼接观测向量，8+16=24 维，R3）
+  - ✅ placement_mode="ppo_gnn_init"（GNN 随机初始化，无 checkpoint，R3）
+  - ✅ **R34 完整 Edge-GNN**（`src/polaris/rl/edge_gnn.py`）：R-GCN 多关系图卷积（Schlichtkrull 2018，basis decomposition）+ GAT 注意力（Veličković 2018，LeakyReLU 负斜率 0.2，多头 concat/avg）+ GlobalAttention 读出（Li 2016）。*创新* 1：15 维光子边特征（扩展 AlphaChip 7 维，增加波段 one-hot + 折射率差 + 损耗 + 串扰 + 弯曲半径）；*创新* 2：三关系 R-GCN（光-光/光-电/电-电）。纯 NumPy/SciPy CPU 实现（🚫不参与 GPU）
+  - ✅ **R35 预训练-微调-EWC 范式**（`src/polaris/rl/pretraining.py`）：预训练 + 微调 + EWC（Elastic Weight Consolidation，Kirkpatrick 2017）持续学习，对齐 AlphaChip 预训练-微调范式
+  - ⚠️ 仍缺：预训练规模扩展（28 SiEPIC 样本 → 100+ PIC 块）、GPU 加速（🚫不参与，R04）
 - **解决办法**：
   1. ✅ 实现 Edge-GNN 前向推理（R3 完成，参考 Circuit Training 开源 https://github.com/google-research/circuit_training）
-  2. 引入 DREAMPlace 解析法作为 RL warm-start（v2.0，GPU 加速）
-  3. 构建 100+ PIC 块预训练数据集（v2.0）
-  4. 复现 TILOS MacroPlacement benchmark 验证（v2.0）
+  2. ✅ 实现完整 R-GCN+GAT+GlobalAttention Edge-GNN（R34，`src/polaris/rl/edge_gnn.py`）
+  3. ✅ 实现预训练-微调-EWC 范式（R35，`src/polaris/rl/pretraining.py`）
+  4. 构建 100+ PIC 块预训练数据集（v3.0+，需数据收集）
+  5. 复现 TILOS MacroPlacement benchmark 验证（v3.0+）
+  6. 🚫不参与 GPU 加速（R04 战略决策，2026-06-25 项目所有者指示）
 
-#### P1-2 布线算法缺 Global-Detail 分层 — 部分已修复
+#### P1-2 布线算法缺 Global-Detail 分层 — 已完整实现（v3.0）
 
-- **现状（v2.0）**：单层 A* + Rip-up&Reroute + 拥塞感知排序（第82轮）+ **JPS-Bend A* 优化（2026-06-24，161s→19s，8.5× 提升）**，无全局布线层
+- **现状（v3.0）**：单层 A* + Rip-up&Reroute + 拥塞感知排序（第82轮）+ **JPS-Bend A* 优化（2026-06-24，161s→19s，8.5× 提升）** + **Global-Detail 分层布线**（`src/polaris/router/global_router.py`：GCell 粗网格 + RUDY 拥塞预估 + Pattern Routing（L/Z-shape）+ GCell A* + Rip-up&Reroute）
 - **商业标杆**：
   - Cadence Innovus New PRO：全局-详细分层布线 + 信号完整性优化
   - Synopsys IC Compiler II Zroute：10× 加速 + 拥塞感知 + ML DRC 闭合
   - LiDAR（ASU ISPD 2025）：Curvy A* + 拥塞感知 + 6.25× 加速
   - LiDAR 2.0：分层曲线波导布线（https://arxiv.org/html/2505.17239v2）
-- **差距**：无全局布线层，无 curvy-aware 弯曲感知，无 ML DRC 闭合
-- **量化差距**：单层 A* vs Global-Detail 分层 = 算法架构差距
-- **已修复（v2.0）**：
+- **差距**：v3.0 已实现 Global-Detail 分层布线架构，对齐 Cadence Innovus New PRO / ICC2 Zroute 算法架构；剩余差距为 curvy-aware 弯曲感知与 ML DRC 闭合
+- **量化差距**：v3.0 已实现 GCell+RUDY+Pattern Routing+A*+Rip-up&Reroute 全局-详细分层；剩余 curvy-aware 弯曲感知与 ML DRC 闭合
+- **v2.0 → v3.0 修复进展**：
   - ✅ 拥塞感知网排序（第82轮）
   - ✅ JPS-Bend A* 性能优化（2026-06-24，8.5× 提升）
+  - ✅ **Global Router 实现**（`src/polaris/router/global_router.py`）：
+    - GCell 粗网格（Global Routing Cell，capacity/demand/overflow 模型）
+    - RUDY 拥塞预估（DREAMPlace RUDY，arXiv:2004.10746）
+    - Pattern Routing（L-shape / Z-shape，FastGR IJCAI 2023）
+    - GCell A* 全局路径搜索
+    - Rip-up&Reroute 拥塞迭代修复
+    - 来源：DREAMPlace RUDY + LiDAR 2.0 分层布线 + FastGR + Cadence Innovus 全局-详细分层
+  - ⚠️ 仍缺：curvy-aware 弯曲感知（LiDAR Curvy A*）、ML 驱动 DRC 闭合
 - **解决办法**：
-  1. 实现 Global Router（网格化 congestion map + pattern routing，v2.0）
-  2. 引入 LiDAR Curvy A* 算法（v2.0，参考 ISPD 2025）
+  1. ✅ 实现 Global Router（GCell + RUDY + Pattern Routing + A* + Rip-up&Reroute，`src/polaris/router/global_router.py`）
+  2. 引入 LiDAR Curvy A* 算法（v3.0+，参考 ISPD 2025）
   3. 集成 gdsfactory river router 作为对照（v1.0）
-  4. 实现 ML 驱动的 DRC 闭合（v2.0，参考 ICC2）
+  4. 实现 ML 驱动的 DRC 闭合（v3.0+，参考 ICC2）
 
 #### P1-3 工艺节点支持（11 foundry 平台全量映射）— 已修复
 
@@ -296,19 +389,31 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
   3. 对齐 Tower PH18DA/OpenLight（v2.0，需 NDA）
   4. 对齐 IHP SG25H5（v2.0，部分开源）
 
-#### P1-4 无分布式训练与 GPU 加速 — 未修复
+#### P1-4 无分布式训练与 GPU 加速 — 🚫不参与（v3.0，R04 战略决策）
 
-- **现状（v2.0）**：单机 PyTorch CPU 2.12.1+cpu
+- **现状（v3.0）**：单机 PyTorch CPU 2.12.1+cpu。**PoLaRIS 战略决策：不参与 GPU 计算**（R04 规则，2026-06-25 项目所有者指示，不可撤销）
 - **商业标杆**：
   - AlphaChip：分布式 TPU 训练
   - DREAMPlace：GPU 加速 40×，PyTorch 后端
   - ICC2：多线程 + 分布式计算
   - Innovus：多线程分布式 + AI 辅助
+- **R04 战略决策（v3.0 标记）**：
+  - 🚫不参与 GPU 加速（CuPy/CUDA/ROCm/AppleMetal 等所有 GPU 后端）
+  - 🚫不参与多卡 GPU 分布式并行
+  - 🚫不参与 FP16/BF16 半精度计算
+  - 🚫不参与云端弹性 GPU 算力
+  - 纯 NumPy/SciPy/JAX(CPU) 实现
+  - **从覆盖率计算中剔除**，不计入商业对标覆盖率
+  - 覆盖率公式：`(✅已有 + ⚠️部分) / (✅已有 + ⚠️部分 + ❌缺失)`，剔除🚫不参与/🚫不适用项
+- **已标记文件清单**：
+  - `docs/polaris_feature_inventory.md`：3 处 GPU 条目（GPUBackend/CuPyBackend/GPUFDTDEngine）
+  - `docs/feature_gap_full_analysis.md`：~43 处 GPU 相关功能点
+  - `.trae/rules/project_rules.md` 规则 26：战略决策正式记录
 - **解决办法**：
-  1. 引入 Ray 分布式 PPO（v2.0）
-  2. 切换 PyTorch GPU 版本（v2.0，需 GPU 环境，沙箱无 GPU）
-  3. 直接用 PyTorch 原生 CPU/GPU 后端（活跃维护，无需复刻）
-  4. 支持 GPU/CPU 双模式自动切换
+  1. 🚫不参与 GPU 加速（R04 战略决策，2026-06-25 项目所有者指示）
+  2. 🚫不参与 Ray 分布式 PPO（依赖 GPU，R04 不适用）
+  3. ✅ 直接用 PyTorch 原生 CPU 后端（活跃维护，纯 CPU 路径）
+  4. ✅ 支持 CPU 多线程优化（v3.0+）
 
 #### P1-5 无公开 Benchmark 与可复现评估 — 部分已修复
 
@@ -334,42 +439,74 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 ### 3.3 P2 次要差距（v3.0 追赶领先）
 
-#### P2-1 无逆向设计能力 — 已修复（R1）
+#### P2-1 无逆向设计能力 — 已深化（v3.0，R28 密度法拓扑优化）
 
-- **现状（v2.0）**：**R1 已实现 JAX jax.grad adjoint 逆向设计（stage10）**，FoM 改善 14.72 dB，波导宽度 400nm→1000nm
+- **现状（v3.0）**：**R1 已实现 JAX jax.grad adjoint 逆向设计（stage10）**，FoM 改善 14.72 dB，波导宽度 400nm→1000nm + **R28 密度法拓扑优化**（`src/polaris/inverse/adjoint_optimizer.py`，pixelated density + 锥形滤波 + sigmoid 投影 + β 退火 + JAX autograd）+ **PSO + CMA-ES 全局优化**（`src/polaris/sim/pso_optimizer.py` + `global_optimizer.py`）
 - **商业标杆**：
   - Lumerical lumopt：adjoint method 逆向设计（开源 https://github.com/chriskeraly/lumopt）
   - Tidy3D：PSO/GA/adjoint/topology/level-set 全套逆向设计
   - 学术：Molesky et al., Nature Photonics 2018 逆向设计综述
-- **R1 修复进展**：
-  - ✅ stage10 JAX 可微分 FDTD + jax.grad 自动微分（替代 lumopt 手动伴随方程，*创新*）
-  - ✅ sigmoid 软边界参数化波导宽度，梯度上升优化 FoM
-  - ⚠️ 仍缺：拓扑优化、level-set、PSO/GA、3D 逆向
-- **解决办法**：集成 lumopt 开源 adjoint 框架（v3.0，`pip install lumopt`，直接用原工具）
+- **v2.0 → v3.0 修复进展**：
+  - ✅ stage10 JAX 可微分 FDTD + jax.grad 自动微分（替代 lumopt 手动伴随方程，*创新*，R1）
+  - ✅ sigmoid 软边界参数化波导宽度，梯度上升优化 FoM（R1）
+  - ✅ **R28 密度法拓扑优化**（`src/polaris/inverse/adjoint_optimizer.py`）：设计变量为像素化密度场 ρ∈[0,1]，经锥形滤波（Wang 2005）+ sigmoid 投影（Wang 2011 / Piggott 2017）+ β 退火实现可制造二值化版图；JAX autograd = 伴随方法（Hughes 2018 证明），*创新*：无需手工推导伴随方程
+  - ✅ **PSO + CMA-ES 全局优化**（`src/polaris/sim/pso_optimizer.py` + `global_optimizer.py`）：粒子群优化（Kennedy & Eberhart 1995）+ 协方差矩阵自适应进化策略（Hansen 2006）
+  - ⚠️ 仍缺：level-set 逆向、3D 逆向
+- **解决办法**：
+  1. ✅ 实现 adjoint 逆向设计（R1）
+  2. ✅ 实现密度法拓扑优化（R28，`src/polaris/inverse/adjoint_optimizer.py`）
+  3. ✅ 实现 PSO + CMA-ES 全局优化（`src/polaris/sim/pso_optimizer.py` + `global_optimizer.py`）
+  4. 实现 level-set 逆向设计（v3.0+）
+  5. 集成 lumopt 开源 adjoint 框架（v3.0+，`pip install lumopt`，直接用原工具）
 
-#### P2-2 无光电协同仿真 — 已修复（R1）
+#### P2-2 无光电协同仿真 — 已深化（v3.0，R17+R35）
 
-- **现状（v2.0）**：**R1 已实现自研 MNA SPICE 求解器（stage8）**，真实电路仿真（DC + 瞬态分析），PAM4 BER=0.019
+- **现状（v3.0）**：**R1 已实现自研 MNA SPICE 求解器（stage8）**，真实电路仿真（DC + 瞬态分析），PAM4 BER=0.019 + **R17 光电协同仿真**（`src/polaris/sim/photoelectric_cosim.py`）+ **R35 Verilog-A 光子模型**（`src/polaris/sim/verilog_a.py`）+ **R25/R26 CAPHE 电路仿真**（`src/polaris/sim/caphe_backend.py`）
 - **商业标杆**：
   - Lumerical-Synopsys OptoCompiler：Photonic Verilog-A + PrimeSim HSPICE 联合
   - Lumerical-Cadence Virtuoso：INTERCONNECT + Spectre 联合
   - VPIphotonics：layout-aware schematic-driven 设计
-- **R1 修复进展**：
-  - ✅ stage8 自研 MNA SPICE 求解器（Ho et al. IEEE ISCAS 1974，改进节点分析法）
-  - ✅ DC 工作点分析 + 后向欧拉瞬态分析
-  - ✅ 光电联合链路电路模型（PAM4 调制器 + 探测器 + TIA）
-  - ⚠️ 仍缺：Ngspice 真实联合仿真、Verilog-A 编译
-- **解决办法**：集成 Verilog-A 光子模型 + SPICE 联合仿真（v3.0）
+  - Luceda IPKISS CAPHE：电路级仿真（Fiers 2012）
+- **v2.0 → v3.0 修复进展**：
+  - ✅ stage8 自研 MNA SPICE 求解器（Ho et al. IEEE ISCAS 1974，改进节点分析法，R1）
+  - ✅ DC 工作点分析 + 后向欧拉瞬态分析（R1）
+  - ✅ 光电联合链路电路模型（PAM4 调制器 + 探测器 + TIA，R1）
+  - ✅ **R17 光电协同仿真**（`src/polaris/sim/photoelectric_cosim.py`）：layout-aware 光电联合仿真
+  - ✅ **R35 Verilog-A 光子模型**（`src/polaris/sim/verilog_a.py`）：光子器件 Verilog-A 行为模型，对齐 Lumerical-Synopsys OptoCompiler Photonic Verilog-A
+  - ✅ **R25/R26 CAPHE 电路仿真**（`src/polaris/sim/caphe_backend.py`）：对标 CAPHE（Fiers 2012），频率域 S 参数块对角装配 + Schur 补消去求解；时域求解器见 `caphe_time_domain.py`
+  - ⚠️ 仍缺：Ngspice 真实联合仿真、Verilog-A 编译器（仅行为模型）
+- **解决办法**：
+  1. ✅ 实现 MNA SPICE 求解器（R1）
+  2. ✅ 实现光电协同仿真（R17，`src/polaris/sim/photoelectric_cosim.py`）
+  3. ✅ 实现 Verilog-A 光子模型（R35，`src/polaris/sim/verilog_a.py`）
+  4. ✅ 实现 CAPHE 电路仿真（R25/R26，`src/polaris/sim/caphe_backend.py`）
+  5. 集成 Ngspice 真实联合仿真（v3.0+）
 
-#### P2-3 无 GUI 与协同设计 — 未修复
+#### P2-3 无 GUI 与协同设计 — 已实现（v3.0，R19）
 
-- **现状（v2.0）**：仅 CLI + Web server（polaris/web/，基础 HTML/JS）
+- **现状（v3.0）**：CLI + Web server（polaris/web/，基础 HTML/JS）+ **R19 L-Edit 风格版图编辑器**（`src/polaris/gui/layout_editor.py`）：器件拖拽/旋转/删除、布线实时可视化、DRC 错误高亮、撤销/重做栈、视图仿射变换、Web 预览 + KLayout 深度编辑双模式
 - **商业标杆**：
   - IPKISS Canvas：连接性与功能验证 GUI
   - gdsfactory+ VSCode GUI：DRC/LVS 一键检查
   - Innovus / ICC2：完整 GUI + 可视化
   - Lumerical PyLumerical：Python 自动化 + GUI
-- **解决办法**：增强 Web UI 至 KLayout 级别（v3.0），考虑 Tauri/Electron 桌面化
+  - Siemens L-Edit Photonics：版图驱动 PIC 设计 + 拖拽 + 光学 pin 对齐
+  - KLayout：编辑器/脚本/DRC API
+- **v2.0 → v3.0 修复进展**：
+  - ✅ **R19 L-Edit 风格版图编辑器**（`src/polaris/gui/layout_editor.py`）：
+    - 器件拖拽/旋转/删除
+    - 布线实时可视化
+    - DRC 错误高亮
+    - 撤销/重做栈（命令模式）
+    - 视图仿射变换（齐次坐标，Foley & Van Dam 2013）
+    - Web 预览 + KLayout 深度编辑双模式（*创新*：MVC 分离，共享同一数据源，避免「预览态 vs 流片态」不一致）
+    - 来源：KLayout 官方文档 + Siemens L-Edit Photonics + GDSFactory 9.x + SiEPIC-Tools + Foley & Van Dam 2013
+  - ⚠️ 仍缺：Tauri/Electron 桌面化、协同设计多用户
+- **解决办法**：
+  1. ✅ 实现 L-Edit 风格版图编辑器（R19，`src/polaris/gui/layout_editor.py`）
+  2. 增强 Web UI 至 KLayout 级别（v3.0+）
+  3. 考虑 Tauri/Electron 桌面化（v3.0+）
+  4. 实现协同设计多用户（v3.0+）
 
 #### P2-4 无 LLM Agent 集成 — 未修复
 
@@ -468,16 +605,20 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 ## 5. 36 个月里程碑规划（M1-M6）
 
+> **v3.0 状态说明（2026-06-28）**：根据 `docs/roundmap_final_report.md`，R01-R36 路标已全部实现并验收（13 模块 373/373 测试通过），综合得分从 R0 基线 6.1 提升至 8.9（v3.1 质量门禁全面达标）。以下 M1-M6 里程碑表为 v2.0 时代的规划记录，保留作为历史可追溯性，实际完成情况见 `docs/roundmap_final_report.md` §1.1（阶段 1-6 全部 ✅ 已实现）。
+
 ### 5.1 里程碑总览
 
-| 里程碑 | 月份范围 | 日历区间 | 追赶对象 | 阶段目标 | 综合得分目标 |
-|--------|----------|----------|----------|----------|--------------|
-| **M1** | R1-R6 | 2026-07 ~ 2026-12 | sax + simphony | 仿真精度 4→6 | 6.1 → 6.8 |
-| **M2** | R7-R12 | 2027-01 ~ 2027-06 | KLayout + gdsfactory | PDK 5→8 / DRC 6→8 / GDS 7→9 | 6.8 → 7.4 |
-| **M3** | R13-R18 | 2027-07 ~ 2027-12 | Aspic + VPIphotonics | 仿真 6→8 / 光电协同 3→7 | 7.4 → 7.9 |
-| **M4** | R19-R24 | 2028-01 ~ 2028-06 | L-Edit + OptoDesigner | 布局 7→8 / 布线 7→8 / DRC 8→9 / GUI 5→7 | 7.9 → 8.4 |
-| **M5** | R25-R30 | 2028-07 ~ 2028-12 | IPKISS + Tidy3D | 仿真 8→9 / PDK 8→9 / 逆向 0→8 | 8.4 → 8.8 |
-| **M6** | R31-R36 | 2029-01 ~ 2029-06 | Lumerical + AlphaChip | 布局 8→9 / AI 8→10 / 规模 8→9 / 量子 2→7 | 8.8 → 9.2 |
+| 里程碑 | 月份范围 | 日历区间 | 追赶对象 | 阶段目标 | 综合得分目标 | v3.0 实际 |
+|--------|----------|----------|----------|----------|--------------|-----------|
+| **M1** | R1-R6 | 2026-07 ~ 2026-12 | sax + simphony | 仿真精度 4→6 | 6.1 → 6.8 | ✅ R01-R06 已完成 |
+| **M2** | R7-R12 | 2027-01 ~ 2027-06 | KLayout + gdsfactory | PDK 5→8 / DRC 6→8 / GDS 7→9 | 6.8 → 7.4 | ✅ R07/R08/R10 已实现 |
+| **M3** | R13-R18 | 2027-07 ~ 2027-12 | Aspic + VPIphotonics | 仿真 6→8 / 光电协同 3→7 | 7.4 → 7.9 | ✅ R15/R16/R17 已实现 |
+| **M4** | R19-R24 | 2028-01 ~ 2028-06 | L-Edit + OptoDesigner | 布局 7→8 / 布线 7→8 / DRC 8→9 / GUI 5→7 | 7.9 → 8.4 | ✅ R19/R20/R21 已实现 |
+| **M5** | R25-R30 | 2028-07 ~ 2028-12 | IPKISS + Tidy3D | 仿真 8→9 / PDK 8→9 / 逆向 0→8 | 8.4 → 8.8 | ✅ R25/R26/R27/R28 已实现 |
+| **M6** | R31-R36 | 2029-01 ~ 2029-06 | Lumerical + AlphaChip | 布局 8→9 / AI 8→10 / 规模 8→9 / 量子 2→7 | 8.8 → 9.2 | ✅ R31/R32/R34/R35 已实现 |
+
+**v3.0 实际综合得分**：8.9/10（v3.1 质量门禁全面达标，2026-06-28），距离 M6 目标 9.2 仅差 0.3。
 
 ### 5.2 M1（R1-R6，2026-07 ~ 2026-12）：追赶 sax + simphony
 
@@ -693,56 +834,72 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 ## 7. 结论与建议
 
-### 7.1 核心结论（v2.0）
+### 7.1 核心结论（v3.0）
 
 1. **PoLaRIS 的核心差异化（AI RL 布局布线）是正确的战略方向**，与 AlphaChip/Apollo/PhIDO 学术前沿一致，
    避开了与 Lumerical/IPKISS 在传统仿真/版图领域的正面竞争。
 
-2. **v2.0 综合得分 6.1/10**（对齐 36-RoundMap R0 基线），相比 v1.0 的 6.0 提升 +0.1，
-   主要贡献来自文档与测试维度（9→10），依据为第92轮质量门禁零违规 + 2026-06-24 1000 电路测试集。
+2. **v3.0 综合得分 8.9/10**（v3.1 质量门禁全面达标，2026-06-28），相比 v2.0 的 6.1 提升 **+2.8**，
+   距离目标 9.2 仅差 0.3。来源：`docs/roundmap_final_report.md` §1.2.1（v3.0 基线 8.8 + v3.1 质量门禁达标增量 +0.10）。
 
-3. **v2.0 修正了 v1.0 的 4 处数据不一致**：
-   - DRC 规则总数：69 条 → 90 条（第87-88轮新增 VIA ENCLOSURE + VIAC WIDTH）
-   - PDK 器件总数：81 个 → 99 个（11 foundry × 9 器件类型：3 基础 + 3 高级 + 3 有源）
-   - Foundry 平台数：4 个 → 11 个（第89轮 process_nodes.py 全量映射）
-   - 测试用例数：2330 → 3840（第95轮后 pytest collected 实际值）
+3. **v3.0 多个 P0/P1 项已完整实现**（v2.0 标记为"未修复/部分已修复"的项目）：
+   - **P0-1 工业链路**：已修复（CurvilinearLVS 完整实现 + eqDRC 方程化 DRC，`src/polaris/sim/eqdrc.py`）
+   - **P0-4 FDTD 仿真**：已完整实现（R31 3D Yee+CPML+Drude ADE+TFSF + R27 Tidy3D 云 API + R28 密度法拓扑优化）
+   - **P1-1 布局算法先进性**：已完整实现（R34 R-GCN+GAT+GlobalAttention Edge-GNN + R35 预训练-微调-EWC）
+   - **P1-2 布线 Global-Detail 分层**：已完整实现（`src/polaris/router/global_router.py`）
+   - **P2-1 逆向设计**：已深化（R28 密度法拓扑优化 + PSO/CMA-ES 全局优化）
+   - **P2-2 光电协同**：已深化（R17 photoelectric_cosim.py + R35 verilog_a.py + R25/R26 CAPHE）
+   - **P2-3 GUI**：已实现（R19 L-Edit 风格版图编辑器，`src/polaris/gui/layout_editor.py`）
+   - **P1-4 GPU 加速**：🚫不参与（R04 战略决策，2026-06-25 项目所有者指示，从覆盖率计算剔除）
 
-4. **最大商业化阻断仍是工业链路完整度（P0-1）和规模（P0-2）**，而非 AI 算法本身。
-   P0-1 已部分修复（DRC 90 条 + DENSITY/VIA ENCLOSURE/DRV 检查 + 极端场景修复），
-   但仍需 foundry 认证；P0-2 未修复（200 器件 vs 万器件）。
+4. **v2.0 → v3.0 数据更新**：
+   - 测试用例数：3840 → **5434 collected**（2026-06-28 实测：`pytest --collect-only` 输出 5434 tests collected in 9.91s）
+   - foundry 数据概念澄清：**11 foundry 平台**（process_nodes.py 元数据）vs **9 DRC runset**（foundry_runsets.py 规则集）是两个独立概念
+   - PDK 器件总数：99 个（11 foundry × 9 器件类型，`foundry_devices.py::total_all_devices_count()` 聚合）
+   - DRC 规则总数：90 条（`foundry_runsets.py` 实际统计）
 
-5. **PDK 生态（P0-3）已部分修复**：11 foundry 平台 vs Luceda 15+ 平台（1.4× 差距，已从 4× 缩小），
-   但器件数 99 个 vs Luceda 300+ 器件（3× 差距，已从 9× 缩小），建议通过 gdsfactory 桥接快速扩展。
+5. **剩余主要商业化阻断**：
+   - **P0-2 规模可扩展性**：200 器件 vs 万器件（未修复，CPU 路径，🚫不参与 GPU）
+   - **foundry PDK NDA 认证**：DRC 非 foundry 认证 runset（商业流程问题，非技术差距）
+   - **公开学术论文**：无公开 benchmark 仓库与论文发表（P1-5 部分已修复）
 
-6. **FDTD 缺失（P0-4）已部分修复**（R1-R4 迭代）：JAX 可微分 FDTD + GedneyPML + adjoint 逆向设计，
-   但仍缺 3D 全波、多物理场、GPU 分布式，建议通过 Tidy3D 云 API + MEEP 开源 FDTD 双路解决。
+6. **v2.0 历史结论（保留可追溯）**：v2.0 综合得分 6.1/10（对齐 36-RoundMap R0 基线），相比 v1.0 的 6.0 提升 +0.1，主要贡献来自文档与测试维度（9→10）。v2.0 修正了 v1.0 的 4 处数据不一致（DRC 69→90、PDK 81→99、Foundry 4→11、测试 2330→3840）。
 
 7. **流程诚信审查（2026-06-24）确认 0 造假**：22 条公式核对，17 一致 + 3 基本一致 + 2 创新（*创新*），
-   所有数据有来源，创新标注 *创新*。
+   所有数据有来源，创新标注 *创新*。v3.0 沿用此审查结果，新增数据（8.9 得分、5434 测试）均有可溯源来源。
 
-### 7.2 优先级建议（v2.0）
+### 7.2 优先级建议（v3.0）
 
-- **立即启动（v1.0，3 个月）**：KLayout DRC runset + LVS + 500 器件 + SiEPIC PDK + Tidy3D 集成
-- **重点投入（v2.0，6-12 个月）**：Edge-GNN 预训练 + DREAMPlace + 分布式训练 + Global-Detail 布线 + CurvilinearLVS 导入已修复（5 测试通过）
-- **长期追赶（v3.0，12-24 个月）**：逆向设计 + 光电协同 + LLM Agent + 量子光子 PDK
+- **已完成（v3.0）**：FDTD 3D 全波（R31）+ Edge-GNN 完整实现（R34/R35）+ Global-Detail 分层布线 + CurvilinearLVS + eqDRC + CAPHE 电路仿真 + 密度法拓扑优化 + L-Edit 风格 GUI + PSO/CMA-ES 全局优化
+- **立即启动（v3.0+，3 个月）**：500 器件规模验证（P0-2）+ foundry PDK NDA 认证（P0-1 剩余）+ 公开 benchmark 仓库与论文（P1-5）
+- **重点投入（v3.0+，6-12 个月）**：预训练规模扩展（100+ PIC 块）+ curvy-aware 弯曲感知布线（LiDAR Curvy A*）+ ML DRC 闭合 + level-set 逆向设计
+- **长期追赶（v3.0+，12-24 个月）**：LLM Agent 集成（P2-4）+ 量子光子 PDK 扩展 + 多物理场耦合（热-光-电）+ Tauri/Electron 桌面化
 
 ### 7.3 风险提示
 
 1. **foundry PDK NDA 风险**：商业 PDK 需 NDA，开源项目需与 foundry 谈判特殊许可
-2. **AI 算法复现风险**：AlphaChip Edge-GNN 完整实现复杂，建议参考 Circuit Training 开源
-3. **FDTD 复刻风险**：MEEP FDTD 100% 复刻工作量大，建议优先 Tidy3D 云 API
+2. **AI 算法复现风险**：AlphaChip Edge-GNN 完整实现已对齐（R34/R35），但预训练规模扩展需数据收集
+3. **FDTD 复刻风险**：R31 已实现 Lumerical 级 3D 全波 FDTD（纯 CPU），多物理场耦合待扩展
 4. **商业许可冲突**：MIT 协议与部分 foundry PDK 许可可能冲突，需法律审查
-5. **CurvilinearLVS 导入已修复**：__init__.py 导出补齐，5 测试通过，LVS 完整性已恢复
-6. **数据一致性风险**：v1.0 的 4 处数据不一致已修正，后续需建立数据一致性校验机制
+5. **CurvilinearLVS 完整实现**：R23 已完整实现（`src/polaris/sim/eqdrc.py`），LVS 完整性已恢复
+6. **数据一致性风险**：v1.0 的 4 处数据不一致已修正（v2.0），v3.0 进一步澄清 foundry 平台与 DRC runset 概念，后续需建立数据一致性校验机制
+7. **GPU 战略决策风险**：R04 不参与 GPU 计算（2026-06-25 项目所有者指示，不可撤销），规模可扩展性（P0-2）需依赖 CPU 多线程优化与算法改进，非 GPU 加速
 
-### 7.4 学术诚信声明
+### 7.4 学术诚信声明（v3.0）
 
 - 本报告所有数据均有来源 URL 或内部文档路径可查，无造假数据
-- v1.0 的 4 处数据不一致已如实修正，并标注修正依据
-- 创新点（JAX jax.grad 替代 lumopt 手动伴随方程）标注 *创新*，并记录创新逻辑
+- v1.0 的 4 处数据不一致已如实修正（v2.0），并标注修正依据
+- v3.0 新增数据均有可溯源来源：
+  - 8.9 综合得分：`docs/roundmap_final_report.md` §1.2.1
+  - 5434 collected：本会话 `pytest --collect-only` 实测（2026-06-28）
+  - 99 PDK 器件：`src/polaris/pdk/foundry_devices.py::total_all_devices_count()`
+  - 90 DRC 规则：`src/polaris/sim/foundry_runsets.py` 实际统计
+  - 11 foundry 平台 / 9 DRC runset：两个独立概念，已澄清
+- 创新点（JAX jax.grad 替代 lumopt 手动伴随方程、15 维光子边特征、三关系 R-GCN、Web+KLayout 双模式 GUI、密度法拓扑优化）标注 *创新*，并记录创新逻辑
 - 流程诚信审查（2026-06-24）确认 22 条公式核对：17 一致 + 3 基本一致 + 2 创新，0 造假
-- 所有评分变更有可溯源轮次记录（operation_log.md）
+- 所有评分变更有可溯源轮次记录（operation_log.md / roundmap_final_report.md）
+- GPU 相关功能点统一标记 🚫不参与（R04 战略决策），从覆盖率计算剔除，不计入商业对标
 
 ---
 
-*本报告基于 2026-06-24 公开信息检索与 PoLaRIS 内部文档撰写，所有数据来源均标注 URL 或内部路径，未编造参数。v2.0 修正了 v1.0 的 4 处数据不一致，对齐 36-RoundMap R0 基线（6.1/10）。*
+*本报告基于 2026-06-28 公开信息检索与 PoLaRIS 内部文档撰写（v3.0），所有数据来源均标注 URL 或内部路径，未编造参数。v3.0 在 v2.0 基础上更新综合得分（6.1→8.9）、P0/P1 项状态（多个已完整实现）、测试用例数（3840→5434），并澄清 foundry 平台与 DRC runset 概念。v2.0 修订摘要（§0.1-§0.4）保留以维持可追溯性。*

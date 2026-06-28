@@ -93,13 +93,13 @@ v3.1 得分 = 8.8 + 0.10 = 8.9
 
 | 路标 | 优先级 | 实现文件路径 | 商业对齐对象 | 测试数 | v3.0 状态 |
 |------|--------|--------------|--------------|--------|-----------|
-| R10 | P1 | `src/polaris/routing/gdsfactory_style.py` | gdsfactory 布线 | ≥8 | ✅ 已实现 |
+| R10 | P1 | `src/polaris/router/gdsfactory_style.py` | gdsfactory 布线 | ≥8 | ✅ 已实现 |
 | R15 | P0 | `src/polaris/sim/picwave_backend.py` | VPI PDK | ≥8 | ✅ 已实现 |
 | R16 | P0 | `src/polaris/sim/eme_backend.py` | VPI 时域 | ≥6 | ✅ 已实现 |
 | R17 | P0 | `src/polaris/sim/photoelectric_cosim.py` | layout-aware | ≥8 | ✅ 已实现 |
 | R19 | P1 | `src/polaris/gui/layout_editor.py` | L-Edit | ≥10 | ✅ 已实现 |
 | R20 | P1 | `src/polaris/flow/design_intent.py` | OptoDesigner | ≥8 | ✅ 已实现 |
-| R21 | P1 | `src/polaris/routing/commercial_router.py` | OptoDesigner 布线 | ≥8 | ✅ 已实现 |
+| R21 | P1 | `src/polaris/router/commercial_router.py` | OptoDesigner 布线 | ≥8 | ✅ 已实现 |
 | R27 | P0 | `src/polaris/sim/tidy3d_backend.py` | Tidy3D 云 | ≥8 | ✅ 已实现 |
 | R28 | P0 | `src/polaris/inverse/adjoint_optimizer.py` | lumopt | ≥8 | ✅ 已实现 |
 | R31 | P2 | `src/polaris/sim/lumerical_fdtd.py` | Lumerical FDTD | ≥10 | ✅ 已实现 |
