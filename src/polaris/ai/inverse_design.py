@@ -441,10 +441,10 @@ class GANInverseDesigner:
             gr = -np.ones_like(d_real) / bs
             gW2 = hf.T @ gf + hr.T @ gr
             gb2 = gf.sum(0) + gr.sum(0)
-            gW1 = (gf @ self.D_W2.T * (hf > 0)).T @ fake_f
-            gW1 += (gr @ self.D_W2.T * (hr > 0)).T @ real
-            gb1 = (gf @ self.D_W2.T * (hf > 0)).sum(0)
-            gb1 += (gr @ self.D_W2.T * (hr > 0)).sum(0)
+            gp_f = gf @ self.D_W2.T * (hf > 0)  # [bs, hidden]
+            gp_r = gr @ self.D_W2.T * (hr > 0)
+            gW1 = fake_f.T @ gp_f + real.T @ gp_r  # [n, hidden]
+            gb1 = gp_f.sum(0) + gp_r.sum(0)
             # 梯度惩罚 GP（解析梯度，来源: Gulrajani 2017 Eq.(3)）
             eps_ = rng.uniform(0, 1, (bs, 1))
             interp = eps_ * real + (1 - eps_) * fake_f
@@ -457,9 +457,9 @@ class GANInverseDesigner:
             gp_val = float(np.mean((g_norm - 1.0) ** 2))
             gn_safe = np.where(g_norm > 1e-12, g_norm, 1e-12)
             beta = 2.0 * (g_norm - 1.0) / gn_safe  # [bs]
-            # ∂GP/∂D_W1 = mean_i β_i·outer(w2⊙mask_i, g_i)
-            gp_gW1 = (gw * beta[:, None]).T @ g_all / bs  # [hidden, n]
-            # ∂GP/∂D_W2 = mean_i β_i·mask_i·(W1·g_i)
+            # ∂GP/∂D_W1 = mean_i β_i·outer(g_i, w2⊙mask_i)  [n, hidden]
+            gp_gW1 = (beta[:, None] * g_all).T @ gw / bs
+            # ∂GP/∂D_W2 = mean_i β_i·mask_i·(W1·g_i)  [hidden, 1]
             w1_g = g_all @ self.D_W1  # [bs, hidden]
             gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs
             # D 参数更新（主损失 + λ·GP）
@@ -603,6 +603,13 @@ class DiffusionInverseDesigner:
             2.0 / self.hidden_dim
         )
         self.b2 = np.zeros(self.n_pixels)
+        # Adam 优化器状态（修复 P0-A: 原实现参数从不更新）
+        self._ddpm_m = {
+            "W1": np.zeros_like(self.W1), "b1": np.zeros_like(self.b1),
+            "W2": np.zeros_like(self.W2), "b2": np.zeros_like(self.b2),
+        }
+        self._ddpm_v = {k: np.zeros_like(v) for k, v in self._ddpm_m.items()}
+        self._ddpm_t = 0
 
     def _noise_predict(self, x_t: np.ndarray, t: int, condition: float) -> np.ndarray:
         """噪声预测网络 ε_θ(x_t, t, c)。"""
@@ -657,26 +664,51 @@ class DiffusionInverseDesigner:
             mean = mean + noise
         return mean.reshape(self.h, self.w)
 
-    def compute_loss(self, x0: np.ndarray, t: int) -> float:
-        """计算训练损失。
+    def train_step(self, x0: np.ndarray, t: int, rng: np.random.Generator) -> float:
+        """DDPM 单步训练：前向扩散→噪声预测→MSE→反向传播→Adam 更新。
 
+        修复 P0-A: 原实现 compute_loss 仅计算损失不更新参数。
         L = E[||ε - ε_θ(x_t, t, c)||²]
         来源: Ho et al. 2020 NeurIPS DDPM Eq.(14)
 
         Args:
             x0: 原始形状 (H, W)。
             t: 时间步。
+            rng: 随机数生成器。
 
         Returns:
             MSE 损失值。
         """
         x0_flat = x0.flatten()
         alpha_bar = self.alpha_bars[t]
-        eps = np.random.default_rng().standard_normal(x0_flat.shape)
+        eps = rng.standard_normal(x0_flat.shape)
         x_t = np.sqrt(alpha_bar) * x0_flat + np.sqrt(1 - alpha_bar) * eps
         cond_val = self.simulator.simulate(x0)[self.simulator.target_metric]
-        eps_pred = self._noise_predict(x_t, t, cond_val)
-        return float(np.mean((eps - eps_pred) ** 2))
+        # 前向（含缓存）
+        inp = np.concatenate([x_t, [t / self.config.num_timesteps], [cond_val]])
+        h = np.maximum(0, inp @ self.W1 + self.b1)
+        eps_pred = h @ self.W2 + self.b2
+        loss = float(np.mean((eps - eps_pred) ** 2))
+        # 反向传播: ∂L/∂params
+        grad_out = 2.0 * (eps_pred - eps) / eps.size
+        grad_W2 = np.outer(h, grad_out)
+        grad_b2 = grad_out
+        grad_h = grad_out @ self.W2.T * (h > 0)
+        grad_W1 = np.outer(inp, grad_h)
+        grad_b1 = grad_h
+        # Adam 更新（来源: Kingma & Ba 2015 ICLR）
+        self._ddpm_t += 1
+        b1_, b2_, lr = 0.9, 0.999, self.config.learning_rate
+        grads = {"W1": grad_W1, "b1": grad_b1, "W2": grad_W2, "b2": grad_b2}
+        for name, g in grads.items():
+            self._ddpm_m[name] = b1_ * self._ddpm_m[name] + (1 - b1_) * g
+            self._ddpm_v[name] = b2_ * self._ddpm_v[name] + (1 - b2_) * g * g
+            m_hat = self._ddpm_m[name] / (1 - b1_**self._ddpm_t)
+            v_hat = self._ddpm_v[name] / (1 - b2_**self._ddpm_t)
+            cur = {"W1": self.W1, "b1": self.b1, "W2": self.W2, "b2": self.b2}[name]
+            new = cur - lr * m_hat / (np.sqrt(v_hat) + 1e-8)
+            setattr(self, name, new)
+        return loss
 
     def design(self, target_spec: dict) -> dict:
         """执行 Diffusion 逆向设计。
@@ -698,13 +730,14 @@ class DiffusionInverseDesigner:
             shape[self.h // 4 : 3 * self.h // 4, :] = 1.0
             shape += rng.normal(0, 0.1, self.config.grid_size)
             train_shapes.append(np.clip(shape, 0, 1))
-        # 简化训练：计算损失（演示训练过程）
+        # 训练噪声预测网络（修复 P0-A: 原仅计算损失不更新参数）
         history: list[float] = []
-        for _ in range(5):
+        for ep in range(5):
+            ep_loss = 0.0
             for shape in train_shapes:
                 t = int(rng.integers(0, self.config.num_timesteps))
-                _ = self.compute_loss(shape, t)
-            history.append(0.0)
+                ep_loss += self.train_step(shape, t, rng)
+            history.append(float(ep_loss / len(train_shapes)))
         # 反向扩散生成（稀疏步数加速）
         x_t = rng.standard_normal(self.config.grid_size)
         step = max(1, self.config.num_timesteps // 10)
