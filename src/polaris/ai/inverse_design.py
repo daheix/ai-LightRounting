@@ -358,39 +358,28 @@ class GANInverseDesigner:
         self._adam_init()
 
     def _adam_init(self) -> None:
-        """初始化 Adam 优化器状态。"""
-        self._adam_m = {n: np.zeros_like(p) for n, p in self._get_params().items()}
-        self._adam_v = {n: np.zeros_like(p) for n, p in self._get_params().items()}
+        """初始化 Adam 优化器状态（G/D 参数分别管理）。"""
+        names = ["G_W1", "G_b1", "G_W2", "G_b2", "D_W1", "D_b1", "D_W2", "D_b2"]
+        self._adam_m = {n: np.zeros_like(getattr(self, n)) for n in names}
+        self._adam_v = {n: np.zeros_like(getattr(self, n)) for n in names}
         self._adam_t = 0
 
-    def _get_params(self) -> dict:
-        """获取所有参数。"""
-        return {
-            "G_W1": self.G_W1,
-            "G_b1": self.G_b1,
-            "G_W2": self.G_W2,
-            "G_b2": self.G_b2,
-            "D_W1": self.D_W1,
-            "D_b1": self.D_b1,
-            "D_W2": self.D_W2,
-            "D_b2": self.D_b2,
-        }
-
     def _adam_update(self, grads: dict) -> None:
-        """Adam 优化器更新参数。
+        """Adam 优化器更新（仅更新 grads 中提供的参数）。
 
         来源: Kingma & Ba 2015 ICLR "Adam: A Method for Stochastic Optimization"
         """
         self._adam_t += 1
         beta1, beta2, eps = self.config.beta1, 0.999, 1e-8
         lr = self.config.learning_rate
-        params = self._get_params()
-        for name in params:
-            self._adam_m[name] = beta1 * self._adam_m[name] + (1 - beta1) * grads[name]
-            self._adam_v[name] = beta2 * self._adam_v[name] + (1 - beta2) * grads[name] ** 2
+        for name, grad in grads.items():
+            if name not in self._adam_m:
+                raise KeyError(f"未知参数 {name}")
+            self._adam_m[name] = beta1 * self._adam_m[name] + (1 - beta1) * grad
+            self._adam_v[name] = beta2 * self._adam_v[name] + (1 - beta2) * grad**2
             m_hat = self._adam_m[name] / (1 - beta1**self._adam_t)
             v_hat = self._adam_v[name] / (1 - beta2**self._adam_t)
-            setattr(self, name, params[name] - lr * m_hat / (np.sqrt(v_hat) + eps))
+            setattr(self, name, getattr(self, name) - lr * m_hat / (np.sqrt(v_hat) + eps))
 
     def generate(self, z: np.ndarray) -> np.ndarray:
         """生成器：噪声 → 形状。
@@ -417,9 +406,10 @@ class GANInverseDesigner:
         return float(score[0])
 
     def train_step(self, real_shapes: list) -> dict:
-        """一步 WGAN-GP 训练。
+        """一步 WGAN-GP 训练（含真实反向传播 + Adam 参数更新）。
 
         来源: Gulrajani et al. 2017 NeurIPS（WGAN-GP）
+        修复 P0-A: 原实现仅计算损失未调用 backward/step，参数从不更新。
 
         Args:
             real_shapes: 真实形状列表 [(H, W), ...]。
@@ -428,43 +418,78 @@ class GANInverseDesigner:
             训练损失字典 {d_loss, g_loss, gp}。
         """
         rng = np.random.default_rng()
-        batch_size = len(real_shapes)
-        real_batch = np.array([s.flatten() for s in real_shapes])
-        d_loss_total = 0.0
-        gp_total = 0.0
-        # 训练 Discriminator（5 次，WGAN 策略）
+        bs = len(real_shapes)
+        real = np.array([s.flatten() for s in real_shapes])  # [bs, n]
+        d_loss_sum = 0.0
+        gp_sum = 0.0
+        lam = 10.0  # GP 权重（来源: Gulrajani 2017 默认 λ=10）
+        # ===== 判别器训练（WGAN: 5 次 critic 更新）=====
         for _ in range(5):
-            z = rng.standard_normal((batch_size, self.config.latent_dim))
-            fake_batch = self.generate(z)
-            if fake_batch.ndim == 2:
-                fake_batch = fake_batch[np.newaxis, :]
-            fake_flat = fake_batch.reshape(batch_size, -1)
-            d_real = np.array([self.discriminate(s.reshape(self.h, self.w)) for s in real_batch])
-            d_fake = np.array([self.discriminate(s) for s in fake_flat])
+            z = rng.standard_normal((bs, self.config.latent_dim))
+            # G 前向（detach，不更新 G）
+            hg = np.maximum(0, z @ self.G_W1 + self.G_b1)
+            fake = 1.0 / (1.0 + np.exp(-(hg @ self.G_W2 + self.G_b2)))
+            fake_f = fake.reshape(bs, -1)  # [bs, n]
+            # D 前向（real + fake，缓存中间值）
+            hr = np.maximum(0, real @ self.D_W1 + self.D_b1)
+            d_real = hr @ self.D_W2 + self.D_b2  # [bs, 1]
+            hf = np.maximum(0, fake_f @ self.D_W1 + self.D_b1)
+            d_fake = hf @ self.D_W2 + self.D_b2
             d_loss = float(np.mean(d_fake) - np.mean(d_real))
-            # 梯度惩罚 GP（WGAN-GP 核心）
-            eps = rng.uniform(0, 1, (batch_size, 1))
-            interp = eps * real_batch + (1 - eps) * fake_flat
-            interp_shapes = interp.reshape(batch_size, self.h, self.w)
-            gp = 0.0
-            for i in range(batch_size):
-                d_interp = self.discriminate(interp_shapes[i])
-                perturb = interp[i].copy()
-                perturb[0] += 1e-4
-                d_perturb = self.discriminate(perturb.reshape(self.h, self.w))
-                grad_norm = abs(d_perturb - d_interp) / 1e-4
-                gp += (grad_norm - 1.0) ** 2
-            gp = float(gp / batch_size)
-            d_loss_total += d_loss + 10.0 * gp
-            gp_total += gp
-        # 训练 Generator
-        z = rng.standard_normal((batch_size, self.config.latent_dim))
-        fake_batch = self.generate(z)
-        if fake_batch.ndim == 2:
-            fake_batch = fake_batch[np.newaxis, :]
-        fake_flat = fake_batch.reshape(batch_size, -1)
-        g_loss = float(-np.mean([self.discriminate(s) for s in fake_flat]))
-        return {"d_loss": d_loss_total / 5.0, "g_loss": g_loss, "gp": gp_total / 5.0}
+            # D 主损失反向: ∂(mean(D(fake))-mean(D(real)))/∂D_params
+            gf = np.ones_like(d_fake) / bs
+            gr = -np.ones_like(d_real) / bs
+            gW2 = hf.T @ gf + hr.T @ gr
+            gb2 = gf.sum(0) + gr.sum(0)
+            gW1 = (gf @ self.D_W2.T * (hf > 0)).T @ fake_f
+            gW1 += (gr @ self.D_W2.T * (hr > 0)).T @ real
+            gb1 = (gf @ self.D_W2.T * (hf > 0)).sum(0)
+            gb1 += (gr @ self.D_W2.T * (hr > 0)).sum(0)
+            # 梯度惩罚 GP（解析梯度，来源: Gulrajani 2017 Eq.(3)）
+            eps_ = rng.uniform(0, 1, (bs, 1))
+            interp = eps_ * real + (1 - eps_) * fake_f
+            hi = np.maximum(0, interp @ self.D_W1 + self.D_b1)
+            mask_i = (hi > 0).astype(np.float64)
+            w2_col = self.D_W2[:, 0]  # [hidden]
+            gw = mask_i * w2_col  # [bs, hidden]
+            g_all = gw @ self.D_W1.T  # [bs, n] = ∇_x D per sample
+            g_norm = np.linalg.norm(g_all, axis=1)  # [bs]
+            gp_val = float(np.mean((g_norm - 1.0) ** 2))
+            gn_safe = np.where(g_norm > 1e-12, g_norm, 1e-12)
+            beta = 2.0 * (g_norm - 1.0) / gn_safe  # [bs]
+            # ∂GP/∂D_W1 = mean_i β_i·outer(w2⊙mask_i, g_i)
+            gp_gW1 = (gw * beta[:, None]).T @ g_all / bs  # [hidden, n]
+            # ∂GP/∂D_W2 = mean_i β_i·mask_i·(W1·g_i)
+            w1_g = g_all @ self.D_W1  # [bs, hidden]
+            gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs
+            # D 参数更新（主损失 + λ·GP）
+            self._adam_update({
+                "D_W1": gW1 + lam * gp_gW1, "D_b1": gb1,
+                "D_W2": gW2 + lam * gp_gW2, "D_b2": gb2,
+            })
+            d_loss_sum += d_loss + lam * gp_val
+            gp_sum += gp_val
+        # ===== 生成器训练: g_loss = -mean(D(G(z))) =====
+        z = rng.standard_normal((bs, self.config.latent_dim))
+        hg = np.maximum(0, z @ self.G_W1 + self.G_b1)
+        sig = 1.0 / (1.0 + np.exp(-(hg @ self.G_W2 + self.G_b2)))
+        fake_out = sig.reshape(bs, -1)
+        hd = np.maximum(0, fake_out @ self.D_W1 + self.D_b1)
+        d_fake_g = hd @ self.D_W2 + self.D_b2
+        g_loss = float(-np.mean(d_fake_g))
+        # 反向: -mean(D(G(z))) → D(fixed) → G
+        grad_d = -np.ones_like(d_fake_g) / bs
+        grad_fake = (grad_d @ self.D_W2.T * (hd > 0)) @ self.D_W1.T  # [bs, n]
+        grad_pre = grad_fake * sig * (1 - sig)  # sigmoid 反向
+        gG_W2 = hg.T @ grad_pre
+        gG_b2 = grad_pre.sum(0)
+        grad_hg = (grad_pre @ self.G_W2.T) * (hg > 0)
+        gG_W1 = z.T @ grad_hg
+        gG_b1 = grad_hg.sum(0)
+        self._adam_update({
+            "G_W1": gG_W1, "G_b1": gG_b1, "G_W2": gG_W2, "G_b2": gG_b2,
+        })
+        return {"d_loss": d_loss_sum / 5.0, "g_loss": g_loss, "gp": gp_sum / 5.0}
 
     def design(self, target_spec: dict) -> dict:
         """执行 GAN 逆向设计。
