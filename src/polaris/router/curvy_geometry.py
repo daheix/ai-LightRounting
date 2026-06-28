@@ -92,31 +92,42 @@ def _generate_euler_bend(
 
     保证欧拉曲线最小曲率半径 >= radius_um（SiEPIC EBeam PDK 约束）。
     若两点距离过近导致缩放后半径不足，则放大 radius_um 到满足约束的值。
-    来源: LiDAR ISPD'25 §3.2; SiEPIC EBeam PDK bend_euler
-      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+    弧长公式（clothoid 数学定义，单段 0→1/R）:
+        k(s) = s / (R*L)，θ = L/(2R)，故 L = 2*R*θ
+        对 90° 弯曲 (θ=π/2): L = π*R
+
+    来源:
+    - LiDAR ISPD'25 §3.2: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+    - SiEPIC EBeam PDK bend_euler: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Flexcompute Tidy3D clothoid 公式 RL=A², θ=L/(2R):
+      https://docs.flexcompute.com/projects/tidy3d/en/v2.9.2/notebooks/EulerWaveguideBend.html
     """
     sx, sy = start
     ex, ey = end
     angle_in = math.atan2(ey - sy, ex - sx) if abs(ex - sx) > 1e-9 else math.pi / 2
     total_angle = math.pi / 2
-    # 欧拉曲线长度 L = R * sqrt(total_angle)（clothoid 总长公式，来源: LiDAR ISPD'25 §3.2）
+    # 单段 clothoid 弧长: L = 2*R*θ（k 从 0 线性增至 1/R 时恰好转过 θ）
     #
     # *创新*：终点位移近似系数 0.6（经验近似，非文献直接引用）
     # 创新逻辑:
     # - Euler/clothoid 弯曲终点位移无简单解析解，需 Fresnel 积分 ∫cos(s²/(2RL))ds
-    # - 对 90° 弯曲（θ=π/2），数值积分得位移/L ≈ 0.596
+    # - 对 90° 单段 clothoid（θ=π/2，L=π*R），数值积分得位移/L ≈ 0.596
     # - 取 0.6 作为保守上界，用于缩放预判：当目标距离 < L*0.6 时放大半径 R，
     #   保证缩放后曲率半径 >= 约束值
     # - 该系数仅用于布线器半径自适应调整，不影响最终弯曲几何精度
     #   （最终几何由 _euler_raw_points 数值积分生成）
     # 支持理论: Clothoid 曲线性质（曲率线性变化），Fresnel 积分数值解
+    #           A² = R*L，θ = L/(2R)（来源: Flexcompute Tidy3D）
     # 对标: KLayout/gdsfactory euler bend 自动半径调整
-    actual_dist_approx = radius_um * math.sqrt(total_angle) * 0.6
+    L = 2.0 * radius_um * total_angle
+    actual_dist_approx = L * 0.6
     target_dist = math.hypot(ex - sx, ey - sy)
     if target_dist < actual_dist_approx and target_dist > 1e-9:
         # 放大 radius_um 使 actual_dist_approx = target_dist，保证 scale=1
-        radius_um = target_dist / (math.sqrt(total_angle) * 0.6)
-    L = radius_um * math.sqrt(total_angle)
+        # 反解: target_dist = 0.6 * 2 * R * θ → R = target_dist / (1.2 * θ)
+        radius_um = target_dist / (2.0 * total_angle * 0.6)
+        L = 2.0 * radius_um * total_angle
     pts = _euler_raw_points(start, angle_in, L, radius_um, n_points)
     if pts:
         return _rescale_euler_points(sx, sy, ex, ey, pts)
