@@ -28,14 +28,11 @@ A·E = λ·E，其中 λ = k₀²n_eff²，用 numpy.linalg.eigh 求解实对称
 
 from __future__ import annotations
 
-import logging
 from dataclasses import dataclass
 
 import numpy as np
 
 from polaris.sim.lumerical_constants import _C0, _N_SILICON, _N_SIO2
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -288,8 +285,15 @@ class ModeSolver:
         h_eff = height * k0 + np.pi / core_index
         n_eff_sq = core_index**2 - (np.pi / w_eff) ** 2 - (np.pi / h_eff) ** 2
         if n_eff_sq < cladding_index**2:
-            # 截止条件：n_eff < n_clad，模式不再导模
-            return cladding_index
+            # R03 禁止 fall-back：截止条件 n_eff < n_clad 表示模式不再导模，
+            # 禁止返回 cladding_index 假数据让程序"跑通"，应告警退出。
+            msg = (
+                f"模式截止：n_eff²={n_eff_sq:.6e} < n_clad²={cladding_index**2:.6e}"
+                f"（w={width}μm, h={height}μm, λ={wl}μm, "
+                f"n_core={core_index}, n_clad={cladding_index}），"
+                f"波导尺寸过小或波长过长导致模式不导模。"
+            )
+            raise ValueError(msg)
         return float(np.sqrt(n_eff_sq))
 
     def compute_dispersion(self, wavelengths: list, width: float) -> dict:
@@ -308,9 +312,15 @@ class ModeSolver:
         n_effs = np.array(
             [self.compute_neff(width, _N_SILICON, _N_SIO2, wl) for wl in wls]
         )
-        # 数值二阶导数
+        # 数值二阶导数需要至少 3 个波长点（中心差分）
         if len(wls) < 3:
-            return {"wavelengths": wls, "dispersion": np.zeros_like(wls), "n_eff": n_effs}
+            # R03 禁止 fall-back：波长点数 < 3 无法计算二阶导数，
+            # 禁止返回零色散假数据让程序"跑通"，应告警退出。
+            msg = (
+                f"计算色散需要至少 3 个波长点（中心差分），实际 {len(wls)} 个。"
+                f"请增加波长采样密度。"
+            )
+            raise ValueError(msg)
         d2_n = np.zeros_like(n_effs)
         dwl = wls[1] - wls[0]
         d2_n[1:-1] = (n_effs[:-2] - 2.0 * n_effs[1:-1] + n_effs[2:]) / dwl**2
@@ -341,16 +351,24 @@ class ModeSolver:
         m1 = np.asarray(mode1, dtype=np.float64)
         m2 = np.asarray(mode2, dtype=np.float64)
         if m1.shape != m2.shape:
-            # 形状不一致时，裁剪到较小尺寸
-            nx = min(m1.shape[0], m2.shape[0])
-            ny = min(m1.shape[1], m2.shape[1])
-            m1 = m1[:nx, :ny]
-            m2 = m2[:nx, :ny]
+            # R03 禁止 fall-back：形状不一致时禁止静默裁剪（丢弃数据），
+            # 应告警退出，由调用方负责对齐网格。
+            msg = (
+                f"模式剖面形状不匹配：m1={m1.shape} vs m2={m2.shape}，"
+                f"请在相同网格上计算两个模式后再次调用。"
+            )
+            raise ValueError(msg)
         dA = self.dx * self.dy
         num = np.sum(m1 * m2) * dA
         den1 = np.sqrt(np.sum(np.abs(m1) ** 2) * dA)
         den2 = np.sqrt(np.sum(np.abs(m2) ** 2) * dA)
         if den1 < 1e-15 or den2 < 1e-15:
-            return 0.0
+            # R03 禁止 fall-back：模式范数为 0 表示模式剖面全零（无效输入），
+            # 禁止返回 0.0 假数据让程序"跑通"，应告警退出。
+            msg = (
+                f"模式剖面范数为零（den1={den1:.3e}, den2={den2:.3e}），"
+                f"模式剖面全零或归一化失败，请检查模式求解结果。"
+            )
+            raise ValueError(msg)
         overlap = np.abs(num) / (den1 * den2)
         return float(min(overlap**2, 1.0))

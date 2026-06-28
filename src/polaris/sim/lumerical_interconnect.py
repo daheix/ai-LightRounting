@@ -202,7 +202,18 @@ class INTERCONNECTSimulator:
         rx = np.asarray(rx_bits)
         n = min(len(tx), len(rx))
         if n == 0:
-            return 0.5
+            # R03 禁止 fall-back：无比特可比对时禁止返回 0.5 假数据，
+            # 应告警退出，由调用方检查输入。
+            msg = (
+                f"compute_ber 输入为空（tx={len(tx)}, rx={len(rx)}），"
+                f"无比特可比对，请检查输入比特序列。"
+            )
+            raise ValueError(msg)
+        if len(tx) != len(rx):
+            logger.warning(
+                "compute_ber 输入长度不一致（tx=%d, rx=%d），按较短序列对齐计算。",
+                len(tx), len(rx),
+            )
         errors = np.sum(tx[:n] != rx[:n])
         return float(errors) / float(n)
 
@@ -236,7 +247,17 @@ class INTERCONNECTSimulator:
             for j in range(spp - 1):
                 if (row[j] - threshold) * (row[j + 1] - threshold) < 0:
                     crossings.append(j)
-        eye_width = float(np.std(crossings)) if len(crossings) > 1 else float(spp) / 2.0
+        if len(crossings) < 2:
+            # R03 禁止 fall-back：交叉点 < 2 无法统计眼宽标准差，
+            # 禁止返回 spp/2 假数据让程序"跑通"，应告警退出。
+            msg = (
+                f"眼图过零交叉点数 {len(crossings)} < 2，无法计算眼宽，"
+                f"可能原因：n_bits={n_bits} 过小、信号全 0/全 1、"
+                f"或信号未跨越阈值 threshold={threshold:.3e}。"
+                f"请增加比特数或检查信号质量。"
+            )
+            raise ValueError(msg)
+        eye_width = float(np.std(crossings))
         return {
             "eye_data": eye_data,
             "eye_height": eye_height,
@@ -260,7 +281,13 @@ class INTERCONNECTSimulator:
         signal_power = float(np.mean(np.abs(np.asarray(signal)) ** 2))
         noise_power = float(np.mean(np.abs(np.asarray(noise)) ** 2))
         if noise_power < 1e-15:
-            return 1e15
+            # R03 禁止 fall-back：噪声功率 ≈ 0 时 OSNR 无定义（除零），
+            # 禁止返回 1e15 假数据让程序"跑通"，应告警退出。
+            msg = (
+                f"compute_osnr 噪声功率 {noise_power:.3e} ≈ 0，OSNR 无定义，"
+                f"请检查噪声波形是否全零或幅度过小。"
+            )
+            raise ValueError(msg)
         return signal_power / noise_power
 
     def run_link_simulation(self, link_config: dict) -> dict:

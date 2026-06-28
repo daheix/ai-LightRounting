@@ -37,6 +37,24 @@ from polaris.sim.lumerical_constants import _EPS0, _EPS_SI, _KB, _Q
 
 logger = logging.getLogger(__name__)
 
+# Soref & Bennett 1987 硅等离子色散系数 @ λ=1550nm
+# 来源 1: Soref RA, Bennett BR, "Electrooptical effects in silicon,"
+#         IEEE J. Quantum Electron. 23(1), 123-129 (1987)
+#         https://ieeexplore.ieee.org/document/1138738
+# 来源 2: Ansys Lumerical 官方文档（显式列出系数值）
+#         https://optics.ansys.com/hc/en-us/articles/360034382494
+# 来源 3: Reed GT, "Silicon optical modulators," Nature Photonics 4, 518-526 (2010)
+#         https://doi.org/10.1038/nphoton.2010.179
+# 公式: Δn = dn_Ap·(ΔP)^dn_Ep + dn_An·(ΔN)^dn_En
+#   线性近似（dn_Ep = dn_En = 1，Soref & Bennett 1987 原始形式）:
+#   Δn = -8.5e-18·ΔP_h - 8.8e-22·ΔN_e  (ΔN/ΔP 单位 cm⁻³, Δn 无量纲)
+#   注：空穴贡献系数比电子大 ~4 个数量级，耗尽型调制器中空穴效应主导。
+_SOREF_DN_AN = -8.8e-22  # 电子系数 (cm³)，@ 1550nm
+_SOREF_DN_AP = -8.5e-18  # 空穴系数 (cm³)，@ 1550nm
+_URL_SOREF_1987 = "https://ieeexplore.ieee.org/document/1138738"
+_URL_LUMERICAL_PLASMA = "https://optics.ansys.com/hc/en-us/articles/360034382494"
+_URL_REED_2010 = "https://doi.org/10.1038/nphoton.2010.179"
+
 
 @dataclass
 class CHARGEConfig:
@@ -120,8 +138,16 @@ class CHARGESimulator:
         # 反向偏置时 V_a < 0，V_bi - V_a > V_bi，耗尽区变宽
         v_total = v_bi - va
         if v_total <= 0:
-            # 强正向偏置，耗尽区消失
-            return 0.0
+            # R03 禁止 fall-back：强正向偏置使耗尽区消失（V_a ≥ V_bi），
+            # 此时 PN 结处于正向导通区，耗尽近似不再成立，
+            # 禁止返回 0.0 假数据让程序"跑通"，应告警退出。
+            msg = (
+                f"compute_depletion_width 耗尽区消失：v_total={v_total:.4e} V ≤ 0"
+                f"（V_bi={v_bi:.4e} V, V_a={va:.4e} V），"
+                f"外加正向偏置 ≥ 内建电势，PN 结进入正向导通区，"
+                f"耗尽近似不成立，请使用正向导通模型或降低正向偏置。"
+            )
+            raise ValueError(msg)
         w = np.sqrt(
             2.0 * self.eps * v_total / _Q * (1.0 / self.N_A + 1.0 / self.N_D)
         )
@@ -152,7 +178,15 @@ class CHARGESimulator:
         """
         w = self.compute_depletion_width(va)
         if w < 1e-12:
-            return 0.0
+            # R03 禁止 fall-back：耗尽区宽度 < 1e-12 m（亚原子尺度，非物理），
+            # 禁止返回 0.0 假数据让程序"跑通"，应告警退出。
+            # 该情形通常由 compute_depletion_width 即将 raise 的边界条件触发。
+            msg = (
+                f"compute_junction_capacitance 耗尽区宽度 {w:.3e} m < 1e-12 m，"
+                f"非物理值（亚原子尺度），请检查偏置电压 V_a={va} V "
+                f"是否接近或超过内建电势。"
+            )
+            raise ValueError(msg)
         return float(self.eps * area / w)
 
     def compute_modulator_bandwidth(self, r_series: float, c_j: float) -> float:
@@ -169,7 +203,15 @@ class CHARGESimulator:
             3dB 带宽（Hz）。
         """
         if r_series * c_j < 1e-30:
-            return 1e15
+            # R03 禁止 fall-back：RC 时间常数 < 1e-30 s（非物理值），
+            # 禁止返回 1e15 Hz 假数据让程序"跑通"，应告警退出。
+            # 该情形通常由零电阻或零电容的退化输入触发。
+            msg = (
+                f"compute_modulator_bandwidth RC={r_series * c_j:.3e} s < 1e-30 s，"
+                f"非物理值（R={r_series:.3e} Ω, C={c_j:.3e} F），"
+                f"请检查串联电阻与结电容是否为零或退化。"
+            )
+            raise ValueError(msg)
         return float(1.0 / (2.0 * np.pi * r_series * c_j))
 
     def solve_pn_junction(self, width: float, length: float) -> dict:
