@@ -13,12 +13,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from polaris.sim.adjoint_optimizer import (
-    AdjointConfig,
-    AdjointOptimizer,
+from polaris.sim.shape_adjoint_optimizer import (
+    ShapeAdjointConfig,
+    ShapeAdjointOptimizer,
     AnalyticalWaveguideCoupler,
     OptimizationBackend,
-    OptimizationResult,
+    ShapeOptimizationResult,
     ParameterizedGeometry,
     run_adjoint_optimization,
 )
@@ -34,12 +34,12 @@ class TestOptimizationBackend:
         assert OptimizationBackend.ANALYTICAL.value == "analytical"
 
 
-class TestAdjointConfig:
-    """AdjointConfig 测试。"""
+class TestShapeAdjointConfig:
+    """ShapeAdjointConfig 测试。"""
 
     def test_defaults(self) -> None:
         """默认配置应符合 lumopt 默认值。"""
-        config = AdjointConfig()
+        config = ShapeAdjointConfig()
         assert config.max_iterations == 100
         assert config.learning_rate == 0.01
         assert config.convergence_threshold == 1e-6
@@ -50,7 +50,7 @@ class TestAdjointConfig:
 
     def test_custom(self) -> None:
         """应支持自定义配置。"""
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=50,
             learning_rate=0.001,
             optimizer="lbfgs",
@@ -62,12 +62,12 @@ class TestAdjointConfig:
         assert config.backend == OptimizationBackend.MEEP
 
 
-class TestOptimizationResult:
-    """OptimizationResult 测试。"""
+class TestShapeOptimizationResult:
+    """ShapeOptimizationResult 测试。"""
 
     def test_defaults(self) -> None:
         """默认值应正确。"""
-        result = OptimizationResult(
+        result = ShapeOptimizationResult(
             optimal_params=np.array([1.0]),
             optimal_fom=0.5,
         )
@@ -185,8 +185,8 @@ class TestAnalyticalWaveguideCoupler:
         assert fom_small_gap != fom_large_gap
 
 
-class TestAdjointOptimizer:
-    """AdjointOptimizer 测试。"""
+class TestShapeAdjointOptimizer:
+    """ShapeAdjointOptimizer 测试。"""
 
     def test_optimize_improves_fom(self) -> None:
         """优化应提升 FoM。"""
@@ -195,27 +195,27 @@ class TestAdjointOptimizer:
             initial_params=np.array([1.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=200,
             learning_rate=0.5,
             convergence_threshold=1e-8,
         )
-        optimizer = AdjointOptimizer(geo, sim, config)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         initial_fom = sim.compute_figure_of_merit(geo.get_params())
         result = optimizer.optimize()
         assert result.optimal_fom >= initial_fom
 
     def test_optimize_returns_result(self) -> None:
-        """优化应返回 OptimizationResult。"""
+        """优化应返回 ShapeOptimizationResult。"""
         sim = AnalyticalWaveguideCoupler()
         geo = ParameterizedGeometry(
             initial_params=np.array([5.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(max_iterations=10)
-        optimizer = AdjointOptimizer(geo, sim, config)
+        config = ShapeAdjointConfig(max_iterations=10)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
-        assert isinstance(result, OptimizationResult)
+        assert isinstance(result, ShapeOptimizationResult)
         assert len(result.fom_history) == 10
         assert len(result.param_history) == 10
         assert result.iterations == 10
@@ -227,12 +227,12 @@ class TestAdjointOptimizer:
             initial_params=np.array([5.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=1000,
             learning_rate=0.001,  # 极小学习率，快速收敛
             convergence_threshold=1e-10,
         )
-        optimizer = AdjointOptimizer(geo, sim, config)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
         # 应在 max_iterations 前收敛或达到上限
         assert result.iterations <= 1000
@@ -244,12 +244,12 @@ class TestAdjointOptimizer:
             initial_params=np.array([5.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=50,
             optimizer="adam",
             learning_rate=0.1,
         )
-        optimizer = AdjointOptimizer(geo, sim, config)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
         assert result.backend_used == OptimizationBackend.ANALYTICAL
         assert len(result.fom_history) == 50
@@ -261,12 +261,12 @@ class TestAdjointOptimizer:
             initial_params=np.array([5.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=50,
             optimizer="lbfgs",  # 实际用梯度下降
             learning_rate=0.1,
         )
-        optimizer = AdjointOptimizer(geo, sim, config)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
         assert len(result.fom_history) == 50
 
@@ -277,8 +277,8 @@ class TestAdjointOptimizer:
             initial_params=np.array([5.0, 1.0]),
             bounds=[(0.1, 20.0), (0.01, 3.0)],
         )
-        config = AdjointConfig(max_iterations=50, learning_rate=10.0)
-        optimizer = AdjointOptimizer(geo, sim, config)
+        config = ShapeAdjointConfig(max_iterations=50, learning_rate=10.0)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
         # 最优参数应在边界内
         assert 0.1 <= result.optimal_params[0] <= 20.0
@@ -289,15 +289,15 @@ class TestRunAdjointOptimization:
     """run_adjoint_optimization 便捷函数测试。"""
 
     def test_convenience_function(self) -> None:
-        """便捷函数应与 AdjointOptimizer.optimize 等价。"""
+        """便捷函数应与 ShapeAdjointOptimizer.optimize 等价。"""
         sim = AnalyticalWaveguideCoupler()
         geo = ParameterizedGeometry(
             initial_params=np.array([5.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(max_iterations=20)
+        config = ShapeAdjointConfig(max_iterations=20)
         result = run_adjoint_optimization(geo, sim, config)
-        assert isinstance(result, OptimizationResult)
+        assert isinstance(result, ShapeOptimizationResult)
         assert len(result.fom_history) == 20
 
 
@@ -320,8 +320,8 @@ class TestCommercialGapReduction:
         grad = sim.compute_gradient(geo.get_params())
         assert grad.shape == (2,)
         # 4. 梯度下降优化
-        config = AdjointConfig(max_iterations=50, learning_rate=0.1)
-        optimizer = AdjointOptimizer(geo, sim, config)
+        config = ShapeAdjointConfig(max_iterations=50, learning_rate=0.1)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
         assert result.optimal_fom >= fom
         # 5. 约束处理
@@ -345,12 +345,12 @@ class TestCommercialGapReduction:
             initial_params=np.array([L_peak - 5.0, 0.5]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=500,
             learning_rate=0.5,
             convergence_threshold=1e-10,
         )
-        optimizer = AdjointOptimizer(geo, sim, config)
+        optimizer = ShapeAdjointOptimizer(geo, sim, config)
         result = optimizer.optimize()
         # 应接近峰值 FoM=1
         assert result.optimal_fom > 0.5
@@ -374,7 +374,7 @@ class TestCommercialGapReduction:
             initial_params=np.array([3.0, 2.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(max_iterations=100, learning_rate=0.2)
+        config = ShapeAdjointConfig(max_iterations=100, learning_rate=0.2)
         result = run_adjoint_optimization(geo, sim, config)
         # 可能在 max_iterations 前收敛
         assert result.iterations <= 100
@@ -388,7 +388,7 @@ class TestCommercialGapReduction:
             initial_params=np.array([1.0, 1.0]),
             bounds=[(0.1, 50.0), (0.01, 5.0)],
         )
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=200,
             learning_rate=0.5,
             convergence_threshold=1e-10,

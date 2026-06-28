@@ -13,11 +13,11 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from polaris.sim.adjoint_optimizer import (
-    AdjointConfig,
+from polaris.sim.shape_adjoint_optimizer import (
+    ShapeAdjointConfig,
     AnalyticalWaveguideCoupler,
     OptimizationBackend,
-    OptimizationResult,
+    ShapeOptimizationResult,
     ParameterizedGeometry,
     run_adjoint_optimization,
 )
@@ -236,13 +236,13 @@ class TestAnalyticalBackendIsIndependent:
             bounds=[(1.0, 20.0), (0.1, 3.0)],
         )
         backend = AnalyticalWaveguideCoupler()
-        config = AdjointConfig(
+        config = ShapeAdjointConfig(
             max_iterations=5,
             learning_rate=0.1,
             backend=OptimizationBackend.ANALYTICAL,
         )
         result = run_adjoint_optimization(geometry, backend, config)
-        assert isinstance(result, OptimizationResult)
+        assert isinstance(result, ShapeOptimizationResult)
         assert result.iterations > 0
         assert isinstance(result.optimal_fom, float)
 

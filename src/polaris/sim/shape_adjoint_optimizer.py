@@ -1,4 +1,10 @@
-"""Adjoint 逆向设计框架（P2-1，第31轮）。
+"""Adjoint 逆向设计框架（P2-1，第31轮；R09 单文件版本重构）。
+
+本模块为参数化几何 adjoint 优化器（lumopt PolygonParameterization 风格），
+与 inverse/topology_adjoint_optimizer.py（密度法拓扑）和
+sim/ai_inverse_design_adjoint.py（TMM 传输矩阵法）是三个不同的优化器，
+三者 API 不兼容，故 R09 重构中将本类由 AdjointOptimizer 改名为
+ShapeAdjointOptimizer 以消除命名冲突（R05 设计 Bug 修复）。
 
 对标 lumopt 开源 adjoint 逆向设计框架，实现基于 adjoint method 的
 光子器件参数优化，支持 MEEP/FDTD 后端，用于逆向设计超紧凑光子器件。
@@ -90,7 +96,7 @@ class ForwardSimulator(Protocol):
 
 
 @dataclass
-class AdjointConfig:
+class ShapeAdjointConfig:
     """Adjoint 优化配置。
 
     Attributes:
@@ -118,7 +124,7 @@ class AdjointConfig:
 
 
 @dataclass
-class OptimizationResult:
+class ShapeOptimizationResult:
     """优化结果。
 
     Attributes:
@@ -201,8 +207,8 @@ class ParameterizedGeometry:
             params[i + 1] = params[i]
 
 
-class AdjointOptimizer:
-    """Adjoint 优化器（P2-1，第31轮）。
+class ShapeAdjointOptimizer:
+    """参数化几何 Adjoint 优化器（P2-1，第31轮；R09 重构）。
 
     用 adjoint method 计算目标函数对设计参数的梯度，
     用 Adam 或 L-BFGS 优化参数，对标 lumopt 核心能力。
@@ -232,7 +238,7 @@ class AdjointOptimizer:
         self,
         geometry: ParameterizedGeometry,
         simulator: ForwardSimulator,
-        config: AdjointConfig | None = None,
+        config: ShapeAdjointConfig | None = None,
     ) -> None:
         """初始化 Adjoint 优化器。
 
@@ -243,17 +249,17 @@ class AdjointOptimizer:
         """
         self.geometry = geometry
         self.simulator = simulator
-        self.config = config or AdjointConfig()
+        self.config = config or ShapeAdjointConfig()
         # Adam 状态
         self._m: np.ndarray | None = None
         self._v: np.ndarray | None = None
         self._t = 0
 
-    def optimize(self) -> OptimizationResult:
+    def optimize(self) -> ShapeOptimizationResult:
         """执行 adjoint 优化。
 
         Returns:
-            OptimizationResult，含最优参数、FoM 历史等。
+            ShapeOptimizationResult，含最优参数、FoM 历史等。
         """
         params = self.geometry.get_params()
         fom_history: list[float] = []
@@ -284,7 +290,7 @@ class AdjointOptimizer:
             self.geometry.set_params(params)
             params = self.geometry.get_params()
 
-        return OptimizationResult(
+        return ShapeOptimizationResult(
             optimal_params=params,
             optimal_fom=fom_history[-1] if fom_history else 0.0,
             fom_history=fom_history,
@@ -417,8 +423,8 @@ class AnalyticalWaveguideCoupler:
 def run_adjoint_optimization(
     geometry: ParameterizedGeometry,
     simulator: ForwardSimulator,
-    config: AdjointConfig | None = None,
-) -> OptimizationResult:
+    config: ShapeAdjointConfig | None = None,
+) -> ShapeOptimizationResult:
     """便捷函数：执行 adjoint 优化。
 
     对标 lumopt `run_adjoint_optimization` 接口。
@@ -429,22 +435,22 @@ def run_adjoint_optimization(
         config: 优化配置（None 用默认）。
 
     Returns:
-        OptimizationResult。
+        ShapeOptimizationResult。
 
     来源:
         lumopt: https://github.com/chriskeraly/lumopt
     """
-    optimizer = AdjointOptimizer(geometry, simulator, config)
+    optimizer = ShapeAdjointOptimizer(geometry, simulator, config)
     return optimizer.optimize()
 
 
 __all__ = [
     "OptimizationBackend",
     "ForwardSimulator",
-    "AdjointConfig",
-    "OptimizationResult",
+    "ShapeAdjointConfig",
+    "ShapeOptimizationResult",
     "ParameterizedGeometry",
-    "AdjointOptimizer",
+    "ShapeAdjointOptimizer",
     "AnalyticalWaveguideCoupler",
     "run_adjoint_optimization",
 ]

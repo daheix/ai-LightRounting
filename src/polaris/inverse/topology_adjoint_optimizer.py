@@ -1,4 +1,10 @@
-"""伴随优化逆向设计 R28（密度法拓扑优化）。
+"""伴随优化逆向设计 R28（密度法拓扑优化；R09 单文件版本重构）。
+
+本模块为密度法拓扑优化器（JAX autograd + 锥形滤波 + sigmoid 投影），
+与 sim/shape_adjoint_optimizer.py（参数化几何）和
+sim/ai_inverse_design_adjoint.py（TMM 传输矩阵法）是三个不同的优化器，
+三者 API 不兼容，故 R09 重构中将本类由 AdjointOptimizer 改名为
+TopologyAdjointOptimizer 以消除命名冲突（R05 设计 Bug 修复）。
 
 对标 Tidy3D adjoint 拓扑优化 + lumopt 密度法。设计变量为像素化密度场 ρ∈[0,1]，
 经锥形滤波 + sigmoid 投影 + β 退火实现可制造二值化版图。
@@ -99,8 +105,8 @@ class OptimizerConfig:
 
 
 @dataclass
-class OptimizationResult:
-    """优化结果。
+class TopologyOptimizationResult:
+    """拓扑优化结果。
 
     Attributes:
         optimal_design: 最优设计密度场（二值化后 0/1）。
@@ -203,8 +209,8 @@ class ModeOverlapObjective:
         return self.overlap(e_out)
 
 
-class AdjointOptimizer:
-    """伴随优化逆向设计主控（密度法拓扑优化）。
+class TopologyAdjointOptimizer:
+    """密度法拓扑伴随优化器（R28；R09 重构）。
 
     对标 Tidy3D adjoint + lumopt 密度法，JAX autograd 计算梯度（与伴随方法等价）。
 
@@ -406,7 +412,7 @@ class AdjointOptimizer:
         v_hat = self._v / (1 - beta2**t)
         return rho_raw + lr * m_hat / (np.sqrt(v_hat) + eps)
 
-    def optimize(self) -> OptimizationResult:
+    def optimize(self) -> TopologyOptimizationResult:
         """执行伴随优化迭代，返回最优设计 + 历史。
 
         Raises:
@@ -448,7 +454,7 @@ class AdjointOptimizer:
             eta=self.config.eta,
         )
         optimal_design = (rho_final > 0.5).astype(np.float64)
-        return OptimizationResult(
+        return TopologyOptimizationResult(
             optimal_design=optimal_design,
             optimal_fom=fom_history[-1] if fom_history else 0.0,
             fom_history=fom_history,
@@ -523,7 +529,7 @@ def example_mmi_1x2() -> dict:
         e_in.astype(np.complex64), e_target.astype(np.complex64)
     )
     config = OptimizerConfig(n_iters=40, learning_rate=0.05, drc_weight=0.005)
-    optimizer = AdjointOptimizer(config, objective, design_shape=(h, w))
+    optimizer = TopologyAdjointOptimizer(config, objective, design_shape=(h, w))
     result = optimizer.optimize()
     return {
         "device": "MMI 1x2",
@@ -545,7 +551,7 @@ def example_grating_coupler() -> dict:
         e_in.astype(np.complex64), e_target.astype(np.complex64)
     )
     config = OptimizerConfig(n_iters=40, learning_rate=0.05, drc_weight=0.005)
-    optimizer = AdjointOptimizer(config, objective, design_shape=(h, w))
+    optimizer = TopologyAdjointOptimizer(config, objective, design_shape=(h, w))
     result = optimizer.optimize()
     return {
         "device": "Grating Coupler",
@@ -572,7 +578,7 @@ def example_mode_converter() -> dict:
     )
     objective = ModeOverlapObjective(e_in, e_target)
     config = OptimizerConfig(n_iters=40, learning_rate=0.05, drc_weight=0.005)
-    optimizer = AdjointOptimizer(config, objective, design_shape=(h, w))
+    optimizer = TopologyAdjointOptimizer(config, objective, design_shape=(h, w))
     result = optimizer.optimize()
     return {
         "device": "Mode Converter TE1->TE0",
@@ -583,9 +589,9 @@ def example_mode_converter() -> dict:
 
 __all__ = [
     "OptimizerConfig",
-    "OptimizationResult",
+    "TopologyOptimizationResult",
     "ModeOverlapObjective",
-    "AdjointOptimizer",
+    "TopologyAdjointOptimizer",
     "example_mmi_1x2",
     "example_grating_coupler",
     "example_mode_converter",

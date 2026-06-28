@@ -1,6 +1,6 @@
 """R28 伴随优化逆向设计模块测试（密度法拓扑优化）。
 
-测试 AdjointOptimizer 密度法伴随优化：JAX autograd 梯度（与伴随方法等价）、
+测试 TopologyAdjointOptimizer 密度法伴随优化：JAX autograd 梯度（与伴随方法等价）、
 锥形滤波、sigmoid 投影、β 退火、DRC 惩罚、MMI/光栅耦合器/模式转换器三标准器件、
 GDSII 导出。对标 Tidy3D adjoint + lumopt 拓扑优化核心能力。
 
@@ -24,8 +24,8 @@ import pytest
 
 os.environ.setdefault("JAX_PLATFORMS", "cpu")
 
-from polaris.inverse.adjoint_optimizer import (  # noqa: E402
-    AdjointOptimizer,
+from polaris.inverse.topology_adjoint_optimizer import (  # noqa: E402
+    TopologyAdjointOptimizer,
     ModeOverlapObjective,
     OptimizerConfig,
     example_grating_coupler,
@@ -41,7 +41,7 @@ def _make_optimizer(
     w: int = 12,
     n_iters: int = 20,
     drc_weight: float = 0.0,
-) -> AdjointOptimizer:
+) -> TopologyAdjointOptimizer:
     """构造测试用优化器（小网格 + 少迭代，加速测试）。"""
     sigma = 1.5
     x = np.arange(w) - (w - 1) / 2.0
@@ -55,7 +55,7 @@ def _make_optimizer(
     config = OptimizerConfig(
         n_iters=n_iters, learning_rate=0.05, drc_weight=drc_weight
     )
-    return AdjointOptimizer(config, objective, design_shape=(h, w))
+    return TopologyAdjointOptimizer(config, objective, design_shape=(h, w))
 
 
 class TestConfigValidation:

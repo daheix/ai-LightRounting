@@ -22,12 +22,12 @@ from __future__ import annotations
 
 import numpy as np
 
-from polaris.sim.adjoint_optimizer import (
-    AdjointConfig,
-    AdjointOptimizer,
+from polaris.sim.shape_adjoint_optimizer import (
+    ShapeAdjointConfig,
+    ShapeAdjointOptimizer,
     AnalyticalWaveguideCoupler,
     OptimizationBackend,
-    OptimizationResult,
+    ShapeOptimizationResult,
     ParameterizedGeometry,
     run_adjoint_optimization,
 )
@@ -68,12 +68,12 @@ class TestOptimizationBackend:
         assert OptimizationBackend("analytical") == OptimizationBackend.ANALYTICAL
 
 
-class TestAdjointConfig:
-    """AdjointConfig 配置测试。"""
+class TestShapeAdjointConfig:
+    """ShapeAdjointConfig 配置测试。"""
 
     def test_default_config(self) -> None:
         """默认配置。"""
-        cfg = AdjointConfig()
+        cfg = ShapeAdjointConfig()
         assert cfg.max_iterations == 100
         assert cfg.learning_rate == 0.01
         assert cfg.convergence_threshold == 1e-6
@@ -84,7 +84,7 @@ class TestAdjointConfig:
 
     def test_custom_config(self) -> None:
         """自定义配置。"""
-        cfg = AdjointConfig(
+        cfg = ShapeAdjointConfig(
             max_iterations=50,
             learning_rate=0.05,
             convergence_threshold=1e-7,
@@ -160,7 +160,7 @@ class TestParameterizedGeometry:
         assert result[0] == result[3]
 
 
-class TestAdjointOptimizerM1GradientConsistency:
+class TestShapeAdjointOptimizerM1GradientConsistency:
     """M1: 伴随梯度 vs 有限差分一致性测试。"""
 
     def test_analytical_coupler_gradient_fd_consistency(self) -> None:
@@ -210,7 +210,7 @@ class TestAdjointOptimizerM1GradientConsistency:
         assert np.allclose(grad, expected, rtol=1e-5)
 
 
-class TestAdjointOptimizerM2ParameterizedShape:
+class TestShapeAdjointOptimizerM2ParameterizedShape:
     """M2: 参数化形状梯度测试。"""
 
     def test_adjoint_optimization_adam(self) -> None:
@@ -219,11 +219,11 @@ class TestAdjointOptimizerM2ParameterizedShape:
         initial = np.array([2.0, 0.3])
         bounds = [(0.0, 20.0), (0.0, 2.0)]
         geom = ParameterizedGeometry(initial, bounds=bounds)
-        cfg = AdjointConfig(max_iterations=30, learning_rate=0.05, optimizer="adam")
+        cfg = ShapeAdjointConfig(max_iterations=30, learning_rate=0.05, optimizer="adam")
 
         result = run_adjoint_optimization(geom, coupler, cfg)
 
-        assert isinstance(result, OptimizationResult)
+        assert isinstance(result, ShapeOptimizationResult)
         assert result.iterations > 0
         assert len(result.fom_history) == result.iterations
         assert result.fom_history[-1] >= result.fom_history[0]
@@ -234,7 +234,7 @@ class TestAdjointOptimizerM2ParameterizedShape:
         initial = np.array([2.0, 0.3])
         bounds = [(0.0, 20.0), (0.0, 2.0)]
         geom = ParameterizedGeometry(initial, bounds=bounds)
-        cfg = AdjointConfig(max_iterations=50, learning_rate=0.01, optimizer="gradient")
+        cfg = ShapeAdjointConfig(max_iterations=50, learning_rate=0.01, optimizer="gradient")
 
         result = run_adjoint_optimization(geom, coupler, cfg)
 
@@ -242,12 +242,12 @@ class TestAdjointOptimizerM2ParameterizedShape:
         assert result.fom_history[-1] >= result.fom_history[0] - 1e-6
 
     def test_optimization_result_fields(self) -> None:
-        """OptimizationResult 字段完整性。"""
+        """ShapeOptimizationResult 字段完整性。"""
         coupler = AnalyticalWaveguideCoupler()
         initial = np.array([2.0, 0.3])
         bounds = [(0.0, 20.0), (0.0, 2.0)]
         geom = ParameterizedGeometry(initial, bounds=bounds)
-        cfg = AdjointConfig(max_iterations=10)
+        cfg = ShapeAdjointConfig(max_iterations=10)
 
         result = run_adjoint_optimization(geom, coupler, cfg)
 
@@ -265,7 +265,7 @@ class TestAdjointOptimizerM2ParameterizedShape:
         initial = np.array([2.0, 0.3])
         bounds = [(0.0, 20.0), (0.0, 2.0)]
         geom = ParameterizedGeometry(initial, bounds=bounds)
-        cfg = AdjointConfig(max_iterations=15)
+        cfg = ShapeAdjointConfig(max_iterations=15)
 
         result = run_adjoint_optimization(geom, coupler, cfg)
 
@@ -405,7 +405,7 @@ class TestTopologyOptimizerM3DensityUpdate:
         assert np.all((binary == 0.0) | (binary == 1.0))
 
 
-class TestAdjointOptimizerEdgeCases:
+class TestShapeAdjointOptimizerEdgeCases:
     """边界情况与异常测试。"""
 
     def test_convergence_stops_early(self) -> None:
@@ -417,8 +417,8 @@ class TestAdjointOptimizerEdgeCases:
                 return np.zeros_like(params)
 
         geom = ParameterizedGeometry(np.array([0.5, 0.5]))
-        cfg = AdjointConfig(max_iterations=100, convergence_threshold=1e10)
-        opt = AdjointOptimizer(geom, FlatSimulator(), cfg)
+        cfg = ShapeAdjointConfig(max_iterations=100, convergence_threshold=1e10)
+        opt = ShapeAdjointOptimizer(geom, FlatSimulator(), cfg)
         result = opt.optimize()
 
         assert result.iterations < 100
@@ -439,8 +439,8 @@ class TestAdjointOptimizerEdgeCases:
             np.array([0.5, 0.5]),
             bounds=[(0.0, 10.0), (0.0, 10.0)],
         )
-        cfg = AdjointConfig(max_iterations=10, convergence_threshold=0.0)
-        opt = AdjointOptimizer(geom, AlwaysChangingSimulator(), cfg)
+        cfg = ShapeAdjointConfig(max_iterations=10, convergence_threshold=0.0)
+        opt = ShapeAdjointOptimizer(geom, AlwaysChangingSimulator(), cfg)
         result = opt.optimize()
 
         assert result.iterations == 10
@@ -452,4 +452,4 @@ class TestAdjointOptimizerEdgeCases:
         initial = np.array([2.0, 0.3])
         geom = ParameterizedGeometry(initial)
         result = run_adjoint_optimization(geom, coupler)
-        assert isinstance(result, OptimizationResult)
+        assert isinstance(result, ShapeOptimizationResult)

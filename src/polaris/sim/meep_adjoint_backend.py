@@ -34,11 +34,11 @@ from typing import Any
 
 import numpy as np
 
-from polaris.sim.adjoint_optimizer import (
-    AdjointConfig,
+from polaris.sim.shape_adjoint_optimizer import (
     OptimizationBackend,
-    OptimizationResult,
     ParameterizedGeometry,
+    ShapeAdjointConfig,
+    ShapeOptimizationResult,
     run_adjoint_optimization,
 )
 
@@ -489,9 +489,9 @@ def create_meep_adjoint_backend(
 
 def run_meep_adjoint_optimization(
     geometry: ParameterizedGeometry,
-    config: AdjointConfig | None = None,
+    config: ShapeAdjointConfig | None = None,
     sim_config: MeepSimulationConfig | None = None,
-) -> OptimizationResult:
+) -> ShapeOptimizationResult:
     """便捷函数：使用 MEEP 后端执行 adjoint 优化。
 
     Args:
@@ -500,11 +500,11 @@ def run_meep_adjoint_optimization(
         sim_config: MEEP 仿真配置（None 用默认）。
 
     Returns:
-        OptimizationResult。
+        ShapeOptimizationResult。
     """
     backend = create_meep_adjoint_backend(sim_config=sim_config)
     if config is None:
-        config = AdjointConfig(backend=backend.backend_used)
+        config = ShapeAdjointConfig(backend=backend.backend_used)
     else:
         config.backend = backend.backend_used
     return run_adjoint_optimization(geometry, backend, config)
