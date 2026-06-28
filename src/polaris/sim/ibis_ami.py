@@ -1,16 +1,9 @@
 """P0-8: IBIS-AMI 模型 — SerDes 信道仿真与信号完整性分析。
 
-对齐 IBIS AMI v5.0 标准（https://www.ibis.org/ver5.0/ver5_0.txt），
-实现 IBIS 文件解析、AMI 参数解析、统计眼图分析、时域仿真。
+对齐 IBIS AMI v5.0 标准 (https://www.ibis.org/ver5.0/ver5_0.txt)，
+实现 IBIS/AMI 解析、统计眼图分析、时域仿真、CTLE/DFE/FFE 均衡。
 
-学术依据:
-- IBIS AMI v5.0 标准: https://www.ibis.org/ver5.0/ver5_0.txt
-- ADS IBIS AMI 模型设计: https://blog.csdn.net/qq_184-d41d8cd98f00b204e9800998ecf8427e
-- SerDes 信号完整性: K. G. McCaughey et al., "Statistical eye analysis for
-  high-speed serial links", IEEE Trans. CPMT 2013
-- CTLE/DFE/FFE 均衡: J. Proakis & M. Salehi, Digital Communications §10
-- 眼图 Q 因子: ITU-T G.977 (Q-factor BER)
-
+学术依据: McCaughey et al., IEEE Trans. CPMT 2013 / Proakis & Salehi §10 / ITU-T G.977
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
 """
 
@@ -61,9 +54,7 @@ def ber_to_q(ber: float) -> float:
     return (lo + hi) / 2
 
 
-# =============================================================================
 # 1. IBIS 文件解析器
-# =============================================================================
 
 class IBISKind(Enum):
     """IBIS 模型类型。"""
@@ -99,13 +90,7 @@ class IBISModel:
 
 
 class IBISParser:
-    """IBIS 文件 (.ibs) 解析器。
-
-    支持 IBIS v5.0 主要关键字：
-    [Component] / [Model] / [Pin] / [Voltage Range]
-    [Pullup] / [Pulldown] / [Ground Clamp] / [Power Clamp]
-    [Ramp] / [C_comp] 等。
-    """
+    """IBIS 文件 (.ibs) 解析器。支持 IBIS v5.0 主要关键字。"""
 
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
@@ -259,9 +244,7 @@ class IBISParser:
         return self.models
 
 
-# =============================================================================
 # 2. AMI 参数解析器
-# =============================================================================
 
 @dataclass
 class AMIParams:
@@ -368,42 +351,26 @@ class AMIParser:
         return params
 
 
-# =============================================================================
-# 3. 眼图分析器（统计模式）
-# =============================================================================
+# 3. 眼图分析器
 
 @dataclass
 class EyeDiagramResult:
-    """眼图分析结果。"""
-    # 眼图开口
-    eye_height_mv: float = 0.0  # mV
-    eye_width_ps: float = 0.0  # ps
+    """眼图分析结果。来源: ITU-T G.977"""
+    eye_height_mv: float = 0.0
+    eye_width_ps: float = 0.0
     eye_crossing_ratio: float = 0.5
-    # BER
     ber_estimated: float = 1e-12
     q_factor: float = 7.0
-    # 抖动/噪声
-    jitter_ps_rms: float = 0.0  # ps RMS
-    noise_mv_rms: float = 0.0  # mV RMS
-    # 直方图
+    jitter_ps_rms: float = 0.0
+    noise_mv_rms: float = 0.0
     histogram_top: NDArray[np.float64] | None = None
     histogram_bottom: NDArray[np.float64] | None = None
-    # 单位
-    ui_ps: float = 40.0  # UI (unit interval) in ps
+    ui_ps: float = 40.0
     n_samples: int = 0
 
 
 class EyeAnalyzer:
-    """统计眼图分析器。
-
-    使用高斯统计模型估算眼图开口和 BER：
-    眼高 = μ_top - μ_bottom - 6σ_total
-    眼宽 = UI - 6σ_jitter
-    Q = (μ_top - μ_bottom) / (σ_top + σ_bottom)
-    BER ≈ 0.5 * erfc(Q / √2)
-
-    来源: K. G. McCaughey et al., IEEE Trans. CPMT 2013
-    """
+    """统计眼图分析器。来源: McCaughey et al., IEEE Trans. CPMT 2013"""
 
     def __init__(self, ui_ps: float = 40.0) -> None:
         """初始化眼图分析器。
@@ -424,53 +391,22 @@ class EyeAnalyzer:
         tx_pre_cursor: float = 0.0,
         tx_post_cursor: float = 0.0,
     ) -> EyeDiagramResult:
-        """统计眼图估算。
-
-        使用解析模型估算眼图参数（不需要时域仿真数据）。
-        """
-        # 有效上升/下降时间
+        """统计眼图估算（解析模型）。"""
         tr_eff = np.sqrt(rise_time_ps ** 2 + (0.3 * self.ui_ps) ** 2)
         tf_eff = np.sqrt(fall_time_ps ** 2 + (0.3 * self.ui_ps) ** 2)
-
-        # 等效噪声带宽 (Hz)
         nbw_r = 0.35 / (tr_eff * 1e-12) if tr_eff > 0 else 1e12
         nbw_f = 0.35 / (tf_eff * 1e-12) if tf_eff > 0 else 1e12
         noise_scale = np.sqrt(nbw_r / nbw_f) if nbw_f > 0 else 1.0
-
-        # 均衡后噪声
         eq_gain = 1.0 + tx_pre_cursor / 10.0 + tx_post_cursor / 10.0
         total_noise = noise_mv_rms * noise_scale * eq_gain
-
-        # 眼高（6σ 统计裕量）
-        sigma_total = total_noise
-        eye_height = max(0.0, amplitude_mv - 6.0 * sigma_total)
-
-        # 眼宽（6σ 抖动）
-        sigma_jitter = jitter_ps_rms
-        eye_width = max(0.0, self.ui_ps - 6.0 * sigma_jitter)
-
-        # Q 因子
-        if sigma_total > 0:
-            q = amplitude_mv / (2.0 * sigma_total)
-        else:
-            q = 12.0
-
-        ber = q_to_ber(q)
-
-        result = EyeDiagramResult(
-            eye_height_mv=eye_height,
-            eye_width_ps=eye_width,
-            q_factor=q,
-            ber_estimated=ber,
-            jitter_ps_rms=jitter_ps_rms,
-            noise_mv_rms=total_noise,
-            ui_ps=self.ui_ps,
+        eye_height = max(0.0, amplitude_mv - 6.0 * total_noise)
+        eye_width = max(0.0, self.ui_ps - 6.0 * jitter_ps_rms)
+        q = amplitude_mv / (2.0 * total_noise) if total_noise > 0 else 12.0
+        return EyeDiagramResult(
+            eye_height_mv=eye_height, eye_width_ps=eye_width, q_factor=q,
+            ber_estimated=q_to_ber(q), jitter_ps_rms=jitter_ps_rms,
+            noise_mv_rms=total_noise, ui_ps=self.ui_ps,
         )
-        logger.info(
-            "眼图分析: 眼高=%.2fmV, 眼宽=%.2fps, Q=%.2f, BER=%.2e",
-            eye_height, eye_width, q, ber,
-        )
-        return result
 
     def analyze_from_waveform(
         self,
@@ -536,16 +472,10 @@ class EyeAnalyzer:
         )
 
 
-# =============================================================================
 # 4. 均衡器
-# =============================================================================
 
 class CTLE:
-    """连续时间线性均衡器（CTLE）。
-
-    对齐 IBIS AMI 接收机 CTLE 模型。
-    来源: J. Proakis & M. Salehi, Digital Communications §10.2
-    """
+    """连续时间线性均衡器。来源: Proakis & Salehi §10.2"""
 
     def __init__(self, dc_gain_db: float = 6.0, zero_hz: float = 5e9,
                  pole_hz: float = 15e9) -> None:
@@ -584,11 +514,7 @@ class CTLE:
 
 
 class DFE:
-    """判决反馈均衡器（DFE）。
-
-    对齐 IBIS AMI 接收机 DFE 模型。
-    来源: J. Proakis & M. Salehi, Digital Communications §10.3
-    """
+    """判决反馈均衡器。来源: Proakis & Salehi §10.3"""
 
     def __init__(self, n_taps: int = 5) -> None:
         """初始化 DFE。
@@ -616,10 +542,7 @@ class DFE:
 
 
 class FFE:
-    """前向反馈均衡器（FFE）。
-
-    对齐 IBIS AMI 发射机预加重/去加重模型。
-    """
+    """前向反馈均衡器（预加重/去加重）。"""
 
     def __init__(self, pre_cursor: float = 0.0, post_cursor: float = 0.0) -> None:
         """初始化 FFE。
@@ -649,9 +572,7 @@ class FFE:
         return out
 
 
-# =============================================================================
 # 5. SerDes 信道仿真器
-# =============================================================================
 
 @dataclass
 class ChannelResult:
@@ -664,13 +585,7 @@ class ChannelResult:
 
 
 class SerDesSimulator:
-    """SerDes 信道仿真器。
-
-    完整仿真链路：TX (FFE) → 频道 → RX (CTLE + DFE) → 眼图
-
-    *创新*: 将光子器件（AWG/调制器/探测器）的 S 参数模型
-    与电子 SerDes IBIS-AMI 模型联合仿真，实现光电协同仿真。
-    """
+    """SerDes 信道仿真器：TX (FFE) → 频道 → RX (CTLE + DFE) → 眼图。"""
 
     def __init__(
         self,
@@ -723,19 +638,6 @@ class SerDesSimulator:
         noise_mv_rms: float = 5.0,
         jitter_ps_rms: float = 1.0,
     ) -> ChannelResult:
-        """运行 SerDes 信道仿真。
-
-        Args:
-            n_bits: 仿真比特数。
-            amplitude_mv: 输出摆幅 (mV)。
-            channel_impulse: 信道冲激响应（None = 理想频道）。
-            ami_params: AMI 参数（用于配置均衡器）。
-            noise_mv_rms: 接收机噪声 RMS (mV)。
-            jitter_ps_rms: 抖动 RMS (ps)。
-
-        Returns:
-            ChannelResult: 包含波形、眼图分析结果、AMI 参数。
-        """
         if ami_params is None:
             ami_params = AMIParams()
 
