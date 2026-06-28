@@ -10,6 +10,23 @@
 
 ---
 
+## 1.1 V8 极简工作流（强制）
+
+**所有开发直接在 main 分支进行，不切换分支，不搞备份。**
+
+详见 `.trae/rules/R11-工作流规范.md`。核心规则：
+
+1. **只用 main 分支**：禁止 dev/feature/backup 等分支，禁止 worktree
+2. **每个小任务完成后立即提交**：`git add 精确文件 → commit → push origin main`
+3. **任务派发前必须核查**：
+   - `git log --all --oneline --follow -- <文件>` 核查 git 历史
+   - `grep <功能名> 操作记录.md` 核查操作记录
+   - `ls <目标路径>` + `Read` 检查现有文件
+4. **操作记录实时刷新**：每个小任务完成 5 分钟内追加到 `操作记录.md`
+5. **后台守护**：`scripts/auto_commit.py V8` 每 6 分钟自动提交兜底 + `scripts/keepalive.sh` 保活
+
+---
+
 ## 2. 保活脚本（规则 23，强制，最高优先级）
 
 ### 2.1 启动要求
@@ -35,13 +52,13 @@
 
 ---
 
-## 3. 代码提交纪律（规则 1.2，强制）
+## 3. 代码提交纪律（R11 V8 极简模式，强制）
 
-- 开发分支固定名称：`trae/solo-agent-QtGqG4-ai-Light`（永久不变）。
-- 每 20 分钟（或每个小任务完成后）必须向远端 `main` 分支提交一次代码。
-- 提交流程：`git add` 精确文件 → `git commit -m "<type>: <简述>"` → `git push origin main` → 切回开发分支。
-- 禁止 `git add -A`/`git add .`，禁止 force push 到 `main`，禁止空提交。
-- 提交前必须通过本地 lint/typecheck/pytest 冒烟测试。
+- **只用 main 分支**：`git push origin main`（禁止 `git push origin dev`）
+- **每个小任务完成后立即提交**，不等待
+- 提交流程：`git add <精确文件名>` → `git commit -m "<type>: <简述>"` → `git push origin main`
+- 禁止 `git add -A` / `git add .`，禁止 `--force`，禁止空提交
+- 详细规范见 [R11-工作流规范.md](file:///workspace/.trae/rules/R11-工作流规范.md)
 
 ---
 
@@ -119,23 +136,13 @@
 
 ---
 
-## 12. 分支管理纪律（规则 24，强制，禁止孤儿分支）
+## 13. 分支管理（已被 R11 替代，V8 极简模式）
 
-### 12.1 核心原则：禁止孤儿分支
-- 仓库**只允许保留两个长期分支**：`main`（稳定发布）+ `dev`（开发集成）。
-- **禁止孤儿分支**：所有开发分支必须最终合并到 `main`，合并后立即删除，禁止残留。
-- 临时开发分支（`trae/agent-xxx`、`feature/xxx`）合并后必须立即删除（本地 + 远端）。
+**R06 分支纪律已被 R11 工作流规范替代**。V8 模式规则：
 
-### 12.2 分支生命周期
-1. 从 `dev` 创建临时分支开发
-2. 合并到 `dev`，再由 `dev` 合并到 `main`
-3. 合并后立即删除临时分支
-4. `main` 和 `dev` 必须保持同步
-
-### 12.3 强制清理
-- 每次会话启动必须检查分支状态：`git fetch --all --prune && git branch -a`
-- 发现孤儿分支必须立即合并或删除
-- 禁止保留 `develop`、`trae/auto-commit`、`trae/solo-agent-xxx` 等冗余分支
+- 仓库**只有 main 一个分支**，不使用 dev/feature 等临时分支
+- 禁止 `git worktree`
+- 详细规范见 [R11-工作流规范.md](file:///workspace/.trae/rules/R11-工作流规范.md) §1 分支管理
 
 ---
 
