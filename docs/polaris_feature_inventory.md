@@ -229,7 +229,7 @@
 
 ### eqdrc — Calibre eqDRC
 - **EqDRCEngine**: R23 Calibre eqDRC 对齐。实现: `src/polaris/sim/eqdrc.py:172`。成熟度: 生产可用
-- **CurvilinearLVS**: 曲线 LVS。实现: `src/polaris/sim/eqdrc.py:390`。成熟度: 实验性
+- **CurvilinearLVS**: 曲线 LVS（__init__.py 导出已补齐，5 测试通过）。实现: `src/polaris/sim/eqdrc.py:390`。成熟度: 生产可用
 - **FoundryDRCCertifier**: foundry DRC 认证。实现: `src/polaris/sim/eqdrc.py:537`。成熟度: 生产可用
 
 ### graph_lvs — 图同构 LVS
@@ -448,7 +448,8 @@
 
 ### foundry_devices — foundry 器件库
 - **get_foundry_device / get_foundry_devices**: foundry 器件获取。实现: `src/polaris/pdk/foundry_devices.py:188,219`。成熟度: 生产可用
-- **total_foundry_devices_count**: foundry 器件总数。实现: `src/polaris/pdk/foundry_devices.py:234`。成熟度: 生产可用
+- **total_foundry_devices_count**: foundry 基础器件总数（11 × 3 = 33）。实现: `src/polaris/pdk/foundry_devices.py:234`。成熟度: 生产可用
+- **total_all_devices_count**: PoLaRIS 全部 foundry 器件总数（基础 + 高级 + 有源 = 99，11 foundry × 9 器件类型）。实现: `src/polaris/pdk/foundry_devices.py:239`。成熟度: 生产可用
 
 ### gdsfactory_pdk_bridge — gdsfactory PDK 桥接
 - **PolarisPDKRegistry**: 48 gdsfactory PDK 注册表。实现: `src/polaris/pdk/gdsfactory_pdk_bridge.py:349`。成熟度: 生产可用

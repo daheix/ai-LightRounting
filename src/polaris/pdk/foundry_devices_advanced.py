@@ -1,7 +1,7 @@
 """Foundry 平台高级器件库（第17轮 P0-3 深化）。
 
 为每个 foundry 平台定义 3 种高级器件（环谐振器 + 定向耦合器 + 光栅耦合器），
-使 PoLaRIS foundry 器件库从 30 个扩展到 60 个（10 foundry × 6 器件）。
+使 PoLaRIS foundry 器件库从 33 个扩展到 66 个（11 foundry × 6 器件：3 基础 + 3 高级）。
 
 ## 器件类型
 

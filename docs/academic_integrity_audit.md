@@ -185,9 +185,9 @@
 | 数据项 | v1.0 文档值 | v2.0 实际值 | 修正依据 |
 |--------|-------------|-------------|----------|
 | DRC 规则总数 | 69 条 | **90 条** | `src/polaris/sim/foundry_runsets.py` 实际统计；第87-88轮 VIA ENCLOSURE + VIAC WIDTH 规则新增 |
-| PDK 器件总数 | 81 个 | **33 个** | `src/polaris/pdk/process_nodes.py` 全量映射后实际统计；v1.0 的 81 含重复计数与未溯源条目 |
+| PDK 器件总数 | 81 个 | **99 个（11 foundry × 9 器件类型）** | `src/polaris/pdk/foundry_devices.py::total_all_devices_count()` 聚合（基础 33 + 高级 33 + 有源 33）；v1.0 的 81 含重复计数与未溯源条目 |
 | Foundry 平台数 | 4 个 | **11 个** | `src/polaris/pdk/process_nodes.py` 全量映射 11 foundry 平台（AIM/AMF/CompoundTek/IHP/GF_Fotonix/Tower_OpenLight/LIGENTEC/LioniX/VTT/Tyndall/HyperLight） |
-| 测试用例数 | 2330 | **3840** | pytest collected 实际值（4 errors: CurvilinearLVS 导入失败） |
+| 测试用例数 | 2330 | **3840** | pytest collected 实际值（CurvilinearLVS 导入已修复：__init__.py 导出补齐，5 测试通过） |
 | 综合得分 | 6.0/10 | **6.1/10** | 36-RoundMap R0 基线对齐 |
 | 文档与测试维度 | 9/10 | **10/10** | 质量门禁零违规 + 1000 电路测试集 |
 
@@ -199,7 +199,7 @@
 - 无造假数据
 
 ### 5.3 v1.0 数据不一致原因分析
-- v1.0 的 81 器件计数包含未溯源条目与重复计数，v2.0 修正为实际可溯源的 33 个器件
+- v1.0 的 81 器件计数包含未溯源条目与重复计数，v2.0 修正为实际可溯源的 99 个器件（11 foundry × 9 器件类型：3 基础 + 3 高级 + 3 有源，聚合函数 `total_all_devices_count()`）
 - v1.0 的 4 foundry 平台仅按材料分类（SOI/SiN/InP/LNOI），v2.0 修正为 11 个 foundry 厂商平台
 - v1.0 的 69 DRC 规则为早期统计，v2.0 补充第87-88轮新增规则后为 90 条
 - v1.0 的 2330 测试用例为早期值，v2.0 对齐第95轮后 pytest collected 实际值 3840

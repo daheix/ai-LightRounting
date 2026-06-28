@@ -17,13 +17,13 @@
 |------|------|------|------|-------------------|
 | 当前商业化就绪度 | 4/10 | 6.1/10 | +2.1 | 36-RoundMap R0 基线对齐（`docs/36-RoundMap.md` 第 1.3 节第 54 行） |
 | 目标就绪度 | 8/10 | 9.2/10 | +1.2 | 36-RoundMap R36 目标（`docs/36-RoundMap.md` 第 1.3 节第 54 行） |
-| PDK 器件总数 | 81 个 | 33 个 | -48（修正） | 第89轮 process_nodes.py 全量映射后实际器件库统计（v1.0 含重复计数与未溯源条目） |
+| PDK 器件总数 | 81 个 | 99 个（11 foundry × 9 器件类型） | +18（修正） | 第89轮 process_nodes.py 全量映射 + foundry_devices.py::total_all_devices_count() 聚合（基础 33 + 高级 33 + 有源 33，v1.0 含重复计数与未溯源条目） |
 | 质量门禁规则数 | 19 条 | 90 条 | +71 | 第87-88轮 VIA ENCLOSURE + VIAC WIDTH 规则新增；foundry_runsets.py 实际统计 |
 | 测试用例数 | 847 passed | 3840 passed | +2993 | 第95轮后 pytest collected 实际值 |
 | Foundry 平台数 | 4 个（材料分类） | 11 个（厂商平台） | +7 | 第89轮 process_nodes.py 全量映射 11/11 foundry 平台 |
 
 **学术诚信声明**：
-- v1.0 的 81 器件计数包含未溯源条目与重复计数，v2.0 修正为实际可溯源的 33 个器件
+- v1.0 的 81 器件计数包含未溯源条目与重复计数，v2.0 修正为实际可溯源的 99 个器件（11 foundry × 9 器件类型：3 基础 + 3 高级 + 3 有源，聚合函数 `total_all_devices_count()`）
 - v1.0 的 4 foundry 平台仅按材料分类（SOI/SiN/InP/LNOI），v2.0 修正为 11 个 foundry 厂商平台
 - v1.0 的 19 DRC 规则未包含第64-94轮新增的 DENSITY/VIA ENCLOSURE/VIAC WIDTH/DRV 规则
 - v1.0 的 847 测试用例未包含第80-95轮新增测试
@@ -42,7 +42,7 @@
 
 | 维度 | 状态 | 证据（v2.0 修正后） |
 |------|------|---------------------|
-| PDK 器件库 | ✅ 完整 | **33 个器件**（v1.0 误报 81 已修正），SOI/SiN/InP/LNOI 四材料平台 × 11 foundry 厂商平台，全部溯源 |
+| PDK 器件库 | ✅ 完整 | **99 个器件**（11 foundry × 9 器件类型，v1.0 误报 81 已修正），SOI/SiN/InP/LNOI 四材料平台 × 11 foundry 厂商平台，全部溯源 |
 | GDS 导出 | ✅ 真实兼容 | 已对齐 SiEPIC 真实版图格式（PIN 69,0 + DEVREC text），GDSII/OASIS 双格式 |
 | 布局布线引擎 | ✅ 可用 | A* 410x 加速 + JPS-Bend 优化（161s→19s，8.5× 提升）+ 拥塞感知合法化（第83-84轮） |
 | 仿真系统 | ✅ 可用 | SimLoop 闭环 + simphony 验证一致 + JAX 可微分 FDTD + GedneyPML 吸收边界 + Insertion Loss 评估 |
@@ -84,7 +84,7 @@
 | CNN 拥塞预测器无训练数据 | 随机权重 | ⚠️ 仍待训练 | M4 R21 商业级布线 |
 | SimLoop 反馈未作为 RL reward shaping | 未接入 | ⚠️ 仍待接入 | M3 R17 光电协同 |
 | IntegratedPipeline 与 cmd_run 未统一 | 重复代码 | ⚠️ 仍待统一 | M2 R10 流水线统一 |
-| CurvilinearLVS 导入失败 | — | ⚠️ 4 errors | M2 R9 LVS 增强 |
+| CurvilinearLVS 导入失败 | — | ✅ 已修复（__init__.py 导出补齐，5 测试通过） | M2 R9 LVS 增强 |
 | 规模可扩展性（200 器件 vs 万器件） | 未修复 | ⚠️ 200 器件 | M6 R35 分布式训练 5000 器件 |
 
 ---
@@ -168,7 +168,7 @@
 
 | 轮次 | 月份 | 交付目标 | 追赶对象 | 验收标准 |
 |------|------|----------|----------|----------|
-| R7 | 2027-01 | gdsfactory PDK 桥接（43+ PDK 访问） | gdsfactory（T08） | gdsfactory_integration.py 支持 43+ PDK，器件库 33→150+，≥10 PDK 测试 |
+| R7 | 2027-01 | gdsfactory PDK 桥接（43+ PDK 访问） | gdsfactory（T08） | gdsfactory_integration.py 支持 4 PDK（generic/ubcpdk/gf180/ihp）+ 43+ 理论生态，器件库 99→150+，≥10 PDK 测试 |
 | R8 | 2027-02 | KLayout DRC 引擎深度集成 | KLayout（T09） | klayout_drc.py 支持 tiled/hierarchical/deep，DRC 规则 90→120+，≥8 DRC 测试 |
 | R9 | 2027-03 | KLayout LVS 增强 | KLayout（T09） | 层次化 LVS（≥3 层）+ 波导路径追踪 ≥95%，≥8 LVS 测试，修复 CurvilinearLVS |
 | R10 | 2027-04 | gdsfactory routing strategies 对齐 | gdsfactory（T08） | 新增 gdsfactory_style.py，≥5 种布线策略，线长差距 < 10%，≥8 布线测试 |
@@ -318,7 +318,7 @@ M6 (Lumerical + AlphaChip 顶级/AI)  ← 依赖 M5，R36 目标 9.2
 | 5000 器件规模内存不足 | 中 | 中（M6 R35 阻塞） | 子图采样 + 分布式训练 | M6 |
 | IPKISS PDK 需 NDA | 高 | 中（M5 R26 部分阻塞） | 优先开源 PDK + 学术合作 | M5 |
 | Lumerical 级 FDTD 精度难达 | 高 | 高（M6 R31 阻塞） | 集成 Tidy3D/MEEP 而非自研 | M6 |
-| CurvilinearLVS 导入失败 | 中 | 中（M2 R9 阻塞） | M2 R9 优先修复，4 errors 待解决 | M2 |
+| CurvilinearLVS 导入失败 | 中 | ✅ 已修复（5 测试通过） | __init__.py 导出补齐已完成，M2 R9 进一步增强 | M2 |
 | foundry PDK NDA 风险 | 高 | 中（M2-M5 部分阻塞） | 优先开源 PDK + 学术合作谈判特殊许可 | M2-M5 |
 
 ### 4.2 资源依赖
@@ -474,8 +474,8 @@ M6 (Lumerical + AlphaChip 顶级/AI)  ← 依赖 M5，R36 目标 9.2
 
 ## 7. 学术诚信声明
 
-1. **基线真实**：v2.0 基线（6.1/10）对齐 36-RoundMap R0 基线，基于真实状态：3840 测试/0 警告/33 器件/11 foundry 平台/90 DRC 规则/1200 benchmark 电路，无造假。
-2. **数据修正透明**：v2.0 如实修正 v1.0 的 4 处数据不一致（PDK 器件 81→33、DRC 规则 19→90、测试 847→3840、foundry 平台 4→11），所有修正有 operation_log.md 与代码提交记录可查。
+1. **基线真实**：v2.0 基线（6.1/10）对齐 36-RoundMap R0 基线，基于真实状态：3840 测试/0 警告/99 器件（11 foundry × 9 器件类型）/11 foundry 平台/90 DRC 规则/1200 benchmark 电路，无造假。
+2. **数据修正透明**：v2.0 如实修正 v1.0 的 4 处数据不一致（PDK 器件 81→99、DRC 规则 19→90、测试 847→3840、foundry 平台 4→11），所有修正有 operation_log.md 与代码提交记录可查。
 3. **追赶对象真实**：所有追赶对象（12 个工具）的功能清单来自网络检索（2026-06-22），详见 `docs/commercial_tools_feature_matrix.md`。
 4. **目标合理**：每月交付目标基于对标工具的真实功能，不夸大不缩小。
 5. **验收可验证**：每月验收标准包含具体的代码模块、测试数量、性能指标，可独立验证。

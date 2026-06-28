@@ -1,7 +1,7 @@
 """Foundry 平台有源器件库（第19轮 P0-3 深化）。
 
 为每个 foundry 平台定义 3 种有源器件（调制器 + 探测器 + 移相器），
-使 PoLaRIS foundry 器件库从 60 个扩展到 90 个（10 foundry × 9 器件）。
+使 PoLaRIS foundry 器件库从 66 个扩展到 99 个（11 foundry × 9 器件：3 基础 + 3 高级 + 3 有源）。
 
 ## 器件类型
 

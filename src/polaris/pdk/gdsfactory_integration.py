@@ -7,8 +7,9 @@ gdsfactory 是开源光子芯片设计库（MIT 许可证），含数百个参�
 2. PDK 桥接（gdsfactory_to_polaris_device / load_gdsfactory_pdk /
    list_gdsfactory_pdks / register_gdsfactory_pdk）—— 第2轮 P0-3
 
-PDK 桥接使 PoLaRIS 能直接使用 gdsfactory 的 43+ PDK 生态（ubcpdk/gf180/ihp
-等），立即获得商业级 PDK 覆盖能力，对标 Lumerical/IPKISS 的 PDK 支持。
+PDK 桥接使 PoLaRIS 能直接使用 gdsfactory 生态：当前已检测并支持 4 个 PDK
+（generic/ubcpdk/gf180/ihp），gdsfactory 上游理论支持 43+ PDK（需用户自行
+安装对应 Python 包方可加载）。对标 Lumerical/IPKISS 的 PDK 支持。
 
 注：gdsfactory 8.18.0 锁定 pydantic<2.10，而 pydantic<2.10 的 pydantic-core
 无 Python 3.14 wheel，因此在 Python 3.14 环境下 gdsfactory 可能 import 失败。
@@ -364,7 +365,8 @@ def gdsfactory_to_polaris_device(
     """将 gdsfactory Component 转换为 PoLaRIS Device（第2轮 P0-3）。
 
     提取 gdsfactory Component 的端口、包围盒信息，转换为 PoLaRIS Device。
-    使 PoLaRIS 能直接使用 gdsfactory 的 43+ PDK 生态器件。
+    使 PoLaRIS 能直接使用 gdsfactory 已检测的 4 个 PDK（generic/ubcpdk/gf180/ihp）
+    器件，gdsfactory 上游理论支持 43+ PDK（需用户自行安装对应包）。
 
     Args:
         component: gdsfactory Component 对象。
@@ -493,7 +495,8 @@ def load_gdsfactory_pdk(
     """加载 gdsfactory PDK 器件为 PoLaRIS Device 字典（第2轮 P0-3）。
 
     将 gdsfactory PDK 的组件转换为 PoLaRIS Device，使 PoLaRIS 能直接
-    使用 gdsfactory 的 43+ PDK 生态。
+    使用 gdsfactory 已检测的 4 个 PDK（generic/ubcpdk/gf180/ihp）生态，
+    上游理论支持 43+ PDK（需用户自行安装对应包）。
 
     Args:
         pdk_name: PDK 名（generic/ubcpdk/gf180/ihp），默认 generic。

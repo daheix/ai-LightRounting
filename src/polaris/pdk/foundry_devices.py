@@ -236,10 +236,30 @@ def total_foundry_devices_count() -> int:
     return len(FOUNDRY_PLATFORMS) * len(_DEVICE_FACTORIES)
 
 
+def total_all_devices_count() -> int:
+    """PoLaRIS 全部 foundry 器件总数（基础 + 高级 + 有源）。
+
+    聚合三层器件计数，确保 docstring 与代码实际器件数一致，
+    避免学术诚信违规（R02）。
+
+    Returns:
+        99（11 foundry × 9 器件类型：3 基础 + 3 高级 + 3 有源）。
+    """
+    from polaris.pdk.foundry_devices_active import total_active_devices_count
+    from polaris.pdk.foundry_devices_advanced import total_advanced_devices_count
+
+    return (
+        total_foundry_devices_count()
+        + total_advanced_devices_count()
+        + total_active_devices_count()
+    )
+
+
 __all__ = [
     "FoundryDeviceSpec",
     "get_foundry_device",
     "get_foundry_devices",
     "list_foundry_device_types",
     "total_foundry_devices_count",
+    "total_all_devices_count",
 ]
