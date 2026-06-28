@@ -1,6 +1,6 @@
 """Tidy3D 集成与 GPU FDTD 引擎（R27+R28 路标）。
 
-对标 Tidy3D 云端 FDTD 仿真平台的集成接口，并提供本地 GPU 加速 FDTD 引擎
+对标 Tidy3D 云端 FDTD 仿真平台的集成接口，并提供本地向量化 FDTD 引擎
 与多后端交叉验证能力。
 
 ## 模块组成
@@ -8,9 +8,16 @@
 1. ``Tidy3DConfig`` — Tidy3D 仿真配置（网格/边界/光源/monitor）
 2. ``Tidy3DAdapter`` — 器件到 FDTD 仿真对象的适配器（几何→介电常数分布）
 3. ``Tidy3DAsyncRunner`` — 异步仿真运行器（提交/轮询/收集结果）
-4. ``GPUFDTDConfig`` — GPU FDTD 引擎配置
-5. ``GPUFDTDEngine`` — GPU 加速 FDTD 引擎（向量化 Yee 算法）
+4. ``GPUFDTDConfig`` — 向量化 FDTD 引擎配置（历史命名保留 GPU 前缀，🚫不参与 GPU / R04）
+5. ``GPUFDTDEngine`` — 向量化 FDTD 引擎（纯 NumPy Yee 算法，🚫不参与 GPU / R04）
 6. ``FDTDCrossValidator`` — 多后端交叉验证器（FDTD vs 解析模型）
+
+## 🚫不参与 GPU（R04 战略决策，不可撤销）
+
+尽管类名 ``GPUFDTDConfig``/``GPUFDTDEngine`` 保留 "GPU" 历史前缀（已导出
+在 ``polaris.sim.__init__`` 中，重命名为 BREAKING 变更），实际实现为纯
+NumPy 向量化 CPU 计算，不引入任何 GPU 后端（CuPy/CUDA/ROCm/AppleMetal）。
+命名沿用是为了对齐 Tidy3D GPU FDTD 引擎 API 接口。
 
 ## 学术依据
 
@@ -20,7 +27,7 @@
   problems involving Maxwell's equations in isotropic media",
   IEEE Trans. Antennas Propag. 14(3), 302-307, 1966,
   https://doi.org/10.1109/TAP.1966.1138693
-- GPU 加速 FDTD: A. F. Oskooi et al., "MEEP: A flexible free-software
+- 向量化 FDTD: A. F. Oskooi et al., "MEEP: A flexible free-software
   package for electromagnetic simulations by the FDTD method",
   Computer Physics Communications 181(3), 687-702, 2010,
   https://doi.org/10.1016/j.cpc.2009.11.008
@@ -374,12 +381,21 @@ class GPUFDTDConfig:
 
 # ---------------------------------------------------------------------------
 # GPUFDTDEngine — GPU 加速 FDTD 引擎
+# 🚫不参与 GPU（R04 战略决策，不可撤销）：尽管类名保留 "GPU" 历史前缀
+# （已导出在 __init__.py 中，重命名为 BREAKING 变更），实际实现为纯 NumPy
+# 向量化 CPU 计算。命名沿用对齐 Tidy3D GPU FDTD 引擎 API，但所有计算
+# 严格遵守 R04：无 CuPy/CUDA/ROCm/AppleMetal 等任何 GPU 后端依赖。
 # ---------------------------------------------------------------------------
 
 
 @dataclass
 class GPUFDTDEngine:
-    """GPU 加速 FDTD 引擎（向量化 Yee 算法）。
+    """GPU 加速 FDTD 引擎（向量化 Yee 算法，🚫不参与 GPU / R04）。
+
+    **R04 合规声明**：类名保留 "GPU" 历史前缀以维持 API 兼容（已导出在
+    ``polaris.sim.__init__`` 中，重命名为 BREAKING 变更），但实际实现为
+    纯 NumPy 向量化 CPU 计算，不引入任何 GPU 后端（CuPy/CUDA/ROCm/
+    AppleMetal）。命名沿用是为了对齐 Tidy3D GPU FDTD 引擎 API 接口。
 
     使用一维 Yee 网格的向量化 numpy 实现 FDTD 电磁仿真，
     计算多层介电结构在指定波长处的传输率。
@@ -394,7 +410,7 @@ class GPUFDTDEngine:
         E_y^{n+1}[i] = E_y^{n}[i] + (dt/(ε[i]·dx))·(H_z^{n+1/2}[i] - H_z^{n+1/2}[i-1])
 
     Attributes:
-        config: GPU FDTD 配置。
+        config: GPU FDTD 配置（历史命名，实际为 CPU 向量化 FDTD 配置）。
     """
 
     config: GPUFDTDConfig = field(default_factory=GPUFDTDConfig)

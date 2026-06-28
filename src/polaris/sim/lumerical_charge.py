@@ -9,12 +9,20 @@
 - Ansys Lumerical CHARGE: https://www.ansys.com/products/optics/charge
 - Ansys Lumerical 多物理场协同:
   https://optics.ansys.com/hc/en-us/articles/360042414214
+- Ansys Lumerical "Charge distribution to change in refractive index theory"
+  （显式列出 Soref & Bennett 1987 系数值）:
+  https://optics.ansys.com/hc/en-us/articles/360034382494
 - Sze & Ng, "Physics of Semiconductor Devices", 3rd ed., 2007
   - §1.4 本征载流子浓度
   - §3.4 PN 结内建电势与耗尽区
   - §3.5 结电容
   - §10.3 调制器带宽（RC 限制）
-- Soref & Bennett, IEEE J. Quantum Electron. 23(1), 1987（硅等离子色散）
+- Soref & Bennett, IEEE J. Quantum Electron. 23(1), 123-129, 1987
+  （硅等离子色散 @ 1550nm：dn_An=-8.8e-22 cm³, dn_Ap=-8.5e-18 cm³）
+  https://ieeexplore.ieee.org/document/1138738
+- Reed GT, "Silicon optical modulators," Nature Photonics 4, 518-526 (2010)
+  （Soref & Bennett 系数的现代综述与调制器应用）
+  https://doi.org/10.1038/nphoton.2010.179
 
 ## 物理常数
 
@@ -67,11 +75,14 @@ class CHARGEConfig:
         temperature: 温度（K）。
         doping_n: n 型掺杂（cm⁻³）。
         doping_p: p 型掺杂（cm⁻³）。
+        confinement_factor: 光模场限制因子 Γ（无量纲），典型 Si strip
+            波导 @ 1550nm 取值 0.3（Reed 2010 Nature Photonics 综述）。
     """
 
     temperature: float = 300.0
     doping_n: float = 1e18
     doping_p: float = 1e18
+    confinement_factor: float = 0.3
 
 
 class CHARGESimulator:
@@ -100,6 +111,7 @@ class CHARGESimulator:
         self.T = config.temperature
         self.N_D = config.doping_n * 1e6  # cm⁻³ → m⁻³
         self.N_A = config.doping_p * 1e6  # cm⁻³ → m⁻³
+        self.Gamma = config.confinement_factor  # 模场限制因子 Γ
         # 硅材料参数（来源: Sze & Ng, Table 1.1）
         self.eps = _EPS_SI * _EPS0  # 介电常数 (F/m)
         self.n_i = self._compute_intrinsic_carrier()
@@ -255,12 +267,21 @@ class CHARGESimulator:
         学术依据：
         - Ansys Lumerical CHARGE + MODE 协同
           https://optics.ansys.com/hc/en-us/articles/360042414214
-        - Sze & Ng, "Physics of Semiconductor Devices", §10.3
+        - Sze & Ng, "Physics of Semiconductor Devices", §3.4（PN 结耗尽近似）
+        - Soref & Bennett, IEEE J. Quantum Electron. 23(1), 123-129, 1987
+          （硅等离子色散 @ 1550nm：dn_An=-8.8e-22 cm³, dn_Ap=-8.5e-18 cm³）
+          https://ieeexplore.ieee.org/document/1138738
+        - Ansys Lumerical "Charge distribution to change in refractive index theory"
+          https://optics.ansys.com/hc/en-us/articles/360034382494
+        - Reed GT, "Silicon optical modulators," Nature Photonics 4, 518-526 (2010)
+          https://doi.org/10.1038/nphoton.2010.179
 
         物理流程：
-        1. 电压 V → 耗尽区宽度变化 ΔW
-        2. ΔW → 有效折射率变化 Δn_eff（等离子色散效应）
-        3. Δn_eff → 相位调制 Δφ = (2π/λ)·Δn_eff·L
+        1. 电压 V → 耗尽区宽度变化 ΔW（Sze & Ng §3.4 耗尽近似）
+        2. ΔW → 移除载流子浓度 ΔN_e = ΔP_h = N_eff·ΔW（电荷中性，N_eff 约化掺杂）
+        3. ΔN/ΔP → 折射率变化 Δn = dn_An·ΔN_e + dn_Ap·ΔP_h（Soref & Bennett 1987）
+        4. Δn → 有效折射率变化 Δn_eff = Γ·Δn（Γ 模场限制因子）
+        5. Δn_eff → 相位调制 Δφ = (2π/λ)·Δn_eff·L
 
         Args:
             modulator_config: 调制器配置（含 voltage/length/wavelength/width）。
@@ -278,15 +299,31 @@ class CHARGESimulator:
         w_0 = self.compute_depletion_width(0.0)
         w_v = self.compute_depletion_width(-abs(voltage))  # 反向偏置
         delta_w = w_v - w_0  # m（反向偏置时为正，耗尽区变宽）
-        # 2. 等离子色散效应：Δn_eff ≈ α·ΔW/W_0
-        # 来源：Soref & Bennett, IEEE J. Quantum Electron. 23(1), 1987
-        # 硅等离子色散系数 @ 1.55μm：Δn ≈ -8.5e-22·ΔN (ΔN 为载流子浓度变化)
-        # 简化：Δn_eff 与耗尽区宽度变化成正比
-        alpha_plasma = -1.0e-3  # 折射率变化系数（μm⁻¹）
-        delta_n_eff = alpha_plasma * (delta_w * 1e6)  # 转换为 μm
-        # 3. 相位调制 Δφ = (2π/λ)·Δn_eff·L
+        # 2-3. 等离子色散效应（Soref & Bennett 1987 严格推导）
+        # 当耗尽区宽度变化 ΔW 时，n 侧与 p 侧分别有 ΔW_n、ΔW_p 的扩展：
+        #   ΔW_n = ΔW·N_A/(N_A+N_D)，ΔW_p = ΔW·N_D/(N_A+N_D)
+        #   （电荷中性条件 N_D·ΔW_n = N_A·ΔW_p，Sze & Ng §3.4）
+        # 移除的载流子浓度：
+        #   ΔN_e = N_D·ΔW_n = N_eff·ΔW（电子，n 侧）
+        #   ΔP_h = N_A·ΔW_p = N_eff·ΔW（空穴，p 侧）
+        #   其中 N_eff = N_D·N_A/(N_A+N_D) 为约化掺杂。
+        # Soref & Bennett 1987 @ 1550nm（线性近似）:
+        #   Δn = dn_An·ΔN_e + dn_Ap·ΔP_h  (ΔN/ΔP 单位 cm⁻³, Δn 无量纲)
+        # 注：空穴系数 |dn_Ap|=8.5e-18 比电子系数 |dn_An|=8.8e-22 大 ~4 个数量级，
+        #     耗尽型调制器中空穴效应主导（Reed 2010 Nature Photonics 综述）。
+        n_eff_doping_m3 = self.N_D * self.N_A / (self.N_D + self.N_A)  # 约化掺杂 (m⁻³)
+        n_eff_doping_cm3 = n_eff_doping_m3 * 1e-6  # m⁻³ → cm⁻³
+        delta_w_cm = delta_w * 1e2  # m → cm
+        delta_n_carrier = n_eff_doping_cm3 * delta_w_cm  # ΔN_e = ΔP_h (cm⁻³)
+        delta_n = (
+            _SOREF_DN_AN * delta_n_carrier  # 电子贡献
+            + _SOREF_DN_AP * delta_n_carrier  # 空穴贡献（ΔN_e = ΔP_h = N_eff·ΔW）
+        )
+        # 4. 模场限制后的有效折射率变化
+        delta_n_eff = self.Gamma * delta_n
+        # 5. 相位调制 Δφ = (2π/λ)·Δn_eff·L
         delta_phi = (2.0 * np.pi / wavelength) * delta_n_eff * length
-        # 4. 调制器带宽（反向偏置下的结电容）
+        # 6. 调制器带宽（反向偏置下的结电容）
         height_m = 220e-9
         area = width * 1e-6 * length * 1e-6 * height_m
         c_j = self.compute_junction_capacitance(area, -abs(voltage))
@@ -297,11 +334,16 @@ class CHARGESimulator:
             "voltage": voltage,
             "depletion_width_0": w_0,
             "depletion_width_v": w_v,
+            "delta_w": delta_w,
+            "delta_n_carrier": delta_n_carrier,
+            "delta_n": delta_n,
             "delta_n_eff": float(delta_n_eff),
             "phase_shift": float(delta_phi),
             "bandwidth": f_3db,
             "capacitance": c_j,
             "resistance": r_series,
+            "confinement_factor": self.Gamma,
+            "n_eff_doping_cm3": n_eff_doping_cm3,
             "length_um": length,
             "wavelength_um": wavelength,
         }
