@@ -39,7 +39,7 @@ from polaris.sim.pso_optimizer import (
     GlobalResult,
     ParticleSwarmOptimizer,
     PSOConfig,
-    create_pso_optimizer,
+    create_pso_optimizer,  # noqa: F401  re-export（test_global_optimizer 从本模块导入）
 )
 
 
