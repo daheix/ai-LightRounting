@@ -1,17 +1,22 @@
-"""R31 路标：本地 GPU FDTD 引擎 + 后端交叉验证器（从 tidy3d_integration.py 拆分）。
+"""R31 路标：本地 CPU FDTD 引擎 + 后端交叉验证器（从 tidy3d_integration.py 拆分）。
 
-R28: 对齐 Tidy3D GPU FDTD 引擎（本地 GPU FDTD，numpy/JAX 实现）
+🚫不参与 GPU（R04 战略决策）：本模块为纯 CPU FDTD 引擎（numpy/JAX CPU 后端）。
+R5-P0-3 修复: 原模块名/docstring 误标 "GPU FDTD"，实际 R04 禁止任何 GPU 后端。
+保留类名 GPUFDTDConfig/GPUFDTDEngine 仅为兼容已有 API，实际 use_gpu 强制 False。
+
+R28: 对齐 Tidy3D FDTD 引擎（纯 CPU numpy/JAX 实现，R04 不参与 GPU）
 R31: 拆分为独立模块，单文件 ≤800 行（规则 7.1）
 
 核心组件:
-1. GPUFDTDConfig: 本地 GPU FDTD 配置
-2. GPUFDTDEngine: 本地 GPU FDTD 引擎（Yee 网格 + PML + 源 + 监视器 + S 参数）
-3. FDTDCrossValidator: FDTD 后端交叉验证器（Tidy3D vs GPU vs MEEP）
+1. GPUFDTDConfig: 本地 CPU FDTD 配置（use_gpu 强制 False，R04）
+2. GPUFDTDEngine: 本地 CPU FDTD 引擎（Yee 网格 + PML + 源 + 监视器 + S 参数）
+3. FDTDCrossValidator: FDTD 后端交叉验证器（Tidy3D vs CPU vs MEEP）
 
 学术依据:
 - Liu & Poon 2025 arXiv:2506.16665v3（Tidy3D vs Lumerical 精度对比，误差 < 1e-3）
   URL: https://arxiv.org/pdf/2506.16665
-- Minkov 2024 OPN "GPU-Accelerated Photonic Simulations"（GPU FDTD memory-bound）
+- Minkov 2024 OPN "GPU-Accelerated Photonic Simulations"（GPU FDTD memory-bound，
+  本项目 R04 不参与 GPU，仅引用其 CPU 基线数据做对比）
   URL: https://opnmedia.blob.core.windows.net/$web/opn/media/images/pdf/2024/0924/044-050_opn35_09.pdf
 - Yee 1966 IEEE TAP（交错网格 FDTD）
   URL: https://ieeexplore.ieee.org/document/1138693
@@ -20,7 +25,7 @@ R31: 拆分为独立模块，单文件 ≤800 行（规则 7.1）
 - Tidy3D 官方文档
   URL: https://docs.flexcompute.com/projects/tidy3d/
 
-合规: 规则 14.1 禁止 fall-back；规则 18 学术诚信；规则 7.1 文件 < 800 行。
+合规: R03 禁止 fall-back；R02 学术诚信；R04 不参与 GPU；R05 Bug 必修；规则 7.1 文件 < 800 行。
 """
 
 from __future__ import annotations
@@ -64,15 +69,14 @@ CROSS_VALIDATE_TOL = 1e-3
 # =============================================================================
 @dataclass
 class GPUFDTDConfig:
-    """本地 GPU FDTD 配置（numpy/JAX 实现）。
+    """本地 CPU FDTD 配置（numpy/JAX CPU 实现，R04 不参与 GPU）。
 
     学术依据：Minkov 2024 OPN "GPU-Accelerated Photonic Simulations"
     URL: https://opnmedia.blob.core.windows.net/$web/opn/media/images/pdf/2024/0924/044-050_opn35_09.pdf
 
-    GPU FDTD 是内存带宽受限（memory-bound），
-    GPU 高带宽（H100: 3 TB/s）相比 CPU（~50 GB/s）有 60× 带宽优势。
-
-    numpy 为主要后端（完整功能），JAX 为可选加速（非 fall-back）。
+    R5-P0-3 修复: R04 战略决策"不参与 GPU 计算"，use_gpu 强制 False。
+    原设计参考 GPU FDTD memory-bound 特性，但本项目纯 CPU 实现。
+    numpy 为主要后端（完整功能），JAX CPU 为可选加速（非 fall-back）。
 
     Attributes:
         grid_size: 网格尺寸 (nx, ny, nz)。
@@ -80,7 +84,7 @@ class GPUFDTDConfig:
         dt: 时间步长（s），None 则自动 CFL。
         runtime: 仿真时长（s）。
         pml_layers: PML 层数。
-        use_gpu: 是否启用 GPU（JAX 不可用时用 numpy，非 fall-back）。
+        use_gpu: 是否启用 GPU（R04 强制 False，True 时 raise RuntimeError）。
     """
 
     grid_size: tuple = (100, 100, 1)
@@ -90,7 +94,10 @@ class GPUFDTDConfig:
     dt: float | None = None  # 自动 CFL
     runtime: float = 1e-12  # 1 ps
     pml_layers: int = 12
-    use_gpu: bool = True
+    # R5-P0-3 修复: R04 战略决策"不参与 GPU 计算"，禁止 use_gpu=True。
+    # 原值 True 违反 R04，且 JAX 不可用时静默回退 numpy 违反 R03 禁止 fall-back。
+    # 文献: 项目规则 R04-不参与GPU.md / AGENTS.md §9
+    use_gpu: bool = False
 
 
 # =============================================================================
@@ -148,10 +155,13 @@ class GPUFDTDEngine:
         self._grid_ready = False
         self._pml_ready = False
         self._has_jax = self._check_jax()
-        if config.use_gpu and not self._has_jax:
-            logger.info(
-                "JAX 不可用，GPU FDTD 使用 numpy 后端（CPU）。"
-                "numpy 为主要后端，JAX 为可选加速（非 fall-back）。"
+        # R5-P0-3 修复: R04 战略禁止 GPU。use_gpu=True 时必须 raise，
+        # 禁止静默 fall-back 到 numpy（违反 R03）。
+        if config.use_gpu:
+            raise RuntimeError(
+                "R04 战略决策：PoLaRIS 不参与 GPU 计算。"
+                "GPUFDTDConfig.use_gpu 必须为 False。"
+                "如需 CPU 加速，使用 JAX CPU 后端（sim/jax_backend.py）。"
             )
 
     @staticmethod

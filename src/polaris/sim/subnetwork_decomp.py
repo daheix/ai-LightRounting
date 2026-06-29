@@ -534,10 +534,20 @@ def _multiway_partition(nx, G, num_subnetworks: int) -> list[set[str]]:
         )
         logger.error(msg)
         raise RuntimeError(msg) from e
+    # R5-P1-8 修复: 原 while 循环是死代码（条件永不成立），且当
+    # len(communities) > num_subnetworks 时超出部分被静默丢弃（R03 违规）。
+    # 修复: 多余社区合并到最小子网络；社区数不足时 raise。
+    if len(communities) < num_subnetworks:
+        raise RuntimeError(
+            f"社区数 {len(communities)} < 目标子网络数 {num_subnetworks}，"
+            "无法分割（图连通度过高）。请减少 num_subnetworks 或检查电路拓扑。"
+            "R03 禁止 fall-back: 禁止静默返回不足数量的子网络。"
+        )
     subnetworks = [set(c) for c in communities[:num_subnetworks]]
-    # 合并多余的社区
-    while len(subnetworks) < num_subnetworks and len(communities) > len(subnetworks):
-        subnetworks.append(set(communities[len(subnetworks)]))
+    # 合并多余的社区到最小子网络（避免静默丢失）
+    for extra in communities[num_subnetworks:]:
+        idx_min = min(range(len(subnetworks)), key=lambda i: len(subnetworks[i]))
+        subnetworks[idx_min] |= set(extra)
     return subnetworks
 
 

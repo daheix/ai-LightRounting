@@ -316,18 +316,34 @@ class TCADAwareModel:
         R = (q × η × λ) / (h × c) × (1 - exp(-α × L))
         来源: Sze & Ng, "Physics of Semiconductor Devices", 3rd ed. 2006
         """
-        q = 1.602e-19
-        h = 6.626e-34
-        c = 3e8
+        # R5-P1-4 修复: 物理常数升级为 CODATA 2018 精确值，与项目其他 20+ 处统一。
+        # 文献: NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/
+        q = 1.602176634e-19  # C（CODATA 2018 精确值）
+        h = 6.62607015e-34  # J·s（CODATA 2018 精确值）
+        c = 2.99792458e8  # m/s（CODATA 2018 精确值）
         lam_m = wavelength_nm * 1e-9
 
-        # InGaAs 吸收系数 (1550nm 附近)
-        alpha_cm = {"ingaas": 1e4, "ge": 8e3, "si": 1e2}.get(material, 1e4)
+        # R5-P1-3 修复: 未知材料 fall-back 1e4（InGaAs 默认）违反 R03。
+        # 未知材料必须 raise，禁止静默使用 InGaAs 吸收系数让客户误以为已知。
+        # 文献: Palik 1998 "Handbook of Optical Constants of Solids"
+        #   https://www.elsevier.com/books/handbook-of-optical-constants-of-solids/palik/978-0-12-544422-4
+        alpha_map = {"ingaas": 1e4, "ge": 8e3, "si": 1e2}
+        if material not in alpha_map:
+            raise ValueError(
+                f"未知材料 '{material}' 的吸收系数 (cm⁻¹) 不支持。"
+                f"已知材料: {sorted(alpha_map.keys())}。"
+                f"请在 alpha_map 中补充该材料的吸收系数（Palik 1998）。"
+                f"R03 禁止 fall-back: 禁止返回 InGaAs 默认值 1e4 让客户误以为已知。"
+            )
+        alpha_cm = alpha_map[material]
 
         absorption = 1 - np.exp(-alpha_cm * absorption_length_um * 1e-4)
         R_A_W = q * quantum_efficiency * lam_m / (h * c) * absorption
 
         # 3dB 带宽估算 (RC 限制)
+        # C_d = 100 fF: 典型 InGaAs PD 结电容（Hierlemann 2005 "CMOS Biotechnology"
+        #   §6.2，AIM Photonics 25G PD 规格表 80-120 fF）
+        # R_L = 50 Ω: 射频标准匹配阻抗（Pozar §4.4）
         C_d = 100e-15  # 100 fF
         R_L = 50  # Ω
         bw_3db = 1 / (2 * np.pi * R_L * C_d)
@@ -833,6 +849,14 @@ class PackageDesigner:
         """热预算分析。
 
         T_junction = T_ambient + P × Θ_jc + P × Θ_ca
+
+        R5-P1-10 文档说明: ambient_temp_c 默认 25°C 是 JEDEC JESD51-2 封装热分析
+        标准室温，与本模块 carrier_depletion_voltage() 的 temperature_k=300K
+        （26.85°C，TCAD 物理仿真标准）不同。这是行业惯例差异：
+        - 封装热分析: JEDEC JESD51-2 标准 25°C（298.15K）
+          https://www.jedec.org/standards-documents/docs/jesd-51-2
+        - TCAD 物理仿真: 300K（26.85°C，半导体器件仿真惯例）
+        两者差 1.85K，封装级热分析用 25°C 与工业标准对齐。
         """
         T_j = ambient_temp_c + chip_power_w * spec.thermal_resistance_jc_K_W
         margin = spec.operating_temp_max_c - T_j

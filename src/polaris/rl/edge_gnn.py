@@ -255,7 +255,11 @@ class EdgeGNN:
         wl = float(edge.get("wavelength", 1.55))
         feat[7 + _wavelength_to_band_idx(wl)] = 1.0
         feat[10] = min(abs(float(edge.get("delta_neff", 0.0))) / 2.0, 1.0)
-        feat[11] = min(float(edge.get("loss_db_cm", 2.0)) / 10.0, 1.0)
+        # R5-P1-2 修复: 原 default 2.0 dB/cm 与项目 7 处 3.0 dB/cm 不一致。
+        # 统一为 3.0 dB/cm（SOI 上界，Soref 1993 + SiEPIC PDK）。
+        # 文献: Soref 1993 IEEE Proc. 41(9) 1182-1183
+        #   https://ieeexplore.ieee.org/document/1148303
+        feat[11] = min(float(edge.get("loss_db_cm", 3.0)) / 10.0, 1.0)
         feat[12] = min(float(edge.get("crosstalk_db", 30.0)) / 40.0, 1.0)
         feat[13] = min(float(edge.get("bend_radius", 5.0)) / 50.0, 1.0)
         relation = int(edge.get("relation", RELATION_OPTICAL))

@@ -66,7 +66,7 @@ class PhotonicDevice:
 #   - MZI 矩阵: 0.5 dB（4×4 矩阵典型值）
 #   - 相位调制器: 0.1 dB（热光相移器典型值）
 #   - 探测器: 0.5 dB（耦合损耗）
-#   - 波导交叉: 0.2 dB（低损耗交叉典型值）
+#   - 波导交叉: 0.3 dB（SiEPIC EBeam PDK crossing_te1550 保守上界）
 #   - 锥形转换器: 0.1 dB（绝热锥形典型值）
 #   - 波导/激光器: 0.0 dB（波导损耗按长度计算，激光器为光源）
 # 文献来源:
@@ -181,7 +181,12 @@ PTC_DEVICES: dict[str, PhotonicDevice] = {
         height_um=20.0,
         category="passive",
         description="波导交叉（低损耗）",
-        insertion_loss_db=0.2,
+        # R5-P1-9 修复: 原 0.2 dB 与项目 3 处 0.3 dB 不一致。
+        # 统一为 0.3 dB（SiEPIC EBeam PDK crossing_te1550 保守上界）。
+        # 文献: SiEPIC EBeam PDK
+        #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        # 同步: curvy_optodesigner.py / path_geometry.py / sim/models.py
+        insertion_loss_db=0.3,
     ),
 }
 

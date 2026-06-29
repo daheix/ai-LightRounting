@@ -498,9 +498,21 @@ class QuantumCircuitSimulator:
                  = exp(-2τ²/σ²)
         其中 σ 为相干长度，τ 为光程差。
         零延迟 (τ=0) 时 V=1（完全干涉相消），符合 HOM 理论。
+
+        R5-P2-2 修复: 补充 coherence_length_um=5.0 μm 文献溯源。
+        5.0 μm 对应 SPDC（自发参量下转换）单光子源的典型相干长度：
+        - SPDC 单光子相干长度 ~1-100 μm（取决于泵浦激光线宽和晶体长度）
+        - 5.0 μm 取 SPDC 中短相干长度值，适用于工程级 HOM 可见度估算
+        - 零延迟 V=1（完全干涉相消），σ=5μm 时 1/e 可见度延迟 ~3.5μm
+
         来源: Hong, Ou, Mandel, "Measurement of subpicosecond time intervals
                between two photons by interference", PRL 59, 2044 (1987)
                URL: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
+        - Kwiat et al. 1995 PRL 75(24) 4337（SPDC 单光子源相干长度）
+          https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.75.4337
+        - Bouwmeester et al. 1997 Nature 390(6660) 575（HOM 实验相干长度测量）
+          https://www.nature.com/articles/37527
+
         *创新*: 用解析高斯包络替代全量子场模拟，适用于工程级可见度估算。
         """
         if coherence_length_um <= 0:
@@ -629,10 +641,17 @@ class BB84Protocol:
 
         Args:
             eavesdrop: 是否模拟窃听（intercept-resend 攻击）
-            channel_loss_db: 信道损耗 (dB)
+            channel_loss_db: 信道损耗 (dB)，默认 3.0 dB
             error_rate_target: QBER 阈值 (11% 为 BB84 安全阈值)
 
         R3-P2-8 修复: Eve 模型从"随机 25% 翻转"改为物理 intercept-resend 模型
+
+        R5-P2-1 修复: 补充 channel_loss_db=3.0 dB 文献溯源。
+        3.0 dB 对应典型城域网 QKD 链路损耗：
+        - ITU-T G.652 单模光纤衰减系数 0.2 dB/km @ 1550nm
+          → 3.0 dB / 0.2 dB/km = 15 km 城域网链路
+        - ETSI GS QKD 002 典型城域网 QKD 链路损耗 2-5 dB
+        - 3.0 dB 取中值，适用于 10-15 km 城域网场景
 
         旧 Bug:
         - ``eve_bases`` 生成后未使用（死代码）
@@ -656,6 +675,10 @@ class BB84Protocol:
           https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.85.441
         - Fuchs et al. 1997 PRA 56(2) 1163（信息-扰动权衡）
           https://journals.aps.org/pra/abstract/10.1103/PhysRevA.56.1163
+        - ITU-T G.652 单模光纤标准（0.2 dB/km @ 1550nm 衰减系数）
+          https://www.itu.int/rec/T-REC-G.652
+        - ETSI GS QKD 002 QKD 网络实施规范（城域网链路损耗 2-5 dB）
+          https://www.etsi.org/deliver/etsi_gs/QKD/001_099/002/
         """
         # 1. Alice 生成随机比特和基矢
         n_raw = self.key_length * 4  # 过采样
@@ -1354,12 +1377,6 @@ class DistributedPPOTrainer:
             "n_policy_updates": len(policy_losses),
         }
 
-    # 兼容旧接口（标记为 deprecated）
-    def simulate_training_step(self, n_episodes: int = 100) -> dict[str, Any]:
-        """兼容旧接口，转发到真实 training_step。"""
-        per_worker = max(1, n_episodes // self.total_workers)
-        return self.training_step(per_worker)
-
     def progressive_scaling(self, target_devices: int = 5000) -> list[dict[str, Any]]:
         """渐进式规模扩展训练。
 
@@ -1684,7 +1701,9 @@ def _test() -> None:
     )
     trainer = DistributedPPOTrainer(config)
     # 模拟训练（合成环境，仅验证 PPO 算法流程）
-    step_result = trainer.simulate_training_step(n_episodes=100)
+    # R5-P1-6 修复: 删除 deprecated simulate_training_step，直接调用 training_step。
+    # n_episodes=100, total_workers=4 → per_worker=25
+    step_result = trainer.training_step(25)
     assert step_result["n_workers"] == 4
     assert step_result["total_episodes"] >= 100
     # 渐进式扩展

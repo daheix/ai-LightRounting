@@ -33,7 +33,10 @@ logger = logging.getLogger(__name__)
 # 物理常量（来源: NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/）
 C0 = 2.99792458e8  # 真空光速 m/s（NIST CODATA 2018 精确值）
 EPS0 = 8.8541878128e-12  # 真空介电常数 F/m（NIST CODATA 2018）
-MU0 = 1.25663706212e-7  # 真空磁导率 H/m（NIST CODATA 2018）
+MU0 = 1.25663706212e-6  # 真空磁导率 H/m（NIST CODATA 2018，μ₀ = 4π×10⁻⁷）
+# R5-P0-2 修复: 原值 1.25663706212e-7 小 10 倍，导致 η₀≈119Ω（正确 377Ω）、
+# PML 磁场阻尼系数大 10 倍。μ₀ = 4π×10⁻⁷ H/m ≈ 1.25663706212e-6 H/m
+# 文献: NIST CODATA 2018 https://physics.nist.gov/cgi-bin/cuu/Value?mu0
 # SOI 材料参数（来源: Soref 1993 IEEE J. Quantum Electron.）
 SOI_N_SI = 3.476  # 硅折射率 @1.55μm（Soref 1993）
 SOI_N_SIO2 = 1.444  # 二氧化硅折射率 @1.55μm（Soref 1993）

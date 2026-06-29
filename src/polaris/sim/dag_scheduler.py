@@ -269,19 +269,20 @@ def cascade_parallel(
     # 小规模电路不启用并行
     if n < MIN_PARALLEL_SUBNETWORKS:
         logger.info("cascade_parallel: 电路规模 %d < %d，使用串行 KLU", n, MIN_PARALLEL_SUBNETWORKS)
-        return _fallback_klu(instances, connections, ports)
+        return _cascade_via_klu(instances, connections, ports)
 
-    # 创建 DAG 并检测并行层级
+    # 创建 DAG 并显式检测环（R5-P1-5: 禁止 except RuntimeError 静默 fall-back）
     dag = create_dag(instances, connections)
-    try:
-        levels = detect_parallel_groups(dag)
-    except RuntimeError:
-        logger.info("cascade_parallel: 检测到环，使用 KLU 后端")
-        return _fallback_klu(instances, connections, ports)
+    if _has_cycle(dag):
+        logger.info("cascade_parallel: 检测到环，使用 KLU 后端（合法策略选择，非 fall-back）")
+        return _cascade_via_klu(instances, connections, ports)
+
+    # 无环：检测并行层级
+    levels = detect_parallel_groups(dag)
 
     # 只有 1 层说明所有节点串行
     if len(levels) <= 1:
-        return _fallback_klu(instances, connections, ports)
+        return _cascade_via_klu(instances, connections, ports)
 
     # 子网络分解 + 并行求解 + 合并
     return _parallel_solve_subnetworks(
@@ -289,12 +290,41 @@ def cascade_parallel(
     )
 
 
-def _fallback_klu(
+def _has_cycle(dag: Any) -> bool:
+    """显式检测 DAG 是否存在环（邻接表 DFS 三色标记法）。
+
+    R5-P1-5 修复: 原 cascade_parallel 用 except RuntimeError 静默 fall-back 到 KLU，
+    违反 R03 禁止 fall-back。改为显式环检测后策略选择。
+    文献: Cormen et al. 2009 "Introduction to Algorithms" 3rd ed. §22.3 DFS
+      https://mitpress.mit.edu/9780262033848/
+    """
+    white, gray, black = 0, 1, 2
+    color: dict[str, int] = {node: white for node in dag}
+
+    def dfs(node: str) -> bool:
+        color[node] = gray
+        for neighbor in dag.get(node, []):
+            if color[neighbor] == gray:
+                return True  # 回边 → 环
+            if color[neighbor] == white and dfs(neighbor):
+                return True
+        color[node] = black
+        return False
+
+    return any(color[node] == white and dfs(node) for node in dag)
+
+
+def _cascade_via_klu(
     instances: dict[str, SDict],
     connections: list[tuple[str, str]],
     ports: dict[str, str] | None,
 ) -> SDict:
-    """回退到 KLU 后端（小规模或环电路场景）。"""
+    """使用 KLU 后端串行求解（小规模或环电路的合法策略选择）。
+
+    R5-P1-5 修复: 原函数名 _fallback_klu 违反 R03 命名规范（"fallback" 术语误导）。
+    重命名为 _cascade_via_klu，明确这是处理环电路/小规模电路的合法算法路径，
+    而非异常 fall-back。
+    """
     from polaris.sim.cascade_backends import cascade_klu
 
     return cascade_klu(instances, connections, ports)

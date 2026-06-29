@@ -38,18 +38,34 @@ from polaris.sim.quantum_boson_sampling import (
 
 
 def klm_cnot_success_probability() -> float:
-    """KLM CNOT 门成功率。
+    """KLM CNOT 门成功率（Ralph 2002 简化 4-BS 电路）。
 
-    KLM 方案用线性光学实现量子门，CNOT 门成功率为 1/4（25%）。
+    本模块 klm_cnot_circuit() 实现的是 Ralph 2002 PRA 65, 062324 提出的
+    简化 4-BS 电路（4 模式），后选择成功率约 1/9 ≈ 0.1111。
+
+    R5-P0-1 修复: 原 docstring 误标 "1/4（25%）" 并 return 0.25，但 0.25 是
+    完整 KLM NS-gate 方案（Knill 2001 Nature，8 模式）的理论值，与本模块
+    实际电路（Ralph 2002 简化 4-BS，4 模式）不匹配，违反 R02 学术诚信
+    （方案混用）。修正为 1/9，与 quantum/quantum_circuit_distributed.py
+    的 Ralph 2002 实现一致。
+
+    方案区分（重要）:
+    - Knill 2001 Nature 原始 NS-gate: 8 模式，成功率 1/16 ≈ 0.0625
+    - Ralph 2002 PRA 65, 062324 简化 4-BS: 4 模式，成功率 1/9 ≈ 0.1111
+    - 本模块 klm_cnot_circuit() 返回 4×4 酉矩阵 → Ralph 2002 简化版
 
     来源:
-    - Knill, Laflamme, Milburn, Nature 2001
+    - Knill, Laflamme, Milburn, Nature 2001（原始 KLM 方案，NS-gate 1/16）
       https://www.nature.com/articles/35051009
+    - Ralph, Langford, Bell, White, PRA 2002, 65, 062324（简化 4-BS 1/9）
+      https://doi.org/10.1103/PhysRevA.65.062324
+    - Knill, PRA 2002, 66, 052306（改进方案 ~1/9）
+      https://doi.org/10.1103/PhysRevA.66.052306
 
     Returns:
-        成功率 0.25。
+        成功率 1/9 ≈ 0.1111（Ralph 2002 简化 4-BS 电路）。
     """
-    return 0.25
+    return 1.0 / 9.0
 
 
 def klm_hadamard_gate() -> np.ndarray:
@@ -267,16 +283,23 @@ def klm_cnot_simulate(
 
     学术诚信说明:
     - 本实现为 Ralph et al. 2002 的简化版 KLM CNOT 门（4 模式）
-    - 完整 KLM CNOT 门需要 2 个 NS gate + 分束器（8 模式），成功率 1/4
-    - 简化版后选择成功率约 20%，信号模式分布展示量子干涉特征
+    - 完整 KLM CNOT 门需要 2 个 NS gate + 分束器（8 模式），成功率 1/16
+    - 简化版后选择成功率约 1/9（Ralph 2002 PRA 65, 062324）
     - 信号模式分布非均匀（非经典），验证了后选择实现非线性操作的物理本质
-    - klm_cnot_success_probability() 返回的 0.25 是完整 KLM 方案的理论值
+    - klm_cnot_success_probability() 返回 1/9（Ralph 2002 简化电路理论值）
+
+    R5-P0-1 修复: 原注释误标 "完整 KLM 1/4" 和 "简化版 20%"，与文献不符。
+    - Knill 2001 Nature 原始 NS-gate: 1/16（非 1/4）
+    - Ralph 2002 PRA 65, 062324 简化 4-BS: 1/9（非 20%）
+    - 本模块 klm_cnot_circuit() 返回 4×4 酉矩阵 → Ralph 2002 简化版
 
     来源:
-    - Knill, Laflamme, Milburn, Nature 2001, KLM 方案
+    - Knill, Laflamme, Milburn, Nature 2001, KLM 方案（NS-gate 1/16）
       https://www.nature.com/articles/35051009
-    - Ralph et al., PRA 2002, 简化 KLM CNOT 门
-      https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324
+    - Ralph et al., PRA 2002, 65, 062324, 简化 KLM CNOT 门（1/9）
+      https://doi.org/10.1103/PhysRevA.65.062324
+    - Knill, PRA 2002, 66, 052306, 改进方案（~1/9）
+      https://doi.org/10.1103/PhysRevA.66.052306
 
     Args:
         n_shots: 蒙特卡洛采样次数（用于统计验证）。
@@ -293,7 +316,7 @@ def klm_cnot_simulate(
         - quantum_interference: 量子干涉特征验证（信号分布非均匀）
         - n_shots: 采样次数
         - sampled_success_rate: 采样后选择成功率
-        - theoretical_success_prob: KLM 理论值 0.25（完整 NS gate 版本）
+        - theoretical_success_prob: Ralph 2002 简化电路理论值 1/9
         - simplified_success_prob: 简化电路实际后选择成功率
     """
     U, signal_modes, aux_modes = klm_cnot_circuit()
@@ -320,7 +343,7 @@ def klm_cnot_simulate(
         "quantum_interference": quantum_interference,
         "n_shots": n_shots,
         "sampled_success_rate": sampled_success_rate,
-        "theoretical_success_prob": 0.25,  # KLM 理论值（完整 NS gate 版本）
+        "theoretical_success_prob": 1.0 / 9.0,  # Ralph 2002 简化 4-BS 电路理论值
         "simplified_success_prob": post_select_prob,  # 简化电路实际值
     }
 

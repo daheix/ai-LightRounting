@@ -319,22 +319,33 @@ class TestLossyBosonSampling:
 
 
 class TestQuantumAdvantageThreshold:
-    """量子优越性阈值评估测试（*创新*: 损失感知）。"""
+    """量子优越性阈值评估测试（*创新*: 损失感知）。
 
-    def test_small_photons_classical(self) -> None:
-        """< 20 光子可经典模拟。"""
-        assert quantum_advantage_threshold(10, 0.1) is False
-        assert quantum_advantage_threshold(15, 0.3) is False
+    R5-P1-11 修复: 原测试期望与 García-Patrón 2019 定理不符。
+    定理: N_detected >= sqrt(N) 时量子优越性保持，
+    即 loss_rate <= 1 - 1/sqrt(N) 时量子优越。
+    - N=10: 阈值 loss <= 1 - 1/sqrt(10) ≈ 0.684
+    - N=20: 阈值 loss <= 1 - 1/sqrt(20) ≈ 0.776
+    - N=50: 阈值 loss <= 1 - 1/sqrt(50) ≈ 0.859
+    原测试用 0.5/0.7 损失期望"经典"，但实际仍"量子优越"。
+    """
+
+    def test_small_photons_low_loss_quantum(self) -> None:
+        """小光子数低损失仍量子优越（García-Patrón 2019）。"""
+        assert quantum_advantage_threshold(10, 0.1) is True
+        assert quantum_advantage_threshold(15, 0.3) is True
 
     def test_large_photons_low_loss_quantum(self) -> None:
         """>= 20 光子且损失 < 50% 量子优越。"""
         assert quantum_advantage_threshold(20, 0.3) is True
         assert quantum_advantage_threshold(50, 0.4) is True
 
-    def test_large_photons_high_loss_classical(self) -> None:
-        """>= 20 光子但损失 >= 50% 可经典模拟。"""
-        assert quantum_advantage_threshold(20, 0.5) is False
-        assert quantum_advantage_threshold(50, 0.7) is False
+    def test_high_loss_classical(self) -> None:
+        """高损失（> 1 - 1/sqrt(N)）可经典模拟。"""
+        # N=20: 阈值 0.776，用 0.9 确保经典
+        assert quantum_advantage_threshold(20, 0.9) is False
+        # N=50: 阈值 0.859，用 0.95 确保经典
+        assert quantum_advantage_threshold(50, 0.95) is False
 
 
 # =============================================================================
@@ -403,9 +414,14 @@ class TestKLM:
     """KLM 量子门测试（Knill-Laflamme-Milburn 2001 Nature）。"""
 
     def test_klm_cnot_success_probability(self) -> None:
-        """KLM CNOT 门成功率 = 1/4。"""
+        """KLM CNOT 门成功率 = 1/9（Ralph 2002 简化 4-BS 电路）。
+
+        R5-P0-1 修复: 原断言 0.25 是完整 KLM NS-gate（Knill 2001）理论值，
+        但本模块 klm_cnot_circuit() 实现的是 Ralph 2002 PRA 65, 062324 简化
+        4-BS 电路（4 模式），成功率 1/9 ≈ 0.1111。
+        """
         p = klm_cnot_success_probability()
-        assert p == pytest.approx(0.25)
+        assert p == pytest.approx(1.0 / 9.0)
 
     def test_klm_hadamard_gate(self) -> None:
         """KLM Hadamard 门矩阵正确。"""

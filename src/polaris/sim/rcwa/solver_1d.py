@@ -350,6 +350,15 @@ def _safe_real_ratio(numerator: np.ndarray, denominator: complex) -> np.ndarray:
     ratio = np.zeros_like(num, dtype=np.float64)
     safe_den = np.real(denominator) if np.abs(np.real(denominator)) > 1e-30 else 1e-30
     ratio[propagating] = np.real(num[propagating]) / safe_den
-    # 负比值（后向传播）置 0
-    ratio[ratio < 0] = 0.0
+    # R5-P1-7 修复: 负衍射效率表示能量守恒违反，禁止静默截断为 0（R03）。
+    # 物理上传播波衍射效率必须 ≥ 0，负值提示数值发散或傅里叶阶数不足。
+    # 文献: Moharam 1995 JOSA A 12(5) 1077-1086 §6 能量守恒
+    #   https://doi.org/10.1364/JOSAA.12.001077
+    if np.any(ratio[propagating] < -1e-10):
+        raise RuntimeError(
+            f"RCWA 衍射效率出现负值 {ratio[propagating].min():.6e}，"
+            "提示数值发散或傅里叶阶数不足（Moharam 1995 JOSA A §6 能量守恒违反）。"
+            "请增加傅里叶阶数 n_harmonics 或检查介质层参数。"
+            "R03 禁止 fall-back: 禁止静默截断负效率为 0。"
+        )
     return ratio
