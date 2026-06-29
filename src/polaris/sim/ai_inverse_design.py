@@ -47,7 +47,6 @@ n_i = n_low + θ_i·(n_high - n_low)，优化目标为最大化/约束目标波�
 - ``ai_inverse_design_physics`` — TMM 可微正向仿真核心 + 物理常数 + JAX 检测
 - ``ai_inverse_design_adjoint`` — AdjointConfig + AdjointOptimizer
 - ``ai_inverse_design_rl`` — RLDesignConfig + RLInverseDesigner
-- ``ai_inverse_design_gan`` — GANDesigner
 - ``ai_inverse_design_optimizers`` — MultiObjectiveOptimizer + ManufactureAwareOptimizer
 """
 
@@ -58,7 +57,6 @@ from polaris.sim.ai_inverse_design_adjoint import (  # noqa: F401
     AdjointOptimizer,
     _transfer_matrix_transmission_jax,
 )
-from polaris.sim.ai_inverse_design_gan import GANDesigner  # noqa: F401
 from polaris.sim.ai_inverse_design_optimizers import (  # noqa: F401
     ManufactureAwareOptimizer,
     MultiObjectiveOptimizer,
@@ -80,7 +78,6 @@ __all__ = [
     "AdjointOptimizer",
     "RLDesignConfig",
     "RLInverseDesigner",
-    "GANDesigner",
     "MultiObjectiveOptimizer",
     "ManufactureAwareOptimizer",
 ]

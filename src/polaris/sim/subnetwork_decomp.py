@@ -650,27 +650,35 @@ def merge_subnetworks_via_schur(
     if len(sub_results) == 1:
         return sub_results[0]
 
-    # 简化实现：逐对合并
-    # 对于多子网络，可扩展为层次化合并
+    # 跟踪已合并的子网络集合（从第0个开始，逐步加入）
+    merged_group: set[int] = {0}
     merged = sub_results[0]
     for i in range(1, len(sub_results)):
         next_s = sub_results[i]
-        # 收集两个子网络间的耦合
-        relevant_couplings = []
+        # R14-P2-1 修复: 原逻辑只检查 (s1==0 and s2==i) 或 (s1==i and s2==0)，
+        # 但第1次合并后 merged 包含多个子网络，原耦合键不再匹配。
+        # 正确逻辑: 检查任意耦合 (s1,s2) 满足 s1∈merged_group 且 s2==i，
+        # 或 s1==i 且 s2∈merged_group。s1==s2 的内部耦合（已在 merged 内）被排除。
+        relevant_couplings: list[tuple[str, str]] = []
         for s1, s2, ports_list in couplings:
-            if (s1 == 0 and s2 == i) or (s1 == i and s2 == 0):
+            in_group_1 = s1 in merged_group
+            in_group_2 = s2 in merged_group
+            is_internal = in_group_1 and in_group_2  # 两端都在 merged 内→内部耦合
+            connects_to_i = (in_group_1 and s2 == i) or (in_group_2 and s1 == i)
+            if connects_to_i and not is_internal:
                 relevant_couplings.extend(ports_list)
 
         if not relevant_couplings:
-            # 无耦合，直接合并端口
+            # 无耦合，直接合并端口（各自独立，无相互作用）
             merged = {**merged, **next_s}
         else:
             # 有耦合，使用 Redheffer 星积合并
             from polaris.sim.cascade_backends import redheffer_star
 
-            # 提取连接端口对
-            internal_connections = relevant_couplings
-            merged = redheffer_star(merged, next_s, internal_connections)
+            merged = redheffer_star(merged, next_s, relevant_couplings)
+
+        # 第 i 个子网络合并完成，将其加入 merged_group
+        merged_group.add(i)
 
     return merged
 

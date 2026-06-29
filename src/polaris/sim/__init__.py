@@ -43,7 +43,6 @@
 from polaris.sim.ai_inverse_design import (
     AdjointConfig,
     AdjointOptimizer,
-    GANDesigner,
     ManufactureAwareOptimizer,
     MultiObjectiveOptimizer,
     RLDesignConfig,
@@ -600,7 +599,6 @@ __all__ = [
     "AdjointOptimizer",
     "RLDesignConfig",
     "RLInverseDesigner",
-    "GANDesigner",
     "MultiObjectiveOptimizer",
     "ManufactureAwareOptimizer",
     # R14 Building Block 抽象（ModelCard/TMatrix/s_to_t/t_to_s）
