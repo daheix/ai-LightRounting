@@ -652,26 +652,21 @@ class WorkerStats:
     devices_processed: int = 0
 
 
-class _PolicyNetwork:
-    """简易策略网络（纯 NumPy 实现，R04 不参与 GPU）。
+class _BaseMLP:
+    """基础 MLP 网络（纯 NumPy 实现，R04 不参与 GPU）。"""
 
-    两层 MLP: obs → hidden(64) → hidden(64) → action_logits
-    使用 Adam 优化器，PPO-Clip 目标函数。
-    """
-
-    def __init__(self, obs_dim: int, action_dim: int, lr: float = 3e-4) -> None:
+    def __init__(self, obs_dim: int, hidden_dim: int, output_dim: int, lr: float) -> None:
         self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
         self.lr = lr
         rng = np.random.default_rng(42)
-        # He 初始化
-        self.W1 = rng.normal(0, np.sqrt(2.0 / obs_dim), (obs_dim, 64))
-        self.b1 = np.zeros(64)
-        self.W2 = rng.normal(0, np.sqrt(2.0 / 64), (64, 64))
-        self.b2 = np.zeros(64)
-        self.W3 = rng.normal(0, np.sqrt(2.0 / 64), (64, action_dim))
-        self.b3 = np.zeros(action_dim)
-        # Adam 状态
+        self.W1 = rng.normal(0, np.sqrt(2.0 / obs_dim), (obs_dim, hidden_dim))
+        self.b1 = np.zeros(hidden_dim)
+        self.W2 = rng.normal(0, np.sqrt(2.0 / hidden_dim), (hidden_dim, hidden_dim))
+        self.b2 = np.zeros(hidden_dim)
+        self.W3 = rng.normal(0, np.sqrt(2.0 / hidden_dim), (hidden_dim, output_dim))
+        self.b3 = np.zeros(output_dim)
         self._m = [np.zeros_like(p) for p in self._params()]
         self._v = [np.zeros_like(p) for p in self._params()]
         self._t = 0
@@ -679,106 +674,31 @@ class _PolicyNetwork:
     def _params(self) -> list[NDArray[np.float64]]:
         return [self.W1, self.b1, self.W2, self.b2, self.W3, self.b3]
 
-    def forward(self, obs: NDArray[np.float64]) -> NDArray[np.float64]:
-        """前向传播，返回 action logits。"""
+    def _forward(self, obs: NDArray[np.float64]) -> tuple[NDArray, NDArray, NDArray]:
         h1 = np.tanh(obs @ self.W1 + self.b1)
         h2 = np.tanh(h1 @ self.W2 + self.b2)
-        logits = h2 @ self.W3 + self.b3
-        return logits
+        out = h2 @ self.W3 + self.b3
+        return h1, h2, out
 
-    def act(self, obs: NDArray[np.float64], rng: np.random.Generator) -> tuple[int, float]:
-        """采样动作，返回 (action, log_prob)。"""
-        logits = self.forward(obs.reshape(1, -1))[0]
-        # 数值稳定 softmax
-        logits = logits - np.max(logits)
-        exp_logits = np.exp(logits)
-        probs = exp_logits / np.sum(exp_logits)
-        probs = np.clip(probs, 1e-10, 1.0)
-        probs = probs / np.sum(probs)
-        action = int(rng.choice(self.action_dim, p=probs))
-        log_prob = float(np.log(probs[action]))
-        return action, log_prob
-
-    def update(self, obs_batch: NDArray[np.float64],
-               action_batch: NDArray[np.int64],
-               old_log_prob: NDArray[np.float64],
-               advantages: NDArray[np.float64],
-               clip_ratio: float = 0.2,
-               entropy_coeff: float = 0.01) -> dict[str, float]:
-        """PPO-Clip 策略更新。
-
-        L^CLIP = E[min(r_t A_t, clip(r_t, 1-ε, 1+ε) A_t)]
-        来源: Schulman et al. 2017 §3, eq.(7)
-        """
-        n = len(obs_batch)
-        if n == 0:
-            raise ValueError("批次不能为空")
-
-        # 前向
-        h1 = np.tanh(obs_batch @ self.W1 + self.b1)   # (n, 64)
-        h2 = np.tanh(h1 @ self.W2 + self.b2)          # (n, 64)
-        logits = h2 @ self.W3 + self.b3                # (n, action_dim)
-        logits = logits - np.max(logits, axis=1, keepdims=True)
-        exp_logits = np.exp(logits)
-        probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
-        probs = np.clip(probs, 1e-10, 1.0)
-        probs = probs / np.sum(probs, axis=1, keepdims=True)
-
-        # 取出所选动作的概率
-        action_probs = probs[np.arange(n), action_batch]
-        new_log_prob = np.log(action_probs)
-        ratio = np.exp(new_log_prob - old_log_prob)
-
-        # PPO-Clip 目标
-        surr1 = ratio * advantages
-        surr2 = np.clip(ratio, 1 - clip_ratio, 1 + clip_ratio) * advantages
-        policy_loss = -float(np.mean(np.minimum(surr1, surr2)))
-
-        # 熵正则
-        entropy = -float(np.mean(np.sum(probs * np.log(probs), axis=1)))
-        total_loss = policy_loss - entropy_coeff * entropy
-
-        # 反向传播（对 total_loss 的梯度）
-        # PPO-Clip 梯度:
-        #   当 r_t × A_t < clip(r_t, 1-ε, 1+ε) × A_t 时（即未被截断）:
-        #     dL/dθ = -A_t × ∇log π(a|s)
-        #   当被截断时: 梯度为 0（停止梯度）
-        # 来源: Schulman et al. 2017 §3, eq.(7)
-        grad_logits = np.zeros_like(logits)
-        for i in range(n):
-            a = action_batch[i]
-            # 只在未被截断时传递梯度
-            if surr1[i] < surr2[i]:
-                # 未截断: dL/dθ = -A_t × ∇log π(a|s) = -A_t × (1/π(a|s)) × ∇π(a|s)
-                grad_logits[i, a] += -advantages[i] * (1.0 / probs[i, a])
-            # 被截断时 grad=0，不更新
-        # 熵正则梯度: dH/d logits = probs × (log probs + 1)
-        # 总 loss = policy_loss - entropy_coeff × entropy
-        # dL/d logits += -entropy_coeff × dH/d logits / n
-        grad_logits += -entropy_coeff * (probs * (np.log(probs) + 1)) / n
-
-        # 传递到 W3
-        grad_W3 = h2.T @ grad_logits                  # (64, action_dim)
-        grad_b3 = np.sum(grad_logits, axis=0)
-        grad_h2 = grad_logits @ self.W3.T              # (n, 64)
-        # tanh 反向
+    def _backward(self, obs: NDArray, h1: NDArray, h2: NDArray,
+                  grad_out: NDArray) -> list[NDArray]:
+        grad_W3 = h2.T @ grad_out
+        grad_b3 = np.sum(grad_out, axis=0)
+        grad_h2 = grad_out @ self.W3.T
         grad_h2_pre = grad_h2 * (1 - h2 ** 2)
-        grad_W2 = h1.T @ grad_h2_pre                   # (64, 64)
+        grad_W2 = h1.T @ grad_h2_pre
         grad_b2 = np.sum(grad_h2_pre, axis=0)
         grad_h1 = grad_h2_pre @ self.W2.T
         grad_h1_pre = grad_h1 * (1 - h1 ** 2)
-        grad_W1 = obs_batch.T @ grad_h1_pre            # (obs_dim, 64)
+        grad_W1 = obs.T @ grad_h1_pre
         grad_b1 = np.sum(grad_h1_pre, axis=0)
+        return [grad_W1, grad_b1, grad_W2, grad_b2, grad_W3, grad_b3]
 
-        grads = [grad_W1, grad_b1, grad_W2, grad_b2, grad_W3, grad_b3]
+    def _adam_update(self, grads: list[NDArray], max_grad_norm: float) -> float:
         grad_norm = float(np.sqrt(sum(np.sum(g ** 2) for g in grads)))
-
-        # 梯度裁剪
-        if grad_norm > 0.5:
-            scale = 0.5 / grad_norm
+        if grad_norm > max_grad_norm:
+            scale = max_grad_norm / grad_norm
             grads = [g * scale for g in grads]
-
-        # Adam 更新
         self._t += 1
         beta1, beta2, eps = 0.9, 0.999, 1e-8
         params = self._params()
@@ -788,6 +708,127 @@ class _PolicyNetwork:
             m_hat = self._m[i] / (1 - beta1 ** self._t)
             v_hat = self._v[i] / (1 - beta2 ** self._t)
             p -= self.lr * m_hat / (np.sqrt(v_hat) + eps)
+        return grad_norm
+
+
+class _PolicyNetwork(_BaseMLP):
+    """策略网络（Actor），PPO-Clip 目标函数。
+
+    文献:
+    - Schulman et al., "Proximal Policy Optimization Algorithms", arXiv:1707.06347, 2017.
+      URL: https://arxiv.org/abs/1707.06347
+    - Williams, "Simple Statistical Gradient-Following Algorithms for
+      Connectionist Reinforcement Learning", MLJ 1992.
+      URL: https://link.springer.com/article/10.1007/BF00992696
+    - Sutton & Barto, "Reinforcement Learning: An Introduction", 2nd ed., 2018.
+      URL: http://incompleteideas.net/book/the-book-2nd.html
+    - Mnih et al., "Asynchronous Methods for Deep Reinforcement Learning", ICML 2016.
+      URL: http://proceedings.mlr.press/v48/mniha16.html
+    - Schulman et al., "Trust Region Policy Optimization", ICML 2015.
+      URL: https://arxiv.org/abs/1502.05477
+    """
+
+    def __init__(self, obs_dim: int, action_dim: int, lr: float = 3e-4) -> None:
+        super().__init__(obs_dim, 64, action_dim, lr)
+        self.action_dim = action_dim
+
+    def forward(self, obs: NDArray[np.float64]) -> NDArray[np.float64]:
+        _, _, logits = self._forward(obs)
+        return logits
+
+    def _softmax(self, logits: NDArray[np.float64]) -> NDArray[np.float64]:
+        logits = logits - np.max(logits, axis=1, keepdims=True)
+        exp_logits = np.exp(logits)
+        probs = exp_logits / np.sum(exp_logits, axis=1, keepdims=True)
+        probs = np.clip(probs, 1e-10, 1.0)
+        probs = probs / np.sum(probs, axis=1, keepdims=True)
+        return probs
+
+    def act(self, obs: NDArray[np.float64], rng: np.random.Generator) -> tuple[int, float]:
+        """采样动作，返回 (action, log_prob)。"""
+        logits = self.forward(obs.reshape(1, -1))
+        probs = self._softmax(logits)[0]
+        action = int(rng.choice(self.action_dim, p=probs))
+        log_prob = float(np.log(probs[action]))
+        return action, log_prob
+
+    def evaluate(self, obs: NDArray[np.float64],
+                 actions: NDArray[np.int64]) -> tuple[NDArray, NDArray, NDArray]:
+        """计算动作概率、log_prob 和熵。"""
+        logits = self.forward(obs)
+        probs = self._softmax(logits)
+        action_probs = probs[np.arange(len(obs)), actions]
+        log_probs = np.log(action_probs)
+        entropy = -np.sum(probs * np.log(probs), axis=1)
+        return log_probs, entropy, probs
+
+    def update(self, obs_batch: NDArray[np.float64],
+               action_batch: NDArray[np.int64],
+               old_log_prob: NDArray[np.float64],
+               advantages: NDArray[np.float64],
+               clip_ratio: float = 0.2,
+               entropy_coeff: float = 0.01,
+               max_grad_norm: float = 0.5) -> dict[str, float]:
+        """PPO-Clip 策略更新。
+
+        L^CLIP(θ) = E_t[min(r_t(θ)·Â_t, clip(r_t(θ), 1−ε, 1+ε)·Â_t)]
+
+        梯度计算: 对未截断样本，梯度为 -r_t · Â_t · ∇log π(a|s)；
+        对截断样本，梯度为 0（停止梯度）。
+
+        文献:
+        - Schulman et al., PPO, arXiv:1707.06347, 2017. §3 eq.(7)
+          URL: https://arxiv.org/abs/1707.06347
+        """
+        n = len(obs_batch)
+        if n == 0:
+            raise ValueError("批次不能为空")
+
+        h1, h2, logits = self._forward(obs_batch)
+        probs = self._softmax(logits)
+
+        action_probs = probs[np.arange(n), action_batch]
+        new_log_prob = np.log(action_probs)
+        ratio = np.exp(new_log_prob - old_log_prob)
+
+        surr1 = ratio * advantages
+        surr2 = np.clip(ratio, 1 - clip_ratio, 1 + clip_ratio) * advantages
+        min_surr = np.minimum(surr1, surr2)
+        policy_loss = -float(np.mean(min_surr))
+
+        entropy = -float(np.mean(np.sum(probs * np.log(probs), axis=1)))
+        total_loss = policy_loss - entropy_coeff * entropy
+
+        # 梯度: d(-min(surr1, surr2))/d logits
+        # 未截断条件:
+        #   A > 0 时: ratio <= 1+ε (未到上界)
+        #   A < 0 时: ratio >= 1-ε (未到下界)
+        # 等价于: surr1 <= surr2 （或 ratio 在 clip 范围内）
+        # 未截断梯度: -ratio * A * ∇ log π(a|s)
+        # 截断梯度: 0（停止梯度）
+        # ∇ log π(a)/d logits_j = δ_{aj} - π_j  (softmax 梯度)
+        grad_logits = np.zeros_like(logits)
+        for i in range(n):
+            clipped_upper = (advantages[i] > 0) and (ratio[i] > 1 + clip_ratio)
+            clipped_lower = (advantages[i] < 0) and (ratio[i] < 1 - clip_ratio)
+            is_clipped = clipped_upper or clipped_lower
+            if not is_clipped:
+                a = action_batch[i]
+                coeff = -ratio[i] * advantages[i] / n
+                grad_logits[i, :] += coeff * (-probs[i, :])
+                grad_logits[i, a] += coeff
+
+        # 熵正则梯度: H = -Σ p_i log p_i
+        # dH/d logits_j = p_j * (log p_j + 1) - p_j * Σ p_i (log p_i + 1)
+        # 简化: dH/d logits = p * (log p + 1) - p * H_scalar
+        # 这里直接用: grad_logits += -entropy_coeff * dH/d logits / n
+        log_p = np.log(probs)
+        d_entropy_d_logits = probs * (log_p + 1)
+        d_entropy_d_logits -= probs * np.sum(probs * (log_p + 1), axis=1, keepdims=True)
+        grad_logits += -entropy_coeff * d_entropy_d_logits / n
+
+        grads = self._backward(obs_batch, h1, h2, grad_logits)
+        grad_norm = self._adam_update(grads, max_grad_norm)
 
         return {
             "policy_loss": policy_loss,
@@ -797,12 +838,73 @@ class _PolicyNetwork:
         }
 
 
+class _ValueNetwork(_BaseMLP):
+    """价值网络（Critic），估计 V(s)。
+
+    文献:
+    - Schulman et al., "High-Dimensional Continuous Control Using
+      Generalized Advantage Estimation", ICLR 2016.
+      URL: https://arxiv.org/abs/1506.02438
+    - Sutton & Barto, "Reinforcement Learning: An Introduction", 2nd ed., 2018.
+      URL: http://incompleteideas.net/book/the-book-2nd.html
+    - Mnih et al., "Asynchronous Methods for Deep Reinforcement Learning", ICML 2016.
+      URL: http://proceedings.mlr.press/v48/mniha16.html
+    - Schulman et al., "Proximal Policy Optimization Algorithms", arXiv:1707.06347, 2017.
+      URL: https://arxiv.org/abs/1707.06347
+    - Sutton, "Learning to Predict by the Methods of Temporal Differences", MLJ 1988.
+      URL: https://link.springer.com/article/10.1007/BF00115009
+    """
+
+    def __init__(self, obs_dim: int, lr: float = 1e-3) -> None:
+        super().__init__(obs_dim, 64, 1, lr)
+
+    def forward(self, obs: NDArray[np.float64]) -> NDArray[np.float64]:
+        _, _, values = self._forward(obs)
+        return values.squeeze(axis=-1)
+
+    def update(self, obs_batch: NDArray[np.float64],
+               returns: NDArray[np.float64],
+               max_grad_norm: float = 0.5) -> dict[str, float]:
+        """价值函数更新，MSE loss。"""
+        n = len(obs_batch)
+        if n == 0:
+            raise ValueError("批次不能为空")
+
+        h1, h2, values = self._forward(obs_batch)
+        values = values.squeeze(axis=-1)
+        value_loss = float(np.mean((values - returns) ** 2))
+
+        grad_values = 2.0 * (values - returns) / n
+        grad_out = grad_values.reshape(-1, 1)
+        grads = self._backward(obs_batch, h1, h2, grad_out)
+        grad_norm = self._adam_update(grads, max_grad_norm)
+
+        return {
+            "value_loss": value_loss,
+            "value_grad_norm": grad_norm,
+        }
+
+
 class DistributedPPOTrainer:
-    """分布式 PPO 训练器（真实 PPO 算法，纯 NumPy）。
+    """分布式 PPO 训练器（Actor-Critic，GAE + PPO-Clip，纯 NumPy）。
 
     对齐: Google AlphaChip Circuit Training + Ray RLlib 架构。
     *创新*: 多 worker 并行采集 + GAE 优势估计 + PPO-Clip 更新，
            支持渐进式规模扩展（200→5000 器件）。
+
+    文献:
+    - Schulman et al., "Proximal Policy Optimization Algorithms", arXiv:1707.06347, 2017.
+      URL: https://arxiv.org/abs/1707.06347
+    - Schulman et al., "High-Dimensional Continuous Control Using
+      Generalized Advantage Estimation", ICLR 2016.
+      URL: https://arxiv.org/abs/1506.02438
+    - Sutton & Barto, "Reinforcement Learning: An Introduction", 2nd ed., 2018.
+      URL: http://incompleteideas.net/book/the-book-2nd.html
+    - Mnih et al., "Asynchronous Methods for Deep Reinforcement Learning", ICML 2016.
+      URL: http://proceedings.mlr.press/v48/mniha16.html
+    - Williams, "Simple Statistical Gradient-Following Algorithms for
+      Connectionist Reinforcement Learning", MLJ 1992.
+      URL: https://link.springer.com/article/10.1007/BF00992696
 
     注意: 本实现为单进程模拟多 worker 并行（multiprocessing.Pool 风格），
           R04 不参与 GPU，所有计算纯 NumPy。
@@ -812,6 +914,9 @@ class DistributedPPOTrainer:
         self.config = config or DistributedPPOConfig()
         self._policy = _PolicyNetwork(
             self.config.obs_dim, self.config.action_dim, self.config.learning_rate,
+        )
+        self._value = _ValueNetwork(
+            self.config.obs_dim, self.config.learning_rate,
         )
         self._workers: list[WorkerStats] = []
         self._global_step = 0
@@ -859,7 +964,8 @@ class DistributedPPOTrainer:
     def _collect_rollout(self, n_episodes: int, worker_id: int) -> dict[str, Any]:
         """单个 worker 采集 rollout 数据。"""
         rng = np.random.default_rng(self._global_step * 100 + worker_id)
-        obs_list, action_list, reward_list, log_prob_list, done_list = [], [], [], [], []
+        obs_list, next_obs_list = [], []
+        action_list, reward_list, log_prob_list, done_list = [], [], [], []
 
         total_reward = 0.0
         for ep in range(n_episodes):
@@ -871,6 +977,7 @@ class DistributedPPOTrainer:
                     obs, action, self.config.n_devices_per_circuit, step, rng,
                 )
                 obs_list.append(obs)
+                next_obs_list.append(next_obs)
                 action_list.append(action)
                 reward_list.append(reward)
                 log_prob_list.append(log_prob)
@@ -883,6 +990,7 @@ class DistributedPPOTrainer:
 
         return {
             "obs": np.array(obs_list, dtype=np.float64),
+            "next_obs": np.array(next_obs_list, dtype=np.float64),
             "actions": np.array(action_list, dtype=np.int64),
             "rewards": np.array(reward_list, dtype=np.float64),
             "old_log_probs": np.array(log_prob_list, dtype=np.float64),
@@ -893,35 +1001,60 @@ class DistributedPPOTrainer:
         }
 
     def _compute_gae(self, rewards: NDArray[np.float64],
+                     values: NDArray[np.float64],
+                     next_values: NDArray[np.float64],
                      dones: NDArray[np.bool_],
                      gamma: float = 0.99,
-                     lam: float = 0.95) -> NDArray[np.float64]:
+                     lam: float = 0.95) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
         """Generalized Advantage Estimation (GAE)。
 
-        来源: Schulman et al., "High-Dimensional Continuous Control Using
-               Generalized Advantage Estimation", ICLR 2016.
-               URL: https://arxiv.org/abs/1506.02438
-        δ_t = r_t + γ V(s_{t+1}) - V(s_t)
-        A_t = Σ (γλ)^l δ_{t+l}
+        δ_t = r_t + γ V(s_{t+1}) · (1 - done_t) - V(s_t)
+        Â_t = Σ_{l=0}^∞ (γλ)^l δ_{t+l}
+
+        终止状态处理:
+        - 若 done_t=True，则 s_{t+1} 为终止状态，V(s_{t+1}) 不参与 bootstrap（乘 0）
+        - 若 done_t=False，则用 V(s_{t+1}) 进行 bootstrap
+
+        文献:
+        - Schulman et al., "High-Dimensional Continuous Control Using
+          Generalized Advantage Estimation", ICLR 2016.
+          URL: https://arxiv.org/abs/1506.02438
+        - Sutton & Barto, "Reinforcement Learning: An Introduction", 2nd ed., 2018.
+          URL: http://incompleteideas.net/book/the-book-2nd.html
+        - Schulman et al., "Proximal Policy Optimization Algorithms", arXiv:1707.06347, 2017.
+          URL: https://arxiv.org/abs/1707.06347
+        - Mnih et al., "Asynchronous Methods for Deep Reinforcement Learning", ICML 2016.
+          URL: http://proceedings.mlr.press/v48/mniha16.html
+        - Sutton, "Learning to Predict by the Methods of Temporal Differences", MLJ 1988.
+          URL: https://link.springer.com/article/10.1007/BF00115009
         """
         n = len(rewards)
-        advantages = np.zeros(n, dtype=np.float64)
+        if n == 0:
+            raise ValueError("GAE: 空序列")
+        if len(values) != n or len(next_values) != n or len(dones) != n:
+            raise ValueError("GAE: 输入数组长度不一致")
+
+        advantages_raw = np.zeros(n, dtype=np.float64)
         last_adv = 0.0
-        # 简化：用 0 作为 baseline（无 critic 网络）
+        not_done = (~dones).astype(np.float64)
+
         for t in reversed(range(n)):
-            non_terminal = 0.0 if dones[t] else 1.0
-            delta = rewards[t] + gamma * 0.0 * non_terminal - 0.0
-            last_adv = delta + gamma * lam * non_terminal * last_adv
-            advantages[t] = last_adv
-        # 标准化
+            delta = rewards[t] + gamma * next_values[t] * not_done[t] - values[t]
+            last_adv = delta + gamma * lam * not_done[t] * last_adv
+            advantages_raw[t] = last_adv
+
+        returns = advantages_raw + values
+
+        advantages = advantages_raw.copy()
         if np.std(advantages) > 1e-8:
             advantages = (advantages - np.mean(advantages)) / (np.std(advantages) + 1e-8)
-        return advantages
+
+        return advantages, returns
 
     def training_step(self, n_episodes_per_worker: int = 25) -> dict[str, Any]:
-        """一次真实 PPO 训练步骤。
+        """一次真实 PPO 训练步骤（Actor-Critic + GAE + PPO-Clip）。
 
-        流程: 多 worker 并行采集 → GAE 优势估计 → PPO-Clip 策略更新。
+        流程: 多 worker 并行采集 → 价值估计 → GAE 优势估计 → PPO-Clip 更新。
         """
         # 1. 多 worker 采集
         rollouts = []
@@ -933,46 +1066,59 @@ class DistributedPPOTrainer:
 
         # 2. 聚合数据
         all_obs = np.vstack([r["obs"] for r in rollouts])
+        all_next_obs = np.vstack([r["next_obs"] for r in rollouts])
         all_actions = np.concatenate([r["actions"] for r in rollouts])
         all_rewards = np.concatenate([r["rewards"] for r in rollouts])
         all_old_log_probs = np.concatenate([r["old_log_probs"] for r in rollouts])
         all_dones = np.concatenate([r["dones"] for r in rollouts])
 
-        # 3. GAE 优势估计
-        advantages = self._compute_gae(
-            all_rewards, all_dones,
+        # 3. 价值估计（V(s) 和 V(s')）
+        all_values = self._value.forward(all_obs)
+        all_next_values = self._value.forward(all_next_obs)
+
+        # 4. GAE 优势估计（正确的 terminal mask + bootstrap）
+        advantages, returns = self._compute_gae(
+            all_rewards, all_values, all_next_values, all_dones,
             self.config.gamma, self.config.gae_lambda,
         )
 
-        # 4. PPO 策略更新（多 epoch）
-        losses = []
+        # 5. PPO 策略更新 + 价值函数更新（多 epoch）
+        policy_losses, value_losses = [], []
         batch_size = min(self.config.batch_size, len(all_obs))
         for epoch in range(self.config.n_epochs):
-            # 随机打乱
             idx = np.random.permutation(len(all_obs))
             for start in range(0, len(all_obs), batch_size):
                 batch_idx = idx[start:start + batch_size]
-                loss_info = self._policy.update(
+                policy_info = self._policy.update(
                     all_obs[batch_idx],
                     all_actions[batch_idx],
                     all_old_log_probs[batch_idx],
                     advantages[batch_idx],
                     self.config.clip_ratio,
                     self.config.entropy_coeff,
+                    self.config.max_grad_norm,
                 )
-                losses.append(loss_info)
+                value_info = self._value.update(
+                    all_obs[batch_idx],
+                    returns[batch_idx],
+                    self.config.max_grad_norm,
+                )
+                policy_losses.append(policy_info)
+                value_losses.append(value_info)
 
-        # 5. 统计
+        # 6. 统计
         self._global_step += 1
         mean_reward = float(np.mean([r["mean_reward"] for r in rollouts]))
         if mean_reward > self._best_reward:
             self._best_reward = mean_reward
-        mean_loss = float(np.mean([l["total_loss"] for l in losses])) if losses else 0.0
-        mean_grad = float(np.mean([l["grad_norm"] for l in losses])) if losses else 0.0
+        mean_policy_loss = float(np.mean([l["policy_loss"] for l in policy_losses])) if policy_losses else 0.0
+        mean_value_loss = float(np.mean([l["value_loss"] for l in value_losses])) if value_losses else 0.0
+        mean_total_loss = mean_policy_loss + 0.5 * mean_value_loss
+        mean_grad = float(np.mean([l["grad_norm"] for l in policy_losses])) if policy_losses else 0.0
 
         for w in self._workers:
             w.mean_reward = mean_reward
-            w.mean_loss = mean_loss
+            w.mean_loss = mean_total_loss
             w.gradient_norm = mean_grad
 
         return {
@@ -982,11 +1128,13 @@ class DistributedPPOTrainer:
             "total_episodes": self.total_episodes,
             "mean_reward": mean_reward,
             "best_reward": float(self._best_reward),
-            "mean_loss": mean_loss,
+            "mean_loss": mean_total_loss,
+            "mean_policy_loss": mean_policy_loss,
+            "mean_value_loss": mean_value_loss,
             "mean_grad_norm": mean_grad,
             "total_devices": self.total_devices_processed,
             "n_rollout_steps": len(all_obs),
-            "n_policy_updates": len(losses),
+            "n_policy_updates": len(policy_losses),
         }
 
     # 兼容旧接口（标记为 deprecated）

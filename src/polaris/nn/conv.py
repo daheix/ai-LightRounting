@@ -22,6 +22,9 @@ from polaris.nn import Module, Tensor, _init_weight
 def _pad2d(data: np.ndarray, ph: int, pw: int) -> np.ndarray:
     """零填充 (N, C, H, W) → (N, C, H+2ph, W+2pw)。
 
+    统一使用 float64 dtype，确保数值精度一致性（NumPy dtype 最佳实践）。
+    来源: https://numpy.org/doc/stable/reference/arrays.promotion.html
+
     Args:
         data: 输入张量 (N, C, H, W)。
         ph: 高度方向填充量。
@@ -33,7 +36,7 @@ def _pad2d(data: np.ndarray, ph: int, pw: int) -> np.ndarray:
     if ph == 0 and pw == 0:
         return data
     n, c, h, w = data.shape
-    padded = np.zeros((n, c, h + 2 * ph, w + 2 * pw))
+    padded = np.zeros((n, c, h + 2 * ph, w + 2 * pw), dtype=np.float64)
     padded[:, :, ph : ph + h, pw : pw + w] = data
     return padded
 
@@ -79,12 +82,13 @@ class Conv2d(Module):
     def _im2col(self, data: np.ndarray, oh: int, ow: int) -> np.ndarray:
         """im2col: (N, C, H, W) → (N, C*kh*kw, oh*ow)。
 
+        统一使用 float64 dtype，确保数值精度一致性。
         来源: Chellapilla et al., 2006, 高性能卷积 im2col 算法。
         """
         kh, kw = self.kernel_size
         sh, sw = self.stride
         n, c, _, _ = data.shape
-        cols = np.zeros((n, c * kh * kw, oh * ow))
+        cols = np.zeros((n, c * kh * kw, oh * ow), dtype=np.float64)
         for i in range(oh):
             for j in range(ow):
                 patch = data[:, :, i * sh : i * sh + kh, j * sw : j * sw + kw]
@@ -92,14 +96,17 @@ class Conv2d(Module):
         return cols
 
     def _col2im(self, cols: np.ndarray, oh: int, ow: int) -> np.ndarray:
-        """col2im: (N, C*kh*kw, oh*ow) → (N, C, hp, wp)。逆 im2col，累加重叠区域。"""
+        """col2im: (N, C*kh*kw, oh*ow) → (N, C, hp, wp)。逆 im2col，累加重叠区域。
+
+        统一使用 float64 dtype，确保数值精度一致性。
+        """
         kh, kw = self.kernel_size
         sh, sw = self.stride
         n = cols.shape[0]
         c = cols.shape[1] // (kh * kw)
         hp = (oh - 1) * sh + kh
         wp = (ow - 1) * sw + kw
-        dx = np.zeros((n, c, hp, wp))
+        dx = np.zeros((n, c, hp, wp), dtype=np.float64)
         for i in range(oh):
             for j in range(ow):
                 dpatch = cols[:, :, i * ow + j].reshape(n, c, kh, kw)
@@ -194,6 +201,7 @@ class MaxPool2d(Module):
     def forward(self, x: Tensor) -> Tensor:
         """前向：滑动窗口取最大值，记录 argmax 用于反向路由。
 
+        统一使用 float64 dtype，确保数值精度一致性。
         来源: PyTorch MaxPool2d
         https://pytorch.org/docs/stable/generated/torch.nn.MaxPool2d
         """
@@ -205,7 +213,7 @@ class MaxPool2d(Module):
         sh, sw = self.stride
         oh = (h - kh) // sh + 1
         ow = (w - kw) // sw + 1
-        out = np.zeros((n, c, oh, ow))
+        out = np.zeros((n, c, oh, ow), dtype=np.float64)
         argmax = np.zeros((n, c, oh, ow), dtype=np.intp)
         for i in range(oh):
             for j in range(ow):

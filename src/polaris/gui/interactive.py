@@ -35,6 +35,7 @@
 
 from __future__ import annotations
 
+import copy
 import math
 import sys
 from code import InteractiveConsole
@@ -221,14 +222,19 @@ def _require_object(scene: dict[int, LayoutObject], obj_id: int) -> LayoutObject
 
 @dataclass
 class AddObjectCommand:
-    """添加对象命令。"""
+    """添加对象命令。
+
+    使用深拷贝保存对象快照，避免外部修改导致撤销/重做副作用。
+    来源: Gamma et al., "Design Patterns", Addison-Wesley 1994 (Command Pattern)
+    URL: https://en.wikipedia.org/wiki/Command_pattern
+    """
 
     obj: LayoutObject
 
     def do(self, scene: dict[int, LayoutObject]) -> None:
         if self.obj.obj_id in scene:
             raise KeyError(f"对象 ID {self.obj.obj_id} 已存在")
-        scene[self.obj.obj_id] = self.obj
+        scene[self.obj.obj_id] = copy.deepcopy(self.obj)
 
     def undo(self, scene: dict[int, LayoutObject]) -> None:
         if self.obj.obj_id not in scene:
@@ -238,20 +244,26 @@ class AddObjectCommand:
 
 @dataclass
 class RemoveObjectCommand:
-    """删除对象命令（do 时快照当前对象以备撤销）。"""
+    """删除对象命令（do 时深拷贝快照当前对象以备撤销）。
+
+    使用深拷贝保存对象快照，避免外部修改导致撤销/重做副作用。
+    来源: Gamma et al., "Design Patterns", Addison-Wesley 1994 (Command Pattern)
+    URL: https://en.wikipedia.org/wiki/Command_pattern
+    深度拷贝参考: https://docs.python.org/3/library/copy.html
+    """
 
     obj: LayoutObject
 
     def do(self, scene: dict[int, LayoutObject]) -> None:
         if self.obj.obj_id not in scene:
             raise KeyError(f"对象 ID {self.obj.obj_id} 不存在")
-        self.obj = scene[self.obj.obj_id]
+        self.obj = copy.deepcopy(scene[self.obj.obj_id])
         del scene[self.obj.obj_id]
 
     def undo(self, scene: dict[int, LayoutObject]) -> None:
         if self.obj.obj_id in scene:
             raise KeyError(f"对象 ID {self.obj.obj_id} 已存在，无法撤销")
-        scene[self.obj.obj_id] = self.obj
+        scene[self.obj.obj_id] = copy.deepcopy(self.obj)
 
 
 @dataclass

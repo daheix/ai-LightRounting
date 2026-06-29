@@ -42,9 +42,14 @@ from scipy import sparse
 
 from polaris.sim.heat import (
     ADIABATIC,
+    ALPHA_SILICON,
+    CP_SILICON,
+    CP_SIO2,
     DN_DT_SI,
     K_SILICON,
     K_SIO2,
+    RHO_SILICON,
+    RHO_SIO2,
     SIGMA_SB,
     BcSpec,
     BoundaryType,
@@ -52,12 +57,17 @@ from polaris.sim.heat import (
     HeatConfig,
     HeatResult,
     HeatSolver,
+    TransientHeatConfig,
+    TransientHeatResult,
+    TransientHeatSolver,
     apply_boundary_conditions,
     ddm_to_heat,
     heat_to_fde,
     is_grounding_bc,
     radiative_h,
     solve_heat,
+    solve_transient_heat,
+    thermal_time_constant_1d,
 )
 
 # 物理参数（Cocorullo 1999 / Incropera / CODATA 2018，与 src 常量一致）
@@ -718,3 +728,280 @@ class TestPhysicalValidation:
         assert np.allclose(r1.heat_flux_x, r2.heat_flux_x)
         # solve_heat 便捷函数与 HeatSolver.solve 等价
         assert np.array_equal(r1.temperature, r2.temperature)
+
+
+# ===========================================================================
+# 8. TestTransientHeat — 瞬态热传导求解器（Crank-Nicolson）
+# ===========================================================================
+class TestTransientHeat:
+    """瞬态热传导求解器测试（Crank-Nicolson 隐式方法）。"""
+
+    def test_transient_config_valid(self) -> None:
+        """瞬态热配置构造成功，参数校验通过。"""
+        nx, ny = 16, 8
+        k = np.full((nx, ny), _K_SI)
+        q = np.zeros((nx, ny))
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+        hc = HeatConfig(
+            dx=_DX,
+            dy=_DX,
+            k_arr=k,
+            q_arr=q,
+            bc_dict={
+                "west": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "east": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+            },
+        )
+        cfg = TransientHeatConfig(
+            heat_config=hc,
+            rho_arr=rho,
+            cp_arr=cp,
+            t_initial=300.0,
+            t_final=1e-6,
+            dt=1e-8,
+        )
+        assert cfg.t_final == 1e-6
+        assert cfg.dt == 1e-8
+        assert cfg.t_initial.shape == (nx, ny)
+
+    def test_transient_config_invalid_rho_raises(self) -> None:
+        """非法 rho/cp/t_final/dt 应 raise ValueError。"""
+        nx, ny = 4, 4
+        k = np.full((nx, ny), _K_SI)
+        q = np.zeros((nx, ny))
+        hc = HeatConfig(dx=_DX, dy=_DX, k_arr=k, q_arr=q)
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+
+        # rho 含非正值
+        with pytest.raises(ValueError, match="rho_arr"):
+            TransientHeatConfig(
+                heat_config=hc,
+                rho_arr=np.full((nx, ny), -1.0),
+                cp_arr=cp,
+                t_final=1e-6,
+                dt=1e-8,
+            )
+        # cp 含非正值
+        with pytest.raises(ValueError, match="cp_arr"):
+            TransientHeatConfig(
+                heat_config=hc,
+                rho_arr=rho,
+                cp_arr=np.full((nx, ny), 0.0),
+                t_final=1e-6,
+                dt=1e-8,
+            )
+        # t_final <= 0
+        with pytest.raises(ValueError, match="t_final"):
+            TransientHeatConfig(
+                heat_config=hc, rho_arr=rho, cp_arr=cp, t_final=0.0, dt=1e-8
+            )
+        # dt > t_final
+        with pytest.raises(ValueError, match="dt"):
+            TransientHeatConfig(
+                heat_config=hc, rho_arr=rho, cp_arr=cp, t_final=1e-8, dt=1e-6
+            )
+
+    def test_transient_uniform_initial_stays_uniform(self) -> None:
+        """均匀初始温度 + 无热源 + 均匀 Dirichlet 边界 → 温度始终均匀。"""
+        nx, ny = 16, 8
+        T0 = 350.0
+        k = np.full((nx, ny), _K_SI)
+        q = np.zeros((nx, ny))
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+        hc = HeatConfig(
+            dx=_DX,
+            dy=_DX,
+            k_arr=k,
+            q_arr=q,
+            bc_dict={
+                "west": BcSpec(type=BoundaryType.DIRICHLET, value=T0),
+                "east": BcSpec(type=BoundaryType.DIRICHLET, value=T0),
+                "south": BcSpec(type=BoundaryType.DIRICHLET, value=T0),
+                "north": BcSpec(type=BoundaryType.DIRICHLET, value=T0),
+            },
+        )
+        cfg = TransientHeatConfig(
+            heat_config=hc,
+            rho_arr=rho,
+            cp_arr=cp,
+            t_initial=T0,
+            t_final=1e-6,
+            dt=1e-8,
+        )
+        result = TransientHeatSolver().solve(cfg)
+        # 所有时刻温度均应等于 T0（均匀稳态）
+        for T in result.temperatures:
+            assert np.max(np.abs(T - T0)) < 1e-6
+
+    def test_transient_heating_then_cooling(self) -> None:
+        """阶跃热源加热后关断，温度先升后降（能量守恒定性验证）。"""
+        nx, ny = 20, 10
+        k = np.full((nx, ny), _K_SI)
+        q0 = 1e10  # 体积热源 W/m³
+        q = np.full((nx, ny), q0)
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+        hc = HeatConfig(
+            dx=_DX,
+            dy=_DX,
+            k_arr=k,
+            q_arr=q,
+            bc_dict={
+                "west": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "east": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "south": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "north": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+            },
+        )
+        cfg = TransientHeatConfig(
+            heat_config=hc,
+            rho_arr=rho,
+            cp_arr=cp,
+            t_initial=300.0,
+            t_final=5e-7,
+            dt=1e-8,
+        )
+        result = TransientHeatSolver().solve(cfg)
+        # 加热阶段：最大温度应随时间上升
+        times, T_max = result.max_temperature_vs_time()
+        assert T_max[-1] > T_max[0], "加热阶段温度应上升"
+        assert np.all(np.isfinite(result.temperatures))
+
+    def test_transient_approaches_steady_state(self) -> None:
+        """长时间瞬态求解应趋近稳态解。"""
+        nx, ny = 20, 10
+        k = np.full((nx, ny), _K_SI)
+        q0 = 5e9
+        q = np.full((nx, ny), q0)
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+        hc = HeatConfig(
+            dx=_DX,
+            dy=_DX,
+            k_arr=k,
+            q_arr=q,
+            bc_dict={
+                "west": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "east": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "south": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "north": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+            },
+        )
+        # 稳态解
+        steady = HeatSolver().solve(hc)
+        # 瞬态求解足够长时间
+        cfg = TransientHeatConfig(
+            heat_config=hc,
+            rho_arr=rho,
+            cp_arr=cp,
+            t_initial=300.0,
+            t_final=1e-5,
+            dt=2e-8,
+            save_every=10,
+        )
+        result = TransientHeatSolver().solve(cfg)
+        # 最后一步应接近稳态（误差 < 5%）
+        T_last = result.temperatures[-1]
+        rel_err = np.max(np.abs(T_last - steady.temperature)) / (
+            np.max(np.abs(steady.temperature - 300.0)) + 1e-30
+        )
+        assert rel_err < 0.05, f"瞬态末态与稳态相对误差 {rel_err:.2%} > 5%"
+
+    def test_thermal_time_constant_1d(self) -> None:
+        """1D 平板热时间常数解析公式：τ ≈ L²/(π²·α)。"""
+        L = 1e-5  # 10 μm
+        tau = thermal_time_constant_1d(
+            thickness=L,
+            thermal_conductivity=K_SILICON,
+            rho=RHO_SILICON,
+            cp=CP_SILICON,
+        )
+        # 应与 α = k/(ρ·Cp) 自洽
+        alpha = K_SILICON / (RHO_SILICON * CP_SILICON)
+        tau_expected = L**2 / (np.pi**2 * alpha)
+        assert np.isclose(tau, tau_expected, rtol=1e-12)
+        assert tau > 0
+
+    def test_transient_result_shape(self) -> None:
+        """TransientHeatResult 形状正确：times 与 temperatures 第 0 维匹配。"""
+        nx, ny = 8, 4
+        k = np.full((nx, ny), _K_SI)
+        q = np.zeros((nx, ny))
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+        hc = HeatConfig(
+            dx=_DX, dy=_DX, k_arr=k, q_arr=q,
+            bc_dict={
+                "west": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "east": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+            },
+        )
+        cfg = TransientHeatConfig(
+            heat_config=hc,
+            rho_arr=rho,
+            cp_arr=cp,
+            t_initial=300.0,
+            t_final=1e-7,
+            dt=1e-8,
+            save_every=2,
+        )
+        result = TransientHeatSolver().solve(cfg)
+        assert result.temperatures.shape[0] == result.times.shape[0]
+        assert result.temperatures.shape[1:] == (nx, ny)
+        assert result.dx == _DX
+        assert result.dy == _DX
+
+    def test_solve_transient_heat_convenience(self) -> None:
+        """solve_transient_heat 便捷函数与 TransientHeatSolver.solve 等价。"""
+        nx, ny = 8, 4
+        k = np.full((nx, ny), _K_SI)
+        q = np.zeros((nx, ny))
+        rho = np.full((nx, ny), RHO_SILICON)
+        cp = np.full((nx, ny), CP_SILICON)
+        hc = HeatConfig(
+            dx=_DX, dy=_DX, k_arr=k, q_arr=q,
+            bc_dict={
+                "west": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+                "east": BcSpec(type=BoundaryType.DIRICHLET, value=300.0),
+            },
+        )
+        cfg = TransientHeatConfig(
+            heat_config=hc,
+            rho_arr=rho,
+            cp_arr=cp,
+            t_initial=300.0,
+            t_final=1e-7,
+            dt=1e-8,
+        )
+        r1 = solve_transient_heat(cfg)
+        r2 = TransientHeatSolver().solve(cfg)
+        assert np.array_equal(r1.temperatures, r2.temperatures)
+        assert np.array_equal(r1.times, r2.times)
+
+
+# ===========================================================================
+# 9. TestPhysicalConstants — 热物性常量验证
+# ===========================================================================
+class TestPhysicalConstants:
+    """热物性物理常量正确性验证。"""
+
+    def test_thermal_diffusivity_consistency(self) -> None:
+        """热扩散率 α = k/(ρ·Cp) 自洽性检查。"""
+        alpha = K_SILICON / (RHO_SILICON * CP_SILICON)
+        assert np.isclose(alpha, ALPHA_SILICON, rtol=1e-12)
+        assert alpha > 0
+
+    def test_silicon_conductivity_value(self) -> None:
+        """硅热导率应在 140-160 W/(m·K) 范围（室温典型值）。"""
+        assert 140.0 <= K_SILICON <= 160.0
+
+    def test_sio2_conductivity_value(self) -> None:
+        """SiO2 热导率应在 1.0-2.0 W/(m·K) 范围（室温典型值）。"""
+        assert 1.0 <= K_SIO2 <= 2.0
+
+    def test_dn_dt_silicon_value(self) -> None:
+        """硅热光系数应在 1.5e-4 ~ 2.5e-4 /K 范围（Cocorullo 1999）。"""
+        assert 1.5e-4 <= DN_DT_SI <= 2.5e-4

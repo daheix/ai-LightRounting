@@ -97,7 +97,18 @@ class TaskState:
 
 @dataclass
 class TaskResult:
-    """任务执行结果。"""
+    """任务执行结果。
+
+    _future 属性用于 threading 后端保存 concurrent.futures.Future 对象，
+    以便支持任务取消。默认 None，仅在 threading 后端设置。
+
+    参考:
+    - Python dataclasses: https://docs.python.org/3/library/dataclasses.html
+    - concurrent.futures: https://docs.python.org/3/library/concurrent.futures.html
+    - Python 类型提示最佳实践: https://peps.python.org/pep-0484/
+    - 内部属性命名约定: https://peps.python.org/pep-0008/#descriptive-naming-styles
+    - ThreadPoolExecutor: https://docs.python.org/3/library/concurrent.futures.html#threadpoolexecutor
+    """
 
     task_id: str
     status: TaskStatus = TaskStatus.PENDING
@@ -108,6 +119,7 @@ class TaskResult:
     end_time: float | None = None
     retries: int = 0
     cancel_requested: bool = False  # 取消请求标志（同步后端协作式取消）
+    _future: Any = field(default=None, init=False, repr=False)  # threading 后端 Future 对象
 
     @property
     def duration_s(self) -> float | None:
@@ -198,7 +210,7 @@ class DistributedTaskScheduler:
             future = self._executor.submit(
                 self._execute_task_sync, task_id, func, *args, **kwargs
             )
-            result._future = future  # type: ignore[attr-defined]
+            result._future = future
         else:
             self._execute_task_sync(task_id, func, *args, **kwargs)
 

@@ -203,6 +203,8 @@ _FORMAT_MAP: dict[str, tuple[str, str, str]] = {
     "odbpp": ("._odbpp", "read_odbpp", "write_odbpp"),
     "lef_def": ("._lef_def", "read_lef_def", "write_lef_def"),
     "lef/def": ("._lef_def", "read_lef_def", "write_lef_def"),
+    "openaccess": (".openaccess", "read_oa", "write_oa"),
+    "oa": (".openaccess", "read_oa", "write_oa"),
 }
 
 SUPPORTED_FORMATS = sorted(set(_FORMAT_MAP.keys()))

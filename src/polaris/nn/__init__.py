@@ -458,22 +458,24 @@ class Linear(Module):
 def _init_weight(in_features: int, out_features: int, init: str) -> np.ndarray:
     """权重初始化（orthogonal / kaiming_uniform / xavier）。
 
+    统一使用 float64 dtype，确保数值精度一致性（NumPy dtype 最佳实践）。
     来源:
     - orthogonal: Saxe et al., 2013, https://arxiv.org/abs/1312.6120
     - kaiming_uniform: He et al., 2015, torch.nn.Linear 默认
+    - NumPy dtype promotion: https://numpy.org/doc/stable/reference/arrays.promotion.html
+    - float64 数值稳定性: https://theneuralbase.com/numpy-for-ml/learn/beginner/dtype-float32-float64-int32/
+    - PyTorch 默认精度选择: https://theneuralbase.com/numpy-for-ml/learn/beginner/float-precision-issues/
     """
     if init == "orthogonal":
-        # 生成正交矩阵，shape=(out, in)，与 torch.nn.init.orthogonal_ 一致
         flat_shape = (out_features, in_features)
-        a = np.random.randn(*flat_shape)
+        a = np.random.randn(*flat_shape).astype(np.float64)
         u, s, vt = np.linalg.svd(a, full_matrices=False)
         q = u if a.shape[0] >= a.shape[1] else vt
         weight = q.reshape(flat_shape)
         scale = 1.0 / np.sqrt(in_features)
-        return weight * scale
-    # kaiming_uniform（torch 默认）
+        return (weight * scale).astype(np.float64)
     bound = 1.0 / np.sqrt(in_features)
-    return np.random.uniform(-bound, bound, (out_features, in_features))
+    return np.random.uniform(-bound, bound, (out_features, in_features)).astype(np.float64)
 
 
 class ReLU(Module):

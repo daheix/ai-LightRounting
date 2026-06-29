@@ -2,60 +2,60 @@
 
 ## 阶段 1: 根因分析（为什么有 95 Bug）
 
-- [ ] Task 1: 撰写根因分析报告（`docs/学术诚信检查.md` 新增 §7）
-  - [ ] SubTask 1.1: 统计 95 Bug 按 5 类根因分布（历史债/审查方法/算法复杂度/集成缺陷/文献不足）
-  - [ ] SubTask 1.2: 每类根因列出典型案例（3-5 Bug）+ 流程缺陷描述 + 改进措施
-  - [ ] SubTask 1.3: 撰写 §7 根因分析与流程改进（含 5 类根因表 + 改进 roadmap）
+- [x] Task 1: 撰写根因分析报告（`docs/学术诚信检查.md` 新增 §7）
+  - [x] SubTask 1.1: 统计 95 Bug 按 5 类根因分布（历史债/审查方法/算法复杂度/集成缺陷/文献不足）
+  - [x] SubTask 1.2: 每类根因列出典型案例（3-5 Bug）+ 流程缺陷描述 + 改进措施
+  - [x] SubTask 1.3: 撰写 §7 根因分析与流程改进（含 5 类根因表 + 改进 roadmap）
 
 ## 阶段 2: 5 P0 Bug 修复（Year 1 Q1 优先，WebSearch 验证）
 
-- [ ] Task 2: 修复 #v3.3-VER-2 verification/M4 硬编码 True
-  - [ ] SubTask 2.1: WebSearch "M4 milestone delivery checklist software engineering"
-  - [ ] SubTask 2.2: 读取 `src/polaris/verification/drc_curvilinear_18rules.py`，移除硬编码 True，改为真实状态查询
-  - [ ] SubTask 2.3: 回归测试 + docstring 文献补充
-- [ ] Task 3: 修复 #v3.3-Q-3 quantum/KLM_CNOT 未实现
-  - [ ] SubTask 3.1: WebSearch "KLM CNOT gate linear optical quantum computing Knill Nature 2001"
-  - [ ] SubTask 3.2: 读取 `src/polaris/quantum/quantum_circuit_distributed.py`，实现 KLM CNOT 门（含辅助光子 + 后选择）
-  - [ ] SubTask 3.3: 回归测试 + docstring 补 Knill 2001 / Ralph 2002 / Hofmann 2002 / O'Brien 2003 / Knill 2002
-- [ ] Task 4: 修复 #v3.3-Q-4 quantum/玻色采样缺失
-  - [ ] SubTask 4.1: WebSearch "boson sampling Aaronson 2011 Arkhipov implementation"
-  - [ ] SubTask 4.2: 实现玻色采样（ permanents of submatrix / Glynn-Gray 算法）
-  - [ ] SubTask 4.3: 回归测试 + docstring 补 Aaronson 2011 / Arkhipov 2014 / Clifford 2017 / Wu 2020 / Zhong 2020
-- [ ] Task 5: 修复 #v3.3-AI-6 ai/real_shapes 合成数据
-  - [ ] SubTask 5.1: WebSearch "inverse design real photonic shapes dataset training"
-  - [ ] SubTask 5.2: 读取 `src/polaris/ai/inverse_design.py`，移除 real_shapes 合成数据，改为真实 PDK 器件采样
-  - [ ] SubTask 5.3: 回归测试 + docstring 补真实数据来源（SiEPIC EBeam PDK）
-- [ ] Task 6: 修复 #v3.3-SYS-3 system/CANCELLED 假实现
-  - [ ] SubTask 6.1: WebSearch "python asyncio task cancellation CancelledError best practice"
-  - [ ] SubTask 6.2: 读取 `src/polaris/system/system.py`，实现真实 CANCELLED 状态（asyncio.CancelledError + 状态机）
-  - [ ] SubTask 6.3: 回归测试 + docstring 补 PEP 8 异常处理
+- [x] Task 2: 修复 #v3.3-VER-2 verification/M4 硬编码 True
+  - [x] SubTask 2.1: WebSearch "M4 milestone delivery checklist software engineering"
+  - [x] SubTask 2.2: 读取 `src/polaris/verification/drc_curvilinear_18rules.py`，移除硬编码 True，改为真实状态查询
+  - [x] SubTask 2.3: 回归测试 + docstring 文献补充
+- [x] Task 3: 修复 #v3.3-Q-3 quantum/KLM_CNOT 未实现
+  - [x] SubTask 3.1: WebSearch "KLM CNOT gate linear optical quantum computing Knill Nature 2001"
+  - [x] SubTask 3.2: 读取 `src/polaris/quantum/quantum_circuit_distributed.py`，实现 KLM CNOT 门（含辅助光子 + 后选择）
+  - [x] SubTask 3.3: 回归测试 + docstring 补 Knill 2001 / Ralph 2002 / Hofmann 2002 / O'Brien 2003 / Knill 2002
+- [x] Task 4: 修复 #v3.3-Q-4 quantum/玻色采样缺失
+  - [x] SubTask 4.1: WebSearch "boson sampling Aaronson 2011 Arkhipov implementation"
+  - [x] SubTask 4.2: 实现玻色采样（ permanents of submatrix / Glynn-Gray 算法）
+  - [x] SubTask 4.3: 回归测试 + docstring 补 Aaronson 2011 / Arkhipov 2014 / Clifford 2017 / Wu 2020 / Zhong 2020
+- [x] Task 5: 修复 #v3.3-AI-6 ai/real_shapes 合成数据
+  - [x] SubTask 5.1: WebSearch "inverse design real photonic shapes dataset training"
+  - [x] SubTask 5.2: 读取 `src/polaris/ai/inverse_design.py`，移除 real_shapes 合成数据，改为真实 PDK 器件采样
+  - [x] SubTask 5.3: 回归测试 + docstring 补真实数据来源（SiEPIC EBeam PDK）
+- [x] Task 6: 修复 #v3.3-SYS-3 system/CANCELLED 假实现
+  - [x] SubTask 6.1: WebSearch "python asyncio task cancellation CancelledError best practice"
+  - [x] SubTask 6.2: 读取 `src/polaris/system/system.py`，实现真实 CANCELLED 状态（asyncio.CancelledError + 状态机）
+  - [x] SubTask 6.3: 回归测试 + docstring 补 PEP 8 异常处理
 
 ## 阶段 3: P1-A 算法错误修复（16 项，WebSearch 验证）
 
-- [ ] Task 7: 修复 verification/ P1-A Bug（#v3.3-VER-1/3/4/11/12，5 项）
-  - [ ] SubTask 7.1: #v3.3-VER-1 DRC 18 规则无几何实现 → WebSearch "curvilinear DRC geometry check KLayout" + 实现真实几何运算
-  - [ ] SubTask 7.2: #v3.3-VER-3 PEX 边缘电容公式 → WebSearch "parasitic capacitance fringing edge formula"
-  - [ ] SubTask 7.3: #v3.3-VER-4 Layout-Aware MC 空间相关 → WebSearch "layout aware Monte Carlo spatial correlation"
-  - [ ] SubTask 7.4: #v3.3-VER-11 凹多边形 → WebSearch "concave polygon point in polygon algorithm"
-  - [ ] SubTask 7.5: #v3.3-VER-12 耦合长度 → WebSearch "directional coupler coupling length formula"
-  - [ ] SubTask 7.6: 回归测试 + docstring 文献补充
-- [ ] Task 8: 修复 inverse/ P1-A Bug（#v3.3-INV-3，1 项）
-  - [ ] SubTask 8.1: WebSearch "topology adjoint optimization sigmoid projection three layer"
-  - [ ] SubTask 8.2: 修复三层 sigmoid 投影
-  - [ ] SubTask 8.3: 回归测试
-- [ ] Task 9: 修复 quantum/ P1-A Bug（#v3.3-Q-1/2，2 项）
-  - [ ] SubTask 9.1: #v3.3-Q-1 PPO 梯度截断 → WebSearch "PPO gradient clipping implementation"
-  - [ ] SubTask 9.2: #v3.3-Q-2 GAE V(s)=0 边界 → WebSearch "GAE terminal value bootstrap Schulman 2015"
-  - [ ] SubTask 9.3: 回归测试
-- [ ] Task 10: 修复 device/ P1-A Bug（#v3.3-D-2/3/4/6，4 项）
-  - [ ] SubTask 10.1: #v3.3-D-2 热串扰魔法数 0.5 → 已用 Carslaw-Jaeger，文档同步
-  - [ ] SubTask 10.2: #v3.3-D-3 V_π 带宽公式 → WebSearch "modulator Vpi bandwidth formula"
-  - [ ] SubTask 10.3: #v3.3-D-4 Δα 单位错 → WebSearch "plasma dispersion effect delta alpha unit"
-  - [ ] SubTask 10.4: #v3.3-D-6 瞬态热响应缺失 → WebSearch "transient thermal response FDM Crank-Nicolson"
-  - [ ] SubTask 10.5: 回归测试
-- [ ] Task 11: 修复 ai/nn/io/gui/eval/ P1-A Bug（#v3.3-AI-5/NN-3/IO-2/GUI-1/SYS-2，5 项）
-  - [ ] SubTask 11.1: #v3.3-AI-5 启发式公式无溯源 → WebSearch 验证 + 补溯源或删除
-  - [ ] SubTask 11.2: #v3.3-NN-3 dtype 类型不一致 → 统一 float32/float64
+- [x] Task 7: 修复 verification/ P1-A Bug（#v3.3-VER-1/3/4/11/12，5 项）
+  - [x] SubTask 7.1: #v3.3-VER-1 DRC 18 规则无几何实现 → WebSearch + 实现真实几何运算
+  - [x] SubTask 7.2: #v3.3-VER-3 PEX 边缘电容公式 → WebSearch + Banerjee UCSB 反双曲余弦模型
+  - [x] SubTask 7.3: #v3.3-VER-4 Layout-Aware MC 空间相关 → WebSearch + Pelgrom 指数协方差 + Cholesky
+  - [x] SubTask 7.4: #v3.3-VER-11 凹多边形 → WebSearch + 射线法
+  - [x] SubTask 7.5: #v3.3-VER-12 耦合长度 → WebSearch + 耦合模理论 κL 公式
+  - [x] SubTask 7.6: 回归测试 + docstring 文献补充
+- [x] Task 8: 修复 inverse/ P1-A Bug（#v3.3-INV-3，1 项）
+  - [x] SubTask 8.1: WebSearch "topology adjoint optimization sigmoid projection three layer"
+  - [x] SubTask 8.2: 修复三层 sigmoid 投影（标准 tanh-sigmoid 公式 + Wang 2011 三点投影）
+  - [x] SubTask 8.3: 回归测试（28/28 通过）
+- [x] Task 9: 修复 quantum/ P1-A Bug（#v3.3-Q-1/2，2 项）
+  - [x] SubTask 9.1: #v3.3-Q-1 PPO 梯度截断 → WebSearch + 正确 clip 概率比
+  - [x] SubTask 9.2: #v3.3-Q-2 GAE V(s)=0 边界 → WebSearch + terminal mask + bootstrap
+  - [x] SubTask 9.3: 回归测试（14/14 通过）
+- [x] Task 10: 修复 device/ P1-A Bug（#v3.3-D-2/3/4/6，4 项）
+  - [x] SubTask 10.1: #v3.3-D-2 热串扰魔法数 0.5 → Carslaw-Jaeger 2D 线热源 Green's 函数
+  - [x] SubTask 10.2: #v3.3-D-3 V_π 带宽公式 → RC 限制 f_3dB = 1/(2πRC) + V_π·L 乘积
+  - [x] SubTask 10.3: #v3.3-D-4 Δα 单位 → cm⁻¹（Soref-Bennett 一致）
+  - [x] SubTask 10.4: #v3.3-D-6 瞬态热响应 → 集总参数解析解 + Crank-Nicolson 2D FDM
+  - [x] SubTask 10.5: 回归测试（36/36 通过）
+- [/] Task 11: 修复 ai/nn/io/gui/sys P1-A Bug（#v3.3-AI-5/NN-3/IO-2/GUI-1/SYS-2，5 项）
+  - [ ] SubTask 11.1: #v3.3-AI-5 启发式公式无溯源 → WebSearch 验证 + 补溯源
+  - [ ] SubTask 11.2: #v3.3-NN-3 dtype 类型不一致 → 统一 float64
   - [ ] SubTask 11.3: #v3.3-IO-2 读写不对称 → 实现对称 IO
   - [ ] SubTask 11.4: #v3.3-GUI-1 RemoveObjectCommand 浅拷贝 → 改深拷贝
   - [ ] SubTask 11.5: #v3.3-SYS-2 _future 未声明 → 补声明

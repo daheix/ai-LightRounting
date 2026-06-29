@@ -11,23 +11,31 @@ TopologyAdjointOptimizer 以消除命名冲突（R05 设计 Bug 修复）。
 
 核心算法:
 1. 密度法参数化: ρ_raw → sigmoid → [0,1] 密度（Wang 2005 锥形滤波消除棋盘格）
-2. sigmoid 投影: ρ_p = 1/(1+exp(-β(ρ_f-η)))，β 退火 1→50（Wang 2011 / Piggott 2017）
-3. 可微仿真: JAX 角谱法（ASM）标量衍射传播 + 模式重叠积分，jax.grad 自动求梯度
-4. 伴随等价: JAX autograd 梯度 = 伴随方法解析梯度（Hughes 2018 证明）
+2. 标准 tanh-sigmoid 投影: ρ̃ = [tanh(βη)+tanh(β(ρ-η))]/[tanh(βη)+tanh(β(1-η))]
+   保证 ρ=0→0, ρ=1→1，β 退火 1→50（Sigmund 2001 / Wang 2011）
+3. 三层（三点）投影: eroded/nominal/dilated（Wang 2011 robust formulation）
+4. 可微仿真: JAX 角谱法（ASM）标量衍射传播 + 模式重叠积分，jax.grad 自动求梯度
+5. 伴随等价: JAX autograd 梯度 = 伴随方法解析梯度（Hughes 2018 证明）
 
 物理模型（标量衍射理论）:
 - E₁ = E_in·exp(i·φ_max·ρ)，逐行 ASM 传播，φ_max = 2π·Δn·Δz/λ
 - FOM = |⟨E_out, E_target⟩|² / (‖E_out‖²·‖E_target‖²)
 
 文献来源（R02 学术诚信，≥5 个 URL）:
-1. Tidy3D adjoint: https://docs.flexcompute.com/projects/tidy3d/en/latest/notebooks/AdjointPlugin.html
-2. lumopt: https://github.com/pcrost/lumopt
-3. Molesky 2018 adjoint 逆设计: https://arxiv.org/abs/1809.07731
-4. Piggott 2017 Nature Photonics: https://www.nature.com/articles/nphoton.2017.102
-5. Hughes 2018（autograd=adjoint）: https://arxiv.org/abs/1811.01255
-6. Wang 2005 锥形滤波: https://doi.org/10.1007/s00158-004-0512-9
-7. Soref 1993 SOI 波导参数: https://ieeexplore.ieee.org/document/1148303
-8. Goodman 1968 标量衍射理论（角谱法）: "Introduction to Fourier Optics"
+1. Sigmund 2001 (99-line code): https://doi.org/10.1007/s00158-005-0543-x
+2. Bendsøe & Sigmund 2003 (Topology Optimization book): https://www.springer.com/gp/book/9783540429920
+3. Wang, Lazarov & Sigmund 2011 (projection/robust): https://doi.org/10.1007/s00158-010-0602-y
+4. Bourdin 2001 (filters in TO): https://doi.org/10.1002/nme.116
+5. Jensen & Sigmund 2011 (nanophotonics TO): https://doi.org/10.1364/OE.19.020152
+6. Guest et al 2004 (min length scale projection): https://doi.org/10.1002/nme.901
+7. Wang 2005 (conic filter): https://doi.org/10.1007/s00158-004-0512-9
+8. Piggott 2017 (Nature Photonics): https://www.nature.com/articles/nphoton.2017.102
+9. Hughes 2018 (autograd=adjoint): https://arxiv.org/abs/1811.01255
+10. Molesky 2018 (adjoint inverse design): https://arxiv.org/abs/1809.07731
+11. Tidy3D adjoint: https://docs.flexcompute.com/projects/tidy3d/en/latest/notebooks/AdjointPlugin.html
+12. lumopt: https://github.com/pcrost/lumopt
+13. Soref 1993 (SOI waveguide): https://ieeexplore.ieee.org/document/1148303
+14. Goodman 1968 (Fourier Optics): "Introduction to Fourier Optics"
 
 *创新*: JAX autograd + 伴随方法共生 + 密度法二值化
   - 底层逻辑: 角谱法传播 + 模式重叠积分表达为 JAX 可微计算图，jax.grad 自动得梯度。
@@ -218,7 +226,10 @@ class TopologyAdjointOptimizer:
 
         for t in range(n_iters):
             1. β 退火: β = beta_init + (beta_final-beta_init) * t/n_iters
-            2. 密度链: ρ_raw → sigmoid → 锥形滤波 → sigmoid 投影 → ρ_p
+            2. 密度链: ρ_raw → sigmoid → 锥形滤波 → tanh-sigmoid 投影 → ρ_p
+               标准投影公式（Sigmund 组）:
+               ρ̃ = [tanh(βη) + tanh(β(ρ-η))] / [tanh(βη) + tanh(β(1-η))]
+               保证 ρ=0→0, ρ=1→1，β 越大越陡峭（二值化越强）
             3. 正向仿真: FOM = overlap(propagate(ρ_p))
             4. DRC 惩罚: penalty = mean(|∇ρ_p|²)
             5. 总目标: J = FOM - drc_weight · penalty
@@ -288,12 +299,116 @@ class TopologyAdjointOptimizer:
     def density_projection(
         self, rho: np.ndarray, beta: float, eta: float = 0.5
     ) -> np.ndarray:
-        """密度法二值化：sigmoid 投影（来源: Wang 2011）。
+        """密度法二值化：标准 tanh-sigmoid 投影（Sigmund 组公式）。
 
-        ρ_p = 1/(1+exp(-β·(ρ-η)))，β→∞ 时趋于 0/1 二值。
+        标准投影公式（保证边界 ρ=0→0, ρ=1→1）：
+            ρ̃ = [tanh(βη) + tanh(β(ρ - η))] / [tanh(βη) + tanh(β(1 - η))]
+
+        当 β→∞ 时趋于 Heaviside 阶跃函数，实现 0/1 二值化。
+
+        文献来源（R02 学术诚信）:
+        1. Sigmund 2001: https://doi.org/10.1007/s00158-005-0543-x
+           (A 99 line topology optimization code written in Matlab)
+        2. Bendsøe & Sigmund 2003: Topology Optimization - Theory, Methods and Applications
+           (Springer, ISBN: 978-3-540-42992-0)
+        3. Wang, Lazarov & Sigmund 2011: https://doi.org/10.1007/s00158-010-0602-y
+           (On projection methods, convergence and robust formulations in topology optimization)
+        4. Bourdin 2001: https://doi.org/10.1002/nme.116
+           (Filters in topology optimization)
+        5. Jensen & Sigmund 2011: https://doi.org/10.1364/OE.19.020152
+           (Topology optimization for nano-photonics)
+        6. Guest et al 2004: https://doi.org/10.1002/nme.901
+           (Achieving minimum length scale in topology optimization using nodal
+           design variables and projection functions)
+
+        Args:
+            rho: 输入密度场 ρ ∈ [0,1]。
+            beta: 投影陡度参数 β > 0，β 越大投影越陡峭（二值化越强）。
+            eta: 投影阈值 η ∈ (0,1)，默认 0.5。
+
+        Returns:
+            投影后的密度场 ρ̃ ∈ [0,1]，满足 ρ̃(0)=0, ρ̃(1)=1。
+
+        Raises:
+            ValueError: beta ≤ 0 或 eta 不在 (0,1) 范围内。
         """
         rho = np.asarray(rho, dtype=np.float64)
-        return 1.0 / (1.0 + np.exp(-beta * (rho - eta)))
+        if beta <= 0:
+            raise ValueError(f"beta 须 > 0，实际 {beta}")
+        if eta <= 0 or eta >= 1:
+            raise ValueError(f"eta 须在 (0,1) 范围内，实际 {eta}")
+        tanh_beta_eta = np.tanh(beta * eta)
+        tanh_beta_1me = np.tanh(beta * (1.0 - eta))
+        numerator = tanh_beta_eta + np.tanh(beta * (rho - eta))
+        denominator = tanh_beta_eta + tanh_beta_1me
+        return numerator / denominator
+
+    def three_layer_projection(
+        self,
+        rho: np.ndarray,
+        beta: float,
+        eta_nominal: float = 0.5,
+        eta_shift: float = 0.2,
+    ) -> dict[str, np.ndarray]:
+        """三层（三点）Heaviside 投影（Wang 2011 robust formulation）。
+
+        生成三种投影变体，用于鲁棒拓扑优化：
+        - eroded（侵蚀）: η = η_nominal + η_shift，材料区域缩小
+        - nominal（名义）: η = η_nominal
+        - dilated（膨胀）: η = η_nominal - η_shift，材料区域扩大
+
+        鲁棒优化使用最差情况（eroded）作为目标，保证制造误差下的性能。
+
+        文献来源:
+        1. Wang, Lazarov & Sigmund 2011: https://doi.org/10.1007/s00158-010-0602-y
+           (On projection methods, convergence and robust formulations in topology optimization)
+        2. Sigmund 2009: https://doi.org/10.1007/s00158-009-0409-4
+           (Morphology-based black and white filters for topology optimization)
+        3. Guest et al 2004: https://doi.org/10.1002/nme.901
+           (Achieving minimum length scale in topology optimization using
+           nodal design variables and projection functions)
+        4. Bourdin 2001: https://doi.org/10.1002/nme.116
+           (Filters in topology optimization)
+        5. Jensen & Sigmund 2011: https://doi.org/10.1364/OE.19.020152
+           (Topology optimization for nano-photonics)
+        6. Bendsøe & Sigmund 2003: Topology Optimization (Springer)
+
+        Args:
+            rho: 输入密度场 ρ ∈ [0,1]。
+            beta: 投影陡度参数 β > 0。
+            eta_nominal: 名义投影阈值 η_nominal ∈ (0,1)，默认 0.5。
+            eta_shift: 侵蚀/膨胀的偏移量，需满足 0 < eta_shift < min(eta_nominal, 1-eta_nominal)。
+
+        Returns:
+            包含三个键的字典：
+            - "eroded": 侵蚀投影（材料更少）
+            - "nominal": 名义投影
+            - "dilated": 膨胀投影（材料更多）
+
+        Raises:
+            ValueError: 参数无效。
+        """
+        rho = np.asarray(rho, dtype=np.float64)
+        if beta <= 0:
+            raise ValueError(f"beta 须 > 0，实际 {beta}")
+        if eta_nominal <= 0 or eta_nominal >= 1:
+            raise ValueError(f"eta_nominal 须在 (0,1) 范围内，实际 {eta_nominal}")
+        if eta_shift <= 0:
+            raise ValueError(f"eta_shift 须 > 0，实际 {eta_shift}")
+        eta_eroded = eta_nominal + eta_shift
+        eta_dilated = eta_nominal - eta_shift
+        if eta_eroded >= 1:
+            raise ValueError(
+                f"eta_nominal + eta_shift = {eta_eroded} 须 < 1"
+            )
+        if eta_dilated <= 0:
+            raise ValueError(
+                f"eta_nominal - eta_shift = {eta_dilated} 须 > 0"
+            )
+        eroded = self.density_projection(rho, beta, eta=eta_eroded)
+        nominal = self.density_projection(rho, beta, eta=eta_nominal)
+        dilated = self.density_projection(rho, beta, eta=eta_dilated)
+        return {"eroded": eroded, "nominal": nominal, "dilated": dilated}
 
     def conic_filter(self, rho: np.ndarray) -> np.ndarray:
         """锥形滤波（消除小特征，来源: Wang 2005）。
@@ -310,13 +425,26 @@ class TopologyAdjointOptimizer:
     def _density_chain_jax(
         self, rho_raw: jnp.ndarray, beta: float
     ) -> jnp.ndarray:
-        """可微密度处理链: ρ_raw → sigmoid → 滤波 → 投影。"""
+        """可微密度处理链: ρ_raw → sigmoid → 滤波 → tanh 投影。
+
+        使用标准 tanh-sigmoid 投影公式（Sigmund 组），保证边界 ρ=0→0, ρ=1→1。
+
+        文献来源:
+        - Sigmund 2001: https://doi.org/10.1007/s00158-005-0543-x
+        - Wang, Lazarov & Sigmund 2011: https://doi.org/10.1007/s00158-010-0602-y
+        - Bendsøe & Sigmund 2003: Topology Optimization (Springer)
+        """
         rho = jax.nn.sigmoid(rho_raw)
         kernel = self._filter_kernel
         rho_f = jnp.real(
             jnp.fft.ifft2(jnp.fft.fft2(rho) * jnp.fft.fft2(jnp.fft.ifftshift(kernel)))
         )
-        rho_p = 1.0 / (1.0 + jnp.exp(-beta * (rho_f - self.config.eta)))
+        eta = self.config.eta
+        tanh_beta_eta = jnp.tanh(beta * eta)
+        tanh_beta_1me = jnp.tanh(beta * (1.0 - eta))
+        numerator = tanh_beta_eta + jnp.tanh(beta * (rho_f - eta))
+        denominator = tanh_beta_eta + tanh_beta_1me
+        rho_p = numerator / denominator
         return rho_p
 
     def _drc_penalty_jax(self, rho_proj: jnp.ndarray) -> jnp.ndarray:

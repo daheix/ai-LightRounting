@@ -85,6 +85,8 @@ def scatter_add(src: Tensor, dsts: np.ndarray, n: int) -> Tensor:
     用于 GNN 消息传递中邻居特征聚合，使梯度能从聚合结果流回
     邻居线性变换的参数。
 
+    统一使用 float64 dtype，确保数值精度一致性。
+
     Args:
         src: 源张量 ``[E, D]``（E 条边，D 维特征）。
         dsts: 目标节点索引 ``[E]``（取值范围 ``[0, n)``）。
@@ -94,7 +96,7 @@ def scatter_add(src: Tensor, dsts: np.ndarray, n: int) -> Tensor:
         聚合后的张量 ``[n, D]``。
     """
     d = src.data.shape[-1] if src.data.ndim > 1 else 1
-    out_data = np.zeros((n, d))
+    out_data = np.zeros((n, d), dtype=np.float64)
     np.add.at(out_data, dsts, src.data)
     out = Tensor(out_data, src.requires_grad, (src,))
 
@@ -115,6 +117,8 @@ def index_select(src: Tensor, idx: np.ndarray) -> Tensor:
 
     用于 GNN 消息传递中按边源节点选取特征，使梯度能流回源节点变换参数。
 
+    统一使用 float64 dtype，确保数值精度一致性。
+
     Args:
         src: 源张量 ``[N, D]``。
         idx: 行索引 ``[E]``（取值范围 ``[0, N)``）。
@@ -127,7 +131,7 @@ def index_select(src: Tensor, idx: np.ndarray) -> Tensor:
     def _back(g):
         if src.requires_grad:
             src._ensure_grad()
-            grad = np.zeros_like(src.data)
+            grad = np.zeros_like(src.data, dtype=np.float64)
             np.add.at(grad, idx, g)
             src.grad = src.grad + grad
 
