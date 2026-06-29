@@ -12,6 +12,14 @@ CIF 语法实现严格遵循下列权威来源（规则 18 学术诚信）：
 - Wikipedia, "Caltech Intermediate Format",
   https://en.wikipedia.org/wiki/Caltech_Intermediate_Format
 
+异常处理最佳实践（R03 禁止 fall-back）：
+- PEP 8 Python 代码风格指南: https://peps.python.org/pep-0008/
+- Effective Python 第20条 遇到意外状况时应该抛出异常，不要返回 None:
+  https://www.informit.com/articles/article.aspx?p=3203546&seqNum=3
+- Python 官方文档 Errors and Exceptions: https://docs.python.org/3/tutorial/errors.html
+- Real Python: https://realpython.com/async-io-python/
+- Python Cookbook 3rd Edition: https://www.oreilly.com/library/view/python-cookbook-3rd/9781449357337/
+
 CIF 语句以分号终止；注释括在括号内；坐标为 centimicron 整数
 （1 单位 = 0.01 μm，来源 Caltech TR 2686）。
 """
@@ -76,7 +84,12 @@ def read_cif(text: str) -> FormatLayout:
             break
 
     for cell, sym, inst in pending_calls:
-        inst.cell_name = sym_to_name.get(sym, f"sym{sym}")
+        if sym not in sym_to_name:
+            raise ValueError(
+                f"CIF 符号 {sym} 被引用但未定义（C 命令引用的符号必须有 DS 定义，"
+                f"来源 Caltech TR 2686）"
+            )
+        inst.cell_name = sym_to_name[sym]
         cell.instances.append(inst)
 
     top = _cif_pick_top(cells)

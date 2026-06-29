@@ -18,6 +18,13 @@ SiEPIC GDS 格式（来源: SiEPIC_EBeam_PDK, MIT, UBC）:
 - SiEPIC netlist extraction: https://github.com/SiEPIC/SiEPIC-Tools
 - klayout.db API: https://www.klayout.de/doc-qt5/code/class_LayerInfo.html
 - klayout Instance class: https://www.klayout.org/klayout-pypi/overview/instances/
+
+R03 异常处理设计: PIN text 无匹配 path 或端口未匹配到器件时 raise ValueError，
+禁止静默跳过（GDS 数据不完整时必须告警）。
+
+异常处理文献:
+- Python 异常处理: https://docs.python.org/3/tutorial/errors.html
+- PEP 8 异常设计: https://peps.python.org/pep-0008/#exception-handling
 """
 
 from __future__ import annotations
@@ -303,7 +310,11 @@ def _match_text_to_path(
                     best_dist = dist
                     best_path_pts = pts
         if not best_path_pts:
-            continue
+            # R03: PIN text 无匹配 path，禁止静默跳过（GDS 数据不完整）
+            raise ValueError(
+                f"PIN 端口 '{name}' (位置 {tx},{ty}) 未匹配到任何 PIN path，"
+                f"可能 GDS 文件缺少 PIN path 层或数据不完整"
+            )
         mid_x = sum(p[0] for p in best_path_pts) / len(best_path_pts)
         mid_y = sum(p[1] for p in best_path_pts) / len(best_path_pts)
         direction = _port_direction_from_path(best_path_pts)
@@ -364,11 +375,21 @@ def _build_connections(ports: list[dict]) -> list[tuple[str, str, str, str]]:
     connections: list[tuple[str, str, str, str]] = []
     used: set[int] = set()
     for i, p1 in enumerate(ports):
-        if i in used or not p1.get("device_name"):
+        if i in used:
             continue
+        if not p1.get("device_name"):
+            # R03: 端口未匹配到器件，禁止静默跳过（GDS 数据不完整）
+            raise ValueError(
+                f"PIN 端口 '{p1.get('name', '?')}' 未匹配到器件实例"
+            )
         for j, p2 in enumerate(ports):
-            if j <= i or j in used or not p2.get("device_name"):
+            if j <= i or j in used:
                 continue
+            if not p2.get("device_name"):
+                # R03: 端口未匹配到器件，禁止静默跳过
+                raise ValueError(
+                    f"PIN 端口 '{p2.get('name', '?')}' 未匹配到器件实例"
+                )
             if p1["device_name"] == p2["device_name"]:
                 continue
             dist = ((p1["pos"][0] - p2["pos"][0]) ** 2 + (p1["pos"][1] - p2["pos"][1]) ** 2) ** 0.5

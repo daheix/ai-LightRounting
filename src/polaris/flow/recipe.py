@@ -11,6 +11,10 @@
 - Cadence ADE-XL 配置管理: https://docs.cadence.com/
 - Synopsys ICC2 流程配置: https://www.synopsys.com/
 - Ansys Lumerical 参数集: https://www.ansys.com/products/photonics
+- Effective Python 3rd Ed. Item 32（优先抛异常而非返回 None）:
+  https://effectivepython.com/
+- Real Python: Effectively Raising Exceptions（fail-fast 原则）:
+  https://realpython.com/python-raise-exception/
 
 Recipe 是可序列化的流水线配置，支持 JSON 与 YAML 双向序列化。
 YAML 序列化采用简单缩进格式，不依赖 PyYAML 第三方库。
@@ -171,12 +175,16 @@ class Recipe:
 
 
 def _coerce_scalar(val: str):
-    """将字符串标量转换为 int/float/str（内部辅助函数）"""
+    """将字符串标量转换为 int/float/str（内部辅助函数）。
+
+    R03 合规：原 ``except (ValueError, AttributeError): pass`` 是静默吞异常的
+    fall-back——对 ``str`` 输入 ``str.replace``/``str.isdigit`` 永不抛这两类异常，
+    该 except 仅在调用方违反类型契约（传入非 str）时掩盖 Bug。现已移除：
+    非字符串输入由 ``val.isdigit()`` 自然抛 ``AttributeError`` 上抛告警，
+    禁止 fall-back 静默吞没（Effective Python Item 32: 优先抛异常而非返回 None）。
+    """
     if val.isdigit():
         return int(val)
-    try:
-        if val.replace(".", "").isdigit():
-            return float(val)
-    except (ValueError, AttributeError):
-        pass
+    if val.replace(".", "").isdigit():
+        return float(val)
     return val

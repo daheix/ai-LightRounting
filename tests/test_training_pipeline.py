@@ -157,13 +157,15 @@ def test_training_result_fields():
 
 
 def test_training_pipeline_no_benchmarks(tmp_path):
-    """基准目录不存在时应返回空 TrainingResult，不抛异常。"""
+    """基准目录不存在时应 raise FileNotFoundError（R03: 禁止 fall-back）。
+
+    回归 #v3.3-P-3：原实现 fall-back 返回空 TrainingResult 掩盖配置错误，
+    现已修正为 raise。本测试固化修正后行为，防止 fall-back 复发。
+    """
     cfg = _make_small_config(tmp_path, benchmark_dir=str(tmp_path / "nonexistent"))
     pipeline = TrainingPipeline(cfg)
-    result = pipeline.train()
-    assert result.episodes_completed == 0
-    assert result.floorplan_logs == []
-    assert result.routing_logs == []
+    with pytest.raises(FileNotFoundError, match="基准目录不存在"):
+        pipeline.train()
 
 
 def test_training_pipeline_sim_feedback(tmp_path):

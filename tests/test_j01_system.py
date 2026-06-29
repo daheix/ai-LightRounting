@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import time
 
+import pytest
+
 from polaris.system import (
     DistributedConfig,
     DistributedTaskScheduler,
@@ -135,10 +137,11 @@ class TestDistributedTaskScheduling:
             scheduler.shutdown()
 
     def test_scheduler_get_nonexistent_task(self):
-        """获取不存在任务返回 None。"""
+        """获取不存在任务 raise KeyError（R03 禁止 fall-back，不返回 None）。"""
         scheduler = DistributedTaskScheduler()
         try:
-            assert scheduler.get_result("nonexistent") is None
+            with pytest.raises(KeyError, match="任务不存在"):
+                scheduler.get_result("nonexistent")
         finally:
             scheduler.shutdown()
 

@@ -6,7 +6,15 @@ PIC IR 是 Apollo/LiDAR 定义的光子电路中间表示格式，
 LiDAR benchmark YAML 含 ``!!python/tuple`` 标签（grating_coupler 参数），
 ``yaml.safe_load`` 无法解析，需注册自定义构造器将其视为普通 list。
 
-来源: https://github.com/ScopeX-ASU/LiDAR
+R03 异常处理设计: 所有数据格式错误（非 dict 实例/net、端口引用解析失败、
+endpoints 格式不支持）均 raise TypeError/ValueError，禁止静默返回 None/[]。
+
+来源:
+- LiDAR PIC IR: https://github.com/ScopeX-ASU/LiDAR
+- Apollo: https://github.com/ASU-LOPE-Group/Apollo
+- Python 异常处理: https://docs.python.org/3/tutorial/errors.html
+- PEP 8 异常设计: https://peps.python.org/pep-0008/#exception-handling
+- Real Python try/except: https://realpython.com/python-exceptions/
 """
 
 from __future__ import annotations
@@ -57,13 +65,19 @@ def _parse_pic_ir_nets(
 
     Returns:
         连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
+
+    Raises:
+        TypeError: nets 字段非 dict/list。
     """
     nets = raw.get("nets", [])
     if isinstance(nets, dict):
         return _parse_pic_ir_nets_dict(nets)
     if isinstance(nets, list):
         return _parse_pic_ir_nets_list(nets)
-    return []
+    # R03: nets 格式错误，禁止静默返回空列表
+    raise TypeError(
+        f"PIC IR nets 字段必须为 dict 或 list，实际为 {type(nets).__name__}: {nets!r}"
+    )
 
 
 def _parse_pic_ir_nets_dict(
@@ -79,13 +93,12 @@ def _parse_pic_ir_nets_dict(
     """
     connections: list[tuple[str, str, str, str]] = []
     for _net_name, endpoints in nets.items():
-        conn = _parse_pic_ir_endpoints(endpoints)
-        if conn is not None:
-            connections.append(conn)
+        # _parse_pic_ir_endpoints 已改为 raise，无需 None 检查（R03）
+        connections.append(_parse_pic_ir_endpoints(endpoints))
     return connections
 
 
-def _parse_pic_ir_endpoints(endpoints: object) -> tuple[str, str, str, str] | None:
+def _parse_pic_ir_endpoints(endpoints: object) -> tuple[str, str, str, str]:
     """解析单个 net 的 endpoints（list/tuple 或 dict）。
 
     Args:
@@ -93,7 +106,11 @@ def _parse_pic_ir_endpoints(endpoints: object) -> tuple[str, str, str, str] | No
             {src, dst} 字典。
 
     Returns:
-        (src_dev, src_port, dst_dev, dst_port) 或 None（解析失败）。
+        (src_dev, src_port, dst_dev, dst_port)。
+
+    Raises:
+        TypeError: endpoints 格式不支持（非 list/tuple/dict）。
+        ValueError: 端口引用解析失败（src/dst 为空）。
     """
     if isinstance(endpoints, (list, tuple)) and len(endpoints) >= 2:
         src_ref = str(endpoints[0])
@@ -102,12 +119,20 @@ def _parse_pic_ir_endpoints(endpoints: object) -> tuple[str, str, str, str] | No
         src_ref = str(endpoints.get("src", endpoints.get("source", "")))
         dst_ref = str(endpoints.get("dst", endpoints.get("destination", "")))
     else:
-        return None
+        # R03: endpoints 格式不支持，禁止静默返回 None
+        raise TypeError(
+            f"PIC IR net endpoints 必须为 list/tuple/dict，"
+            f"实际为 {type(endpoints).__name__}: {endpoints!r}"
+        )
     src_dev, src_port = split_port_ref(src_ref)
     dst_dev, dst_port = split_port_ref(dst_ref)
-    if src_dev and dst_dev:
-        return (src_dev, src_port, dst_dev, dst_port)
-    return None
+    if not src_dev or not dst_dev:
+        # R03: 端口引用解析失败，禁止静默返回 None
+        raise ValueError(
+            f"PIC IR net endpoints 端口引用解析失败: "
+            f"src_ref={src_ref!r}, dst_ref={dst_ref!r}"
+        )
+    return (src_dev, src_port, dst_dev, dst_port)
 
 
 def _parse_pic_ir_nets_list(
@@ -122,16 +147,29 @@ def _parse_pic_ir_nets_list(
         连接列表 [(src_dev, src_port, dst_dev, dst_port), ...]。
     """
     connections: list[tuple[str, str, str, str]] = []
-    for net in nets:
+    for i, net in enumerate(nets):
         if not isinstance(net, dict):
-            continue
+            # R03: net 格式错误，禁止静默跳过
+            raise TypeError(
+                f"PIC IR nets[{i}] 必须为 dict，实际为 {type(net).__name__}: {net!r}"
+            )
         src = net.get("src", net.get("source", ""))
         dst = net.get("dst", net.get("destination", ""))
-        if "," in src and "," in dst:
-            src_parts = src.split(",")
-            dst_parts = dst.split(",")
-            if len(src_parts) == 2 and len(dst_parts) == 2:
-                connections.append((src_parts[0], src_parts[1], dst_parts[0], dst_parts[1]))
+        if "," not in src or "," not in dst:
+            # R03: 端口引用缺少逗号分隔符，禁止静默跳过
+            raise ValueError(
+                f"PIC IR nets[{i}] 端口引用必须为 'dev,port' 格式: "
+                f"src={src!r}, dst={dst!r}"
+            )
+        src_parts = src.split(",")
+        dst_parts = dst.split(",")
+        if len(src_parts) != 2 or len(dst_parts) != 2:
+            # R03: 端口引用分割后长度不为 2，禁止静默跳过
+            raise ValueError(
+                f"PIC IR nets[{i}] 端口引用分割后长度不为 2: "
+                f"src={src!r}, dst={dst!r}"
+            )
+        connections.append((src_parts[0], src_parts[1], dst_parts[0], dst_parts[1]))
     return connections
 
 
@@ -152,7 +190,10 @@ def _parse_pic_ir_instances(instances: dict | list) -> list[DeviceSpec]:
     devices: list[DeviceSpec] = []
     for name, inst in items:
         if not isinstance(inst, dict):
-            continue
+            # R03: 实例格式错误，禁止静默跳过
+            raise TypeError(
+                f"PIC IR 实例 '{name}' 必须为 dict，实际为 {type(inst).__name__}: {inst!r}"
+            )
         if not name or name == "unknown":
             name = inst.get("name", "unknown")
         cell = inst.get("cell_type", inst.get("cell", inst.get("component", "unknown")))

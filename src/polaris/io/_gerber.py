@@ -11,6 +11,14 @@ Gerber 语法实现严格遵循下列权威来源（规则 18 学术诚信）：
 - Wikipedia, "Gerber format",
   https://en.wikipedia.org/wiki/Gerber_format
 
+异常处理最佳实践（R03 禁止 fall-back）：
+- PEP 8 Python 代码风格指南: https://peps.python.org/pep-0008/
+- Effective Python 第20条 遇到意外状况时应该抛出异常，不要返回 None:
+  https://www.informit.com/articles/article.aspx?p=3203546&seqNum=3
+- Python 官方文档 Errors and Exceptions: https://docs.python.org/3/tutorial/errors.html
+- Real Python: https://realpython.com/async-io-python/
+- Python Cookbook 3rd Edition: https://www.oreilly.com/library/view/python-cookbook-3rd/9781449357337/
+
 Gerber 为扁平格式（无单元层级），全部形状归入单 cell。
 坐标按 %FS% 格式声明（整数 + 隐含小数位）与 %MO% 单位（IN/MM）解析。
 """
@@ -125,7 +133,12 @@ def _gerber_process_blocks(
     def flush_path() -> None:
         nonlocal path_pts
         if len(path_pts) >= 2:
-            w = apertures.get(current_ap, ("C", [0.0]))[1][0]
+            if current_ap not in apertures:
+                raise ValueError(
+                    f"Gerber 孔径未定义: D{current_ap}（D01 绘制前必须先用 "
+                    f"%ADD% 定义孔径）"
+                )
+            w = apertures[current_ap][1][0]
             shapes.append(Shape("path", "gerber", list(path_pts), width=w))
         path_pts = []
 
@@ -189,15 +202,23 @@ def _gerber_update_pos(
 
 
 def _gerber_flash_shape(dcode: int, apertures: dict, pt: Point) -> Shape:
-    """Gerber D03 flash → Shape（按孔径形状）。"""
-    shape_t, params = apertures.get(dcode, ("C", [0.0]))
+    """Gerber D03 flash → Shape（按孔径形状）。
+
+    Raises:
+        ValueError: dcode 未在 apertures 中定义（R03 禁止 fall-back）。
+        ValueError: 孔径形状类型不支持。
+    """
+    if dcode not in apertures:
+        raise ValueError(
+            f"Gerber 孔径未定义: D{dcode}（D03 flash 前必须先用 %ADD% 定义孔径）"
+        )
+    shape_t, params = apertures[dcode]
     if shape_t == "C":
         return Shape("circle", "gerber", [pt], width=params[0])
     if shape_t in ("R", "O"):
         return Shape("rect", "gerber", [pt],
                      width=params[0], height=params[1])
-    return Shape("circle", "gerber", [pt],
-                 width=params[0] if params else 0.0)
+    raise ValueError(f"Gerber 不支持孔径形状: {shape_t}（dcode D{dcode}）")
 
 
 def write_gerber(layout: FormatLayout) -> str:

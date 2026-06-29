@@ -19,6 +19,14 @@
 - ANSYS HFSS/PEX 寄生参数提取方法学
   URL: https://www.ansys.com/products/electronics/ansys-q3d-extractor
 
+异常处理最佳实践（R03 禁止 fall-back）:
+- PEP 8 Python 代码风格指南: https://peps.python.org/pep-0008/
+- Effective Python 第20条 遇到意外状况时应该抛出异常，不要返回 None:
+  https://www.informit.com/articles/article.aspx?p=3203546&seqNum=3
+- Python 官方文档 Errors and Exceptions: https://docs.python.org/3/tutorial/errors.html
+- NumPy LinAlgError 文档: https://numpy.org/doc/stable/reference/generated/numpy.linalg.LinAlgError.html
+- SciPy stats 文档: https://docs.scipy.org/doc/scipy/reference/stats.html
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
 """
 
@@ -701,19 +709,24 @@ class StatisticalAnalyzer:
                     samples = p.nominal + L @ z
             elif p.distribution == "uniform":
                 # 均匀分布：先高斯再变换（近似）
+                # *Bug #v3.3-VER-1 修复*: 原 except Exception fall-back 到
+                # 无空间相关的简单均匀分布（丢失空间相关性，假数据）。
+                # 修复：与高斯分布一致，仅捕获 LinAlgError 用 SVD 替代；
+                # 其他异常（如 scipy 导入失败）必须 raise（R03 禁止 fall-back）。
                 cov = _cov_matrix(p.sigma / np.sqrt(3))
                 try:
                     L = np.linalg.cholesky(cov)
-                    z = self._rng.standard_normal((n_devices, n_runs))
-                    gauss_samples = L @ z
-                    # 高斯到均匀的变换（通过经验 CDF 近似）
-                    from scipy.stats import norm, uniform
-                    u = norm.cdf(gauss_samples)
-                    samples = p.lower + u * (p.upper - p.lower)
-                except Exception:
-                    samples = self._rng.uniform(
-                        p.lower, p.upper, (n_devices, n_runs)
-                    )
+                except np.linalg.LinAlgError:
+                    # Cholesky 失败（半正定非正定），用 SVD 替代（数学等价）
+                    eigvals, eigvecs = np.linalg.eigh(cov)
+                    eigvals = np.maximum(eigvals, 0)
+                    L = eigvecs @ np.diag(np.sqrt(eigvals))
+                z = self._rng.standard_normal((n_devices, n_runs))
+                gauss_samples = L @ z
+                # 高斯到均匀的变换（通过经验 CDF 近似）
+                from scipy.stats import norm
+                u = norm.cdf(gauss_samples)
+                samples = p.lower + u * (p.upper - p.lower)
             else:
                 samples = np.full((n_devices, n_runs), p.nominal)
             param_samples[name] = samples

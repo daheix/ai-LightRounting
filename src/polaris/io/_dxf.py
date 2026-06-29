@@ -11,6 +11,14 @@ DXF 语法实现遵循下列权威来源（规则 18 学术诚信）：
 - Mead & Conway, "Introduction to VLSI Systems", Addison-Wesley 1980
   （版图分层理论，DXF 层概念对应）
 
+异常处理最佳实践（R03 禁止 fall-back）：
+- PEP 8 Python 代码风格指南: https://peps.python.org/pep-0008/
+- Effective Python 第20条 遇到意外状况时应该抛出异常，不要返回 None:
+  https://www.informit.com/articles/article.aspx?p=3203546&seqNum=3
+- Python 官方文档 Errors and Exceptions: https://docs.python.org/3/tutorial/errors.html
+- Real Python Async IO: https://realpython.com/async-io-python/
+- Python Cookbook 3rd Edition: https://www.oreilly.com/library/view/python-cookbook-3rd/9781449357337/
+
 DXF 为码值对（group code / value）文本格式；本模块解析 ENTITIES 段的
 LINE / CIRCLE / LWPOLYLINE / TEXT 实体（来源: Autodesk DXF Reference）。
 """
@@ -44,9 +52,8 @@ def read_dxf(text: str) -> FormatLayout:
         elif code == "0" and in_entities:
             entity_pairs = _dxf_collect_entity(lines, i)
             shape = _dxf_parse_entity(value, entity_pairs)
-            if shape is not None:
-                shapes.append(shape)
-                layers.setdefault(shape.layer, LayerInfo(name=shape.layer))
+            shapes.append(shape)
+            layers.setdefault(shape.layer, LayerInfo(name=shape.layer))
             i += len(entity_pairs) + 1
         i += 1
     cell = Cell(name="dxf_layout", shapes=shapes)
@@ -72,11 +79,14 @@ def _dxf_collect_entity(lines: list[str], start: int) -> list[str]:
     return out
 
 
-def _dxf_parse_entity(etype: str, pairs: list[str]) -> Shape | None:
+def _dxf_parse_entity(etype: str, pairs: list[str]) -> Shape:
     """解析单个 DXF 实体 → Shape。
 
     码定义（来源: Autodesk DXF Reference）：8=层, 10/20=x/y,
     11/21=LINE 终点, 40=半径/字高, 70=多段线标志, 43=线宽, 1=文本。
+
+    Raises:
+        ValueError: 未识别的 DXF 实体类型（R03 禁止 fall-back，不返回 None）。
     """
     codes = _dxf_pairs_to_dict(pairs)
     layer = str(codes.get(8, "0"))
@@ -90,7 +100,7 @@ def _dxf_parse_entity(etype: str, pairs: list[str]) -> Shape | None:
         cx = float(codes.get(10, 0))
         cy = float(codes.get(20, 0))
         return Shape("text", layer, [Point(cx, cy)], text=str(codes.get(1, "")))
-    return None
+    raise ValueError(f"DXF 不支持实体类型: {etype}")
 
 
 def _dxf_line(codes: dict, layer: str) -> Shape:

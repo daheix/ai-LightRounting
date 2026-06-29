@@ -220,13 +220,17 @@ class JobScheduler:
                 job.workspace.write_log(f"作业执行异常: {e}", "ERROR")
                 job.workspace.write_job_metadata(job.to_dict())
             except RuntimeError as re:
-                # 状态转换失败时记录但不静默吞没
+                # R03 合规：状态机违规必须上抛，禁止静默吞没。
+                # 原实现仅 logger.error 是 fall-back——掩盖了状态机 Bug
+                # （如作业已处终态却试图 mark_failed）。re-raise 让上层感知，
+                # 原始异常 e 通过 Python 异常链 __context__ 自动保留。
                 logger.error(
                     "作业 %s 状态转换失败，当前状态 %s: %s",
                     job.job_id,
                     job.status,
                     re,
                 )
+                raise
 
     @staticmethod
     def _generate_report(job: Job) -> dict:

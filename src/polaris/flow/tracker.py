@@ -11,6 +11,10 @@
 - Cadence ADE-XL 作业历史: https://docs.cadence.com/
 - Synopsys ICC2 状态追踪: https://www.synopsys.com/
 - Ansys Lumerical 结果查询: https://www.ansys.com/products/photonics
+- Effective Python 3rd Ed. Item 32（优先抛异常而非返回 None）:
+  https://effectivepython.com/
+- Real Python: Effectively Raising Exceptions（异常链与 re-raise）:
+  https://realpython.com/python-raise-exception/
 
 JobTracker 是只读查询接口，从磁盘工作空间读取作业元数据与阶段输出，
 不参与作业执行。供 CLI / Web / 上层编排使用。
@@ -26,7 +30,9 @@ class JobTracker:
     """作业追踪器，提供状态查询、历史记录、阶段结果检索
 
     通过扫描 base_output_dir 下的作业目录，提供只读查询能力。
-    所有方法在文件缺失或损坏时返回 None / 空列表，不抛出异常。
+    R03 合规契约：文件/目录**缺失**时返回 None / 空列表（合法查询未命中）；
+    文件**存在但损坏**（JSON 解析失败、IO 错误）直接 raise 异常，禁止 fall-back
+    静默吞没——数据损坏属业务 Bug，必须上抛告警。
     """
 
     # 阶段 ID → slug 映射（与 STANDARD_STAGES 保持一致）
@@ -68,12 +74,9 @@ class JobTracker:
             meta_path = job_dir / "job.json"
             if not meta_path.exists():
                 continue
-            try:
-                meta = json.loads(meta_path.read_text(encoding="utf-8"))
-                if status is None or meta.get("status") == status:
-                    jobs.append(meta)
-            except (json.JSONDecodeError, OSError):
-                continue
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            if status is None or meta.get("status") == status:
+                jobs.append(meta)
         return jobs
 
     def get_stage_result(self, job_id: str, stage_id: int) -> dict | None:
@@ -96,11 +99,13 @@ class JobTracker:
         return history
 
     def _read_job_metadata(self, job_id: str) -> dict | None:
-        """读取作业元数据"""
+        """读取作业元数据。
+
+        R03 合规：文件缺失返回 None（合法的查询未命中）；
+        文件存在但损坏（JSON 解析失败 / IO 错误）直接 raise，禁止 fall-back
+        返回 None 掩盖数据损坏（Effective Python Item 32）。
+        """
         path = self.base_output_dir / job_id / "job.json"
         if not path.exists():
             return None
-        try:
-            return json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return None
+        return json.loads(path.read_text(encoding="utf-8"))

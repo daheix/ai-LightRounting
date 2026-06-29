@@ -3,12 +3,20 @@
 对标 TILOS MacroPlacement 评估标准，提供 HPWL/重叠/利用率/拥塞度等指标计算，
 用于与电子 EDA 工具（Innovus/ICC2/DREAMPlace/Circuit Training）公平对比。
 
+R03 异常处理设计: 缺失 placements 坐标或 circuit.devices 中无对应模块时
+raise KeyError，禁止静默跳过（会导致 HPWL/重叠/拥塞度/插入损耗/DRV 计算不准）。
+
 来源:
 - TILOS MacroPlacement 评估: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
 - Circuit Training 评估: https://github.com/google-research/circuit_training
+- DREAMPlace: https://github.com/limbo018/DREAMPlace
 - HPWL 经典定义: EDA 教材半周长线长估计
 - Congestion 评估: Nesterenko & Hsu 2002 "Congestion-Aware Placement"
 - Insertion Loss: 光子电路插入损耗 = 波导损耗 + 器件损耗
+
+异常处理文献:
+- Python 异常处理: https://docs.python.org/3/tutorial/errors.html
+- PEP 8 异常设计: https://peps.python.org/pep-0008/#exception-handling
 
 评估指标:
 - HPWL (Half-Perimeter Wire Length): 半周长线长，布局质量核心指标
@@ -73,7 +81,11 @@ def evaluate_hpwl(
     total = 0.0
     for src, _src_port, dst, _dst_port in circuit.connections:
         if src not in placements or dst not in placements:
-            continue
+            # R03: 缺失布局坐标，禁止静默跳过（会导致 HPWL 计算不准）
+            raise KeyError(
+                f"HPWL 评估: 连接 {src}→{dst} 的模块缺失 placements "
+                f"(src_in={src in placements}, dst_in={dst in placements})"
+            )
         x1, y1 = placements[src]
         x2, y2 = placements[dst]
         total += abs(x2 - x1) + abs(y2 - y1)
@@ -101,7 +113,10 @@ def evaluate_overlap(
     size_map = {d.name: (d.width_um, d.height_um) for d in circuit.devices}
     for name, (cx, cy) in placements.items():
         if name not in size_map:
-            continue
+            # R03: placements 中的模块不在 circuit.devices 中，禁止静默跳过
+            raise KeyError(
+                f"重叠评估: placements 中的模块 '{name}' 不在 circuit.devices 中"
+            )
         w, h = size_map[name]
         boxes.append((name, cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2))
 
@@ -168,7 +183,11 @@ def _build_demand_grid(
 
     for src, _src_port, dst, _dst_port in circuit.connections:
         if src not in placements or dst not in placements:
-            continue
+            # R03: 缺失布局坐标，禁止静默跳过（会导致拥塞度计算不准）
+            raise KeyError(
+                f"拥塞度评估: 连接 {src}→{dst} 的模块缺失 placements "
+                f"(src_in={src in placements}, dst_in={dst in placements})"
+            )
         x1, y1 = placements[src]
         x2, y2 = placements[dst]
         xmin, xmax = min(x1, x2), max(x1, x2)
@@ -322,7 +341,11 @@ def evaluate_insertion_loss(
     waveguide_loss = 0.0
     for src, _src_port, dst, _dst_port in circuit.connections:
         if src not in placements or dst not in placements:
-            continue
+            # R03: 缺失布局坐标，禁止静默跳过（会导致插入损耗计算不准）
+            raise KeyError(
+                f"插入损耗评估: 连接 {src}→{dst} 的模块缺失 placements "
+                f"(src_in={src in placements}, dst_in={dst in placements})"
+            )
         x1, y1 = placements[src]
         x2, y2 = placements[dst]
         length_um = abs(x2 - x1) + abs(y2 - y1)
@@ -377,7 +400,10 @@ def evaluate_drv(
     boxes: list[tuple[str, float, float, float, float]] = []
     for name, (cx, cy) in placements.items():
         if name not in size_map:
-            continue
+            # R03: placements 中的模块不在 circuit.devices 中，禁止静默跳过
+            raise KeyError(
+                f"DRV 评估: placements 中的模块 '{name}' 不在 circuit.devices 中"
+            )
         w, h = size_map[name]
         xmin = cx - w / 2
         ymin = cy - h / 2

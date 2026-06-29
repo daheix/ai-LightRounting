@@ -17,6 +17,14 @@ Calibre LFD（光刻友好设计，PV-band 热点检测）。
 6. Arora et al., IEEE TCAD 15(1), 1996, doi:10.1109/43.534256
    https://www.stanford.edu/class/archive/ee/ee371/ee371.1066/handouts/arora96.pdf
 
+异常处理最佳实践（R03 禁止 fall-back）:
+- PEP 8 Python 代码风格指南: https://peps.python.org/pep-0008/
+- Effective Python 第20条 遇到意外状况时应该抛出异常，不要返回 None:
+  https://www.informit.com/articles/article.aspx?p=3203546&seqNum=3
+- Python 官方文档 Errors and Exceptions: https://docs.python.org/3/tutorial/errors.html
+- Real Python: https://realpython.com/async-io-python/
+- Python Cookbook 3rd Edition: https://www.oreilly.com/library/view/python-cookbook-3rd/9781449357337/
+
 合规: R03 禁止 fall-back；R02 学术诚信；R04 不参与 GPU（纯 NumPy）；
       文件 < 800 行，函数 < 80 行，圈复杂度 ≤ 15。
 """
@@ -500,8 +508,8 @@ class ParasiticExtractor:
         total_c = 0.0
         layer_polys: dict[str, list[np.ndarray]] = {}
         for layer_name, spec in layer_map.items():
-            if spec.gds_layer not in layout.polygons:
-                continue
+            # *Bug #v3.3-VER-13 修复*: 原代码 `continue` 静默跳过不存在的层
+            # （fall-back），改为让 get_polygons raise KeyError（R03 禁止 fall-back）。
             polys = layout.get_polygons(spec.gds_layer)
             layer_polys[layer_name] = polys
             if spec.is_conductor:
@@ -692,6 +700,7 @@ class ParasiticExtractor:
 
         Raises:
             ImportError: klayout 不可用时 raise（规则 14.1 禁止 fall-back）。
+            ValueError: GDS 文件解析失败或无 top cell 时 raise（R03 禁止 fall-back）。
         """
         try:
             import klayout.db as db
@@ -701,8 +710,16 @@ class ParasiticExtractor:
                 "请安装 klayout 或使用 extract_layout() 直接传入 Layout"
             ) from exc
         ly = db.Layout()
-        ly.read(str(gds_path))
-        top = ly.top_cells()[0]
+        try:
+            ly.read(str(gds_path))
+        except Exception as exc:
+            raise ValueError(
+                f"GDS 文件解析失败: {gds_path}（{exc}）"
+            ) from exc
+        top_cells = ly.top_cells()
+        if not top_cells:
+            raise ValueError(f"GDS 文件无 top cell: {gds_path}")
+        top = top_cells[0]
         polygons: dict[tuple[int, int], list[np.ndarray]] = {}
         layer_set = {spec.gds_layer for spec in layer_map.values()}
         for gds_layer in layer_set:

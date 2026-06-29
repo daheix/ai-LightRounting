@@ -421,10 +421,23 @@ class DistributedTaskScheduler:
                 raise KeyError(f"任务不存在: {task_id}")
             return result.cancel_requested
 
-    def get_result(self, task_id: str) -> TaskResult | None:
-        """获取任务结果。"""
+    def get_result(self, task_id: str) -> TaskResult:
+        """获取任务结果。
+
+        Args:
+            task_id: 任务 ID。
+
+        Returns:
+            TaskResult 对象。
+
+        Raises:
+            KeyError: 任务不存在（R03 禁止 fall-back，不返回 None）。
+        """
         with self._lock:
-            return self._tasks.get(task_id)
+            result = self._tasks.get(task_id)
+        if result is None:
+            raise KeyError(f"任务不存在: {task_id}")
+        return result
 
     def list_results(self, status: TaskStatus | None = None) -> list[TaskResult]:
         """列出所有任务结果。"""

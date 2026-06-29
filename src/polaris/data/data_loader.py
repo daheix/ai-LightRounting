@@ -8,17 +8,29 @@ GDSFactory (*.pic.yml)、PhIDO (YAML/JSON) 等格式加载光子电路训练数�
 - ``_other_formats.py``: GDSFactory / PICBench / PhIDO 格式
 - ``_common.py``: 共享工具函数
 
+R03 异常处理设计: 失败即 raise，禁止静默 fall-back。auto 模式逐个尝试
+所有 loader 但记录每个 loader 的失败原因，全部失败时 raise 汇总错误；
+批量加载目录时单文件失败即 raise（不跳过），确保数据完整性。
+
 数据来源:
 - LiDAR PIC IR: https://github.com/ScopeX-ASU/LiDAR
 - PICBench: https://github.com/PICDA/PICBench
 - GDSFactory: https://gdsfactory.github.io/gdsfactory/
 - PhIDO: https://github.com/JPPhotonics/PhIDO-Release
+
+异常处理最佳实践文献:
+- Python 官方异常处理指南: https://docs.python.org/3/tutorial/errors.html
+- PEP 8 异常设计: https://peps.python.org/pep-0008/#exception-handling
+- Real Python 异常处理: https://realpython.com/python-exceptions/
+- Google Python 风格指南异常: https://google.github.io/styleguide/pyguide.html#exceptions
 """
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
+
+import yaml
 
 from polaris.data._other_formats import (
     load_gdsfactory_yaml,
@@ -54,32 +66,15 @@ def load_directory(
         )
 
     circuits: list[CircuitSpec] = []
-    for fp in sorted(p.glob("*.y*ml")):
+    # 收集 yaml 与 json 文件（R03: 单个文件失败应 raise 而非 continue 跳过）
+    files = sorted(p.glob("*.y*ml")) + sorted(p.glob("*.json"))
+    for fp in files:
         try:
-            c = _load_file(fp, fmt)
-            circuits.append(c)
-        except OSError as e:
-            # 文件 I/O 错误（含文件不存在/权限）可恢复：记录 warning 后跳过
-            logger.warning("文件读取失败，跳过: %s (%s)", fp, e)
-            continue
-        except (ValueError, KeyError, TypeError) as e:
-            # 解析错误不可恢复：必须 raise 告警（规则 14.1: 无 fall-back）
+            circuits.append(_load_file(fp, fmt))
+        except (ValueError, KeyError, TypeError, OSError, yaml.YAMLError) as e:
+            # R03: 失败即 raise，禁止静默跳过单个文件（含 I/O 错误与解析错误）
             raise ValueError(
-                f"数据文件解析失败: {fp}: {e}"
-            ) from e
-
-    for fp in sorted(p.glob("*.json")):
-        try:
-            c = _load_file(fp, fmt)
-            circuits.append(c)
-        except OSError as e:
-            # 文件 I/O 错误（含文件不存在/权限）可恢复：记录 warning 后跳过
-            logger.warning("文件读取失败，跳过: %s (%s)", fp, e)
-            continue
-        except (ValueError, KeyError, TypeError) as e:
-            # 解析错误不可恢复：必须 raise 告警（规则 14.1: 无 fall-back）
-            raise ValueError(
-                f"数据文件解析失败: {fp}: {e}"
+                f"数据文件加载失败: {fp}: {type(e).__name__}: {e}"
             ) from e
 
     logger.info("从 %s 加载了 %d 个电路", path, len(circuits))
@@ -107,13 +102,22 @@ def _load_file(fp: Path, fmt: str) -> CircuitSpec:
         return load_picbench(fp)
     if fmt == "phido":
         return load_phido(fp)
-    # auto: 尝试所有格式
-    for loader in [load_pic_ir, load_gdsfactory_yaml, load_picbench, load_phido]:
+    # auto: 逐个尝试所有格式，全部失败则 raise 并汇总各 loader 失败原因
+    # （R03: 无静默 fall-back；记录每个 loader 的失败原因供诊断）
+    errors: list[str] = []
+    for loader_name, loader in [
+        ("pic_ir", load_pic_ir),
+        ("gdsfactory", load_gdsfactory_yaml),
+        ("picbench", load_picbench),
+        ("phido", load_phido),
+    ]:
         try:
             return loader(fp)
-        except Exception:
-            continue
-    raise ValueError(f"无法识别文件格式: {fp}")
+        except (ValueError, KeyError, TypeError, AttributeError, OSError, yaml.YAMLError) as e:
+            errors.append(f"{loader_name}: {type(e).__name__}: {e}")
+    raise ValueError(
+        f"无法识别文件格式: {fp}。所有加载器均失败: {'; '.join(errors)}"
+    )
 
 
 def circuit_spec_to_netlist_dict(circuit: CircuitSpec) -> dict:
@@ -218,12 +222,16 @@ def load_tilos_ariane(path: str | Path | None = None) -> CircuitSpec:
     circuit = load_ariane_benchmark()
     if path is not None:
         p = Path(path)
-        if p.exists():
-            loaded = _load_file(p, "auto")
-            loaded.benchmark_source = BenchmarkSource.TILOS
-            loaded.target_metric = TargetMetric.HPWL
-            return loaded
-        logger.warning("TILOS Ariane benchmark 文件不存在: %s", path)
+        if not p.exists():
+            # R03: 用户指定 path 但文件不存在，禁止静默 fall-back 到默认拓扑
+            raise FileNotFoundError(
+                f"TILOS Ariane benchmark 文件不存在: {path}。"
+                f"请检查路径，或不传 path 参数以使用内置默认拓扑。"
+            )
+        loaded = _load_file(p, "auto")
+        loaded.benchmark_source = BenchmarkSource.TILOS
+        loaded.target_metric = TargetMetric.HPWL
+        return loaded
     return circuit
 
 
@@ -252,12 +260,16 @@ def load_apollo_ptc(path: str | Path | None = None) -> CircuitSpec:
     circuit = load_apollo_ptc_benchmark()
     if path is not None:
         p = Path(path)
-        if p.exists():
-            loaded = _load_file(p, "auto")
-            loaded.benchmark_source = BenchmarkSource.APOLLO
-            loaded.target_metric = TargetMetric.INSERTION_LOSS_DB
-            return loaded
-        logger.warning("Apollo PTC benchmark 文件不存在: %s", path)
+        if not p.exists():
+            # R03: 用户指定 path 但文件不存在，禁止静默 fall-back 到默认拓扑
+            raise FileNotFoundError(
+                f"Apollo PTC benchmark 文件不存在: {path}。"
+                f"请检查路径，或不传 path 参数以使用内置默认拓扑。"
+            )
+        loaded = _load_file(p, "auto")
+        loaded.benchmark_source = BenchmarkSource.APOLLO
+        loaded.target_metric = TargetMetric.INSERTION_LOSS_DB
+        return loaded
     return circuit
 
 
@@ -286,12 +298,16 @@ def load_apollo_onoc(path: str | Path | None = None) -> CircuitSpec:
     circuit = load_apollo_onoc_benchmark()
     if path is not None:
         p = Path(path)
-        if p.exists():
-            loaded = _load_file(p, "auto")
-            loaded.benchmark_source = BenchmarkSource.APOLLO
-            loaded.target_metric = TargetMetric.ROUTING_SUCCESS_RATE
-            return loaded
-        logger.warning("Apollo oNoC benchmark 文件不存在: %s", path)
+        if not p.exists():
+            # R03: 用户指定 path 但文件不存在，禁止静默 fall-back 到默认拓扑
+            raise FileNotFoundError(
+                f"Apollo oNoC benchmark 文件不存在: {path}。"
+                f"请检查路径，或不传 path 参数以使用内置默认拓扑。"
+            )
+        loaded = _load_file(p, "auto")
+        loaded.benchmark_source = BenchmarkSource.APOLLO
+        loaded.target_metric = TargetMetric.ROUTING_SUCCESS_RATE
+        return loaded
     return circuit
 
 
@@ -321,12 +337,16 @@ def load_lidar_benchmark(path: str | Path | None = None) -> CircuitSpec:
     circuit = load_lidar_ptc_benchmark()
     if path is not None:
         p = Path(path)
-        if p.exists():
-            loaded = _load_file(p, "auto")
-            loaded.benchmark_source = BenchmarkSource.LIDAR
-            loaded.target_metric = TargetMetric.ROUTING_SUCCESS_RATE
-            return loaded
-        logger.warning("LiDAR benchmark 文件不存在: %s", path)
+        if not p.exists():
+            # R03: 用户指定 path 但文件不存在，禁止静默 fall-back 到默认拓扑
+            raise FileNotFoundError(
+                f"LiDAR benchmark 文件不存在: {path}。"
+                f"请检查路径，或不传 path 参数以使用内置默认拓扑。"
+            )
+        loaded = _load_file(p, "auto")
+        loaded.benchmark_source = BenchmarkSource.LIDAR
+        loaded.target_metric = TargetMetric.ROUTING_SUCCESS_RATE
+        return loaded
     return circuit
 
 

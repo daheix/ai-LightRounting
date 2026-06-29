@@ -355,18 +355,20 @@ class TrainingPipeline:
         """
         bdir = Path(benchmark_dir)
         if not bdir.exists():
-            logger.error("基准目录不存在: %s", benchmark_dir)
-            return []
+            # R03 合规：基准目录不存在属配置错误，禁止 fall-back 返回空列表
+            # （否则下游会在零基准上训练，掩盖配置 Bug）。直接 raise 告警。
+            raise FileNotFoundError(
+                f"基准目录不存在: {benchmark_dir}"
+                "（R03: 禁止 fall-back 返回空列表掩盖配置错误）"
+            )
         circuits: list[CircuitSpec] = []
         for f in sorted(bdir.glob("*.json")):
             if f.name in ("index.json", "variant_stats.json"):
                 continue
-            try:
-                circuit = _parse_benchmark_json(f)
-                if circuit is not None:
-                    circuits.append(circuit)
-            except Exception as e:
-                logger.warning("加载失败: %s (%s)", f, e)
+            # R03 合规：基准文件解析失败属数据损坏，禁止 except+logger.warning 静默跳过。
+            # _parse_benchmark_json 对空/无法识别格式直接 raise，由上层决策。
+            circuit = _parse_benchmark_json(f)
+            circuits.append(circuit)
         logger.info(
             "加载了 %d 个基准电路 (总器件数=%d, 总连接数=%d)",
             len(circuits),
@@ -376,7 +378,7 @@ class TrainingPipeline:
         return circuits
 
 
-def _parse_benchmark_json(path: Path) -> CircuitSpec | None:
+def _parse_benchmark_json(path: Path) -> CircuitSpec:
     """解析基准 JSON 快照为 CircuitSpec。
 
     支持三种来源格式：
@@ -384,11 +386,18 @@ def _parse_benchmark_json(path: Path) -> CircuitSpec | None:
     - PICBench: data.netlist.instances/connections
     - LiDAR PIC IR: instances 列表 + nets
 
+    R03 合规：原实现对“无器件且无连接”返回 None 静默跳过，是 fall-back——
+    掩盖了格式不匹配或空文件等数据质量问题。现改为 raise ValueError 告警，
+    强制上层处理（Effective Python Item 32: 优先抛异常而非返回 None）。
+
     Args:
         path: JSON 文件路径。
 
     Returns:
-        CircuitSpec，若无法解析则返回 None。
+        CircuitSpec（含 devices 与 connections）。
+
+    Raises:
+        ValueError: 文件无器件且无连接（空基准 / 无法识别格式）。
     """
     data = json.loads(path.read_text(encoding="utf-8"))
     name = data.get("name", path.stem)
@@ -402,8 +411,10 @@ def _parse_benchmark_json(path: Path) -> CircuitSpec | None:
     connections.extend(_parse_nets(netlist))
 
     if not devices and not connections:
-        logger.debug("跳过空基准: %s", name)
-        return None
+        raise ValueError(
+            f"基准文件 {name} 无器件且无连接"
+            "（R03: 禁止 fall-back 跳过空基准，数据质量问题必须上抛）"
+        )
 
     return CircuitSpec(name=name, devices=devices, connections=connections)
 
@@ -432,12 +443,32 @@ def _parse_instances(netlist: dict) -> list[DeviceSpec]:
     return devices
 
 
+def _first_float(source: dict, keys: tuple[str, ...], default: float) -> float:
+    """从 source 中按 keys 顺序取第一个非 None 值并转 float。
+
+    修复 #v3.3-P-6（R05 根因修复）：原 ``source.get(k1, source.get(k2, default))``
+    在 key 存在但值为 None 时返回 None（dict.get 语义：key 存在即返回其值，
+    即便为 None），导致 ``float(None)`` 抛 TypeError。该 Bug 曾被
+    ``_load_benchmarks`` 的 ``except logger.warning`` fall-back 静默吞没
+    （整文件被跳过，造成基准数据大量丢失），R03 移除 fall-back 后暴露。
+    本辅助函数显式跳过 None 值，取首个非 None 候选。
+
+    来源: Python dict.get 语义
+      https://docs.python.org/3/library/stdtypes.html#dict.get
+    """
+    for k in keys:
+        v = source.get(k)
+        if v is not None:
+            return float(v)
+    return default
+
+
 def _make_device_from_dict_inst(name: str, inst_data: dict) -> DeviceSpec:
     """从 GDSFactory 字典格式 instance 构造 DeviceSpec。"""
     component = inst_data.get("component", inst_data.get("type", "unknown"))
-    settings = inst_data.get("settings", {})
-    w = float(settings.get("length", settings.get("width", 10.0)))
-    h = float(settings.get("gap", settings.get("height", 10.0)))
+    settings = inst_data.get("settings") or {}
+    w = _first_float(settings, ("length", "width"), 10.0)
+    h = _first_float(settings, ("gap", "height"), 10.0)
     return DeviceSpec(
         name=name,
         device_type=component,
@@ -451,8 +482,8 @@ def _make_device_from_list_inst(inst: dict) -> DeviceSpec:
     """从 LiDAR 列表格式 instance 构造 DeviceSpec。"""
     inst_name = inst.get("name", inst.get("instance", "unknown"))
     cell = inst.get("cell_type", inst.get("component", inst.get("type", "unknown")))
-    w = float(inst.get("width", inst.get("xsize", 10.0)))
-    h = float(inst.get("height", inst.get("ysize", 10.0)))
+    w = _first_float(inst, ("width", "xsize"), 10.0)
+    h = _first_float(inst, ("height", "ysize"), 10.0)
     return DeviceSpec(name=inst_name, device_type=cell, width_um=w, height_um=h)
 
 
@@ -467,8 +498,8 @@ def _parse_components(netlist: dict) -> list[DeviceSpec]:
             continue
         cname = comp.get("name", "unknown")
         ctype = comp.get("type", comp.get("component", "unknown"))
-        w = float(comp.get("width", comp.get("xsize", 10.0)))
-        h = float(comp.get("height", comp.get("ysize", 10.0)))
+        w = _first_float(comp, ("width", "xsize"), 10.0)
+        h = _first_float(comp, ("height", "ysize"), 10.0)
         devices.append(DeviceSpec(name=cname, device_type=ctype, width_um=w, height_um=h))
     return devices
 
