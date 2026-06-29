@@ -34,6 +34,8 @@ Gerber 的 ``D03`` flash ↔ circle Shape(diameter=孔径直径)。
 from __future__ import annotations
 
 import importlib
+import os
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -284,4 +286,25 @@ class MultiFormatIO:
                 f"不支持的格式: {fmt}（支持: {SUPPORTED_FORMATS}）"
             )
         writer = _load_handler(fmt, entry[2])
-        Path(path).write_text(writer(layout), encoding="utf-8")
+        # R05 Bug 修复 v4.0-ATOMIC-01（第1轮迭代发现）:
+        # 原 Path(path).write_text() 非原子，进程中断会导致文件截断/半写入，
+        # 客户导入时解析失败丢失设计成果。改为原子写入（临时文件 + fsync + os.replace）
+        # 规则: R03 禁止 fall-back / R05 Bug 必修
+        # 文献: POSIX rename(2) 原子性 https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html
+        # 文献: Python os.replace https://docs.python.org/3/library/os.html#os.replace
+        # 文献: atomicwrites 库 https://github.com/untitaker/python-atomicwrites
+        content = writer(layout)
+        target = Path(path)
+        fd, tmp_name = tempfile.mkstemp(
+            dir=target.parent, prefix=target.name + ".", suffix=".tmp"
+        )
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, target)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise

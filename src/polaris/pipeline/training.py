@@ -139,8 +139,17 @@ class TrainingPipeline:
 
         circuits = self._load_benchmarks(cfg.benchmark_dir)
         if not circuits:
-            logger.error("无基准数据，训练终止")
-            return TrainingResult()
+            # R05 Bug 修复 v4.0-FALLBACK-01（第1轮迭代发现）:
+            # 原 return TrainingResult() 是静默 fall-back，客户以为"训练完成"
+            # 但实际无任何训练（episodes_completed=0），拿到空模型部署 RL 布局无效。
+            # 修复：raise ValueError，禁止静默返回空结果。
+            # 规则: R03 禁止 fall-back / R05 Bug 必修
+            # 文献: Effective Python Item 32 https://effectivepython.com/
+            raise ValueError(
+                f"基准目录 {cfg.benchmark_dir!r} 无可用 JSON 文件，"
+                f"训练终止。请提供真实 benchmark 数据（参考 data/benchmarks/）。"
+                f"R03 禁止 fall-back：禁止返回空 TrainingResult 让客户误以为训练完成。"
+            )
 
         floorplan_logs: list[dict] = []
         routing_logs: list[dict] = []

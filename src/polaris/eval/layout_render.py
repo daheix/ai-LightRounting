@@ -26,7 +26,10 @@
 
 from __future__ import annotations
 
+import os
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -66,6 +69,42 @@ def _get_klayout_db() -> Any:
             "（或参考 install.sh 统一安装）"
         ) from e
     return db
+
+
+def _atomic_write_klayout(ly: Any, output_path: str) -> str:
+    """原子写入 GDS/OASIS 文件（R05 Bug 修复 v4.0-ATOMIC-02，第1轮迭代发现）。
+
+    原 ly.write(output_path) 非原子，大版图（>100MB）写入耗时长，中断会导致
+    文件截断/半写入，损坏的 GDS 提交到代工厂会直接导致流片失败，客户索赔
+    金额可达百万级。改为临时文件 + os.replace 原子替换。
+
+    Args:
+        ly: klayout.Layout 对象。
+        output_path: 目标输出路径。
+
+    Returns:
+        output_path（写入成功后返回）。
+
+    Raises:
+        OSError: 临时文件创建或替换失败时抛出（R03 禁止 fall-back）。
+    """
+    target = Path(output_path)
+    fd, tmp_name = tempfile.mkstemp(
+        dir=target.parent, prefix=target.name + ".", suffix=".tmp"
+    )
+    # 关闭 fd，由 klayout ly.write 重新打开（避免双 open 冲突）
+    os.close(fd)
+    tmp_path = Path(tmp_name)
+    try:
+        ly.write(str(tmp_path))
+        # 确保 klayout 写入的数据持久化到磁盘
+        with open(tmp_path, "rb") as f:
+            os.fsync(f.fileno())
+        os.replace(tmp_path, target)
+    except Exception:
+        tmp_path.unlink(missing_ok=True)
+        raise
+    return output_path
 
 # 器件类别 → 渲染颜色
 _CATEGORY_COLORS = {
@@ -411,7 +450,8 @@ def export_gds(
     ly, top, layers = _create_klayout_layout(dbu)
     _place_device_boxes(top, placements, layers, dbu, add_ports=True)
     _place_waveguide_paths(top, paths, layers["WG"])
-    ly.write(output_path)
+    # R05 Bug 修复 v4.0-ATOMIC-02: 原子写入（临时文件 + os.replace）
+    _atomic_write_klayout(ly, output_path)
     return output_path
 
 
@@ -437,7 +477,8 @@ def export_oasis(
     ly, top, layers = _create_klayout_layout(dbu)
     _place_device_boxes(top, placements, layers, dbu, add_ports=False)
     _place_waveguide_paths(top, paths, layers["WG"])
-    ly.write(output_path)
+    # R05 Bug 修复 v4.0-ATOMIC-02: 原子写入（临时文件 + os.replace）
+    _atomic_write_klayout(ly, output_path)
     return output_path
 
 

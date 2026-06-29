@@ -32,7 +32,7 @@ import sys
 import threading
 import traceback
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import TYPE_CHECKING
 from urllib.parse import urlparse
@@ -46,41 +46,59 @@ logger = logging.getLogger(__name__)
 _STATIC_DIR = Path(__file__).parent / "static"
 
 # Showcase 运行状态字典: {run_id: {"status": str, "output_dir": str, "error": str|None}}
+# R05 Bug 修复 v4.0-WEB-LOCK（第1轮迭代发现）:
+# 原 _showcase_runs 全局字典无锁，后台线程写 + HTTP 线程读存在竞态。
+# 改为 threading.Lock 保护所有读写操作。
 _showcase_runs: dict[str, dict] = {}
+_showcase_lock = threading.Lock()
 
 # 全局作业调度器与追踪器（对齐 Cadence ADE-XL 作业队列模型）
+# R05 Bug 修复 v4.0-WEB-LOCK: 懒初始化加锁，防止 ThreadingHTTPServer 下创建多实例
 _global_scheduler: JobScheduler | None = None
 _global_tracker: JobTracker | None = None
+_global_lock = threading.Lock()
 
 
 def _get_scheduler() -> JobScheduler:
-    """获取全局作业调度器（懒初始化）。
+    """获取全局作业调度器（懒初始化，线程安全）。
 
     首次调用时创建 JobScheduler 实例，注入标准 10 阶段执行函数，
     后续调用复用同一实例。对齐 Cadence ADE-XL 的全局作业队列模型。
+
+    R05 Bug 修复 v4.0-WEB-LOCK: 加 _global_lock 双重检查锁定，
+    防止 ThreadingHTTPServer 下多线程并发创建多个 scheduler 实例。
+    文献: Python threading.Lock https://docs.python.org/3/library/threading.html#lock-objects
+    文献: Double-checked locking https://en.wikipedia.org/wiki/Double-checked_locking
     """
     global _global_scheduler
     if _global_scheduler is None:
-        from polaris.flow.executors import STAGE_EXECUTORS
-        from polaris.flow.scheduler import JobScheduler
+        with _global_lock:
+            # 双重检查锁定：进入锁后再检查一次，防止多线程同时通过第一次检查
+            if _global_scheduler is None:
+                from polaris.flow.executors import STAGE_EXECUTORS
+                from polaris.flow.scheduler import JobScheduler
 
-        _global_scheduler = JobScheduler(
-            max_workers=4, stage_executors=STAGE_EXECUTORS
-        )
+                _global_scheduler = JobScheduler(
+                    max_workers=4, stage_executors=STAGE_EXECUTORS
+                )
     return _global_scheduler
 
 
 def _get_tracker() -> JobTracker:
-    """获取全局作业追踪器（懒初始化）。
+    """获取全局作业追踪器（懒初始化，线程安全）。
 
     首次调用时创建 JobTracker 实例，扫描 out/jobs 目录，
     后续调用复用同一实例。
+
+    R05 Bug 修复 v4.0-WEB-LOCK: 加 _global_lock 双重检查锁定。
     """
     global _global_tracker
     if _global_tracker is None:
-        from polaris.flow.tracker import JobTracker
+        with _global_lock:
+            if _global_tracker is None:
+                from polaris.flow.tracker import JobTracker
 
-        _global_tracker = JobTracker(base_output_dir="out/jobs")
+                _global_tracker = JobTracker(base_output_dir="out/jobs")
     return _global_tracker
 
 
@@ -320,15 +338,19 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
                     for key, value in result.items():
                         sl.log_output(key, value)
 
-        _showcase_runs[run_id]["status"] = "done"
+        # R05 Bug 修复 v4.0-WEB-LOCK: _showcase_runs 写操作加锁
+        with _showcase_lock:
+            _showcase_runs[run_id]["status"] = "done"
         logger.info("Showcase 运行完成: run_id=%s", run_id)
     except Exception as e:
         logger.error(
             "Showcase 运行失败: run_id=%s, 错误: %s\n%s",
             run_id, e, traceback.format_exc(),
         )
-        _showcase_runs[run_id]["status"] = "failed"
-        _showcase_runs[run_id]["error"] = str(e)
+        # R05 Bug 修复 v4.0-WEB-LOCK: _showcase_runs 写操作加锁
+        with _showcase_lock:
+            _showcase_runs[run_id]["status"] = "failed"
+            _showcase_runs[run_id]["error"] = str(e)
 
 
 class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
@@ -546,9 +568,20 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
                 result = _run_pipeline(preset_id, router_type)
                 self._send_json({"success": True, "result": result})
             except Exception as e:
+                # R05 Bug 修复 v4.0-WEB-SEC（第1轮迭代发现）:
+                # 原代码返回 traceback 给客户端，泄露服务器文件路径、Python 版本、
+                # 代码结构、依赖库版本，攻击者可据此构造针对性攻击。
+                # 修复：traceback 仅写入服务器日志，客户端只收到通用错误消息。
+                # 规则: R02 学术诚信 / R05 Bug 必修
+                # 文献: OWASP Error Handling https://owasp.org/www-community/Improper_Error_Handling
+                # 文献: CWE-209 Information Exposure Through Error https://cwe.mitre.org/data/definitions/209.html
                 logger.error("Pipeline 运行失败: %s\n%s", e, traceback.format_exc())
                 self._send_json(
-                    {"success": False, "error": str(e), "traceback": traceback.format_exc()},
+                    {
+                        "success": False,
+                        "error": "内部错误，请联系支持（详见服务器日志）",
+                        "error_type": type(e).__name__,
+                    },
                     code=500,
                 )
             return
@@ -614,11 +647,13 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
         output_dir = params.get("output_dir", "out/e2e_showcase_web")
 
         run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        _showcase_runs[run_id] = {
-            "status": "running",
-            "output_dir": output_dir,
-            "error": None,
-        }
+        # R05 Bug 修复 v4.0-WEB-LOCK: _showcase_runs 写操作加锁
+        with _showcase_lock:
+            _showcase_runs[run_id] = {
+                "status": "running",
+                "output_dir": output_dir,
+                "error": None,
+            }
 
         thread = threading.Thread(
             target=_run_showcase_background,
@@ -637,7 +672,9 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_showcase_report(self, run_id: str) -> None:
         """处理 GET /api/showcase/report/{run_id}: 返回汇总报告。"""
-        run_info = _showcase_runs.get(run_id)
+        # R05 Bug 修复 v4.0-WEB-LOCK: 读操作加锁，防止后台线程同时写
+        with _showcase_lock:
+            run_info = _showcase_runs.get(run_id)
         if run_info is None:
             self._send_json(
                 {"success": False, "error": f"未知 run_id: {run_id}"},
@@ -689,7 +726,9 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_showcase_stage(self, run_id: str, stage_id: int) -> None:
         """处理 GET /api/showcase/stages/{run_id}/{stage_id}: 返回单阶段结果。"""
-        run_info = _showcase_runs.get(run_id)
+        # R05 Bug 修复 v4.0-WEB-LOCK: 读操作加锁
+        with _showcase_lock:
+            run_info = _showcase_runs.get(run_id)
         if run_info is None:
             self._send_json(
                 {"success": False, "error": f"未知 run_id: {run_id}"},
@@ -758,7 +797,16 @@ class WebServer:
         Args:
             blocking: True 为阻塞运行，False 为后台线程运行。
         """
-        self._server = HTTPServer((self.host, self.port), PolarisHTTPRequestHandler)
+        # R05 Bug 修复 v4.0-WEB-THREAD（第1轮迭代发现）:
+        # 原 HTTPServer 单线程，/api/run 同步运行流水线时所有其他请求阻塞，
+        # 客户端 UI 冻结数十秒。改用 ThreadingHTTPServer 每请求一线程。
+        # 配合 _global_lock + _showcase_lock 保证线程安全。
+        # 规则: R05 Bug 必修
+        # 文献: Python ThreadingHTTPServer https://docs.python.org/3/library/http.server.html#http.server.ThreadingHTTPServer
+        # 文献: socketserver.ThreadingMixIn https://docs.python.org/3/library/socketserver.html#socketserver.ThreadingMixIn
+        self._server = ThreadingHTTPServer(
+            (self.host, self.port), PolarisHTTPRequestHandler
+        )
         logger.info("PoLaRIS Web UI 启动: http://%s:%s", self.host, self.port)
         if blocking:
             self._server.serve_forever()
