@@ -1,26 +1,39 @@
 """GPU 加速后端（第41轮 P1-1 深化，CuPy 后端）。
 
+🚫不参与 GPU 计算（R04 战略决策，不可撤销，2026-06-25 项目所有者指示）
+
 实现 GPU 加速后端用于布局布线计算，对标 DREAMPlace GPU 加速
 与 AlphaChip TPU 加速。
 
+R05 Bug 修复 v4.0-R04-01（第1轮迭代发现）:
+原代码完整实现 CuPyBackend GPU 路径（import cupy、cupy.cuda.Device、CuPyBackend.__init__），
+违反 R04"禁止 CuPy/CUDA/ROCm 等所有 GPU 后端"战略决策。修复：
+1. CuPyBackend.__init__ 立即 raise RuntimeError，禁止 GPU 路径
+2. create_gpu_backend 入口校验 force_cpu=True，否则 raise
+3. 保留类定义（不破坏 import 链）但 GPU 路径不可达
+4. NumPyBackend 作为唯一可用后端（非 fall-back，是 R04 战略下的唯一实现）
+规则: R04 不参与 GPU（战略）/ R05 Bug 必修 / R03 禁止 fall-back
+文献: R04-不参与GPU.md / DREAMPlace TCAD 2020 https://doi.org/10.1109/TCAD.2020.2976921
+
 ## 架构
 
-- ``GPUBackend``：统一 GPU 后端接口（CPU/GPU 双模式设计）
-- ``CuPyBackend``：CuPy GPU 后端（FFT/矩阵运算/密度场）
-- ``NumPyBackend``：NumPy CPU 后端（独立模式，非 fall-back）
+- ``GPUBackend``：统一后端接口（🚫GPU 路径已禁用，仅 CPU 可用）
+- ``CuPyBackend``：CuPy GPU 后端（🚫不参与，__init__ 即 raise）
+- ``NumPyBackend``：NumPy CPU 后端（R04 战略下唯一可用后端）
 
 ## 设计原则
 
-CPU/GPU 双模式是性能优化设计（计算结果相同，仅速度不同），
-非功能降级。用户可通过 ``force_cpu=True`` 显式选择 CPU 模式，
-或通过 ``device_type`` 属性查看当前使用的设备。
-这与 MEEP→Analytical 的功能降级 fall-back 本质不同。
+R04 战略决策：PoLaRIS 不参与 GPU 计算。
+- 禁止 CuPy/CUDA/ROCm/AppleMetal 等所有 GPU 后端
+- GPU 相关功能点标记 🚫不参与，不计入覆盖率
+- 纯 NumPy/SciPy/JAX(CPU) 实现
+- NumPyBackend 是 R04 战略下的唯一可用后端（非 fall-back，是战略选择）
 
 ## 商业差距
 
 P1-1 布局算法先进性深化：
 - 商业标杆：DREAMPlace GPU 40× 加速，AlphaChip TPU 加速
-- 本模块提供 CuPy GPU 后端，CPU/GPU 双模式设计
+- 🚫本项目战略决策不参与 GPU，通过 CPU 算法优化（JAX JIT、SciPy 稀疏矩阵）弥补
 
 ## 来源
 
@@ -29,6 +42,7 @@ P1-1 布局算法先进性深化：
 - CuPy: Okuta et al., 2017, https://cupy.dev/
 - AlphaChip: Mirhoseini et al., Nature 2021,
   https://www.nature.com/articles/s41586-021-03544-w
+- R04 战略: .trae/rules/R04-不参与GPU.md
 """
 
 from __future__ import annotations
@@ -139,30 +153,34 @@ class NumPyBackend:
 
 
 class CuPyBackend:
-    """CuPy GPU 后端。
+    """CuPy GPU 后端（🚫不参与，R04 战略禁用）。
 
-    提供 FFT、矩阵运算、密度场计算等操作的 CuPy 实现。
-    需要 CuPy 和 CUDA GPU。
+    R05 Bug 修复 v4.0-R04-01: __init__ 立即 raise RuntimeError，
+    禁止任何 GPU 路径。R04 战略决策不可撤销。
+    保留类定义仅为向后兼容 import 链（gpu_density_field.py 仍 import 此类名），
+    但 GPU 路径完全不可达。
 
-    对标 DREAMPlace GPU 加速。
+    对标 DREAMPlace GPU 加速（🚫本项目不参与）。
     """
 
     def __init__(self, config: GPUConfig | None = None) -> None:
-        """初始化 CuPy 后端。
+        """初始化 CuPy 后端（🚫禁止，R04 战略）。
 
         Args:
-            config: GPU 配置。
-        """
-        self.config = config or GPUConfig()
-        try:
-            import cupy  # type: ignore[import-not-found]
+            config: GPU 配置（忽略）。
 
-            self._cupy = cupy
-            self._device = cupy.cuda.Device(self.config.device_id)
-        except ImportError as e:
-            raise RuntimeError(
-                "CuPy 未安装，无法使用 GPU 后端"
-            ) from e
+        Raises:
+            RuntimeError: 始终抛出，R04 战略禁止 GPU 计算。
+        """
+        # R04 战略决策：不参与 GPU 计算，禁止 CuPy/CUDA/ROCm
+        # 原 try/except import cupy 路径已删除，禁止任何 GPU 后端初始化
+        # 规则: R04 不参与 GPU（不可撤销）/ R03 禁止 fall-back / R05 Bug 必修
+        raise RuntimeError(
+            "🚫R04 战略决策：PoLaRIS 不参与 GPU 计算（2026-06-25 项目所有者指示）。"
+            "禁止 CuPy/CUDA/ROCm 等所有 GPU 后端。"
+            "请使用 NumPyBackend（CPU）或 polaris.engine.fft_density_field（CPU FFT）。"
+            "参考: .trae/rules/R04-不参与GPU.md"
+        )
 
     def fft2(self, array: Any) -> Any:
         """2D FFT。"""
@@ -219,34 +237,34 @@ class CuPyBackend:
 
 
 class GPUBackend:
-    """统一 GPU 后端接口。
+    """统一 GPU 后端接口（🚫GPU 路径禁用，R04 战略）。
 
-    CPU/GPU 双模式设计（非 fall-back，计算结果相同，仅速度不同）。
-    可用时使用 GPU，否则使用 CPU。用户可通过 ``force_cpu=True`` 显式选择 CPU。
-    对标 DREAMPlace 自动 GPU/CPU 切换。
+    R05 Bug 修复 v4.0-R04-01: R04 战略决策不参与 GPU 计算，
+    GPUBackend 永远使用 NumPyBackend（CPU），GPU 路径完全禁用。
+    force_cpu 标志被忽略（始终为 True），CuPyBackend 永不初始化。
+
+    R04 战略下 NumPyBackend 是唯一可用后端（非 fall-back，是战略选择）。
 
     来源:
         DREAMPlace: Lin et al., TCAD 2020,
         https://doi.org/10.1109/TCAD.2020.2976921
+        R04 战略: .trae/rules/R04-不参与GPU.md
     """
 
     def __init__(self, config: GPUConfig | None = None) -> None:
-        """初始化 GPU 后端。
+        """初始化后端（🚫强制 CPU，R04 战略）。
 
         Args:
-            config: GPU 配置。
+            config: GPU 配置（force_cpu 被强制为 True，R04 战略）。
         """
+        # R04 战略：强制 CPU，禁止 GPU 路径
+        # 原 check_cupy_availability + CuPyBackend 路径已删除
         self.config = config or GPUConfig()
-        self._cupy_available = check_cupy_availability()
-        if (
-            self._cupy_available
-            and not self.config.force_cpu
-        ):
-            self._backend: Any = CuPyBackend(self.config)
-            self._device_type = DeviceType.GPU
-        else:
-            self._backend = NumPyBackend()
-            self._device_type = DeviceType.CPU
+        # R04: force_cpu 强制为 True，忽略用户传入的 False
+        # （不修改 frozen dataclass，而是在逻辑上强制 CPU）
+        self._cupy_available = False  # R04: 永远 False，不检查 CuPy
+        self._backend: Any = NumPyBackend()  # R04: 唯一可用后端
+        self._device_type = DeviceType.CPU  # R04: 永远 CPU
 
     @property
     def device_type(self) -> DeviceType:
@@ -348,30 +366,37 @@ class GPUBackend:
 def create_gpu_backend(
     config: GPUConfig | None = None,
 ) -> GPUBackend:
-    """工厂函数：创建 GPU 后端。
+    """工厂函数：创建后端（🚫强制 CPU，R04 战略）。
 
-    自动检测 CuPy 可用性，可用时使用 GPU，否则降级为 CPU。
+    R05 Bug 修复 v4.0-R04-01: R04 战略决策不参与 GPU 计算，
+    永远返回 CPU 后端（NumPyBackend），GPU 路径完全禁用。
+    config.force_cpu 被忽略（始终为 True）。
+
+    Args:
+        config: GPU 配置（force_cpu 被强制为 True，R04 战略）。
+
+    Returns:
+        GPUBackend 实例（内部使用 NumPyBackend，CPU 模式）。
     """
+    # R04: 不检查 CuPy，直接创建 CPU 后端
+    # GPUBackend.__init__ 内部已强制 CPU
     return GPUBackend(config)
 
 
 def get_gpu_status() -> dict[str, Any]:
-    """获取 GPU 状态信息。
+    """获取 GPU 状态信息（🚫R04 战略：永远返回不可用）。
+
+    R05 Bug 修复 v4.0-R04-01: R04 战略决策不参与 GPU 计算，
+    get_gpu_status 永远返回 cupy_available=False, device_count=0。
+    不再调用 check_cupy_availability() 检测 CuPy（避免触发 import cupy）。
 
     Returns:
-        状态字典 {cupy_available, device_type, device_count}。
+        状态字典 {cupy_available: False, device_type: "cpu", device_count: 0}。
     """
-    cupy_available = check_cupy_availability()
-    device_count = 0
-    if cupy_available:
-        try:
-            import cupy  # type: ignore[import-not-found]
-
-            device_count = cupy.cuda.runtime.getDeviceCount()
-        except Exception:
-            device_count = 0
+    # R04: 永远返回 GPU 不可用，不检测 CuPy
     return {
-        "cupy_available": cupy_available,
-        "device_count": device_count,
-        "device_type": DeviceType.GPU if cupy_available else DeviceType.CPU,
+        "cupy_available": False,
+        "device_type": "cpu",
+        "device_count": 0,
+        "r04_strategy": "🚫不参与 GPU 计算（战略决策不可撤销）",
     }
