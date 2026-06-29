@@ -278,7 +278,7 @@ def list_process_nodes() -> list[str]:
     """列出所有已注册的 CMOS photonics 工艺节点名。
 
     Returns:
-        工艺节点名列表（9 个公开工艺节点）。
+        工艺节点名列表（13 个公开工艺节点）。
     """
     return list(CMOS_PROCESS_NODES.keys())
 
@@ -336,7 +336,7 @@ def cmos_process_node_count() -> int:
     """返回已注册的 CMOS photonics 工艺节点总数。
 
     Returns:
-        工艺节点数量（当前 9 个公开工艺节点）。
+        工艺节点数量（当前 13 个公开工艺节点）。
     """
     return len(CMOS_PROCESS_NODES)
 

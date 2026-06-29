@@ -210,8 +210,16 @@ class IBISParser:
                                     "dV_f": dV_f, "dt_f": dt_f,
                                     "r_load": r_load,
                                 }
-                            except (ValueError, IndexError):
-                                pass
+                            except (ValueError, IndexError) as e:
+                                # R05 Bug 修复 v3.3-IBIS-1: ramp 字段解析失败必须 raise
+                                # 原 fall-back `pass` 会静默丢失损坏 IBIS 文件，掩盖后续仿真错误
+                                # 规则: R03 禁止 fall-back / R05 Bug 必修
+                                # 文献: IBIS v5.0 §6 ramp 字段必须可解析
+                                #   https://www.ibis.org/ver5.0/ver5_0.txt
+                                raise ValueError(
+                                    f"IBIS ramp 字段解析失败 (model={current_model.name!r}, "
+                                    f"line={ramp_line!r}): {e}"
+                                ) from e
 
                 # C_comp
                 elif keyword == "c_comp":
@@ -220,8 +228,17 @@ class IBISParser:
                         try:
                             vals = [float(p) for p in parts[:3]]
                             current_model.c_comp = float(np.mean(vals))  # typ
-                        except ValueError:
-                            pass
+                        except ValueError as e:
+                            # R05 Bug 修复 v3.3-IBIS-2: c_comp 字段解析失败必须 raise
+                            # c_comp 是 IBIS 模型必备电容参数，缺失会导致信号完整性仿真错误
+                            # 原 fall-back `pass` 静默丢失损坏 IBIS 文件
+                            # 规则: R03 禁止 fall-back / R05 Bug 必修
+                            # 文献: IBIS v5.0 §5 C_comp 必备字段
+                            #   https://www.ibis.org/ver5.0/ver5_0.txt
+                            raise ValueError(
+                                f"IBIS c_comp 字段解析失败 (model={current_model.name!r}, "
+                                f"parts={parts!r}): {e}"
+                            ) from e
 
                 elif keyword in ("voltage range", "typ", "min", "max"):
                     pass  # 元数据
