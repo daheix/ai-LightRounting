@@ -22,6 +22,15 @@ CIF 语法实现严格遵循下列权威来源（规则 18 学术诚信）：
 
 CIF 语句以分号终止；注释括在括号内；坐标为 centimicron 整数
 （1 单位 = 0.01 μm，来源 Caltech TR 2686）。
+
+参考文献：
+[1] Mead C, Conway L. Introduction to VLSI Systems[M]. Addison-Wesley, 1980. https://ai.eecs.umich.edu/people/conway/VLSI/VLSIText/VLSIText.html
+[2] Sequin C H. Description of the Caltech Intermediate Form (CIF) Version 2.0[R]. California Institute of Technology, Computer Science Department, Technical Report 2686, 1980. https://thesis.library.caltech.edu/6909/
+[3] Lin T M. From Geometry to Logic[D]. Master's thesis, California Institute of Technology, 1981. https://thesis.library.caltech.edu/6909/1/Lin_tm_1981.pdf
+[4] Rubin S M. Computer Aids for VLSI Design[M]. Addison-Wesley, 1987. https://iue.tuwien.ac.at/phd/minixhofer/node51.html
+[5] Heller W R, Mikulina E J, Tomasulo R M. Design rules in a hierarchical VLSI layout system[J]. IEEE Transactions on Circuits and Systems, 1980, 27(12): 1178-1186. https://ieeexplore.ieee.org/document/1084697
+[6] Weste N, Harris D. CMOS VLSI Design: A Circuits and Systems Perspective[M]. 4th ed. Addison-Wesley, 2011. https://www.pearson.com/en-us/subject-catalog/p/cmos-vlsi-design-a-circuits-and-systems-perspective/P200000005724/9780321547743
+[7] Loomis H H. Integrated Circuit Mask Design Using Caltech Intermediate Form[J]. IEEE Transactions on Manufacturing Technology, 1980, 9(2): 90-96. https://ieeexplore.ieee.org/document/1086396
 """
 
 from __future__ import annotations

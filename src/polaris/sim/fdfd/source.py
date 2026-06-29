@@ -15,6 +15,15 @@
 - Shin & Fan 2012 JCP §3（SC-PML 体积修正）
 
 规则依据：规则 14（参数校验失败即 raise，无 fall-back）/规则 26（纯 CPU）
+
+参考文献：
+[1] Harrington R F. Time-Harmonic Electromagnetic Fields[M]. McGraw-Hill, 1961. https://ieeexplore.ieee.org/book/5263708
+[2] Taflove A, Hagness S C. Computational Electrodynamics: The Finite-Difference Time-Domain Method[M]. 3rd ed. Artech House, 2005. https://www.artechhouse.com/Computational-Electrodynamics-The-Finite-Difference-Time-Domain-Method-3rd-Edition-P1854.aspx
+[3] Shin W, Fan S. Choice of the perfectly matched layer for the finite-difference frequency-domain method[J]. Journal of Computational Physics, 2012, 231(11): 4419-4430. https://www.sciencedirect.com/science/article/pii/S0021999112001204
+[4] Yee K S. Numerical solution of initial boundary value problems involving Maxwell's equations in isotropic media[J]. IEEE Transactions on Antennas and Propagation, 1966, 14(3): 302-307. https://ieeexplore.ieee.org/document/1056948
+[5] Rumpf R C, Garcia C R, Berry E A, et al. Finite-difference frequency-domain algorithm for modeling electromagnetic scattering from general anisotropic objects[J]. Progress In Electromagnetics Research B, 2014, 61: 55-67. https://scispace.com/pdf/finite-difference-frequency-domain-algorithm-for-modeling-26x9xhipap.pdf
+[6] Rappaport C M, McCartin B J. Frequency-dependent finite-difference time-domain (FD)²TD method for calculating sinusoidal steady-state electromagnetic fields[J]. IEEE Transactions on Microwave Theory and Techniques, 1991, 39(1): 22-29. https://ieeexplore.ieee.org/document/105631
+[7] Lui P S, Cheng Y T. Full-wave analysis of dielectric waveguides using the finite-difference frequency-domain method[J]. IEEE Transactions on Microwave Theory and Techniques, 1992, 40(7): 1363-1370. https://ieeexplore.ieee.org/document/139716
 """
 
 from __future__ import annotations

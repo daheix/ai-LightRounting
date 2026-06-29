@@ -15,6 +15,15 @@ reinitialize() 仅做符号化（无效），无法维持水平集数值稳定�
 - Sethian "A fast marching level set method for monotonically advancing fronts" 1996
 - Osher & Fedkiw "Level Set Methods and Dynamic Implicit Surfaces" 2003 第 7 章
 - Sethian "Level Set Methods and Fast Marching Methods" 1999
+
+参考文献：
+[1] Sethian J A. A fast marching level set method for monotonically advancing fronts[J]. Proceedings of the National Academy of Sciences, 1996, 93(4): 1591-1595. https://www.pnas.org/doi/pdf/10.1073/pnas.93.4.1591
+[2] Osher S, Sethian J A. Fronts propagating with curvature-dependent speed: algorithms based on Hamilton-Jacobi formulations[J]. Journal of Computational Physics, 1988, 79(1): 12-49. https://www.sciencedirect.com/science/article/pii/0021999188900022
+[3] Sussman M, Smereka P, Osher S. A level set approach for computing solutions to incompressible two-phase flow[J]. Journal of Computational Physics, 1994, 114(1): 146-159. https://www.sciencedirect.com/science/article/pii/S0021999184710655
+[4] Adalsteinsson D, Sethian J A. The fast construction of extension velocities in level set methods[J]. Journal of Computational Physics, 1999, 148(1): 2-22. https://www.sciencedirect.com/science/article/pii/S0021999198961284
+[5] Osher S, Fedkiw R. Level Set Methods and Dynamic Implicit Surfaces[M]. Springer-Verlag New York, 2003. https://link.springer.com/book/10.1007/b98879
+[6] Sethian J A. Level Set Methods and Fast Marching Methods: Evolving Interfaces in Computational Geometry, Fluid Mechanics, Computer Vision, and Materials Science[M]. Cambridge University Press, 1999. https://www.cambridge.org/core/books/level-set-methods-and-fast-marching-methods/
+[7] Tsitsiklis J N. Efficient algorithms for globally optimal trajectories[J]. IEEE Transactions on Automatic Control, 1995, 40(9): 1528-1538. https://ieeexplore.ieee.org/document/412841
 """
 
 from __future__ import annotations

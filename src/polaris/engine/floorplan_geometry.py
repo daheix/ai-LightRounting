@@ -6,6 +6,14 @@
 方法参考：
 - 经典 HPWL（半周长线长）估计，见 EDA 教材
 - 空间哈希经典算法（OpenROAD/R-tree 的简化版）
+
+参考文献：
+[1] Kennings A, Markov I L. Analytical minimization of half-perimeter wirelength[C]//Proceedings of the 2000 Asia and South Pacific Design Automation Conference. ACM, 2000: 37-42. https://www.eecs.umich.edu/~imarkov/pubs/conf/c014.pdf
+[2] Chu C. FLUTE: fast lookup table based wirelength estimation technique[C]//Proceedings of the 2004 IEEE/ACM International Conference on Computer-aided design. IEEE Computer Society, 2004: 696-701. https://limsk.ece.gatech.edu/course/ece6133/slides/placement.pdf
+[3] Breuer M A. A class of min-cut placement algorithms[C]//Proceedings of the 14th Design Automation Conference. IEEE, 1977: 284-290.
+[4] Guttman A. R-trees: a dynamic index structure for spatial searching[C]//Proceedings of the 1984 ACM SIGMOD international conference on Management of data. 1984: 47-57. https://dl.acm.org/doi/10.1145/602259.602266
+[5] Samet H. The quadtree and related hierarchical data structures[J]. ACM Computing Surveys (CSUR), 1984, 16(2): 187-260. https://dl.acm.org/doi/10.1145/356924.356930
+[6] Shi Y, Xue K, Song L, et al. Macro Placement by Wire-Mask-Guided Black-Box Optimization[J]. Advances in Neural Information Processing Systems, 2023, 36. https://arxiv.org/pdf/2306.16844
 """
 
 from __future__ import annotations

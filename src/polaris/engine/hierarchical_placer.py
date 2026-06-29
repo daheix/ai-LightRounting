@@ -7,6 +7,15 @@
 - 谱聚类: Shi & Malik, IEEE TPAMI 2000 (Normalized Cuts)
 - DREAMPlace 分块: Lin et al., IEEE TCAD 2020
 - BFS 分块: Karypis & Kumar 1998 (METIS)
+
+参考文献：
+[1] Shi J, Malik J. Normalized cuts and image segmentation[J]. IEEE Transactions on Pattern Analysis and Machine Intelligence, 2000, 22(8): 888-905. https://people.eecs.berkeley.edu/~malik/papers/SM-ncut.pdf
+[2] Karypis G, Kumar V. A fast and high quality multilevel scheme for partitioning irregular graphs[J]. SIAM Journal on Scientific Computing, 1998, 20(1): 359-392. https://www.cs.utexas.edu/~kuipers/readings/Karypis-Kumar-sisc.1998.pdf
+[3] Lin Y, Dhar S, Li W, et al. DREAMPlace: Deep learning toolkit-enabled GPU acceleration for modern VLSI placement[J]. IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, 2020, 40(4): 748-761. https://ieeexplore.ieee.org/document/9178748
+[4] Lloyd S. Least squares quantization in PCM[J]. IEEE Transactions on Information Theory, 1982, 28(2): 129-137. https://ieeexplore.ieee.org/document/1056489
+[5] Ng A Y, Jordan M I, Weiss Y. On spectral clustering: Analysis and an algorithm[C]//Advances in Neural Information Processing Systems. 2001: 849-856. https://papers.nips.cc/paper/2001/hash/801272ee79cfde7fa5960571fee36b9b-Abstract.html
+[6] Dunlop A E, Kernighan B W. A procedure for placement of standard-cell VLSI circuits[J]. IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems, 1985, 4(1): 92-98. https://ieeexplore.ieee.org/document/1270060
+[7] Lehoucq R B, Sorensen D C. Deflation techniques for an implicitly re-started Arnoldi iteration[J]. SIAM Journal on Matrix Analysis and Applications, 1996, 17(4): 789-821. https://epubs.siam.org/doi/10.1137/S0895479895281484
 """
 
 from __future__ import annotations
