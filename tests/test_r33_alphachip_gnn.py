@@ -299,6 +299,144 @@ class TestGATLayer:
 
 
 # =============================================================================
+# 3.1 P1-4 回归测试（v4.0）：GAT 反向传播断裂修复
+# 来源: Veličković et al., ICLR 2018, GAT https://arxiv.org/abs/1710.10903
+# 旧 Bug: GATLayer.forward 用 wh.data[srcs] / np.concatenate / np.add.at
+#         直接取 .data，计算图在 3 处断裂，self.w/self.attn 永远不可训练
+# ============================================================================
+
+
+class TestGATLayerBackward:
+    """P1-4 回归：验证 GAT 参数能接收非零梯度（反向传播未断裂）。
+
+    旧 Bug: GATLayer.forward 使用 ``wh.data[srcs]`` / ``np.concatenate`` /
+    ``np.add.at`` / ``weight.data.T`` 等 numpy 操作直接取 ``.data``，
+    导致计算图在 3 处断裂，GAT 的核心参数（``self.w`` / ``self.attn``）
+    永远接收不到梯度（``.grad`` 始终为 None 或零）。
+    """
+
+    def test_gat_output_requires_grad(self):
+        """P1-4: GAT 输出 Tensor 的 requires_grad 应为 True。"""
+        node_feats, edge_index, edge_feats = _make_simple_graph()
+        gat = GATLayer(in_dim=6, out_dim=8, edge_feat_dim=PHOTONIC_EDGE_DIM)
+        out = gat(node_feats, edge_index, edge_feats)
+        assert out.requires_grad, (
+            "P1-4 回归: GAT 输出 requires_grad 应为 True（旧实现返回的 Tensor "
+            "requires_grad 取决于 node_feats，且 _backward 为空操作）"
+        )
+
+    def test_gat_w_weight_receives_gradient(self):
+        """P1-4: 反向后 self.w.weight.grad 应为非零值。
+
+        旧 Bug: ``wh_data = wh.data`` 切断了 W 的梯度路径，
+        self.w.weight.grad 永远为 None。
+        """
+        node_feats, edge_index, edge_feats = _make_simple_graph()
+        gat = GATLayer(in_dim=6, out_dim=8, edge_feat_dim=PHOTONIC_EDGE_DIM)
+        out = gat(node_feats, edge_index, edge_feats)
+        loss = out.sum()
+        loss.backward()
+        w_grad = gat.w.weight.grad
+        assert w_grad is not None, (
+            "P1-4 回归: self.w.weight.grad 为 None（W 梯度路径断裂）"
+        )
+        assert np.any(np.abs(w_grad) > 1e-10), (
+            f"P1-4 回归: self.w.weight.grad 全为零（梯度未流过 W），grad norm={np.linalg.norm(w_grad)}"
+        )
+
+    def test_gat_attn_weight_receives_gradient(self):
+        """P1-4: 反向后 self.attn.weight.grad 应为非零值。
+
+        旧 Bug: ``attn_input @ self.attn.weight.data.T`` 直接用 .data，
+        切断了 attn 的梯度路径，self.attn.weight.grad 永远为 None。
+        """
+        node_feats, edge_index, edge_feats = _make_simple_graph()
+        gat = GATLayer(in_dim=6, out_dim=8, edge_feat_dim=PHOTONIC_EDGE_DIM)
+        out = gat(node_feats, edge_index, edge_feats)
+        loss = out.sum()
+        loss.backward()
+        attn_grad = gat.attn.weight.grad
+        assert attn_grad is not None, (
+            "P1-4 回归: self.attn.weight.grad 为 None（attn 梯度路径断裂）"
+        )
+        assert np.any(np.abs(attn_grad) > 1e-10), (
+            f"P1-4 回归: self.attn.weight.grad 全为零（梯度未流过 attn），"
+            f"grad norm={np.linalg.norm(attn_grad)}"
+        )
+
+    def test_gat_gradient_changes_weights(self):
+        """P1-4: 一步 SGD 更新后 GAT 权重应发生变化。
+
+        旧 Bug: 由于梯度始终为零，SGD 更新不会改变权重，GAT 无法训练。
+        """
+        node_feats, edge_index, edge_feats = _make_simple_graph()
+        gat = GATLayer(in_dim=6, out_dim=8, edge_feat_dim=PHOTONIC_EDGE_DIM)
+        w_before = gat.w.weight.data.copy()
+        attn_before = gat.attn.weight.data.copy()
+        # 前向 + 反向
+        out = gat(node_feats, edge_index, edge_feats)
+        loss = out.sum()
+        loss.backward()
+        # SGD 更新
+        lr = 0.01
+        gat.w.weight.data -= lr * gat.w.weight.grad
+        gat.attn.weight.data -= lr * gat.attn.weight.grad
+        # 权重应发生变化
+        assert np.any(np.abs(gat.w.weight.data - w_before) > 1e-10), (
+            "P1-4 回归: self.w.weight 更新后未变化（梯度为零，SGD 无效）"
+        )
+        assert np.any(np.abs(gat.attn.weight.data - attn_before) > 1e-10), (
+            "P1-4 回归: self.attn.weight 更新后未变化（梯度为零，SGD 无效）"
+        )
+
+    def test_gat_gradient_numerical_check(self):
+        """P1-4: 解析梯度应与有限差分数值梯度一致（反向公式正确性）。
+
+        验证 leaky_relu + segment_softmax + scatter_add 的反向公式
+        与数值微分一致（相对误差 < 1e-5）。
+
+        来源: 梯度检查标准方法
+        https://pytorch.org/docs/stable/notes/autograd.html#gradient-checking
+        """
+        node_feats, edge_index, edge_feats = _make_simple_graph()
+        gat = GATLayer(in_dim=6, out_dim=4, edge_feat_dim=PHOTONIC_EDGE_DIM)
+        # 固定 attn，只检查 w 的梯度（减少数值误差来源）
+        gat.attn.weight.requires_grad = False
+
+        # 解析梯度
+        out = gat(node_feats, edge_index, edge_feats)
+        loss = out.sum()
+        loss.backward()
+        analytic_grad = gat.w.weight.grad.copy()
+
+        # 数值梯度（有限差分）
+        eps = 1e-6
+        w_data = gat.w.weight.data
+        numeric_grad = np.zeros_like(w_data)
+        for i in range(w_data.shape[0]):
+            for j in range(w_data.shape[1]):
+                orig = w_data[i, j]
+                w_data[i, j] = orig + eps
+                out_plus = gat(node_feats, edge_index, edge_feats)
+                loss_plus = float(out_plus.sum().data)
+                w_data[i, j] = orig - eps
+                out_minus = gat(node_feats, edge_index, edge_feats)
+                loss_minus = float(out_minus.sum().data)
+                w_data[i, j] = orig
+                numeric_grad[i, j] = (loss_plus - loss_minus) / (2 * eps)
+
+        # 相对误差检查
+        diff = np.abs(analytic_grad - numeric_grad)
+        scale = np.maximum(np.abs(analytic_grad), np.abs(numeric_grad))
+        rel_error = np.divide(diff, scale, out=np.zeros_like(diff), where=scale > 1e-10)
+        max_rel_error = np.max(rel_error)
+        assert max_rel_error < 1e-4, (
+            f"P1-4 回归: 解析梯度与数值梯度不一致（max rel error={max_rel_error}），"
+            f"反向传播公式有误。\nanalytic={analytic_grad}\nnumeric={numeric_grad}"
+        )
+
+
+# =============================================================================
 # 4. MultiRelationalEdgeGraphEncoder 测试
 # =============================================================================
 

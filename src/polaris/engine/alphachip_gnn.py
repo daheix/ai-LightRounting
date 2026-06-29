@@ -325,7 +325,17 @@ class GATLayer(Module):
         edge_index: np.ndarray,
         edge_feats: Tensor | None = None,
     ) -> Tensor:
-        """前向 GAT 注意力消息传递。
+        """前向 GAT 注意力消息传递（P1-4 修复：全可微，参数可训练）。
+
+        P1-4 修复（v4.0）：旧实现用 ``wh.data[srcs]`` / ``np.concatenate`` /
+        ``np.add.at`` 等 numpy 操作直接取 ``.data``，导致计算图在 3 处断裂：
+        1. ``wh_data = wh.data`` 切断 W 的梯度
+        2. ``attn_input @ self.attn.weight.data.T`` 切断 attn 的梯度
+        3. ``Tensor(out_data, ..., (node_feats,))`` 未挂 _backward
+        结果 GAT 的核心参数（``self.w`` / ``self.attn``）永远不可训练。
+        新实现使用 ``polaris.nn.functional`` 的可微操作（``index_select`` /
+        ``cat`` / ``leaky_relu`` / ``segment_softmax`` / ``scatter_add``），
+        梯度可从输出流回 ``self.w.weight`` 和 ``self.attn.weight``。
 
         Args:
             node_feats: 节点特征 ``[N, in_dim]``。
@@ -334,34 +344,51 @@ class GATLayer(Module):
 
         Returns:
             节点嵌入 ``[N, out_dim]``。
+
+        来源:
+        - Veličković et al., ICLR 2018, GAT https://arxiv.org/abs/1710.10903
+        - PyTorch torch.scatter_softmax https://pytorch.org/docs/stable/generated/torch.scatter_softmax.html
         """
+        from polaris.nn.functional import (
+            cat,
+            index_select,
+            leaky_relu,
+            scatter_add,
+            segment_softmax,
+        )
+
         n = node_feats.shape[0]
-        # 节点变换 Wh
-        wh = self.w(node_feats)  # [N, out_dim]
-        wh_data = wh.data
+        # 节点变换 Wh（可微 Linear）
+        wh = self.w(node_feats)  # [N, out_dim] Tensor
         srcs = edge_index[0]
         dsts = edge_index[1]
         if len(srcs) == 0:
             return wh
-        # 构造注意力输入 [Wh_src || Wh_dst || e_ij]
-        wh_src = wh_data[srcs]  # [E, out_dim]
-        wh_dst = wh_data[dsts]  # [E, out_dim]
+        # 按边索引选取 Wh（可微 index_select，替代 wh.data[srcs]）
+        wh_src = index_select(wh, srcs)  # [E, out_dim] Tensor
+        wh_dst = index_select(wh, dsts)  # [E, out_dim] Tensor
+        # 拼接注意力输入 [Wh_src || Wh_dst || e_ij]（可微 cat，替代 np.concatenate）
         if edge_feats is not None and self.edge_feat_dim > 0:
-            e_data = edge_feats.data if isinstance(edge_feats, Tensor) else np.asarray(edge_feats)
-            attn_input = np.concatenate([wh_src, wh_dst, e_data], axis=1)
+            e_t = (
+                edge_feats
+                if isinstance(edge_feats, Tensor)
+                else Tensor(np.asarray(edge_feats, dtype=np.float64))
+            )
+            attn_input = cat([wh_src, wh_dst, e_t], axis=1)
         else:
-            attn_input = np.concatenate([wh_src, wh_dst], axis=1)
-        # LeakyReLU + 注意力分数
-        scores = attn_input @ self.attn.weight.data.T  # [E, 1]
-        scores = np.where(scores > 0, scores, self.leaky_slope * scores)
-        scores = scores.ravel()  # [E]
-        # softmax 归一化（按 dst 节点分组）
-        attn_weights = _segment_softmax(scores, dsts, n)  # [E]
-        # 加权聚合
-        msg = wh_src * attn_weights[:, None]  # [E, out_dim]
-        out_data = np.zeros((n, self.out_dim), dtype=np.float64)
-        np.add.at(out_data, dsts, msg)
-        return Tensor(out_data, node_feats.requires_grad, (node_feats,))
+            attn_input = cat([wh_src, wh_dst], axis=1)
+        # 注意力分数 a^T [Wh_i || Wh_j]（可微 Linear，替代 weight.data.T）
+        scores = self.attn(attn_input)  # [E, 1] Tensor
+        scores = scores.flatten()  # [E] Tensor（可微 flatten）
+        # LeakyReLU（可微 leaky_relu，替代 np.where）
+        scores = leaky_relu(scores, self.leaky_slope)
+        # segment softmax 按目标节点分组归一化（可微 segment_softmax）
+        attn_weights = segment_softmax(scores, dsts, n)  # [E] Tensor
+        # 加权聚合：msg = alpha_j * Wh_src_j（可微乘法 + reshape 广播）
+        msg = wh_src * attn_weights.reshape(-1, 1)  # [E, out_dim] Tensor
+        # scatter-add 聚合到目标节点（可微 scatter_add，替代 np.add.at）
+        out = scatter_add(msg, dsts, n)  # [N, out_dim] Tensor
+        return out
 
 
 class MultiRelationalEdgeGraphEncoder(Module):

@@ -130,23 +130,28 @@ class TestForwardSimulate:
         assert np.iscomplexobj(result["e_out"])
 
 
-class TestAdjointSimulate:
-    """伴随仿真。"""
+class TestAdjointSimulateRemoved:
+    """R05 v4.0-ADJOINT-PLACEHOLDER-P1 回归: 占位方法 adjoint_simulate 应已删除。
 
-    def test_adjoint_returns_normalized(self) -> None:
-        """伴随仿真应返回归一化伴随场（范数=1）。"""
-        opt = _make_optimizer(h=8, w=12)
-        src = np.random.default_rng(0).standard_normal(12) + 1j
-        adj = opt.adjoint_simulate(src)
-        assert adj.shape == (12,)
-        norm = np.sqrt(np.sum(np.abs(adj) ** 2))
-        assert norm == pytest.approx(1.0, abs=1e-5)
+    原方法是占位实现（仅 L2 归一化，无真正伴随场求解），违反 R02/R03。
+    真正的伴随等价梯度由 compute_gradient (jax.grad) 提供。
+    """
 
-    def test_adjoint_zero_source_raises(self) -> None:
-        """零伴随源应 raise（R03 禁止 fall-back）。"""
+    def test_adjoint_simulate_method_removed(self) -> None:
+        """adjoint_simulate 方法应已从 TopologyAdjointOptimizer 删除。"""
         opt = _make_optimizer(h=8, w=12)
-        with pytest.raises(ValueError):
-            opt.adjoint_simulate(np.zeros(12, dtype=np.complex64))
+        assert not hasattr(opt, "adjoint_simulate"), (
+            "占位方法 adjoint_simulate 应已删除（R03 禁止 fall-back）。"
+            "梯度统一由 compute_gradient (jax.grad) 提供。"
+        )
+
+    def test_compute_gradient_still_works(self) -> None:
+        """删除占位方法后 compute_gradient 仍应正常工作。"""
+        opt = _make_optimizer(h=8, w=12, drc_weight=0.0)
+        rho_raw = np.random.default_rng(0).standard_normal((8, 12)) * 0.1
+        grad = opt.compute_gradient(rho_raw, beta=1.0)
+        assert grad.shape == (8, 12)
+        assert np.all(np.isfinite(grad))
 
 
 class TestComputeGradient:

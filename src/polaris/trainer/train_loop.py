@@ -66,7 +66,14 @@ class TrainConfig:
 
 
 def _lr_scale(ep: int, total: int, schedule: str) -> float:
-    """计算当前轮的学习率缩放因子。
+    """计算当前轮的学习率缩放因子（独立工具函数，供外部调用/测试使用）。
+
+    .. warning::
+        P1-1 修复（v4.0）：本函数不再被 ``_run_floorplan_episode`` 调用。
+        学习率调度已统一到 ``PPOAgent._get_lr()`` 内部，由 ``PPOConfig``
+        的 ``lr_schedule``/``total_steps`` 字段驱动。本函数保留作为独立
+        工具接口（``tests/test_integration.py`` 直接测试），可在需要外部
+        预览调度曲线时使用，但**不再写入** ``agent.optimizer.lr``。
 
     Args:
         ep: 当前轮次（0-based）。
@@ -121,12 +128,6 @@ def _pad_obs(obs_vec: np.ndarray, obs_dim: int) -> np.ndarray:
         # 正常情况下 obs_dim 应配置为数据集最大器件数对应维度
         return obs_vec[:obs_dim]
     return obs_vec
-
-
-def _apply_lr_scale(agent: PPOAgent, lr_scale: float, base_lr: float) -> None:
-    """根据缩放因子调整优化器学习率（线性衰减等）。"""
-    if lr_scale < 1.0 and hasattr(agent, "optimizer"):
-        agent.optimizer.lr = base_lr * lr_scale
 
 
 def _discretize_floorplan_action(
@@ -194,7 +195,7 @@ def _log_floorplan_progress(log: dict, log_every: int, verbose: bool) -> None:
             f"ep {log['episode']:3d} | reward {log['ep_reward']:8.3f} | "
             f"policy {log['policy_loss']:.4f} | "
             f"value {log['value_loss']:.4f} | "
-            f"lr_scale {log['lr_scale']:.3f}"
+            f"lr {log['lr']:.6f}"  # P1-1: 显示实际 lr（旧字段 lr_scale 误导）
         )
 
 
@@ -279,8 +280,24 @@ def _init_floorplan_training(
     config: TrainConfig,
     agent: PPOAgent | None,
 ) -> tuple[PPOAgent, list, tuple[int, int], Path]:
-    """初始化布局训练：生成数据集、推断维度、创建智能体与检查点目录。"""
+    """初始化布局训练：生成数据集、推断维度、创建智能体与检查点目录。
+
+    P1-1 修复（v4.0）：统一学习率调度入口到 ``PPOAgent._get_lr()``。
+    旧实现存在调度冲突：``_run_floorplan_episode`` 外部用
+    ``_apply_lr_scale`` 写入 cosine 学习率 → ``PPOAgent.update()`` 内部
+    用 ``PPOConfig.lr_schedule="constant"`` 覆盖 → cosine 永不生效。
+    新实现：将 ``TrainConfig.lr_schedule`` 和 ``num_episodes`` 同步到
+    ``PPOConfig``，由 ``PPOAgent.update()`` 内部统一调度，删除外部覆盖。
+
+    来源:
+    - Stable-Baselines3 ``PPO.learn()`` 内部 ``total_timesteps`` 调度
+      https://stable-baselines3.readthedocs.io/
+    - Loshchilov & Hutter, 2017, SGDR https://arxiv.org/abs/1608.03983
+    """
     np.random.seed(config.seed)
+    # P1-1: 同步学习率调度配置到 PPOConfig（单一调度入口）
+    config.ppo.lr_schedule = config.lr_schedule
+    config.ppo.total_steps = config.num_episodes
     netlists = generate_dataset(config.dataset)
     net0, devices0, _ = load_netlist(netlists[0])
     env0 = FloorplanEnv(
@@ -300,6 +317,10 @@ def _init_floorplan_training(
             config=config.ppo,
             hidden_dim=config.hidden_dim,
         )
+    else:
+        # 断点续训：同步配置到已有 agent（确保 _get_lr 使用新调度参数）
+        agent.config.lr_schedule = config.lr_schedule
+        agent.config.total_steps = config.num_episodes
     ckpt_dir = Path(config.checkpoint_dir)
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     return agent, netlists, dims, ckpt_dir
@@ -312,9 +333,12 @@ def _run_floorplan_episode(
     ep: int,
     dims: tuple[int, int],
 ) -> tuple[dict, float]:
-    """执行单轮布局训练，返回 (日志字典, 本轮奖励)。"""
-    lr_scale = _lr_scale(ep, config.num_episodes, config.lr_schedule)
-    _apply_lr_scale(agent, lr_scale, config.ppo.lr)
+    """执行单轮布局训练，返回 (日志字典, 本轮奖励)。
+
+    P1-1 修复（v4.0）：删除外部 ``_apply_lr_scale`` 调用。
+    学习率调度由 ``PPOAgent.update()`` 内部 ``_get_lr()`` 统一处理，
+    避免"外部写 cosine → 内部用 constant 覆盖"的调度冲突。
+    """
     nl = netlists[ep % len(netlists)]
     net, devices, _ = load_netlist(nl)
     env = FloorplanEnv(
@@ -332,7 +356,8 @@ def _run_floorplan_episode(
         "netlist": nl["name"],
         "ep_reward": ep_reward,
         "steps": steps,
-        "lr_scale": lr_scale,
+        # P1-1: 记录实际学习率（旧字段 lr_scale 误导，已被 PPOAgent 内部调度取代）
+        "lr": agent.optimizer.lr,
         **metrics,
     }
     # SimLoop 约束反馈：每轮结束后检查布局约束违规并记入日志
@@ -439,8 +464,16 @@ def train_routing(
     agent: PPOAgent | None = None,
     verbose: bool = True,
 ) -> tuple[PPOAgent, list[dict]]:
-    """训练布线 PPO 智能体（先布局再布线）。"""
+    """训练布线 PPO 智能体（先布局再布线）。
+
+    P1-1 修复（v4.0）：与 ``train_floorplan`` 一致，统一学习率调度入口到
+    ``PPOAgent._get_lr()``。旧实现的布线路径完全跳过 lr 调度（既不调用
+    ``_apply_lr_scale``，也不同步 ``PPOConfig``），导致布线训练 lr 恒定。
+    """
     config = config or TrainConfig()
+    # P1-1: 同步学习率调度配置到 PPOConfig（单一调度入口）
+    config.ppo.lr_schedule = config.lr_schedule
+    config.ppo.total_steps = config.num_episodes
     np.random.seed(config.seed)
     netlists = generate_dataset(config.dataset)
     logs: list[dict] = []
@@ -457,6 +490,10 @@ def train_routing(
             config=config.ppo,
             hidden_dim=config.hidden_dim,
         )
+    else:
+        # 断点续训：同步配置到已有 agent
+        agent.config.lr_schedule = config.lr_schedule
+        agent.config.total_steps = config.num_episodes
 
     ckpt_dir = Path(config.checkpoint_dir)
     ckpt_dir.mkdir(parents=True, exist_ok=True)

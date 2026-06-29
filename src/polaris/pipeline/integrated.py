@@ -254,11 +254,20 @@ class _DefaultPlacer:
         # 足以容纳任何合理电路 (50 器件 × 30×20μm = 30000μm², 5 次后画布 ×1024 倍)
         for attempt in range(5):
             placements = _grid_place(circuit.devices, canvas_w, canvas_h, rng)
-            # 合法化迭代: 多次扫描消除级联重叠 (单次无法解决 A 推 B 又撞 C 的情况)
-            for _ in range(3):
+            # R05 v4.0-LEGALIZE-FALLBACK-P1: _legalize_overlaps 现在是不动点迭代，
+            # 失败时 raise LegalizeFailure（不再静默返回含重叠的布局）。
+            # 捕获 LegalizeFailure → 扩大画布重试；最终仍失败则 raise RuntimeError。
+            try:
                 placements = _legalize_overlaps(placements, canvas_w, canvas_h)
-                if not _has_overlap(placements):
-                    break
+            except LegalizeFailure as e:
+                # 单次合法化失败 → 立即扩大画布重试（避免 3 趟空转）
+                canvas_w *= 2.0
+                canvas_h *= 2.0
+                logger.warning(
+                    "P1-2: 合法化失败 (%s)，扩大画布至 %.1f×%.1f μm 重试 (attempt %d/5)",
+                    str(e), canvas_w, canvas_h, attempt + 1,
+                )
+                continue
             if not _has_overlap(placements):
                 return placements
             # 仍有重叠 → 扩大画布重试 (×2.0, 比 ×1.5 更快达到足够空间)
@@ -358,24 +367,81 @@ def _has_overlap(placements: dict) -> bool:
     return False
 
 
-def _legalize_overlaps(placements: dict, canvas_w: float, canvas_h: float) -> dict:
-    """合法化布局：消除重叠（推开重叠器件到最近空闲位置）。
+class LegalizeFailure(Exception):
+    """布局合法化失败异常（R03: 失败即 raise，禁止静默 fall-back）。
 
-    遍历所有器件对，对重叠器件沿 x/y 方向搜索最近空闲位置。
-    来源: DREAMPlace 合法化（TCAD 2020 §III.C）
-      https://arxiv.org/abs/1904.03522
+    R05 v4.0-LEGALIZE-FALLBACK-P1（第3轮迭代发现）:
+        原 _find_nearest_free 在找不到空闲位置时 `return p`（返回原位置），
+        导致 _legalize_overlaps 误以为已修复而继续，但实际重叠仍存在，
+        上层 _place_random 通过 _has_overlap 检测到后重试，造成 3 趟空转
+        + 5 次画布扩大 ×2 的浪费。修复: 改为 raise LegalizeFailure，
+        让调用方明确感知失败并立即决定下一步（扩大画布或 raise）。
+    来源: Effective Python Item 32 优先抛异常而非返回 None
+      https://effectivepython.com/
     """
-    names = list(placements.keys())
-    for i in range(len(names)):
-        for j in range(i + 1, len(names)):
-            p1 = placements[names[i]]
-            p2 = placements[names[j]]
-            if _rects_overlap(p1, p2):
-                # 将 p2 推开到最近空闲位置
-                new_p2 = _find_nearest_free(
-                    p2, placements, canvas_w, canvas_h, exclude=names[j]
-                )
-                placements[names[j]] = new_p2
+
+
+def _legalize_overlaps(
+    placements: dict,
+    canvas_w: float,
+    canvas_h: float,
+    max_iter: int = 50,
+) -> dict:
+    """合法化布局：迭代消除重叠（不动点迭代）。
+
+    R05 v4.0-LEGALIZE-FALLBACK-P1（第3轮迭代发现）:
+        原实现仅做单趟 O(N²) 扫描，对级联重叠（A 推 B 又撞 C）无法在本趟
+        内消除，依赖外层 3 次硬编码补偿迭代。修复:
+        - 改为不动点迭代: 重复扫描直到无重叠或达 max_iter 上限
+        - 单次 _find_nearest_free 失败时立即终止本趟（raise LegalizeFailure）
+          由调用方决定扩大画布或 raise（R03 禁止 fall-back）
+        - 增加 4 个对角方向搜索，降低 fall-back 触发率
+
+    Args:
+        placements: 器件布局字典 {name: {x, y, w, h}}。
+        canvas_w: 画布宽度（μm）。
+        canvas_h: 画布高度（μm）。
+        max_iter: 最大迭代次数（默认 50，足够处理长级联链）。
+
+    Returns:
+        合法化后的 placements（无重叠）。
+
+    Raises:
+        LegalizeFailure: 某次 _find_nearest_free 找不到空闲位置。
+            调用方应捕获此异常并扩大画布重试或 raise RuntimeError。
+
+    来源:
+    - DREAMPlace 合法化 TCAD 2020 §III.C
+      https://arxiv.org/abs/1904.03522
+    - Analog Layout Automation 中合法化迭代到不动点
+      https://ieeexplore.ieee.org/document/9463456
+    """
+    for iteration in range(max_iter):
+        moved = False
+        names = list(placements.keys())
+        overlap_found = False
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                p1 = placements[names[i]]
+                p2 = placements[names[j]]
+                if _rects_overlap(p1, p2):
+                    overlap_found = True
+                    # 将 p2 推开到最近空闲位置（失败时 raise LegalizeFailure）
+                    new_p2 = _find_nearest_free(
+                        p2, placements, canvas_w, canvas_h, exclude=names[j]
+                    )
+                    placements[names[j]] = new_p2
+                    moved = True
+        if not overlap_found:
+            # 不动点: 无重叠，收敛
+            return placements
+        if not moved and overlap_found:
+            # 有重叠但无法移动（_find_nearest_free 全部失败已 raise）
+            # 理论上不会走到这里（raise 已抛出），防御性处理
+            raise LegalizeFailure(
+                f"合法化迭代 {iteration} 发现重叠但无法移动任何器件"
+            )
+    # 达 max_iter 仍有重叠，由调用方决定（扩大画布或 raise）
     return placements
 
 
@@ -386,7 +452,14 @@ def _find_nearest_free(
     canvas_h: float,
     exclude: str,
 ) -> dict:
-    """沿 +x/+y/-x/-y 方向搜索最近空闲位置。
+    """沿 8 个方向（4 轴向 + 4 对角）搜索最近空闲位置。
+
+    R05 v4.0-LEGALIZE-FALLBACK-P1（第3轮迭代发现）:
+        原实现仅沿 4 个轴向（±x, ±y）搜索，且找不到时 `return p`（fall-back）。
+        修复:
+        - 增加 4 个对角方向（±±x±y），降低 fall-back 触发率
+        - 探测步数与画布尺寸挂钩（max_steps = canvas_size / step），而非固定 200
+        - 找不到空闲位置时 raise LegalizeFailure（不再 fall-back 返回原位置）
 
     Args:
         p: 待移动器件的布局 {x, y, w, h}。
@@ -396,13 +469,23 @@ def _find_nearest_free(
         exclude: 排除的器件名（即待移动器件自身）。
 
     Returns:
-        移动后的布局 dict；找不到空闲位置时返回原位置（由上层扩大画布重试）。
+        移动后的布局 dict。
+
+    Raises:
+        LegalizeFailure: 8 个方向均在画布范围内找不到空闲位置。
+            调用方应捕获并扩大画布重试或 raise。
     """
     step = _MIN_PLACE_SPACING_UM
-    # 4 个搜索方向: +x, +y, -x, -y
-    for dx, dy in ((1, 0), (0, 1), (-1, 0), (0, -1)):
+    # 自适应探测步数: 与画布尺寸挂钩（至少 200，至多 canvas/step）
+    max_steps = max(200, int(max(canvas_w, canvas_h) / step))
+    # 8 个搜索方向: 4 轴向 + 4 对角（对角方向更可能找到斜向空位）
+    directions = (
+        (1, 0), (0, 1), (-1, 0), (0, -1),       # 轴向
+        (1, 1), (1, -1), (-1, 1), (-1, -1),     # 对角
+    )
+    for dx, dy in directions:
         new_p = dict(p)
-        for _ in range(200):  # 最多搜索 200 步
+        for _ in range(max_steps):
             new_p["x"] += dx * step
             new_p["y"] += dy * step
             # 边界检查
@@ -420,7 +503,11 @@ def _find_nearest_free(
                     break
             if not clash:
                 return new_p
-    return p  # 找不到空闲位置，返回原位置（由上层扩大画布重试）
+    # R03 禁止 fall-back: 找不到空闲位置时 raise，不再返回原位置
+    raise LegalizeFailure(
+        f"器件 {exclude} 在 {canvas_w:.1f}×{canvas_h:.1f} μm 画布内"
+        f"8 方向 × {max_steps} 步内无空闲位置。请扩大画布或减少器件数。"
+    )
 
 
 class _DefaultRouter:

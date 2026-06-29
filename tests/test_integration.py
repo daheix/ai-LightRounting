@@ -361,3 +361,115 @@ def test_integrated_pipeline_drc_field(tmp_path):
     assert isinstance(result.drc_passed, bool)
     # 报告文件应存在
     assert os.path.exists(result.report_path)
+
+
+# ============================================================================
+# P1-1 回归测试（v4.0）：PPO 学习率调度冲突修复
+# 来源: Stable-Baselines3 PPO learn() 内部 total_timesteps 调度
+#       https://stable-baselines3.readthedocs.io/
+# 旧 Bug: train_loop 外部 _apply_lr_scale 写 cosine lr → ppo.update() 内部
+#         用 PPOConfig.lr_schedule="constant" 覆盖 → cosine 永不生效
+# ============================================================================
+
+
+def test_p11_apply_lr_scale_function_removed():
+    """P1-1: ``_apply_lr_scale`` 函数应已删除（不再外部覆盖 lr）。"""
+    from polaris.trainer import train_loop
+
+    assert not hasattr(train_loop, "_apply_lr_scale"), (
+        "_apply_lr_scale 应已删除：学习率调度统一到 PPOAgent._get_lr()"
+    )
+
+
+def test_p11_lr_schedule_synced_to_ppo_config():
+    """P1-1: TrainConfig.lr_schedule 应同步到 PPOConfig.lr_schedule。
+
+    旧 Bug: TrainConfig 默认 "cosine"，PPOConfig 默认 "constant"，
+    两者不同步导致 PPOAgent._get_lr() 始终用 constant。
+    """
+    from polaris.trainer.train_loop import TrainConfig
+
+    cfg = TrainConfig()
+    # 默认值检查
+    assert cfg.lr_schedule == "cosine"
+    assert cfg.ppo.lr_schedule == "constant"  # PPOConfig 默认值
+
+    # 模拟 _init_floorplan_training 中的同步逻辑
+    cfg.ppo.lr_schedule = cfg.lr_schedule
+    cfg.ppo.total_steps = cfg.num_episodes
+    assert cfg.ppo.lr_schedule == "cosine"
+    assert cfg.ppo.total_steps == cfg.num_episodes
+
+
+def test_p11_floorplan_training_uses_cosine_schedule(tmp_path):
+    """P1-1: 布局训练后 agent.config 应使用 cosine 调度，且 lr 实际衰减。
+
+    旧 Bug: 即使 TrainConfig.lr_schedule="cosine"，agent.config.lr_schedule
+    仍是 "constant"，lr 恒定不变。
+
+    注意: PPOAgent.update() 内部 ``current_step += 1`` 先执行，再计算 lr，
+    所以首轮训练后 current_step=1（与 SB3 step 从 1 开始计数一致）。
+    来源: Stable-Baselines3 PPO learn() https://stable-baselines3.readthedocs.io/
+    """
+    cfg = TrainConfig()
+    cfg.lr_schedule = "cosine"
+    cfg.num_episodes = 6
+    cfg.checkpoint_dir = str(tmp_path)
+    cfg.dataset.num_netlists = 1
+    cfg.dataset.min_devices = 3
+    cfg.dataset.max_devices = 3
+    cfg.early_stop_patience = 0  # 禁用早停
+
+    agent, logs = train_floorplan(cfg, verbose=False)
+
+    # P1-1 核心断言：agent.config 应使用 cosine（而非默认 constant）
+    assert agent.config.lr_schedule == "cosine", (
+        f"P1-1 回归: agent.config.lr_schedule 应为 'cosine'，"
+        f"实际为 '{agent.config.lr_schedule}'（配置未同步）"
+    )
+    assert agent.config.total_steps == 6
+
+    # lr 应在训练过程中衰减（首轮 > 末轮，cosine 从 1.0 衰减到 0.0）
+    lr_values = [log["lr"] for log in logs if "lr" in log]
+    assert len(lr_values) >= 1, "应至少有 1 轮训练日志"
+    if len(lr_values) >= 2:
+        assert lr_values[0] > lr_values[-1], (
+            f"P1-1 回归: lr 应衰减，首轮={lr_values[0]}，末轮={lr_values[-1]}"
+        )
+    # 首轮 lr 应接近 base_lr * cosine(π * 1/total)（update 内 current_step 先 +=1）
+    # 旧 Bug: 若 lr_schedule="constant"，首轮 lr 应恒等于 base_lr=3e-4
+    # P1-1 修复后: 首轮 lr = base_lr * 0.5 * (1 + cos(π * 1/6)) ≈ 2.799e-4
+    step = 1  # 首轮 update 后 current_step=1
+    progress = step / cfg.num_episodes
+    expected_first = cfg.ppo.lr * 0.5 * (1.0 + np.cos(np.pi * progress))
+    assert abs(lr_values[0] - expected_first) < 1e-8, (
+        f"P1-1 回归: 首轮 lr 应为 {expected_first}（cosine step=1），"
+        f"实际 {lr_values[0]}（若等于 {cfg.ppo.lr} 则说明 constant 覆盖了 cosine）"
+    )
+    # 关键回归断言：首轮 lr 不应等于 base_lr（证明 cosine 生效，非 constant）
+    assert abs(lr_values[0] - cfg.ppo.lr) > 1e-8, (
+        f"P1-1 回归: 首轮 lr={lr_values[0]} 等于 base_lr={cfg.ppo.lr}，"
+        f"说明 PPOConfig.lr_schedule 仍为 'constant'（配置未同步）"
+    )
+
+
+def test_p11_log_uses_lr_field_not_lr_scale():
+    """P1-1: 训练日志应使用 'lr' 字段（实际学习率），而非 'lr_scale'（误导）。"""
+    cfg = TrainConfig()
+    cfg.num_episodes = 2
+    cfg.checkpoint_dir = "/tmp/p11_log_test"
+    cfg.dataset.num_netlists = 1
+    cfg.dataset.min_devices = 3
+    cfg.dataset.max_devices = 3
+    cfg.early_stop_patience = 0
+
+    _, logs = train_floorplan(cfg, verbose=False)
+    assert len(logs) > 0
+    first_log = logs[0]
+    # 旧字段 lr_scale 应不存在
+    assert "lr_scale" not in first_log, (
+        "P1-1 回归: 日志不应含 'lr_scale' 字段（已被 'lr' 取代）"
+    )
+    # 新字段 lr 应存在且为正数
+    assert "lr" in first_log
+    assert first_log["lr"] > 0.0

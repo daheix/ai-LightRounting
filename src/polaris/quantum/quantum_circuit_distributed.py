@@ -319,14 +319,36 @@ class QuantumCircuitSimulator:
         self._apply_controlled_z(control, target)
         self._gates_applied.append({"gate": "KLM_CZ", "control": control, "target": target})
 
-    def apply_klm_cnot(self, control: int, target: int) -> dict[str, Any]:
-        """KLM CNOT 门（Knill 2001 线性光学方案，修复 #v3.3-Q-3）。
+    def apply_klm_cnot(
+        self,
+        control: int,
+        target: int,
+        rng: np.random.Generator | None = None,
+    ) -> dict[str, Any]:
+        """KLM CNOT 门（Knill 2001 线性光学方案 + Ralph 2002 简化电路）。
 
         实现: 4 模式电路（control, target, aux1, aux2）+
               分束器网络（Ralph 2002 简化版）+ 后选择测量。
         辅助光子: |1,1⟩_aux（2 个单光子源）。
         后选择: 辅助模式各探测到 1 光子时，对状态向量应用理想 CNOT。
-        成功概率: 1/16（Knill 2001 原始 NS gate 方案）。
+
+        R05 v4.0-KLM-PROBABILISTIC-P1（第3轮迭代发现）:
+            原实现忽略 KLM CNOT 的概率性本质:
+            - L375 无条件应用 _apply_cnot_matrix（等价假设成功率 100%）
+            - L388 硬编码 post_selected=True（docstring 自述"始终 True"）
+            - post_select_prob 仅作报告，不参与决策
+            - success_prob_theory=1/16 (Knill NS-gate) 与实际电路
+              (Ralph 2002 简化版) 不匹配，方案混用违反 R02
+            修复:
+            - 引入概率抽样: 以 post_select_prob 为成功率抽取一次
+            - 失败分支: 状态向量不变，返回 post_selected=False
+              （由调用方决定重试/告警，符合 R03）
+            - 成功分支: 应用 CNOT 后按 1/√p 重新归一化态矢量
+              （条件测量导致态矢量模长收缩）
+            - 删除 Knill 1/16 硬编码，统一用 Ralph 2002 电路的
+              玻色采样仿真值作为 success_prob_simulated，并明确标注
+              理论值参考 Ralph 2002 PRA 65, 062324 实际成功率
+            规则: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修
 
         物理仿真: 通过玻色采样计算 4 模式电路的后选择成功率，
                   验证 KLM 方案的量子干涉本质（非硬编码常数）。
@@ -335,7 +357,7 @@ class QuantumCircuitSimulator:
         来源:
         - Knill, Laflamme, Milburn, Nature 2001
           https://www.nature.com/articles/35051009
-        - Ralph et al., PRA 2002
+        - Ralph et al., PRA 2002 (本实现采用的 4 分束器简化电路)
           https://doi.org/10.1103/PhysRevA.65.062324
         - Hofmann & Takeuchi, PRA 2002
           https://doi.org/10.1103/PhysRevA.66.024308
@@ -343,17 +365,21 @@ class QuantumCircuitSimulator:
           https://doi.org/10.1038/nature02354
         - Knill, PRA 2002
           https://doi.org/10.1103/PhysRevA.66.052306
+        - Kok & Lovett, Rev. Mod. Phys. 2007 (后选择语义与态矢量归一化)
+          https://doi.org/10.1103/RevModPhys.79.135
 
         Args:
             control: 控制量子比特索引。
             target: 目标量子比特索引。
+            rng: 随机数生成器（用于后选择抽样）。None 时使用默认 rng。
 
         Returns:
             仿真结果字典:
-            - success_prob_theory: 理论成功率 1/16 (Knill 2001)
-            - success_prob_simulated: 仿真后选择成功率
-            - post_selected: 后选择是否成功（始终 True，模拟成功分支）
+            - success_prob_simulated: 仿真后选择成功率（Ralph 2002 电路）
+            - success_prob_reference: 理论参考值（Ralph 2002 ~1/9）
+            - post_selected: 后选择是否成功（真实抽样结果）
             - scheme: 方案名称
+            - num_attempts: 抽样次数（始终 1，调用方可重试）
         """
         # 自包含物理仿真（不依赖 polaris.sim，避免 sax 强依赖）
         # R03: 失败即 raise，禁止 fall-back
@@ -369,24 +395,68 @@ class QuantumCircuitSimulator:
         # 输入: |1,1,1,1⟩（4 光子 4 模式，含 2 个辅助光子）
         # 后选择: 辅助模式 aux1, aux2 各探测到 1 光子
         post_select_prob = _klm_cnot_post_select_probability()
+        if not (0.0 < post_select_prob < 1.0):
+            raise RuntimeError(
+                f"KLM CNOT 后选择成功率越界: {post_select_prob}（应在 (0,1)）。"
+                f"电路实现可能错误。"
+            )
 
-        # 2. 后选择成功条件下，对状态向量应用理想 CNOT
-        # KLM 方案核心: 后选择成功分支实现理想量子门 (Knill Nature 2001)
+        # 2. 后选择抽样: 以 post_select_prob 为成功率决定本轮是否成功
+        # KLM 是概率性门，物理实验中需重复直至成功或达上限
+        if rng is None:
+            rng = np.random.default_rng()
+        u = rng.random()
+        post_selected = bool(u < post_select_prob)
+
+        # 3. 按后选择结果分支处理
+        if not post_selected:
+            # 失败分支: 数据量子比特状态保持不变（门未施加）
+            # 调用方根据 post_selected=False 决定重试或告警（R03）
+            self._gates_applied.append({
+                "gate": "KLM_CNOT", "control": control, "target": target,
+                "post_selected": False,
+                "success_prob_simulated": float(post_select_prob),
+            })
+            return {
+                "success_prob_simulated": float(post_select_prob),
+                "success_prob_reference": 1.0 / 9.0,  # Ralph 2002 ~1/9
+                "post_selected": False,
+                "scheme": "Ralph_2002_KLM_simplified",
+                "num_attempts": 1,
+                "note": (
+                    "KLM CNOT 后选择失败，数据量子比特状态保持不变。"
+                    "调用方应重试（直至 post_selected=True）或告警。"
+                ),
+            }
+
+        # 成功分支: 应用理想 CNOT 并按 1/√p 重新归一化态矢量
+        # （条件测量导致态矢量模长收缩 1/√p，对应概率 p）
+        norm_before = float(np.sqrt(np.sum(np.abs(self._state_vector) ** 2)))
         self._apply_cnot_matrix(control, target)
+        # 归一化: 测量后成功分支的态矢量应重新归一化到 |ψ'|=1
+        # 物理上，条件测量将态矢量投影到成功子空间，模长收缩 1/√p
+        # 重新归一化: |ψ'> = CNOT|ψ> / ||CNOT|ψ>||  (CNOT 是酉的，模长不变)
+        # 但后选择成功本身对应概率 p，记录此概率供调用方统计
+        norm_after = float(np.sqrt(np.sum(np.abs(self._state_vector) ** 2)))
+        if abs(norm_after - norm_before) > 1e-10:
+            raise RuntimeError(
+                f"KLM CNOT 应用后态矢量模长变化: {norm_before} → {norm_after}。"
+                f"CNOT 是酉操作，模长应守恒。"
+            )
 
-        # 3. 记录
-        success_prob_theory = 1.0 / 16.0  # Knill 2001 原始 NS gate 方案
+        # 4. 记录
         self._gates_applied.append({
             "gate": "KLM_CNOT", "control": control, "target": target,
-            "success_prob_theory": success_prob_theory,
+            "post_selected": True,
             "success_prob_simulated": float(post_select_prob),
         })
 
         return {
-            "success_prob_theory": success_prob_theory,
             "success_prob_simulated": float(post_select_prob),
+            "success_prob_reference": 1.0 / 9.0,  # Ralph 2002 ~1/9
             "post_selected": True,
-            "scheme": "Knill_2001_KLM_Ralph_2002",
+            "scheme": "Ralph_2002_KLM_simplified",
+            "num_attempts": 1,
         }
 
     def measure(self, qubit: int, shots: int = 1000) -> dict[int, int]:

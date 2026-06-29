@@ -139,4 +139,101 @@ def index_select(src: Tensor, idx: np.ndarray) -> Tensor:
     return out
 
 
-__all__ = ["cat", "index_select", "matmul_backward", "scatter_add"]
+def leaky_relu(x: Tensor, slope: float = 0.2) -> Tensor:
+    """LeakyReLU 激活（复刻 ``torch.nn.functional.leaky_relu``，支持自动微分）。
+
+    前向：``out = where(x > 0, x, slope * x)``
+    反向：``g * where(x > 0, 1, slope)``
+
+    用于 GAT 注意力分数的 LeakyReLU 激活（Veličković 2018 原文 §2.1）。
+
+    Args:
+        x: 输入 Tensor。
+        slope: 负斜率（默认 0.2，GAT 原文值）。
+
+    Returns:
+        激活后的 Tensor（含计算图）。
+
+    来源:
+    - Maas et al., 2013, Rectifier Nonlinearities Improve Neural Network Acoustic Models
+      https://ai.stanford.edu/~amaas/papers/relu_hybrid_icml2013_final.pdf
+    - Veličković et al., ICLR 2018, GAT（LeakyReLU 负斜率 0.2）
+      https://arxiv.org/abs/1710.10903
+    """
+    data = np.where(x.data > 0, x.data, slope * x.data)
+    out = Tensor(data, x.requires_grad, (x,))
+
+    def _back(g):
+        if x.requires_grad:
+            x._ensure_grad()
+            x.grad = x.grad + g * np.where(x.data > 0, 1.0, slope)
+
+    out._backward = _back
+    return out
+
+
+def segment_softmax(scores: Tensor, dsts: np.ndarray, n: int) -> Tensor:
+    """按目标节点分组的 softmax（支持自动微分，用于 GAT 注意力归一化）。
+
+    对每个目标节点 ``i``，对其所有入边 ``j``（``dsts[j] == i``）的分数做
+    softmax 归一化。数学等价于 ``torch.scatter_softmax``。
+
+    前向（数值稳定）::
+
+        max_i = max_{j: dsts[j]==i} scores[j]               # 组内最大值
+        exp_j = exp(scores[j] - max_{dsts[j]})               # 减最大值防溢出
+        sum_i = sum_{j: dsts[j]==i} exp_j                    # 组内求和
+        alpha_j = exp_j / sum_{dsts[j]}                      # 归一化
+
+    反向（softmax 链式法则，按 dst 分组）::
+
+        dL/dscores[j] = alpha_j * (dL/dalpha[j]
+                                   - sum_{k: dsts[k]==dsts[j]} alpha[k] * dL/dalpha[k])
+
+    推导：设 ``s_j`` 为 scores，``a_j = softmax(s)``，则
+    ``da_j/ds_k = a_j * (delta_{jk} - a_k)``（同组内），
+    由链式法则 ``dL/ds_k = sum_j dL/da_j * da_j/ds_k
+    = a_k * (dL/da_k - sum_{j in group} a_j * dL/da_j)``。
+
+    Args:
+        scores: 边注意力分数 ``[E]``（E 条边）。
+        dsts: 目标节点索引 ``[E]``（取值范围 ``[0, n)``）。
+        n: 节点数（输出第 0 维大小）。
+
+    Returns:
+        注意力权重 ``[E]``（每条边的归一化权重，按 dst 分组和为 1）。
+
+    来源:
+    - Veličković et al., ICLR 2018, GAT（按邻居 softmax 归一化）
+      https://arxiv.org/abs/1710.10903
+    - PyTorch torch.scatter_softmax（segment softmax 语义）
+      https://pytorch.org/docs/stable/generated/torch.scatter_softmax.html
+    """
+    scores_data = scores.data.astype(np.float64, copy=False)
+    # 前向：数值稳定的 segment softmax
+    max_per_dst = np.full(n, -np.inf, dtype=np.float64)
+    np.maximum.at(max_per_dst, dsts, scores_data)
+    shifted = scores_data - max_per_dst[dsts]
+    exp_scores = np.exp(shifted)
+    sum_per_dst = np.zeros(n, dtype=np.float64)
+    np.add.at(sum_per_dst, dsts, exp_scores)
+    sum_per_dst[sum_per_dst == 0.0] = 1.0  # 避免除零（孤立节点）
+    alpha_data = exp_scores / sum_per_dst[dsts]
+
+    out = Tensor(alpha_data, scores.requires_grad, (scores,))
+
+    def _back(g):
+        if scores.requires_grad:
+            scores._ensure_grad()
+            # softmax 反向：dL/ds_k = a_k * (g_k - sum_{j in group} a_j * g_j)
+            weighted_g = alpha_data * g  # [E]
+            sum_weighted_g = np.zeros(n, dtype=np.float64)
+            np.add.at(sum_weighted_g, dsts, weighted_g)
+            grad = alpha_data * (g - sum_weighted_g[dsts])
+            scores.grad = scores.grad + grad
+
+    out._backward = _back
+    return out
+
+
+__all__ = ["cat", "index_select", "leaky_relu", "matmul_backward", "scatter_add", "segment_softmax"]

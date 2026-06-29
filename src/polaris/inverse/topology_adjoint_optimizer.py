@@ -485,17 +485,16 @@ class TopologyAdjointOptimizer:
         fom = float(self.objective.overlap(e_out))
         return {"fom": fom, "e_out": np.asarray(e_out), "rho_proj": design_vars}
 
-    def adjoint_simulate(self, adjoint_source: np.ndarray) -> np.ndarray:
-        """伴随仿真：注入伴随场，返回设计变量梯度方向。
-
-        伴随源 = 目标模式场（反向传播），梯度 ∝ Re(E_forward · E_adjoint)。
-        本实现中由 jax.grad 统一处理，此处返回归一化伴随场作为梯度方向参考。
-        """
-        adjoint = np.asarray(adjoint_source, dtype=np.complex64)
-        norm = np.sqrt(np.sum(np.abs(adjoint) ** 2))
-        if norm == 0:
-            raise ValueError("伴随源范数为 0，无法计算梯度方向")
-        return adjoint / norm
+    # R05 v4.0-ADJOINT-PLACEHOLDER-P1（第3轮迭代发现）:
+    # 原 adjoint_simulate 方法是占位实现（仅做 L2 归一化，无真正伴随场求解，
+    # 无 Re(E_fwd · E_adj) 积分），且在 optimize() 主流程中从未被调用 —
+    # 真正的伴随等价梯度由 compute_gradient (jax.grad) 提供。
+    # 该占位方法误导用户以为有显式伴随场求解接口，违反 R02 学术诚信和
+    # R03 禁止 fall-back（声称返回"梯度方向"实为归一化源副本）。
+    # 修复: 删除占位方法，梯度统一由 compute_gradient 提供。
+    # 文献: Hughes 2018 ACS Photonics — autograd = adjoint 数学等价
+    #   https://arxiv.org/abs/1811.01255
+    # 规则: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修
 
     def compute_gradient(self, design_vars: np.ndarray, beta: float = 1.0) -> np.ndarray:
         """计算目标函数对设计变量的梯度（伴随法 = jax.grad）。
