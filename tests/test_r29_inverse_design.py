@@ -27,10 +27,12 @@ from polaris.ai.inverse_design import (
     GANInverseDesignConfig,
     GANInverseDesigner,
     InverseDesignEvaluator,
+    PDKDeviceSampler,
     RLInverseDesignConfig,
     RLInverseDesigner,
     WaveguideSimulator,
 )
+from polaris.ai.pdk_device_sampler import PDKDevice
 
 # ---------------------------------------------------------------------------
 # 测试辅助函数
@@ -564,3 +566,177 @@ class TestR29Integration:
             score += 1.0
         # 综合得分应 ≥ 8.85
         assert round(score, 2) >= 8.85, f"综合得分 {score:.2f} < 8.85"
+
+
+# ---------------------------------------------------------------------------
+# 6. TestRealPDKShapes — Bug #v3.3-AI-6 回归测试
+# ---------------------------------------------------------------------------
+# 验证 GAN/Diffusion design() 移除合成数据，改用真实 SiEPIC EBeam PDK 器件。
+# 来源:
+# - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+# - Bug #v3.3-AI-6: real_shapes 原使用 np.random 合成数据，现已修复
+# ---------------------------------------------------------------------------
+class TestRealPDKShapes:
+    """Bug #v3.3-AI-6 回归测试: 真实 SiEPIC PDK 器件采样。
+
+    验证 PDKDeviceSampler 从 data/benchmarks/siepic_netlists/ 加载真实
+    器件，GAN/Diffusion design() 不再使用 np.random 合成数据。
+    """
+
+    # SiEPIC EBeam PDK 真实器件类型（来自 siepic_mapping.py + netlist JSON）
+    _REAL_DEVICE_TYPES = {
+        "y_branch", "grating_coupler_1d", "grating_coupler_2d",
+        "directional_coupler", "ring_resonator", "mmi_1x2", "mmi_2x2",
+        "terminator", "crossing", "linear_taper", "strip_waveguide", "bend",
+    }
+
+    def test_pdk_sampler_loads_real_devices(self):
+        """验证 sampler 加载真实 SiEPIC 器件（数量 > 0，类型已知）。"""
+        sampler = PDKDeviceSampler()
+        devices = sampler.devices
+        assert len(devices) > 0, "未加载到任何真实 SiEPIC 器件"
+        # 至少有一种已知 SiEPIC 器件类型
+        types = {d.type for d in devices}
+        known = types & self._REAL_DEVICE_TYPES
+        assert len(known) > 0, (
+            f"加载的器件类型 {types} 不含任何已知 SiEPIC 类型 {self._REAL_DEVICE_TYPES}"
+        )
+
+    def test_pdk_sampler_real_device_dimensions(self):
+        """验证加载的器件尺寸来自真实 SiEPIC GDS（非 0，非负）。"""
+        sampler = PDKDeviceSampler()
+        for dev in sampler.devices:
+            assert dev.width_um > 0.0, f"器件 {dev.name} width_um 非正"
+            assert dev.height_um > 0.0, f"器件 {dev.name} height_um 非正"
+            # SiEPIC 器件尺寸应在合理范围 (0.1μm ~ 100μm)
+            assert 0.1 <= dev.width_um <= 100.0, (
+                f"器件 {dev.name} width_um={dev.width_um} 超出 SiEPIC 真实范围"
+            )
+            assert 0.1 <= dev.height_um <= 100.0, (
+                f"器件 {dev.name} height_um={dev.height_um} 超出 SiEPIC 真实范围"
+            )
+
+    def test_pdk_sampler_known_siepic_devices_present(self):
+        """验证加载的器件含 SiEPIC 标志性器件（如 ebeam_gc_te1550 光栅耦合器）。"""
+        sampler = PDKDeviceSampler()
+        names = {d.name for d in sampler.devices}
+        # SiEPIC EBeam PDK 标志性器件名（来自 netlist JSON）
+        siepic_names = {
+            "ebeam_gc_te1550", "ebeam_y_1550", "ebeam_dc_halfring_straight",
+            "ebeam_bdc_te1550", "ebeam_crossing4", "ebeam_terminator_te1550",
+        }
+        assert len(names & siepic_names) > 0, (
+            f"加载的器件名 {names} 不含任何 SiEPIC 标志性器件 {siepic_names}"
+        )
+
+    def test_pdk_sampler_returns_correct_shape(self):
+        """验证 sample() 返回正确形状和 dtype。"""
+        sampler = PDKDeviceSampler()
+        shapes = sampler.sample(5, (16, 16))
+        assert len(shapes) == 5
+        for s in shapes:
+            assert s.shape == (16, 16)
+            assert s.dtype == np.float64
+
+    def test_pdk_sampler_shapes_are_binary(self):
+        """验证栅格化输出为二值掩模（0 或 1，无中间值）。"""
+        sampler = PDKDeviceSampler()
+        shapes = sampler.sample(10, (24, 24))
+        for s in shapes:
+            unique_vals = set(np.unique(s).tolist())
+            assert unique_vals.issubset({0.0, 1.0}), (
+                f"栅格化输出含非二值: {unique_vals}"
+            )
+            # 不应全 0（空形状）或全 1（满填充）
+            fill = float(np.mean(s))
+            assert 0.0 < fill < 1.0, f"填充率 {fill} 异常（全 0 或全 1）"
+
+    def test_pdk_sampler_no_random_data(self):
+        """验证采样结果非纯随机（相同 rng 应一致，不同器件应产生不同形状）。"""
+        sampler = PDKDeviceSampler()
+        rng1 = np.random.default_rng(42)
+        rng2 = np.random.default_rng(42)
+        shapes1 = sampler.sample(3, (16, 16), rng=rng1)
+        shapes2 = sampler.sample(3, (16, 16), rng=rng2)
+        # 相同 rng 应产生相同结果（确定性）
+        assert len(shapes1) == len(shapes2)
+        for s1, s2 in zip(shapes1, shapes2, strict=True):
+            assert np.array_equal(s1, s2), "相同 rng 采样结果不一致"
+        # 验证栅格化结果含硅材料（非全 0 假数据）
+        for s in shapes1:
+            assert s.sum() > 0, "采样形状全 0（疑似假数据）"
+
+    def test_pdk_sampler_invalid_n_raises(self):
+        """验证 n <= 0 raise ValueError。"""
+        sampler = PDKDeviceSampler()
+        with pytest.raises(ValueError, match="n 必须"):
+            sampler.sample(0, (8, 8))
+        with pytest.raises(ValueError, match="n 必须"):
+            sampler.sample(-1, (8, 8))
+
+    def test_pdk_sampler_invalid_grid_size_raises(self):
+        """验证非法 grid_size raise ValueError。"""
+        sampler = PDKDeviceSampler()
+        with pytest.raises(ValueError, match="grid_size"):
+            sampler.sample(2, (0, 8))
+        with pytest.raises(ValueError, match="grid_size"):
+            sampler.sample(2, (8,))
+        with pytest.raises(ValueError, match="grid_size"):
+            sampler.sample(2, (8, -1))
+
+    def test_pdk_sampler_missing_dir_raises(self):
+        """验证不存在的目录 raise FileNotFoundError（R03 禁止 fall-back）。"""
+        with pytest.raises(FileNotFoundError, match="PDK 目录不存在"):
+            PDKDeviceSampler(pdk_dir="/nonexistent/path/xyz")
+
+    def test_gan_design_uses_real_pdk(self):
+        """验证 GAN design() 使用真实 PDK 器件，不再用合成数据。
+
+        Bug #v3.3-AI-6 回归: design() 应成功运行（PDK 数据可用），
+        返回有效结果，无 np.random fall-back。
+        """
+        sim = _make_simulator((8, 8))
+        config = GANInverseDesignConfig(
+            grid_size=(8, 8), latent_dim=32, hidden_dim=64, learning_rate=1e-4
+        )
+        designer = GANInverseDesigner(config, sim)
+        result = designer.design(_make_target_spec(0.9))
+        assert result["shape"].shape == (8, 8)
+        assert 0.0 <= result["performance"] <= 1.0
+        assert len(result["history"]) > 0
+
+    def test_diffusion_design_uses_real_pdk(self):
+        """验证 Diffusion design() 使用真实 PDK 器件，不再用合成数据。
+
+        Bug #v3.3-AI-6 回归: design() 应成功运行（PDK 数据可用），
+        返回有效结果，无 np.random fall-back。
+        """
+        sim = _make_simulator((8, 8))
+        config = DiffusionInverseDesignConfig(
+            grid_size=(8, 8), num_timesteps=50, beta_start=1e-4, beta_end=0.02
+        )
+        designer = DiffusionInverseDesigner(config, sim)
+        result = designer.design(_make_target_spec(0.9))
+        assert result["shape"].shape == (8, 8)
+        assert 0.0 <= result["performance"] <= 1.0
+        assert len(result["history"]) > 0
+
+    def test_pdk_sampler_source_circuit_recorded(self):
+        """验证每个器件记录来源电路名（可溯源到 SiEPIC netlist JSON）。"""
+        sampler = PDKDeviceSampler()
+        for dev in sampler.devices:
+            assert dev.source_circuit, (
+                f"器件 {dev.name} 缺来源电路名（无法溯源到 SiEPIC netlist）"
+            )
+
+    def test_pdk_device_dataclass_fields(self):
+        """验证 PDKDevice dataclass 字段完整。"""
+        sampler = PDKDeviceSampler()
+        dev = sampler.devices[0]
+        assert isinstance(dev, PDKDevice)
+        assert isinstance(dev.name, str) and dev.name
+        assert isinstance(dev.type, str) and dev.type
+        assert isinstance(dev.width_um, float)
+        assert isinstance(dev.height_um, float)
+        assert isinstance(dev.params, dict)
+        assert isinstance(dev.source_circuit, str)

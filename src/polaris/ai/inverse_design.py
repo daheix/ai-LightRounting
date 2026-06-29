@@ -2,6 +2,11 @@
 
 对齐 lumopt + Stanford GAN + MIT Diffusion 逆向设计 SOTA。
 
+**Bug #v3.3-AI-6 修复**: GAN/Diffusion ``design()`` 原使用 ``np.zeros`` +
+``rng.normal`` 合成"50% 填充 + 高斯噪声"假数据训练，商业交付不可信。
+现改为从真实 SiEPIC EBeam PDK 器件 netlist 采样（``PDKDeviceSampler``），
+禁止 fall-back 到 np.random（R03 强制）。
+
 学术依据（R02 学术诚信，所有参数/公式可溯源）:
 - Sutton & Barto 2018, Reinforcement Learning（REINFORCE 策略梯度）
   URL: http://incompleteideas.net/book/RLbook2020.pdf
@@ -15,9 +20,18 @@
   arXiv:2006.11239, URL: https://arxiv.org/abs/2006.11239
 - Kingma & Ba 2015 ICLR, "Adam: A Method for Stochastic Optimization"
   arXiv:1412.6980, URL: https://arxiv.org/abs/1412.6980
-- Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 波导损耗参数）
-  URL: https://ieeexplore.ieee.org/document/1148303
-- Piggott et al. 2020 ACS Photonics 7(3) 569-575（逆向设计可制造性）
+- Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 波导损耗参数）: https://ieeexplore.ieee.org/document/1148303
+- Piggott et al. 2020 ACS Photonics 7(3) 569-575（逆向设计可制造性）:
+  https://doi.org/10.1021/acsphotonics.9b01645
+- SiEPIC EBeam PDK (Lukas Chrostowski, UBC, MIT 许可证)（真实器件数据源）:
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge:
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- Lu & Vuckovic 2013, "Nanophotonic computational design", Opt. Express:
+  https://doi.org/10.1364/OE.21.017293
+- Piggott 2017, Nature Photonics 11(9) 543-549（逆向设计波分解复用器）:
+  https://www.nature.com/articles/nphoton.2017.126
+- gdsfactory PDK (MIT 许可证): https://gdsfactory.github.io/gdsfactory/
 
 合规: R03 禁止 fall-back（失败即 raise）；R02 学术诚信；R05 文件 < 800 行。
 """
@@ -29,6 +43,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+
+from polaris.ai.pdk_device_sampler import PDKDeviceSampler
 
 logger = logging.getLogger(__name__)
 
@@ -422,16 +438,16 @@ class GANInverseDesigner:
         return {"d_loss": d_loss_sum / 5.0, "g_loss": g_loss, "gp": gp_sum / 5.0}
 
     def design(self, target_spec: dict) -> dict:
-        """执行 GAN 逆向设计。Returns: {shape, performance, history}。"""
+        """执行 GAN 逆向设计。Returns: {shape, performance, history}。
+
+        训练数据来自真实 SiEPIC EBeam PDK 器件（Bug #v3.3-AI-6 修复），
+        禁止 np.random 合成数据 fall-back（R03 强制）。
+        """
         rng = np.random.default_rng(123)
         target_value = target_spec.get("target_value", 0.95)
-        # 生成目标形状样本（基于目标性能的优化形状）
-        real_shapes = []
-        for _ in range(20):
-            shape = np.zeros(self.config.grid_size)
-            shape[self.h // 4 : 3 * self.h // 4, :] = 1.0
-            shape += rng.normal(0, 0.1, self.config.grid_size)
-            real_shapes.append(np.clip(shape, 0, 1))
+        # Bug #v3.3-AI-6: 真实 SiEPIC PDK 器件采样（移除合成数据）
+        sampler = PDKDeviceSampler()
+        real_shapes = sampler.sample(20, self.config.grid_size, rng=rng)
         history: list[float] = []
         best_shape = None
         best_perf = -1.0
@@ -662,16 +678,12 @@ class DiffusionInverseDesigner:
         """
         target_value = target_spec.get("target_value", 0.95)
         rng = np.random.default_rng(123)
-        # 训练数据：50% 填充 + 高连通性形状
-        train_shapes = []
-        for _ in range(10):
-            shape = np.zeros(self.config.grid_size)
-            shape[self.h // 4 : 3 * self.h // 4, :] = 1.0
-            shape += rng.normal(0, 0.1, self.config.grid_size)
-            train_shapes.append(np.clip(shape, 0, 1))
+        # Bug #v3.3-AI-6: 真实 SiEPIC PDK 器件采样（移除合成数据）
+        sampler = PDKDeviceSampler()
+        train_shapes = sampler.sample(10, self.config.grid_size, rng=rng)
         # 训练噪声预测网络（修复 P0-A: 原仅计算损失不更新参数）
         history: list[float] = []
-        for ep in range(5):
+        for _ep in range(5):
             ep_loss = 0.0
             for shape in train_shapes:
                 t = int(rng.integers(0, self.config.num_timesteps))
@@ -784,4 +796,5 @@ __all__ = [
     "DiffusionInverseDesignConfig",
     "DiffusionInverseDesigner",
     "InverseDesignEvaluator",
+    "PDKDeviceSampler",
 ]
