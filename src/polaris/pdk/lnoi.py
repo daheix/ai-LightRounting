@@ -196,7 +196,14 @@ def make_lnoi_mzm_traveling_wave() -> Device:
         length_um=length_um,
         params={
             "vpi_l_v_cm": 1.77,
-            "optical_loss_db_cm": 0.022,
+            # R05 v4.0-LNOI-LOSS-P2（第2轮迭代发现）:
+            # 0.022 dB/cm 是 U-T double-layer 行波电极 MZM 特定器件实测值
+            # （MDPI Photonics 2023），非 LNOI 平台典型值（平台典型 0.4 dB/cm
+            # 见 lnoi.py:71 / pretrain_constants.py:91 / waveguide_router.py:545）。
+            # 若被其他模块误用为 LNOI 平台损耗会严重低估，注释明确"器件特定"。
+            # 规则: R02 学术诚信 / R05 Bug 必修
+            # 文献: MDPI Photonics 2023 U-T double-layer traveling-wave electrode
+            "optical_loss_db_cm": 0.022,  # 器件特定（非平台典型值 0.4 dB/cm）
             "bandwidth_ghz": 100.0,  # >100 GHz（保守下界）
             "electrode_type": "traveling_wave_coplanar",
             "modulator_length_um": length_um,

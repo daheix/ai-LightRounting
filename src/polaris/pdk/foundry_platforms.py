@@ -251,6 +251,29 @@ FOUNDRY_PLATFORMS: dict[str, FoundryPlatform] = {
         ],
         notes="美国 HyperLight，X-cut LNOI，Pockels 调制 100GHz，CMOS 兼容",
     ),
+    # R05 v4.0-HHI-ADD（第2轮迭代发现）:
+    # foundry_pdk_expanded.py:246-253 已注册 HHI InP 平台，但 foundry_platforms.py 漏注册，
+    # 导致两表不对称。新增 HHI 条目，与 expanded 一致（width=1.5μm, loss=1.5 dB/cm）。
+    # 规则: R02 学术诚信 / R03 内部一致性 / R05 Bug 必修
+    # 文献:
+    # - Fraunhofer HHI InP https://www.hhi.fraunhofer.de/
+    # - foundry_pdk_expanded.py:246-253 HHI InP 平台
+    # - InP 平台综述 https://pattern-project.eu/technology/material-platforms/inp-platform/
+    "HHI": FoundryPlatform(
+        name="HHI",
+        foundry="Fraunhofer Heinrich-Hertz-Institut",
+        process_node="InP PLC (100mm)",
+        material_platform="InP",
+        waveguide_width_um=1.5,
+        min_bend_radius_um=100.0,
+        waveguide_loss_db_cm=1.5,
+        wafer_size_mm=100,
+        sources=[
+            "https://www.hhi.fraunhofer.de/",
+            "https://pattern-project.eu/technology/material-platforms/inp-platform/",
+        ],
+        notes="德国 Fraunhofer HHI，InP PLC，集成 DFB/MZM/PD，100Gbps+ 收发",
+    ),
 }
 
 

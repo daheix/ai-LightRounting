@@ -109,7 +109,10 @@ _SRC_PIGGOTT_NP2017 = Source(
 # SiEPIC EBeam PDK（UBC 开源光子 PDK，220nm SOI e-beam 工艺）
 # 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK (MIT License)
 # 工艺: 220nm SOI, 100keV e-beam lithography, min feature 70nm
-# 器件: waveguide(500nm strip)/DC(gap=200nm)/half_ring(gap=50nm,radius=5μm)/GC(TE,1550nm)
+# 器件: waveguide(500nm strip)/DC(gap=200nm)/half_ring(gap=200nm,radius=5μm)/GC(TE,1550nm)
+# R05 v4.0-GAP-P2 同步: half_ring gap 由 50nm 改为 200nm（与 resonators.py:123 +
+# constraint_types.py:136 min_coupling_gap_um=0.1 + 项目其他 DC 一致），50nm 在
+# e-beam 工艺下虽可制造但触发项目自家 DRC 违例
 _SRC_SIEPIC_EBEAM = Source(
     title="SiEPIC EBeam PDK — Open-source Silicon Photonics Process Design Kit",
     authors="SiEPIC / University of British Columbia (UBC)",
