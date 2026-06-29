@@ -624,9 +624,34 @@ class BB84Protocol:
         """运行 BB84 协议仿真。
 
         Args:
-            eavesdrop: 是否模拟窃听
+            eavesdrop: 是否模拟窃听（intercept-resend 攻击）
             channel_loss_db: 信道损耗 (dB)
             error_rate_target: QBER 阈值 (11% 为 BB84 安全阈值)
+
+        R3-P2-8 修复: Eve 模型从"随机 25% 翻转"改为物理 intercept-resend 模型
+
+        旧 Bug:
+        - ``eve_bases`` 生成后未使用（死代码）
+        - ``eavesdrop_errors = rng.random(n_raw) < 0.25`` 为简化模型，
+          直接随机翻转 25% 比特，不模拟 Eve 测量物理过程
+        - 虽然平均 QBER ≈ 25% 正确，但单次仿真方差偏大，不符合物理
+
+        新模型（intercept-resend，物理准确）:
+        1. Eve 随机选择基矢测量每个光子
+        2. Eve 基矢 == Alice 基矢: Eve 获得正确比特，重发无误差
+        3. Eve 基矢 != Alice 基矢: Eve 测量结果随机，重发后 Bob 用 Alice
+           基矢测量有 50% 概率出错
+        4. 综合: P(Eve 基矢≠Alice) × P(误差|Eve 基矢≠Alice) = 0.5 × 0.5 = 25%
+
+        文献:
+        - Bennett & Brassard 1984 SIGACT News
+          https://doi.org/10.1007/978-1-4613-9411-6_5
+        - Lo & Chau 1999 Science 283(5410) 2050-2056
+          https://www.science.org/doi/10.1126/science.283.5410.2050
+        - Shor & Preskill 2000 PRL 85(2) 441-444（11% QBER 阈值证明）
+          https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.85.441
+        - Fuchs et al. 1997 PRA 56(2) 1163（信息-扰动权衡）
+          https://journals.aps.org/pra/abstract/10.1103/PhysRevA.56.1163
         """
         # 1. Alice 生成随机比特和基矢
         n_raw = self.key_length * 4  # 过采样
@@ -640,25 +665,32 @@ class BB84Protocol:
         survival_prob = 10 ** (-channel_loss_db / 10)
         survived = self._rng.random(n_raw) < survival_prob
 
-        # 4. 窃听 (Eve 随机基矢)
+        # 4. 窃听 (Eve intercept-resend 攻击，物理准确模型)
+        # R3-P2-8 修复: 替代旧 ``eavesdrop_errors = rng.random < 0.25`` 简化模型
         if eavesdrop:
             eve_bases = self._rng.integers(0, 2, n_raw)
-            # Eve 测量引入 ~25% 误码
-            eavesdrop_errors = self._rng.random(n_raw) < 0.25
+            # Eve 基矢与 Alice 不匹配时，Eve 测量结果随机化
+            eve_basis_mismatch = eve_bases != alice_bases
+            # Eve 测量结果: 基矢匹配→正确，不匹配→随机
+            eve_bits = alice_bits.copy()
+            eve_bits[eve_basis_mismatch] = self._rng.integers(
+                0, 2, np.sum(eve_basis_mismatch)
+            )
+            # Eve 重发后，Bob 测量 Eve 的比特（而非 Alice 原始比特）
+            # 这会在 Bob 基矢==Alice 基矢但 Eve 基矢≠Alice 基矢时引入 50% 误差
+            alice_bits_after_eve = eve_bits  # Eve 重发的是她测量的比特
+        else:
+            alice_bits_after_eve = alice_bits
 
         # 5. Bob 测量结果
-        bob_bits = alice_bits.copy().astype(np.int8)
+        bob_bits = alice_bits_after_eve.copy().astype(np.int8)
         # 基矢不匹配 → 随机结果
         mismatch = alice_bases != bob_bases
         bob_bits[mismatch] = self._rng.integers(0, 2, np.sum(mismatch))
-        # 窃听引入额外误码
-        if eavesdrop:
-            flip = eavesdrop_errors & survived
-            bob_bits[flip] = 1 - bob_bits[flip]
 
         # 6. 基矢比对 (公开信道)
         same_base = (alice_bases == bob_bases) & survived
-        sifted_alice = alice_bits[same_base]
+        sifted_alice = alice_bits[same_base]  # Alice 原始比特
         sifted_bob = bob_bits[same_base]
 
         # 7. QBER 估算
