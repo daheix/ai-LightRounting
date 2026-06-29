@@ -17,6 +17,8 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -608,7 +610,24 @@ class IntegratedPipeline:
             "iterations": result.iterations,
             "violations": len(result.violations),
         }
-        Path(report_path).write_text(json.dumps(report, indent=2), encoding="utf-8")
+        # R05 Bug 修复 v4.0-ATOMIC-04 + v4.0-JSON-NAN（第1轮迭代发现）:
+        # 原裸 write_text 非原子 + 未传 allow_nan=False。
+        # 修复：原子写入 + allow_nan=False
+        target = Path(report_path)
+        content = json.dumps(report, indent=2, allow_nan=False)
+        fd, tmp_name = tempfile.mkstemp(
+            dir=target.parent, prefix=target.name + ".", suffix=".tmp"
+        )
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, target)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
         return report_path
 
     def _export_layout(self, circuit: CircuitSpec, result, cfg: PipelineConfig) -> tuple[str, bool]:

@@ -114,11 +114,28 @@ class _DefaultSimulator:
         return self._simulate_table(circuit, placements, paths)
 
     def _simulate_real(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """真实 S 参数级联仿真。"""
+        """真实 S 参数级联仿真。
+
+        R05 Bug 修复 v4.0-FALLBACK-02（第1轮迭代发现）:
+        原 result.get("total_loss_db", 0.0) 在键缺失时静默返回 0，
+        客户基于 0 dB 损耗做链路预算，实际产品损耗超标现场部署失败。
+        修复：显式取键，KeyError 即 raise 告警。
+        规则: R03 禁止 fall-back / R05 Bug 必修
+        """
         result = self._sim.simulate(circuit)
+        # R03: 显式取键，禁止 .get(key, default) 静默吞 KeyError
+        try:
+            total_loss_db = float(result["total_loss_db"])
+            n_crossings = int(result["n_crossings"])
+        except KeyError as e:
+            raise KeyError(
+                f"CircuitSimulator.simulate 返回结果缺少必需字段: {e}. "
+                f"返回 dict keys={list(result.keys())}. "
+                f"R03 禁止 fall-back：禁止用 0 默认值掩盖 simulator 返回 schema 变化。"
+            ) from e
         return {
-            "total_loss_db": float(result.get("total_loss_db", 0.0)),
-            "n_crossings": int(result.get("n_crossings", 0)),
+            "total_loss_db": total_loss_db,
+            "n_crossings": n_crossings,
         }
 
     def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:

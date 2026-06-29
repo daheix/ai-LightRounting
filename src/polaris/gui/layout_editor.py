@@ -552,7 +552,8 @@ class LayoutEditor:
             if len(pts) < 2:
                 continue
             pts_str = ", ".join(
-                f"db.DPoint({float(p[0])}, {float(p[1])})" for p in pts
+                f"db.DPoint({_fmt_klayout_float(p[0])}, {_fmt_klayout_float(p[1])})"
+                for p in pts
             )
             lines.append(f"path = db.DPath([{pts_str}], 0.5)")
             lines.append("top.shapes(layer_wg).insert(path)")
@@ -603,3 +604,42 @@ def _um_to_dbu(um: float, dbu: float) -> int:
     来源：SiEPIC-Tools + eval/layout_render.py ``_um_to_dbu``。
     """
     return int(round(um / dbu))
+
+
+def _fmt_klayout_float(x) -> str:
+    """KLayout 脚本浮点格式化（强制定点 + NaN/Inf 检测）。
+
+    R05 Bug 修复 v4.0-KLAYOUT-FMT（第1轮迭代发现）:
+    原代码 ``f"db.DPoint({float(p[0])}, {float(p[1])})"`` 用默认 str()
+    可能输出科学计数法（1e-05），KLayout Python 解释器虽能解析但
+    生成的脚本可读性差且部分旧版 KLayout 报语法错误。
+
+    修复:
+    1. NaN/Inf → raise ValueError（R03 禁止 fall-back）
+    2. ``:.6f`` 定点格式（0.001nm 分辨率）
+    3. 去尾零美化（1.500000 → 1.5）
+
+    规则: R03 禁止 fall-back / R05 Bug 必修
+    文献:
+    - KLayout Python API db.DPoint:
+      https://www.klayout.org/doc-qt5/code/class_KLayout_db_DPoint.html
+    - Python format spec:
+      https://docs.python.org/3/library/string.html#format-specification-mini-language
+    - IEEE 754: https://en.wikipedia.org/wiki/IEEE_754
+    - KLayout scripting manual:
+      https://www.klayout.org/doc/manual/python.html
+    - SiEPIC-Tools KLayout scripts:
+      https://github.com/siepic/SiePIC_EBeam_PDK
+    """
+    import math
+
+    v = float(x)
+    if math.isnan(v) or math.isinf(v):
+        raise ValueError(
+            f"KLayout 坐标值非法（NaN/Infinity 不允许）: {x!r}. "
+            f"R03 禁止 fall-back：拒绝生成损坏脚本。"
+        )
+    s = f"{v:.6f}"
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s if s else "0"

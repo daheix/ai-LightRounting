@@ -105,7 +105,16 @@ class Workspace:
         - SQLite WAL 原子提交（同类原理）: https://www.sqlite.org/wal.html
         - Effective Python Item 32: 优先抛异常而非返回 None
         """
-        content = json.dumps(data, ensure_ascii=False, indent=2, default=str)
+        # R05 Bug 修复 v4.0-JSON-NAN（第1轮迭代发现）:
+        # 原 json.dumps 未传 allow_nan=False，NumPy 计算产生的 NaN/Infinity
+        # 会写出 NaN/Infinity 字面量，标准 JSON (RFC 8259) 不支持，
+        # JavaScript/Java/Go 解析失败。修复：allow_nan=False，NaN/Inf 即 raise。
+        # 规则: R03 禁止 fall-back / R05 Bug 必修
+        # 文献: RFC 8259 JSON §6 Numbers https://datatracker.ietf.org/doc/html/rfc8259#section-6
+        # 文献: Python json.dumps allow_nan https://docs.python.org/3/library/json.html#json.dumps
+        content = json.dumps(
+            data, ensure_ascii=False, indent=2, default=str, allow_nan=False
+        )
         fd, tmp_name = tempfile.mkstemp(
             dir=path.parent, prefix=path.name + ".", suffix=".tmp"
         )

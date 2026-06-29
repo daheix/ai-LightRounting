@@ -27,6 +27,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -345,7 +347,29 @@ class TrainingPipeline:
             "calibration_max_error_db": cal_result.max_error_db,
             "calibration_mean_error_db": cal_result.mean_error_db,
         }
-        Path(ckpt_path).write_text(json.dumps(ckpt_data, indent=2), encoding="utf-8")
+        # R05 Bug 修复 v4.0-ATOMIC-03 + v4.0-JSON-NAN（第1轮迭代发现）:
+        # 原裸 write_text 非原子 + 未传 allow_nan=False。
+        # 1. 原子写入：训练耗时数小时，断电/中断时检查点损坏无法恢复
+        # 2. NaN/Inf 检测：NumPy 计算可能产生 NaN，写出后无法被其他工具解析
+        # 修复：原子写入 + allow_nan=False，NaN/Inf 即 raise
+        # 规则: R03 禁止 fall-back / R05 Bug 必修
+        # 文献: POSIX rename(2) https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html
+        # 文献: RFC 8259 JSON §6 https://datatracker.ietf.org/doc/html/rfc8259#section-6
+        target = Path(ckpt_path)
+        content = json.dumps(ckpt_data, indent=2, allow_nan=False)
+        fd, tmp_name = tempfile.mkstemp(
+            dir=target.parent, prefix=target.name + ".", suffix=".tmp"
+        )
+        tmp_path = Path(tmp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, target)
+        except Exception:
+            tmp_path.unlink(missing_ok=True)
+            raise
         return ckpt_path
 
     @staticmethod

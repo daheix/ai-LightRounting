@@ -18,11 +18,49 @@ DEF 定义 COMPONENTS（→ Instance，+ PLACED (x y) N）。
 
 from __future__ import annotations
 
+import math
 import re
 
 from polaris.io.multi_format import Cell, FormatLayout, Instance, LayerInfo, Point, Shape
 
 __all__ = ["read_lef_def", "write_lef_def"]
+
+
+def _fmt_lef_float(x: float) -> str:
+    """LEF/DEF 距离值格式化（强制定点，禁科学计数法 + NaN/Inf 检测）。
+
+    R05 Bug 修复 v4.0-LEFDEF-FMT（第1轮迭代发现）:
+    原代码 ``f"( {inst.origin.x} {inst.origin.y} )"`` 用默认 str()
+    会产生科学计数法（1e-05）或浮点精度伪影（0.30000000000000004），
+    LEF/DEF 5.8 语法禁止科学计数法，导致 OpenROAD/KLayout 解析失败。
+
+    修复:
+    1. NaN/Inf → raise ValueError（R03 禁止 fall-back）
+    2. ``:.6f`` 定点格式（0.001nm 分辨率，足够 LEF/DEF DATABASE MICRONS 10000）
+    3. 去尾零美化（1.500000 → 1.5）保持可读
+
+    规则: R03 禁止 fall-back / R05 Bug 必修 / R02 学术诚信
+    文献:
+    - LEF/DEF 5.8 Reference §2.1 Distance values
+  https://www.ispd.cc/contests/18/lefdefref.pdf
+    - OpenROAD LEF/DEF parser (禁止科学计数法)
+  https://github.com/The-OpenROAD-Project/OpenDB
+    - Python format spec §format-spec:
+  https://docs.python.org/3/library/string.html#format-specification-mini-language
+    - IEEE 754 NaN/Inf 处理: https://en.wikipedia.org/wiki/IEEE_754
+    - KLayout LEF/DEF 输出: https://www.klayout.org/doc/manual/lef_def.html
+    """
+    v = float(x)
+    if math.isnan(v) or math.isinf(v):
+        raise ValueError(
+            f"LEF/DEF 距离值非法（NaN/Infinity 不允许）: {x!r}. "
+            f"R03 禁止 fall-back：拒绝写出损坏几何，由上游修复数据。"
+        )
+    s = f"{v:.6f}"
+    # 去尾零: 1.500000 → 1.5; 1.000000 → 1
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return s if s else "0"
 
 
 def read_lef_def(text: str) -> FormatLayout:
@@ -251,7 +289,8 @@ def write_lef_def(layout: FormatLayout) -> str:
                 orient = _lef_def_orient(inst.angle, inst.mirror)
                 lines.append(
                     f"- {inst.name} {inst.cell_name} + PLACED "
-                    f"( {inst.origin.x} {inst.origin.y} ) {orient} ;"
+                    f"( {_fmt_lef_float(inst.origin.x)} {_fmt_lef_float(inst.origin.y)} ) "
+                    f"{orient} ;"
                 )
         lines.append("END COMPONENTS")
     lines.append("END DESIGN")
@@ -265,9 +304,12 @@ def _lef_shape_lines(s: Shape) -> list[str]:
         x1, y1 = c.x - s.width / 2, c.y - s.height / 2
         x2, y2 = c.x + s.width / 2, c.y + s.height / 2
         return ["  OBS", f"    LAYER {s.layer} ;",
-                f"      RECT {x1} {y1} {x2} {y2} ;", "  END"]
+                f"      RECT {_fmt_lef_float(x1)} {_fmt_lef_float(y1)} "
+                f"{_fmt_lef_float(x2)} {_fmt_lef_float(y2)} ;", "  END"]
     if s.shape_type == "polygon":
-        pts = " ".join(f"{p.x} {p.y}" for p in s.points)
+        pts = " ".join(
+            f"{_fmt_lef_float(p.x)} {_fmt_lef_float(p.y)}" for p in s.points
+        )
         return ["  OBS", f"    LAYER {s.layer} ;",
                 f"      POLYGON {pts} ;", "  END"]
     raise ValueError(f"LEF/DEF 不支持形状类型: {s.shape_type}")
