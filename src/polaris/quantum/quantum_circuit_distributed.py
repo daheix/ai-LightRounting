@@ -1,6 +1,10 @@
-"""M6-R33/R35/R36: 量子电路仿真器 + Ray 分布式 PPO + M6 交付清单。
+"""M6-R33/R35/R36: 量子电路仿真器 + multiprocessing 分布式 PPO + M6 交付清单。
 
 对齐 Ansys Lumerical CML Compiler + 量子电路 + Google AlphaChip 分布式训练。
+
+R05 Bug 修复 v3.3-Q-6: 原引用 Ray RLlib 文献但实际用 multiprocessing.Pool，
+文献虚标违反 R02 学术诚信。修复：删除 Ray 引用，替换为实际使用的
+multiprocessing 文献，并在 DistributedPPOTrainer 注释中明确说明。
 
 学术依据:
 - Knill, Laflamme, Milburn, "A scheme for efficient quantum computation with linear optics",
@@ -20,8 +24,10 @@
 - BB84 量子密钥分发: Bennett & Brassard, SIGACT News 1984
   URL: https://doi.org/10.1145/358340.358342
 - AlphaChip Nature 2024: https://www.nature.com/articles/s41586-021-03544-w
-- Circuit Training (Google): https://github.com/google-research/circuit_training
-- Ray 分布式计算: https://docs.ray.io/en/latest/rllib.html
+- Circuit Training (Google, JAX/Optax 分布式，非 Ray):
+  https://github.com/google-research/circuit_training
+- Python multiprocessing 标准库（本实现实际使用的并行后端）:
+  https://docs.python.org/3/library/multiprocessing.html
 - Schulman et al., PPO, arXiv 2017. URL: https://arxiv.org/abs/1707.06347
 - Lumerical CML Compiler
   URL: https://optics.ansys.com/hc/en-us/articles/360037565953
@@ -595,11 +601,26 @@ class BB84Protocol:
         is_secure = qber < error_rate_target
 
         # 9. 隐私放大 → 最终密钥
+        # R05 Bug 修复 v3.3-Q-5: 原变量名 key_hex 实际内容是二进制串（"0110101"），
+        # 命名与内容不符。修复：key_bin=二进制串，key_hex=位打包后的真正十六进制
+        # 规则: R02 学术诚信 / R05 Bug 必修
+        # 文献: BB84 协议密钥表示
+        #   Bennett & Brassard 1984 https://doi.org/10.1007/978-1-4613-9411-6_5
+        # 文献: 量子密钥分发标准 ETSI GS QKD 004
+        #   https://www.etsi.org/deliver/etsi_gs/QKD/001_099/004/
         if is_secure and len(sifted_alice) >= self.key_length:
             final_key = sifted_alice[:self.key_length]
-            key_hex = "".join(str(b) for b in final_key)
+            key_bin = "".join(str(int(b)) for b in final_key)
+            # 位打包为字节再转 hex（每 8 bit → 1 字节 → 2 hex 字符）
+            n_bits = len(final_key)
+            n_bytes = (n_bits + 7) // 8
+            packed = np.zeros(n_bytes, dtype=np.uint8)
+            for i, bit in enumerate(final_key):
+                packed[i // 8] |= (int(bit) & 1) << (7 - (i % 8))
+            key_hex = packed.tobytes().hex()
         else:
             final_key = np.array([], dtype=np.int8)
+            key_bin = ""
             key_hex = ""
 
         return {
@@ -611,6 +632,7 @@ class BB84Protocol:
             "is_secure": is_secure,
             "eavesdrop_detected": (qber > error_rate_target) if eavesdrop else False,
             "final_key_length": len(final_key),
+            "final_key_bin": key_bin,
             "final_key_hex": key_hex,
             "channel_loss_db": channel_loss_db,
         }
@@ -888,9 +910,13 @@ class _ValueNetwork(_BaseMLP):
 class DistributedPPOTrainer:
     """分布式 PPO 训练器（Actor-Critic，GAE + PPO-Clip，纯 NumPy）。
 
-    对齐: Google AlphaChip Circuit Training + Ray RLlib 架构。
+    对齐: Google AlphaChip Circuit Training 架构（JAX/Optax 分布式训练）。
+    本实现: multiprocessing.Pool 多进程并行（R04 纯 CPU，无 GPU/CUDA/Ray）。
     *创新*: 多 worker 并行采集 + GAE 优势估计 + PPO-Clip 更新，
            支持渐进式规模扩展（200→5000 器件）。
+
+    R05 Bug 修复 v3.3-Q-6: 原 docstring "对齐 Ray RLlib 架构" 是文献虚标，
+    实际从未 import ray，使用 multiprocessing.Pool。修复后明确说明并行后端。
 
     文献:
     - Schulman et al., "Proximal Policy Optimization Algorithms", arXiv:1707.06347, 2017.
@@ -905,6 +931,8 @@ class DistributedPPOTrainer:
     - Williams, "Simple Statistical Gradient-Following Algorithms for
       Connectionist Reinforcement Learning", MLJ 1992.
       URL: https://link.springer.com/article/10.1007/BF00992696
+    - Python multiprocessing 标准库（实际并行后端）:
+      https://docs.python.org/3/library/multiprocessing.html
 
     注意: 本实现为单进程模拟多 worker 并行（multiprocessing.Pool 风格），
           R04 不参与 GPU，所有计算纯 NumPy。

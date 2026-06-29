@@ -119,6 +119,12 @@ class TaskResult:
     end_time: float | None = None
     retries: int = 0
     cancel_requested: bool = False  # 取消请求标志（同步后端协作式取消）
+    # R05 Bug 修复 v3.3-SYS-2: _future 字段显式声明并初始化为 None
+    # 原代码未声明 _future，line 213 `result._future = future` 会动态添加属性，
+    # 违反 dataclass 字段规范，且 mypy 静态检查报错。修复：用 field(default=None) 显式声明。
+    # 规则: R02 学术诚信 / R05 Bug 必修
+    # 文献: Python dataclass field https://docs.python.org/3/library/dataclasses.html#dataclasses.field
+    # 文献: concurrent.futures.Future https://docs.python.org/3/library/concurrent.futures.html
     _future: Any = field(default=None, init=False, repr=False)  # threading 后端 Future 对象
 
     @property

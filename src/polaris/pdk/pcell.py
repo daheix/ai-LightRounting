@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import math
 import re
 import types
@@ -30,6 +31,8 @@ import numpy as np
 
 from polaris.pdk.device import BoundingBox, Device
 from polaris.pdk.port import Direction, Port
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "PCellCache",

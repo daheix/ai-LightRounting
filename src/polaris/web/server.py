@@ -648,6 +648,12 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
 
         jsonl_path = Path(output_dir) / "logs" / "showcase.jsonl"
         stages: list[dict] = []
+        # R05 Bug 修复 v3.3-WEB-1: 增加 n_skipped 计数器
+        # 原 summary 只含 n_done/n_failed/n_total，丢失无效行计数
+        # 规则: R02 学术诚信 / R03 禁止静默吞异常（warning 已记录但需在 summary 体现）
+        # 文献: JSON Lines 规范 http://jsonlines.org/
+        # 文献: REST API 错误处理 https://datatracker.ietf.org/doc/html/rfc7807
+        n_skipped = 0
         if jsonl_path.exists():
             with jsonl_path.open("r", encoding="utf-8") as f:
                 for line in f:
@@ -655,8 +661,12 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
                     if line:
                         try:
                             stages.append(json.loads(line))
-                        except json.JSONDecodeError:
-                            logger.warning("跳过无效 JSONL 行: %s", line[:100])
+                        except json.JSONDecodeError as e:
+                            n_skipped += 1
+                            logger.warning(
+                                "跳过无效 JSONL 行 (#%d): %s | error=%s",
+                                n_skipped, line[:100], e,
+                            )
 
         n_done = sum(1 for s in stages if s.get("status") == "done")
         n_failed = sum(1 for s in stages if s.get("status") == "failed")
@@ -672,6 +682,7 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
                 "n_done": n_done,
                 "n_failed": n_failed,
                 "n_total": len(stages),
+                "n_skipped": n_skipped,
                 "total_duration_s": round(total_duration, 4),
             },
         })
@@ -689,6 +700,9 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
 
         jsonl_path = Path(output_dir) / "logs" / "showcase.jsonl"
         stage_data: dict | None = None
+        # R05 Bug 修复 v3.3-WEB-1: 原 except: continue 是静默 fall-back，改为 warning
+        # 规则: R03 禁止静默吞异常 / R02 学术诚信
+        # 文献: Python logging 最佳实践 https://docs.python.org/3/howto/logging.html
         if jsonl_path.exists():
             with jsonl_path.open("r", encoding="utf-8") as f:
                 for line in f:
@@ -697,7 +711,11 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
                         continue
                     try:
                         log = json.loads(line)
-                    except json.JSONDecodeError:
+                    except json.JSONDecodeError as e:
+                        logger.warning(
+                            "showcase stage 查找：跳过无效 JSONL 行: %s | error=%s",
+                            line[:100], e,
+                        )
                         continue
                     if log.get("stage_id") == stage_id:
                         stage_data = log

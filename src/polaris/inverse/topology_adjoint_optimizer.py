@@ -70,7 +70,14 @@ WAVELENGTH_UM = 1.55  # C-band 中心波长（μm）
 N_SILICON = 3.476  # 硅 @1.55μm（Palik）
 N_SILICA = 1.444  # SiO₂ @1.55μm（Palik）
 DELTA_N = N_SILICON - N_SILICA  # 2.032，芯包折射率差
-PIXEL_SIZE_UM = 0.05  # λ/20 @1.55μm（Tidy3D/MEEP 推荐网格分辨率）
+# R05 Bug 修复 v3.3-INV-4: 原标注 "λ/20 @1.55μm" 错误（λ_vac/20 = 0.0775μm ≠ 0.05μm）
+# 正确：0.05μm = λ_SiO₂/20 @1.55μm（包层 SiO₂ 介质中波长 / 20）
+#   λ_SiO₂ = 1.55μm / 1.444 = 1.0734μm → /20 = 0.0537μm ≈ 0.05μm
+# 文献: Tidy3D "use at least λ/20 in the medium where the field is propagating"
+#   https://docs.flexcompute.com/projects/tidy3d/en/latest/academy/AdjointPlugin.html
+# 文献: MEEP docs §Numerical Dispersion → λ_medium/20 网格分辨率
+#   https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics.html
+PIXEL_SIZE_UM = 0.05  # λ_SiO₂/20 @1.55μm（Tidy3D/MEEP 推荐：基于包层介质波长）
 
 # 文献 URL 常量（R02 学术诚信）
 URL_TIDY3D = (
@@ -97,7 +104,7 @@ class OptimizerConfig:
         drc_weight: DRC 惩罚权重（来源: Piggott 2020 ACS Photonics 可制造性）。
         dz_um: 器件单像素传播厚度（μm）。
         wavelength_um: 工作波长（μm，C-band 1.55）。
-        pixel_size_um: 网格分辨率（μm，λ/20）。
+        pixel_size_um: 网格分辨率（μm，λ_SiO₂/20 @1.55μm，Tidy3D/MEEP 推荐）。
     """
 
     n_iters: int = 100

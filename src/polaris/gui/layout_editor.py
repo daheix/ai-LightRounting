@@ -519,7 +519,15 @@ class LayoutEditor:
             "# SiEPIC/gdsfactory 标准 foundry 层（止血7）",
             "layer_wg = ly.layer(1, 0)      # WG 波导层",
             "layer_devrec = ly.layer(68, 0) # DEVREC 器件识别层",
-            "layer_pin = ly.layer(69, 0)    # PIN 端口层",
+            # R05 Bug 修复 v3.3-GUI-2: 删除 layer_pin 死代码
+            # 原代码定义 layer_pin = ly.layer(69,0) 后从未使用，
+            # DeviceInstance 无 ports 字段无法画 PIN 标记，违反 R02 学术诚信
+            # 待 DeviceInstance 增加 ports 字段后可恢复 PIN 层标记
+            # 规则: R05 删除死代码 / R02 学术诚信
+            # 文献: SiEPIC EBeam PDK layer map
+            #   https://github.com/siepic/SiePIC_EBeam_PDK
+            # 文献: gdsfactory KLayout layers
+            #   https://gdsfactory.github.io/gdsfactory/
             "",
         ]
         for dev in self._devices.values():
