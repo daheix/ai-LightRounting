@@ -25,6 +25,7 @@ import pytest
 from polaris.quantum.quantum_circuit_distributed import (
     DistributedPPOConfig,
     DistributedPPOTrainer,
+    RoadmapScoreSummary,
     _PolicyNetwork,
     _ValueNetwork,
 )
@@ -309,9 +310,11 @@ class TestGAEBoundaryHandling:
 
     def test_value_network_in_training(self):
         """训练中 Value Network 应参与 GAE 计算。"""
+        # R05 v4.0-FAKE-ENV-P0 回归: 算法单元测试显式启用 synthetic_env_mode
         config = DistributedPPOConfig(
             n_workers=2, obs_dim=4, action_dim=2, n_epochs=1,
             batch_size=8, n_devices_per_circuit=100,
+            synthetic_env_mode=True,
         )
         trainer = DistributedPPOTrainer(config)
 
@@ -327,9 +330,11 @@ class TestEndToEndTraining:
 
     def test_distributed_ppo_runs(self):
         """分布式 PPO 训练应能正常运行。"""
+        # R05 v4.0-FAKE-ENV-P0 回归: 算法单元测试显式启用 synthetic_env_mode
         config = DistributedPPOConfig(
             n_workers=2, obs_dim=8, action_dim=4,
             n_epochs=2, batch_size=16, n_devices_per_circuit=100,
+            synthetic_env_mode=True,
         )
         trainer = DistributedPPOTrainer(config)
 
@@ -344,9 +349,11 @@ class TestEndToEndTraining:
 
     def test_progressive_scaling(self):
         """渐进式规模扩展应正常工作。"""
+        # R05 v4.0-FAKE-ENV-P0 回归: 算法单元测试显式启用 synthetic_env_mode
         config = DistributedPPOConfig(
             n_workers=2, obs_dim=4, action_dim=2,
             n_epochs=1, batch_size=8,
+            synthetic_env_mode=True,
         )
         trainer = DistributedPPOTrainer(config)
 
@@ -355,6 +362,107 @@ class TestEndToEndTraining:
         assert len(stages) == 5
         assert stages[-1]["stage_devices"] == 1000
         assert all("mean_reward" in s for s in stages)
+
+
+class TestNoFakeEnvNoFakeScore:
+    """R05 v4.0-FAKE-ENV-P0 / FAKE-SCORE-P0 回归测试（第3轮迭代）。"""
+
+    def test_training_step_raises_without_real_env(self):
+        """无真实环境且 synthetic_env_mode=False 时 training_step 应 raise。
+
+        R03 禁止 fall-back: 禁止用合成环境冒充真实环境训练。
+        """
+        config = DistributedPPOConfig(
+            n_workers=1, obs_dim=4, action_dim=2,
+            n_epochs=1, batch_size=8,
+            synthetic_env_mode=False,  # 默认值，显式写出
+        )
+        trainer = DistributedPPOTrainer(config)
+
+        with pytest.raises(RuntimeError, match="未注入真实布局布线环境"):
+            trainer.training_step(n_episodes_per_worker=1)
+
+    def test_synthetic_env_step_is_clearly_marked(self):
+        """合成环境方法应明确标记为测试夹具（非真实环境）。"""
+        trainer = DistributedPPOTrainer(DistributedPPOConfig(
+            obs_dim=4, action_dim=4, synthetic_env_mode=True,
+        ))
+        # 合成方法名应包含 synthetic 标记
+        assert hasattr(trainer, "_synthetic_env_step")
+        assert not hasattr(trainer, "_env_step"), "旧的 _env_step 应已重命名"
+
+        # docstring 应明确警告"合成测试夹具"
+        doc = trainer._synthetic_env_step.__doc__ or ""
+        assert "合成" in doc or "synthetic" in doc.lower(), (
+            "_synthetic_env_step docstring 应明确标记为合成测试夹具"
+        )
+        assert "AlphaChip" not in doc, (
+            "_synthetic_env_step docstring 不应误引 AlphaChip 文献（R02 学术诚信）"
+        )
+
+    def test_set_real_env_validates_interface(self):
+        """set_real_env 应验证注入环境实现 reset/step 接口。"""
+        trainer = DistributedPPOTrainer(DistributedPPOConfig())
+
+        # 缺少 step 方法的对象应被拒绝
+        class BadEnv:
+            def reset(self, n_devices: int = 0):
+                return np.zeros(4)
+
+        with pytest.raises(TypeError, match="缺少必需方法"):
+            trainer.set_real_env(BadEnv())
+
+        # 完整接口应通过
+        class GoodEnv:
+            def reset(self, n_devices: int = 0):
+                return np.zeros(4)
+
+            def step(self, action: int):
+                return np.zeros(4), 0.0, True, {}
+
+        trainer.set_real_env(GoodEnv())
+        assert trainer._real_env is not None
+
+    def test_compute_score_raises_on_none_benchmark(self):
+        """RoadmapScoreSummary.compute_score 拒绝 None benchmark_data。
+
+        R02 学术诚信 / R03 禁止 fall-back: 综合得分必须基于真实评测数据，
+        禁止凭空返回 9.2/10 等虚标分数。
+        """
+        with pytest.raises(RuntimeError, match="拒绝返回假分数"):
+            RoadmapScoreSummary.compute_score("M6_R36", None)
+
+    def test_compute_score_raises_on_missing_fields(self):
+        """benchmark_data 缺少必需字段时 raise KeyError。"""
+        with pytest.raises(KeyError, match="缺少必需字段"):
+            RoadmapScoreSummary.compute_score("M6_R36", {"hpwl_improvement_pct": 5.0})
+
+    def test_compute_score_with_full_data(self):
+        """提供完整基准数据时应计算出合理得分。"""
+        benchmark = {
+            "hpwl_improvement_pct": 15.0,  # 优于行业基准 10%
+            "congestion_reduction_pct": 60.0,  # 优于阈值 50%
+            "drc_violation_count": 0,
+            "runtime_seconds": 200.0,  # 快于行业基准 300s
+            "device_count": 1000,
+            "industry_benchmark_hpwl_pct": 10.0,
+            "industry_benchmark_runtime_s": 300.0,
+        }
+        score = RoadmapScoreSummary.compute_score("M6_R36", benchmark)
+        # 应在 [0, 10] 区间
+        assert 0.0 <= score <= 10.0
+        # 优于行业基准 → 得分应较高
+        assert score > 8.0, f"优于行业基准但得分 {score} 过低"
+
+    def test_report_without_data_returns_none_scores(self):
+        """无基准数据时 report 返回 None 分数（拒绝虚标）。"""
+        result = RoadmapScoreSummary.report()
+        assert "M6_R36" in result["milestones"]
+        assert result["milestones"]["M6_R36"] is None, (
+            "无基准数据时 M6 得分应为 None（拒绝虚标 9.2/10）"
+        )
+        assert result["total_improvement"] is None
+        assert result["exceeds_industry_max"] is None
 
 
 if __name__ == "__main__":

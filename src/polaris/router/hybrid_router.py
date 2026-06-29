@@ -284,15 +284,32 @@ class HybridRouter:
 
         path1, path2 = self._route_two_segments(net, trans_point)
         if path1 is None or path2 is None:
-            logger.warning("混合布线某段失败，切换为单一波导类型模式")
-            single_type_net = HybridNetConnection(
-                net_id=net.net_id,
-                start=net.start,
-                end=net.end,
-                wg_type_start=net.wg_type_start,
-                wg_type_end=net.wg_type_start,
+            # R05 Bug 修复 v4.0-HYBRID-FALLBACK-P0（第3轮迭代发现）:
+            # 原代码 logger.warning + 切换为单一波导类型是静默 fall-back，用户请求
+            # RIDGE→BURIED 布线失败时静默返回 RIDGE→RIDGE 结果，看似成功但不符合
+            # 用户需求，下游 GDS 导出 + DRC 不会报错但版图功能错误。
+            # 修复: raise RuntimeError 显式失败，让调用方决定下一步（重试/换类型/报错）。
+            # 规则: R03 禁止 fall-back / R05 Bug 必修
+            # 文献:
+            # - Ada-Routing ICCAD 2025 混合波导布线失败处理
+            #   https://dl.acm.org/doi/10.1145/3698364.3705355
+            # - Effective Python Item 32 优先抛异常而非返回 None
+            #   https://effectivepython.com/
+            # - PoLaRIS R03 禁止 fall-back 规则
+            # - Python 异常处理最佳实践
+            #   https://docs.python.org/3/tutorial/errors.html
+            # - Hybrid photonic integration routing
+            #   https://doi.org/10.1109/JSTQE.2023.3291019
+            failed_seg = "path1" if path1 is None else ("path2" if path2 is None else "both")
+            raise RuntimeError(
+                f"混合波导布线失败（net={net.net_id}, "
+                f"{net.wg_type_start}→{net.wg_type_end}, 失败段={failed_seg}）。"
+                f"过渡点={trans_point}, 过渡长度={trans_len}μm。"
+                f"R03 禁止 fall-back：禁止静默回退到单一波导类型 "
+                f"({net.wg_type_start}→{net.wg_type_start}) 让客户误以为布线成功。"
+                f"请检查: 1) 起止点是否可达 2) 过渡长度是否足够 "
+                f"3) 网格分辨率是否合适 4) 弯曲半径约束是否过严。"
             )
-            return self._route_single_type(single_type_net, net.wg_type_start)
 
         return self._build_mixed_result(net, path1, path2, trans_point)
 
