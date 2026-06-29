@@ -130,7 +130,13 @@ def _lef_polygon_shape(toks: list[str], layer: str) -> Shape:
 
 
 def _def_parse_components(lines: list[str], i: int) -> tuple[list[Instance], int]:
-    """解析 DEF COMPONENTS 段。"""
+    """解析 DEF COMPONENTS 段。
+
+    完整支持 LEF/DEF 5.8 的 8 种 orient：N/E/S/W/FN/FS/FE/FW
+    （来源: LEF/DEF 5.8 Language Reference §Components）。
+    对称解析 angle + mirror，与 ``_lef_def_orient`` 反向映射一致
+    （R05 Bug 修复 v3.3-IO-2）。
+    """
     instances: list[Instance] = []
     i += 1
     while i < len(lines):
@@ -143,18 +149,86 @@ def _def_parse_components(lines: list[str], i: int) -> tuple[list[Instance], int
             line,
         )
         if m:
+            angle, mirror = _lef_def_parse_orient(m.group(5))
             instances.append(Instance(
                 name=m.group(1),
                 cell_name=m.group(2),
                 origin=Point(float(m.group(3)), float(m.group(4))),
-                angle=0.0 if m.group(5) == "N" else 90.0,
+                angle=angle,
+                mirror=mirror,
             ))
         i += 1
     return instances, i
 
 
+# LEF/DEF 5.8 §Components: 8 种合法 orient
+# 来源: http://coriolis.lip6.fr/doc/lefdef/lefdefref/DEFSyntax.html
+_LEF_DEF_ORIENT_TO_TRANSFORM: dict[str, tuple[float, bool]] = {
+    "N": (0.0, False),    # North (默认)
+    "E": (90.0, False),   # East (顺时针 90°)
+    "S": (180.0, False),  # South (180°)
+    "W": (270.0, False),  # West (270°)
+    "FN": (0.0, True),    # Flipped North (镜像 N)
+    "FE": (90.0, True),   # Flipped East
+    "FS": (180.0, True),  # Flipped South
+    "FW": (270.0, True),  # Flipped West
+}
+# 反向映射：(angle_rounded, mirror) → orient 字符串
+_LEF_DEF_TRANSFORM_TO_ORIENT: dict[tuple[int, bool], str] = {
+    (int(round(a)), m): o for o, (a, m) in _LEF_DEF_ORIENT_TO_TRANSFORM.items()
+}
+
+
+def _lef_def_parse_orient(orient: str) -> tuple[float, bool]:
+    """LEF/DEF orient 字符串 → (angle, mirror)。
+
+    Args:
+        orient: ``N``/``E``/``S``/``W``/``FN``/``FE``/``FS``/``FW`` 之一。
+
+    Returns:
+        (angle_degrees, mirror_flag) 元组。
+
+    Raises:
+        ValueError: 未知 orient 值。
+    """
+    key = orient.upper()
+    if key not in _LEF_DEF_ORIENT_TO_TRANSFORM:
+        raise ValueError(f"LEF/DEF 未知 orient: {orient}")
+    return _LEF_DEF_ORIENT_TO_TRANSFORM[key]
+
+
+def _lef_def_orient(angle: float, mirror: bool) -> str:
+    """(angle, mirror) → LEF/DEF orient 字符串。
+
+    LEF/DEF 5.8 标准仅支持 4 个正交角度（0/90/180/270）+ 镜像标志，
+    不支持 magnification 与任意角度（来源: LEF/DEF 5.8 LRM §Components）。
+
+    Args:
+        angle: 旋转角度（度），必须为 0/90/180/270 之一。
+        mirror: 是否镜像。
+
+    Returns:
+        ``N``/``E``/``S``/``W``/``FN``/``FE``/``FS``/``FW`` 之一。
+
+    Raises:
+        ValueError: 角度不在 4 个正交值中。
+    """
+    key = (int(round(angle)) % 360, mirror)
+    if key not in _LEF_DEF_TRANSFORM_TO_ORIENT:
+        raise ValueError(
+            f"LEF/DEF 5.8 仅支持 0/90/180/270 正交角度，收到 angle={angle}"
+        )
+    return _LEF_DEF_TRANSFORM_TO_ORIENT[key]
+
+
 def write_lef_def(layout: FormatLayout) -> str:
-    """将 FormatLayout 写为 LEF/DEF 混合文本。"""
+    """将 FormatLayout 写为 LEF/DEF 混合文本。
+
+    Instance 完整序列化 orient（N/E/S/W/FN/FS/FE/FW），与
+    ``_def_parse_components`` 对称（R05 Bug 修复 v3.3-IO-2）。
+    LEF/DEF 5.8 标准不支持 magnification，mag != 1.0 时 raise
+    （禁止 fall-back 静默丢失，规则 R03）。
+    """
     lines = ["VERSION 5.8 ;", "UNITS DATABASE MICRONS 1000 ;",
              "NOWIREEXTENSIONATPIN ON ;"]
     for cell in layout.cells:
@@ -169,9 +243,15 @@ def write_lef_def(layout: FormatLayout) -> str:
         lines.append(f"COMPONENTS {total} ;")
         for cell in layout.cells:
             for inst in cell.instances:
+                if inst.mag != 1.0:
+                    raise ValueError(
+                        f"LEF/DEF 5.8 不支持 magnification（实例 {inst.name} "
+                        f"mag={inst.mag}）；请改用 OpenAccess 格式"
+                    )
+                orient = _lef_def_orient(inst.angle, inst.mirror)
                 lines.append(
                     f"- {inst.name} {inst.cell_name} + PLACED "
-                    f"( {inst.origin.x} {inst.origin.y} ) N ;"
+                    f"( {inst.origin.x} {inst.origin.y} ) {orient} ;"
                 )
         lines.append("END COMPONENTS")
     lines.append("END DESIGN")

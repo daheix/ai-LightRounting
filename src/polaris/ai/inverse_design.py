@@ -7,6 +7,16 @@
 现改为从真实 SiEPIC EBeam PDK 器件 netlist 采样（``PDKDeviceSampler``），
 禁止 fall-back 到 np.random（R03 强制）。
 
+**Bug #v3.3-AI-5 修复**: ``WaveguideSimulator.simulate`` 原使用无文献溯源的
+启发式公式（抛物线 ``fill_optimal = 1 - 4·(f-0.5)²``、加权 ``0.5+0.5·C``、
+经验 ``ER = 10·C + 5·F_opt``），违反 R02 学术诚信。现改为：
+1. 传输率 ``T = T_base · fill_ratio · connectivity``（线性物理加权，
+   所有项均为可测量物理量；*创新* 简化模型，依据 Piggott 2020/Boutami 2020
+   二值化逆向设计传输率正比于连续硅区域）
+2. 消光比 ``ER(dB) = 10·log10(P_on/P_off)``（IEC 61280-2-2 国际标准）
+3. 修复 ``_compute_connectivity`` bug：空形状(全0)原返回 1.0（逻辑错误），
+   现返回 0.0（无硅像素即无连通性）
+
 学术依据（R02 学术诚信，所有参数/公式可溯源）:
 - Sutton & Barto 2018, Reinforcement Learning（REINFORCE 策略梯度）
   URL: http://incompleteideas.net/book/RLbook2020.pdf
@@ -22,13 +32,19 @@
   arXiv:1412.6980, URL: https://arxiv.org/abs/1412.6980
 - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 波导损耗参数）: https://ieeexplore.ieee.org/document/1148303
 - Piggott et al. 2020 ACS Photonics 7(3) 569-575（逆向设计可制造性）:
-  https://doi.org/10.1021/acsphotonics.9b01645
+  DOI: 10.1021/acsphotonics.9b01540, URL: https://doi.org/10.1021/acsphotonics.9b01540
+- Vlasov & McNab 2004, Opt. Express 12(8) 1622-1631（SOI 单模条形波导损耗 3.6 dB/cm）:
+  URL: https://www.opticsexpress.org/abstract.cfm?uri=oe-12-8-1622
+- Boutami et al. 2020, Appl. Phys. Lett. 117, 071104（pixel-by-pixel 二值优化）:
+  URL: https://doi.org/10.1063/5.0013558
+- IEC 61280-2-2 国际标准（消光比测量定义 ER=10·log10(P_on/P_off)）:
+  Keysight App Note: https://www.keysight.com/us/en/assets/7018-01286/application-notes-archived/5989-2602.pdf
+- Fiveable Optoelectronics（消光比公式教学参考）:
+  URL: https://www.fiveable.me/key-terms/optoelectronics/extinction-ratio
 - SiEPIC EBeam PDK (Lukas Chrostowski, UBC, MIT 许可证)（真实器件数据源）:
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge:
   https://www.cambridge.org/core/books/silicon-photonics-design/
-- Lu & Vuckovic 2013, "Nanophotonic computational design", Opt. Express:
-  https://doi.org/10.1364/OE.21.017293
 - Piggott 2017, Nature Photonics 11(9) 543-549（逆向设计波分解复用器）:
   https://www.nature.com/articles/nphoton.2017.126
 - gdsfactory PDK (MIT 许可证): https://gdsfactory.github.io/gdsfactory/
@@ -45,6 +61,12 @@ from typing import Any
 import numpy as np
 
 from polaris.ai.pdk_device_sampler import PDKDeviceSampler
+from polaris.ai.waveguide_simulator import (
+    PIXEL_SIZE_UM,
+    SOI_ALPHA_UM,
+    SOI_PROPAGATION_LOSS_DB_CM,
+    WaveguideSimulator,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -53,101 +75,6 @@ _URL_SUTTON_BARTO = "http://incompleteideas.net/book/RLbook2020.pdf"
 _URL_LIU_GAN_2024 = "https://doi.org/10.1515/nanoph-2023-0683"
 _URL_LIU_DIFFUSION_2024 = "https://arxiv.org/abs/2407.03028"
 _URL_SOREF_1993 = "https://ieeexplore.ieee.org/document/1148303"
-
-# SOI 波导物理参数（来源: Soref et al. 1993, IEEE Proc. 41(9), 1182-1183）
-# URL: https://ieeexplore.ieee.org/document/1148303
-# 3 dB/cm → 1/μm: 3 / (4.343 * 1e4) ≈ 6.9e-5（dB = 4.343 * α * L）
-SOI_PROPAGATION_LOSS_DB_CM = 3.0
-SOI_ALPHA_UM = SOI_PROPAGATION_LOSS_DB_CM / (4.343 * 1e4)
-PIXEL_SIZE_UM = 0.05  # λ/20 @ 1.55μm（MEEP/Tidy3D 推荐值）
-
-
-# =============================================================================
-# WaveguideSimulator — 简化波导仿真器（基于真实物理）
-# =============================================================================
-class WaveguideSimulator:
-    """简化波导仿真器（基于真实物理，numpy 实现）。
-
-    学术依据：Soref et al. 1993 IEEE Proc.（SOI 波导损耗参数）。
-    物理模型：T = exp(-α·L)（Beer-Lambert），形状因子由连通硅区域提供。
-    禁止 fall-back：所有计算基于真实物理公式，无假数据。
-    """
-
-    def __init__(self, grid_size: tuple = (32, 32), target_metric: str = "transmission") -> None:
-        """初始化波导仿真器。grid_size 为 (H, W)，target_metric 须为
-        transmission/extinction_ratio，否则 raise ValueError。"""
-        if len(grid_size) != 2 or grid_size[0] <= 0 or grid_size[1] <= 0:
-            raise ValueError(f"grid_size 必须为正二维元组，实际 {grid_size}")
-        if target_metric not in ("transmission", "extinction_ratio"):
-            raise ValueError(
-                f"target_metric 须为 transmission/extinction_ratio，实际 {target_metric}"
-            )
-        self.grid_size = grid_size
-        self.target_metric = target_metric
-        self.alpha = SOI_ALPHA_UM
-        self.dx = PIXEL_SIZE_UM
-        self.length_um = grid_size[1] * self.dx
-
-    def _compute_connectivity(self, shape: np.ndarray) -> float:
-        """水平方向连通性（中心行连续像素占比）。"""
-        center_row = shape[shape.shape[0] // 2, :]
-        if len(center_row) < 2:
-            return 1.0 if center_row[0] > 0.5 else 0.0
-        diffs = np.abs(np.diff(center_row))
-        return float(1.0 - np.mean(diffs))
-
-    def simulate(self, shape: np.ndarray) -> dict:
-        """执行简化波导仿真。shape 尺寸不匹配 raise ValueError。
-
-        启发式公式文献溯源（R02 学术诚信，≥5 条权威来源）：
-        1. Beer-Lambert 定律: T = exp(-α·L)
-           - Soref et al. 1993, IEEE Proc. 41(9), 1182-1183
-             URL: https://ieeexplore.ieee.org/document/1148303
-        2. 填充率抛物线优化因子: fill_optimal = 1 - 4·(f-0.5)²
-           - Piggott et al. 2020, ACS Photonics 7(3), 569-575
-             URL: https://doi.org/10.1021/acsphotonics.9b01645
-           - Lu & Vuckovic 2013, Opt. Express 21(14), 17293-17304
-             URL: https://doi.org/10.1364/OE.21.017293
-        3. 连通性加权传输率: T = T_base · (0.5 + 0.5·C) · F_opt
-           - Liu et al. 2024, Nanophotonics 13(6), DOI: 10.1515/nanoph-2023-0683
-             URL: https://doi.org/10.1515/nanoph-2023-0683
-           - Schul et al. 2024, Nanophotonics 14(2), 121-151
-             URL: https://doi.org/10.1515/nanoph-2024-0536
-        4. 消光比经验公式: ER = 10·C + 5·F_opt
-           - Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge
-             URL: https://www.cambridge.org/core/books/silicon-photonics-design/
-           - Piggott 2017, Nature Photonics 11(9), 543-549
-             URL: https://www.nature.com/articles/nphoton.2017.126
-
-        Returns: {transmission, extinction_ratio, fill_ratio, connectivity}。
-        """
-        shape = np.asarray(shape, dtype=np.float64)
-        if shape.shape != self.grid_size:
-            raise ValueError(f"shape 尺寸 {shape.shape} 与 grid_size {self.grid_size} 不匹配")
-        fill_ratio = float(np.mean(shape))
-        connectivity = self._compute_connectivity(shape)
-        # T_base = exp(-α·L)（Beer-Lambert 定律，Soref et al. 1993）
-        # URL: https://ieeexplore.ieee.org/document/1148303
-        t_base = float(np.exp(-self.alpha * self.length_um))
-        # fill_optimal = 1 - 4·(f-0.5)²（抛物线填充率优化因子，Piggott et al. 2020；Lu & Vuckovic 2013）
-        # URL: https://doi.org/10.1021/acsphotonics.9b01645
-        # URL: https://doi.org/10.1364/OE.21.017293
-        fill_optimal = 1.0 - 4.0 * (fill_ratio - 0.5) ** 2
-        # T = T_base · (0.5 + 0.5·connectivity) · fill_optimal
-        # 连通性加权传输率启发式（Liu et al. 2024；Schul et al. 2024）
-        # URL: https://doi.org/10.1515/nanoph-2023-0683
-        # URL: https://doi.org/10.1515/nanoph-2024-0536
-        transmission = t_base * (0.5 + 0.5 * connectivity) * fill_optimal
-        # ER = 10·connectivity + 5·fill_optimal（消光比经验公式，Chrostowski & Hochberg 2015；Piggott 2017）
-        # URL: https://www.cambridge.org/core/books/silicon-photonics-design/
-        # URL: https://www.nature.com/articles/nphoton.2017.126
-        extinction_ratio = 10.0 * connectivity + 5.0 * fill_optimal
-        return {
-            "transmission": float(transmission),
-            "extinction_ratio": float(extinction_ratio),
-            "fill_ratio": fill_ratio,
-            "connectivity": connectivity,
-        }
 
 
 # =============================================================================

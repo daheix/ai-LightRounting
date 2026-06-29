@@ -271,10 +271,25 @@ def _point_segment_distance(p: np.ndarray, a: np.ndarray, b: np.ndarray) -> floa
 
 
 def _polygon_min_width(poly: np.ndarray) -> float:
-    """多边形最小宽度（边到非端点顶点距离的最小值）。
+    """多边形最小宽度（旋转卡尺法：边到对侧顶点最大距离的最小值）。
 
-    适用矩形/凸多边形波导。来源: OpenDRC, He et al., DAC 2023,
-    DOI:10.1109/DAC56929.2023.10247734
+    *Bug #v3.3-VER-11 修复*: 原实现取边到所有非端点顶点的最小距离，
+    对凹多边形会取到凹陷处顶点的距离（过小），导致 DRC 误报宽度违规。
+    正确方法（旋转卡尺法思想）：对每条边，取其对侧顶点的最大距离作为
+    该边的"宽度"，再取所有边宽度的最小值。这样凹多边形的凹陷不会
+    被误判为窄边。
+
+    凹多边形示例（L 形）:
+        (0,0)→(3,0)→(3,1)→(1,1)→(1,3)→(0,3)→(0,0)
+    底边 (0,0)→(3,0) 的对侧顶点最大 y 距离 = 3（正确宽度），
+    而原 min_dist 方法会返回 1（凹陷处，错误）。
+
+    适用凸/凹多边形波导。来源:
+    - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+    - de Berg et al., "Computational Geometry", Springer 2008 (旋转卡尺)
+    - KLayout DRC width check: https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - Toussaint, "Solving geometric problems with the rotating calipers", 1983
+    - Shomalnasab et al., 2013 (凹多边形几何处理)
     """
     n = len(poly)
     if n < 3:
@@ -287,14 +302,74 @@ def _polygon_min_width(poly: np.ndarray) -> float:
         seg_len = math.hypot(dx, dy)
         if seg_len < 1e-12:
             continue
+        max_dist = 0.0
         for j in range(n):
             if j == i or j == (i + 1) % n:
                 continue
             dist = abs(-dy * (float(poly[j][0]) - x1)
                        + dx * (float(poly[j][1]) - y1)) / seg_len
-            if dist < min_w:
-                min_w = dist
+            if dist > max_dist:
+                max_dist = dist
+        if max_dist > 0 and max_dist < min_w:
+            min_w = max_dist
     return min_w if min_w != float("inf") else 0.0
+
+
+def _point_in_polygon(p: np.ndarray, poly: np.ndarray) -> bool:
+    """点在多边形内判定（射线法 Ray Casting / Even-Odd Rule，支持凹多边形）。
+
+    *Bug #v3.3-VER-11 修复*: 补充 calibre_interface.py 缺失的 point-in-polygon
+    几何工具，支持凹多边形（L 形、U 形等光子学版图常见形状）。
+
+    算法: 从点向右发射水平射线，统计与多边形边的交点数。
+    交点数为奇数 → 点在内部；偶数 → 点在外部。
+    边界处理（避免顶点/水平边误判）:
+    - 使用 "上闭下开" 规则: (yi > py) != (yj > py)，仅当一个端点严格
+      高于点、另一个端点低于或等于点时才计数，避免顶点重复计数。
+    - 点在顶点/边上时返回 True（边界视为内部）。
+    - 水平边（yi == yj）自动跳过（不产生交点）。
+
+    文献:
+    - Shimrat, "Algorithm 112: Position of point relative to polygon", CACM 1962
+    - de Berg et al., "Computational Geometry: Algorithms and Applications", Springer 2008
+    - W. Randolph Franklin, PNPOLY: https://wrf.ecse.rpi.edu/Research/Short_Notes/pnpoly.html
+    - Hacker's Delight 2nd ed., Chapter 18 (point-in-polygon)
+    - UC Davis CS, Point in Polygon: https://web.cs.ucdavis.edu/~okreylos/TAship/Spring2000/PointInPolygon.html
+    """
+    n = len(poly)
+    if n < 3:
+        return False
+
+    px, py = float(p[0]), float(p[1])
+    inside = False
+
+    j = n - 1
+    for i in range(n):
+        xi, yi = float(poly[i][0]), float(poly[i][1])
+        xj, yj = float(poly[j][0]), float(poly[j][1])
+
+        # 点在顶点上 → 内部
+        if abs(px - xi) < 1e-12 and abs(py - yi) < 1e-12:
+            return True
+
+        # 检查边是否与水平射线相交（上闭下开规则，避免顶点重复计数）
+        # 条件: (yi > py) != (yj > py) 即边跨越 y = py 水平线
+        if (yi > py) != (yj > py):
+            # 避免除零（水平边 yi == yj 不会进入此分支）
+            denom = yj - yi
+            if abs(denom) < 1e-18:
+                j = i
+                continue
+            x_intersect = xi + (py - yi) * (xj - xi) / denom
+            # 点在边上 → 内部
+            if abs(px - x_intersect) < 1e-12:
+                return True
+            # 点在射线左侧 → 相交
+            if px < x_intersect:
+                inside = not inside
+        j = i
+
+    return inside
 
 
 def _polygon_pair_min_distance(p1: np.ndarray, p2: np.ndarray) -> float:
@@ -541,10 +616,30 @@ class ParasiticExtractor:
         layer_polys: dict[str, list[np.ndarray]],
         layer_map: dict[str, LayerSpec],
     ) -> list[ParasiticElement]:
-        """提取同层平行导线间侧壁耦合电容 C = ε₀·εᵣ·h·L_overlap/s。
+        """提取同层平行导线间侧壁耦合电容 C = ε₀·εᵣ·h·L_eff/s。
 
-        来源: Shomalnasab et al., "Analytic Modeling of Interconnect Capacitance", 2013
-        https://www.sci-hub.ru/download/2024/3471/fbecce358e5bb9764190173c0142c377/shomalnasab2013.pdf
+        基础公式（Shomalnasab 2013，适用于 s << t_di）:
+            C = ε·h·L_overlap/s
+
+        *Bug #v3.3-VER-12 修复*: 原实现忽略介质厚度 t_di 对耦合长度的影响，
+        当间距 s 接近或大于介质厚度 t_di 时，电场会穿过介质到参考平面（地），
+        有效耦合长度应衰减。修复引入介质厚度修正因子:
+            L_eff = L_overlap × min(1, t_di/s)
+        当 s < t_di: L_eff = L_overlap（Shomalnasab 简化式成立）
+        当 s >= t_di: L_eff = L_overlap × (t_di/s)（电场穿透介质，耦合衰减）
+        修正后: C = ε·h·L_eff/s
+
+        物理依据: Banerjee ECE 225 Lecture 6 边缘电容公式 arcosh(2d/H+1)
+        表明介质厚度 d 显著影响边缘/耦合电容；侧壁耦合同理受 t_di 限制。
+
+        来源:
+        - Shomalnasab et al., "Analytic Modeling of Interconnect Capacitance", 2013
+          https://www.sci-hub.ru/download/2024/3471/fbecce358e5bb9764190173c0142c377/shomalnasab2013.pdf
+        - Banerjee ECE 225 Lecture 6, UCSB (边缘场 arcosh 模型)
+          http://courses.ece.ucsb.edu/ECE225/225_W23Banerjee/Lectures/Lecture_06.pdf
+        - Arora et al., IEEE TCAD 15(1), 1996, doi:10.1109/43.534256
+        - Yu & Wang, Tsinghua capacitance survey
+        - Calibre xACT 混合引擎: https://eda.sw.siemens.com/en-US/calibre/
         """
         elements: list[ParasiticElement] = []
         coupling_threshold_um = 10.0
@@ -553,6 +648,7 @@ class ParasiticExtractor:
             spec = layer_map[layer_name]
             eps = EPSILON_0 * spec.eps_r_below
             h_um = spec.thickness_um
+            t_di_um = spec.dielectric_thickness_um  # 介质厚度（修正因子用）
             n = len(polys)
             if n < 2:
                 continue
@@ -572,7 +668,13 @@ class ParasiticExtractor:
                     l_overlap = _bbox_overlap_length(bbox_i, bbox_j)
                     if l_overlap < 1e-9:
                         continue
-                    c_coupling = eps * h_um * l_overlap / s_um * um_to_m
+                    # *v3.3-VER-12 修复*: 介质厚度修正，避免耦合长度高估
+                    # 当 s >= t_di 时，有效耦合长度按 t_di/s 衰减
+                    if s_um > t_di_um and t_di_um > 0:
+                        l_eff = l_overlap * (t_di_um / s_um)
+                    else:
+                        l_eff = l_overlap
+                    c_coupling = eps * h_um * l_eff / s_um * um_to_m
                     elements.append(ParasiticElement(
                         name=f"C_{layer_name}_{i}_{j}_coup",
                         element_type="CAPACITOR",

@@ -347,16 +347,28 @@ class PEXEngine:
         C_area = self.eps_r * self.eps_0 * width_um * length_um / self.t_diel_um
 
         # 边缘电容: Banerjee 公式 C_fringe = 2π·ε·L / arcosh(2d/H + 1)
-        # 来源: Banerjee ECE 225 UCSB Lecture 11
-        # 对于微带线结构，两侧各有一个边缘电容，故乘以 2
+        # 来源: Banerjee ECE 225 UCSB Lecture 6 (VLSI Interconnects-I)
+        #   http://courses.ece.ucsb.edu/ECE225/225_W23Banerjee/Lectures/Lecture_06.pdf
+        # 公式 c_wire = c_pp + c_fringe，其中
+        #   c_pp  = (ε/t_di) · (W - H/2) · L   （有效平行板宽度 W-H/2）
+        #   c_fringe = (2π·ε·L) / arcosh(2·t_di/H + 1)
+        # *Bug #v3.3-VER-3 修复*: 2π 系数源自圆柱导线模型（直径=H），
+        # 已包含两侧边缘场（左侧+右侧），不需要再乘以 2。
+        # 原实现 C_fringe = 2 × 2π·ε·L/arcosh(...) 高估 2 倍，导致 PEX 寄生电容偏高。
+        # 文献交叉验证:
+        # - Banerjee ECE 225 Lecture 6 (2023W), UCSB
+        # - Bakoglu, "Circuits, Interconnections, and Packaging for VLSI", 1990
+        # - Arora et al., IEEE TCAD 15(1), 1996, doi:10.1109/43.534256
+        # - Shomalnasab et al., "Analytic Modeling of Interconnect Capacitance", 2013
+        # - Yu & Wang, Tsinghua capacitance survey
         d_over_h = 2.0 * self.t_diel_um / self.t_metal_um + 1.0
         if d_over_h > 1.0:
             acosh_val = np.arccosh(d_over_h)
             if acosh_val > 1e-18:
-                C_fringe_per_side = (
+                # 2π 已含两侧边缘场（圆柱模型），直接用，不再 ×2
+                C_fringe = (
                     2.0 * np.pi * self.eps_r * self.eps_0 * length_um / acosh_val
                 )
-                C_fringe = 2.0 * C_fringe_per_side
             else:
                 C_fringe = 0.0
         else:
@@ -588,13 +600,19 @@ class StatisticalAnalyzer:
     ) -> dict[str, Any]:
         """Layout-Aware 蒙特卡洛（空间相关）。
 
-        方法: 基于 Pelgrom 模型和高斯随机场，使用指数协方差函数
+        方法: 基于 Lumerical INTERCONNECT 高斯随机场标准，使用高斯协方差函数
         生成空间相关的工艺波动 → 按器件位置采样参数。
 
-        协方差函数: C(r) = σ² · exp(-r/ξ)
-        其中 r 是器件间距, ξ 是相关长度
+        协方差函数: C(r) = σ² · exp(-2·(r/L)²)   (高斯型，平方衰减)
+        其中 r 是器件间距, L 是相关长度
+
+        *Bug #v3.3-VER-4 修复*: 原实现用指数型 exp(-r/ξ)（Pelgrom MOSFET
+        匹配模型），不符合光子学 layout-aware yield 工业标准。光子学器件
+        （波导宽度/高度变化）的空间相关应使用 Lumerical 高斯模型。
 
         来源:
+        - Lumerical INTERCONNECT Monte Carlo spatial correlations
+          https://optics.ansys.com/hc/en-us/articles/360051762393
         - Bogaerts et al. OFC 2018, "Layout-Aware Yield Prediction of Photonic Circuits"
         - Pelgrom et al., "Matching Properties of MOS Transistors", IEEE JSSC 1989
         - Lumerical INTERCONNECT Layout-aware statistical yield analysis
@@ -640,9 +658,25 @@ class StatisticalAnalyzer:
             for j in range(n_devices):
                 dist_matrix[i, j] = float(np.linalg.norm(positions[i] - positions[j]))
 
-        # 指数协方差矩阵 (Pelgrom 模型): C = σ² · exp(-r/ξ)
+        # 高斯协方差矩阵 (Lumerical INTERCONNECT 标准空间相关模型):
+        #   ρ(d) = exp(-2·(d/L)²)   (高斯型，平方衰减)
+        # *Bug #v3.3-VER-4 修复*: 原实现用指数型 exp(-d/ξ)（Pelgrom MOSFET
+        # 匹配模型），不符合光子学 layout-aware yield 工业标准。
+        # Lumerical INTERCONNECT (Ansys Optics) 官方文档明确：
+        #   coeff = exp(-2(d/L)²)
+        # 这是光子学器件（波导宽度/高度变化）的标准空间相关模型，
+        # 用于 WDM 收发器、环谐振器等 layout-aware 良率分析。
+        # 文献:
+        # - Lumerical INTERCONNECT Monte Carlo spatial correlations
+        #   https://optics.ansys.com/hc/en-us/articles/360051762393
+        # - Bogaerts et al., "Layout-Aware Yield Prediction of Photonic Circuits", OFC 2018
+        #   https://fib.intec.ugent.be/download/pub_4125.pdf
+        # - Pelgrom et al., IEEE JSSC 1989 (MOSFET 匹配，指数模型适用于 IC，不适用于光子学)
+        # - Lumerical Layout-aware yield WDM transceiver
+        #   https://optics.ansys.com/hc/en-us/articles/360054921214
         def _cov_matrix(sigma: float) -> NDArray[np.float64]:
-            cov = (sigma ** 2) * np.exp(-dist_matrix / correlation_length_um)
+            ratio_sq = (dist_matrix / correlation_length_um) ** 2
+            cov = (sigma ** 2) * np.exp(-2.0 * ratio_sq)
             # 添加小的正则化项确保正定
             cov += np.eye(n_devices) * 1e-10 * sigma ** 2
             return cov
@@ -714,7 +748,7 @@ class StatisticalAnalyzer:
             "max": float(np.max(performances)),
             "layout_aware": True,
             "correlation_length_um": correlation_length_um,
-            "spatial_correlation_model": "exponential (Pelgrom)",
+            "spatial_correlation_model": "gaussian (Lumerical INTERCONNECT, exp(-2(d/L)^2))",
         }
 
     # ----- Sensitivity Analysis -----

@@ -261,7 +261,18 @@ def _cif_shape_line(s: Shape) -> str:
 
 
 def _cif_instance_line(inst: Instance, name_to_sym: dict[str, int]) -> str:
-    """单实例 → CIF C 语句。"""
+    """单实例 → CIF C 语句。
+
+    CIF C 命令变换集为 T/R/MX/MY（Mead & Conway 1980 Appendix C,
+    Caltech TR 2686），**不支持 magnification**。mag != 1.0 时 raise
+    而非静默丢失，保证 read→write→read 对称（R05 Bug 修复 v3.3-IO-2，
+    规则 R03 禁止 fall-back）。
+    """
+    if inst.mag != 1.0:
+        raise ValueError(
+            f"CIF 标准不支持 magnification（实例 {inst.name} "
+            f"mag={inst.mag}）；请改用 OpenAccess 或 GDS 格式"
+        )
     sym = name_to_sym.get(inst.cell_name)
     if sym is None:
         raise ValueError(f"CIF 实例引用未知单元: {inst.cell_name}")

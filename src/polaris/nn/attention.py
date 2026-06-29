@@ -9,6 +9,15 @@
 （手动前向+反向，softmax/QK^T/V 反向公式），保留完整计算图，
 w_q/w_k/w_v/w_o 全部可接收非零梯度，残差连接梯度可流回输入。
 
+修复 Bug #v3.3-NN-3: 原实现 ScaledDotProductAttention.forward /
+_multi_head_attention_op 未强制统一 dtype，若用户传入 float32 ndarray，
+内部 ``q3d @ k3d.swapaxes(-2, -1)`` 会触发 NumPy 隐式 dtype 提升
+（float32 @ float64 → float64），导致前向/反向 dtype 不一致、
+梯度累积时 dtype 错配（``q.grad = q.grad + grad`` 可能 float32+float64）。
+现强制统一为 ``DEFAULT_DTYPE=np.float64``（与 nn 模块其他文件一致：
+conv.py / functional.py / __init__.py 均强制 float64），并在入口显式
+``np.asarray(x, dtype=DEFAULT_DTYPE)`` 转换，禁用隐式提升。
+
 文献溯源（R02 学术诚信，公式/算法均可溯源）:
 - Vaswani et al., 2017, "Attention Is All You Need", NeurIPS
   https://arxiv.org/abs/1706.03762
@@ -33,6 +42,16 @@ w_q/w_k/w_v/w_o 全部可接收非零梯度，残差连接梯度可流回输入�
   https://pytorch.org/docs/stable/generated/torch.nn.MultiheadAttention
 - ChipletFormer (NeurIPS 2024): Transformer + GNN 融合布局布线
   https://mlforsystems.org/assets/papers/neurips2024/paper22.pdf
+- NumPy dtype 提升规则（Bug #v3.3-NN-3 修复依据）
+  https://numpy.org/doc/stable/reference/arrays.promotion.html
+  （np.dot(float32, float64) 静默提升为 float64，导致 dtype 错配）
+- The Neural Base: float32 vs float64 trade-offs（2026 验证）
+  https://theneuralbase.com/numpy-for-ml/learn/advanced/float32-vs-float64-trade-offs/
+  （NumPy 2.x 不自动提升混合 dtype，须显式 astype；CPU 科学计算
+   float64 精度优先，避免迭代优化中累积误差）
+- The Neural Base: dtype float32/float64/int32（2026 验证）
+  https://theneuralbase.com/numpy-for-ml/learn/beginner/dtype-float32-float64-int32/
+  （ML 框架默认 float32 用于 GPU，CPU 科学计算用 float64 保证数值稳定性）
 """
 
 from __future__ import annotations
@@ -43,6 +62,12 @@ import numpy as np
 
 from polaris.nn import Linear, Module, Tensor
 
+# 模块默认 dtype（Bug #v3.3-NN-3 修复：统一为 float64，与 nn 模块其他文件一致）
+# 依据: NumPy dtype promotion 规则 + nn/__init__.py Tensor 类强制 float64
+# URL: https://numpy.org/doc/stable/reference/arrays.promotion.html
+# URL: https://theneuralbase.com/numpy-for-ml/learn/advanced/float32-vs-float64-trade-offs/
+DEFAULT_DTYPE = np.float64
+
 
 class ScaledDotProductAttention(Module):
     """缩放点积注意力（Vaswani et al., 2017）。
@@ -51,6 +76,9 @@ class ScaledDotProductAttention(Module):
 
     注意: 本类为 numpy 工具实现（非可微），用于测试/参考。
     可微版本见 ``_multi_head_attention_op``。
+
+    Bug #v3.3-NN-3 修复: 入口显式 ``np.asarray(x, dtype=DEFAULT_DTYPE)``
+    统一 dtype，禁用 NumPy 隐式提升，避免 float32/float64 混合导致精度问题。
 
     来源: Vaswani et al., 2017, https://arxiv.org/abs/1706.03762
     """
@@ -64,7 +92,16 @@ class ScaledDotProductAttention(Module):
         key: np.ndarray,
         value: np.ndarray,
     ) -> np.ndarray:
-        """前向：QK^T / sqrt(d_k) → softmax → V。"""
+        """前向：QK^T / sqrt(d_k) → softmax → V。
+
+        Bug #v3.3-NN-3 修复: 入口强制统一 dtype 为 ``DEFAULT_DTYPE``
+        （float64），避免 float32 输入触发 NumPy 隐式 dtype 提升。
+        """
+        # Bug #v3.3-NN-3: 强制统一 dtype，禁用 NumPy 隐式提升
+        # URL: https://numpy.org/doc/stable/reference/arrays.promotion.html
+        query = np.asarray(query, dtype=DEFAULT_DTYPE)
+        key = np.asarray(key, dtype=DEFAULT_DTYPE)
+        value = np.asarray(value, dtype=DEFAULT_DTYPE)
         d_k = query.shape[-1]
         scores = query @ key.swapaxes(-2, -1) / math.sqrt(d_k)
         # 数值稳定 softmax
@@ -99,6 +136,12 @@ def _multi_head_attention_op(
     - d_q = d_scores · K / sqrt(d_k)
     - d_k = d_scores^T · Q / sqrt(d_k)
 
+    Bug #v3.3-NN-3 修复: 入口校验 q/k/v.data dtype 是否为 ``DEFAULT_DTYPE``
+    （float64），反向梯度 ``g`` 显式 ``astype(DEFAULT_DTYPE)``，确保
+    前向/反向/梯度累积全程 dtype 一致，避免 float32/float64 混合
+    触发 NumPy 隐式提升导致的精度问题。
+    URL: https://numpy.org/doc/stable/reference/arrays.promotion.html
+
     Args:
         q: 查询 Tensor [seq, embed]（来自 w_q 投影，requires_grad=True）。
         k: 键 Tensor [seq, embed]。
@@ -110,6 +153,13 @@ def _multi_head_attention_op(
     Returns:
         注意力输出 Tensor [seq, embed]，保留计算图。
     """
+    # Bug #v3.3-NN-3: dtype 一致性校验（防御性，Tensor 类已强制 float64）
+    # URL: https://numpy.org/doc/stable/reference/arrays.promotion.html
+    for name, t in (("q", q), ("k", k), ("v", v)):
+        if t.data.dtype != DEFAULT_DTYPE:
+            raise TypeError(
+                f"{name}.data dtype 须为 {DEFAULT_DTYPE}，实际 {t.data.dtype}（Bug #v3.3-NN-3）"
+            )
     seq_len = q.data.shape[0]
     # 前向（用 .data 计算，但记录 parents 供反向）
     q3d = q.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)  # [h,s,d]
@@ -126,6 +176,9 @@ def _multi_head_attention_op(
     out = Tensor(out_data, rg, (q, k, v))
 
     def _back(g: np.ndarray) -> None:
+        # Bug #v3.3-NN-3: 强制统一反向梯度 dtype，避免 float32 输入累积误差
+        # URL: https://theneuralbase.com/numpy-for-ml/learn/advanced/float32-vs-float64-trade-offs/
+        g = np.asarray(g, dtype=DEFAULT_DTYPE)
         # g: [seq, embed] → [h, s, d]
         g3d = g.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
         # d_out = attn @ v → d_attn, d_v
@@ -253,4 +306,9 @@ class TransformerBlock(Module):
         return params
 
 
-__all__ = ["ScaledDotProductAttention", "MultiHeadAttention", "TransformerBlock"]
+__all__ = [
+    "DEFAULT_DTYPE",
+    "ScaledDotProductAttention",
+    "MultiHeadAttention",
+    "TransformerBlock",
+]

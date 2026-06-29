@@ -268,12 +268,19 @@ def _oa_text_shape(toks: list[str]) -> Shape:
 
 
 def _oa_inst(toks: list[str]) -> Instance:
-    """INST name cell ORIGIN x y ANGLE deg → Instance。"""
-    if len(toks) < 8:
+    """INST name cell ORIGIN x y [ANGLE deg] [MIRROR] [MAG s] → Instance。
+
+    对称解析全部 transform 字段：ORIGIN / ANGLE / MIRROR / MAG。
+    与 ``_oa_inst_line`` 一一对应，保证 read→write→read 往返一致
+    （R05 Bug 修复 v3.3-IO-2）。
+    """
+    if len(toks) < 6:
         raise ValueError(f"OpenAccess INST 参数不足: {toks}")
     name, cell = toks[1], toks[2]
     ox = oy = 0.0
     angle = 0.0
+    mirror = False
+    mag = 1.0
     i = 3
     while i < len(toks):
         if toks[i] == "ORIGIN" and i + 2 < len(toks):
@@ -282,9 +289,18 @@ def _oa_inst(toks: list[str]) -> Instance:
         elif toks[i] == "ANGLE" and i + 1 < len(toks):
             angle = float(toks[i + 1])
             i += 2
+        elif toks[i] == "MIRROR":
+            mirror = True
+            i += 1
+        elif toks[i] == "MAG" and i + 1 < len(toks):
+            mag = float(toks[i + 1])
+            i += 2
         else:
             i += 1
-    return Instance(name=name, cell_name=cell, origin=Point(ox, oy), angle=angle)
+    return Instance(
+        name=name, cell_name=cell, origin=Point(ox, oy),
+        angle=angle, mirror=mirror, mag=mag,
+    )
 
 
 def _write_oa_text(layout: FormatLayout, layer_map: dict[str, tuple[int, int]]) -> str:
@@ -328,9 +344,20 @@ def _oa_shape_line(s: Shape, layer_map: dict[str, tuple[int, int]]) -> str:
 
 
 def _oa_inst_line(inst: Instance) -> str:
-    """单实例 → OpenAccess INST 语句。"""
+    """单实例 → OpenAccess INST 语句。
+
+    对称写入全部 transform 字段：ORIGIN / ANGLE / MIRROR / MAG。
+    OpenAccess oaInst 的 oaTransform 包含 origin + angle + mirror +
+    magnification（Si2 OpenAccess 22.60 API Reference §oaTransform），
+    故 4 个字段全部序列化以保证 read→write→read 往返一致
+    （R05 Bug 修复 v3.3-IO-2）。
+    """
     parts = [f"  INST {inst.name} {inst.cell_name}",
              f"ORIGIN {inst.origin.x} {inst.origin.y}"]
     if inst.angle != 0.0:
         parts.append(f"ANGLE {inst.angle}")
+    if inst.mirror:
+        parts.append("MIRROR")
+    if inst.mag != 1.0:
+        parts.append(f"MAG {inst.mag}")
     return " ".join(parts) + " ;"

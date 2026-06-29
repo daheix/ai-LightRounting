@@ -33,6 +33,7 @@ Patterns", Addison-Wesley 1994；仿射变换见上述 Foley & Van Dam。
 
 from __future__ import annotations
 
+import copy
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
@@ -263,7 +264,7 @@ class LayoutEditor:
             rotation=float(rotation),
             size=size,
             category=category,
-            params=dict(params) if params else {},
+            params=copy.deepcopy(params) if params else {},
         )
         self._devices[dev.device_id] = dev
         dev_id = dev.device_id
@@ -288,20 +289,17 @@ class LayoutEditor:
         self._push_undo(lambda d=dev, r=old_rot: setattr(d, "rotation", r))
 
     def delete_device(self, device_id: int) -> None:
-        """删除器件。"""
+        """删除器件。
+
+        snapshot 使用 deepcopy 保存器件完整状态（含 params 嵌套结构），
+        防止撤销时对象状态被外部修改污染（R05 Bug 修复 v3.3-GUI-1）。
+        deepcopy 参考: https://docs.python.org/3/library/copy.html
+        """
         dev = self._require_device(device_id)
-        snapshot = DeviceInstance(
-            device_id=dev.device_id,
-            device_type=dev.device_type,
-            position=dev.position,
-            rotation=dev.rotation,
-            size=dev.size,
-            category=dev.category,
-            params=dict(dev.params),
-        )
+        snapshot = _copy_device(dev)
         del self._devices[device_id]
         self._push_undo(
-            lambda s=snapshot: self._devices.__setitem__(s.device_id, snapshot)
+            lambda s=snapshot: self._devices.__setitem__(s.device_id, _copy_device(s))
         )
 
     def get_device(self, device_id: int) -> DeviceInstance:
@@ -565,7 +563,21 @@ class LayoutEditor:
 
 
 def _copy_device(dev: DeviceInstance) -> DeviceInstance:
-    """深拷贝器件实例（用于快照）。"""
+    """深拷贝器件实例（用于快照）。
+
+    使用 copy.deepcopy 递归复制 params 字段，避免 dict() 浅拷贝导致
+    嵌套可变对象（list/dict）在撤销/重做时被外部修改污染
+    （R05 Bug 修复 v3.3-GUI-1）。
+
+    参考:
+    - Python copy 模块 deepcopy: https://docs.python.org/3/library/copy.html#copy.deepcopy
+    - 浅拷贝陷阱: https://docs.python.org/3/library/copy.html#shallow-vs-deep-copy
+    - 命令模式 Memento + deepcopy: https://refactoring.guru/design-patterns/memento
+    - Gamma et al., "Design Patterns", Addison-Wesley 1994
+      https://en.wikipedia.org/wiki/Command_pattern
+    - Python 数据模型 dataclasses 不可变性讨论
+      https://docs.python.org/3/reference/datamodel.html#object.__copy__
+    """
     return DeviceInstance(
         device_id=dev.device_id,
         device_type=dev.device_type,
@@ -573,7 +585,7 @@ def _copy_device(dev: DeviceInstance) -> DeviceInstance:
         rotation=dev.rotation,
         size=dev.size,
         category=dev.category,
-        params=dict(dev.params),
+        params=copy.deepcopy(dev.params),
     )
 
 

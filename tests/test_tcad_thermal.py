@@ -222,22 +222,23 @@ class TestThermalCrosstalk:
         )
 
     def test_crosstalk_zero_beyond_ref(self) -> None:
-        """距离 ≥ r_ref（衬底厚度）时串扰为 0。"""
+        """距离 ≥ r_ref（= 2h 镜像源距离）时串扰为 0。"""
         model = self._make_model()
-        # 衬底总厚度 = 500μm (Si_substrate)
-        # 远大于 r_ref 的位置应无串扰
+        # D-2 修复: r_ref = 2h（镜像源法），h = 0.22 + 500 = 500.22μm
+        # r_ref = 2 × 500.22 = 1000.44μm，故 device 须 > 1000.44μm 才无串扰
         matrix = model.thermal_crosstalk_matrix(
             heater_positions_um=[0.0],
-            device_positions_um=[1000.0],  # 远大于衬底厚度
+            device_positions_um=[2000.0],  # 远大于 r_ref = 2h = 1000.44μm
             heater_power_mw=10.0,
             heater_length_um=50.0,
         )
-        assert matrix[0, 0] == 0.0, "超出 r_ref 的位置串扰应为 0"
+        assert matrix[0, 0] == 0.0, "超出 r_ref = 2h 的位置串扰应为 0"
 
     def test_crosstalk_logarithmic_scaling(self) -> None:
         """验证 Carslaw-Jaeger 公式：ΔT ∝ ln(r_ref/r) 对数关系。"""
         model = self._make_model()
-        # r_ref = 衬底厚度 = 500μm（Si_dev + Si_substrate 都是 k≥100 的层）
+        # D-2 修复: r_ref = 2h（镜像源法），h = 0.22 + 500 = 500.22μm
+        # r_ref = 2 × 500.22 = 1000.44μm（热源到镜像源距离）
         # 取两个不同距离 r1, r2，温差比 = ln(r_ref/r1) / ln(r_ref/r2)
         r1, r2 = 5.0, 20.0
         matrix = model.thermal_crosstalk_matrix(
@@ -247,7 +248,7 @@ class TestThermalCrosstalk:
             heater_length_um=50.0,
         )
         dT1, dT2 = matrix[0, 0], matrix[0, 1]
-        r_ref = 500.22  # 0.22 + 500
+        r_ref = 2.0 * 500.22  # 2h = 1000.44μm（镜像源法）
         expected_ratio = np.log(r_ref / r1) / np.log(r_ref / r2)
         actual_ratio = dT1 / dT2
         assert np.isclose(actual_ratio, expected_ratio, rtol=1e-6), (

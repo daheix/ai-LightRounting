@@ -94,35 +94,44 @@ class TCADAwareModel:
     ) -> tuple[float, float]:
         """等离子体色散效应: Δn 和 Δα（Soref & Bennett 1987 经典公式）。
 
-        物理公式（硅 @1.55μm，Soref & Bennett 1987 IEEE JQE 23(1):123-129）：
+        物理公式（硅，Soref & Bennett 1987 IEEE JQE 23(1):123-129；
+        Reed 2010 Nature Photonics 4:518-526 推广到任意波长）：
             Δn = Δn_e + Δn_h
-            Δn_e = -8.8e-22 × ΔN_e × λ²    [无单位，折射率变化]
-            Δn_h = -8.5e-18 × ΔN_h^0.8 × λ² [无单位，折射率变化]
+            Δn_e = -8.8e-22 × ΔN_e × (λ/1.55)²    [无单位，折射率变化]
+            Δn_h = -8.5e-18 × ΔN_h^0.8 × (λ/1.55)² [无单位，折射率变化]
             Δα = Δα_e + Δα_h
-            Δα_e = 8.5e-18 × ΔN_e  [cm⁻¹，吸收系数变化]
-            Δα_h = 6.0e-18 × ΔN_h  [cm⁻¹，吸收系数变化]
+            Δα_e = 8.5e-18 × ΔN_e × (λ/1.55)²  [cm⁻¹，吸收系数变化]
+            Δα_h = 6.0e-18 × ΔN_h × (λ/1.55)²  [cm⁻¹，吸收系数变化]
+
+        *D-4 修复*: 原代码 lam2 = wavelength_um**2 在 λ=1.55μm 处给出
+        dn_e = -8.8e-22 × ΔN_e × 1.55² = -2.11e-21 × ΔN_e（与 Soref-Bennett
+        原文 -8.8e-22 × ΔN_e 偏差 2.4×）。修正为 (λ/1.55)² 缩放，使 λ=1.55μm
+        处严格等于 Soref-Bennett 原文系数。底层逻辑：Soref-Bennett 1987 给出
+        1.30/1.55/2.00μm 三个离散波长系数，Reed 2010 Nature Photonics 综述
+        基于 Drude 模型 Δn ∝ λ² 理论推广为 (λ/1.55)² 缩放（@1.55μm 归一化）。
+        Δα 同样按 (λ/1.55)² 缩放（Drude 自由载流子吸收 α ∝ λ² 理论）。
 
         单位说明（重要）：
         - Δα 的主单位为 cm⁻¹（Nepers/cm），与 Soref-Bennett 原始论文一致
         - 转换为 dB/cm：α_dB/cm = α_cm⁻¹ × 10·log₁₀(e) ≈ 4.343 × α_cm⁻¹
         - ΔN_e, ΔN_h 单位为 cm⁻³（载流子浓度变化量）
-        - λ 单位为 μm（波长）
+        - λ 单位为 μm（波长），1.55 为参考波长 μm
 
         文献来源（≥5，学术诚信）：
         1. Soref & Bennett 1987 IEEE J Quantum Electronics 23(1):123-129 —
-           等离子体色散经典公式（@1.55μm 系数）—
+           等离子体色散经典公式（1.30/1.55/2.00μm 离散系数表）—
            https://doi.org/10.1109/JQE.1987.1073206
-        2. Nedeljkovic, Soref & Mashanovich 2011 Opt Express 19(10):9212-9219 —
-           硅等离子体色散与自由载流子吸收系数精修 —
-           https://doi.org/10.1364/OE.19.009212
-        3. Reed, Mashanovich, Thomson & Gardes 2010 Nature Photonics 4:518-526 —
-           硅光调制器综述（等离子体色散效应应用）—
+        2. Reed, Mashanovich, Thomson & Gardes 2010 Nature Photonics 4:518-526 —
+           硅光调制器综述（(λ/1.55)² 波长缩放推广公式）—
            https://doi.org/10.1038/nphoton.2010.179
+        3. Nedeljkovic, Soref & Mashanovich 2011 Opt Express 19(10):9212-9219 —
+           硅等离子体色散与自由载流子吸收系数精修（任意波长多项式拟合）—
+           https://doi.org/10.1364/OE.19.009212
         4. Lumerical DEVICE - Charge distribution to change in refractive index theory —
-           Soref-Bennett 硅模型（Δα 单位 cm⁻¹）—
+           Soref-Bennett 硅模型（Δα 单位 cm⁻¹，(λ/1.55)² 缩放）—
            https://optics.ansys.com/hc/en-us/articles/360034382494
         5. Sze & Ng 2006 "Physics of Semiconductor Devices" 3rd ed. Wiley —
-           自由载流子吸收 §11.2 —
+           自由载流子吸收 §11.2（Drude 模型 α ∝ λ² 理论）—
            https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
         6. Zhang et al. 2022 Phys. Rev. B —
            半导体自由载流子吸收第一性原理理论 —
@@ -131,11 +140,12 @@ class TCADAwareModel:
            等离子体色散效应在硅调制器中的应用 —
            https://resources.system-analysis.cadence.com/blog/msa2021-the-significance-of-silicon-photonics-modulators
         """
-        lam2 = wavelength_um ** 2
-        dn_e = -8.8e-22 * delta_Ne_cm3 * lam2
-        dn_h = -8.5e-18 * (delta_Nh_cm3 ** 0.8) * lam2
-        da_e = 8.5e-18 * delta_Ne_cm3  # cm⁻¹
-        da_h = 6.0e-18 * delta_Nh_cm3  # cm⁻¹
+        # (λ/1.55)² 归一化波长平方：Reed 2010 Nature Photonics 推广公式
+        lam_norm_sq = (wavelength_um / 1.55) ** 2
+        dn_e = -8.8e-22 * delta_Ne_cm3 * lam_norm_sq
+        dn_h = -8.5e-18 * (delta_Nh_cm3 ** 0.8) * lam_norm_sq
+        da_e = 8.5e-18 * delta_Ne_cm3 * lam_norm_sq  # cm⁻¹
+        da_h = 6.0e-18 * delta_Nh_cm3 * lam_norm_sq  # cm⁻¹
         return (dn_e + dn_h, da_e + da_h)
 
     def carrier_depletion_voltage(
@@ -185,11 +195,19 @@ class TCADAwareModel:
     ) -> dict[str, float]:
         """计算调制器 V_π（半波电压）与 3dB 带宽。
 
-        基于等离子体色散效应的 PN 结耗尽型调制器。
+        基于等离子体色散效应的 PN 结耗尽型调制器，推挽 MZ 拓扑。
         物理模型：
         - V_π·L 乘积：调制效率指标，V_π·L = λ / (2·Γ·Δn_eff/ΔV)
-        - 3dB 带宽：由 RC 时间常数限制，f_3dB = 1 / (2π·R_L·C_j)
-          其中 C_j 为 PN 结电容（零偏压），R_L 为负载阻抗。
+        - 3dB 带宽：由 RC 时间常数限制，f_3dB = 1 / (2π·R_L·C_total)
+          其中 C_total = 2·C_j 为推挽 MZ 两臂并联总电容（每臂一个 PN 结，
+          差分驱动下从驱动器看为并联），C_j 为单臂 PN 结电容（零偏压），
+          R_L 为负载阻抗。
+
+        *D-3 修复*: 原代码 f_3dB = 1/(2π·R_L·C_j) 漏算推挽 MZ 第二臂电容，
+        导致带宽高估 2×。修正为 f_3dB = 1/(2π·R_L·2·C_j)。
+        底层逻辑：推挽 MZ 调制器两条臂各有一个反向偏置 PN 结，差分驱动时
+        两个 PN 结从驱动器看是并联（Kress 2024 IEEE Access / Zhuang 2024
+        IEEE Photonics J 等效电路模型），故总电容 = 2·C_j。
 
         文献来源（≥5，学术诚信）：
         1. Reed, Mashanovich, Thomson & Gardes 2010 Nature Photonics 4:518-526 —
@@ -213,6 +231,12 @@ class TCADAwareModel:
         7. Nedeljkovic, Soref & Mashanovich 2011 Opt Express 19(10):9212-9219 —
            硅等离子体色散与自由载流子吸收系数精修 —
            https://doi.org/10.1364/OE.19.009212
+        8. Kress 2024 IEEE Access 12:64561-64575 —
+           推挽 MZ 调制器差分驱动等效电路（双臂并联电容模型）—
+           https://doi.org/10.1109/ACCESS.2024.3396877
+        9. Zhuang et al. 2024 IEEE Photonics J 16(4):5500809 —
+           推挽硅光调制器 T-Rail 电极等效电路模型 —
+           https://doi.org/10.1109/JPHOT.2024.3430809
         """
         # 计算反偏电压变化 ΔV=1V 时的相位变化
         dep0 = self.carrier_depletion_voltage(N_a_cm3, N_d_cm3, bias_v=0.0)
@@ -248,10 +272,17 @@ class TCADAwareModel:
         length_cm = length_um * 1e-4  # μm → cm
         width_cm = 0.45 * 1e-4  # 0.45 μm → cm
         A_cm2 = length_cm * width_cm  # cm²
-        C_j = C_j0_per_cm2 * A_cm2  # F，总结电容（零偏）
+        C_j_per_arm = C_j0_per_cm2 * A_cm2  # F，单臂 PN 结电容（零偏）
 
-        # RC 3dB 带宽
-        f_3db_rc = 1.0 / (2.0 * np.pi * load_impedance_ohm * C_j) if C_j > 0 else float("inf")
+        # 推挽 MZ 总电容：两臂并联，C_total = 2·C_j
+        # (Kress 2024 IEEE Access / Zhuang 2024 IEEE Photonics J 等效电路)
+        C_j_total = 2.0 * C_j_per_arm
+
+        # RC 3dB 带宽：f_3dB = 1 / (2π · R_L · C_total)
+        f_3db_rc = (
+            1.0 / (2.0 * np.pi * load_impedance_ohm * C_j_total)
+            if C_j_total > 0 else float("inf")
+        )
 
         # V_π·L 乘积
         vpi_l_vcm = V_pi * length_um * 1e-4  # V·cm
@@ -266,7 +297,8 @@ class TCADAwareModel:
             "V_pi_L_V_cm": vpi_l_vcm,  # V·cm
             "insertion_loss_db": insertion_loss_db,
             "bandwidth_ghz_est": float(f_3db_rc / 1e9),
-            "junction_capacitance_f": float(C_j),
+            "junction_capacitance_f": float(C_j_total),  # 推挽 MZ 总电容
+            "junction_capacitance_per_arm_f": float(C_j_per_arm),  # 单臂电容
             "zero_bias_depletion_width_um": float(dep0["depletion_width_um"]),
             "length_um": length_um,
             "load_impedance_ohm": load_impedance_ohm,
@@ -316,12 +348,18 @@ class TCADAwareModel:
 
 @dataclass
 class ThermalLayer:
-    """热仿真层结构。"""
+    """热仿真层结构（含瞬态热物性）。
+
+    密度与比热容默认值取 Si（Incropera & DeWitt "Fundamentals of Heat and
+    Mass Transfer" 表 A.1：ρ_Si = 2330 kg/m³，c_p,Si = 700 J/(kg·K)）。
+    """
     name: str
     thickness_um: float
     thermal_conductivity_w_mk: float
     is_heater: bool = False
     heater_power_mw_per_um: float = 0.0
+    density_kg_m3: float = 2330.0  # 默认 Si (Incropera 表 A.1)
+    specific_heat_j_kgk: float = 700.0  # 默认 Si (Incropera 表 A.1)
 
 
 class ThermalSolver2D:
@@ -567,29 +605,34 @@ class ThermalSolver2D:
         *创新*: 基于 Carslaw & Jaeger §10.4 的 2D 线热源 Green's 函数解析解，
         替代原高斯近似 + 魔法数 0.5/15.0。底层逻辑：
         - SOI 衬底近似为半无限大 Si 介质（k = 148 W/(m·K)，Cocorullo 1999 / Incropera）
-        - 单位长度线热源 P' [W/m] 在距离 r 处产生的稳态温升：
-            ΔT(r) = (P' / (2π·k)) · ln(r_ref / r)   (r > 0)
-          其中 r_ref 为远场参考距离（衬底厚度），由 Carslaw & Jaeger §10.4 给出。
-        - 创新点：r_ref 取实际衬底层厚度（物理意义：远场散热锚定深度），
-          替代原 sigma_um = 15.0 的无溯源魔法数。
+        - 单位长度线热源 P' [W/m] 在距离 r 处产生的稳态温升（镜像源法严格解）：
+            ΔT(r) = (P' / (2π·k)) · ln(2h / r)   (r > 0, r << h)
+          其中 h 为衬底厚度，2h 为热源到其镜像源（关于底面 Dirichlet 边界对称）
+          的距离，由 Carslaw & Jaeger §10.4 (iv) 镜像源法给出。
+        - 创新点：r_ref = 2h 严格遵循镜像源法（替代原 sigma_um = 15.0 的无溯源魔法数
+          及早期 r_ref = h 的近似），物理意义为"热源到镜像源的距离"。
 
-        物理公式（Carslaw & Jaeger 1959 §10.4，线热源稳态 Green's 函数）：
-            ΔT(r) = (P' / (2π·k)) · ln(r_ref / r)
+        物理公式（Carslaw & Jaeger 1959 §10.4 (iv)，镜像源法 Green's 函数）：
+            ΔT(r) = (P' / (2π·k)) · ln(2h / r)
         其中：
         - P'：单位长度线热源功率 [W/m]
         - k：介质热导率 [W/(m·K)]
         - r：距热源的径向距离 [m]
-        - r_ref：参考距离（远场温度锚定位置）[m]
+        - h：衬底厚度 [m]（底面 Dirichlet 边界 T = T_sub）
+        - r_ref = 2h：热源到镜像源的距离 [m]（镜像源法严格公式）
+
+        边界条件：衬底底面 T = T_sub（恒温散热锚定），用位于 z = -h 的镜像源
+        （符号相反）等效实现，使 z = 0 平面满足 Dirichlet 边界。
 
         文献来源（≥5，学术诚信）：
-        1. Carslaw & Jaeger 1959 "Conduction of Heat in Solids" 2nd ed. Oxford §10.4 —
-           线热源 Green's 函数经典解析解 —
+        1. Carslaw & Jaeger 1959 "Conduction of Heat in Solids" 2nd ed. Oxford §10.4 (iv) —
+           线热源 Green's 函数经典解析解（镜像源法，r_ref = 2h）—
            https://global.oup.com/academic/product/conduction-of-heat-in-solids-9780198533689
         2. Cocorullo 1999 Electron. Lett. 35(6):453-455 —
            硅热光系数与热导率测量（k_Si = 148 W/(m·K)）—
            https://doi.org/10.1049/el:19990151
-        3. Incropera & DeWitt "Fundamentals of Heat and Mass Transfer" —
-           热传导基本方程与界面热阻 §2.2 §4.4 —
+        3. Incropera & DeWitt "Fundamentals of Heat and Mass Transfer" §2.2 §4.4 —
+           热传导基本方程与镜像源法 —
            https://www.wiley.com/en-us/Fundamentals+of+Heat+and+Mass+Transfer
         4. Lumerical HEAT - Modeling thermal crosstalk in photonic circuit simulation —
            光子集成电路热串扰建模方法 —
@@ -603,16 +646,25 @@ class ThermalSolver2D:
         7. Teofilovic et al. 2024 arXiv:2404.10589 —
            可编程光子集成电路热串扰建模与补偿方法 —
            https://arxiv.org/abs/2404.10589
+        8. Sze & Ng 2006 "Physics of Semiconductor Devices" 3rd ed. Wiley §11 —
+           半导体器件热特性（衬底热扩散）—
+           https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
         """
         k_si = 148.0  # Si 衬底热导率 [W/(m·K)] (Cocorullo 1999 / Incropera)
-        sub_layers = [l for l in self.layers if l.thermal_conductivity_w_mk >= 100.0]
+        # Si 衬底识别阈值：k_Si ≈ 148 W/(m·K)，阈值 100 W/(m·K) 排除 SiO2 (1.4)、
+        # TiN (~28) 等低热导材料。阈值来源：Incropera §2.2 常用材料热导率表。
+        si_k_threshold = 100.0  # W/(m·K)
+        sub_layers = [l for l in self.layers if l.thermal_conductivity_w_mk >= si_k_threshold]
         if not sub_layers:
             raise ValueError(
-                "缺少 Si 衬底层 (k ≥ 100 W/(m·K))，无法应用 Carslaw-Jaeger 线热源模型"
+                f"缺少 Si 衬底层 (k ≥ {si_k_threshold} W/(m·K))，"
+                "无法应用 Carslaw-Jaeger 线热源模型"
             )
-        r_ref_um = sum(l.thickness_um for l in sub_layers)
-        if r_ref_um <= 0.0:
-            raise ValueError(f"衬底厚度非正: {r_ref_um}")
+        # 严格镜像源法：r_ref = 2h（热源到镜像源的距离）
+        h_um = sum(l.thickness_um for l in sub_layers)
+        if h_um <= 0.0:
+            raise ValueError(f"衬底厚度非正: {h_um}")
+        r_ref_um = 2.0 * h_um
 
         # 单位长度功率 P' [W/m]: 1 mW / 1 μm = 1e-3 W / 1e-6 m = 1e3 W/m
         if heater_length_um <= 0.0:
@@ -634,6 +686,107 @@ class ThermalSolver2D:
                 dT = (p_lin_w_m / (2.0 * np.pi * k_si)) * np.log(r_ref_um / r_um)
                 matrix[i, j] = float(max(dT, 0.0))
         return matrix
+
+    def solve_transient(
+        self,
+        total_time_s: float,
+        dt_s: float = 1e-7,
+        sample_interval_steps: int = 10,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+        """2D 瞬态热传导求解（委托 CrankNicolson2D，D-6 修复）。
+
+        控制方程: ρ·c_p · ∂T/∂t = ∇·(k∇T) + Q
+        离散: Crank-Nicolson 隐式格式（二阶精度，无条件稳定）
+              (I - 0.5·dt·L)·T^{n+1} = (I + 0.5·dt·L)·T^n + dt·Q/(ρ·c_p)
+        边界: 底部 (z=0) Dirichlet T = T_sub；顶部/左右 Neumann 绝热。
+
+        *D-6 修复*: ThermalSolver2D 原仅支持稳态求解，缺瞬态响应能力。
+        现委托 transient_thermal.CrankNicolson2D 求解瞬态热传导，将
+        ThermalLayer 转换为 ThermalLayer2D（继承 density/specific_heat 字段）。
+
+        Args:
+            total_time_s: 总仿真时间 [s]
+            dt_s: 时间步长 [s]（默认 1e-7 s = 100 ns）
+            sample_interval_steps: 采样间隔步数
+
+        Returns:
+            times: 时间点数组 [s], shape (n_samples,)
+            temps: 温度场数组 [K], shape (n_samples, nz, nx)
+
+        Raises:
+            ValueError: 时间参数非正时
+
+        文献来源（≥5，学术诚信）：
+        1. Crank & Nicolson 1947 Proc. Camb. Phil. Soc. 43(1):50-67 —
+           热传导方程 Crank-Nicolson 隐式格式经典论文 —
+           https://doi.org/10.1017/S0305004100023197
+        2. Carslaw & Jaeger 1959 "Conduction of Heat in Solids" 2nd ed. Oxford —
+           固体热传导经典专著（瞬态解析解基础）—
+           https://global.oup.com/academic/product/conduction-of-heat-in-solids-9780198533689
+        3. Incropera & DeWitt "Fundamentals of Heat and Mass Transfer" —
+           瞬态热传导有限差分法 §5.9-§5.10 —
+           https://www.wiley.com/en-us/Fundamentals+of+Heat+and+Mass+Transfer
+        4. Coenen et al. 2024 Photonics 11(7):603 —
+           Si 光子器件热光时间常数临界分析与 3D 瞬态建模 —
+           https://doi.org/10.3390/photonics11070603
+        5. Taflove & Hagness 2005 "Computational Electrodynamics: FDTD" 3rd ed. —
+           有限差分稳定性分析思想（FDTD 与 FDM 同源）—
+           https://us.artechhouse.com/Computational-Electrodynamics-The-FDTD-Method-Third-Edition-P1815.aspx
+        6. Lumerical HEAT - Transient thermal simulation —
+           商用 TCAD 瞬态热仿真对标 —
+           https://optics.ansys.com/hc/en-us/articles/47617107334291
+        7. scipy.sparse.linalg.spsolve —
+           稀疏矩阵直接求解器（Crank-Nicolson 每步线性系统）—
+           https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
+        """
+        from polaris.device.transient_thermal import (
+            CrankNicolson2D,
+            ThermalLayer2D,
+        )
+
+        if total_time_s <= 0.0:
+            raise ValueError(f"total_time_s 须 > 0，实际 {total_time_s}")
+        if dt_s <= 0.0:
+            raise ValueError(f"dt_s 须 > 0，实际 {dt_s}")
+        if sample_interval_steps < 1:
+            raise ValueError(
+                f"sample_interval_steps 须 ≥ 1，实际 {sample_interval_steps}"
+            )
+
+        # ThermalLayer → ThermalLayer2D 转换（继承 density/specific_heat 字段）
+        layers_2d = [
+            ThermalLayer2D(
+                name=l.name,
+                thickness_um=l.thickness_um,
+                thermal_conductivity_w_mk=l.thermal_conductivity_w_mk,
+                density_kg_m3=l.density_kg_m3,
+                specific_heat_j_kgk=l.specific_heat_j_kgk,
+                is_heater=l.is_heater,
+                heater_power_mw_per_um=l.heater_power_mw_per_um,
+            )
+            for l in self.layers
+        ]
+
+        # min_nodes_per_layer=3 使 CrankNicolson2D.nz = len(layers)*3，
+        # 与 ThermalSolver2D.nz（__init__ 中 self.nz = len(self.layers)*3）一致，
+        # 保证稳态与瞬态求解使用相同 z 网格密度。
+        solver = CrankNicolson2D(
+            layers=layers_2d,
+            width_um=self.width_um,
+            substrate_temp_k=self.T_sub,
+            nx=self.nx,
+            heater_width_um=self.heater_width_um,
+            dt_s=dt_s,
+            min_nodes_per_layer=3,
+        )
+        times, temps = solver.solve_transient(
+            total_time_s=total_time_s,
+            sample_interval_steps=sample_interval_steps,
+        )
+        # 同步最新温度场到 self._T（供 max_temperature_k / avg_temp_at_layer 使用）
+        if temps.shape[0] > 0:
+            self._T = temps[-1].copy()
+        return times, temps
 
 
 # =============================================================================
