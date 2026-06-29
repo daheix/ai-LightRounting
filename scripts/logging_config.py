@@ -5,9 +5,9 @@
     创建按字节大小自动轮转的日志器（达到 max_bytes 时滚动并保留
     backup_count 个备份），同时附加控制台 StreamHandler 便于调试。
 
-    默认配置:
-    - max_bytes = 10 MB (10 * 1024 * 1024 = 10485760)
-    - backup_count = 1 (保留 1 个备份，总磁盘上限 ~20 MB)
+    默认配置（用户规则 2026-06-29 "运行日志循环保留 100M"）:
+    - max_bytes = 50 MB (50 * 1024 * 1024 = 52428800)
+    - backup_count = 1 (保留 1 个备份，总磁盘上限 = 50 + 50 = 100 MB)
     - 日志目录 /tmp/polaris_logs/（自动创建）
     - 默认级别 logging.INFO
 
@@ -33,8 +33,8 @@
 参数说明:
     name: 日志器名称（同时作为日志文件名 {name}.log）。
     log_dir: 日志目录，默认 /tmp/polaris_logs。
-    max_bytes: 单个日志文件最大字节数，达到后触发轮转，默认 10485760 (10 MB)。
-    backup_count: 保留的备份文件数，默认 1（总上限 ~20 MB）。
+    max_bytes: 单个日志文件最大字节数，达到后触发轮转，默认 52428800 (50 MB)。
+    backup_count: 保留的备份文件数，默认 1（总上限 = 50 + 50 = 100 MB）。
     level: 日志级别，默认 logging.INFO，可通过该参数覆盖。
 
 *创新* 点:
@@ -55,9 +55,10 @@ from logging.handlers import RotatingFileHandler
 
 __all__ = ["get_logger"]
 
-# 默认参数常量（spec 规定；max_bytes = 10 * 1024 * 1024 = 10485760）
+# 默认参数常量（用户规则 2026-06-29 "运行日志循环保留 100M"）
+# 总上限 = max_bytes × (backup_count + 1) = 50 MB × 2 = 100 MB
 DEFAULT_LOG_DIR = "/tmp/polaris_logs"
-DEFAULT_MAX_BYTES = 10 * 1024 * 1024  # 10 MB = 10485760
+DEFAULT_MAX_BYTES = 50 * 1024 * 1024  # 50 MB = 52428800（×2 备份 = 100 MB）
 DEFAULT_BACKUP_COUNT = 1
 DEFAULT_LEVEL = logging.INFO
 
