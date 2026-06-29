@@ -494,3 +494,107 @@ def test_route_curvy_connection_invalid_curve_type_defaults_euler():
     )
     assert wp.points[0] == (10, 10)
     assert wp.points[-1] == (150, 100)
+
+
+# =============================================================================
+# R3-P2-3 回归测试（v4.1）：hybrid_router/curvy_router fall-back 消除
+# 旧 Bug:
+#   1. hybrid_router._get_transition_loss/length 用 .get(key, 0.1/15.0) 静默 fall-back
+#   2. hybrid_router._route_single_type 失败返回 total_loss_db=999.0 哨兵值
+#   3. curvy_router.route_curvy 失败返回 loss_db=999.0 哨兵值
+# 修复: 全部改为 raise RuntimeError/KeyError（R03 禁止 fall-back）
+# =============================================================================
+
+
+class TestR3P23HybridRouterFallbackRemoved:
+    """R3-P2-3: hybrid_router 静默 fall-back 与 999.0 哨兵值已消除。"""
+
+    def test_get_transition_loss_raises_on_missing_pair(self):
+        """R3-P2-3: 缺失过渡对应 raise KeyError，不再返回魔数 0.1。"""
+        from polaris.router.hybrid_router import (
+            WaveguideType,
+            _WG_TYPE_PROPS,
+            _get_transition_loss,
+        )
+        # 所有 6 个过渡对（3×2）都应在 _WG_TYPE_PROPS 中定义
+        for from_t in WaveguideType:
+            for to_t in WaveguideType:
+                if from_t == to_t:
+                    continue
+                # 不应 raise（补全后所有对都已定义）
+                loss = _get_transition_loss(from_t, to_t)
+                assert 0.0 < loss < 1.0, f"{from_t}→{to_t} 损耗异常: {loss}"
+
+    def test_get_transition_length_no_magic_default(self):
+        """R3-P2-3: 过渡长度不再有魔数 15.0 默认值。"""
+        from polaris.router.hybrid_router import (
+            WaveguideType,
+            _get_transition_length,
+        )
+        for from_t in WaveguideType:
+            for to_t in WaveguideType:
+                if from_t == to_t:
+                    continue
+                length = _get_transition_length(from_t, to_t)
+                assert 0.0 < length < 100.0, f"{from_t}→{to_t} 长度异常: {length}"
+
+    def test_route_single_type_raises_on_failure(self):
+        """R3-P2-3: 同类型布线失败应 raise，不再返回 999.0 哨兵值。"""
+        from polaris.router.hybrid_router import (
+            HybridNetConnection,
+            HybridRouter,
+            WaveguideType,
+        )
+        # 构造不可达场景：1x1 网格 + 起止点相同但被障碍包围
+        router = HybridRouter(grid_w=3, grid_h=3, grid_size=1.0)
+        # 添加障碍阻断所有路径
+        router.add_obstacle(WaveguideType.RIDGE, (1, 0, 1, 2))
+        router.add_obstacle(WaveguideType.RIDGE, (0, 1, 2, 1))
+        net = HybridNetConnection(
+            net_id="test_fail",
+            start=(0.0, 0.0),
+            end=(2.0, 2.0),
+            wg_type_start=WaveguideType.RIDGE,
+            wg_type_end=WaveguideType.RIDGE,
+        )
+        with pytest.raises(RuntimeError, match="R03 禁止 fall-back"):
+            router.route(net)
+
+    def test_route_mixed_type_raises_on_failure(self):
+        """R3-P2-3: 混合类型布线失败应 raise，不再 fall-back 到单一类型。"""
+        from polaris.router.hybrid_router import (
+            HybridNetConnection,
+            HybridRouter,
+            WaveguideType,
+        )
+        router = HybridRouter(grid_w=3, grid_h=3, grid_size=1.0)
+        # 阻断 RIDGE 和 BURIED 的所有路径
+        router.add_obstacle(WaveguideType.RIDGE, (1, 0, 1, 2))
+        router.add_obstacle(WaveguideType.BURIED, (1, 0, 1, 2))
+        net = HybridNetConnection(
+            net_id="test_mixed_fail",
+            start=(0.0, 0.0),
+            end=(2.0, 2.0),
+            wg_type_start=WaveguideType.RIDGE,
+            wg_type_end=WaveguideType.BURIED,
+        )
+        with pytest.raises(RuntimeError, match="R03 禁止 fall-back"):
+            router.route(net)
+
+
+class TestR3P23CurvyRouterFallbackRemoved:
+    """R3-P2-3: curvy_router.route_curvy 失败应 raise，不再返回 999.0 哨兵值。"""
+
+    def test_route_curvy_raises_on_failure(self):
+        """R3-P2-3: 弯曲布线失败应 raise RuntimeError。"""
+        from polaris.router.curvy_router import CurvyRouteConfig, CurvyRouter
+
+        # 构造不可达场景：3x3 网格，中心被障碍完全阻断
+        config = CurvyRouteConfig(grid_w=3, grid_h=3, grid_size=1.0)
+        router = CurvyRouter(config)
+        # 添加十字障碍阻断所有路径（add_obstacle 签名: gx, gy, gw, gh）
+        router.add_obstacle(1, 0, 1, 3)  # 竖直障碍 (x=1, 全高)
+        router.add_obstacle(0, 1, 3, 1)  # 水平障碍 (y=1, 全宽)
+
+        with pytest.raises(RuntimeError, match="R03 禁止 fall-back"):
+            router.route_curvy((0, 0), (2, 2))
