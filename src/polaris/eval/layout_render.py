@@ -10,18 +10,25 @@
 - matplotlib: https://matplotlib.org/ （版图渲染）
 - gdsfactory GDS 导出参考: https://gdsfactory.github.io/gdsfactory/
 
-三方工具 import 处理（规则 5.3）：
+三方工具 import 处理（规则 5.3 + R05 Bug 修复 v3.3-EVAL-1）：
 - klayout 为运行依赖（pyproject.toml [project.dependencies]），install.sh 统一安装
+- **延迟导入**：klayout.db 不在顶层 import，仅在 GDS/OASIS 导出函数内按需导入，
+  使 matplotlib 渲染等核心功能不受 klayout 安装状态影响
 - import 失败时 GDS/OASIS 导出函数抛出 ImportError 并提示安装命令
-- 核心功能（PDK/布局/布线/训练）独立于 klayout
+- 核心功能（PDK/布局/布线/训练/渲染）独立于 klayout
+- 规则: R02 学术诚信 / R03 禁止静默兜底 / R05 Bug 必修
+- 文献: PEP 8 模块导入 https://peps.python.org/pep-0008/
+- 文献: Python 延迟导入模式 https://docs.python.org/3/tutorial/modules.html
+- 文献: TYPE_CHECKING 模式 https://docs.python.org/3/library/typing.html#typing.TYPE_CHECKING
+- 文献: klayout Python API https://www.klayout.de/doc-qt5/code/
+- 文献: gdsfactory KLayout 集成 https://gdsfactory.github.io/gdsfactory/
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
-# 三方工具：klayout（必装依赖，规则 2 直接集成）
-import klayout.db as _db
 import numpy as np
 
 from polaris.engine.floorplan_env import Placement
@@ -31,6 +38,34 @@ from polaris.pdk.layer_map import (
 )
 from polaris.pdk.port import Direction
 from polaris.router.waveguide_router import WaveguidePath
+
+# 类型检查时导入 klayout.db 以提供精确类型注解（运行时不导入）
+if TYPE_CHECKING:
+    import klayout.db as _db  # noqa: F401
+
+
+def _get_klayout_db() -> Any:
+    """延迟导入 klayout.db 模块（R05 Bug 修复 v3.3-EVAL-1）。
+
+    原 `import klayout.db as _db` 在顶层，导致 klayout 未安装时整个模块
+    无法加载，matplotlib 渲染等核心功能也不可用。改为延迟导入后，仅
+    GDS/OASIS 导出函数实际需要 klayout 时才导入。
+
+    Returns:
+        klayout.db 模块对象。
+
+    Raises:
+        ImportError: klayout 未安装时抛出，含安装命令提示（R03 禁止静默兜底）。
+    """
+    try:
+        import klayout.db as db
+    except ImportError as e:
+        raise ImportError(
+            "klayout 未安装，GDS/OASIS 导出功能不可用。"
+            "安装命令: pip install klayout"
+            "（或参考 install.sh 统一安装）"
+        ) from e
+    return db
 
 # 器件类别 → 渲染颜色
 _CATEGORY_COLORS = {
@@ -194,7 +229,7 @@ _DIR_VEC: dict[Direction, tuple[float, float]] = {
 }
 
 
-def _create_klayout_layout(dbu: float = 0.001):
+def _create_klayout_layout(dbu: float = 0.001) -> tuple[Any, Any, dict[str, Any]]:
     """创建 klayout Layout 并定义工艺层，返回 (layout, top, layer_map)。
 
     使用真实 foundry layer 编号（止血7），借鉴 SiEPIC EBeam PDK + ubcpdk +
@@ -207,7 +242,7 @@ def _create_klayout_layout(dbu: float = 0.001):
         ``(layout, top_cell, layer_map)`` 元组。``layer_map`` 为名称到
         klayout layer info 的字典，包含 WG/PORT/DEVREC/TEXT/FLOORPLAN 等层。
     """
-    db = _db
+    db = _get_klayout_db()
 
     ly = db.Layout()
     ly.dbu = dbu
@@ -219,7 +254,13 @@ def _create_klayout_layout(dbu: float = 0.001):
     return ly, top, layer_map
 
 
-def _place_devrec_text(top, pl, layer_devrec, cx: float, cy: float) -> None:
+def _place_devrec_text(
+    top: Any,
+    pl: Placement,
+    layer_devrec: Any,
+    cx: float,
+    cy: float,
+) -> None:
     """在 DEVREC 层添加 SiEPIC 标准 Text 标签（真实版图验证）。
 
     真实 SiEPIC 格式（RingResonator.gds 验证）：
@@ -230,7 +271,7 @@ def _place_devrec_text(top, pl, layer_devrec, cx: float, cy: float) -> None:
     来源: SiEPIC EBeam PDK Examples
     https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
-    db = _db
+    db = _get_klayout_db()
     lib_text = db.DText(
         "Lumerical_INTERCONNECT_library=Design kits/ebeam_v1.2",
         db.DTrans(cx, cy - 1.0),
@@ -247,7 +288,13 @@ def _place_devrec_text(top, pl, layer_devrec, cx: float, cy: float) -> None:
         top.shapes(layer_devrec).insert(spice_text)
 
 
-def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> None:
+def _place_device_boxes(
+    top: Any,
+    placements: dict[str, Placement],
+    layer_map: dict[str, Any],
+    dbu: float,
+    add_ports: bool,
+) -> None:
     """将器件矩形画到对应工艺层，可选添加端口标记。
 
     器件按其 ``category`` 映射到真实 foundry 层（止血7）：
@@ -260,7 +307,7 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
     来源: SiEPIC EBeam PDK Examples
     https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
-    db = _db
+    db = _get_klayout_db()
 
     for _inst_id, pl in placements.items():
         xmin, ymin, xmax, ymax = pl.bbox_abs()
@@ -285,7 +332,13 @@ def _place_device_boxes(top, placements, layer_map, dbu, add_ports: bool) -> Non
             _place_port_markers(top, pl, layer_map["PIN"], layer_map["PIN"], dbu)
 
 
-def _place_port_markers(top, pl, layer_port, layer_text, dbu) -> None:
+def _place_port_markers(
+    top: Any,
+    pl: Placement,
+    layer_port: Any,
+    layer_text: Any,
+    dbu: float,
+) -> None:
     """在端口位置画 PinRec Path + pin 名称 Text（SiEPIC Tools 格式）。
 
     SiEPIC Tools 要求 PinRec 层用 Path 形状（非 Box）表示端口，
@@ -295,7 +348,7 @@ def _place_port_markers(top, pl, layer_port, layer_text, dbu) -> None:
     来源: SiEPIC-Tools Wiki - Layout - Devices
     https://github.com/SiEPIC/SiEPIC-Tools/wiki
     """
-    db = _db
+    db = _get_klayout_db()
     pin_len = 1.0  # PinRec Path 长度（μm，SiEPIC 推荐值）
 
     for port in pl.ports_abs():
@@ -314,9 +367,13 @@ def _place_port_markers(top, pl, layer_port, layer_text, dbu) -> None:
         top.shapes(layer_text).insert(text)
 
 
-def _place_waveguide_paths(top, paths, layer_waveguide) -> None:
+def _place_waveguide_paths(
+    top: Any,
+    paths: dict[int, WaveguidePath] | None,
+    layer_waveguide: Any,
+) -> None:
     """将波导路径画到布线层（WG 层，与器件同层）。"""
-    db = _db
+    db = _get_klayout_db()
 
     if not paths:
         return

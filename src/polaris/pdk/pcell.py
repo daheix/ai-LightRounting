@@ -570,10 +570,22 @@ def _ensure_unique_name(base_name: str, param_key: tuple) -> str:
 
 
 def _resolve_hints(func: Callable) -> dict[str, Any]:
-    """解析函数类型标注。"""
+    """解析函数类型标注。
+
+    R05 改进 v3.3-PCELL-HINTS: 原 `except NameError: return {}` 静默丢失
+    forward reference 解析失败信息。改进：添加 logger.debug 记录被跳过的
+    函数名，便于调试注解缺失问题。返回空 dict 仍为合法业务语义（typing
+    官方文档化行为：forward reference 未定义时 get_type_hints 抛 NameError）。
+    """
     try:
         return typing.get_type_hints(func)
-    except NameError:
+    except NameError as e:
+        # 不 raise：forward reference 解析失败时返回空 dict 是合法业务语义
+        # 但需记录调试信息，避免静默吞异常（R03 边界改进）
+        logger.debug(
+            "类型注解解析失败（forward reference 未定义）: func=%s | error=%s",
+            getattr(func, "__qualname__", func), e,
+        )
         return {}
 
 
