@@ -84,11 +84,22 @@ def auto_grid_size(
 
     Raises:
         ValueError: canvas_w 或 canvas_h 非正数。
+        KeyError: platform 不在 _PLATFORM_WAVEGUIDE_WIDTH 中（R4-P0-3 R03 修复）。
     """
     if canvas_w <= 0 or canvas_h <= 0:
         raise ValueError(f"画布尺寸必须为正数: canvas_w={canvas_w}, canvas_h={canvas_h}")
 
-    waveguide_width = _PLATFORM_WAVEGUIDE_WIDTH.get(platform, 0.5)
+    # R4-P0-3: 禁止 fall-back（R03）—— 未知平台必须 raise，禁止静默使用 0.5 μm。
+    # 0.5 μm 是 SOI 平台波导宽度，对 SiN (1.0) / InP (2.0) / LNOI (1.5) 不适用，
+    # 静默使用会导致 grid_size 计算错误（物理下界偏小），A* 路径违反 DRC 间距。
+    if platform not in _PLATFORM_WAVEGUIDE_WIDTH:
+        raise KeyError(
+            f"未定义平台 '{platform}' 的波导宽度 (μm)。"
+            f"已知平台: {sorted(_PLATFORM_WAVEGUIDE_WIDTH.keys())}。"
+            f"请在 _PLATFORM_WAVEGUIDE_WIDTH 中补充该平台的波导宽度。"
+            f"R03 禁止 fall-back: 禁止返回魔数 0.5 μm (SOI 默认值) 让客户误以为参数已知。"
+        )
+    waveguide_width = _PLATFORM_WAVEGUIDE_WIDTH[platform]
     if min_bend_radius_um is None:
         from polaris.router.waveguide_router import get_platform_constraints
 

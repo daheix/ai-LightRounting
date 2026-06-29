@@ -61,11 +61,19 @@ class AdaptiveCrossingInserter:
                            false otherwise
     """
 
-    def __init__(self, crossing_loss: float = 0.1) -> None:
+    def __init__(self, crossing_loss: float = 0.3) -> None:
         """初始化自适应交叉插入器。
 
         Args:
-            crossing_loss: 单次交叉插入损耗（dB），SiEPIC EBeam 典型 0.1dB。
+            crossing_loss: 单次交叉插入损耗（dB），默认 0.3 dB。
+              SiEPIC EBeam PDK crossing_te1550 在 1550nm 波段下单次交叉损耗
+              典型值 0.15-0.3 dB，取保守上界 0.3 dB 与
+              path_geometry.path_loss() 默认值一致。
+              来源: SiEPIC_EBeam_PDK
+                https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+              R4-P0-7: 原默认 0.1 dB 过于乐观（低于 SiEPIC PDK 实测下界），
+              与 path_geometry.py (0.3) / sim/models.py (0.3) 不一致，
+              违反 R02 学术诚信（同平台参数跨模块不一致）。
 
         Raises:
             ValueError: crossing_loss 非正。

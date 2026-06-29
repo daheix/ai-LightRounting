@@ -381,7 +381,11 @@ class TestAutoGridSize:
         gs_large = auto_grid_size(1000.0, 1000.0, platform="SOI", min_bend_radius_um=20.0)
         assert gs_large >= gs_small
 
-    def test_unknown_platform_works(self):
-        """M1: 未知平台使用默认值（不报错）。"""
-        gs = auto_grid_size(1000.0, 1000.0, platform="UNKNOWN_SOIV")
-        assert gs > 0.0
+    def test_unknown_platform_raises(self):
+        """R4-P0-3: 未知平台必须 raise（R03 禁止 fall-back）。
+
+        原 test_unknown_platform_works 验证 fall-back 行为（返回默认 0.5），
+        R4-P0-3 修复后改为 raise KeyError。
+        """
+        with pytest.raises(KeyError, match="未定义平台"):
+            auto_grid_size(1000.0, 1000.0, platform="UNKNOWN_SOIV")

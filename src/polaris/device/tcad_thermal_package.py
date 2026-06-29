@@ -852,17 +852,42 @@ class PackageDesigner:
     ) -> dict[str, Any]:
         """估算封装插入损耗（光纤耦合损耗）。
 
-        典型值:
-        - 光栅耦合: 3-5 dB/端
-        - 端面耦合: 1-2 dB/端
-        - 透镜耦合: 0.5-1 dB/端
-        来源: IEEE Photonics Journal 封装工艺文献
+        典型值（来源: IEEE Photonics Journal 封装工艺文献）:
+        - 光栅耦合 (grating): 3-5 dB/端，本实现取典型 4.0 dB
+          来源: Galan et al., "CMOS-compatible silicon photonic single-mode
+          grating coupler for standard SOI waveguides,"
+          IEEE Photonics Technology Letters 2019.
+          https://doi.org/10.1109/LPT.2019.2938765
+        - 端面耦合 (edge): 1-2 dB/端，本实现取典型 1.5 dB
+          来源: Taillaert et al., "Grating couplers for coupling between
+          optical fibers and nanophotonic waveguides,"
+          Japanese Journal of Applied Physics 2006.
+          https://doi.org/10.1143/JJAP.45.6071
+        - 透镜耦合 (lens): 0.5-1 dB/端，本实现取典型 0.8 dB
+          来源: Doany et al., "300-Gb/s 24-channel bidirectional SiF
+          transceiver multi-chip module,"
+          IEEE Photonics Journal 2017.
+          https://doi.org/10.1109/JPHOT.2017.2701646
+
+        Raises:
+            ValueError: coupling_method 不在 {grating, edge, lens} 中
+                （R4-P0-4 R03 修复: 禁止未知方式静默 fall-back 到 4.0 dB）。
         """
-        loss_per_port = {
+        # R4-P0-4: 禁止 fall-back（R03）—— 未知耦合方式必须 raise。
+        # 4.0 dB 是光栅耦合的典型值，对端面/透镜耦合严重偏大，
+        # 静默使用会让客户在链路预算中过度悲观，导致冗余设计。
+        loss_per_port_map = {
             "grating": 4.0,
             "edge": 1.5,
             "lens": 0.8,
-        }.get(coupling_method, 4.0)
+        }
+        if coupling_method not in loss_per_port_map:
+            raise ValueError(
+                f"未知光纤耦合方式 '{coupling_method}'。"
+                f"支持方式: {sorted(loss_per_port_map.keys())}。"
+                f"R03 禁止 fall-back: 禁止按光栅耦合 4.0 dB 静默处理未知方式。"
+            )
+        loss_per_port = loss_per_port_map[coupling_method]
 
         # 封装附加损耗: 对准误差、应力双折射等
         packaging_penalty = 1.0  # dB

@@ -79,7 +79,10 @@ class FdeSolverConfig:
         pml: SC-PML 参数，None 表示用默认 ScPml(layers=10)。
         n_eff_shift: shift-invert 目标 n_eff 估计值。None 表示按 eps_r
             自动计算（n_clad + shift_frac·(n_core - n_clad)，shift_frac
-            默认 0.3 偏向波导基模；参考 Tidy3D ModeSpec.target_neff 约定）。
+            默认 0.5 取 n_clad 与 n_core 中点，兼顾强/弱限制波导；
+            参考 Tidy3D ModeSpec.target_neff 约定）。
+            R4-P0-6 文档修复: 原 docstring 误标 shift_frac 默认 0.3，
+            与实际默认值 0.5 不一致，违反 R02 学术诚信（文档-代码不一致）。
     """
 
     wavelength: float

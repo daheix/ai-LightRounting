@@ -15,6 +15,13 @@
 - Layer 0: SOI 器件层（有源/无源）
 - Layer 1: SiN 无源层（低损传输）
 - Layer 2: LNOI 调制层（高速调制）
+
+R4-P1 修复（2026-06-29）:
+- _route_single_layer / _route_multi_layer / route: 删除 `return None`
+  静默 fall-back（R03 违规），改为 raise RuntimeError 显式告警。
+- total_loss_db: 删除硬编码 2.0 dB/cm 魔数，改为按 layer.platform
+  查询 _PLATFORM_LOSS_DB_CM（与 waveguide_router.py 一致）。
+  来源: SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 """
 
 from __future__ import annotations
@@ -24,7 +31,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from polaris.router.waveguide_router import GridRouter, RouterConstraints
+from polaris.router.waveguide_router import GridRouter, RouterConstraints, _PLATFORM_LOSS_DB_CM
 
 logger = logging.getLogger(__name__)
 
@@ -144,8 +151,15 @@ class MultiLayerRouter:
         start_pos: tuple[float, float],
         end_layer: int,
         end_pos: tuple[float, float],
-    ) -> MultiLayerRouteResult | None:
-        """3D 多层布线（支持层间 OTV 连接）。"""
+    ) -> MultiLayerRouteResult:
+        """3D 多层布线（支持层间 OTV 连接）。
+
+        R4-P1: 删除 `-> MultiLayerRouteResult | None` 中的 None 静默 fall-back，
+        布线失败时 raise RuntimeError（R03 禁止 fall-back）。
+
+        Raises:
+            RuntimeError: 布线失败（路径不可达 / 无可用 OTV）。
+        """
         if start_layer == end_layer:
             return self._route_single_layer(start_layer, start_pos, end_pos)
         return self._route_multi_layer(start_layer, start_pos, end_layer, end_pos)
@@ -155,25 +169,47 @@ class MultiLayerRouter:
         layer_idx: int,
         start: tuple[float, float],
         end: tuple[float, float],
-    ) -> MultiLayerRouteResult | None:
-        """单层布线。"""
+    ) -> MultiLayerRouteResult:
+        """单层布线。
+
+        R4-P1: 删除 `return None` 静默 fall-back，改为 raise RuntimeError。
+        R4-P1: 删除硬编码 2.0 dB/cm 魔数，改为按 layer.platform 查询
+        _PLATFORM_LOSS_DB_CM（与 waveguide_router.py 一致）。
+
+        Raises:
+            RuntimeError: A* 路径不可达。
+            KeyError: layer.platform 不在 _PLATFORM_LOSS_DB_CM 中。
+        """
         router = self.routers[layer_idx]
         gs = self.layers[layer_idx].grid_size
         sg = (int(start[0] / gs), int(start[1] / gs))
         eg = (int(end[0] / gs), int(end[1] / gs))
         grid_path = router.route(sg, eg)
         if grid_path is None:
-            logger.error("层 %s 布线失败: %s -> %s", self.layers[layer_idx].name, start, end)
-            return None
+            # R4-P1: R03 禁止 fall-back —— 布线失败必须 raise
+            raise RuntimeError(
+                f"层 {self.layers[layer_idx].name} (idx={layer_idx}) 布线失败: "
+                f"start={start} -> end={end}。"
+                f"R03 禁止 fall-back: 禁止返回 None 让调用方误判成功。"
+            )
         pts = [(g[0] * gs, g[1] * gs) for g in grid_path]
         length = sum(
             np.sqrt((pts[i + 1][0] - pts[i][0]) ** 2 + (pts[i + 1][1] - pts[i][1]) ** 2)
             for i in range(len(pts) - 1)
         )
+        # R4-P1: 按 layer.platform 查询传播损耗，禁止硬编码 2.0 dB/cm
+        platform = self.layers[layer_idx].platform
+        if platform not in _PLATFORM_LOSS_DB_CM:
+            raise KeyError(
+                f"层 {self.layers[layer_idx].name} (idx={layer_idx}) 平台 '{platform}' "
+                f"未定义传播损耗系数 (dB/cm)。已知平台: {sorted(_PLATFORM_LOSS_DB_CM.keys())}。"
+                f"R03 禁止 fall-back: 禁止返回魔数 2.0 dB/cm。"
+            )
+        loss_db_cm = _PLATFORM_LOSS_DB_CM[platform]
         return MultiLayerRouteResult(
             layer_paths={layer_idx: pts},
             total_length_um=length,
-            total_loss_db=length * 2.0 / 1e4,
+            total_loss_db=length * loss_db_cm / 1e4,  # μm → cm
         )
 
     def _route_multi_layer(
@@ -182,13 +218,29 @@ class MultiLayerRouter:
         start: tuple[float, float],
         end_layer: int,
         end: tuple[float, float],
-    ) -> MultiLayerRouteResult | None:
-        """多层布线：找最近 OTV → 层1到OTV → OTV到层2 → OTV到终点。"""
+    ) -> MultiLayerRouteResult:
+        """多层布线：找最近 OTV → 层1到OTV → OTV到层2 → OTV到终点。
+
+        R4-P1: 删除 `return None` 静默 fall-back，改为 raise RuntimeError。
+        R4-P1: _otv_grid_map.get(otv_key, []) 静默空列表 fall-back 改为显式 raise。
+
+        Raises:
+            RuntimeError: 无可用 OTV / 子层布线失败。
+        """
         otv_key = (start_layer, end_layer)
-        available_otvs = self._otv_grid_map.get(otv_key, [])
+        # R4-P1: R03 禁止 fall-back —— 无 OTV 必须 raise，禁止返回空列表
+        if otv_key not in self._otv_grid_map:
+            raise RuntimeError(
+                f"层 {start_layer}→{end_layer} 无可用 OTV（键不存在）。"
+                f"已注册 OTV 层对: {sorted(self._otv_grid_map.keys())}。"
+                f"R03 禁止 fall-back: 禁止返回 None 让调用方误判成功。"
+            )
+        available_otvs = self._otv_grid_map[otv_key]
         if not available_otvs:
-            logger.error("层 %d→%d 无可用 OTV", start_layer, end_layer)
-            return None
+            raise RuntimeError(
+                f"层 {start_layer}→{end_layer} OTV 列表为空。"
+                f"R03 禁止 fall-back: 禁止返回 None 让调用方误判成功。"
+            )
         # 选择距离起点+终点最近的 OTV
         best_otv = min(
             available_otvs,
@@ -196,14 +248,10 @@ class MultiLayerRouter:
                 abs(o.x - start[0]) + abs(o.y - start[1]) + abs(o.x - end[0]) + abs(o.y - end[1])
             ),
         )
-        # 层1: 起点 → OTV
+        # 层1: 起点 → OTV（R4-P1: _route_single_layer 已改为 raise，无需 None 检查）
         r1 = self._route_single_layer(start_layer, start, (best_otv.x, best_otv.y))
-        if r1 is None:
-            return None
-        # 层2: OTV → 终点
+        # 层2: OTV → 终点（R4-P1: _route_single_layer 已改为 raise，无需 None 检查）
         r2 = self._route_single_layer(end_layer, (best_otv.x, best_otv.y), end)
-        if r2 is None:
-            return None
         # 合并结果
         merged = MultiLayerRouteResult()
         merged.layer_paths = {**r1.layer_paths, **r2.layer_paths}

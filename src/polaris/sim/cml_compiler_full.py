@@ -254,8 +254,20 @@ class SParameterLoader:
                 break
 
         # 频率单位转换
+        # R4-P0-2: 禁止 fall-back（R03）—— 未知频率单位必须 raise。
+        # Touchstone 文件头明确定义了频率单位，未知单位意味着文件损坏或
+        # 解析错误，静默按 GHz (1e9) 处理会传播错误频率到 S 参数模型。
+        # 文献: Touchstone File Format Specification, IBIS Open Forum 2009
+        #   https://ibis.org/connector/touchstone_spec11.pdf
         unit_map = {"Hz": 1.0, "kHz": 1e3, "MHz": 1e6, "GHz": 1e9, "THz": 1e12}
-        freq_scale = unit_map.get(freq_unit, 1e9)
+        if freq_unit not in unit_map:
+            raise ValueError(
+                f"Touchstone 文件频率单位 '{freq_unit}' 不支持。"
+                f"支持单位: {sorted(unit_map.keys())}。"
+                f"请检查文件头 # 行格式（应为 '# <unit> S <RI|MA|dB> R <ref>'）。"
+                f"R03 禁止 fall-back: 禁止按 GHz (1e9) 静默处理未知单位。"
+            )
+        freq_scale = unit_map[freq_unit]
 
         # 解析数据行
         data_lines = []

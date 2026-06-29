@@ -32,13 +32,17 @@ multiprocessing 文献，并在 DistributedPPOTrainer 注释中明确说明。
 - Lumerical CML Compiler
   URL: https://optics.ansys.com/hc/en-us/articles/360037565953
 
-KLM CNOT 门 (#v3.3-Q-3 修复, Knill 2001 方案):
+KLM CNOT 门 (#v3.3-Q-3 修复, Ralph 2002 简化版方案):
 - 4 模式电路: control, target, aux1, aux2 (Ralph 2002 简化版)
 - 辅助光子: |1,1⟩_aux (2 个单光子源)
 - 分束器网络: 4 个分束器 (θ₁=arccos√(2/3), θ₂=arccos√(2/3),
   θ₃=π/4, θ₄=arccos√(1/3))
 - 后选择: 辅助模式各探测到 1 光子
-- 成功概率: 1/16 (Knill 2001 原始 NS gate 方案)
+- 成功概率: ~1/9 (Ralph 2002 PRA 65, 062324 简化 4-BS 电路实测)
+  注: Knill 2001 Nature 原始 NS-gate 方案理论成功率 1/16，但本实现
+  采用 Ralph 2002 简化电路（4 个分束器），成功率不同。
+  R4-P0-5 文档修复: 原 docstring 误标 1/16 (Knill NS-gate)，与实际
+  电路（Ralph 2002）不匹配，违反 R02 学术诚信（方案混用）。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
 """

@@ -634,7 +634,17 @@ def route_connection(
     if config.target_length_um is not None:
         cons = get_platform_constraints(platform)
         pts = equalize_length(pts, config.target_length_um, detour_step=cons["min_bend_radius_um"])
-    loss_db_cm = _PLATFORM_LOSS_DB_CM.get(platform, 2.0)
+    # R4-P0-1: 禁止 fall-back（R03）—— 未知平台必须 raise，禁止静默使用 2.0 dB/cm
+    # 让客户误以为损耗已知。2.0 dB/cm 既非 SOI 也非 SiN/LNOI 的真实值，
+    # 用魔数掩盖配置错误会传播到后续链路预算分析。
+    if platform not in _PLATFORM_LOSS_DB_CM:
+        raise KeyError(
+            f"未定义平台 '{platform}' 的传播损耗系数 (dB/cm)。"
+            f"已知平台: {sorted(_PLATFORM_LOSS_DB_CM.keys())}。"
+            f"请在 _PLATFORM_LOSS_DB_CM 中补充该平台的损耗值。"
+            f"R03 禁止 fall-back: 禁止返回魔数 2.0 dB/cm 让客户误以为损耗已知。"
+        )
+    loss_db_cm = _PLATFORM_LOSS_DB_CM[platform]
     loss = path_loss(pts, loss_db_cm=loss_db_cm)
     return WaveguidePath(points=pts, length_um=path_length(pts), loss_db=loss)
 
