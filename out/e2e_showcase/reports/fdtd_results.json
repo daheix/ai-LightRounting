@@ -4,7 +4,7 @@
   "waveguide": {
     "transmission_db": 13.345711536530466,
     "analytical_transmission_db": -0.0003,
-    "fdtd_duration_s": 1.7175862789154053,
+    "fdtd_duration_s": 0.9446985721588135,
     "n_steps": 600,
     "grid_size": [
       24,
@@ -16,9 +16,9 @@
     "pml_n_layers": 2
   },
   "mmi": {
-    "mmi_split_ratio": 0.556516844162909,
+    "mmi_split_ratio": 0.5565168441629089,
     "mmi_insertion_loss_db": -72.73936921015473,
-    "fdtd_duration_s": 2.1358115673065186,
+    "fdtd_duration_s": 1.0187523365020752,
     "n_steps": 600,
     "grid_size": [
       29,
@@ -29,7 +29,7 @@
     "pml_enabled": true,
     "pml_n_layers": 2
   },
-  "fdtd_vs_analytical_error_db": 5.6516844162909035,
-  "fdtd_duration_s": 3.853397846221924,
+  "fdtd_vs_analytical_error_db": 5.651684416290892,
+  "fdtd_duration_s": 1.9634509086608887,
   "extinction_ratio_physical_db": 27.958800173440746
 }
