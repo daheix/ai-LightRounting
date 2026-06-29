@@ -263,6 +263,66 @@ class TransientHeatSolver:
         result = TransientHeatSolver().solve(cfg)
     """
 
+    def _build_mass_matrix(
+        self, rho_arr: NDArray[np.float64], cp_arr: NDArray[np.float64], n: int
+    ) -> sparse.csr_matrix:
+        """构建单位体积热容对角矩阵 M = diag(ρ·Cp)。"""
+        rho_cp = rho_arr * cp_arr
+        diag_vals = rho_cp.ravel()
+        return sparse.diags(diag_vals, 0, shape=(n, n), format="csr")
+
+    def _build_crank_nicolson_matrices(
+        self,
+        M_mat: sparse.csr_matrix,
+        A_interior: sparse.csr_matrix,
+        dt: float,
+    ) -> tuple[sparse.csr_matrix, sparse.csr_matrix]:
+        """构建 Crank-Nicolson 左右两侧矩阵。"""
+        A_lhs = M_mat - (dt / 2.0) * A_interior
+        A_rhs_mat = M_mat + (dt / 2.0) * A_interior
+        return A_lhs, A_rhs_mat
+
+    def _compute_heat_source(
+        self,
+        config: TransientHeatConfig,
+        t_half: float,
+        q_const: NDArray[np.float64],
+        n: int,
+    ) -> NDArray[np.float64]:
+        """计算半时间步的热源 Q(t + dt/2)。"""
+        if config.heater_func is not None:
+            q_half = np.asarray(config.heater_func(t_half), dtype=float).ravel()
+            if q_half.shape != (n,):
+                raise ValueError(
+                    f"heater_func 返回形状 {q_half.shape}，"
+                    f"期望 ({n},) 或 (nx, ny)"
+                )
+            return q_half
+        return q_const
+
+    def _time_step(
+        self,
+        T_vec: NDArray[np.float64],
+        A_lhs_step: sparse.csr_matrix,
+        A_rhs_step: sparse.csr_matrix,
+        dt_actual: float,
+        q_half: NDArray[np.float64],
+        hc: HeatConfig,
+        step: int,
+    ) -> NDArray[np.float64]:
+        """执行单步时间步进，返回新的温度场。"""
+        b_vec = A_rhs_step.dot(T_vec) + dt_actual * q_half
+        A_lhs_bc, b_bc = apply_boundary_conditions(
+            A_lhs_step.copy(), b_vec.copy(), hc
+        )
+        T_new = spsolve(A_lhs_bc, b_bc)
+        if not np.all(np.isfinite(T_new)):
+            raise RuntimeError(
+                f"瞬态求解第 {step} 步失败：温度场含非有限值"
+                f"（系统奇异或时间步长问题）"
+            )
+        return T_new
+
     def solve(self, config: TransientHeatConfig) -> TransientHeatResult:
         """求解瞬态温度场时间序列。
 
@@ -280,45 +340,22 @@ class TransientHeatSolver:
         n = nx * ny
         dx, dy = hc.dx, hc.dy
 
-        # 1. 构建离散热传导算子 A（与稳态内部矩阵相同）
-        # A_interior · T = ∇·(k∇T) 的 5 点差分离散（W/m³）
-        # 稳态方程：A_interior · T + q_v = 0
         A_interior, _ = _build_interior(hc)
+        M_mat = self._build_mass_matrix(config.rho_arr, config.cp_arr, n)
 
-        # 2. 构建单位体积热容对角矩阵 M = diag(ρ·Cp)（集中质量矩阵）
-        # 瞬态方程：ρ·Cp · ∂T/∂t = ∇·(k∇T) + q_v
-        # 所有项单位均为 W/m³（体积功率密度）
-        rho_cp = config.rho_arr * config.cp_arr  # (nx, ny) J/(m³·K)
-        diag_vals = rho_cp.ravel()
-        M_mat = sparse.diags(diag_vals, 0, shape=(n, n), format="csr")
-
-        # 3. 初始温度场
         T_vec = np.asarray(config.t_initial, dtype=float).ravel().copy()
         if not np.all(np.isfinite(T_vec)):
             raise ValueError("初始温度场含非有限值")
 
-        # 4. 时间步数与保存数组分配
         dt = config.dt
         n_steps = int(np.ceil(config.t_final / dt))
         save_every = max(1, int(config.save_every))
 
-        saved_times: list[float] = []
-        saved_temps: list[np.ndarray] = []
+        saved_times: list[float] = [0.0]
+        saved_temps: list[np.ndarray] = [T_vec.reshape(nx, ny).copy()]
 
-        # 保存初始时刻
-        saved_times.append(0.0)
-        saved_temps.append(T_vec.reshape(nx, ny).copy())
+        A_lhs, A_rhs_mat = self._build_crank_nicolson_matrices(M_mat, A_interior, dt)
 
-        # 5. 构建 Crank-Nicolson 矩阵
-        # 瞬态方程：M · dT/dt = A · T + q
-        # CN 格式（2 阶时间精度，无条件稳定）：
-        #   M·(T^{n+1} - T^n)/dt = 0.5·A·(T^{n+1} + T^n) + q_half
-        # 整理：
-        #   (M - 0.5·dt·A) · T^{n+1} = (M + 0.5·dt·A) · T^n + dt·q_half
-        A_lhs = M_mat - (dt / 2.0) * A_interior
-        A_rhs_mat = M_mat + (dt / 2.0) * A_interior
-
-        # 6. 时间步进
         t = 0.0
         q_const = hc.q_arr.ravel().astype(float, copy=True)
 
@@ -328,57 +365,26 @@ class TransientHeatSolver:
                 break
 
             if abs(dt_actual - dt) > 1e-12 * dt:
-                A_lhs_step = M_mat - (dt_actual / 2.0) * A_interior
-                A_rhs_step = M_mat + (dt_actual / 2.0) * A_interior
-            else:
-                A_lhs_step = A_lhs
-                A_rhs_step = A_rhs_mat
-
-            # 计算半时间步的热源 Q(t + dt/2)
-            t_half = t + dt_actual / 2.0
-            if config.heater_func is not None:
-                q_half = np.asarray(
-                    config.heater_func(t_half), dtype=float
-                ).ravel()
-                if q_half.shape != (n,):
-                    raise ValueError(
-                        f"heater_func 返回形状 {q_half.shape}，"
-                        f"期望 ({n},) 或 (nx, ny)"
-                    )
-            else:
-                q_half = q_const
-
-            # 右端向量：RHS = A_rhs · T^n + dt · Q_half
-            b_vec = A_rhs_step.dot(T_vec) + dt_actual * q_half
-
-            # 应用边界条件（Dirichlet 行替换到 A_lhs 与 b_vec）
-            # 注意：边界条件也需在 CN 格式中处理，这里采用简单方法：
-            # 对 Dirichlet 边界节点，强制 T^{n+1} = T_boundary（精确满足）
-            # 通过行替换实现，与稳态求解器一致。
-            # 先构造完整的 A_lhs（含边界），再对边界节点行替换。
-            A_lhs_bc, b_bc = apply_boundary_conditions(
-                A_lhs_step.copy(), b_vec.copy(), hc
-            )
-
-            # 求解 T^{n+1}
-            T_new = spsolve(A_lhs_bc, b_bc)
-            if not np.all(np.isfinite(T_new)):
-                raise RuntimeError(
-                    f"瞬态求解第 {step} 步失败：温度场含非有限值"
-                    f"（系统奇异或时间步长问题）"
+                A_lhs_step, A_rhs_step = self._build_crank_nicolson_matrices(
+                    M_mat, A_interior, dt_actual
                 )
+            else:
+                A_lhs_step, A_rhs_step = A_lhs, A_rhs_mat
 
-            T_vec = T_new
+            t_half = t + dt_actual / 2.0
+            q_half = self._compute_heat_source(config, t_half, q_const, n)
+
+            T_vec = self._time_step(
+                T_vec, A_lhs_step, A_rhs_step, dt_actual, q_half, hc, step
+            )
             t += dt_actual
 
-            # 保存
             if step % save_every == 0 or step == n_steps:
                 saved_times.append(t)
                 saved_temps.append(T_vec.reshape(nx, ny).copy())
 
-        # 8. 组装结果
         times_arr = np.array(saved_times, dtype=float)
-        temps_arr = np.stack(saved_temps, axis=0)  # (n_times, nx, ny)
+        temps_arr = np.stack(saved_temps, axis=0)
 
         return TransientHeatResult(
             times=times_arr,
