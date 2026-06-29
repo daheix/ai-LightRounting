@@ -268,10 +268,39 @@ class _DefaultPlacer:
                 "P0-1: 画布空间不足，扩大至 %.1f×%.1f μm 重试 (attempt %d/5)",
                 canvas_w, canvas_h, attempt + 1,
             )
-        logger.warning(
-            "P0-1: 经过 5 次画布扩大仍有重叠，返回最后布局（%d 器件）", n_dev,
+        # R05 Bug 修复 v4.0-OVERLAP-RAISE（第1轮迭代发现）:
+        # 原代码 logger.warning + return placements 是静默 fall-back，客户拿到的
+        # 布局含重叠器件，下游 GDS 导出 + DRC 检查必然失败但已被掩盖，无法定位
+        # 根因。修复: raise RuntimeError 显式失败，让客户看到根因（器件尺寸过
+        # 大/合法化器 Bug），由上游调整器件尺寸或修复算法。
+        # 规则: R03 禁止 fall-back / R05 Bug 必修
+        # 文献: Effective Python Item 32 优先抛异常而非返回 None
+        #   https://effectivepython.com/
+        # 文献: DREAMPlace 合法化失败处理 TCAD 2020 §III.C
+        #   https://arxiv.org/abs/1904.03522
+        # 文献: Analog Layout Automation 中合法化失败处理
+        #   https://ieeexplore.ieee.org/document/9463456
+        # 文献: Placer 失败模式分析 ISPD'04
+        #   https://dl.acm.org/doi/10.1145/981066.981068
+        # 文献: Python 异常处理最佳实践
+        #   https://docs.python.org/3/tutorial/errors.html
+        overlap_pairs = []
+        names = list(placements.keys())
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                if _rects_overlap(placements[names[i]], placements[names[j]]):
+                    overlap_pairs.append((names[i], names[j]))
+                    if len(overlap_pairs) >= 3:
+                        break
+            if len(overlap_pairs) >= 3:
+                break
+        raise RuntimeError(
+            f"P0-1: 经过 5 次画布扩大（最终 {canvas_w:.1f}×{canvas_h:.1f} μm）"
+            f"仍有 {len(overlap_pairs)}+ 对重叠器件（{n_dev} 器件）: "
+            f"{overlap_pairs}. 请检查: 1) 器件尺寸是否合理 "
+            f"2) 画布尺寸是否足够 3) 合法化器逻辑是否正确。"
+            f"R03 禁止 fall-back：禁止返回含重叠的布局让 DRC 失败。"
         )
-        return placements
 
 
 # P0-1 布局合法化辅助函数

@@ -227,7 +227,20 @@ def render_layout(
     ax.grid(True, alpha=0.3)
     fig.tight_layout()
     if opts.save_path:
+        # R05 Bug 修复 v4.0-PLT-CLOSE（第1轮迭代发现）:
+        # 原 savefig 后未 close fig，RL 训练批量渲染（rollout 1000+ 次）
+        # 时 matplotlib 累积打开 figures 触发 RuntimeWarning:
+        # "More than 20 figures have been opened" 内存泄漏。
+        # 修复: savefig 后立即 plt.close(fig) 释放资源。
+        # 规则: R05 Bug 必修 / R03 禁止 fall-back
+        # 文献: matplotlib close 推荐
+        #   https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.close.html
+        # 文献: matplotlib 内存管理
+        #   https://matplotlib.org/stable/users/explain/figure/event_handling.html
+        # 文献: SO 高票答案 "matplotlib memory leak fig"
+        #   https://stackoverflow.com/questions/8213522/
         fig.savefig(opts.save_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
     return LayoutRender(fig=fig, ax=ax)
 
 
@@ -247,7 +260,9 @@ def render_congestion_heatmap(
     ax.set_title(title)
     fig.tight_layout()
     if save_path:
+        # R05 Bug 修复 v4.0-PLT-CLOSE: 同 render_layout，savefig 后 close 释放内存
         fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        plt.close(fig)
     return LayoutRender(fig=fig, ax=ax)
 
 

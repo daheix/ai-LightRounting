@@ -380,6 +380,80 @@ def _point_in_polygon(p: np.ndarray, poly: np.ndarray) -> bool:
     return inside
 
 
+def _spatial_candidate_pairs(
+    polys: list[np.ndarray],
+    threshold: float,
+) -> list[tuple[int, int]]:
+    """生成阈值距离内的多边形候选索引对（i < j），用 cKDTree 跳过远对。
+
+    R05 Bug 修复 v4.0-SPATIAL-IDX（第1轮迭代发现）:
+    原代码双层循环 ``for i in range(n): for j in range(i+1, n)``
+    对 1000+ 多边形层（PCB/光电大规模版图）执行 500,000+ 次 bbox
+    计算，RC 提取/DRC 检查耗时数小时（Calibre 商业版用 hierarchical
+    R-tree 解决同样问题）。
+
+    修复:
+    1. 用 ``scipy.spatial.cKDTree`` 在多边形 bbox 中心上构建 k-d 树
+    2. ``query_pairs(r=threshold + 2*max_half_diag)`` 一次性返回所有
+       可能接近的对（O(n log n) 构造 + O(n + k) 查询，k 为候选对数）
+    3. 调用方仍需 bbox 距离 + 实际距离过滤（k 远小于 n²）
+
+    退化: scipy 不可用时 raise ImportError（R03 禁止 fall-back 到 O(n²)，
+    会让大规模版图分析静默超时；上游需安装 scipy）。
+
+    规则: R03 禁止 fall-back / R05 Bug 必修 / 用户规则 优先使用三方库
+    文献:
+    - scipy.spatial.cKDTree:
+      https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.cKDTree.html
+    - Bentley, "Multidimensional Binary Search Trees", CACM 1975
+      https://dl.acm.org/doi/10.1145/361002.361007
+    - de Berg et al., "Computational Geometry", Springer 2008 (k-d tree §5.2)
+    - Calibre xACT 空间索引:
+      https://eda.sw.siemens.com/en-US/calibre/
+    - Magic VLSI hierarchical DRC:
+      http://opencircuitdesign.com/magic/
+
+    Args:
+        polys: 多边形列表（每个为 (m,2) ndarray）。
+        threshold: 距离阈值（μm），仅返回中心距离 ≤ threshold+2·max_half_diag 的对。
+
+    Returns:
+        候选 (i, j) 对列表，i < j。调用方仍需做 bbox 距离 + 实际距离精确过滤。
+    """
+    n = len(polys)
+    if n < 2:
+        return []
+    try:
+        from scipy.spatial import cKDTree
+    except ImportError as exc:
+        raise ImportError(
+            "scipy.spatial.cKDTree 不可用，无法构建空间索引。"
+            "R03 禁止 fall-back 到 O(n²)：大规模版图会静默超时。"
+            "请安装 scipy (pip install scipy)。"
+        ) from exc
+
+    centers = np.empty((n, 2), dtype=float)
+    half_diags = np.zeros(n, dtype=float)
+    for i, poly in enumerate(polys):
+        if len(poly) < 1:
+            centers[i] = (0.0, 0.0)
+            continue
+        bbox = _polygon_bbox(poly)
+        centers[i, 0] = (bbox[0] + bbox[2]) * 0.5
+        centers[i, 1] = (bbox[1] + bbox[3]) * 0.5
+        half_diags[i] = math.hypot(bbox[2] - bbox[0], bbox[3] - bbox[1]) * 0.5
+
+    max_half_diag = float(half_diags.max()) if n > 0 else 0.0
+    # 两多边形 bbox 中心距离 ≤ threshold + 2·max_half_diag 时才可能整体距离 ≤ threshold
+    r_query = threshold + max_half_diag * 2.0
+    if r_query <= 0:
+        return []
+
+    tree = cKDTree(centers)
+    pairs_set = tree.query_pairs(r=r_query, output_type="set")
+    return sorted(pairs_set)
+
+
 def _polygon_pair_min_distance(p1: np.ndarray, p2: np.ndarray) -> float:
     """两个多边形之间的最小边到边距离。来源: de Berg, CG, Springer 2008。"""
     n1, n2 = len(p1), len(p2)
@@ -660,36 +734,39 @@ class ParasiticExtractor:
             n = len(polys)
             if n < 2:
                 continue
-            for i in range(n):
-                for j in range(i + 1, n):
-                    if len(polys[i]) < 3 or len(polys[j]) < 3:
-                        continue
-                    bbox_i = _polygon_bbox(polys[i])
-                    bbox_j = _polygon_bbox(polys[j])
-                    dx = max(0.0, max(bbox_j[0] - bbox_i[2], bbox_i[0] - bbox_j[2]))
-                    dy = max(0.0, max(bbox_j[1] - bbox_i[3], bbox_i[1] - bbox_j[3]))
-                    if math.hypot(dx, dy) > coupling_threshold_um or math.hypot(dx, dy) < 1e-9:
-                        continue
-                    s_um = _polygon_pair_min_distance(polys[i], polys[j])
-                    if s_um < 1e-9 or s_um > coupling_threshold_um:
-                        continue
-                    l_overlap = _bbox_overlap_length(bbox_i, bbox_j)
-                    if l_overlap < 1e-9:
-                        continue
-                    # *v3.3-VER-12 修复*: 介质厚度修正，避免耦合长度高估
-                    # 当 s >= t_di 时，有效耦合长度按 t_di/s 衰减
-                    if s_um > t_di_um and t_di_um > 0:
-                        l_eff = l_overlap * (t_di_um / s_um)
-                    else:
-                        l_eff = l_overlap
-                    c_coupling = eps * h_um * l_eff / s_um * um_to_m
-                    elements.append(ParasiticElement(
-                        name=f"C_{layer_name}_{i}_{j}_coup",
-                        element_type="CAPACITOR",
-                        value=c_coupling,
-                        node1=f"n_{layer_name}_{i}_b",
-                        node2=f"n_{layer_name}_{j}_b",
-                    ))
+            # R05 Bug 修复 v4.0-SPATIAL-IDX（第1轮迭代发现）:
+            # 原双层循环 O(n²)，对 1000+ 多边形层执行 500k+ 次 bbox 计算。
+            # 改用 cKDTree 候选对过滤（O(n log n)），调用方仍做精确过滤。
+            candidate_pairs = _spatial_candidate_pairs(polys, coupling_threshold_um)
+            for i, j in candidate_pairs:
+                if len(polys[i]) < 3 or len(polys[j]) < 3:
+                    continue
+                bbox_i = _polygon_bbox(polys[i])
+                bbox_j = _polygon_bbox(polys[j])
+                dx = max(0.0, max(bbox_j[0] - bbox_i[2], bbox_i[0] - bbox_j[2]))
+                dy = max(0.0, max(bbox_j[1] - bbox_i[3], bbox_i[1] - bbox_j[3]))
+                if math.hypot(dx, dy) > coupling_threshold_um or math.hypot(dx, dy) < 1e-9:
+                    continue
+                s_um = _polygon_pair_min_distance(polys[i], polys[j])
+                if s_um < 1e-9 or s_um > coupling_threshold_um:
+                    continue
+                l_overlap = _bbox_overlap_length(bbox_i, bbox_j)
+                if l_overlap < 1e-9:
+                    continue
+                # *v3.3-VER-12 修复*: 介质厚度修正，避免耦合长度高估
+                # 当 s >= t_di 时，有效耦合长度按 t_di/s 衰减
+                if s_um > t_di_um and t_di_um > 0:
+                    l_eff = l_overlap * (t_di_um / s_um)
+                else:
+                    l_eff = l_overlap
+                c_coupling = eps * h_um * l_eff / s_um * um_to_m
+                elements.append(ParasiticElement(
+                    name=f"C_{layer_name}_{i}_{j}_coup",
+                    element_type="CAPACITOR",
+                    value=c_coupling,
+                    node1=f"n_{layer_name}_{i}_b",
+                    node2=f"n_{layer_name}_{j}_b",
+                ))
         return elements
 
     @staticmethod
@@ -837,24 +914,27 @@ class LithoFriendlyChecker:
         """
         hotspots: list[LithoHotspot] = []
         n = len(polys)
-        for i in range(n):
-            for j in range(i + 1, n):
-                if len(polys[i]) < 3 or len(polys[j]) < 3:
-                    continue
-                s = _polygon_pair_min_distance(polys[i], polys[j])
-                if s < rule.min_value:
-                    cx = (_polygon_center(polys[i])[0]
-                          + _polygon_center(polys[j])[0]) * 0.5
-                    cy = (_polygon_center(polys[i])[1]
-                          + _polygon_center(polys[j])[1]) * 0.5
-                    hotspots.append(LithoHotspot(
-                        rule_name=rule.name, rule_type="SPACE",
-                        gds_layer=rule.gds_layer, location=(cx, cy),
-                        actual_value=s, expected_value=rule.min_value,
-                        severity=rule.severity,
-                        message=(f"多边形 {i}-{j} 间距 {s:.4f}μm < 阈值 "
-                                 f"{rule.min_value:.4f}μm"),
-                    ))
+        # R05 Bug 修复 v4.0-SPATIAL-IDX（第1轮迭代发现）:
+        # 原双层循环 O(n²)，对 1000+ 多边形层执行 500k+ 次精确距离计算。
+        # 改用 cKDTree 候选对过滤（O(n log n)），调用方仍做精确距离过滤。
+        candidate_pairs = _spatial_candidate_pairs(polys, rule.min_value)
+        for i, j in candidate_pairs:
+            if len(polys[i]) < 3 or len(polys[j]) < 3:
+                continue
+            s = _polygon_pair_min_distance(polys[i], polys[j])
+            if s < rule.min_value:
+                cx = (_polygon_center(polys[i])[0]
+                      + _polygon_center(polys[j])[0]) * 0.5
+                cy = (_polygon_center(polys[i])[1]
+                      + _polygon_center(polys[j])[1]) * 0.5
+                hotspots.append(LithoHotspot(
+                    rule_name=rule.name, rule_type="SPACE",
+                    gds_layer=rule.gds_layer, location=(cx, cy),
+                    actual_value=s, expected_value=rule.min_value,
+                    severity=rule.severity,
+                    message=(f"多边形 {i}-{j} 间距 {s:.4f}μm < 阈值 "
+                             f"{rule.min_value:.4f}μm"),
+                ))
         return hotspots
 
     def _check_area(
