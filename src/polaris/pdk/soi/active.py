@@ -83,8 +83,24 @@ def _make_mrm_ports(radius: float, width: float) -> list[Port]:
 def make_thermo_optic_phase_shifter() -> Device:
     """热光移相器（thermo-optic phase shifter, TOPS）。
 
-    Pπ ~20mW，基于 Si 热光系数（1.8×10⁻⁴ /K）实现相位调谐。
-    来源：硅光工艺平台比较（iccsz.com）；热光系数来源台积电 ISSCC 2026。
+    Pπ ~20mW，基于 Si 热光系数（1.86×10⁻⁴ /K）实现相位调谐。
+
+    R05 Bug 修复 v4.0-DNDT-P0（第2轮迭代发现）:
+    原 dn/dT=1.8e-4 /K 来源 iccsz.com/ISSCC 2026 不可溯源二手，违反 R02。
+    修复为 1.86e-4 /K（Cocorullo 1999 IEEE JSTQE 5(3):519-521, DOI:10.1109/2944.788409），
+    与 sim/heat/solver.py、sim/multiphysics/thermo_optic.py、device/tcad_thermal_package.py
+    等 5 处保持一致。差异约 3.3%，影响 Pπ 功耗/热光开关时间/热串扰计算。
+    规则: R02 学术诚信 / R05 Bug 必修
+    文献:
+    - Cocorullo 1999 IEEE JSTQE 5(3):519-521
+      https://doi.org/10.1109/2944.788409
+    - Cocorullo 1999 Electron. Lett. 35(5):453-455
+      https://doi.org/10.1049/el:19990151
+    - Komma 2012 Appl. Phys. Lett. 101:041905 复核
+      https://doi.org/10.1063/1.4738989
+    - Della Corte 2000 IEEE
+    - Frey/Gordon/Levi 2006 J. Appl. Phys. 99:033107 综述
+      https://doi.org/10.1063/1.2170418
     """
     length = 100.0  # 加热器长度
     width = 0.5
@@ -105,7 +121,7 @@ def make_thermo_optic_phase_shifter() -> Device:
             "ppi_mw": 20.0,  # Pπ ~20mW（π 相移功耗）
             "insertion_loss_db": 0.1,
             "heater_length_um": 100.0,
-            "thermo_optic_coeff_per_k": 1.8e-4,  # Si 热光系数 1.8×10⁻⁴ /K
+            "thermo_optic_coeff_per_k": 1.86e-4,  # Si 热光系数 1.86×10⁻⁴ /K (Cocorullo 1999)
             "wavelength_nm": 1550,
         },
         source=_SRC_ICCSZ,

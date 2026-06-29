@@ -84,7 +84,9 @@ class GPUFDTDConfig:
     """
 
     grid_size: tuple = (100, 100, 1)
-    dx: float = 0.05  # μm（λ/20 @ 1.55μm，MEEP/Tidy3D 推荐值）
+    # R05 Bug 修复 v4.0-FDTD-GRID-P1: 0.05μm 实为 λ_SiO₂/20 @1.55μm（包层介质波长）
+    # 硅芯中实为 λ_Si/9（0.446μm/9），高约束 SOI 器件需亚像素平滑或更细网格
+    dx: float = 0.05  # μm（λ_SiO₂/20 @ 1.55μm，MEEP/Tidy3D 推荐值）
     dt: float | None = None  # 自动 CFL
     runtime: float = 1e-12  # 1 ps
     pml_layers: int = 12

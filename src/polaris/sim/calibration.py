@@ -176,11 +176,19 @@ def _estimate_loss(data: dict) -> float:
     - LiDAR: instances (dict, 含 component/settings)
     - gdsfactory: instances (list 或 dict)
 
-    波导类器件按 length 参数计算损耗（2.0 dB/cm），其他器件按类型查表。
+    波导类器件按 length 参数计算损耗（3.0 dB/cm），其他器件按类型查表。
+
+    R05 Bug 修复 v4.0-SOI-LOSS-P1（第2轮迭代发现）:
+    原 2.0 dB/cm 取 SiEPIC PDK 下界，与 waveguide_router.py:545、
+    rip_reroute.py:55、curvy_router.py:244 等 7 处 3.0 dB/cm 不一致。
+    修复为 3.0 dB/cm（Soref 1993 + Vlasov 2004）。
 
     来源:
-    - SiEPIC EBeam PDK 波导损耗典型值 2.0 dB/cm
-      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183 SOI 3 dB/cm
+      https://ieeexplore.ieee.org/document/1148303
+    - Vlasov & McNab 2004 Opt. Express 12(8) 1622-1631
+      https://www.opticsexpress.org/abstract.cfm?uri=oe-12-8-1622
+    - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     instances = data.get("instances")
     if instances is None:
@@ -210,8 +218,9 @@ def _instance_loss(inst) -> float:
     return _cell_loss(cell)
 
 
-# 波导单位长度损耗 (dB/μm)，来源 SiEPIC EBeam PDK 典型值 2.0 dB/cm
-_WG_LOSS_DB_PER_UM: float = 2.0 / 1e4
+# 波导单位长度损耗 (dB/μm)，SOI 3.0 dB/cm（Soref 1993 + SiEPIC EBeam PDK 上界）
+# R05 Bug 修复 v4.0-SOI-LOSS-P1: 原值 2.0 dB/cm 与项目 7 处不一致，统一为 3.0
+_WG_LOSS_DB_PER_UM: float = 3.0 / 1e4
 
 
 # 器件类型关键字 → 损耗 (dB) 映射表

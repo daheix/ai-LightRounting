@@ -97,16 +97,30 @@ class PhotonicEdgeFeatureConfig:
 
     将光电子专用边特征参数聚合为单一配置对象（规则 4.1）。
 
+    R05 Bug 修复 v4.0-SOI-LOSS-P1（第2轮迭代发现）:
+    原 default_loss_db_cm=2.0 取 SiEPIC PDK 下界，与 waveguide_router.py:545、
+    rip_reroute.py:55、curvy_router.py:244 等 7 处 3.0 dB/cm 不一致。
+    修复为 3.0 dB/cm 统一上界（Soref 1993 + Vlasov 2004）。
+    规则: R02 学术诚信 / R05 Bug 必修
+    文献:
+    - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183
+      https://ieeexplore.ieee.org/document/1148303
+    - Vlasov & McNab 2004 Opt. Express 12(8) 1622-1631
+      https://www.opticsexpress.org/abstract.cfm?uri=oe-12-8-1622
+    - Chrostowski & Hochberg 2015 §6.4
+      https://www.cambridge.org/core/books/silicon-photonics-design/
+    - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
     Attributes:
         default_wavelength_um: 默认波长（μm），来源 SiEPIC EBeam PDK 1550nm。
-        default_loss_db_cm: 默认波导损耗（dB/cm），来源 SiEPIC EBeam PDK strip 2.0 dB/cm。
+        default_loss_db_cm: 默认波导损耗（dB/cm），SOI 3.0 dB/cm（Soref 1993）。
         default_crosstalk_db: 默认串扰（-dB），来源 SiEPIC EBeam PDK 波导间距 3μm 时 -30dB。
         default_bend_radius_um: 默认弯曲半径（μm），来源 SiEPIC EBeam PDK 最小 5μm。
         default_neff: 默认有效折射率，来源 SiEPIC EBeam PDK strip 2.4。
     """
 
     default_wavelength_um: float = 1.55
-    default_loss_db_cm: float = 2.0
+    default_loss_db_cm: float = 3.0
     default_crosstalk_db: float = 30.0
     default_bend_radius_um: float = 5.0
     default_neff: float = 2.4

@@ -46,7 +46,17 @@ import numpy as np
 # 3 dB/cm → 1/μm: 3 / (4.343 * 1e4) ≈ 6.9e-5（dB = 4.343 * α * L）
 SOI_PROPAGATION_LOSS_DB_CM = 3.0
 SOI_ALPHA_UM = SOI_PROPAGATION_LOSS_DB_CM / (4.343 * 1e4)
-PIXEL_SIZE_UM = 0.05  # λ/20 @ 1.55μm（MEEP/Tidy3D 推荐值）
+# R05 Bug 修复 v4.0-FDTD-GRID-P1（第2轮迭代发现）:
+# 原注释"λ/20 @ 1.55μm"误导。0.05μm 实为 λ_SiO₂/20 @1.55μm（包层介质波长），
+# 非真空中波长 λ_vac/20=0.0775μm。硅芯中 λ_Si=0.446μm，0.05μm=λ_Si/9，
+# 高约束 SOI 器件硅芯区数值色散显著（需亚像素平滑或更细网格）。
+# 注释明确介质类型，避免误判满足准则。
+# 规则: R02 学术诚信 / R05 Bug 必修
+# 文献:
+# - MEEP docs §Numerical Dispersion https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/
+# - Tidy3D docs λ/20 in the medium https://docs.flexcompute.com/projects/tidy3d/
+# - Taflove Hagness 2005 "Computational Electrodynamics" §4 FDTD 数值色散
+PIXEL_SIZE_UM = 0.05  # λ_SiO₂/20 @ 1.55μm（包层介质波长；硅芯中实为 λ_Si/9 需注意）
 
 
 class WaveguideSimulator:

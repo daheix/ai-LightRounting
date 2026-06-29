@@ -86,8 +86,10 @@ class FDTDConfig:
     - wavelength 1.5-1.6μm: C 波段 (ITU-T G.694.1)。
     - n_wavelengths=50: Tidy3D 默认采样数
       (https://docs.flexcompute.com/projects/tidy3d/en/latest/)。
-    - grid_resolution_um=0.05: λ/20 @ 1.55μm，MEEP/Tidy3D 推荐值
+    - grid_resolution_um=0.05: λ_SiO₂/20 @ 1.55μm（包层介质波长；硅芯中实为
+      λ_Si/9，高约束 SOI 器件需亚像素平滑或更细网格），MEEP/Tidy3D 推荐值
       (https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/)。
+      R05 Bug 修复 v4.0-FDTD-GRID-P1: 原注释"λ/20 @ 1.55μm"未指明介质，误导
     - pml_thickness_um=1.0: MEEP 默认 PML 厚度
       (https://meep.readthedocs.io/en/latest/Python_User_Interface/#pml)。
     - boundary_type="PML": 完美匹配层，MEEP/Tidy3D 标准吸收边界
@@ -100,7 +102,8 @@ class FDTDConfig:
     wavelength_start_um: float = 1.5
     wavelength_end_um: float = 1.6
     n_wavelengths: int = 50
-    grid_resolution_um: float = 0.05  # λ/20 @ 1.55μm
+    # R05 Bug 修复 v4.0-FDTD-GRID-P1: 0.05μm 实为 λ_SiO₂/20，非 λ_vac/20=0.0775μm
+    grid_resolution_um: float = 0.05  # λ_SiO₂/20 @ 1.55μm（包层介质波长）
     pml_thickness_um: float = 1.0
     boundary_type: str = "PML"
     simulation_time_fs: float = 1000.0

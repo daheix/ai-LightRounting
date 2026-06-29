@@ -101,12 +101,26 @@ def _make_double_ring_ports(
 def make_ring_resonator() -> Device:
     """微环谐振器（add-drop ring resonator）。
 
-    SiEPIC EBeam PDK half_ring 默认参数：radius=5μm, gap=50nm, width=500nm。
+    SiEPIC EBeam PDK half_ring 默认参数：radius=5μm, gap=200nm, width=500nm。
+
+    R05 Bug 修复 v4.0-GAP-P1（第2轮迭代发现）:
+    原 gap=50nm 与项目自家 DRC constraint_types.py:136 min_coupling_gap_um=0.1
+    冲突，会触发自身 DRC 违例。50nm 虽在 SiEPIC e-beam 工艺下可制造，但项目
+    其他 DC（couplers.py:174/192, double_ring_filter:144/164,
+    gdsfactory_integration.py:144/158）均统一 200nm。修复为 200nm 与项目标准一致。
+    规则: R02 学术诚信 / R05 Bug 必修 / R03 内部一致性
+    文献:
+    - SiEPIC EBeam PDK half_ring https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Chrostowski & Hochberg 2015 §6.4 ring resonator
+      https://www.cambridge.org/core/books/silicon-photonics-design/
+    - 项目 DRC constraint_types.py:136 min_coupling_gap_um=0.1
+    - 项目 couplers.py:174 gap_nm=200
+    - AIM Photonics 教程 ring resonator
     半径 5-20μm，与总线波导耦合构成谐振滤波/调制单元。
     来源：SiEPIC EBeam PDK half_ring 模型 + AIM Photonics 教程。
     """
     radius = 5.0  # SiEPIC half_ring 默认半径 5μm
-    gap = 0.05  # SiEPIC half_ring 默认耦合间隙 50nm
+    gap = 0.2  # 项目 DRC 标准 200nm（与 couplers.py / gdsfactory_integration.py 一致）
     width = 0.5
     ports = _make_ring_resonator_ports(radius, gap, width)
     ring_top = 2 * (radius + gap + width) + width / 2
@@ -119,7 +133,7 @@ def make_ring_resonator() -> Device:
         bbox=BoundingBox(xmin=0.0, ymin=-width / 2, xmax=2 * radius, ymax=ring_top),
         params={
             "radius_um": 5.0,  # SiEPIC 默认半径 5μm
-            "gap_nm": 50,  # SiEPIC half_ring 默认耦合间隙 50nm
+            "gap_nm": 200,  # 项目 DRC 标准 200nm（R05 v4.0-GAP-P1 修复，原 50nm 触发自身 DRC）
             "q_factor": 10000,  # 品质因数
             "fsr_nm": 10.0,  # 自由光谱范围
             "loss_db_cm": 3.0,  # SiEPIC e-beam 波导损耗

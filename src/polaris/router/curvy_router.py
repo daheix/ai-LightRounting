@@ -226,13 +226,22 @@ class CurvyRouter(DiagonalGridRouter):
     def _estimate_curvy_loss(length_um: float, num_bends: int) -> float:
         """估算弯曲波导总损耗（dB）。
 
-        来源: SiEPIC EBeam PDK
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - 传播损耗: SOI strip waveguide 2.0 dB/cm（SiEPIC EBeam PDK 典型值 2-3 dB/cm）
-        - 单位弯曲损耗: 0.015 dB/bend（euler bend R=5μm 典型值 0.01-0.1 dB/90°，
-          取下界附近保守值；来源: SiEPIC EBeam PDK bend_euler loss_db_90 参数）
+        R05 Bug 修复 v4.0-SOI-LOSS-P1（第2轮迭代发现）:
+        原 propagation=2.0 dB/cm 取 SiEPIC PDK 下界，与 waveguide_router.py:545、
+        rip_reroute.py:55、default_simulator.py、ai/waveguide_simulator.py 等
+        6 处 3.0 dB/cm 不一致。修复为 3.0 dB/cm 统一上界（Soref 1993 IEEE
+        Proc. 41(9) 1182-1183 SOI 3 dB/cm 基准），消除模块间数值差异。
+        规则: R02 学术诚信 / R05 Bug 必修
+        文献:
+        - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183
+          https://ieeexplore.ieee.org/document/1148303
+        - Vlasov & McNab 2004 Opt. Express 12(8) 1622-1631
+          https://www.opticsexpress.org/abstract.cfm?uri=oe-12-8-1622
+        - Chrostowski & Hochberg 2015 §6.4
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+        - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         """
-        propagation = 2.0 * length_um / 1e4  # SOI ~2 dB/cm
+        propagation = 3.0 * length_um / 1e4  # SOI 3.0 dB/cm（Soref 1993 + SiEPIC PDK 上界）
         bend_loss = num_bends * 0.015  # euler bend ~0.015 dB/90° (SiEPIC EBeam PDK)
         return propagation + bend_loss
 

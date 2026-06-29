@@ -411,7 +411,12 @@ def make_sin_thermo_optic() -> Device:
         bbox=BoundingBox(xmin=0.0, ymin=0.0, xmax=1.0, ymax=1.0),
         params={
             "thermo_optic_coefficient_per_k": 2.4e-5,  # 2.4×10⁻⁵ /K（文献典型值）
-            "si_thermo_optic_coefficient_per_k": 1.8e-4,  # Si 1.8×10⁻⁴ /K（对比）
+            # R05 Bug 修复 v4.0-DNDT-P0（第2轮迭代发现）:
+            # 原 1.8e-4 来源 iccsz.com 不可溯源，与 soi/active.py 同步错误。
+            # 修复为 1.86e-4（Cocorullo 1999 IEEE JSTQE 5(3):519-521,
+            # DOI:10.1109/2944.788409），与项目内 5 处保持一致。
+            # 规则: R02 学术诚信 / R05 Bug 必修
+            "si_thermo_optic_coefficient_per_k": 1.86e-4,  # Si 1.86×10⁻⁴ /K (Cocorullo 1999)
             "comparison": "比 Si 低一个数量级",
         },
         source=_SRC_EEFOCUS_SIN_TOC,

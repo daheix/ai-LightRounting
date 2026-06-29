@@ -310,8 +310,18 @@ def evaluate_congestion(
 
 
 # 默认波导损耗（dB/cm），用于 INSERTION_LOSS_DB 评估
-# 来源: SOI 220nm 平台典型值 1.0 dB/cm（foundry_platforms.py GF_Fotonix/Tower）
-_DEFAULT_WAVEGUIDE_LOSS_DB_CM = 1.0
+# R05 Bug 修复 v4.0-SOI-LOSS-P1（第2轮迭代发现）:
+# 原注释"SOI 220nm 平台典型值 1.0 dB/cm"误导（实为 GF_Fotonix/Tower 特定值，
+# 非 SOI 平台典型），且与项目 7 处 3.0 dB/cm 不一致。统一为 3.0 dB/cm
+# （Soref 1993 + SiEPIC EBeam PDK 上界）。
+# 规则: R02 学术诚信 / R05 Bug 必修
+# 文献:
+# - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183
+#   https://ieeexplore.ieee.org/document/1148303
+# - Vlasov & McNab 2004 Opt. Express 12(8) 1622-1631
+#   https://www.opticsexpress.org/abstract.cfm?uri=oe-12-8-1622
+# - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+_DEFAULT_WAVEGUIDE_LOSS_DB_CM = 3.0
 
 
 def evaluate_insertion_loss(

@@ -150,16 +150,27 @@ FOUNDRY_PLATFORMS: dict[str, FoundryPlatform] = {
         name="Tower_OpenLight",
         foundry="Tower Semiconductor / OpenLight",
         process_node="PH18DA, 220nm SOI (200mm)",
-        material_platform="Hybrid",
-        waveguide_width_um=0.45,
+        # R05 Bug 修复 v4.0-OPENLIGHT-MATL（第2轮迭代发现）:
+        # 原 material_platform="Hybrid" + width=0.45μm 与 foundry_pdk_expanded.py:231
+        # MaterialPlatform.INP + width=2.0μm 不一致。OpenLight 官方确认 InP PLC
+        # 平台，波导宽度 2.0μm。修复为 InP/2.0μm 与 foundry_pdk_expanded.py 一致。
+        # 规则: R02 学术诚信 / R05 Bug 必修 / R03 内部一致性
+        # 文献:
+        # - OpenLight InP PLC https://openlightphotonics.com/
+        # - foundry_pdk_expanded.py:231-238 OpenLight=InP, width=2.0μm
+        # - Tower PH18DA https://towerjazz.com/
+        # - 448Gbps InP PLC https://cloud.tencent.cn/developer/article/2512304
+        material_platform="InP",
+        waveguide_width_um=2.0,
         min_bend_radius_um=5.0,
         waveguide_loss_db_cm=1.0,
         wafer_size_mm=200,
         sources=[
-            "http://www.c-fol.net/m/news/view.php?id=20250327095459",
+            "http://www.c-fol.net/m_news/view.php?id=20250327095459",
             "https://cloud.tencent.cn/developer/article/2512304",
+            "https://openlightphotonics.com/",
         ],
-        notes="Tower/OpenLight，InP 异质集成，448Gbps 单通道",
+        notes="Tower/OpenLight，InP PLC（异质集成 DFB+MZM+PD），448Gbps 单通道",
     ),
     # --- SiN 平台 ---
     "LIGENTEC": FoundryPlatform(

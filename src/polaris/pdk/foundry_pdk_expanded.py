@@ -216,10 +216,21 @@ class FoundryPDKRegistry:
                         device_count=13, drc_rule_count=80,
                         description="UBC SiEPIC EBeam",
                         url="https://github.com/SiEPIC/SiEPIC_EBeam_PDK"),
-            FoundrySpec(FoundryPlatform.VTT, MaterialPlatform.SIN,
-                        min_feature_nm=500, propagation_loss_db_cm=0.1,
+            # R05 Bug 修复 v4.0-VTT-MATL（第2轮迭代发现）:
+            # 原标记 MaterialPlatform.SIN 错误，VTT 实际为 3μm ThickSOI 平台
+            # （foundry_platforms.py:196-210 已溯源 VTT 官方文档）。
+            # 修复为 SOI + width=3.0μm + thickness=3000nm，与 foundry_platforms.py 一致。
+            # 规则: R02 学术诚信 / R05 Bug 必修
+            # 文献:
+            # - VTT 3μm Thick SOI https://cloud.tencent.com/developer/article/1678542
+            # - VTT official https://www.vttresearch.com/
+            # - Omeda Semi VTT https://www.omedasemi.com/news/641.html
+            FoundrySpec(FoundryPlatform.VTT, MaterialPlatform.SOI,
+                        min_feature_nm=500, waveguide_width_um=3.0,
+                        waveguide_thickness_nm=3000,
+                        propagation_loss_db_cm=0.1,
                         device_count=10, drc_rule_count=55,
-                        description="VTT SiN PIC",
+                        description="VTT 3μm Thick SOI (150mm)",
                         url="https://www.vttresearch.com/"),
             FoundrySpec(FoundryPlatform.TOWER, MaterialPlatform.SOI,
                         min_feature_nm=130, waveguide_thickness_nm=220,
