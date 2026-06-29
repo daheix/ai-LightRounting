@@ -164,7 +164,8 @@ class FoundryPDKRegistry:
                         description="Advanced Micro Foundry SOI",
                         url="https://www.amf.com.sg/"),
             FoundrySpec(FoundryPlatform.AIM, MaterialPlatform.SOI,
-                        min_feature_nm=130, device_count=14, drc_rule_count=90,
+                        min_feature_nm=130, propagation_loss_db_cm=3.0,  # R10-P2-3: 硅平台 3.0 dB/cm（Soref 1993）
+                        device_count=14, drc_rule_count=90,
                         has_active=True, has_modulator=True, has_detector=True,
                         description="AIM Photonics Multi-Project Wafer",
                         url="https://aimphotonics.com/"),
@@ -176,12 +177,14 @@ class FoundryPDKRegistry:
                         url="https://www.compoundtek.com/"),
             FoundrySpec(FoundryPlatform.GF, MaterialPlatform.SOI,
                         min_feature_nm=90, waveguide_thickness_nm=220,
+                        propagation_loss_db_cm=3.0,  # R10-P2-4: 硅平台 3.0 dB/cm（Soref 1993）
                         has_active=True, has_modulator=True, has_detector=True,
                         device_count=18, drc_rule_count=110,
                         description="GlobalFoundries 45CLO SiPh",
                         url="https://gf.com/technology-solutions/silicon-photonics/"),
             FoundrySpec(FoundryPlatform.IHP, MaterialPlatform.SOI,
                         min_feature_nm=130, waveguide_thickness_nm=220,
+                        propagation_loss_db_cm=3.0,  # R10-P2-5: 硅平台 3.0 dB/cm（Soref 1993）
                         has_active=True, has_modulator=True, has_detector=True,
                         has_laser=True,  # IHP 有异质集成激光器
                         device_count=19, drc_rule_count=100,
@@ -234,6 +237,7 @@ class FoundryPDKRegistry:
                         url="https://www.vttresearch.com/"),
             FoundrySpec(FoundryPlatform.TOWER, MaterialPlatform.SOI,
                         min_feature_nm=130, waveguide_thickness_nm=220,
+                        propagation_loss_db_cm=3.0,  # R10-P2-1: 硅平台应为 3.0 dB/cm（Soref 1993）
                         has_active=True, has_modulator=True, has_detector=True,
                         device_count=17, drc_rule_count=105,
                         description="Tower Semiconductor PH18 SiPh",
@@ -249,7 +253,7 @@ class FoundryPDKRegistry:
                         url="https://openlightphotonics.com/"),
             FoundrySpec(FoundryPlatform.CORNERSTONE, MaterialPlatform.SOI,
                         min_feature_nm=130, waveguide_thickness_nm=220,
-                        propagation_loss_db_cm=2.0,
+                        propagation_loss_db_cm=3.0,  # R10-P2-2: 硅平台应为 3.0 dB/cm（Soref 1993）
                         has_active=True, has_modulator=True, has_detector=True,
                         device_count=14, drc_rule_count=80,
                         description="Cornerstone SiP MPW",
