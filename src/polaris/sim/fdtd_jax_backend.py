@@ -692,6 +692,8 @@ class JAXFDTDEngine:
     def __init__(
         self,
         grid_size: tuple = (50, 50, 10),
+        # R05 v4.0-FDTD-GRID-P2: 0.05μm 实为 λ_SiO₂/20 @1.55μm（包层介质波长），
+        # 硅芯中实为 λ_Si/9，高约束 SOI 器件需亚像素平滑或更细网格
         dx_um: float = 0.05,
         pml_layers: int = 8,
         runtime_fs: float = 500,

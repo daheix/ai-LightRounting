@@ -125,6 +125,7 @@ class LumericalIntegration:
             全流程结果字典。
         """
         # 1. MODE 求解波导模式
+        # R05 v4.0-FDTD-GRID-P2: (0.05, 0.05) 实为 λ_SiO₂/20 @1.55μm（包层介质波长）
         mode_cfg = ModeConfig(
             wavelength=waveguide_config.get("wavelength", 1.55),
             grid_size=waveguide_config.get("grid_size", (0.05, 0.05)),

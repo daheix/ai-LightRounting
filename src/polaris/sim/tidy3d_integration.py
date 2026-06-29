@@ -78,7 +78,9 @@ class Tidy3DConfig:
         wavelength_um: 中心波长（μm）。
         wavelength_span_um: 波长范围（μm）。
         n_wavelengths: 波长采样点数。
-        grid_size_um: 网格尺寸（μm），通常 λ/20。
+        grid_size_um: 网格尺寸（μm），λ_SiO₂/20 @1.55μm（包层介质波长；
+            硅芯中实为 λ_Si/9 需亚像素平滑或更细网格）。
+            R05 v4.0-FDTD-GRID-P2: 原注释"通常 λ/20"未指明介质
         pml_layers: PML 吸收边界层数。
         simulation_time_fs: 仿真时长（fs）。
         boundary_type: 边界类型（"PML"）。
@@ -87,6 +89,7 @@ class Tidy3DConfig:
     wavelength_um: float = 1.55
     wavelength_span_um: float = 0.1
     n_wavelengths: int = 11
+    # R05 v4.0-FDTD-GRID-P2: 0.05μm 实为 λ_SiO₂/20 @1.55μm
     grid_size_um: float = 0.05
     pml_layers: int = 10
     simulation_time_fs: float = 100.0

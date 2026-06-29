@@ -54,6 +54,8 @@ class ModeConfig:
     """
 
     wavelength: float = 1.55
+    # R05 v4.0-FDTD-GRID-P2: (0.05, 0.05) 实为 λ_SiO₂/20 @1.55μm（包层介质波长）
+    # 硅芯中实为 λ_Si/9，高约束 SOI 器件需亚像素平滑或更细网格
     grid_size: tuple = (0.05, 0.05)
     n_modes: int = 4
     boundary: str = "PML"
