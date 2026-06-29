@@ -155,10 +155,20 @@ class CurvyRouter(DiagonalGridRouter):
     def route_curvy(
         self, start: tuple[int, int], goal: tuple[int, int],
     ) -> CurvyPathResult:
-        """弯曲波导布线：A* 搜索 → 曲线平滑 → 输出弯曲路径。"""
+        """弯曲波导布线：A* 搜索 → 曲线平滑 → 输出弯曲路径。
+
+        R3-P2-3 修复: 原代码 grid_path=None 时返回 ``loss_db=999.0`` 哨兵值，
+        违反 R03（禁止 fall-back）。调用方必须检查 ``== 999.0`` 才能识别失败，
+        但文档未约定此协议，下游可能误用 999.0 dB 作为真实损耗。
+        修复为 raise RuntimeError，与 hybrid_router 失败处理保持一致。
+        """
         grid_path = self.route(start, goal)
         if grid_path is None:
-            return CurvyPathResult(points=[], length_um=0.0, loss_db=999.0)
+            raise RuntimeError(
+                f"弯曲波导布线失败: start={start}, goal={goal}。"
+                f"R03 禁止 fall-back: 禁止返回 999.0 dB 哨兵值让调用方误判成功。"
+                f"请检查: 1) 起止点是否可达 2) 障碍物是否阻断 3) 网格分辨率。"
+            )
         cfg = self.config
         raw_pts = [(g[0] * self.grid_size, g[1] * self.grid_size) for g in grid_path]
         corners = _detect_corners(grid_path)

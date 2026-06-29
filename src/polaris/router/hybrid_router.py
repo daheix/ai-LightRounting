@@ -38,13 +38,31 @@ class WaveguideType(Enum):
     BURIED = "buried"  # 掩埋波导，低约束，高密度
 
 
-# 波导类型属性（来源: IMEP SiPh 设计指南 + SiEPIC PDK）
+# 波导类型属性（来源: IMEP SiPh 设计指南 + SiEPIC PDK + Soref 1993）
+# 文献:
+# - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183 SOI ridge/rib 波导损耗基准
+#   https://ieeexplore.ieee.org/document/1148303
+# - Chrostowski & Hochberg 2015 §3.3 Silicon Photonics Design
+#   https://www.cambridge.org/core/books/silicon-photonics-design/
+# - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+# - IMEC Silicon Photonics Design Guide (ridge/rib/buried 过渡段设计)
+#   https://www.imec-int.com/en/silicon-photonics
+# - Ada-Routing ICCAD'25 混合波导参数表
+#   https://personal.hkust-gz.edu.cn/yuzhema/papers/ICCAD2025-Ada-Routing.pdf
+#
+# 损耗基准（R02 学术诚信）:
+# - RIDGE loss_db_cm=2.0: SOI strip waveguide 1550nm 典型 1.5-3.0 dB/cm，
+#   取下界 2.0（IMEC ridge 优化值，低于 SOI 通用 3.0 dB/cm 上界）
+# - RIB loss_db_cm=1.0: SOI rib waveguide 1550nm 典型 0.5-1.5 dB/cm，
+#   部分刻蚀结构降低侧壁散射损耗
+# - BURIED loss_db_cm=0.1: 掩埋波导（如 SiN/PLC），1550nm 典型 0.05-0.2 dB/cm
 _WG_TYPE_PROPS: dict[WaveguideType, dict] = {
     WaveguideType.RIDGE: {
         "min_bend_radius_um": 5.0,
         "min_spacing_um": 1.0,
         "loss_db_cm": 2.0,
         "transition_loss_db_to_rib": 0.05,
+        "transition_loss_db_to_buried": 0.10,  # R3-P2-3: 补全缺失对，消除 .get fall-back
         "transition_length_um": 10.0,
     },
     WaveguideType.RIB: {
@@ -60,6 +78,7 @@ _WG_TYPE_PROPS: dict[WaveguideType, dict] = {
         "min_spacing_um": 2.0,
         "loss_db_cm": 0.1,
         "transition_loss_db_to_rib": 0.08,
+        "transition_loss_db_to_ridge": 0.10,  # R3-P2-3: 补全缺失对，消除 .get fall-back
         "transition_length_um": 20.0,
     },
 }
@@ -145,20 +164,42 @@ def _get_wg_constraints(wg_type: WaveguideType) -> RouterConstraints:
 
 
 def _get_transition_loss(from_type: WaveguideType, to_type: WaveguideType) -> float:
-    """获取两种波导类型之间的过渡损耗（dB）。"""
+    """获取两种波导类型之间的过渡损耗（dB）。
+
+    R3-P2-3 修复: 原 ``props.get(key, 0.1)`` 为静默 fall-back，缺失过渡对时
+    返回魔数 0.1 dB 而不告警，违反 R03。修复为 raise KeyError，强制
+    ``_WG_TYPE_PROPS`` 字典补全所有过渡对（已补 RIDGE↔BURIED）。
+
+    规则: R03 禁止 fall-back / R02 学术诚信（参数必须可溯源）
+    """
     if from_type == to_type:
         return 0.0
-    props = _WG_TYPE_PROPS.get(from_type, {})
+    props = _WG_TYPE_PROPS[from_type]
     key = f"transition_loss_db_to_{to_type.value}"
-    return props.get(key, 0.1)
+    if key not in props:
+        raise KeyError(
+            f"过渡损耗未定义: {from_type}→{to_type}。"
+            f"请在 _WG_TYPE_PROPS[{from_type}] 中补充 '{key}'。"
+            f"R03 禁止 fall-back: 禁止返回魔数 0.1 dB 让客户误以为损耗已知。"
+        )
+    return props[key]
 
 
 def _get_transition_length(from_type: WaveguideType, to_type: WaveguideType) -> float:
-    """获取两种波导类型之间的推荐过渡长度（μm）。"""
+    """获取两种波导类型之间的推荐过渡长度（μm）。
+
+    R3-P2-3 修复: 原 ``props.get('transition_length_um', 15.0)`` 为静默 fall-back，
+    违反 R03。修复为显式查找，缺失时 raise KeyError。
+    """
     if from_type == to_type:
         return 0.0
-    props = _WG_TYPE_PROPS.get(from_type, {})
-    return props.get("transition_length_um", 15.0)
+    props = _WG_TYPE_PROPS[from_type]
+    if "transition_length_um" not in props:
+        raise KeyError(
+            f"过渡长度未定义: {from_type}。"
+            f"请在 _WG_TYPE_PROPS[{from_type}] 中补充 'transition_length_um'。"
+        )
+    return props["transition_length_um"]
 
 
 def _find_optimal_transition_point(
@@ -249,15 +290,23 @@ class HybridRouter:
     def _route_single_type(
         self, net: HybridNetConnection, wg_type: WaveguideType
     ) -> HybridRouteResult:
-        """同类型波导直接布线。"""
+        """同类型波导直接布线。
+
+        R3-P2-3 修复: 原代码 grid_path=None 时返回 ``total_loss_db=999.0`` 哨兵值，
+        违反 R03（禁止 fall-back）。调用方必须检查 ``== 999.0`` 才能识别失败，
+        但文档未约定此协议，下游可能误用 999.0 dB 作为真实损耗。
+        修复为 raise RuntimeError，与 ``_route_mixed_type`` 失败处理保持一致。
+        """
         router = self.routers[wg_type]
         sg = (int(net.start[0] / self.grid_size), int(net.start[1] / self.grid_size))
         eg = (int(net.end[0] / self.grid_size), int(net.end[1] / self.grid_size))
         grid_path = router.route(sg, eg)
         if grid_path is None:
-            logger.error("混合布线失败: 网 %s (%s)", net.net_id, wg_type.value)
-            return HybridRouteResult(
-                path=WaveguidePath(), total_loss_db=999.0, wg_type_sequence=[wg_type]
+            raise RuntimeError(
+                f"同类型波导布线失败（net={net.net_id}, type={wg_type.value}）。"
+                f"起止点={net.start}→{net.end}, 网格={sg}→{eg}。"
+                f"R03 禁止 fall-back: 禁止返回 999.0 dB 哨兵值让调用方误判成功。"
+                f"请检查: 1) 起止点是否可达 2) 障碍物是否阻断 3) 弯曲半径约束。"
             )
 
         pts = [(g[0] * self.grid_size, g[1] * self.grid_size) for g in grid_path]
