@@ -299,19 +299,19 @@ def _has_cycle(dag: Any) -> bool:
       https://mitpress.mit.edu/9780262033848/
     """
     white, gray, black = 0, 1, 2
-    color: dict[str, int] = {node: white for node in dag}
+    color: dict[str, int] = {node: white for node in dag.nodes}
 
     def dfs(node: str) -> bool:
         color[node] = gray
-        for neighbor in dag.get(node, []):
+        for neighbor in dag.adjacency.get(node, set()):
             if color[neighbor] == gray:
-                return True  # 回边 → 环
+                return True
             if color[neighbor] == white and dfs(neighbor):
                 return True
         color[node] = black
         return False
 
-    return any(color[node] == white and dfs(node) for node in dag)
+    return any(color[node] == white and dfs(node) for node in dag.nodes)
 
 
 def _cascade_via_klu(
@@ -349,7 +349,7 @@ def _parallel_solve_subnetworks(
         decomp = decompose_circuit(instances, connections, num_subnetworks=num_subs)
     except RuntimeError as e:
         logger.warning("子网络分解失败: %s，使用 KLU", e)
-        return _fallback_klu(instances, connections, ports)
+        return _cascade_via_klu(instances, connections, ports)
 
     sub_params = _prepare_subnetwork_params(instances, connections, decomp)
     sub_results = _solve_subnetworks(sub_params, max_workers)

@@ -193,7 +193,12 @@ def _build_s_block_triplets(
             i = port_idx[ref_out]
             j = port_idx[ref_in]
             v = np.asarray(val, dtype=complex)
-            if v.ndim > 0:
+            if v.ndim > 1:
+                raise ValueError(
+                    f"S 参数值维度错误: {v.ndim}D（应为标量或 1D 频率数组）。"
+                    f"实例: {inst_name}, 端口: ({p_out}, {p_in}), shape: {v.shape}"
+                )
+            if v.ndim == 1:
                 v = v[freq_idx] if freq_idx < v.shape[0] else v[0]
             rows.append(i)
             cols.append(j)
