@@ -390,7 +390,13 @@ def _pattern_route(
 
 
 def _path_cost(path: list[tuple[int, int]], curvy: CurvyPatternConfig) -> float:
-    """路径代价 = 长度 + 弯曲损耗权重 × 弯曲数 × 单弯损耗（LiDAR ISPD 2025）。"""
+    """路径代价 = 长度 + 弯曲损耗权重 × 弯曲数 × 单弯损耗（LiDAR ISPD 2025）。
+
+    默认 ``bend_loss_per_corner_db=0.05`` 为通用路径保守上界
+    （对齐 ``path_geometry.path_loss`` 默认值，SiEPIC EBeam PDK 1550nm 上界）。
+    若路径明确使用 euler 弯曲，应将 ``CurvyPatternConfig.bend_loss_per_corner_db``
+    调整为 0.015 dB（curvy_router.py euler 弯曲典型值）。
+    """
     return len(path) + curvy.bend_loss_weight * _count_bends(path) * curvy.bend_loss_per_corner_db
 
 

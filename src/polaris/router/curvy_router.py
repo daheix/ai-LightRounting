@@ -226,6 +226,13 @@ class CurvyRouter(DiagonalGridRouter):
     def _estimate_curvy_loss(length_um: float, num_bends: int) -> float:
         """估算弯曲波导总损耗（dB）。
 
+        使用 **欧拉弯曲专用损耗** 0.015 dB/bend（curvy_router 强制 euler bend），
+        **不要** 与 ``path_geometry.path_loss()`` 默认值 0.05 dB 混用：
+        - 0.05 dB: 通用路径保守上界（可能含 90° 直角弯/小半径弧形弯）
+        - 0.015 dB: euler 弯曲（clothoid）典型值，曲率线性变化，损耗远低于直角弯
+
+        两者物理意义不同，数值差异源于弯曲类型，**非 Bug**。
+
         R05 Bug 修复 v4.0-SOI-LOSS-P1（第2轮迭代发现）:
         原 propagation=2.0 dB/cm 取 SiEPIC PDK 下界，与 waveguide_router.py:545、
         rip_reroute.py:55、default_simulator.py、ai/waveguide_simulator.py 等

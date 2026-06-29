@@ -226,10 +226,19 @@ def path_loss(
     """计算波导路径损耗（传播损耗 + 弯曲损耗 + 交叉损耗）。
 
     默认损耗值来源（SiEPIC EBeam PDK 真实测量值）:
-    - bend_loss_db=0.05: 欧拉弯曲单弯损耗，SiEPIC EBeam PDK 中 euler bend
-      在 1550nm 波段下单弯损耗典型值 0.005-0.05 dB
+    - bend_loss_db=0.05: **保守上界**，适用于未指定弯曲类型的通用路径
+      （可能含 90° 直角弯/小半径弧形弯）。SiEPIC EBeam PDK 在 1550nm 波段下
+      各类弯曲单弯损耗范围 0.005-0.05 dB，本函数取上界 0.05 dB 作为默认值，
+      确保预估损耗不低于实际损耗（商业交付的保守设计原则）。
       来源: SiEPIC_EBeam_PDK, Lukas Chrostowski et al., UBC, MIT 协议
       https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+      文献: Chrostowski & Hochberg 2015 §3.3 Silicon Photonics Design
+      https://www.cambridge.org/core/books/silicon-photonics-design/
+
+      **注**: 若路径明确使用欧拉弯曲（clothoid, 曲率线性变化），单弯损耗
+      典型值仅 0.005-0.015 dB（远低于上界），应使用 ``curvy_router.py``
+      中的 euler 弯曲专用计算（0.015 dB），不要套用本函数默认值。
+
     - crossing_loss_db=0.3: 波导交叉损耗，SiEPIC EBeam PDK 中 crossing_te1550
       在 1550nm 波段下单次交叉损耗典型值 0.15-0.3 dB
       来源: 同上 SiEPIC_EBeam_PDK
@@ -237,7 +246,7 @@ def path_loss(
     Args:
         path: 折线路径点序列。
         loss_db_cm: 传播损耗系数 (dB/cm)。
-        bend_loss_db: 单弯损耗 (dB)，默认 0.05（SiEPIC EBeam PDK）。
+        bend_loss_db: 单弯损耗 (dB)，默认 0.05（SiEPIC EBeam PDK 上界，保守估计）。
         crossing_loss_db: 单次交叉损耗 (dB)，默认 0.3（SiEPIC EBeam PDK）。
         num_crossings: 交叉数。
 
