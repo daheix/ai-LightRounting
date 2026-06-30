@@ -108,6 +108,7 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
     def __init__(self) -> None:
         self._rules: list[CurvilinearDRCRule] = []
         self._violations: list[DRCViolation18] = []
+        self._extended_enabled: bool = False
         self._register_18_rules()
 
     @property
@@ -121,6 +122,134 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
     @property
     def error_count(self) -> int:
         return sum(1 for v in self._violations if v.severity == "error")
+
+    @property
+    def extended_rules_enabled(self) -> bool:
+        """是否启用了 R141-R180 扩展规则（8 类）。"""
+        return self._extended_enabled
+
+    def enable_extended_rules(self) -> None:
+        """启用 R141-R180 扩展规则（8 类: Step/Alignment/Edge/Perimeter/Symmetry/Array/Extension/MaxWidth）。
+
+        调用后引擎将注册并检查这 8 个扩展规则。默认不启用以保持向后兼容
+        （原 18 类基础规则保持 rule_count == 18 不变）。
+
+        扩展规则清单（每条对应一个 ``_check_*_geo`` 几何算法）:
+        - ST1_step_width: 步进宽度突变（波导相邻段宽度差）
+        - AL1_layer_alignment: 层对齐度（两层图形边缘错位）
+        - EX1_layer_extension: 层延伸（一层超出另一层的最小延伸量）
+        - ED1_edge_length: 边缘长度（最小/最大边长）
+        - PM1_perimeter: 周长（最小/最大周长）
+        - SY1_symmetry: 对称性（图形对称度）
+        - AR1_array_pitch: 阵列间距（周期性阵列 pitch 一致性）
+        - MW1_max_width_single_mode: 最大宽度（防止过宽导致多模）
+
+        学术依据:
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - KLayout DRC Reference: https://www.klayout.org/doc-qt5/manual/drc.html
+        - Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
+        - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Eades 1986 "Optimal Algorithms for Symmetry Detection":
+          https://deepblue.lib.umich.edu/bitstream/handle/2027.42/8337/bad6491.0001.001.pdf
+        - Toussaint 1983 "Rotating Calipers":
+          https://www.cs.mcgill.ca/~godfried/publications/calipers.pdf
+        """
+        if self._extended_enabled:
+            return  # 已启用，幂等
+        extended = self._build_extended_rules()
+        self._rules.extend(extended)
+        self._extended_enabled = True
+
+    def disable_extended_rules(self) -> None:
+        """禁用 R141-R180 扩展规则（移除 8 条扩展规则，恢复 18 类基础规则集）。"""
+        if not self._extended_enabled:
+            return
+        extended_categories = {
+            DRCRuleCategory.STEP_WIDTH,
+            DRCRuleCategory.LAYER_ALIGNMENT,
+            DRCRuleCategory.LAYER_EXTENSION,
+            DRCRuleCategory.EDGE_LENGTH,
+            DRCRuleCategory.PERIMETER,
+            DRCRuleCategory.SYMMETRY,
+            DRCRuleCategory.ARRAY_PITCH,
+            DRCRuleCategory.MAX_WIDTH_SINGLE_MODE,
+        }
+        self._rules = [r for r in self._rules if r.category not in extended_categories]
+        self._extended_enabled = False
+
+    @staticmethod
+    def _build_extended_rules() -> list[CurvilinearDRCRule]:
+        """构建 R141-R180 扩展规则集（8 条）。
+
+        每条规则的阈值来自 SiEPIC EBeam PDK / Chrostowski & Hochberg 2015 /
+        Synopsys OptoDesigner DRC Module，禁止编造（R02 学术诚信）。
+
+        文献:
+        - SiEPIC EBeam PDK DRC runset: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
+        - KLayout DRC: https://www.klayout.org/doc-qt5/manual/drc.html
+        """
+        return [
+            # 1. Step 规则: 波导宽度突变 ≤ 0.1μm（SiEPIC mismatched pin widths）
+            CurvilinearDRCRule(
+                "ST1_step_width", DRCRuleCategory.STEP_WIDTH,
+                "waveguide", 0.1, "μm", False,
+                "步进宽度突变（波导相邻段宽度差）",
+                layer_pair=None,
+            ),
+            # 2. Alignment 规则: 层间对齐误差 ≤ 0.05μm（Calibre ALIGN）
+            CurvilinearDRCRule(
+                "AL1_layer_alignment", DRCRuleCategory.LAYER_ALIGNMENT,
+                "metal1", 0.05, "μm", False,
+                "层对齐度（metal1 与 contact 对齐误差）",
+                layer_pair="contact",
+            ),
+            # 3. Extension 规则: 金属层延伸超出接触孔 ≥ 0.2μm
+            CurvilinearDRCRule(
+                "EX1_layer_extension", DRCRuleCategory.LAYER_EXTENSION,
+                "metal1", 0.2, "μm", False,
+                "层延伸（metal1 延伸超出 contact）",
+                layer_pair="contact",
+            ),
+            # 4. Edge 规则: 最小边长 0.2μm，最大边长 1000μm
+            CurvilinearDRCRule(
+                "ED1_edge_length", DRCRuleCategory.EDGE_LENGTH,
+                "waveguide", 0.2, "μm", False,
+                "边缘长度（最小 0.2μm / 最大 1000μm）",
+                limit_max=1000.0,
+            ),
+            # 5. Perimeter 规则: 最小周长 1.0μm，最大周长 10000μm
+            CurvilinearDRCRule(
+                "PM1_perimeter", DRCRuleCategory.PERIMETER,
+                "waveguide", 1.0, "μm", False,
+                "周长（最小 1.0μm / 最大 10000μm）",
+                limit_max=10000.0,
+            ),
+            # 6. Symmetry 规则: 对称分数 ≥ 0.95（95% 顶点对称）
+            CurvilinearDRCRule(
+                "SY1_symmetry", DRCRuleCategory.SYMMETRY,
+                "waveguide", 0.95, "", True,
+                "对称性（反射对称度，分数 [0,1]）",
+                tolerance=1e-6,
+            ),
+            # 7. Array 规则: 阵列 pitch 标准差 ≤ 0.01μm（10nm 阵列一致性）
+            CurvilinearDRCRule(
+                "AR1_array_pitch", DRCRuleCategory.ARRAY_PITCH,
+                "waveguide", 0.01, "μm", False,
+                "阵列间距（pitch 标准差，周期一致性）",
+            ),
+            # 8. MaxWidth 规则: 单模最大宽度 1.05μm（1550nm SOI 单模截止）
+            CurvilinearDRCRule(
+                "MW1_max_width_single_mode",
+                DRCRuleCategory.MAX_WIDTH_SINGLE_MODE,
+                "waveguide", 1.05, "μm", False,
+                "最大宽度（防止过宽导致多模，1550nm SOI 单模截止）",
+            ),
+        ]
 
     def _register_18_rules(self) -> None:
         """注册 18 类标准 DRC 规则。"""
