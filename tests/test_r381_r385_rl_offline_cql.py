@@ -679,7 +679,7 @@ class TestIntegration:
         assert len(fqe_out["loss"]) == 5
 
         # 4) 估计初始状态价值
-        s0 = rng.standard_normal(5, 4)
+        s0 = rng.standard_normal((5, 4))
         v = evaluator.estimate_value(s0)
         assert np.isfinite(v)
 
@@ -725,6 +725,8 @@ class TestIntegration:
         assert ds.capacity == 5
         batch = ds.sample_batch(5)
         assert batch["states"].shape == (5, 2)
-        # rewards 应为最后 5 个 (i=10..14)
-        r_set = set(batch["rewards"].tolist())
-        assert r_set == {10.0, 11.0, 12.0, 13.0, 14.0}
+        # rewards 应为最后 5 个 (i=10..14)，但由于有放回采样可能重复
+        # 验证所有 rewards 都在 {10..14} 集合内（循环缓冲区正确性）
+        valid_set = {10.0, 11.0, 12.0, 13.0, 14.0}
+        for r in batch["rewards"]:
+            assert r in valid_set, f"reward {r} 不在循环缓冲区期望范围"
