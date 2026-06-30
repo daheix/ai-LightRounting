@@ -490,8 +490,14 @@ class TestR27R28Integration:
         # 对齐度 ≥ 90%
         assert alignment_pct >= 90.0, f"对齐度 {alignment_pct:.1f}% < 90%"
 
+    @pytest.mark.skip(reason="R04 战略决策：PoLaRIS 不参与 GPU 计算，use_gpu=True 已被禁止")
     def test_gpu_vs_cpu(self):
-        """GPU vs CPU 性能对比：两种后端结果一致。"""
+        """GPU vs CPU 性能对比：两种后端结果一致。
+
+        R04 合规：此测试需 use_gpu=True，违反"不参与 GPU"战略决策，已 skip。
+        GPUFDTDConfig(use_gpu=True) 在 __post_init__ 即 raise RuntimeError。
+        CPU vs JAX-CPU 的等价对比由 test_r31_fdtd_jax.py 覆盖。
+        """
         device = _make_waveguide_device()
         # CPU 后端（numpy）
         config_cpu = _make_small_gpu_config()

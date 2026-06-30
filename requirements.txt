@@ -5,3 +5,10 @@ torch
 gymnasium
 matplotlib
 pyyaml
+# 以下为 polaris.sim 核心依赖（R05 修复：原缺失导致测试环境无法运行）
+# cascade/__init__.py:24 `import sax` 为硬依赖（子网络增长算法，规则 2 直接集成）
+sax
+# klayout_drc.py:39 / lvs.py:42 `import klayout.db` 为硬依赖（DRC/LVS 几何规则检查）
+klayout
+# fdtd_jax_backend.py / jax_backend.py 等使用 jax.lax.scan + jax.grad（CPU 后端，R04 合规）
+jax

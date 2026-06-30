@@ -51,6 +51,20 @@ class DRCCheckType(Enum):
     第85轮扩展: 添加 DENSITY 检查类型（CMP 工艺密度规则）。
     来源: Banerjee, "CMOS Photonic Circuits", Springer 2024，
     CMP 工艺要求层密度在 30%-70% 范围内，避免化学机械抛光不均匀。
+
+    Via 扩展: 添加 VIA 检查类型（通孔尺寸+间距组合检查）。
+    VIA 检查 = 通孔最小尺寸（width_check）+ 通孔最小间距（space_check）组合，
+    对应 KLayout Region.width_check/space_check 应用于 VIA 层。通孔（Via）是
+    连接不同金属层的小图形，需同时保证最小尺寸（保证工艺可识别）和最小间距
+    （避免桥接短路）。
+    来源:
+    - SiEPIC EBeam PDK DRC runset (VIAC via rules):
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+    - KLayout DRC width/space checks:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    - Calibre nmDRC via rules: https://eda.sw.siemens.com/en-US/calibre/
+    - Synopsys IC Validator: https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
     """
 
     WIDTH = "width"  # 最小宽度（同层图形内部边缘间距）
@@ -59,6 +73,7 @@ class DRCCheckType(Enum):
     ENCLOSE = "enclose"  # 包围规则（内层须被外层包围）
     AREA = "area"  # 最小面积
     DENSITY = "density"  # 层密度（CMP 工艺要求，第85轮新增）
+    VIA = "via"  # 通孔规则（尺寸+间距组合检查，新增）
 
 
 @dataclass(frozen=True)
@@ -68,15 +83,20 @@ class DRCRule:
     Attributes:
         name: 规则名（如 ``"WG_MIN_WIDTH"``）。
         layer_name: 层名（对应 ``POLARIS_GDS_LAYER_MAP`` 键，如 ``"WG"``）。
-        check_type: 检查类型（WIDTH/SPACE/NOTCH/ENCLOSE/AREA/DENSITY）。
+        check_type: 检查类型（WIDTH/SPACE/NOTCH/ENCLOSE/AREA/DENSITY/VIA）。
         threshold_um: 阈值（μm）。WIDTH/SPACE/NOTCH/ENCLOSE 为最小距离，
-            AREA 为最小面积（μm²），DENSITY 为最小密度（%，如 30.0 表示 30%）。
+            AREA 为最小面积（μm²），DENSITY 为最小密度（%，如 30.0 表示 30%），
+            VIA 为通孔最小尺寸（μm，即通孔图形最小宽度）。
         enclosure_layer_name: ENCLOSE 检查的外层名（仅 ENCLOSE 用）。
         vtype: 对应的 PoLaRIS ViolationType。
         severity: 违规严重程度（0-1）。
         description: 规则描述（含来源）。
         max_density: DENSITY 检查的最大密度（%，第85轮新增）。
             仅 DENSITY 检查使用，None 表示不检查上限。
+        min_space_um: VIA 检查的最小间距（μm，新增）。仅 VIA 检查使用，
+            表示同层通孔之间的最小间距。None 表示不检查通孔间距
+            （仅检查通孔尺寸）。来源: SiEPIC EBeam PDK via spacing rules；
+            Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015。
     """
 
     name: str
@@ -88,6 +108,7 @@ class DRCRule:
     severity: float = 1.0
     description: str = ""
     max_density: float | None = None  # 第85轮新增，DENSITY 检查上限
+    min_space_um: float | None = None  # VIA 检查最小间距（μm，新增）
 
 
 # SiEPIC EBeam PDK 默认 DRC runset
@@ -185,6 +206,21 @@ SIEPIC_EBEAM_DRC_RUNSET: list[DRCRule] = [
         enclosure_layer_name="M1_HEATER",
         vtype=ViolationType.ENCLOSURE,
         description="VIAC 须被 M1_HEATER 包围 ≥0.5μm（防止接触孔开路）",
+    ),
+    # 新增：VIA 尺寸+间距检查（VIAC 通孔最小尺寸与间距）
+    # 来源: SiEPIC EBeam PDK via rules (VIAC min size/space)；
+    #   Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353；
+    #   KLayout DRC width/space checks；
+    #   Calibre nmDRC via rules。通孔最小尺寸 0.5μm 保证工艺可识别，
+    #   最小间距 0.5μm 避免相邻通孔桥接短路。
+    DRCRule(
+        name="VIAC_MIN_SIZE_SPACE",
+        layer_name="VIAC",
+        check_type=DRCCheckType.VIA,
+        threshold_um=0.5,  # 通孔最小尺寸（宽度）0.5μm
+        min_space_um=0.5,  # 通孔最小间距 0.5μm
+        vtype=ViolationType.MIN_WIDTH,
+        description="VIAC 通孔最小尺寸 0.5μm + 最小间距 0.5μm（防止开路/短路）",
     ),
 ]
 
@@ -343,7 +379,11 @@ class KLayoutDRCRunner:
             return self._check_area(region, rule, dbu)
         if rule.check_type == DRCCheckType.DENSITY:
             return self._check_density(region, rule, dbu, cell)
-        return []
+        if rule.check_type == DRCCheckType.VIA:
+            return self._check_via(region, rule, dbu)
+        raise ValueError(
+            f"不支持的 DRC 检查类型: {rule.check_type}（规则 {rule.name}）"
+        )
 
     def _get_layer_index(self, layout: db.Layout, layer_name: str) -> int | None:
         """按层名获取 KLayout 层索引。
@@ -495,6 +535,76 @@ class KLayoutDRCRunner:
                 )
             ]
         return []
+
+    def _check_via(self, region: db.Region, rule: DRCRule, dbu: float) -> list[Violation]:
+        """通孔规则检查（尺寸+间距组合，新增）。
+
+        VIA 检查 = 通孔最小尺寸（width_check）+ 通孔最小间距（space_check）。
+        - 尺寸: 每个通孔图形内部最小宽度 ≥ threshold_um（保证工艺可识别）
+        - 间距: 同层通孔之间最小距离 ≥ min_space_um（避免桥接短路）
+
+        通孔（Via）是连接不同金属层的小图形（如 VIAC 接触孔），需同时保证
+        最小尺寸（光刻工艺分辨率下限）和最小间距（避免相邻通孔在刻蚀后桥接）。
+
+        来源:
+        - SiEPIC EBeam PDK via rules (VIAC min size/space):
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Chrostowski & Hochberg, "Silicon Photonics Design",
+          Cambridge University Press 2015, p.353
+        - KLayout Region.width_check/space_check:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Calibre nmDRC via rules: https://eda.sw.siemens.com/en-US/calibre/
+        - Synopsys IC Validator via checking:
+          https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+        - Banerjee, "CMOS Photonic Circuits", Springer 2024 (via/contact fabrication)
+
+        Args:
+            region: VIA 层 Region。
+            rule: DRC 规则（threshold_um=最小尺寸μm，min_space_um=最小间距μm）。
+            dbu: Database unit（μm）。
+
+        Returns:
+            违规列表（尺寸违规 vtype=MIN_WIDTH，间距违规 vtype=SPACING）。
+        """
+        violations: list[Violation] = []
+        # 1. 通孔尺寸检查（width_check：图形内部最小宽度）
+        size_dbu = int(rule.threshold_um / dbu)
+        size_pairs = region.width_check(size_dbu)
+        for ep in size_pairs.each():
+            bbox = ep.bbox()
+            loc = (bbox.center().x * dbu, bbox.center().y * dbu)
+            violations.append(
+                Violation(
+                    vtype=ViolationType.MIN_WIDTH,
+                    severity=rule.severity,
+                    message=(
+                        f"{rule.name}: 通孔尺寸（宽度）< 最小 {rule.threshold_um:.4f}μm"
+                        f" (位置 {loc[0]:.2f}, {loc[1]:.2f})"
+                    ),
+                    device_name=rule.layer_name,
+                    location=loc,
+                )
+            )
+        # 2. 通孔间距检查（space_check：同层不同图形间距），仅当 min_space_um 配置
+        if rule.min_space_um is not None:
+            space_dbu = int(rule.min_space_um / dbu)
+            space_pairs = region.space_check(space_dbu)
+            for ep in space_pairs.each():
+                bbox = ep.bbox()
+                loc = (bbox.center().x * dbu, bbox.center().y * dbu)
+                violations.append(
+                    Violation(
+                        vtype=ViolationType.SPACING,
+                        severity=rule.severity,
+                        message=(
+                            f"{rule.name}: 通孔间距 < 最小 {rule.min_space_um:.4f}μm"
+                            f" (位置 {loc[0]:.2f}, {loc[1]:.2f})"
+                        ),
+                        device_name=rule.layer_name,
+                        location=loc,
+                    )
+                )
+        return violations
 
     def _edge_pairs_to_violations(
         self,

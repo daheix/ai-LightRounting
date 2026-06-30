@@ -105,11 +105,17 @@ class TestR5P03GpuStrategyCompliance:
         assert config.use_gpu is False, "R04: use_gpu 必须为 False"
 
     def test_use_gpu_true_raises(self) -> None:
-        """use_gpu=True 时 GPUFDTDEngine.__init__ 必须 raise RuntimeError。"""
-        from polaris.sim.fdtd_gpu_engine import GPUFDTDConfig, GPUFDTDEngine
-        bad_config = GPUFDTDConfig(use_gpu=True)
+        """use_gpu=True 时 GPUFDTDConfig.__post_init__ 必须 raise RuntimeError（R04 fail-fast）。
+
+        R05 回归测试更新：原测试期望 Engine.__init__ raise，现加强为 Config
+        构造时即 raise（fail-fast 原则，防止 use_gpu=True 的 Config 被误传）。
+        Engine.__init__ 保留双重校验（已由 src 第 172-177 行保证，但 Config
+        先 raise 使其不可达，属正确防御性设计）。
+        """
+        from polaris.sim.fdtd_gpu_engine import GPUFDTDConfig
+        # Config 层 fail-fast：构造时即 raise（R04 战略决策）
         with pytest.raises(RuntimeError, match="R04"):
-            GPUFDTDEngine(bad_config)
+            GPUFDTDConfig(use_gpu=True)
 
     def test_module_docstring_marks_no_gpu(self) -> None:
         """模块 docstring 必须标注 🚫不参与 GPU。"""

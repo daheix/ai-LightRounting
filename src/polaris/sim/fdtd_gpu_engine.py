@@ -99,12 +99,24 @@ class GPUFDTDConfig:
     # 文献: 项目规则 R04-不参与GPU.md / AGENTS.md §9
     use_gpu: bool = False
 
+    def __post_init__(self) -> None:
+        """R04 强制校验：use_gpu=True 时 raise（禁止 GPU，无 fall-back）。
+
+        Raises:
+            RuntimeError: use_gpu=True 违反 R04 战略决策。
+        """
+        if self.use_gpu:
+            raise RuntimeError(
+                "R04 战略决策：PoLaRIS 不参与 GPU 计算。"
+                "GPUFDTDConfig.use_gpu 必须为 False。"
+            )
+
 
 # =============================================================================
-# 2. GPUFDTDEngine — 本地 GPU FDTD 引擎
+# 2. GPUFDTDEngine — 本地 CPU FDTD 引擎（类名保留兼容，R04 纯 CPU）
 # =============================================================================
 class GPUFDTDEngine:
-    """本地 GPU FDTD 引擎（numpy/JAX 实现）。
+    """本地 CPU FDTD 引擎（numpy/JAX CPU 实现，R04 不参与 GPU）。
 
     学术依据：
     - Minkov 2024 OPN GPU FDTD 原理
@@ -434,7 +446,7 @@ class GPUFDTDEngine:
             mon["data"][n] = self.Ex[mon["ix"], mon["iy"]]
 
     def run(self) -> dict:
-        """运行 GPU FDTD 仿真。
+        """运行 CPU FDTD 仿真（R04 不参与 GPU，use_gpu 强制 False）。
 
         Returns:
             仿真结果字典，含 monitors/n_steps/dt/elapsed_s/backend。
@@ -455,9 +467,10 @@ class GPUFDTDEngine:
             if not np.all(np.isfinite(self.Ex)):
                 raise RuntimeError(f"FDTD 仿真数值不稳定（步 {n}，Ex 含 NaN/Inf）")
         elapsed = time.time() - t0
-        backend = "jax" if (self._has_jax and self.config.use_gpu) else "numpy"
+        # R04: use_gpu 强制 False，backend 恒为 numpy（CPU 实现）
+        backend = "numpy"
         logger.info(
-            "GPU FDTD 仿真完成: %d 步, 耗时 %.3f s (%.1f μs/step), backend=%s",
+            "CPU FDTD 仿真完成: %d 步, 耗时 %.3f s (%.1f μs/step), backend=%s",
             self.n_steps,
             elapsed,
             elapsed / max(1, self.n_steps) * 1e6,

@@ -238,6 +238,8 @@ class HierarchicalDRC:
         if ct == DRCCheckType.DENSITY:
             max_d = rule.max_density if rule.max_density is not None else 100.0
             return self._check_density(polys, rule.threshold_um, max_d, rule)
+        if ct == DRCCheckType.VIA:
+            return self._check_via(polys, rule, bvh)
         raise ValueError(f"不支持的 DRC 检查类型: {ct}")
 
     def _check_width(
@@ -372,6 +374,79 @@ class HierarchicalDRC:
                 )
             ]
         return []
+
+    def _check_via(
+        self,
+        region: list[np.ndarray],
+        rule: DRCRule,
+        bvh: BVH | None,
+    ) -> list[DRCViolation]:
+        """通孔规则检查（尺寸+间距组合，新增）。
+
+        VIA 检查 = 通孔最小尺寸（width）+ 通孔最小间距（space）。
+        - 尺寸: 每个通孔图形内部最小宽度 ≥ threshold_um（保证光刻工艺可识别）
+        - 间距: 同层通孔之间最小距离 ≥ min_space_um（避免刻蚀后桥接短路）
+
+        通孔（Via）是连接不同金属层的小图形（如 VIAC 接触孔）。最小尺寸保证
+        光刻分辨率下限可识别；最小间距避免相邻通孔在刻蚀工艺后桥接短路。
+
+        算法:
+        1. 尺寸: 对每个 Via 多边形调用旋转卡尺法 ``_polygon_min_width``，
+           若最小宽度 < threshold_um 标记 MIN_WIDTH 违规。
+        2. 间距: 复用 ``_check_space`` 边到边距离算法（含 BVH 加速），
+           若 min_space_um 配置则检查同层 Via 对间距，标记 SPACING 违规。
+
+        文献:
+        - SiEPIC EBeam PDK via rules (VIAC min size/space):
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Chrostowski & Hochberg, "Silicon Photonics Design",
+          Cambridge University Press 2015, p.353
+        - KLayout DRC width_check/space_check:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Calibre nmDRC via rules: https://eda.sw.siemens.com/en-US/calibre/
+        - Synopsys IC Validator via checking:
+          https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+        - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+        - Toussaint, "Solving Geometric Problems with the Rotating Calipers",
+          IEEE MELECON 1983, https://www.cs.mcgill.ca/~godfried/publications/calipers.pdf
+
+        Args:
+            region: VIA 层多边形列表。
+            rule: DRC 规则（threshold_um=最小尺寸μm，min_space_um=最小间距μm）。
+            bvh: BVH 加速结构（层次化模式），None 为 flat 模式。
+
+        Returns:
+            违规列表（尺寸违规 + 间距违规）。
+        """
+        violations: list[DRCViolation] = []
+        min_size = rule.threshold_um
+        min_space = rule.min_space_um
+
+        # 1. 通孔尺寸检查（最小宽度，旋转卡尺法）
+        for poly in region:
+            w = self._polygon_min_width(poly)
+            if w < min_size:
+                violations.append(
+                    self._make_violation(
+                        rule, self._polygon_center(poly),
+                        f"通孔尺寸（宽度）{w:.4f}μm < 阈值 {min_size:.4f}μm",
+                    )
+                )
+
+        # 2. 通孔间距检查（仅当 min_space_um 配置）
+        if min_space is not None:
+            space_violations = self._check_space(region, min_space, rule, bvh)
+            for v in space_violations:
+                # 覆盖消息为"通孔间距"语义
+                violations.append(DRCViolation(
+                    rule_name=v.rule_name,
+                    check_type=rule.check_type.value,
+                    layer_name=v.layer_name,
+                    message=f"{rule.name}: 通孔间距 < 最小 {min_space:.4f}μm",
+                    location=v.location,
+                    severity=v.severity,
+                ))
+        return violations
 
     # ===== 几何计算工具 =====
 
