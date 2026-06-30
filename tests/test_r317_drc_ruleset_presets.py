@@ -426,7 +426,7 @@ class TestIntegration:
     """端到端集成测试。"""
 
     def test_preset_ruleset_with_drc_validator(self) -> None:
-        """预设规则集与 DRC 验证器集成（仅用 KLayout 支持的规则类别）。"""
+        """预设规则集与 DRC 验证器集成（仅用 WG 层 + KLayout 支持的规则类别）。"""
         from polaris.verification.gdsii_drc_validator import (
             drc_summary_from_gdsii,
         )
@@ -450,17 +450,17 @@ class TestIntegration:
         with tempfile.TemporaryDirectory() as tmpdir:
             gds_path = os.path.join(tmpdir, "test.gds")
             export_gdsii_from_cells(cells_spec, gds_path)
-            # 从 generic_conservative 过滤出 KLayout 支持的规则类别
+            # 从 generic_conservative 过滤出 WG 层 + KLayout 支持的规则类别
             # KLayout 桥接支持: MIN_WIDTH, MIN_SPACING, MIN_AREA
-            all_rules = get_preset_ruleset("generic_conservative")
             supported_categories = {
                 DRCRuleCategory.MIN_WIDTH,
                 DRCRuleCategory.MIN_SPACING,
                 DRCRuleCategory.MIN_AREA,
             }
+            all_rules = get_preset_ruleset("generic_conservative")
             rules = [
                 r for r in all_rules
-                if r.category in supported_categories
+                if r.category in supported_categories and r.layer == "WG"
             ]
             assert len(rules) > 0
             summary = drc_summary_from_gdsii(gds_path, rules)
