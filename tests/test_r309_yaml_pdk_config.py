@@ -404,7 +404,8 @@ class TestSerializePdkYaml:
         s = serialize_pdk_yaml(cfg)
         assert "pdk:" in s
         assert "name: test" in s
-        assert "version: '1.0.0'" in s or 'version: "1.0.0"' in s
+        # PyYAML safe_dump 对 "1.0.0" 不加引号（YAML 解析为字符串，无需引号）
+        assert "version: 1.0.0" in s
         assert "platform: SOI" in s
 
     def test_serialize_with_layers(self) -> None:

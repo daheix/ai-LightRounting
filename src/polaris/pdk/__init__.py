@@ -84,6 +84,20 @@ from polaris.pdk.gdsfactory_plugin import (
     register_polaris_cell,
     register_to_gdsfactory,
 )
+from polaris.pdk.yaml_pdk_config import (
+    PDKYamlConfig,
+    YamlCellSpec,
+    YamlCrossSectionSpec,
+    YamlLayerLevelSpec,
+    YamlLayerSpec,
+    YamlSectionSpec,
+    build_polaris_cross_section,
+    build_polaris_layer_stack,
+    build_polaris_pdk_from_yaml,
+    parse_pdk_yaml,
+    serialize_pdk_yaml,
+    validate_pdk_yaml,
+)
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -211,6 +225,19 @@ __all__ = [
     "get_polaris_cell",
     "register_polaris_cell",
     "register_to_gdsfactory",
+    # R309 YAML PDK 配置系统
+    "PDKYamlConfig",
+    "YamlCellSpec",
+    "YamlCrossSectionSpec",
+    "YamlLayerLevelSpec",
+    "YamlLayerSpec",
+    "YamlSectionSpec",
+    "build_polaris_cross_section",
+    "build_polaris_layer_stack",
+    "build_polaris_pdk_from_yaml",
+    "parse_pdk_yaml",
+    "serialize_pdk_yaml",
+    "validate_pdk_yaml",
     # R15 VPIphotonics PDK 对齐（VPIToolkitPDK + PDAflow + 3 foundry PDK）
     "PDAflowExporter",
     "VPIBuildingBlock",
