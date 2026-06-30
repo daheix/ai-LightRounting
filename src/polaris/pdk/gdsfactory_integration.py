@@ -1259,6 +1259,13 @@ def create_gdsii_layout_from_cells(
             cell.shapes(li).insert(db.Path(dbu_points, width_dbu))
 
         # 实例
+        # 修复（R05）: 原代码用 db.DCplxTrans(μm) 构造 instance，但 CellInstArray
+        # 在 KLayout 0.30.9 中将 DCplxTrans 的位移当成 dbu 存储，导致 20μm 变成
+        # 0.02μm（20dbu）。改为用 db.ICplxTrans(dbu) 显式构造，μm → dbu 转换
+        # 后再传入，确保 instance 的 placement 正确。
+        # 实测（调试 _debug4_r324.py）: DCplxTrans(1.0,0,False,20.0,0.0) 存储
+        # 后 dcplx_trans 显示 0.02,0 μm（即 20 dbu），而非 20 μm。
+        # 来源: https://www.klayout.de/doc-qt5/code/class_CellInstArray.html
         for inst in spec.get("instances", []):
             child_name = inst.get("cell_name")
             if child_name not in name_to_cell:
@@ -1271,8 +1278,11 @@ def create_gdsii_layout_from_cells(
             y_um = float(inst.get("y", 0.0))
             rotation = float(inst.get("rotation", 0.0))
             mirror = bool(inst.get("mirror", False))
-            # 用 DCplxTrans（μm 单位）
-            trans = db.DCplxTrans(1.0, rotation, mirror, x_um, y_um)
+            # 用 ICplxTrans（dbu 单位）显式构造，避免 DCplxTrans → ICplxTrans
+            # 转换时的单位歧义
+            x_dbu = int(round(x_um / dbu_um))
+            y_dbu = int(round(y_um / dbu_um))
+            trans = db.ICplxTrans(1.0, rotation, mirror, x_dbu, y_dbu)
             cell.insert(db.CellInstArray(child_cell.cell_index(), trans))
 
     # 验证至少有一个顶层 cell
