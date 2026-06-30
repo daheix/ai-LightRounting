@@ -52,7 +52,9 @@ from polaris.sim.fdtd_simulator import (
     FDTDResult,
     run_fdtd_simulation,
 )
+from polaris.sim.cascade import cascade_circuit
 from polaris.sim.touchstone import save_touchstone
+from polaris.sim.types import SDict
 
 if TYPE_CHECKING:
     from polaris.pdk.device import Device
@@ -522,13 +524,343 @@ def get_cosim_summary(result: CoSimResult) -> str:
     return "\n".join(lines)
 
 
+# =============================================================================
+# R305: 电路级联合仿真
+# =============================================================================
+@dataclass
+class CircuitCoSimConfig:
+    """gdsfactory 电路级联合仿真配置（R305）。
+
+    封装多组件电路级仿真的全部配置。每个 gdsfactory Component 先进行
+    组件级 FDTD 仿真（复用 ``simulate_gdsfactory_component``），再将所有
+    组件的 S 参数用 ``cascade_circuit`` 级联，得到电路级 S 参数。
+
+    Attributes:
+        components: 组件字典 {instance_name: gdsfactory Component}。
+        connections: 组件间连接列表 [(inst1.port1, inst2.port2), ...]。
+        ports: 外部端口映射 {ext_name: inst.port}。
+        fdtd_config: FDTD 仿真配置（所有组件共用）。
+        import_config: gdsfactory→PoLaRIS 器件导入配置（None 用默认）。
+        port_order: 端口排序方式（同 CoSimConfig）。
+
+    来源:
+    - gdsfactory 电路级 YAML: https://gdsfactory.github.io/gdsfactory/notebooks/05_yaml_hierarchy.html
+    - SAX 电路级联: https://flaport.github.io/sax/
+    """
+
+    components: dict = field(default_factory=dict)
+    connections: list[tuple[str, str]] = field(default_factory=list)
+    ports: dict[str, str] = field(default_factory=dict)
+    fdtd_config: FDTDConfig | None = None
+    import_config: DeviceImportConfig | None = None
+    port_order: str | None = "name"
+
+
+@dataclass
+class CircuitCoSimResult:
+    """gdsfactory 电路级联合仿真结果（R305）。
+
+    Attributes:
+        component_results: 各组件的仿真结果 {instance_name: CoSimResult}。
+        circuit_sdict: 电路级 S 参数字典（级联后）。
+        n_components: 组件数。
+        n_ports: 电路外部端口数。
+        wavelengths_um: 波长数组（μm）。
+        simulation_status: 仿真状态（"success" / "failed"）。
+    """
+
+    component_results: dict = field(default_factory=dict)
+    circuit_sdict: SDict = field(default_factory=dict)
+    n_components: int = 0
+    n_ports: int = 0
+    wavelengths_um: np.ndarray = field(default_factory=lambda: np.array([1.55]))
+    simulation_status: str = "success"
+
+
+def build_sdict_from_s_matrix(
+    s_matrix: np.ndarray,
+    port_names: list[str],
+) -> SDict:
+    """从 S 矩阵构建 SDict 字典（R305）。
+
+    将 (n_ports, n_ports, n_wavelengths) S 矩阵转换为
+    {(port_out, port_in): np.ndarray} 字典格式，供 ``cascade_circuit`` 使用。
+
+    Args:
+        s_matrix: S 参数矩阵，形状 (n_ports, n_ports, n_wavelengths)。
+        port_names: 端口名列表。
+
+    Returns:
+        S 参数字典 {(port_out, port_in): np.ndarray}。
+
+    Raises:
+        ValueError: 端口名列表为空 / 矩阵形状与端口数不匹配。
+
+    来源:
+    - SDict 格式: https://flaport.github.io/sax/
+    - S 矩阵定义: Pozar, "Microwave Engineering", 4th ed., §4.4
+    """
+    if not port_names:
+        raise ValueError("端口名列表不能为空")
+    n_ports = len(port_names)
+    if s_matrix.shape[0] != n_ports or s_matrix.shape[1] != n_ports:
+        raise ValueError(
+            f"S 矩阵形状 {s_matrix.shape[:2]} 与端口数 {n_ports} 不匹配"
+        )
+    sdict: SDict = {}
+    for i, p_out in enumerate(port_names):
+        for j, p_in in enumerate(port_names):
+            sdict[(p_out, p_in)] = s_matrix[i, j, :]
+    return sdict
+
+
+def _validate_circuit_config(config: CircuitCoSimConfig) -> None:
+    """校验电路级配置（R03 合规：错误必须 raise）。
+
+    Args:
+        config: 电路级配置。
+
+    Raises:
+        ValueError: 组件字典为空 / 连接引用不存在的实例 / 端口引用不存在的实例。
+    """
+    if not config.components:
+        raise ValueError(
+            "组件字典不能为空，电路级仿真至少需要 1 个组件"
+        )
+    inst_names = set(config.components.keys())
+    for src, dst in config.connections:
+        src_inst = src.split(",")[0] if "," in src else src.split(".")[0]
+        dst_inst = dst.split(",")[0] if "," in dst else dst.split(".")[0]
+        if src_inst not in inst_names:
+            raise ValueError(
+                f"连接源 {src!r} 引用的实例 {src_inst!r} 不在组件字典中。"
+                f"可用实例: {sorted(inst_names)}"
+            )
+        if dst_inst not in inst_names:
+            raise ValueError(
+                f"连接目标 {dst!r} 引用的实例 {dst_inst!r} 不在组件字典中。"
+                f"可用实例: {sorted(inst_names)}"
+            )
+    for ext_name, inst_port in config.ports.items():
+        inst_name = inst_port.split(",")[0] if "," in inst_port else inst_port.split(".")[0]
+        if inst_name not in inst_names:
+            raise ValueError(
+                f"外部端口 {ext_name!r} 引用的实例 {inst_name!r} 不在组件字典中。"
+                f"可用实例: {sorted(inst_names)}"
+            )
+
+
+def _normalize_connection_port(port_ref: str) -> str:
+    """将连接端口引用统一为 "inst.port" 格式。
+
+    gdsfactory YAML 用 "inst,port"（逗号分隔），PoLaRIS 内部用 "inst.port"
+    （点分隔）。cascade_circuit 接受两种格式，但统一为点分隔更清晰。
+
+    Args:
+        port_ref: 端口引用（"inst,port" 或 "inst.port"）。
+
+    Returns:
+        统一格式 "inst.port"。
+    """
+    if "," in port_ref:
+        inst, port = port_ref.split(",", 1)
+        return f"{inst}.{port}"
+    return port_ref
+
+
+def simulate_gdsfactory_circuit(
+    config: CircuitCoSimConfig,
+) -> CircuitCoSimResult:
+    """gdsfactory 电路级联合仿真主编排函数（R305）。
+
+    完整工作流:
+    1. 校验电路配置（组件/连接/端口引用一致性）
+    2. 对每个组件调用 ``simulate_gdsfactory_component()`` 进行组件级 FDTD 仿真
+    3. 将各组件 S 矩阵转换为 SDict 字典
+    4. 用 ``cascade_circuit()`` 级联所有组件 S 参数
+    5. 返回电路级 S 参数
+
+    Args:
+        config: 电路级联合仿真配置。
+
+    Returns:
+        电路级仿真结果 ``CircuitCoSimResult``。
+
+    Raises:
+        ValueError: 组件字典为空 / 连接或端口引用不存在的实例。
+        ImportError: gdsfactory 未安装 / FDTD 后端不可用（透传）。
+
+    来源:
+    - gdsfactory 电路级: https://gdsfactory.github.io/gdsfactory/notebooks/05_yaml_hierarchy.html
+    - SAX 级联: https://flaport.github.io/sax/
+    - 电路仿真: Simphony https://simphonyphotonics.readthedocs.io/
+    """
+    _validate_circuit_config(config)
+
+    # 步骤 1: 对每个组件进行组件级 FDTD 仿真
+    component_results: dict = {}
+    instance_sdicts: dict[str, SDict] = {}
+    wavelengths: np.ndarray | None = None
+
+    for inst_name, component in config.components.items():
+        cosim_config = CoSimConfig(
+            device_id=inst_name,
+            import_config=config.import_config,
+            fdtd_config=config.fdtd_config,
+            port_order=config.port_order,
+        )
+        result = simulate_gdsfactory_component(component, cosim_config)
+        component_results[inst_name] = result
+        # S 矩阵 → SDict
+        instance_sdicts[inst_name] = build_sdict_from_s_matrix(
+            result.s_matrix, result.port_names
+        )
+        if wavelengths is None:
+            wavelengths = result.fdtd_result.wavelengths_um
+
+    # 步骤 2: 规范化连接格式（逗号→点号）
+    connections_normalized = [
+        (_normalize_connection_port(src), _normalize_connection_port(dst))
+        for src, dst in config.connections
+    ]
+    ports_normalized = {
+        ext: _normalize_connection_port(inst_port)
+        for ext, inst_port in config.ports.items()
+    }
+
+    # 步骤 3: 电路级 S 参数级联
+    # cascade_circuit 失败会 raise RuntimeError，此处不吞没异常
+    circuit_sdict = cascade_circuit(
+        instances=instance_sdicts,
+        connections=connections_normalized,
+        ports=ports_normalized,
+    )
+
+    logger.info(
+        "gdsfactory 电路级仿真完成: %d 组件, %d 外部端口, %d 波长",
+        len(component_results),
+        len(ports_normalized),
+        wavelengths.size if wavelengths is not None else 0,
+    )
+
+    return CircuitCoSimResult(
+        component_results=component_results,
+        circuit_sdict=circuit_sdict,
+        n_components=len(component_results),
+        n_ports=len(ports_normalized),
+        wavelengths_um=wavelengths if wavelengths is not None else np.array([1.55]),
+        simulation_status="success",
+    )
+
+
+def export_circuit_cosim_to_touchstone(
+    result: CircuitCoSimResult,
+    output_path: str | Path,
+    freq_unit: str = "ghz",
+) -> str:
+    """将电路级联合仿真结果导出为 Touchstone 文件（R305, TR-305.3）。
+
+    Args:
+        result: 电路级仿真结果。
+        output_path: 输出文件路径。
+        freq_unit: 频率单位（hz/khz/mhz/ghz）。
+
+    Returns:
+        输出文件路径字符串。
+
+    Raises:
+        ValueError: 仿真失败 / 电路 S 参数为空。
+
+    来源:
+    - Touchstone 规范: https://en.wikipedia.org/wiki/Touchstone_file
+    """
+    if result.simulation_status != "success":
+        raise ValueError(
+            f"仿真状态为 {result.simulation_status!r}，无法导出 Touchstone"
+        )
+    if not result.circuit_sdict:
+        raise ValueError("电路 S 参数为空，无法导出 Touchstone")
+
+    # 推断端口名（从 circuit_sdict 键）
+    port_names_set: set[str] = set()
+    for p_out, p_in in result.circuit_sdict:
+        port_names_set.add(p_out)
+        port_names_set.add(p_in)
+    port_names = sorted(port_names_set)
+
+    # 波长 → 频率（Hz）: f = c / λ, c = 299792458 m/s
+    # 来源: NIST CODATA 2018 光速常数
+    c_m_per_s = 299_792_458.0
+    wavelengths_m = result.wavelengths_um * 1e-6
+    freqs_hz = c_m_per_s / wavelengths_m
+
+    save_touchstone(
+        filepath=output_path,
+        freqs=freqs_hz,
+        sdict=result.circuit_sdict,
+        freq_unit=freq_unit,
+        port_names=port_names,
+    )
+    logger.info("电路级 Touchstone 导出: %s (%d 端口)", output_path, len(port_names))
+    return str(output_path)
+
+
+def get_circuit_cosim_summary(result: CircuitCoSimResult) -> str:
+    """生成电路级联合仿真结果的可读摘要字符串（R305）。
+
+    Args:
+        result: 电路级仿真结果。
+
+    Returns:
+        多行可读摘要字符串。
+
+    Raises:
+        ValueError: 仿真失败。
+    """
+    if result.simulation_status != "success":
+        raise ValueError(
+            f"仿真状态为 {result.simulation_status!r}，无法生成摘要"
+        )
+
+    wavelengths = result.wavelengths_um
+    wl_range = (
+        f"{float(wavelengths[0]):.4f}-{float(wavelengths[-1]):.4f}μm"
+        if wavelengths.size > 0
+        else "N/A"
+    )
+
+    lines = [
+        f"gdsfactory 电路级联合仿真结果摘要",
+        f"  仿真状态: {result.simulation_status}",
+        f"  组件数: {result.n_components}",
+        f"  外部端口数: {result.n_ports}",
+        f"  波长范围: {wl_range} ({wavelengths.size} 点)",
+        f"  电路 S 参数键数: {len(result.circuit_sdict)}",
+    ]
+
+    # 列出各组件的端口信息
+    for inst_name, comp_result in result.component_results.items():
+        lines.append(
+            f"  组件 {inst_name}: {comp_result.n_ports} 端口, "
+            f"后端 {comp_result.fdtd_result.backend_used.value}"
+        )
+
+    return "\n".join(lines)
+
+
 __all__ = [
     "CoSimConfig",
     "CoSimResult",
+    "CircuitCoSimConfig",
+    "CircuitCoSimResult",
     "attach_metadata_to_component",
     "build_s_matrix_from_sdict",
+    "build_sdict_from_s_matrix",
     "cosim_to_gdsfactory_metadata",
     "export_cosim_to_touchstone",
+    "export_circuit_cosim_to_touchstone",
     "get_cosim_summary",
+    "get_circuit_cosim_summary",
+    "simulate_gdsfactory_circuit",
     "simulate_gdsfactory_component",
 ]

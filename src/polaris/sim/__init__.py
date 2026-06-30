@@ -433,13 +433,19 @@ from polaris.sim.fdtd_simulator import (
     run_fdtd_simulation,
 )
 from polaris.sim.gdsfactory_cosim import (
+    CircuitCoSimConfig,
+    CircuitCoSimResult,
     CoSimConfig,
     CoSimResult,
     attach_metadata_to_component,
     build_s_matrix_from_sdict,
+    build_sdict_from_s_matrix,
     cosim_to_gdsfactory_metadata,
     export_cosim_to_touchstone,
+    export_circuit_cosim_to_touchstone,
+    get_circuit_cosim_summary,
     get_cosim_summary,
+    simulate_gdsfactory_circuit,
     simulate_gdsfactory_component,
 )
 from polaris.sim.types import ModelFunc, SDict, asarray, get_backend, get_xp, set_backend
@@ -828,6 +834,13 @@ __all__ = [
     "export_cosim_to_touchstone",
     "get_cosim_summary",
     "simulate_gdsfactory_component",
+    # R305 gdsfactory 联合仿真 - 电路级
+    "CircuitCoSimConfig",
+    "CircuitCoSimResult",
+    "build_sdict_from_s_matrix",
+    "export_circuit_cosim_to_touchstone",
+    "get_circuit_cosim_summary",
+    "simulate_gdsfactory_circuit",
     # 级联器
     "cascade_circuit",
     # R04 子网络分解（块三对角 + Schur 补 + 自适应策略 + 增量缓存）
