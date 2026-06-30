@@ -574,3 +574,340 @@ def _layer_density(
     for poly in polygons:
         total_area += _polygon_area(poly)
     return min(1.0, total_area / region_area)
+
+
+# =============================================================================
+# R141-R180 扩展几何工具函数（8 个新规则的基础算法）
+# =============================================================================
+
+def _polygon_perimeter(poly: NDArray[np.float64]) -> float:
+    """多边形周长（所有边长度之和）。
+
+    公式: P = Σ ||v_{i+1} - v_i||
+
+    文献:
+    - de Berg et al., "Computational Geometry: Algorithms and Applications",
+      Springer 2008, DOI: 10.1007/978-3-540-77974-2
+    - KLayout DRC perimeter check:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    - Calibre nmDRC perimeter rules: https://eda.sw.siemens.com/en-US/calibre/
+    - Synopsys IC Validator DRC perimeter:
+      https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+    - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+    """
+    n = len(poly)
+    if n < 2:
+        return 0.0
+    total = 0.0
+    for i in range(n):
+        a = poly[i]
+        b = poly[(i + 1) % n]
+        total += float(np.linalg.norm(b - a))
+    return total
+
+
+def _polygon_edge_lengths(poly: NDArray[np.float64]) -> NDArray[np.float64]:
+    """多边形所有边的长度（数组）。
+
+    文献:
+    - de Berg et al., "Computational Geometry", Springer 2008, Ch.2
+    - KLayout DRC edges/length check:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    - Calibre nmDRC edge length rules: https://eda.sw.siemens.com/en-US/calibre/
+    - Synopsys OptoDesigner DRC Module:
+      https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+    - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+    - PDRC, Jiang et al., DAC 2024,
+      http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+    """
+    n = len(poly)
+    if n < 2:
+        return np.array([], dtype=float)
+    lengths = np.zeros(n, dtype=float)
+    for i in range(n):
+        a = poly[i]
+        b = poly[(i + 1) % n]
+        lengths[i] = float(np.linalg.norm(b - a))
+    return lengths
+
+
+def _polygon_max_width(poly: NDArray[np.float64]) -> float:
+    """多边形最大宽度（旋转卡尺法取最大对边距离）。
+
+    用于 MaxWidth 单模约束检查：波导过宽会支持高阶模，需限制最大宽度。
+    算法: 对每条边，计算所有顶点到该边的最大垂直距离，取所有边方向上
+    宽度的最大值，即为多边形的最大宽度。
+
+    文献:
+    - Godfried T. Toussaint, "Solving Geometric Problems with the Rotating Calipers",
+      IEEE MELECON 1983. https://www.cs.mcgill.ca/~godfried/publications/calipers.pdf
+    - Lopez & Reisner, "On the Minimal Width of a Convex Polygon",
+      IPL 1985, DOI: 10.1016/0020-0190(85)90095-4
+    - de Berg et al., "Computational Geometry", Springer 2008, Ch.4
+      DOI: 10.1007/978-3-540-77974-2
+    - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+      (single-mode cutoff width: w_max ≈ λ/(2·√(n_core²-n_clad²)))
+    - SiEPIC EBeam PDK max width rules: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - KLayout DRC width check:
+      https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - Synopsys OptoDesigner DRC Module:
+      https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+    """
+    n = len(poly)
+    if n < 3:
+        return 0.0
+    max_w = 0.0
+    for i in range(n):
+        x1, y1 = float(poly[i][0]), float(poly[i][1])
+        x2, y2 = float(poly[(i + 1) % n][0]), float(poly[(i + 1) % n][1])
+        dx, dy = x2 - x1, y2 - y1
+        seg_len = math.hypot(dx, dy)
+        if seg_len < 1e-12:
+            continue
+        max_dist = 0.0
+        for j in range(n):
+            if j == i or j == (i + 1) % n:
+                continue
+            dist = abs(-dy * (float(poly[j][0]) - x1)
+                       + dx * (float(poly[j][1]) - y1)) / seg_len
+            if dist > max_dist:
+                max_dist = dist
+        if max_dist > max_w:
+            max_w = max_dist
+    return max_w
+
+
+def _polygon_step_width(poly: NDArray[np.float64]) -> float:
+    """多边形步进宽度突变（端边对宽度差，用于 Step 规则）。
+
+    算法: 识别多边形的端边（最短 2 条边，对应波导两端的端面），计算其
+    长度差绝对值。该值反映波导宽度突变幅度，若 > 阈值则违规。
+
+    用于 Step 规则: 波导宽度突变会导致模式失配、反射、损耗，需限制
+    相邻段宽度差。如 SiEPIC Tools Waveguide checking 中的 "Mismatched
+    pin widths" 检查。
+
+    文献:
+    - SiEPIC-Tools Verification "Mismatched pin widths":
+      https://github.com/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+    - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+    - KLayout DRC width check (端面识别):
+      https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - Calibre nmDRC step/width transition rules:
+      https://eda.sw.siemens.com/en-US/calibre/
+    - Synopsys OptoDesigner DRC Module:
+      https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+    - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+    - de Berg et al., "Computational Geometry", Springer 2008, Ch.2
+    """
+    n = len(poly)
+    if n < 4:
+        return 0.0
+    # 取最短的 2 条边（端边），对应波导两端端面
+    end_edges = _polygon_end_edges(poly, max_edges=2)
+    if len(end_edges) < 2:
+        return 0.0
+    lengths = [float(np.linalg.norm(b - a)) for a, b in end_edges]
+    return abs(lengths[0] - lengths[1])
+
+
+def _layer_alignment_offset(
+    inner_polys: list[NDArray[np.float64]],
+    outer_polys: list[NDArray[np.float64]],
+) -> float:
+    """两层图形边缘对齐偏移量（用于 Alignment 规则）。
+
+    算法: 对每个 inner 多边形，找到包围盒中心最近的 outer 多边形，
+    计算两者包围盒中心的偏移量（中心错位）。该值反映两层对齐度，
+    若 > 阈值则违规（层间对齐误差超限，可能导致电路开路/短路）。
+
+    用于 Alignment 规则: 不同层图形（如 metal1 vs contact）需要严格
+    对齐以避免接触不良或短路。Calibre nmDRC ALIGN 操作。
+
+    文献:
+    - Calibre nmDRC ALIGN operation:
+      https://eda.sw.siemens.com/en-US/calibre/
+    - KLayout DRC layer alignment:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    - Synopsys IC Validator DRC alignment:
+      https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+    - Synopsys OptoDesigner DRC Module:
+      https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+    - de Berg et al., "Computational Geometry", Springer 2008, Ch.5 (最近点对)
+    - Ericson, "Real-Time Collision Detection", MK 2005, Ch.5
+    """
+    if not inner_polys or not outer_polys:
+        return 0.0
+    max_offset = 0.0
+    for inner in inner_polys:
+        if len(inner) < 3:
+            continue
+        ixmin, iymin, ixmax, iymax = _polygon_bbox(inner)
+        icx = 0.5 * (ixmin + ixmax)
+        icy = 0.5 * (iymin + iymax)
+        # 找包围盒中心最近的 outer 多边形
+        best_d = float("inf")
+        for outer in outer_polys:
+            if len(outer) < 3:
+                continue
+            oxmin, oymin, oxmax, oymax = _polygon_bbox(outer)
+            ocx = 0.5 * (oxmin + oxmax)
+            ocy = 0.5 * (oymin + oymax)
+            d = math.hypot(icx - ocx, icy - ocy)
+            if d < best_d:
+                best_d = d
+        if best_d != float("inf") and best_d > max_offset:
+            max_offset = best_d
+    return max_offset
+
+
+def _polygon_symmetry_score(
+    poly: NDArray[np.float64], axis: str = "auto",
+) -> tuple[float, tuple[float, float, float]]:
+    """多边形对称性分数（反射对称度，用于 Symmetry 规则）。
+
+    *创新*: 主轴方向自动检测 + 镜像点匹配算法。
+
+    算法:
+    1. 计算多边形质心 C。
+    2. 候选对称轴: 通过质心的水平线、垂直线、以及过质心与最远顶点连线。
+    3. 对每个候选轴，将每个顶点关于该轴做镜像，检查镜像点是否近似落在
+       多边形顶点集上（容差 1e-6）。
+    4. 对称分数 = 匹配顶点数 / 总顶点数。返回最大分数及对应轴方程。
+
+    用于 Symmetry 规则: 光子器件（如 MMIs、Y 分支、DC）需要严格对称
+    以保证光学性能。对称度低于阈值则违规。
+
+    文献:
+    - Eades, P., "Symmetry Finding Algorithms",
+      "Optimal Algorithms for Symmetry Detection in Two and Three Dimensions",
+      University of Michigan Technical Report, 1986.
+      https://deepblue.lib.umich.edu/bitstream/handle/2027.42/8337/bad6491.0001.001.pdf
+    - Wolter, J.D., "Symmetry Detection in Two Dimensions",
+      University of Michigan PhD Thesis, 1985.
+    - de Berg et al., "Computational Geometry", Springer 2008, Ch.5 (主成分分析)
+    - KLayout DRC symmetry checks:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    - SiEPIC-Tools Component verification (对称器件验证):
+      https://github.com/SiEPIC/SiEPIC-Tools
+    - Synopsys OptoDesigner DRC Module:
+      https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+    """
+    n = len(poly)
+    if n < 3:
+        return 0.0, (0.0, 0.0, 0.0)
+
+    # 质心
+    cx = float(poly[:, 0].mean())
+    cy = float(poly[:, 1].mean())
+
+    # 候选对称轴集合: (a, b, c) 表示直线 a*x + b*y + c = 0
+    candidates: list[tuple[float, float, float]] = []
+    # 水平轴: y = cy → 0*x + 1*y - cy = 0
+    candidates.append((0.0, 1.0, -cy))
+    # 垂直轴: x = cx → 1*x + 0*y - cx = 0
+    candidates.append((1.0, 0.0, -cx))
+    # 过质心 + 每个顶点的轴
+    for i in range(n):
+        px, py = float(poly[i][0]), float(poly[i][1])
+        dx, dy = px - cx, py - cy
+        norm = math.hypot(dx, dy)
+        if norm < 1e-12:
+            continue
+        # 法向量 (dy, -dx) / norm，直线 dy*x - dx*y + (dx*cy - dy*cx) = 0
+        a = dy / norm
+        b = -dx / norm
+        c = (dx * cy - dy * cx) / norm
+        candidates.append((a, b, c))
+
+    def reflect(pt: NDArray[np.float64], a: float, b: float, c: float) -> np.ndarray:
+        """点关于直线 ax+by+c=0 的镜像点。"""
+        x, y = float(pt[0]), float(pt[1])
+        denom = a * a + b * b
+        if denom < 1e-18:
+            return pt.copy()
+        # 镜像: p' = p - 2*(a*x+b*y+c)/(a²+b²) * (a,b)
+        factor = 2.0 * (a * x + b * y + c) / denom
+        return np.array([x - factor * a, y - factor * b], dtype=float)
+
+    # 顶点集合（用于快速匹配）
+    pts_list = [(float(poly[i][0]), float(poly[i][1])) for i in range(n)]
+    tol = 1e-6
+
+    def is_in_points(p: tuple[float, float]) -> bool:
+        for q in pts_list:
+            if abs(p[0] - q[0]) < tol and abs(p[1] - q[1]) < tol:
+                return True
+        return False
+
+    best_score = 0.0
+    best_axis = (0.0, 0.0, 0.0)
+    for a, b, c in candidates:
+        matched = 0
+        for i in range(n):
+            rp = reflect(poly[i], a, b, c)
+            if is_in_points((float(rp[0]), float(rp[1]))):
+                matched += 1
+        score = matched / n
+        if score > best_score:
+            best_score = score
+            best_axis = (a, b, c)
+    return best_score, best_axis
+
+
+def _polygon_array_pitch(polys: list[NDArray[np.float64]]) -> float:
+    """多边形阵列 pitch 标准差（用于 Array 规则）。
+
+    *创新*: 基于 1D 投影 + 排序差分计算 pitch 一致性。
+
+    算法:
+    1. 计算每个多边形包围盒中心。
+    2. 找到主分布方向（x 或 y 范围更大者）。
+    3. 按主轴坐标排序，计算相邻 pitch。
+    4. 返回 pitch 标准差（衡量阵列周期一致性）。
+
+    用于 Array 规则: 光子阵列（如光栅耦合器阵列、WDM 滤波器阵列）需要
+    严格 pitch 一致性。pitch 偏差 > 阈值则违规。
+
+    文献:
+    - Synopsys OptoDesigner DRC Module (阵列规则):
+      https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+    - SiEPIC EBeam PDK array components:
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+    - KLayout DRC array/pattern checks:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    - Calibre nmDRC array pattern matching:
+      https://eda.sw.siemens.com/en-US/calibre/
+    - de Berg et al., "Computational Geometry", Springer 2008, Ch.2 (排序)
+    """
+    n = len(polys)
+    if n < 2:
+        return 0.0
+    # 计算每个多边形包围盒中心
+    centers: list[tuple[float, float]] = []
+    for poly in polys:
+        if len(poly) < 3:
+            continue
+        xmin, ymin, xmax, ymax = _polygon_bbox(poly)
+        centers.append((0.5 * (xmin + xmax), 0.5 * (ymin + ymax)))
+    if len(centers) < 2:
+        return 0.0
+    # 主轴方向: 范围更大者
+    xs = [c[0] for c in centers]
+    ys = [c[1] for c in centers]
+    x_range = max(xs) - min(xs)
+    y_range = max(ys) - min(ys)
+    if x_range >= y_range:
+        sorted_centers = sorted(centers, key=lambda c: c[0])
+        coords = [c[0] for c in sorted_centers]
+    else:
+        sorted_centers = sorted(centers, key=lambda c: c[1])
+        coords = [c[1] for c in sorted_centers]
+    # 计算相邻 pitch
+    pitches = [coords[i + 1] - coords[i] for i in range(len(coords) - 1)]
+    if len(pitches) < 2:
+        return 0.0
+    mean_pitch = sum(pitches) / len(pitches)
+    variance = sum((p - mean_pitch) ** 2 for p in pitches) / len(pitches)
+    return math.sqrt(variance)
