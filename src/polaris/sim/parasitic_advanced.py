@@ -455,10 +455,16 @@ class ParasiticInductor:
             spacing_um: 两导线中心距 (μm)。
 
         Returns:
-            {"mutual_inductance_ph": float, "coupling_coefficient_hint": float}
+            {"mutual_inductance_ph": float}
 
         Raises:
             ValueError: 间距过小或长度非法时告警退出。
+
+        Note:
+            R05 Bug 修复 v5.0-P1-3R1: 删除错误的 coupling_coefficient_hint 字段。
+            耦合系数 K = M/√(L1·L2) 是无量纲的，原代码返回 m*1e12（pH 值）量纲错误。
+            本方法不持有自感 L1/L2，无法计算 K。如需 K 请用 extract_inductance_matrix
+            （返回完整 L 矩阵后可计算 K = M_ij/√(L_ii·L_jj)）。
         """
         if length_um <= 0:
             msg = f"length_um 必须 > 0，得到 {length_um}"
@@ -475,7 +481,6 @@ class ParasiticInductor:
         )
         return {
             "mutual_inductance_ph": float(m * 1e12),
-            "coupling_coefficient_hint": float(m * 1e12),
         }
 
     def extract_inductance_matrix(

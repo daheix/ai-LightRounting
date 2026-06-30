@@ -384,16 +384,27 @@ class PEXEngine:
 
         C = C_area + C_fringe
 
-        # 电感: Wheeler 1942 公式
-        # L ≈ μ0 × L × (ln(2L/(W+t)) - 0.75) / (2π)
-        mu0 = 1.2566e-6  # H/m
+        # 电感: Rosa 1908 矩形截面导线自感公式
+        # R05 Bug 修复 v5.0-P0-3R1: 公式系数错误。
+        # 原代码用 ln(2L/(W+t)) - 0.75（错误的 Wheeler 简化），
+        # 应为 Rosa 1908: ln(2L/(W+H)) + 0.5 + (W+H)/(6L)。
+        # 与 parasitic_advanced.py:440 保持一致，避免同项目内公式分歧。
+        # 参考: Rosa 1908, NBS Bull. 4(2), 301-344.
+        #   https://doi.org/10.6028/bulletin.088
+        mu0 = 1.2566e-6  # H/m (μ0 = 4π×10⁻⁷)
         L_m = length_um * 1e-6
         W_m = (width_um + self.t_metal_um) * 1e-6
         if W_m <= 0:
             raise ValueError("线宽必须 > 0")
-        ratio = 2 * length_um / (width_um + self.t_metal_um)
-        ratio = max(ratio, 1.0)
-        L_ind = mu0 * L_m * (np.log(ratio) - 0.75) / (2 * np.pi)
+        if L_m <= 0:
+            raise ValueError("线长必须 > 0")
+        ratio = 2.0 * L_m / W_m
+        if ratio <= 1.0:
+            raise ValueError(
+                f"2L/(W+H) 必须 > 1 以保证 ln 有效，得到 {ratio}"
+            )
+        bracket = float(np.log(ratio)) + 0.5 + W_m / (6.0 * L_m)
+        L_ind = mu0 * L_m / (2.0 * np.pi) * bracket
 
         return {
             "resistance_ohm": float(R),
