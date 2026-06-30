@@ -118,8 +118,8 @@ class DiffReport:
         file_b: 文件 B 路径。
         top_cell_a: 文件 A 顶层 cell 名。
         top_cell_b: 文件 B 顶层 cell 名。
-        dbu_a: 文件 A 数据库单位（米）。
-        dbu_b: 文件 B 数据库单位（米）。
+        dbu_a: 文件 A 数据库单位（μm，KLayout Layout.dbu 返回 μm）。
+        dbu_b: 文件 B 数据库单位（μm，KLayout Layout.dbu 返回 μm）。
         layer_diffs: 各层差异列表。
         total_added_area_um2: 总新增面积（μm²）。
         total_removed_area_um2: 总删除面积（μm²）。
