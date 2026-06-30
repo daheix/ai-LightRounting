@@ -351,6 +351,10 @@ def generate_batch_drc_report(
         ValueError: 不支持的格式 / 参数无效。
         FileNotFoundError: 输入文件不存在。
         ImportError: klayout 未安装。
+
+    来源:
+    - KLayout DRC Reference: https://klayout.org/downloads/master/doc-qt5/about/drc_ref_layer.html
+    - KLayout Database API: https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
     """
     report = run_batch_drc(
         gds_path, rules, top_cell_name, max_violations,
