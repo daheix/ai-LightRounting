@@ -173,13 +173,25 @@ class TestR551SqueezingGate:
         )
 
     def test_squeezing_preserves_uncertainty(self):
-        """压缩保持 ΔxΔp = 1/2（最小不确定态）。"""
+        """压缩保持辛体积 det(V) = 1/4（不确定性关系下界）。
+
+        辛变换 V → S V S^T 保持 det(V)，真空态 det(V_vac) = (1/2)^2 = 1/4。
+        注意：仅在压缩主轴基下 Δx·Δp = 1/2；θ≠0 时 V 非对角，
+        Δx·Δp > 1/2，但 det(V) 仍 = 1/4（Weedbrook 2012 §II.C）。"""
         s0 = _q.GaussianState.vacuum(1)
         S = _q.SqueezingGate(r=1.5, theta=0.7)
         s1 = S.apply(s0, mode=0)
-        dx = np.sqrt(s1.covariance[0, 0])
-        dp = np.sqrt(s1.covariance[1, 1])
-        assert dx * dp == pytest.approx(0.5, rel=1e-9)
+        # det(V_vac) = 0.25，辛变换保持辛体积
+        assert np.linalg.det(s1.covariance) == pytest.approx(0.25, rel=1e-10)
+        # 不确定性关系满足 V + iΩ/2 ≥ 0
+        n = s1.n_modes
+        omega = np.block([
+            [np.zeros((n, n)), np.eye(n)],
+            [-np.eye(n), np.zeros((n, n))],
+        ])
+        test = s1.covariance + 1j * omega / 2.0
+        eigvals = np.linalg.eigvalsh((test + test.T.conj()) / 2)
+        assert np.min(eigvals.real) > -1e-9
 
 
 class TestR551RotationGate:
@@ -664,12 +676,15 @@ class TestR554PhaseNoise:
         np.testing.assert_allclose(rho_out, rho, atol=1e-15)
 
     def test_apply_decays_off_diagonal(self):
-        """σ>0 时非对角元衰减 exp(-(m-n)²σ²/2)。"""
+        """σ>0 时非对角元衰减 exp(-(m-n)²σ²/2)。
+
+        公式（Kok 2010 §3.4 高斯相位扩散）：ρ_mn → exp(-(m-n)²σ²/2)·ρ_mn。
+        m=0, n=1, σ=0.5: 衰减因子 exp(-1·0.25/2) = exp(-0.125)。"""
         rho = np.array([[0.5, 0.5], [0.5, 0.5]], dtype=np.complex128)
         ch = _q.PhaseNoiseChannel(sigma_phi=0.5)
         rho_out = ch.apply(rho)
-        # m=0, n=1: 衰减因子 exp(-0.25·0.25/2) = exp(-0.0625)
-        expected_off = 0.5 * np.exp(-0.5 * 0.5 ** 2 / 2.0)
+        # (m-n)²=1, σ²=0.25: 衰减因子 exp(-0.125)
+        expected_off = 0.5 * np.exp(-1.0 * 0.5 ** 2 / 2.0)
         assert rho_out[0, 1] == pytest.approx(expected_off, rel=1e-12)
 
     def test_apply_preserves_diagonal(self):
@@ -872,12 +887,25 @@ class TestCompliance:
         assert "*创新*" in doc, "docstring 缺少 *创新* 标注（R02）"
 
     def test_r04_no_gpu_keywords(self):
-        """R04: 模块源码不含 CuPy/CUDA/ROCm/Metal 关键词。"""
+        """R04: 模块源码不含 CuPy/CUDA/ROCm/Metal 关键词（单词匹配）。
+
+        用正则 \\b 边界避免 "roc" 匹配 "process" 等子串。"""
+        import re
         src_path = _SRC_DIR / "sim" / "quantum_cv_qec.py"
         src = src_path.read_text(encoding="utf-8")
-        for kw in ["cupy", "cuda", "roc", "metal", "fp16", "bf16"]:
-            assert kw.lower() not in src.lower(), \
-                f"源码含禁用 GPU 关键词 {kw}（R04）"
+        # GPU 后端关键词（带单词边界）
+        gpu_patterns = [
+            r"\bcupy\b",
+            r"\bcuda\b",
+            r"\brocm\b",  # ROCm 全称
+            r"\bmetal\b",  # Apple Metal
+            r"\bfp16\b",
+            r"\bbf16\b",
+        ]
+        for pat in gpu_patterns:
+            matches = re.findall(pat, src, flags=re.IGNORECASE)
+            assert not matches, \
+                f"源码含禁用 GPU 关键词 {pat}（R04），匹配: {matches}"
 
     def test_r03_no_silent_fallback_patterns(self):
         """R03: 源码不应含 except: pass / return None 静默兜底。"""

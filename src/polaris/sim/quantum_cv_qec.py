@@ -802,13 +802,32 @@ class StateFidelity:
 
 
 class PhotonLossChannel:
-    """光子损耗通道（Kok & Lovett 2010 §3.2）。
+    """光子损耗通道（Kok & Lovett 2010 §3.2，Carmichael 1993）。
 
-    Kraus 算子：E_k = sqrt((1-η)^k / k!) · a^k · η^(n/2)
-    其中 η 为透射率（Beer-Lambert: η = exp(-α·L)）。
-    演化：ρ → Σ_k E_k ρ E_k†
+    Kraus 算子（束分裂器模型，环境初态真空）：
+        E_k |n> = sqrt(C(n,k)·(1-η)^k·η^(n-k)) · |n-k>   (n ≥ k)
+                = 0                                       (n < k)
+    其中 C(n,k) = n! / (k!·(n-k)!) 为二项式系数。
 
-    本实现用粒子数表象密度矩阵演化（小 Hilbert 空间截断）。
+    满足完备性 Σ_k E_k† E_k = I（CPTP 性质，保迹）。
+
+    演化矩阵元（解析公式）：
+        ρ'_{mn} = η^((m+n)/2) · Σ_k sqrt(C(m+k,k)·C(n+k,k)) · (1-η)^k · ρ_{m+k, n+k}
+
+    推导：由 <m|E_k|p> = sqrt(C(m+k,k)·(1-η)^k·η^m) · δ_{p, m+k} 代入
+    ρ' = Σ_k E_k ρ E_k† 展开得到。注意 ρ_{m+k,n+k} 是高阶到低阶的反向累加
+    （损失 k 个光子从 |m+k> 到 |m>），原版本 ρ_{m-k,n-k} 方向错误导致不保迹。
+
+    物理验证（|1><1|, η=0.5）：
+        ρ'_{00} = 0.5（损失 1 光子到真空），ρ'_{11} = 0.5（保留 1 光子）
+        Tr(ρ') = 1.0 ✓，<n>_after = 0.5 = η·<n>_before ✓
+
+    Beer-Lambert 定律：η = exp(-α·L)（与经典衰减一致）。
+
+    文献：
+    - Kok & Lovett 2010 §3.2 https://www.cambridge.org/9780521191356
+    - Carmichael 1993 "An Open Systems Approach to Quantum Optics"
+    - Walls & Milburn 2008 "Quantum Optics" §3.7
     """
 
     def __init__(self, eta: float, n_max: int = 20) -> None:
@@ -845,44 +864,43 @@ class PhotonLossChannel:
         return float(np.exp(-alpha * length))
 
     def apply(self, rho: np.ndarray) -> np.ndarray:
-        """对密度矩阵应用光子损耗通道。
+        """对密度矩阵应用光子损耗通道（解析 Kraus 求和）。
 
         Args:
-            rho: (N+1)×(N+1) 密度矩阵。
+            rho: (N+1)×(N+1) 密度矩阵（N+1 ≤ n_max+1）。
 
         Returns:
-            演化后密度矩阵。
+            演化后密度矩阵（保迹 Tr(ρ') = Tr(ρ)）。
+
+        Raises:
+            ValueError: rho 非方阵或维度超过 n_max+1（规则 14）。
         """
+        from math import factorial
+
         rho = np.asarray(rho, dtype=np.complex128)
-        n_max_state = rho.shape[0] - 1
-        if rho.shape != (n_max_state + 1, n_max_state + 1):
+        if rho.ndim != 2 or rho.shape[0] != rho.shape[1]:
             raise ValueError(f"rho 须方阵，实际 {rho.shape}")
-        # 用解析公式：ρ_mn → η^((m+n)/2) · Σ_k C(m,n,k)·(1-η)^k · ρ_{m-k,n-k}
-        # 其中 C(m,n,k) = sqrt(m!·n! / ((m-k)!·(n-k)!·k!²))
-        # 但更简单：构造湮灭算子 a
-        a = np.zeros((self.n_max, self.n_max), dtype=np.complex128)
-        for n in range(1, self.n_max):
-            a[n - 1, n] = np.sqrt(n)
-        # Kraus 算子 E_k = sqrt((1-η)^k / k!) · a^k · η^(n̂/2)
-        # n̂/2 作用在密度矩阵上：对 |n><m| 元素乘以 η^((n+m)/2)
-        # 简化：用束分裂器模型（Kok 2010 Eq. 3.13）
-        # ρ' = Σ_k E_k ρ E_k†, E_k = sqrt((1-η)^k/k!) a^k η^(n̂/2)
-        # 等价矩阵元公式：
-        # ρ'_{mn} = η^((m+n)/2) Σ_k C_{mnk} (1-η)^k / k! ρ_{m-k, n-k}
-        # C_{mnk} = sqrt(m! n! / ((m-k)! (n-k)!))
-        n_state = n_max_state + 1
+        n_state = rho.shape[0]
+        if n_state > self.n_max + 1:
+            raise ValueError(
+                f"rho 维度 {n_state} 超过 n_max+1={self.n_max + 1}（规则 14）"
+            )
         rho_out = np.zeros_like(rho)
+        eta = self.eta
+        one_minus_eta = 1.0 - eta
+        # 矩阵元公式（Kok 2010 Eq. 3.13）：
+        # ρ'_{mn} = η^((m+n)/2) · Σ_k sqrt(C(m+k,k)·C(n+k,k)) · (1-η)^k · ρ_{m+k, n+k}
+        # k 从 0 到 n_state-1-max(m,n)（保证 m+k, n+k 在截断内）
         for m in range(n_state):
             for nn in range(n_state):
                 s = 0.0 + 0j
-                for k in range(min(m, nn) + 1):
-                    # 二项式系数
-                    from math import factorial
-                    cm = np.sqrt(factorial(m) * factorial(nn)
-                                 / (factorial(m - k) * factorial(nn - k)))
-                    s += (cm * (1.0 - self.eta) ** k
-                          * rho[m - k, nn - k])
-                rho_out[m, nn] = self.eta ** ((m + nn) / 2.0) * s
+                k_max = n_state - 1 - max(m, nn)
+                for k in range(k_max + 1):
+                    cmk = factorial(m + k) // (factorial(k) * factorial(m))
+                    cnk = factorial(nn + k) // (factorial(k) * factorial(nn))
+                    coeff = float(cmk * cnk) ** 0.5
+                    s += coeff * (one_minus_eta ** k) * rho[m + k, nn + k]
+                rho_out[m, nn] = eta ** ((m + nn) / 2.0) * s
         return rho_out
 
 
