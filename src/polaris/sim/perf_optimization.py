@@ -344,25 +344,32 @@ class EmeAdaptiveModeSelector:
         history: list[tuple[int, float]] = []
         prev_s: np.ndarray | None = None
         prev_norm: float = 0.0
+        prev_m: int = 0
         selected = -1
         relative_error = float("inf")
         for m in candidate_Ms:
             s = self.solve_fn(m)
-            cur_norm = self._matrix_norm(s)
             if prev_s is not None:
-                if prev_norm < 1e-30:
+                # 不同 M 的 S 矩阵尺寸不同（2M × 2M），取左上 min 子矩阵比较
+                # Gallagher 2003 §3：S 矩阵前 M_min×M_min 子块对应低阶模式耦合
+                n_min = min(s.shape[0], prev_s.shape[0])
+                s_sub = s[:n_min, :n_min]
+                prev_sub = prev_s[:n_min, :n_min]
+                prev_norm_sub = self._matrix_norm(prev_sub)
+                if prev_norm_sub < 1e-30:
                     raise ValueError(
                         "前一 S 矩阵范数 ≈0，无法计算相对误差（规则 14）"
                     )
-                diff = self._matrix_norm(s - prev_s)
-                eps = diff / prev_norm
+                diff = self._matrix_norm(s_sub - prev_sub)
+                eps = diff / prev_norm_sub
                 history.append((m, eps))
                 if eps < threshold and selected < 0:
                     selected = m
                     relative_error = eps
                     break
             prev_s = s
-            prev_norm = cur_norm
+            prev_norm = self._matrix_norm(s)
+            prev_m = m
         if selected < 0:
             raise ValueError(
                 f"所有候选 M {candidate_Ms} 均未收敛到阈值 {threshold}，"
