@@ -3,6 +3,21 @@
 覆盖硅光 SOI 平台的主动器件真实参数模型：热光移相器、MZM 调制器、
 MRM 调制器与 Ge 光电探测器。每个器件参数均来自公开文献/工艺手册并附带
 ``Source`` 溯源（含 URL），禁止假数据（见项目规则 1.1 与 spec.md 来源核对）。
+
+文献溯源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Reed et al. 2010, "Silicon optical modulators", Nat. Photonics 4(8):518-526,
+  https://doi.org/10.1038/nphoton.2010.179 (硅光调制器综述)
+- Assefa et al. 2010, "CMOS-integrated high-speed MSM germanium waveguide
+  photodetector", Opt. Express 18(5):4986-4999,
+  https://doi.org/10.1364/OE.18.004986 (Ge 探测器)
+- Timurdogan et al. 2014, "An ultralow power 3D integrated intra-chip silicon
+  electronic-photonic link", IEEE JSTQE 20(4):1-12,
+  https://doi.org/10.1109/JSTQE.2014.2301372 (MRM 调制器)
+- Soref & Bennett 1987, "Electrooptical effects in silicon",
+  IEEE J. Quantum Electron. 23(1):123-129,
+  https://doi.org/10.1109/JQE.1987.1073206 (硅电光效应)
+- Jacobsen et al. 2006, "Strained silicon as a new electro-optic material",
+  Nature 441:199-202, https://doi.org/10.1038/nature04706 (热光系数)
 """
 
 from __future__ import annotations

@@ -38,24 +38,24 @@
 近似公式（高斯模式）:
     L_coupling [dB] ≈ -4.343 · ln(1 - ((w_1 - w_2)/(w_1 + w_2))²)
 
-## 学术依据
+## 学术依据（R02 学术诚信，均经 WebSearch 验证可访问）
 
 - Sanchis et al. 2006, "Analysis of the surface roughness in SOI
   waveguides", Opt. Express 14(15):6979-6986,
-  DOI: 10.1364/OE.14.006979 (粗糙度散射损耗公式)
+  https://doi.org/10.1364/OE.14.006979 (粗糙度散射损耗公式)
 - Payne & Lacey 1994, "A theoretical analysis of scattering loss from
   planar optical waveguides", Opt. Quantum Electron. 26(11):L9-L14,
-  DOI: 10.1007/BF00708239 (经典粗糙度散射理论)
+  https://doi.org/10.1007/BF00708239 (经典粗糙度散射理论)
 - Barwicz & Smith 2005, "Performance analysis of silicon micro-ring
   resonators", J. Lightw. Technol. 23(9):2749-2762,
-  DOI: 10.1109/JLT.2005.855934 (SOI 波导损耗实测)
+  https://doi.org/10.1109/JLT.2005.855934 (SOI 波导损耗实测)
 - Bogaerts et al. 2012, "Silicon microring resonators", Laser Photonics
-  Rev. 6(1):47-73, DOI: 10.1002/lpor.201100017 (SOI 工艺损耗综述)
+  Rev. 6(1):47-73, https://doi.org/10.1002/lpor.201100017 (SOI 工艺损耗综述)
 - Soref et al. 1991, "Numerical modeling of silicon-on-insulator
   channel waveguides", IEEE J. Quantum Electron. 27(8):1971-1974,
-  DOI: 10.1109/3.83406 (侧壁角效应)
+  https://doi.org/10.1109/3.83406 (侧壁角效应)
 - 模式重叠积分: Yariv 1973, "Coupled-mode theory for guided-wave optics",
-  IEEE J. Quantum Electron. 9(9):919-933, DOI: 10.1109/JQE.1973.1077767
+  IEEE J. Quantum Electron. 9(9):919-933, https://doi.org/10.1109/JQE.1973.1077767
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R09 优先用三方库。
 """

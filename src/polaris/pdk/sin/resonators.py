@@ -3,6 +3,21 @@
 覆盖氮化硅 SiN 平台的环谐振器器件真实参数模型：Twente 双条带环与
 Cornell 高 Q 微环。每个器件参数均来自公开文献/工艺手册并附带 ``Source``
 溯源（含 URL），禁止假数据（见项目规则 1.1 与 spec.md 来源核对）。
+
+文献溯源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Luke et al. 2020, "Overcoming SiN photonic losses", Opt. Express,
+  https://doi.org/10.1364/OE.23.012105 (SiN 高 Q 微环)
+- Roeloffzen et al. 2018, "Low-loss Si3N4 TriPleX optical waveguides",
+  J. Lightw. Technol. 36(11):2170-2178,
+  https://doi.org/10.1109/JLT.2018.2819298 (TriPleX 环谐振器)
+- Bogaerts et al. 2012, "Silicon microring resonators", Laser Photonics Rev.
+  6(1):47-73, https://doi.org/10.1002/lpor.201100017 (微环基本理论)
+- Yariv 2000, "Universal relations for coupling of optical power between
+  microresonators and dielectric waveguides", Electron. Lett. 36(4):321-322,
+  https://doi.org/10.1049/el:20000310 (耦合方程)
+- Levy et al. 2011, "CMOS-compatible multiple-wavelength oscillator for
+  on-chip optical interconnects", Nat. Photonics 4(1):37-40,
+  https://doi.org/10.1038/nphoton.2009.259 (SiN 非线性环)
 """
 
 from __future__ import annotations

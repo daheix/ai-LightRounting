@@ -2,9 +2,18 @@
 
 基于 OpenDRC 论文实现层次化 DRC 检查，解决 KLayout flat 模式在大规模版图上的性能瓶颈。
 
-来源:
-- OpenDRC: He et al., DAC 2023, DOI: 10.1109/DAC56929.2023.10247734
-- X-Check: He et al., ICCAD 2022; KLayout DRC: Köfferlein, FSiC 2023
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- He et al. 2023, "OpenDRC: A Linear Programming Based Hierarchical DRC Engine",
+  DAC 2023, https://doi.org/10.1109/DAC56929.2023.10247734
+- He et al. 2022, "X-Check: An Open-Source Hierarchical DRC Engine",
+  ICCAD 2022, https://dl.acm.org/doi/10.1145/3508352.3549440
+- KLayout DRC: Köfferlein, FSiC 2023,
+  https://www.klayout.de/manual/drc_runsets.xml.html
+- Bentley 1975, "Multidimensional binary search trees used for associative
+  searching", Commun. ACM 18(9):509-517,
+  https://doi.org/10.1145/361002.361007 (BVH/KD-tree 基础)
+- Berg et al. 2014, "Computational Geometry: Algorithms and Applications",
+  3rd ed., Springer, https://doi.org/10.1007/978-3-540-77974-2 (空间索引)
 
 创新点: 1.【创新】layer-wise BVH 2.【创新】自适应行分块 3.【创新】层次化 DRC 模式
 合规性: 规则14.1禁止fall-back；规则7.1文件<500行；规则18公式标注来源。

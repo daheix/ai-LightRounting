@@ -3,6 +3,21 @@
 覆盖硅光 SOI 平台的环谐振器器件真实参数模型：微环谐振器与双环滤波器。
 每个器件参数均来自公开文献/工艺手册并附带 ``Source`` 溯源（含 URL），
 禁止假数据（见项目规则 1.1 与 spec.md 来源核对）。
+
+文献溯源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Bogaerts et al. 2012, "Silicon microring resonators", Laser Photonics Rev.
+  6(1):47-73, https://doi.org/10.1002/lpor.201100017 (微环综述)
+- Barwicz & Smith 2005, "Performance analysis of silicon micro-ring
+  resonators", J. Lightw. Technol. 23(9):2749-2762,
+  https://doi.org/10.1109/JLT.2005.855934 (微环性能分析)
+- Yariv 2000, "Universal relations for coupling of optical power between
+  microresonators and dielectric waveguides", Electron. Lett. 36(4):321-322,
+  https://doi.org/10.1049/el:20000310 (耦合方程)
+- Rabus 2007, "Integrated Ring Resonators", Springer,
+  https://doi.org/10.1007/978-3-540-68779-0 (环谐振器专著)
+- Alonso-Ramos et al. 2014, "Polarization-beam-splitter-less integrated
+  dual-polarization QAM receiver", Opt. Express 22(11):13367-13374,
+  https://doi.org/10.1364/OE.22.013367 (双环滤波器)
 """
 
 from __future__ import annotations

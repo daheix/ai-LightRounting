@@ -20,11 +20,24 @@ NSGA-III 流程：
     6. 遗传操作
     7. 精英选择
 
-来源:
-- Deb & Jain "An Evolutionary Many-Objective Optimization Algorithm Using
-  Reference-Point-Based Nondominated Sorting Approach, Part I" 2014
-- Das & Dennis "Normal-boundary intersection: A new method for generating
-  the Pareto surface in nonlinear multicriteria optimization problems" 1998
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Deb & Jain 2014, "An Evolutionary Many-Objective Optimization Algorithm Using
+  Reference-Point-Based Nondominated Sorting Approach, Part I",
+  IEEE Trans. Evol. Comput. 18(4):577-601,
+  https://doi.org/10.1109/TEVC.2013.2281535
+- Deb & Jain 2014, "Part II: Handling Constraints and Extending to an Adaptive
+  Approach", IEEE Trans. Evol. Comput. 18(4):602-622,
+  https://doi.org/10.1109/TEVC.2013.2281534
+- Das & Dennis 1998, "Normal-boundary intersection: A new method for generating
+  the Pareto surface in nonlinear multicriteria optimization problems",
+  SIAM J. Optim. 8(3):631-657,
+  https://doi.org/10.1137/S1052623496307510
+- Deb et al. 2002, "A fast and elitist multiobjective genetic algorithm: NSGA-II",
+  IEEE Trans. Evol. Comput. 6(2):182-197,
+  https://doi.org/10.1109/4235.996017
+- Tian et al. 2017, "PlatEMO: A MATLAB Platform for Evolutionary Multi-Objective
+  Optimization", IEEE Comput. Intell. Mag. 12(4):73-87,
+  https://doi.org/10.1109/MCI.2017.2742868
 """
 
 from __future__ import annotations

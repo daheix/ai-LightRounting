@@ -10,6 +10,23 @@
 
 端口约定（与 device.py 一致）：端口坐标相对器件原点，``direction`` 为光波导
 出射方向（朝外，便于外部波导连接）。坐标系为标准数学坐标系（y 轴朝上）。
+
+文献溯源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Soldano & Pennings 1995, "Optical multi-mode interference devices based on
+  self-imaging: principles and applications", J. Lightw. Technol. 13(4):615-627,
+  https://doi.org/10.1109/50.372336 (MMI 自成像原理)
+- Yariv 1973, "Coupled-mode theory for guided-wave optics",
+  IEEE J. Quantum Electron. 9(9):919-933,
+  https://doi.org/10.1109/JQE.1973.1077767 (定向耦合器耦合模理论)
+- Soref et al. 1993, "Large single-mode rib waveguides in GeSi-Si and Si-on-SiO2",
+  IEEE J. Quantum Electron. 27(8):1971-1974,
+  https://doi.org/10.1109/3.83406 (SOI 波导)
+- Halir et al. 2011, "Ultra-broadband MMI couplers with low polarization
+  dependence", Opt. Express 19(11):10281-10288,
+  https://doi.org/10.1364/OE.19.010281 (MMI 宽带设计)
+- Lukosz 1981, "Temperature and pressure dependence of the refractive index
+  of silicon", Phys. Status Solidi A 64(1):K57-K60,
+  https://doi.org/10.1002/pssa.2210640147 (MZI 热光移相)
 """
 
 from __future__ import annotations

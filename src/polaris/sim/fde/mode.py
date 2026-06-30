@@ -4,6 +4,20 @@ Mode 数据类封装 FDE 求解输出：6 场分量 + β + n_eff + TE/TM 分数 
 EME/FDFD/2.5D-FDTD/FDTD 模式注入通过此数据类直接消费 FDE 结果，避免格式壁垒。
 
 规则依据：project_rules.md 规则 18（学术诚信，无造假）
+
+文献溯源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Lumerical FDE 求解器（商业对照基准）:
+  https://www.ansys.com/products/optics/mode
+- Lumerical FDE 波导求解文档:
+  https://support.lumerical.com/hc/en-us/articles/360042800453-Waveguide-FDE
+- Säynätjoki et al. 2011, "Comparison of SOI waveguides operated at
+  1550 nm and 850 nm", Opt. Express 19(27):26275-26283,
+  https://doi.org/10.1364/OE.19.026275
+- Snyder & Love, "Optical Waveguide Theory" (1983), Chapman & Hall:
+  https://link.springer.com/book/10.1007/978-1-4615-6326-9
+- Yariv 1973, "Coupled-mode theory for guided-wave optics",
+  IEEE J. Quantum Electron. 9(9):919-933,
+  https://doi.org/10.1109/JQE.1973.1077767
 """
 
 from __future__ import annotations

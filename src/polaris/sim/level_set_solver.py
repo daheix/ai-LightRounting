@@ -26,11 +26,22 @@ Lax-Friedrichs 数值 Hamiltonian：
                         - αy/2 * (b⁺ - b⁻)
     其中 αx = max|∂H/∂φx|, αy = max|∂H/∂φy|（局部 Lipschitz 常数）
 
-来源:
-- Osher & Shu "High-order essentially non-oscillatory schemes for Hamilton-Jacobi equations" 1991
-- Jiang & Peng "Weighted ENO schemes for Hamilton-Jacobi equations" 2000
-- Osher & Fedkiw "Level Set Methods and Dynamic Implicit Surfaces" 2003
-- Sethian "Level Set Methods and Fast Marching Methods" 1999
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Osher & Shu 1991, "High-order essentially non-oscillatory schemes for
+  Hamilton-Jacobi equations", SIAM J. Numer. Anal. 28(4):907-922,
+  https://doi.org/10.1137/0728049
+- Jiang & Peng 2000, "Weighted ENO schemes for Hamilton-Jacobi equations",
+  SIAM J. Sci. Comput. 21(6):2126-2143,
+  https://doi.org/10.1137/S1064827597324553
+- Osher & Sethian 1988, "Fronts propagating with curvature-dependent speed:
+  algorithms based on Hamilton-Jacobi formulations", J. Comput. Phys. 79(1):12-49,
+  https://doi.org/10.1016/S0021-9991(88)80002-2
+- Osher & Fedkiw 2001, "Level set methods: an overview and some recent results",
+  J. Comput. Phys. 169(2):463-502,
+  https://doi.org/10.1006/jcph.2000.6636
+- Shu 2009, "High order weighted essentially nonoscillatory schemes for
+  convection dominated problems", SIAM Review 51(1):82-126,
+  https://doi.org/10.1137/070679065
 """
 
 from __future__ import annotations
