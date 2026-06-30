@@ -604,7 +604,7 @@
 
 ### gdsfactory 深度集成（R301-R350，50 轮）
 
-### [ ] R301: gdsfactory 组件导入 - GDSII 读取增强
+### [x] R301: gdsfactory 组件导入 - GDSII 读取增强
 - **Priority**: high
 - **Depends On**: R115
 - **Description**: 增强 GDSII 读取能力，完全兼容 gdsfactory 输出格式
@@ -614,7 +614,7 @@
   - `programmatic` TR-301.2: 层次结构保留完整
   - `programmatic` TR-301.3: 所有层号映射正确
 
-### [ ] R302: gdsfactory 组件导出 - GDSII 写出增强
+### [x] R302: gdsfactory 组件导出 - GDSII 写出增强
 - **Priority**: high
 - **Depends On**: R301
 - **Description**: 增强 GDSII 写出能力，输出与 gdsfactory 兼容
@@ -624,7 +624,7 @@
   - `programmatic` TR-302.2: 层次结构导出完整
   - `programmatic` TR-302.3: 往返导入导出无信息损失
 
-### [ ] R303: gdsfactory PDK 双向兼容 - 层映射
+### [x] R303: gdsfactory PDK 双向兼容 - 层映射
 - **Priority**: high
 - **Depends On**: R302
 - **Description**: 实现 gdsfactory PDK 与 PoLaRIS PDK 的层映射转换
