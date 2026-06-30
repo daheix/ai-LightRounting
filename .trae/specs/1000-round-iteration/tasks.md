@@ -634,7 +634,7 @@
   - `programmatic` TR-303.2: 自定义层映射支持
   - `programmatic` TR-303.3: 映射配置文件化
 
-### [ ] R304: gdsfactory 联合仿真 - 组件级
+### [x] R304: gdsfactory 联合仿真 - 组件级
 - **Priority**: high
 - **Depends On**: R303
 - **Description**: 实现 gdsfactory 组件直接导入 PoLaRIS 进行仿真的工作流
