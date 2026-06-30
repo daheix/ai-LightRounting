@@ -685,8 +685,8 @@ class PretrainedPolicyLibrary:
                 key=lambda i: type_difficulty.get(dev_map[i].get("type", "mzi"), 99),
             )
             cells = [(r, c) for r in range(grid_h) for c in range(grid_w)]
+        # cells 容量已校验 >= n（见上方 n > grid_h*grid_w 检查），切片到精确 n 个以匹配 order
         placement: dict[str, dict] = {}
-        # cells 容量已校验 >= n，切片到精确 n 个以匹配 order（R03 strict=True 防漏配）
         for dev_id, (r, c) in zip(order, cells[:n], strict=True):
             placement[dev_id] = {
                 "x": float(c * _GRID_CELL_SIZE_UM),
