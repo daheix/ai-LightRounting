@@ -165,8 +165,10 @@ def extract_polygons_from_gdsii(
         top_cell = top_cells[0]
 
     # 按层提取多边形（递归展平所有子 cell）
-    # KLayout Cell.begin_iter_rec (Shapes) 递归遍历所有子 cell 的形状
-    # 来源: https://www.klayout.org/doc-qt5/code/class_Cell.html
+    # KLayout 0.30.9 API: Cell.begin_shapes_rec(layer_index) 返回
+    # RecursiveShapeIterator，遍历该层所有形状（含子 cell）。
+    # db.Region(iterator) 用迭代器构造 Region，自动合并重叠/接触的多边形。
+    # 来源: https://www.klayout.org/doc-qt5/code/class_Cell.html#method20
     result: dict[str, list[np.ndarray]] = {}
     for li in ly.layer_indices():
         info = ly.get_info(li)
@@ -177,8 +179,7 @@ def extract_polygons_from_gdsii(
             f"LAYER_{gds_layer}_{gds_datatype}",
         )
         # 用 Region 收集所有多边形（自动合并重叠/接触的多边形）
-        region = db.Region()
-        region.insert(top_cell.begin(li))
+        region = db.Region(top_cell.begin_shapes_rec(li))
         # 转换为 PoLaRIS 多边形（μm）
         polygons: list[np.ndarray] = []
         # KLayout 0.30.9: SimplePolygon.each_point() 直接返回 Point 对象
