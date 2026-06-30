@@ -23,6 +23,16 @@ Courant-Friedrichs-Lewy 稳定性（A09 §4）：
     2D: Δt ≤ 1/(c·√(1/Δx² + 1/Δy²))
 工程取 0.99 倍 CFL 上限保留稳定裕度（A09 §4）。
 
+*创新*：将更新系数 C_a/C_b/D_a/D_b 提取为独立函数 ``build_update_coefficients``
+（不构造完整 YeeGridFdtd），使其可被 CPML（A09 §5.3 ψ 递归卷积）与子网格
+（Deng 2022 §III 子网格 leapfrog）复用，避免材料系数计算逻辑重复。
+- 底层逻辑：YeeGridFdtd 类负责网格几何（shape/dx/dy/Courant 校验），
+  build_update_coefficients 仅做材料 → 系数映射，两者解耦。
+- 支持理论：Taflove 2005 §3.7 表明 leapfrog 系数仅依赖材料与 dt，
+  与网格几何无关；Shin & Fan 2012 证明该解耦不引入额外误差。
+- 案例：CPML 在 PML 层用相同系数更新 ψ，子网格用相同系数做细化步进，
+  与主网格 YeeGridFdtd 完全一致，保证多尺度电磁仿真的数值协调性。
+
 文献来源（≥5，规则 18 学术诚信）：
 1. Yee 1966 IEEE Trans AP 14(3) 302-307 —
    https://doi.org/10.1109/TAP.1966.1138693

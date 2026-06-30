@@ -115,7 +115,7 @@ class TestR451CpmlConfig:
     def test_sigma_max_gedney(self):
         """σ_max = (m+1)/(150·π·Δh·√ε_r)。"""
         cfg = CpmlConfig(order=3)
-        dx = 50e-9  # 50 nm
+        dx = 50e-9
         eps_r = 1.0
         smax = _sigma_max_gedney(cfg, dx, eps_r)
         expected = (3 + 1) / (150.0 * np.pi * dx * np.sqrt(eps_r))
@@ -142,7 +142,6 @@ class TestR451CpmlConfig:
         assert np.all(coeff.sigma[16:] > 0.0)
 
     def test_build_axis_profile_too_many_layers(self):
-        """PML 层过多应 raise。"""
         cfg = CpmlConfig(layers=10)
         with pytest.raises(ValueError, match="PML 层数"):
             _build_axis_profile(n=15, dx=1e-7, pml=cfg, eps_r_bg=1.0)
@@ -174,7 +173,6 @@ class TestR451CpmlConfig:
         assert np.all(buf.psi_e_xz == 0.0)
 
     def test_build_cpml_invalid_shape(self):
-        """网格过小应 raise。"""
         cfg = CpmlConfig(layers=10)
         with pytest.raises(ValueError, match="网格"):
             build_cpml(shape=(10, 10), dx=1e-7, dy=1e-7, dt=1e-16, pml=cfg)
@@ -197,33 +195,27 @@ class TestR452CpmlPsi:
         cfg = CpmlConfig(layers=4)
         return build_cpml(shape=(20, 20), dx=1e-7, dy=1e-7, dt=1e-16, pml=cfg)
 
-    def test_update_h_psi_basic(self):
-        """H 场 psi 更新：ψ *= b + a·∂E。"""
+    def test_update_h_psi_in_pml_region(self):
+        """PML 区激励后 psi 应非零。"""
         cx, cy, buf = self._make_cpml()
         e_z = np.zeros((20, 20))
-        e_z[10, 10] = 1.0  # 中心激励
+        # 在 PML 区（i=2，左侧 PML 0-3）注入
+        e_z[2, 10] = 1.0
+        e_z[3, 10] = 2.0  # 制造 ∂E/∂x
         update_h_psi(e_z, buf, cx, cy)
-        # 中心附近应有非零 psi
+        # PML 区应有非零 psi
         assert np.any(buf.psi_h_yx != 0.0)
 
-    def test_update_e_psi_basic(self):
-        """E 场 psi 更新：ψ *= b + a·∂H。"""
+    def test_update_e_psi_in_pml_region(self):
+        """PML 区 H 场激励后 psi 应非零。"""
         cx, cy, buf = self._make_cpml()
         h_x = np.zeros((20, 20))
         h_y = np.zeros((20, 20))
-        h_y[10, 10] = 1.0
+        # PML 区制造 ∂H/∂x
+        h_y[2, 10] = 1.0
+        h_y[3, 10] = 2.0
         update_e_psi(h_x, h_y, buf, cx, cy)
         assert np.any(buf.psi_e_xz != 0.0)
-
-    def test_psi_zero_input_zero_output(self):
-        """零输入下 psi 保持衰减（仅 b·ψ）。"""
-        cx, cy, buf = self._make_cpml()
-        # 先注入非零 psi
-        buf.psi_h_yx[5, 5] = 1.0
-        e_z = np.zeros((20, 20))
-        update_h_psi(e_z, buf, cx, cy)
-        # 应衰减 (· b)
-        assert abs(buf.psi_h_yx[5, 5]) < 1.0
 
     def test_psi_internal_zero(self):
         """内部区域 a=0，psi 不积累。"""
@@ -234,28 +226,32 @@ class TestR452CpmlPsi:
         # 内部 (10, 10) 处 a=0，psi 应保持 0
         assert buf.psi_h_yx[10, 10] == 0.0
 
-    def test_psi_decay_over_time(self):
-        """psi 多步更新后应衰减。"""
+    def test_psi_decay_in_pml_region(self):
+        """PML 区 psi 多步衰减（b<1）。"""
         cx, cy, buf = self._make_cpml()
+        # 直接在 PML 区 psi 注入初始值
+        buf.psi_h_yx[2, 10] = 1.0
+        # 零输入更新（e_z 全 0）
         e_z = np.zeros((20, 20))
-        e_z[2, 10] = 1.0  # PML 区
         update_h_psi(e_z, buf, cx, cy)
-        first_val = abs(buf.psi_h_yx[2, 10])
-        # 第二步，零输入
-        e_z[:] = 0.0
+        # PML 区 b<1，psi 应衰减
+        assert abs(buf.psi_h_yx[2, 10]) < 1.0
+
+    def test_psi_internal_no_decay(self):
+        """内部区 b=1，psi 不衰减。"""
+        cx, cy, buf = self._make_cpml()
+        buf.psi_h_yx[10, 10] = 1.0  # 内部
+        e_z = np.zeros((20, 20))
         update_h_psi(e_z, buf, cx, cy)
-        second_val = abs(buf.psi_h_yx[2, 10])
-        # 应衰减
-        assert second_val < first_val
+        # 内部 b=1，psi 不变
+        assert buf.psi_h_yx[10, 10] == pytest.approx(1.0)
 
     def test_reflection_db(self):
         """反射系数 dB 计算。"""
-        # 反射 0.001，入射 1.0 → -60 dB
         r = reflection_db(1.0, 0.001)
         assert r == pytest.approx(-60.0, rel=1e-6)
 
     def test_reflection_db_perfect_absorption(self):
-        """完美吸收反射 0 → -inf。"""
         r = reflection_db(1.0, 0.0)
         assert r == -np.inf
 
@@ -276,65 +272,92 @@ class TestR453Subgridding:
 
     def test_subgrid_config_basic(self):
         cfg = SubgridConfig(
-            n_main=50, n_sub=40, factor=4,
-            sub_start=20, sub_end=30,
-            dx=1e-7, dt=1e-16,
+            n_main=50, dx_main=1e-7, dt_main=1e-16, n_steps=10,
+            factor=4, i0=20, i1=30,
         )
         assert cfg.n_main == 50
         assert cfg.factor == 4
 
+    def test_subgrid_config_invalid_n_main(self):
+        with pytest.raises(ValueError, match="n_main"):
+            SubgridConfig(n_main=5, dx_main=1e-7, dt_main=1e-16, n_steps=1)
+
+    def test_subgrid_config_invalid_factor(self):
+        with pytest.raises(ValueError, match="factor"):
+            SubgridConfig(n_main=20, dx_main=1e-7, dt_main=1e-16,
+                          n_steps=1, factor=1, i0=5, i1=15)
+
     def test_step_yee_1d_basic(self):
-        """1D Yee 时间步进。"""
+        """1D Yee 时间步进：H 推进 E。"""
         n = 20
         e = np.zeros(n)
         h = np.zeros(n - 1)
         h[10] = 1.0
-        step_yee_1d(e, h, dt=1e-16, dx=1e-7)
-        # h 推进 e
-        assert np.any(e != 0.0)
+        # dt 满足 CFL
+        dx = 1e-7
+        c0 = 2.99792458e8
+        dt = 0.5 * dx / c0
+        e_new, h_new = step_yee_1d(e, h, dt=dt, dx=dx)
+        # h 应推进 e（e_new 应有非零）
+        assert np.any(e_new != 0.0)
 
     def test_step_yee_1d_energy_conservation(self):
-        """自由空间无源应近似能量守恒。"""
-        n = 50
+        """自由空间无源能量守恒（leapfrog 辛性质，Hairer 2006 §IX.3）。
+
+        Yee 1966 leapfrog 是辛积分器，理论保证哈密顿量 H = 0.5·∫(εE²+μH²)dx
+        长时守恒。注意 E²+H² 不能直接相加（单位不一致），须用波阻抗
+        Z0=√(μ0/ε0)≈377.73 归一化：H_norm = 0.5·(E² + Z0²·H²)。
+        E/H 半步错位会引入 O(Δt²) 短时振荡，故采用 100 步（不到边界）+ 5% 容差。
+        """
+        n = 200
         e = np.zeros(n)
         h = np.zeros(n - 1)
-        # 注入一个高斯脉冲
         x = np.arange(n)
-        e[:] = np.exp(-((x - 25) ** 2) / 10.0)
+        # 宽包络 sigma=sqrt(25)=5 cells，低频主导减少色散
+        e[:] = np.exp(-((x - 100) ** 2) / 50.0)
         dx = 1e-7
-        dt = 0.5 * dx / 2.99792458e8  # CFL=0.5
-        e0 = float(np.sum(e ** 2) + np.sum(h ** 2))
-        for _ in range(10):
-            step_yee_1d(e, h, dt=dt, dx=dx)
-        e1 = float(np.sum(e ** 2) + np.sum(h ** 2))
-        # 能量应近似守恒（误差 < 5%）
+        c0 = 2.99792458e8
+        dt = 0.5 * dx / c0  # CFL=0.5
+        Z0 = 376.730313668  # 真空波阻抗 √(μ0/ε0)（CODATA 2018）
+        e0 = 0.5 * (float(np.sum(e ** 2)) + Z0 ** 2 * float(np.sum(h ** 2)))
+        # 100 步传播 ≈ 50 cells，未触边界（中心 100，距边界 100 cells）
+        for _ in range(100):
+            e, h = step_yee_1d(e, h, dt=dt, dx=dx)
+        e1 = 0.5 * (float(np.sum(e ** 2)) + Z0 ** 2 * float(np.sum(h ** 2)))
+        # 辛积分器短时振荡容差 5%
         assert abs(e1 - e0) / e0 < 0.05
 
     def test_interpolate_main_to_sub(self):
-        """主网格 → 子网格插值。"""
-        # 主网格 10 点，子网格 factor=4 → 40 点
+        """主网格 → 子网格线性插值。"""
+        # 主网格 10 点，子网格 factor=4 区间 [2, 5]
         main = np.linspace(0, 9, 10)
-        sub = interpolate_main_to_sub(main, factor=4, sub_start=2, sub_end=5)
-        # 子网格应有 (5-2) * 4 = 12 点
-        assert sub.shape[0] == 12
+        sub = interpolate_main_to_sub(main, factor=4, i0=2, i1=5)
+        # 子网格点数 = (5-2)*4 + 1 = 13
+        assert sub.shape[0] == 13
 
     def test_interpolate_sub_to_main(self):
         """子网格 → 主网格投影。"""
-        # 子网格 12 点 → 主网格 3 点
-        sub = np.linspace(0, 11, 12)
-        main = interpolate_sub_to_main(sub, factor=4, sub_start=2, sub_end=5)
-        assert main.shape[0] == 3
+        # 子网格 13 点 → 主网格 4 点（区间 [2, 5]）
+        sub = np.linspace(0, 12, 13)
+        main = interpolate_sub_to_main(sub, factor=4, i0=2, i1=5)
+        assert main.shape[0] == 4
+
+    def test_interpolate_invalid_factor(self):
+        with pytest.raises(ValueError, match="factor"):
+            interpolate_main_to_sub(np.zeros(10), factor=0, i0=2, i1=5)
+        with pytest.raises(ValueError, match="factor"):
+            interpolate_sub_to_main(np.zeros(10), factor=0, i0=2, i1=5)
 
     def test_estimate_speedup(self):
-        """加速比估算。"""
-        s = estimate_speedup(
-            n_main=1000, n_sub_region=200, factor=4, dim=1
-        )
-        assert s > 1.0  # 应有加速
+        """加速比估算：>1 表示有加速。"""
+        s = estimate_speedup(n_main=100, factor=4, i0=40, i1=60)
+        assert s > 1.0
 
-    def test_subgrid_config_invalid_raises(self):
-        with pytest.raises((ValueError, TypeError)):
-            SubgridConfig(n_main=10, n_sub=20, factor=0)
+    def test_estimate_speedup_higher_factor_more_speedup(self):
+        """factor 越大加速比越高。"""
+        s2 = estimate_speedup(n_main=100, factor=2, i0=40, i1=60)
+        s4 = estimate_speedup(n_main=100, factor=4, i0=40, i1=60)
+        assert s4 > s2
 
 
 # ===========================================================================
@@ -345,45 +368,48 @@ class TestR453Subgridding:
 class TestR454SubgridSolver:
     """R454 Subgridding 求解器端到端。"""
 
-    def test_solver_basic(self):
-        """子网格求解器完整运行。"""
-        cfg = SubgridConfig(
-            n_main=80, n_sub=40, factor=4,
-            sub_start=30, sub_end=40,
-            dx=1e-7, dt=1e-17,
+    def _make_cfg(self):
+        return SubgridConfig(
+            n_main=80, dx_main=1e-7, dt_main=1e-17, n_steps=10,
+            factor=4, i0=30, i1=40,
+            source_idx=10, source_amplitude=1.0, source_freq=1e14,
         )
+
+    def test_solver_basic(self):
+        cfg = self._make_cfg()
         solver = SubgridFdtdSolver(cfg)
-        result = solver.solve(n_steps=10)
+        result = solver.solve()
         assert isinstance(result, SubgridResult)
-        assert result.e_main.shape[0] == 80
-        assert result.e_sub.shape[0] == 40
+        assert result.final_e_main.shape[0] == 80
+        # 子网格点数 = (40-30)*4 + 1 = 41
+        assert result.final_e_sub.shape[0] == 41
+
+    def test_solver_history_shapes(self):
+        cfg = self._make_cfg()
+        solver = SubgridFdtdSolver(cfg)
+        result = solver.solve()
+        # 时序应为 n_steps+1
+        assert result.e_main_history.shape == (cfg.n_steps + 1, cfg.n_main)
+        assert result.time.shape == (cfg.n_steps + 1,)
+
+    def test_solver_speedup_factor(self):
+        cfg = self._make_cfg()
+        solver = SubgridFdtdSolver(cfg)
+        result = solver.solve()
+        # 应有正加速比
+        assert result.speedup_factor > 0
 
     def test_solver_gaussian_propagation(self):
-        """高斯脉冲在子网格区域传播。"""
-        cfg = SubgridConfig(
-            n_main=100, n_sub=60, factor=4,
-            sub_start=30, sub_end=45,
-            dx=1e-7, dt=1e-17,
-        )
+        """源注入后场应传播。"""
+        cfg = self._make_cfg()
         solver = SubgridFdtdSolver(cfg)
-        # 注入高斯脉冲
-        x = np.arange(cfg.n_main)
-        solver.e_main[:] = np.exp(-((x - 20) ** 2) / 20.0)
-        result = solver.solve(n_steps=20)
-        # 传播后场应分布到更大范围
-        assert np.sum(result.e_main ** 2) > 0
+        result = solver.solve()
+        # 初始场为 0，经过 n_steps 后应有非零场
+        assert np.sum(result.final_e_main ** 2) > 0
 
     def test_solver_speedup_positive(self):
         """子网格相对全细网格应有加速。"""
-        cfg = SubgridConfig(
-            n_main=100, n_sub=40, factor=4,
-            sub_start=30, sub_end=40,
-            dx=1e-7, dt=1e-17,
-        )
-        s = estimate_speedup(
-            n_main=cfg.n_main, n_sub_region=cfg.sub_end - cfg.sub_start,
-            factor=cfg.factor, dim=1,
-        )
+        s = estimate_speedup(n_main=80, factor=4, i0=30, i1=40)
         assert s > 1.0
 
 
@@ -395,14 +421,31 @@ class TestR454SubgridSolver:
 class TestR455YeeGrid:
     """R455 Yee 网格更新系数。"""
 
-    def test_courant_dt(self):
-        """Courant 稳定性条件 Δt ≤ Δx / (c·√D)。"""
+    def test_courant_dt_2d(self):
+        """2D Courant 稳定性条件。"""
+        dx = 1e-7
+        dt = courant_dt(dx=dx, dy=dx)
+        c0 = 2.99792458e8
+        dt_max = 1.0 / (c0 * np.sqrt(2)) * dx
+        assert dt <= dt_max
+
+    def test_courant_dt_3d(self):
+        """3D Courant 稳定性条件。"""
         dx = 1e-7
         dt = courant_dt(dx=dx, dy=dx, dz=dx)
-        # 3D Courant: dt <= 1 / (c * sqrt(3)) * dx
         c0 = 2.99792458e8
-        dt_max = dx / (c0 * np.sqrt(3))
+        dt_max = 1.0 / (c0 * np.sqrt(3)) * dx
         assert dt <= dt_max
+
+    def test_courant_dt_invalid_dx(self):
+        with pytest.raises(ValueError, match="dx"):
+            courant_dt(dx=0.0, dy=1.0)
+        with pytest.raises(ValueError, match="dy"):
+            courant_dt(dx=1.0, dy=-1.0)
+
+    def test_courant_dt_invalid_cfl(self):
+        with pytest.raises(ValueError, match="cfl"):
+            courant_dt(dx=1.0, dy=1.0, cfl=1.5)
 
     def test_yee_grid_init(self):
         grid = YeeGridFdtd(
@@ -411,12 +454,13 @@ class TestR455YeeGrid:
         )
         assert grid.shape == (20, 20)
 
-    def test_yee_grid_cfl(self):
+    def test_yee_grid_cfl_property(self):
+        """cfl_number 是属性，应返回正值。"""
         grid = YeeGridFdtd(
             shape=(20, 20), dx=1e-7, dy=1e-7, dt=1e-16,
             eps_r=np.ones((20, 20)),
         )
-        cfl = grid.cfl_number()
+        cfl = grid.cfl_number  # 属性访问
         assert cfl > 0.0
 
     def test_yee_grid_allocate_fields(self):
@@ -428,15 +472,33 @@ class TestR455YeeGrid:
         assert e.shape == (20, 20)
         assert h_x.shape == (20, 20)
         assert h_y.shape == (20, 20)
+        # 初始全 0
+        assert np.all(e == 0.0)
+
+    def test_yee_grid_invalid_shape(self):
+        with pytest.raises(ValueError, match="网格过小"):
+            YeeGridFdtd(
+                shape=(2, 2), dx=1e-7, dy=1e-7, dt=1e-16,
+                eps_r=np.ones((2, 2)),
+            )
 
     def test_build_update_coefficients(self):
         """更新系数 Ca/Cb 计算。"""
         eps_r = np.ones((20, 20))
-        ca, cb = build_update_coefficients(
-            eps_r=eps_r, sigma=np.zeros((20, 20)), dt=1e-16, dx=1e-7, dy=1e-7,
+        ca, cb, da, db = build_update_coefficients(
+            eps_r=eps_r, sigma=None, sigma_m=None, mu_r=None, dt=1e-16,
         )
         assert ca.shape == (20, 20)
         assert cb.shape == (20, 20)
+        assert da.shape == (20, 20)
+        assert db.shape == (20, 20)
+
+    def test_build_update_coefficients_invalid_eps(self):
+        with pytest.raises(ValueError, match="eps_r"):
+            build_update_coefficients(
+                eps_r=np.zeros((5, 5)), sigma=None, sigma_m=None,
+                mu_r=None, dt=1e-16,
+            )
 
 
 # ===========================================================================
@@ -448,19 +510,18 @@ class TestR456R460Integration:
     """R456-R460 综合集成 + 边界 + 反射系数。"""
 
     def test_cpml_pml_decay(self):
-        """PML 区域场应快速衰减。"""
+        """PML 区域 psi 多步衰减。"""
         cfg = CpmlConfig(layers=6)
         cx, cy, buf = build_cpml(
             shape=(30, 30), dx=1e-7, dy=1e-7, dt=1e-16, pml=cfg
         )
-        # 在 PML 区注入场
+        # 直接在 PML 区注入 psi
+        buf.psi_h_yx[2, 15] = 1.0
         e_z = np.zeros((30, 30))
-        e_z[2, 15] = 1.0
-        # 多步衰减
+        # 多步衰减（零输入）
         for _ in range(5):
             update_h_psi(e_z, buf, cx, cy)
-            e_z[:] = 0.0  # 无源
-        # psi 应衰减
+        # PML 区 b<1，psi 应大幅衰减
         assert abs(buf.psi_h_yx[2, 15]) < 1.0
 
     def test_cpml_internal_no_modification(self):
@@ -478,9 +539,8 @@ class TestR456R460Integration:
     def test_subgrid_with_pml_compatible(self):
         """子网格与 CPML 可同时使用（不冲突）。"""
         cfg = SubgridConfig(
-            n_main=80, n_sub=40, factor=4,
-            sub_start=30, sub_end=40,
-            dx=1e-7, dt=1e-17,
+            n_main=80, dx_main=1e-7, dt_main=1e-17, n_steps=5,
+            factor=4, i0=30, i1=40,
         )
         solver = SubgridFdtdSolver(cfg)
         # CPML 在主网格 2D
@@ -488,12 +548,11 @@ class TestR456R460Integration:
             shape=(80, 80), dx=1e-7, dy=1e-7, dt=1e-17, pml=CpmlConfig(layers=4)
         )
         # 子网格求解
-        result = solver.solve(n_steps=5)
-        assert result.e_main.shape[0] == 80
+        result = solver.solve()
+        assert result.final_e_main.shape[0] == 80
 
     def test_reflection_db_60db_target(self):
         """R451 路标目标反射 ≤ -60 dB（10 层 PML）。"""
-        # 模拟 10 层 PML 反射 0.001
         r = reflection_db(1.0, 0.001)
         assert r <= -60.0
 
@@ -505,13 +564,13 @@ class TestR456R460Integration:
         )
         e_z = np.zeros((20, 20))
         e_z[2, 10] = 1.0
+        e_z[3, 10] = 2.0
         update_h_psi(e_z, buf, cx, cy)
-        # 同一 buf 对象应保留状态
         first = buf.psi_h_yx[2, 10]
+        # 第二步零输入，psi 应衰减
         update_h_psi(np.zeros_like(e_z), buf, cx, cy)
         second = buf.psi_h_yx[2, 10]
-        # 应不同（衰减）
-        assert first != second
+        assert abs(second) < abs(first)
 
 
 # ===========================================================================
@@ -524,12 +583,9 @@ class TestCompliance:
 
     def test_r03_no_silent_fallback(self):
         from pathlib import Path
-        for fname in ["cpml.py", "subgridding.py"]:
-            src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-                   "sim" / "fdtd" / fname)
-            if not src.exists():
-                src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-                       "sim" / fname)
+        for fname, sub_dir in [("cpml.py", "fdtd"), ("subgridding.py", "."),
+                                ("yee_grid.py", "fdtd")]:
+            src = (_SRC_DIR / "sim" / sub_dir / fname) if sub_dir != "." else (_SRC_DIR / "sim" / fname)
             text = src.read_text(encoding="utf-8")
             assert "except: pass" not in text, f"{fname} R03 违规"
             assert "except Exception: pass" not in text, f"{fname} R03 违规"
@@ -539,44 +595,34 @@ class TestCompliance:
             CpmlConfig(layers=1)
         with pytest.raises(ValueError):
             reflection_db(0.0, 0.1)
+        with pytest.raises(ValueError):
+            SubgridConfig(n_main=5, dx_main=1e-7, dt_main=1e-16, n_steps=1)
 
     def test_r02_docstring_references_cpml(self):
-        from pathlib import Path
-        src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-               "sim" / "fdtd" / "cpml.py")
+        src = _SRC_DIR / "sim" / "fdtd" / "cpml.py"
         text = src.read_text(encoding="utf-8")
         docstring = text.split('from __future__')[0]
         url_count = docstring.count("https://")
         assert url_count >= 5, f"R02 违规: CPML docstring URL < 5 (实际 {url_count})"
 
     def test_r02_docstring_references_subgridding(self):
-        from pathlib import Path
-        src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-               "sim" / "subgridding.py")
+        src = _SRC_DIR / "sim" / "subgridding.py"
         text = src.read_text(encoding="utf-8")
         docstring = text.split('from __future__')[0]
         url_count = docstring.count("https://")
         assert url_count >= 5, f"R02 违规: Subgridding docstring URL < 5 (实际 {url_count})"
 
     def test_r02_innovation_marked(self):
-        from pathlib import Path
-        for fname in ["cpml.py", "subgridding.py"]:
-            src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-                   "sim" / "fdtd" / fname)
-            if not src.exists():
-                src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-                       "sim" / fname)
+        for fname, sub_dir in [("cpml.py", "fdtd"), ("subgridding.py", "."),
+                                ("yee_grid.py", "fdtd")]:
+            src = (_SRC_DIR / "sim" / sub_dir / fname) if sub_dir != "." else (_SRC_DIR / "sim" / fname)
             text = src.read_text(encoding="utf-8")
             assert "*创新*" in text, f"{fname} 缺少 *创新* 标注"
 
     def test_r04_no_gpu_imports(self):
-        from pathlib import Path
-        for fname in ["cpml.py", "subgridding.py", "yee_grid.py"]:
-            src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-                   "sim" / "fdtd" / fname)
-            if not src.exists():
-                src = (Path(__file__).resolve().parents[1] / "src" / "polaris" /
-                       "sim" / fname)
+        for fname, sub_dir in [("cpml.py", "fdtd"), ("subgridding.py", "."),
+                                ("yee_grid.py", "fdtd")]:
+            src = (_SRC_DIR / "sim" / sub_dir / fname) if sub_dir != "." else (_SRC_DIR / "sim" / fname)
             text = src.read_text(encoding="utf-8")
             for forbidden in ["import cupy", "import torch", "from torch",
                               "from cupy", "import cuda"]:
@@ -593,50 +639,41 @@ class TestEndToEndIntegration:
 
     def test_full_fdtd_with_cpml_pipeline(self):
         """完整 FDTD + CPML 流水线。"""
-        # 1) 创建 2D 网格 + CPML
         cfg = CpmlConfig(layers=5)
         cx, cy, buf = build_cpml(
             shape=(30, 30), dx=1e-7, dy=1e-7, dt=1e-16, pml=cfg
         )
-        # 2) 初始化场
         e_z = np.zeros((30, 30))
         h_x = np.zeros((30, 30))
         h_y = np.zeros((30, 30))
-        # 3) 注入高斯脉冲
+        # 注入高斯脉冲
         x = np.arange(30)
         X, Y = np.meshgrid(x, x, indexing="ij")
         e_z[:] = np.exp(-((X - 15) ** 2 + (Y - 15) ** 2) / 20.0)
-        # 4) 几步 FDTD + CPML 更新
+        # 几步 FDTD + CPML 更新
         for _ in range(5):
             update_h_psi(e_z, buf, cx, cy)
             update_e_psi(h_x, h_y, buf, cx, cy)
-        # 5) 验证场有限
+        # 验证场有限
         assert np.all(np.isfinite(e_z))
         assert np.all(np.isfinite(h_x))
 
     def test_subgrid_full_workflow(self):
         """子网格完整工作流。"""
-        # 1) 配置子网格
         cfg = SubgridConfig(
-            n_main=120, n_sub=80, factor=4,
-            sub_start=40, sub_end=60,
-            dx=1e-7, dt=1e-17,
+            n_main=120, dx_main=1e-7, dt_main=1e-17, n_steps=30,
+            factor=4, i0=40, i1=60,
+            source_idx=30, source_amplitude=1.0, source_freq=1e14,
         )
-        # 2) 求解
         solver = SubgridFdtdSolver(cfg)
-        # 3) 注入脉冲
-        x = np.arange(cfg.n_main)
-        solver.e_main[:] = np.exp(-((x - 30) ** 2) / 50.0)
-        # 4) 运行
-        result = solver.solve(n_steps=30)
-        # 5) 验证
-        assert result.e_main.shape == (120,)
-        assert result.e_sub.shape == (80,)
-        assert np.all(np.isfinite(result.e_main))
+        result = solver.solve()
+        assert result.final_e_main.shape == (120,)
+        # 子网格点数 = (60-40)*4 + 1 = 81
+        assert result.final_e_sub.shape == (81,)
+        assert np.all(np.isfinite(result.final_e_main))
 
     def test_cpml_reflection_target(self):
-        """CPML 反射系数目标 ≤ -60 dB。"""
-        # 模拟 10 层 PML 反射
+        """CPML 反射系数目标 ≤ -60 dB（10 层）。"""
         r_db = reflection_db(1.0, 0.001)
         assert r_db <= -60.0
         # 5 层 PML 反射稍差
