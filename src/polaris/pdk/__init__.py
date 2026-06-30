@@ -68,6 +68,14 @@ from polaris.pdk.gdsfactory_integration import (
     round_trip_gdsii,
     save_layer_map_to_yaml,
 )
+from polaris.pdk.pcell_gdsfactory_bridge import (
+    PCellBridgeConfig,
+    direction_to_orientation,
+    gdsfactory_component_to_pcell,
+    orientation_to_direction,
+    pcell_round_trip,
+    pcell_to_gdsfactory_component,
+)
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -181,6 +189,13 @@ __all__ = [
     "merge_layer_maps",
     "polaris_to_gdsfactory_layer",
     "save_layer_map_to_yaml",
+    # R306 PCell ↔ gdsfactory Component 双向兼容
+    "PCellBridgeConfig",
+    "direction_to_orientation",
+    "gdsfactory_component_to_pcell",
+    "orientation_to_direction",
+    "pcell_round_trip",
+    "pcell_to_gdsfactory_component",
     # R15 VPIphotonics PDK 对齐（VPIToolkitPDK + PDAflow + 3 foundry PDK）
     "PDAflowExporter",
     "VPIBuildingBlock",
