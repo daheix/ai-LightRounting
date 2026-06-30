@@ -76,6 +76,14 @@ from polaris.pdk.pcell_gdsfactory_bridge import (
     pcell_round_trip,
     pcell_to_gdsfactory_component,
 )
+from polaris.pdk.gdsfactory_plugin import (
+    PolarisCellEntry,
+    PolarisCellRegistry,
+    default_registry,
+    get_polaris_cell,
+    register_polaris_cell,
+    register_to_gdsfactory,
+)
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -196,6 +204,13 @@ __all__ = [
     "orientation_to_direction",
     "pcell_round_trip",
     "pcell_to_gdsfactory_component",
+    # R308 gdsfactory 插件注册机制
+    "PolarisCellEntry",
+    "PolarisCellRegistry",
+    "default_registry",
+    "get_polaris_cell",
+    "register_polaris_cell",
+    "register_to_gdsfactory",
     # R15 VPIphotonics PDK 对齐（VPIToolkitPDK + PDAflow + 3 foundry PDK）
     "PDAflowExporter",
     "VPIBuildingBlock",
