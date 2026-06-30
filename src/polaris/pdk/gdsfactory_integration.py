@@ -1228,7 +1228,7 @@ def create_gdsii_layout_from_cells(
                 raise ValueError(
                     f"多边形点数 < 3 (cell={name}, layer={layer}/{datatype})"
                 )
-            dbu_points = [db.Point(int(p[0] / dbu_um), int(p[1] / dbu_um)) for p in points]
+            dbu_points = [db.Point(int(round(p[0] / dbu_um)), int(round(p[1] / dbu_um))) for p in points]
             cell.shapes(li).insert(db.Polygon(dbu_points))
 
         # 文本
@@ -1240,7 +1240,8 @@ def create_gdsii_layout_from_cells(
             x_um = float(txt.get("x", 0.0))
             y_um = float(txt.get("y", 0.0))
             # Text 接受 Trans（dbu 单位）
-            trans = db.Trans(int(x_um / dbu_um), int(y_um / dbu_um))
+            # R05 Bug 修复 v5.0-P1-3R1: 统一用 int(round()) 避免截断漂移
+            trans = db.Trans(int(round(x_um / dbu_um)), int(round(y_um / dbu_um)))
             cell.shapes(li).insert(db.Text(string, trans))
 
         # 路径
@@ -1254,8 +1255,8 @@ def create_gdsii_layout_from_cells(
                     f"路径点数 < 2 (cell={name}, layer={layer}/{datatype})"
                 )
             width_um = float(path.get("width", 0.5))
-            width_dbu = int(width_um / dbu_um)
-            dbu_points = [db.Point(int(p[0] / dbu_um), int(p[1] / dbu_um)) for p in points]
+            width_dbu = int(round(width_um / dbu_um))
+            dbu_points = [db.Point(int(round(p[0] / dbu_um)), int(round(p[1] / dbu_um))) for p in points]
             cell.shapes(li).insert(db.Path(dbu_points, width_dbu))
 
         # 实例
