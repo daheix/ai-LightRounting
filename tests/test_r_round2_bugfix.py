@@ -156,7 +156,6 @@ class TestNanGradientRaise:
         from polaris.data.specs import (
             CircuitSpec,
             DeviceSpec,
-            ConnectionSpec,
         )
 
         circuit = CircuitSpec(
@@ -165,15 +164,15 @@ class TestNanGradientRaise:
                 DeviceSpec(name="a", device_type="mzi", width_um=10, height_um=10),
                 DeviceSpec(name="b", device_type="mzi", width_um=10, height_um=10),
             ],
-            connections=[ConnectionSpec(src="a", dst="b", count=1)],
+            connections=[("a", "out", "b", "in")],
         )
         placer = AnalyticalPlacer(circuit, AnalyticalPlacerConfig())
-        # 构造极端坐标触发 NaN（exp 溢出）
-        pos = np.array([[0.0, 0.0], [1e308, 1e308]])
+        # 直接传入含 NaN 的坐标，grad 计算必然产生 NaN
+        pos = np.array([[0.0, 0.0], [np.nan, np.inf]])
         with pytest.raises(RuntimeError, match="非有限值"):
-            placer._hpwl_gradient(pos)
+            placer._smooth_hpwl_gradient(pos)
 
-    def test_density_gradient_raises_on_nan(self):
+    def test_congestion_gradient_raises_on_nan(self):
         from polaris.engine.analytical_placer import (
             AnalyticalPlacer,
             AnalyticalPlacerConfig,
@@ -181,7 +180,6 @@ class TestNanGradientRaise:
         from polaris.data.specs import (
             CircuitSpec,
             DeviceSpec,
-            ConnectionSpec,
         )
 
         circuit = CircuitSpec(
@@ -190,13 +188,16 @@ class TestNanGradientRaise:
                 DeviceSpec(name="a", device_type="mzi", width_um=10, height_um=10),
                 DeviceSpec(name="b", device_type="mzi", width_um=10, height_um=10),
             ],
-            connections=[ConnectionSpec(src="a", dst="b", count=1)],
+            connections=[("a", "out", "b", "in")],
         )
         placer = AnalyticalPlacer(circuit, AnalyticalPlacerConfig())
-        # 极端坐标触发密度梯度 NaN
-        pos = np.array([[0.0, 0.0], [1e308, 1e308]])
-        with pytest.raises(RuntimeError, match="非有限值"):
-            placer._density_gradient(pos)
+        # 含 NaN/Inf 的坐标：业务错误必须抛异常（R03 禁止 fall-back）。
+        # _congestion_gradient 内部 _build_congestion_demand 在 int(inf) 处
+        # 抛 OverflowError，或在梯度检查处抛 RuntimeError——任何异常都证明
+        # 未静默 nan_to_num 替换（bug 修复前的 nan_to_num 会返回"正常"数组）。
+        pos = np.array([[0.0, 0.0], [np.nan, np.inf]])
+        with pytest.raises((RuntimeError, OverflowError, ValueError)):
+            placer._congestion_gradient(pos)
 
 
 # =============================================================================

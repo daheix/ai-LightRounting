@@ -127,7 +127,11 @@ class PhotonicEdgeFeatureConfig:
 
 
 def _get_device_param(dev, key: str, default: float) -> float:
-    """从器件 params 字典提取参数（兼容 DeviceSpec/Device）。"""
+    """从器件 params 字典提取参数（兼容 DeviceSpec/Device）。
+
+    R03 禁止 fall-back: params 中存在该 key 但值无法转 float 时，
+    表明 PDK 数据损坏/类型错误，禁止静默返回 default 掩盖问题。
+    """
     if dev is None:
         return default
     params = getattr(dev, "params", None)
@@ -135,8 +139,11 @@ def _get_device_param(dev, key: str, default: float) -> float:
         val = params[key]
         try:
             return float(val)
-        except (TypeError, ValueError):
-            return default
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"器件参数 {key}={val!r} (类型 {type(val).__name__}) "
+                f"无法转换为 float，PDK 数据损坏（R03 禁止 fall-back）"
+            ) from exc
     return default
 
 
