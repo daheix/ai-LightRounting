@@ -292,6 +292,8 @@ def analyze_cell_hierarchy(
         cell = ly.cell(ci)
         name = str(cell.name)
         # cell 自身包围盒（dbu → μm）
+        # R03 禁止 fall-back：bbox 计算失败是业务错误（KLayout API 异常或
+        # cell 损坏），必须 raise，禁止用 (0,0,0,0) 兜底掩盖问题。
         try:
             bbox_dbu = cell.bbox()
             bbox_um = (
@@ -300,8 +302,11 @@ def analyze_cell_hierarchy(
                 float(bbox_dbu.right) * dbu,
                 float(bbox_dbu.top) * dbu,
             )
-        except Exception:
-            bbox_um = (0.0, 0.0, 0.0, 0.0)
+        except Exception as exc:
+            raise RuntimeError(
+                f"cell '{name}' (index={ci}) bbox 计算失败: {exc!r}。"
+                f"KLayout API 异常，禁止 fall-back 用 0 兜底（R03）。"
+            ) from exc
 
         cells.append(
             CellInfo(
@@ -456,9 +461,14 @@ def _detect_cycles_dfs(
                     start = path.index(v)
                     cycle = path[start:] + [v]
                     cycles.append(cycle)
-                except ValueError:
-                    # v 不在 path 中（不应发生），跳过
-                    pass
+                except ValueError as exc:
+                    # R03 禁止 fall-back：v 标记为 GRAY 却不在 path 中，
+                    # 说明 DFS 三色标记状态不一致（数据结构损坏），
+                    # 禁止静默跳过，必须 raise 报告。
+                    raise RuntimeError(
+                        f"环检测 DFS 状态不一致: 节点 {v} 标记为 GRAY "
+                        f"但不在 path {path} 中（R03 禁止 fall-back）。"
+                    ) from exc
         path.pop()
         color[u] = BLACK
 
