@@ -43,9 +43,28 @@ WHEEL_COUNT=$(ls "${WHEELS_DIR}"/*.whl 2>/dev/null | wc -l)
 echo "[1/4] 发现 ${WHEEL_COUNT} 个 wheel 包"
 
 # 步骤2: 离线安装所有 wheel
+# gerbonara 依赖 quart（仅其可选 Web GUI 用），项目不使用该功能且 quart 未打包，
+# 故 gerbonara 用 --no-deps 安装；其余 wheel 正常解析依赖。
 echo ""
 echo "[2/4] 离线安装所有 wheel（--no-index --find-links）..."
-pip install --no-index --find-links="${WHEELS_DIR}" "${WHEELS_DIR}"/*.whl 2>&1 | tail -5
+GERBONARA_WHL="${WHEELS_DIR}/gerbonara-"*.whl
+# 先装除 gerbonara 外的所有 wheel
+declare -a ALL_OTHER_WHEELS=()
+for w in "${WHEELS_DIR}"/*.whl; do
+    case "$(basename "$w")" in
+        gerbonara-*) continue ;;
+    esac
+    ALL_OTHER_WHEELS+=("$w")
+done
+if [ ${#ALL_OTHER_WHEELS[@]} -gt 0 ]; then
+    pip install --no-index --find-links="${WHEELS_DIR}" "${ALL_OTHER_WHEELS[@]}" 2>&1 | tail -5
+fi
+# gerbonara 单独 --no-deps 安装（quart 未打包，项目不使用其 Web 功能）
+# 用 ls 展开通配符，避免 glob 未匹配时传入字面量
+GERBONARA_WHL_EXPANDED=$(ls "${WHEELS_DIR}"/gerbonara-*.whl 2>/dev/null | head -1)
+if [ -n "${GERBONARA_WHL_EXPANDED}" ]; then
+    pip install --no-index --no-deps "${GERBONARA_WHL_EXPANDED}" 2>&1 | tail -3
+fi
 echo "[2/4] wheel 安装完成"
 
 # 步骤3: 安装 pcb-parser 项目本身（editable）

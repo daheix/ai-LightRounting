@@ -38,6 +38,10 @@ venv/
 !3dtool/subrepo/3dtool/
 # submodule 目录内由 gitlink 跟踪，不直接跟踪文件（git 自身处理）
 
+# 3dtool appimage-parts 分片压缩包（1.2G+，不提交到 git，由 daheix/3dtool 仓库管理）
+3dtool/subrepo/3dtool/3dtool/appimage-parts/*.tar.gz
+3dtool/subrepo/3dtool/3dtool/appimage-parts/*.part_*
+
 # 密钥与凭据
 .env
 *.key
