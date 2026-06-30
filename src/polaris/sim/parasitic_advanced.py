@@ -618,10 +618,18 @@ class ParasiticSParam:
         if np.any(np.abs(denom) < 1e-30):
             msg = "ABCD→S 变换分母退化，检查 R/L/C 是否过大"
             raise ValueError(msg)
+        # ABCD → S（Pozar, Microwave Engineering 4th ed., §4.4 表 4.2）
+        # S11 = (A + B/Z0 - C·Z0 - D) / Δ
+        # S12 = 2(AD - BC) / Δ
+        # S21 = 2 / Δ
+        # S22 = (-A + B/Z0 - C·Z0 + D) / Δ
+        # 其中 Δ = A + B/Z0 + C·Z0 + D
+        # *Bug 修复 (R05)*: 原 S22 公式符号全反，导致无源性验证失败。
+        #   正确来源: Pozar §4.4，对称网络应有 S22 = S11。
         s11 = (A + B / z0 - C * z0 - D) / denom
         s12 = (2.0 * (A * D - B * C)) / denom
         s21 = 2.0 / denom
-        s22 = (A - B / z0 + C * z0 - D) / denom
+        s22 = (-A + B / z0 - C * z0 + D) / denom
         n = freq.size
         s = np.zeros((n, 2, 2), dtype=np.complex128)
         s[:, 0, 0] = s11
