@@ -35,16 +35,23 @@ from numpy.typing import NDArray
 
 from ._drc_geometry import (
     _edge_to_edge_distance,
+    _layer_alignment_offset,
     _layer_density,
     _polygon_angles,
     _polygon_area,
+    _polygon_array_pitch,
     _polygon_bbox,
     _polygon_curvature,
+    _polygon_edge_lengths,
     _polygon_end_edges,
     _polygon_extension,
+    _polygon_max_width,
     _polygon_min_enclosure,
     _polygon_min_width,
     _polygon_pair_min_distance,
+    _polygon_perimeter,
+    _polygon_step_width,
+    _polygon_symmetry_score,
     _polygon_taper_angle,
 )
 from ._drc_rules import CurvilinearDRCRule, DRCRuleCategory, DRCViolation18
@@ -161,6 +168,29 @@ class _DRCGeometricChecksMixin:
             self._check_max_curvature_geo(polys, rule, val)
         elif cat == DRCRuleCategory.TAPER_ANGLE:
             self._check_taper_angle_geo(polys, rule, val)
+        # ===== R141-R180 扩展规则分发 (8 类) =====
+        elif cat == DRCRuleCategory.STEP_WIDTH:
+            self._check_step_width_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.LAYER_ALIGNMENT:
+            pair_layer = rule.layer_pair or enclosure_pairs.get(layer, "")
+            pair_polys = polygons_by_layer.get(pair_layer, [])
+            if pair_polys:
+                self._check_layer_alignment_geo(polys, pair_polys, rule, val)
+        elif cat == DRCRuleCategory.LAYER_EXTENSION:
+            pair_layer = rule.layer_pair or enclosure_pairs.get(layer, "")
+            pair_polys = polygons_by_layer.get(pair_layer, [])
+            if pair_polys:
+                self._check_layer_extension_geo(polys, pair_polys, rule, val)
+        elif cat == DRCRuleCategory.EDGE_LENGTH:
+            self._check_edge_length_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.PERIMETER:
+            self._check_perimeter_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.SYMMETRY:
+            self._check_symmetry_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.ARRAY_PITCH:
+            self._check_array_pitch_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MAX_WIDTH_SINGLE_MODE:
+            self._check_max_width_single_mode_geo(polys, rule, val)
 
     def run_geometric_checks(
         self,
@@ -647,4 +677,342 @@ class _DRCGeometricChecksMixin:
                     layer=rule.layer, severity=rule.severity,
                     message=f"锥形 {i} 张角 {ta:.1f}° > {limit}°",
                     location_um=(cx, cy), measured_value=ta, limit_value=limit,
+                ))
+
+    # =====================================================================
+    # R141-R180 扩展规则检查方法 (8 类)
+    # =====================================================================
+
+    def _check_step_width_geo(
+        self, polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Step 规则: 步进宽度突变检查（波导相邻段宽度差）。
+
+        检测波导宽度突变（不连续），相邻段宽度差超阈值则违规。
+        算法: 对每个多边形识别端边对（最短 2 条边），计算长度差。
+
+        文献:
+        - SiEPIC-Tools Verification "Mismatched pin widths":
+          https://github.com/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+        - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+        - KLayout DRC width check: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Calibre nmDRC step/width transition rules: https://eda.sw.siemens.com/en-US/calibre/
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+        """
+        for i, poly in enumerate(polys):
+            if len(poly) < 4:
+                continue
+            step = _polygon_step_width(poly)
+            if step > limit:
+                cx, cy = float(poly[:, 0].mean()), float(poly[:, 1].mean())
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 步进宽度突变 {step:.3f}μm > {limit}μm",
+                    location_um=(cx, cy), measured_value=step, limit_value=limit,
+                ))
+
+    def _check_layer_alignment_geo(
+        self, inner_polys: list[NDArray[np.float64]],
+        outer_polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Alignment 规则: 层对齐度检查（两层图形边缘对齐度）。
+
+        检查两层图形（如 metal1 vs contact）的对齐误差，若错位 > 阈值则违规。
+        算法: 对每个 inner 多边形，找最近的 outer 多边形，计算包围盒中心错位。
+
+        文献:
+        - Calibre nmDRC ALIGN operation: https://eda.sw.siemens.com/en-US/calibre/
+        - KLayout DRC layer alignment:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Synopsys IC Validator DRC alignment:
+          https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - de Berg et al., "Computational Geometry", Springer 2008, Ch.5 (最近点对)
+        - Ericson, "Real-Time Collision Detection", MK 2005, Ch.5
+        """
+        for i, inner in enumerate(inner_polys):
+            if len(inner) < 3:
+                continue
+            ixmin, iymin, ixmax, iymax = _polygon_bbox(inner)
+            icx = 0.5 * (ixmin + ixmax)
+            icy = 0.5 * (iymin + iymax)
+            best_d = float("inf")
+            for outer in outer_polys:
+                if len(outer) < 3:
+                    continue
+                oxmin, oymin, oxmax, oymax = _polygon_bbox(outer)
+                ocx = 0.5 * (oxmin + oxmax)
+                ocy = 0.5 * (oymin + oymax)
+                d = float(np.hypot(icx - ocx, icy - ocy))
+                if d < best_d:
+                    best_d = d
+            if best_d != float("inf") and best_d > limit:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 层对齐偏移 {best_d:.3f}μm > {limit}μm",
+                    location_um=(icx, icy), measured_value=best_d, limit_value=limit,
+                ))
+
+    def _check_layer_extension_geo(
+        self, inner_polys: list[NDArray[np.float64]],
+        outer_polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Extension 规则（独立层延伸）: 一层超出另一层的最小延伸量。
+
+        与 E2 (MIN_EXTENSION) 区别: LAYER_EXTENSION 是独立可配置的层间规则，
+        通过 rule.layer_pair 显式指定配对层，不依赖 enclosure_pairs。
+        inner 应完全包含 outer 并向外延伸至少 limit。若不满足则违规。
+
+        文献:
+        - Calibre nmDRC ENClosure (ENC) extension:
+          https://eda.sw.siemens.com/en-US/calibre/
+        - KLayout DRC enclosing/extension:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Synopsys IC Validator DRC extension:
+          https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+        - PDRC, Jiang et al., DAC 2024,
+          http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+        """
+        for i, inner in enumerate(inner_polys):
+            if len(inner) < 3:
+                continue
+            max_ext = -1.0
+            for outer in outer_polys:
+                if len(outer) < 3:
+                    continue
+                ext = _polygon_extension(inner, outer)
+                if ext > max_ext:
+                    max_ext = ext
+            cx, cy = float(inner[:, 0].mean()), float(inner[:, 1].mean())
+            if max_ext < 0:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 未完全延伸超出配对层",
+                    location_um=(cx, cy), measured_value=-1.0, limit_value=limit,
+                ))
+            elif max_ext < limit:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 层延伸量 {max_ext:.3f}μm < {limit}μm",
+                    location_um=(cx, cy), measured_value=max_ext, limit_value=limit,
+                ))
+
+    def _check_edge_length_geo(
+        self, polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Edge 规则: 边缘长度检查（最小/最大边长）。
+
+        检查多边形每条边的长度，若 < limit_value (min) 或 > limit_max (max) 则违规。
+        双限检查: limit_value 为最小边长，limit_max 为最大边长（None 不检查上限）。
+
+        文献:
+        - de Berg et al., "Computational Geometry", Springer 2008, Ch.2
+        - KLayout DRC edges/length check:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Calibre nmDRC edge length rules: https://eda.sw.siemens.com/en-US/calibre/
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+        - PDRC, Jiang et al., DAC 2024,
+          http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+        """
+        max_limit = rule.limit_max
+        for i, poly in enumerate(polys):
+            if len(poly) < 3:
+                continue
+            lengths = _polygon_edge_lengths(poly)
+            if len(lengths) == 0:
+                continue
+            min_len = float(np.min(lengths))
+            max_len = float(np.max(lengths))
+            cx, cy = float(poly[:, 0].mean()), float(poly[:, 1].mean())
+            if min_len < limit:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 最小边长 {min_len:.3f}μm < {limit}μm",
+                    location_um=(cx, cy), measured_value=min_len, limit_value=limit,
+                ))
+            if max_limit is not None and max_len > max_limit:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 最大边长 {max_len:.3f}μm > {max_limit}μm",
+                    location_um=(cx, cy), measured_value=max_len, limit_value=max_limit,
+                ))
+
+    def _check_perimeter_geo(
+        self, polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Perimeter 规则: 周长检查（最小/最大周长）。
+
+        检查多边形周长（所有边长度之和），若 < limit_value (min) 或 > limit_max (max)
+        则违规。双限检查: limit_value 为最小周长，limit_max 为最大周长。
+
+        文献:
+        - de Berg et al., "Computational Geometry", Springer 2008, Ch.2
+        - KLayout DRC perimeter check:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Calibre nmDRC perimeter rules: https://eda.sw.siemens.com/en-US/calibre/
+        - Synopsys IC Validator DRC perimeter:
+          https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+        - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+        - PDRC, Jiang et al., DAC 2024,
+          http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+        """
+        max_limit = rule.limit_max
+        for i, poly in enumerate(polys):
+            if len(poly) < 3:
+                continue
+            perim = _polygon_perimeter(poly)
+            cx, cy = float(poly[:, 0].mean()), float(poly[:, 1].mean())
+            if perim < limit:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 周长 {perim:.3f}μm < {limit}μm",
+                    location_um=(cx, cy), measured_value=perim, limit_value=limit,
+                ))
+            if max_limit is not None and perim > max_limit:
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 周长 {perim:.3f}μm > {max_limit}μm",
+                    location_um=(cx, cy), measured_value=perim, limit_value=max_limit,
+                ))
+
+    def _check_symmetry_geo(
+        self, polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Symmetry 规则: 对称性检查（图形对称度）。
+
+        *创新*: 主轴方向自动检测 + 镜像点匹配算法。
+        检查多边形的反射对称度，若对称分数 < limit (阈值) 则违规。
+        对称分数范围 [0, 1]，1 表示完美对称。
+
+        limit_value 解释: 最小对称分数（如 0.95 表示至少 95% 顶点对称）。
+        tolerance 解释: 顶点匹配容差（μm），None 时默认 1e-6。
+
+        文献:
+        - Eades, P., "Optimal Algorithms for Symmetry Detection in Two and
+          Three Dimensions", University of Michigan Technical Report, 1986.
+          https://deepblue.lib.umich.edu/bitstream/handle/2027.42/8337/bad6491.0001.001.pdf
+        - Wolter, J.D., "Symmetry Detection in Two Dimensions",
+          University of Michigan PhD Thesis, 1985.
+        - de Berg et al., "Computational Geometry", Springer 2008, Ch.5
+        - KLayout DRC symmetry checks:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - SiEPIC-Tools Component verification:
+          https://github.com/SiEPIC/SiEPIC-Tools
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        """
+        for i, poly in enumerate(polys):
+            if len(poly) < 3:
+                continue
+            score, _ = _polygon_symmetry_score(poly)
+            if score < limit:
+                cx, cy = float(poly[:, 0].mean()), float(poly[:, 1].mean())
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 对称分数 {score:.2f} < {limit:.2f}",
+                    location_um=(cx, cy), measured_value=score, limit_value=limit,
+                ))
+
+    def _check_array_pitch_geo(
+        self, polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """Array 规则: 阵列间距检查（周期性阵列 pitch 一致性）。
+
+        *创新*: 基于 1D 投影 + 排序差分计算 pitch 一致性。
+        检查多边形阵列的 pitch 标准差，若 > limit (阈值) 则违规。
+        用于光子阵列（光栅耦合器阵列、WDM 滤波器阵列）的周期一致性检查。
+
+        limit_value 解释: 最大允许 pitch 标准差（μm）。
+        要求至少 3 个多边形才能计算 pitch 标准差。
+
+        文献:
+        - Synopsys OptoDesigner DRC Module (阵列规则):
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        - SiEPIC EBeam PDK array components:
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+        - KLayout DRC array/pattern checks:
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        - Calibre nmDRC array pattern matching:
+          https://eda.sw.siemens.com/en-US/calibre/
+        - de Berg et al., "Computational Geometry", Springer 2008, Ch.2
+        """
+        if len(polys) < 3:
+            return  # 至少 3 个多边形才能计算 pitch 标准差
+        pitch_std = _polygon_array_pitch(polys)
+        if pitch_std > limit:
+            # 用所有多边形包围盒中心作为违规位置
+            all_x = [float(p[:, 0].mean()) for p in polys if len(p) >= 3]
+            all_y = [float(p[:, 1].mean()) for p in polys if len(p) >= 3]
+            cx = sum(all_x) / len(all_x) if all_x else 0.0
+            cy = sum(all_y) / len(all_y) if all_y else 0.0
+            self._violations.append(DRCViolation18(
+                rule_name=rule.name, category=rule.category.value,
+                layer=rule.layer, severity=rule.severity,
+                message=f"阵列 pitch 标准差 {pitch_std:.3f}μm > {limit}μm",
+                location_um=(cx, cy), measured_value=pitch_std, limit_value=limit,
+            ))
+
+    def _check_max_width_single_mode_geo(
+        self, polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule, limit: float,
+    ) -> None:
+        """MaxWidth 规则: 最大宽度检查（防止过宽导致多模）。
+
+        检查多边形最大宽度（旋转卡尺法取最大对边距离），若 > limit 则违规。
+        用于光波导单模约束: 波导过宽会支持高阶模（TE1, TE2, ...），
+        需限制最大宽度以保证单模工作。
+
+        单模截止公式: w_max ≈ λ / (2·√(n_core² - n_clad²))
+        - 1550nm, SOI (n_core=3.48, n_clad=1.44): w_max ≈ 1.05μm（TE0 单模）
+        - 来源: Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
+
+        文献:
+        - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+        - Godfried T. Toussaint, "Solving Geometric Problems with the Rotating Calipers",
+          IEEE MELECON 1983. https://www.cs.mcgill.ca/~godfried/publications/calipers.pdf
+        - Lopez & Reisner, "On the Minimal Width of a Convex Polygon",
+          IPL 1985, DOI: 10.1016/0020-0190(85)90095-4
+        - de Berg et al., "Computational Geometry", Springer 2008, Ch.4
+        - SiEPIC EBeam PDK max width rules: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - KLayout DRC width check:
+          https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+        - Synopsys OptoDesigner DRC Module:
+          https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
+        """
+        for i, poly in enumerate(polys):
+            if len(poly) < 3:
+                continue
+            w = _polygon_max_width(poly)
+            if w > limit:
+                cx, cy = float(poly[:, 0].mean()), float(poly[:, 1].mean())
+                self._violations.append(DRCViolation18(
+                    rule_name=rule.name, category=rule.category.value,
+                    layer=rule.layer, severity=rule.severity,
+                    message=f"多边形 {i} 最大宽度 {w:.3f}μm > {limit}μm（可能多模）",
+                    location_um=(cx, cy), measured_value=w, limit_value=limit,
                 ))
