@@ -281,9 +281,14 @@ def check_cell_references(ly) -> list[HealthCheckIssue]:
     - KLayout Layout.each_top_cell: https://www.klayout.org/doc-qt5/code/class_Layout.html
     """
     issues: list[HealthCheckIssue] = []
+    # KLayout 0.30.9 API:
+    # - ly.each_top_cell() 返回 int cell_index 迭代器
+    # - ly.each_cell() 返回 Cell 对象迭代器
+    # - cell.cell_index() 返回该 cell 的 index
+    # 来源: https://www.klayout.org/doc-qt5/code/class_Layout.html
     top_cell_indices = set(ly.each_top_cell())
-    for ci in ly.each_cell():
-        cell = ly.cell(ci)
+    for cell in ly.each_cell():
+        ci = cell.cell_index()
         # 顶层 cell 跳过
         if ci in top_cell_indices:
             continue
