@@ -47,6 +47,13 @@ from polaris.pdk.gdsfactory_pdk_bridge import (
     parse_pic_yaml,
     polaris_to_gdsfactory_component,
 )
+from polaris.pdk.gdsfactory_integration import (
+    GDSIICellInfo,
+    GDSIIImportResult,
+    GDSIIInstanceInfo,
+    GDSIILayerInfo,
+    import_gdsii_from_gdsfactory,
+)
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -105,6 +112,10 @@ __all__ = [
     "GPICBB",
     "GPICPDK",
     "GPIC_DRC_RUNSET",
+    "GDSIICellInfo",
+    "GDSIIImportResult",
+    "GDSIIInstanceInfo",
+    "GDSIILayerInfo",
     "INP_DEVICES",
     "LNOI_DEVICES",
     "PCellCache",
@@ -140,6 +151,7 @@ __all__ = [
     "parse_pic_yaml",
     "polaris_cell",
     "polaris_to_gdsfactory_component",
+    "import_gdsii_from_gdsfactory",
     # R15 VPIphotonics PDK 对齐（VPIToolkitPDK + PDAflow + 3 foundry PDK）
     "PDAflowExporter",
     "VPIBuildingBlock",

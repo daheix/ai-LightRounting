@@ -269,7 +269,11 @@ class AlphaChipAgent:
             mask: 动作掩码。
 
         Returns:
-            最近可用网格索引；若全部占用，返回原始索引。
+            最近可用网格索引。
+
+        Raises:
+            ValueError: 所有网格位置都被占用时（R03: 禁止 fall-back，
+                不返回原始索引让程序假运行）。
         """
         n = len(mask)
         for radius in range(1, n):
@@ -277,7 +281,11 @@ class AlphaChipAgent:
                 idx = action + delta
                 if 0 <= idx < n and mask[idx] > 0.0:
                     return int(idx)
-        return int(action)
+        # R03: 所有位置占用时禁止返回 action（fall-back），raise
+        raise ValueError(
+            f"R03 禁止 fall-back: 所有 {n} 个网格位置都被占用，"
+            f"无法为 action={action} 找到可用位置"
+        )
 
     def compute_reward(self, placement: dict) -> float:
         """计算奖励。
