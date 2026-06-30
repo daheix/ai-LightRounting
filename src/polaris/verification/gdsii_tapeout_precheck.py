@@ -173,6 +173,11 @@ def tapeout_precheck(
 
     # 校验 checks 参数
     if checks is not None:
+        if not checks:
+            raise ValueError(
+                "checks 不能为空列表。禁止 fall-back（R03）。"
+                f"支持: {sorted(ALL_CHECKS.keys())}"
+            )
         unknown = set(checks) - set(ALL_CHECKS.keys())
         if unknown:
             raise ValueError(
