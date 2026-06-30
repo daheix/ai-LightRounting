@@ -24,12 +24,13 @@
 
 ## KLayout 0.30.9 API 关键事实（冒烟测试实测）
 
-- Shape.is_polygon() / Shape.is_box() 判断类型
-- Shape.polygon() 返回 Polygon 对象
+- Shape.is_polygon() / Shape.is_box() 判断类型（方法）
+- Shape.polygon 是属性（非方法），返回 Polygon 对象
 - Polygon.num_points() 返回顶点数
 - Polygon.point(i) 返回 Point（dbu 单位）
 - Shape.bbox() 返回 Box（dbu 单位，含 left/bottom/right/top）
 - Box 矩形存储为 Box（不是 4 点 Polygon）
+- KLayout GDSII writer 会把 4 点矩形 polygon 优化成 BOX record
 - RecursiveShapeIterator.trans() 返回累积 ICplxTrans
 - 世界坐标顶点 = it.trans() * point
 
@@ -251,31 +252,33 @@ def check_grid_alignment(
             total_shapes += 1
 
             if shape.is_polygon():
-                poly = shape.polygon()
-                num_pts = int(poly.num_points())
-                for i in range(num_pts):
-                    pt = poly.point(i)
-                    # 应用累积变换到世界坐标
+                # Shape.polygon 是属性（非方法），返回 Polygon 对象
+                # 来源: https://www.klayout.org/doc-qt4/code/class_Shape.html
+                poly = shape.polygon
+                # KLayout 0.30.9 Polygon 顶点 API:
+                # - num_points_hull() / point_hull(i): 外轮廓顶点
+                # - holes() / num_points_hole(h) / point_hole(h, j): 孔顶点
+                # 来源: https://www.klayout.org/doc-qt5/code/class_Polygon.html
+                num_hull = int(poly.num_points_hull())
+                for i in range(num_hull):
+                    pt = poly.point_hull(i)
                     world_pt = trans * pt
-                    x_dbu = int(world_pt.x)
-                    y_dbu = int(world_pt.y)
-                    x_off = x_dbu % grid_dbu
-                    y_off = y_dbu % grid_dbu
-                    if x_off != 0 or y_off != 0:
-                        v = GridViolation(
-                            layer_name=layer_name,
-                            gds_layer=gds_layer,
-                            gds_datatype=gds_datatype,
-                            x_um=float(x_dbu) * dbu,
-                            y_um=float(y_dbu) * dbu,
-                            x_off_dbu=x_off,
-                            y_off_dbu=y_off,
-                            cell_name=cell_name,
-                            shape_type="polygon",
-                        )
-                        violations.append(v)
-                        layer_violation_counts[layer_name] = (
-                            layer_violation_counts.get(layer_name, 0) + 1
+                    _record_off_grid(
+                        int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
+                        layer_name, gds_layer, gds_datatype,
+                        cell_name, "polygon", violations, layer_violation_counts,
+                    )
+                # 孔顶点（若 polygon 含内孔）
+                num_holes = int(poly.holes())
+                for h in range(num_holes):
+                    num_hole_pts = int(poly.num_points_hole(h))
+                    for j in range(num_hole_pts):
+                        pt = poly.point_hole(h, j)
+                        world_pt = trans * pt
+                        _record_off_grid(
+                            int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
+                            layer_name, gds_layer, gds_datatype,
+                            cell_name, "polygon", violations, layer_violation_counts,
                         )
             elif shape.is_box():
                 box = shape.bbox()
@@ -289,26 +292,11 @@ def check_grid_alignment(
                 for cx, cy in corners:
                     # 应用累积变换
                     world_pt = trans * db.Point(cx, cy)
-                    wx = int(world_pt.x)
-                    wy = int(world_pt.y)
-                    x_off = wx % grid_dbu
-                    y_off = wy % grid_dbu
-                    if x_off != 0 or y_off != 0:
-                        v = GridViolation(
-                            layer_name=layer_name,
-                            gds_layer=gds_layer,
-                            gds_datatype=gds_datatype,
-                            x_um=float(wx) * dbu,
-                            y_um=float(wy) * dbu,
-                            x_off_dbu=x_off,
-                            y_off_dbu=y_off,
-                            cell_name=cell_name,
-                            shape_type="box",
-                        )
-                        violations.append(v)
-                        layer_violation_counts[layer_name] = (
-                            layer_violation_counts.get(layer_name, 0) + 1
-                        )
+                    _record_off_grid(
+                        int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
+                        layer_name, gds_layer, gds_datatype,
+                        cell_name, "box", violations, layer_violation_counts,
+                    )
             it.next()
 
     # 排序: gds_layer → gds_datatype → y_um → x_um
@@ -381,6 +369,59 @@ def generate_grid_check_report(
 # =============================================================================
 # 内部辅助函数
 # =============================================================================
+def _record_off_grid(
+    x_dbu: int,
+    y_dbu: int,
+    grid_dbu: int,
+    dbu: float,
+    layer_name: str,
+    gds_layer: int,
+    gds_datatype: int,
+    cell_name: str,
+    shape_type: str,
+    violations: list[GridViolation],
+    layer_violation_counts: dict[str, int],
+) -> None:
+    """检查单个顶点是否 off-grid，若是则记录违规（R325 内部函数）。
+
+    Args:
+        x_dbu: 顶点 X 坐标（dbu，世界坐标）。
+        y_dbu: 顶点 Y 坐标（dbu，世界坐标）。
+        grid_dbu: 检查网格（dbu）。
+        dbu: 数据库单位（μm）。
+        layer_name: 层名。
+        gds_layer: GDSII 层号。
+        gds_datatype: GDSII datatype。
+        cell_name: shape 所属 cell 名。
+        shape_type: shape 类型（'polygon' / 'box'）。
+        violations: 违规列表（就地追加）。
+        layer_violation_counts: 按层违规计数（就地更新）。
+
+    来源:
+    - KLayout DRC grid check:
+      https://klayout.org/downloads/master/doc-qt5/about/drc_ref.html
+    """
+    x_off = x_dbu % grid_dbu
+    y_off = y_dbu % grid_dbu
+    if x_off != 0 or y_off != 0:
+        violations.append(
+            GridViolation(
+                layer_name=layer_name,
+                gds_layer=gds_layer,
+                gds_datatype=gds_datatype,
+                x_um=float(x_dbu) * dbu,
+                y_um=float(y_dbu) * dbu,
+                x_off_dbu=x_off,
+                y_off_dbu=y_off,
+                cell_name=cell_name,
+                shape_type=shape_type,
+            )
+        )
+        layer_violation_counts[layer_name] = (
+            layer_violation_counts.get(layer_name, 0) + 1
+        )
+
+
 def _get_top_cell(ly, top_cell_name: str | None, gds_path):
     """获取顶层 cell（R325 内部函数）。"""
     if top_cell_name is not None:
