@@ -979,8 +979,14 @@ def _test() -> None:
     def sim_layout(p: dict[str, float], pos: tuple[float, float]) -> float:
         return 1550.0 - 2.0 * (p["waveguide_width"] - 0.45)
 
-    lamc = stats.run_layout_aware_mc(sim_layout, n_runs=100,
-                                      die_size_um=(2000, 2000))
+    # R05 Bug #YA-1 修复: 原代码误用 die_size_um=(2000,2000)，但函数签名
+    # run_layout_aware_mc(sim_fn, device_positions, n_runs, ...) 无 die_size_um
+    # 参数。修正为 device_positions（器件在 die 上的坐标列表）。
+    lamc = stats.run_layout_aware_mc(
+        sim_layout,
+        device_positions=[(500.0, 500.0), (1000.0, 1000.0), (1500.0, 1500.0)],
+        n_runs=100,
+    )
     assert lamc["layout_aware"]
     print(f"Layout-Aware MC: mean={lamc['mean']:.3f}nm, std={lamc['std']:.3f}nm")
 

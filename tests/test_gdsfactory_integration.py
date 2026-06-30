@@ -63,10 +63,12 @@ def test_generate_component_gds_unavailable_raises(tmp_path):
         generate_component_gds("straight", str(tmp_path / "wg.gds"))
 
 
-def test_list_available_components_returns_list():
-    """list_available_components 应返回列表（可能为空）。"""
-    result = list_available_components()
-    assert isinstance(result, list)
+def test_list_available_components_unavailable_raises():
+    """gdsfactory 不可用时 list_available_components 应 raise ImportError（R03 修复）。"""
+    if is_available():
+        pytest.skip("gdsfactory 已安装，跳过降级测试")
+    with pytest.raises(ImportError, match="gdsfactory 未安装"):
+        list_available_components()
 
 
 @pytest.mark.skipif(not is_available(), reason="gdsfactory 未安装")
@@ -99,37 +101,27 @@ def test_list_available_components_has_straight():
 # ==================== 第2轮 P0-3: PDK 桥接测试 ====================
 
 
-def test_list_gdsfactory_pdks_returns_list():
-    """list_gdsfactory_pdks 应返回列表。
+def test_list_gdsfactory_pdks_unavailable_raises():
+    """gdsfactory 不可用时 list_gdsfactory_pdks 应 raise ImportError（R03 修复）。
 
-    gdsfactory 已安装但 PDK 未激活时，list_gdsfactory_pdks 仍应返回
-    内置 PDK 列表（如 generic），因为 list_gdsfactory_pdks 检查的是
-    import 成功而非 PDK 激活状态。
+    gdsfactory 已安装时至少返回 generic PDK。
     """
-    pdks = list_gdsfactory_pdks()
-    assert isinstance(pdks, list)
-    # 检查 gdsfactory 是否可 import（而非 PDK 是否激活）
-    try:
-        import gdsfactory  # noqa: F401
-
-        has_gf = True
-    except ImportError:
-        has_gf = False
-    if not has_gf:
-        assert len(pdks) == 0
-    else:
-        # gdsfactory 已安装时至少有 generic
+    if is_available():
+        pdks = list_gdsfactory_pdks()
+        assert isinstance(pdks, list)
         assert "generic" in pdks
         assert len(pdks) > 0
+    else:
+        with pytest.raises(ImportError, match="gdsfactory 未安装"):
+            list_gdsfactory_pdks()
 
 
-def test_load_gdsfactory_pdk_unavailable_returns_empty():
-    """gdsfactory 不可用时 load_gdsfactory_pdk 应返回空字典。"""
+def test_load_gdsfactory_pdk_unavailable_raises():
+    """gdsfactory 不可用时 load_gdsfactory_pdk 应 raise ImportError（R03 修复）。"""
     if is_available():
         pytest.skip("gdsfactory 已安装，跳过降级测试")
-    devices = load_gdsfactory_pdk("generic")
-    assert isinstance(devices, dict)
-    assert len(devices) == 0
+    with pytest.raises(ImportError, match="gdsfactory 未安装"):
+        load_gdsfactory_pdk("generic")
 
 
 @pytest.mark.skipif(not is_available(), reason="gdsfactory 未安装")
@@ -212,12 +204,12 @@ def test_register_gdsfactory_pdk_to_catalog():
     assert len(gf_devices) == count
 
 
-def test_register_gdsfactory_pdk_unavailable_returns_zero():
-    """gdsfactory 不可用时 register_gdsfactory_pdk 应返回 0。"""
+def test_register_gdsfactory_pdk_unavailable_raises():
+    """gdsfactory 不可用时 register_gdsfactory_pdk 应 raise ImportError（R03 修复）。"""
     if is_available():
         pytest.skip("gdsfactory 已安装，跳过降级测试")
     from polaris.pdk.catalog import DeviceCatalog
 
     catalog = DeviceCatalog()
-    count = register_gdsfactory_pdk(catalog, "generic")
-    assert count == 0
+    with pytest.raises(ImportError, match="gdsfactory 未安装"):
+        register_gdsfactory_pdk(catalog, "generic")
