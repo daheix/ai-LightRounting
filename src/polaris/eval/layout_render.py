@@ -89,8 +89,14 @@ def _atomic_write_klayout(ly: Any, output_path: str) -> str:
         OSError: 临时文件创建或替换失败时抛出（R03 禁止 fall-back）。
     """
     target = Path(output_path)
+    # 保留目标文件扩展名作为临时文件后缀：klayout ly.write 依赖扩展名判断输出格式
+    # (.gds/.oas/.gds2)，使用 .tmp 后缀会导致
+    # "Cannot determine format from filename in Layout.write" 错误。
+    # 来源: KLayout Layout.write 文档
+    #   https://www.klayout.de/doc-qt5/code/class_KLayout_Layout.html
+    suffix = target.suffix or ".gds"
     fd, tmp_name = tempfile.mkstemp(
-        dir=target.parent, prefix=target.name + ".", suffix=".tmp"
+        dir=target.parent, prefix=target.name + ".", suffix=suffix
     )
     # 关闭 fd，由 klayout ly.write 重新打开（避免双 open 冲突）
     os.close(fd)

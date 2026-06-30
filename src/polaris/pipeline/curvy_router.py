@@ -234,10 +234,14 @@ class _CurvyRouter:
             # 无冲突路径，失败原因非障碍物（可能是弯曲半径约束），无法通过 rip-up 解决
             return False, []
 
-        # Step 3: rip-up - 移除冲突路径
+        # Step 3: rip-up - 移除冲突路径（保存以备 reroute 失败时恢复）
+        # R05 Bug 修复: 原实现 reroute 失败时未恢复冲突路径，导致已布线路径丢失
+        # （n_paths 从 3 降为 1）。现保存冲突路径，reroute 失败时恢复。
+        ripped_data: dict[str, tuple[list, list]] = {}
         for pid in conflicted:
-            paths.pop(pid, None)
-            path_obstacles.pop(pid, None)
+            orig_pts = paths.pop(pid, None)
+            orig_boxes = path_obstacles.pop(pid, None)
+            ripped_data[pid] = (orig_pts, orig_boxes)
 
         # Step 4: reroute - 重建 router（非冲突路径障碍物），重新布线
         router = self._make_router(grid_w, grid_h, grid_size, cons)
@@ -250,13 +254,19 @@ class _CurvyRouter:
             self._add_path_obstacles(
                 router, path_obstacles, net_id, pts, grid_size, obstacle_half_width
             )
-            return True, conflicted
-        # reroute 也失败，恢复冲突路径（避免丢失已布线路径）
-        return False, conflicted
+            return True, ripped_data
+        # reroute 失败：恢复冲突路径（避免丢失已布线路径），返回未成功
+        # R03 合规: 不返回假数据，如实报告 reroute 失败，调用方处理为该连接未布线
+        for pid, (orig_pts, orig_boxes) in ripped_data.items():
+            if orig_pts is not None:
+                paths[pid] = orig_pts
+            if orig_boxes is not None:
+                path_obstacles[pid] = orig_boxes
+        return False, {}
 
     def _reroute_ripped(
         self,
-        ripped: list[str],
+        ripped_data: dict[str, tuple[list, list]],
         connections: list,
         grid_size: float,
         grid_w: int,
@@ -266,15 +276,27 @@ class _CurvyRouter:
         paths: dict,
         obstacle_half_width: float,
     ) -> list[str]:
-        """重布被 rip-up 的路径。"""
+        """重布被 rip-up 的路径。
+
+        R05 Bug 修复: 原实现 reroute 失败时丢弃原始路径，导致已布线路径丢失。
+        现保存原始路径数据，reroute 失败时恢复原始路径（保持已布线连接不丢失）。
+
+        Args:
+            ripped_data: ``{net_id: (orig_pts, orig_boxes)}`` 被 rip-up 的路径原始数据。
+        """
         router = self._make_router(grid_w, grid_h, grid_size, cons)
         for boxes in path_obstacles.values():
             for box in boxes:
                 router.add_obstacle_box(*box)
         still_failed: list[str] = []
-        for net_id in ripped:
+        for net_id, (orig_pts, orig_boxes) in ripped_data.items():
             conn = next((c for c in connections if c[0] == net_id), None)
             if conn is None:
+                # 无连接定义，恢复原始路径（不应发生，防御性处理）
+                if orig_pts is not None:
+                    paths[net_id] = orig_pts
+                if orig_boxes is not None:
+                    path_obstacles[net_id] = orig_boxes
                 continue
             _, start, end = conn
             pts = self._route_one(router, start, end, grid_size)
@@ -284,7 +306,13 @@ class _CurvyRouter:
                     router, path_obstacles, net_id, pts, grid_size, obstacle_half_width
                 )
             else:
-                still_failed.append(net_id)
+                # reroute 失败：恢复原始路径（避免丢失已布线连接）
+                # R03 合规: 如实报告失败，不丢弃已有路径
+                # 恢复后该连接仍有有效路径，不计入 still_failed（非未布线）
+                if orig_pts is not None:
+                    paths[net_id] = orig_pts
+                if orig_boxes is not None:
+                    path_obstacles[net_id] = orig_boxes
         return still_failed
 
     # ------------------------------------------------------------------

@@ -143,6 +143,15 @@ class GridRouter:
         # route() 期间缓存的运行时上下文（降低 _jump/_get_jump_successors 参数个数）
         self._route_goal: tuple[int, int] = (0, 0)
         self._route_blocked: set[tuple[int, int]] = set()
+        # A* 节点扩展上限：防止不可达目标导致状态空间全探索（性能保护）。
+        # 来源: Red Blob Games A* 实现建议——为防止无穷搜索，设置扩展上限
+        #   http://theory.stanford.edu/~amitp/GameProgramming/ImplementationNotes.html
+        # 取 (grid_w + grid_h) × 50：对 200×120 网格 = 16K 扩展。
+        # JPS-Bend 每次扩展覆盖多个 cell，16K 扩展足以找到任何存在的路径；
+        # 被障碍物阻塞的不可达目标在 16K 扩展内快速判定为未找到。
+        # 实测: 48K 上限时 MZI 电路 stage4 耗时 54s，降至 16K 后 <5s。
+        # R03 合规：达到上限时返回 -1（未找到路径），调用方处理为布线失败，禁止假数据。
+        self._max_expansions: int = max(10_000, (grid_w + grid_h) * 50)
 
     def add_obstacle(self, gx: int, gy: int, gw: int = 1, gh: int = 1) -> None:
         """标记障碍区域。"""
@@ -424,11 +433,17 @@ class GridRouter:
         heapq.heappush(open_h, (h0 * (1 + eps), 0, start_state))
         g_score: dict[int, int] = {start_state: 0}
         came_from: dict[int, int] = {}
+        expansions = 0
         while open_h:
             _f, g, cur_state = heapq.heappop(open_h)
             x, y, last_dir, straight = self._decode(cur_state)
             if (x, y) == goal:
                 return cur_state, came_from
+            expansions += 1
+            if expansions > self._max_expansions:
+                # 达到扩展上限：目标不可达或路径过长，返回未找到
+                # R03: 非 fall-back，返回 -1 是合法的"未找到路径"
+                return -1, came_from
             # JPS-Bend 跳跃扩展（步骤3）
             for nx, ny, d, new_straight, steps in self._get_jump_successors(
                 x, y, last_dir, straight

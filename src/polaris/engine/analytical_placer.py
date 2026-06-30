@@ -165,6 +165,14 @@ class AnalyticalPlacer:
         无连接的器件放在画布中心。
 
         来源: DREAMPlace 初始布局策略（TCAD 2020）。
+        https://arxiv.org/abs/2004.10746
+
+        可复现性修复 (R05): 原实现使用 ``np.random.uniform`` 无种子 RNG，
+        导致布局结果非确定性（同电路多次运行 HPWL/拓扑不同），下游布线
+        成功率随之抖动（MZI 电路 5 次运行 n_paths ∈ {4, 4, 4, 4, 5}）。
+        DREAMPlace 官方实现（Lin et al. TCAD 2020 §III-A）使用固定种子
+        ``torch.manual_seed`` 保证可复现。本实现改用 ``np.random.default_rng(42)``
+        固定种子 RNG，与 DREAMPlace 可复现性约定对齐。
 
         Returns:
             初始坐标数组 ``(n, 2)``，列 0=x，列 1=y。
@@ -177,15 +185,19 @@ class AnalyticalPlacer:
         for src, dst in self.connections:
             neighbor_cnt[src] += 1
             neighbor_cnt[dst] += 1
+        # 固定种子 RNG（DREAMPlace 可复现性约定）
+        # 来源: DREAMPlace lin et al. TCAD 2020 使用 torch.manual_seed(1000)
+        #   https://arxiv.org/abs/2004.10746
+        rng = np.random.default_rng(42)
         # 无连接的器件放画布中心
         for i in range(self.n):
             if neighbor_cnt[i] == 0:
                 pos[i] = [cx, cy]
             else:
-                # 初始随机扰动（避免全重合）
+                # 初始随机扰动（避免全重合）—— 固定种子保证可复现
                 pos[i] = [
-                    cx + np.random.uniform(-10, 10),
-                    cy + np.random.uniform(-10, 10),
+                    cx + rng.uniform(-10, 10),
+                    cy + rng.uniform(-10, 10),
                 ]
         # 迭代加权平均（3 轮收敛）
         for _ in range(3):
