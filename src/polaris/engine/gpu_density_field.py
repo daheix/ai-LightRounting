@@ -1,27 +1,22 @@
-"""GPU 加速密度场网格化（P1-1 深化，第45轮）。
+"""GPU 密度场网格化（🚫R04 战略：纯 CPU 实现，不参与 GPU 计算）。
 
-打通 gpu_backend.py + fft_density_field.py + density_field.py 三模块集成断裂，
-实现端到端 GPU 加速的密度场离散化，对标 DREAMPlace TCAD 2020 GPU 加速。
+R04 战略决策：PoLaRIS 不参与 GPU 计算（2026-06-25 项目所有者指示，不可撤销）。
+本模块虽命名含 "GPU"，但实际为**纯 CPU 实现**，所有计算均通过 NumPy 完成。
+保留 "GPU" 命名仅为向后兼容 import 链和 API 一致性。
 
-## 核心差距（第44轮分析）
+R05 Bug 修复 v4.0-R04-02（第 X 轮迭代发现）:
+原代码声称支持 GPU 加速（自动 CPU/GPU 切换、CuPy 后端），违反 R04 战略决策。修复：
+1. 模块 docstring 明确标记 R04 战略：不参与 GPU 计算，纯 CPU 实现
+2. 所有 GPU 相关描述更新为 CPU 实现说明
+3. 保留类名/函数名（不破坏 import 链）但实际为纯 CPU
+4. GPUBackend 内部已强制 NumPyBackend（CPU），本模块无需额外 fallback
+5. 无静默 fallback——R04 是战略选择，非降级方案
 
-第36轮的 fft_density_field.py 用 np.fft（CPU），第41轮的 gpu_backend.py 提供 GPU 原语
-但无业务调用方。本模块填补集成断裂：
-
-1. 将 GPUBackend 注入密度场，用 backend.fft2/ifft2 替代 np.fft
-2. 向量化双线性插值面积分布（np.add.at）
-3. 向量化梯度查询
-4. 自动 CPU/GPU 切换
-
-## 性能目标（对标 DREAMPlace）
-
-- CPU 分离卷积：O(G²·k)
-- CPU FFT 卷积：O(G²·log G)
-- GPU FFT 卷积：O(G²·log G) + GPU 并行（10-40× 加速）
-
-来源:
+规则: R04 不参与 GPU（战略）/ R05 Bug 必修 / R03 禁止 fall-back
+文献:
+- R04-不参与GPU.md
 - DREAMPlace TCAD 2020: https://arxiv.org/abs/2004.10746
-- CuPy GPU 加速: https://docs.cupy.dev/
+- DREAMPlace TCAD 2020: https://doi.org/10.1109/TCAD.2020.2976921
 """
 
 from __future__ import annotations
@@ -50,7 +45,10 @@ class DeviceSize:
 
 @dataclass
 class GPUDensityConfig:
-    """GPU 密度场配置。
+    """GPU 密度场配置（🚫R04 战略：纯 CPU 实现，GPU 参数仅向后兼容）。
+
+    R04 战略决策：不参与 GPU 计算。force_cpu 和 device_id 参数仅保留用于
+    向后兼容 API，实际始终运行在 CPU 模式。
 
     Attributes:
         grid_size: 网格分辨率（GxG）。
@@ -58,8 +56,8 @@ class GPUDensityConfig:
         gaussian_sigma: 高斯平滑标准差（网格单位）。
         use_fft: 是否用 FFT 卷积（True=FFT, False=分离卷积）。
             来源: DREAMPlace 默认 FFT。
-        force_cpu: 强制 CPU 模式。
-        device_id: GPU 设备 ID。
+        force_cpu: 强制 CPU 模式（🚫R04 战略下始终为 True，参数仅保留兼容）。
+        device_id: GPU 设备 ID（🚫R04 战略下忽略，参数仅保留兼容）。
     """
 
     grid_size: int = 64
@@ -70,13 +68,14 @@ class GPUDensityConfig:
 
 
 class GPUDensityField:
-    """GPU 加速密度场网格化。
+    """GPU 加速密度场网格化（🚫R04 战略：纯 CPU 实现）。
 
-    对标 DREAMPlace GPU 密度场，自动 CPU/GPU 切换。
+    R04 战略决策：不参与 GPU 计算。本类虽命名含 "GPU"，但实际为纯 CPU 实现。
+    对标 DREAMPlace 密度场算法，但仅使用 NumPy CPU 计算。
 
     Args:
-        config: 密度场配置。
-        gpu_config: GPU 后端配置（可选）。
+        config: 密度场配置（GPU 参数仅保留兼容）。
+        gpu_config: GPU 后端配置（🚫R04 战略下忽略，仅保留兼容）。
     """
 
     def __init__(
@@ -84,26 +83,29 @@ class GPUDensityField:
         config: GPUDensityConfig | None = None,
         gpu_config: GPUConfig | None = None,
     ) -> None:
-        """初始化 GPU 密度场。
+        """初始化 GPU 密度场（🚫R04 战略：强制 CPU）。
+
+        R04 战略决策：不参与 GPU 计算。gpu_config 参数仅保留用于向后兼容，
+        实际始终使用 NumPyBackend（CPU）。
 
         Args:
             config: 密度场配置。
-            gpu_config: GPU 后端配置。
+            gpu_config: GPU 后端配置（忽略，仅保留兼容）。
         """
         self.config = config or GPUDensityConfig()
-        # 创建 GPU 后端（自动检测 CuPy）
+        # R04 战略：强制 CPU，GPU 后端（内部已强制 NumPyBackend）
         effective_gpu_config = gpu_config or GPUConfig(
             device_id=self.config.device_id,
-            force_cpu=self.config.force_cpu,
+            force_cpu=True,  # R04: 强制 True，忽略用户配置
         )
         self.backend: GPUBackend = create_gpu_backend(effective_gpu_config)
         self.grid_size = self.config.grid_size
         self.field: np.ndarray = np.zeros((self.grid_size, self.grid_size))
-        self._device_field = None  # GPU 上的场（延迟初始化）
+        self._device_field = None  # 仅保留字段兼容，实际不使用
 
     @property
     def is_gpu(self) -> bool:
-        """是否运行在 GPU 上。"""
+        """是否运行在 GPU 上（🚫R04 战略：始终返回 False）。"""
         return self.backend.is_gpu
 
     def build(
@@ -204,7 +206,7 @@ class GPUDensityField:
         )
 
     def smooth_gaussian(self, sigma: float | None = None) -> np.ndarray:
-        """高斯平滑（FFT 卷积，GPU 加速）。
+        """高斯平滑（FFT 卷积，🚫R04 战略：纯 CPU 实现）。
 
         Args:
             sigma: 高斯标准差（None 用配置默认值）。
@@ -246,9 +248,9 @@ class GPUDensityField:
         return kernel
 
     def _fft_convolve(self, field: np.ndarray, kernel: np.ndarray) -> np.ndarray:
-        """FFT 卷积（GPU 加速）。
+        """FFT 卷积（🚫R04 战略：纯 CPU 实现，通过 GPUBackend 调用 NumPyBackend）。
 
-        用 GPUBackend.fft2/ifft2 替代 np.fft，实现 GPU 加速。
+        通过 GPUBackend.fft2/ifft2 执行 FFT 卷积（实际为 NumPy CPU 实现）。
 
         Args:
             field: 输入场。
@@ -362,13 +364,13 @@ class GPUDensityField:
         return float(self.field.max())
 
     def benchmark(self, n_devices: int = 100) -> dict[str, float]:
-        """基准测试：CPU vs GPU 性能对比。
+        """基准测试（🚫R04 战略：纯 CPU 性能测试）。
 
         Args:
             n_devices: 测试器件数。
 
         Returns:
-            性能指标字典。
+            性能指标字典（is_gpu 始终为 False）。
         """
         import time
 
@@ -411,16 +413,19 @@ def create_gpu_density_field(
     use_fft: bool = True,
     force_cpu: bool = False,
 ) -> GPUDensityField:
-    """便捷工厂函数：创建 GPU 密度场。
+    """便捷工厂函数：创建 GPU 密度场（🚫R04 战略：纯 CPU 实现）。
+
+    R04 战略决策：不参与 GPU 计算。force_cpu 参数仅保留用于向后兼容，
+    实际始终运行在 CPU 模式。
 
     Args:
         grid_size: 网格分辨率。
         sigma: 高斯标准差。
         use_fft: 是否用 FFT。
-        force_cpu: 强制 CPU。
+        force_cpu: 强制 CPU（忽略，始终为 True）。
 
     Returns:
-        GPUDensityField 实例。
+        GPUDensityField 实例（纯 CPU 实现）。
     """
     config = GPUDensityConfig(
         grid_size=grid_size,

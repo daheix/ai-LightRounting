@@ -390,13 +390,16 @@ def get_gpu_status() -> dict[str, Any]:
     get_gpu_status 永远返回 cupy_available=False, device_count=0。
     不再调用 check_cupy_availability() 检测 CuPy（避免触发 import cupy）。
 
+    R05 Bug 修复 v4.0-R04-03: device_type 返回 DeviceType.CPU 枚举而非字符串 "cpu"，
+    与测试期望和类型契约一致。
+
     Returns:
-        状态字典 {cupy_available: False, device_type: "cpu", device_count: 0}。
+        状态字典 {cupy_available: False, device_type: DeviceType.CPU, device_count: 0}。
     """
     # R04: 永远返回 GPU 不可用，不检测 CuPy
     return {
         "cupy_available": False,
-        "device_type": "cpu",
+        "device_type": DeviceType.CPU,
         "device_count": 0,
         "r04_strategy": "🚫不参与 GPU 计算（战略决策不可撤销）",
     }
