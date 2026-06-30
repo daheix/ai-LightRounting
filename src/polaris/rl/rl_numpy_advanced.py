@@ -98,8 +98,7 @@ class LargeScalePlacementEnv:
     - 底层逻辑：AlphaChip edge-based GNN（Mirhoseini 2021 Nature）通过消息
       传递避免 N×N 全连接注意力，本环境对齐该设计——状态用稀疏矩阵表示
       占用栅格，图嵌入用固定维度摘要（避免随 N 线性增长）。
-    - 复杂度：构建状态 O(N+E)，N=器件数 E=连接数。
-    - 支持 N=1024 器件（远超 100+ 要求）。
+    - 复杂度：构建状态 O(N+E)，N=器件数 E=连接数。支持 N=1024 器件（远超 100+）。
 
     学术依据：AlphaChip edge-based GNN
     https://www.nature.com/articles/s41586-021-03544-w
@@ -112,18 +111,12 @@ class LargeScalePlacementEnv:
         self.placement: dict[str, dict] = {}
 
     def set_circuit(self, circuit: dict) -> None:
-        """设置电路并重置环境。
-
-        Raises:
-            ValueError: 器件数超 max_devices 或缺字段（R03 无 fall-back）。
-        """
+        """设置电路并重置环境（缺字段或超 max_devices 即 raise，R03）。"""
         if "devices" not in circuit or "nets" not in circuit:
             raise ValueError("电路须含 devices 与 nets 字段（R03 无 fall-back）")
         n = len(circuit["devices"])
         if n > self.config.max_devices:
-            raise ValueError(
-                f"器件数 {n} 超过 max_devices={self.config.max_devices}"
-            )
+            raise ValueError(f"器件数 {n} 超过 max_devices={self.config.max_devices}")
         if n < 1:
             raise ValueError("电路器件数须 >= 1（R03 无 fall-back）")
         self.circuit = circuit
@@ -149,9 +142,6 @@ class LargeScalePlacementEnv:
         """构建稀疏占用栅格（CSR，高效存储）。
 
         *创新*：稀疏存储，100+ 组件时密度 < 5%，相比稠密节省 >95% 内存。
-
-        Raises:
-            ValueError: 电路未设置。
         """
         if self.circuit is None:
             raise ValueError("电路未设置，请先调用 set_circuit（R03 无 fall-back）")
@@ -182,9 +172,6 @@ class LargeScalePlacementEnv:
         Returns:
             状态 dict：node_feats [N,9] / occupancy CSR / graph_summary [8] /
             action_mask [grid_h*grid_w] / current_feat [9]。
-
-        Raises:
-            ValueError: 电路未设置。
         """
         if self.circuit is None:
             raise ValueError("电路未设置（R03 无 fall-back）")
@@ -224,11 +211,7 @@ class LargeScalePlacementEnv:
         return len(self.circuit["devices"])
 
     def step(self, device_id: str, grid_idx: int) -> dict:
-        """放置一个器件到指定网格索引。
-
-        Raises:
-            ValueError: 位置被占用或器件已放置或索引越界。
-        """
+        """放置一个器件到指定网格索引（位置占用/已放置/越界即 raise，R03）。"""
         if self.circuit is None:
             raise ValueError("电路未设置（R03 无 fall-back）")
         grid_h, grid_w = self.config.grid_size
@@ -236,9 +219,7 @@ class LargeScalePlacementEnv:
             raise ValueError(f"grid_idx={grid_idx} 越界 [0, {grid_h*grid_w})")
         occ = self.build_sparse_occupancy().toarray().ravel()
         if occ[grid_idx] > 0.0:
-            raise ValueError(
-                f"grid_idx={grid_idx} 已被占用（R03 禁止 fall-back）"
-            )
+            raise ValueError(f"grid_idx={grid_idx} 已被占用（R03 禁止 fall-back）")
         if device_id in self.placement:
             raise ValueError(f"器件 {device_id} 已放置（R03 禁止 fall-back）")
         row = grid_idx // grid_w
@@ -301,11 +282,7 @@ class PPOAdvantageOptimizer:
         """计算 GAE 优势估计与回报（Schulman 2015 arXiv:1506.02438）。
 
         δ_t = r_t + γ·V(s_{t+1})·(1-done_t) - V(s_t)
-        Â_t = δ_t + γ·λ·(1-done_t)·Â_{t+1}
-        R_t = Â_t + V(s_t)
-
-        Raises:
-            ValueError: 输入形状不匹配或为空。
+        Â_t = δ_t + γ·λ·(1-done_t)·Â_{t+1}；R_t = Â_t + V(s_t)
         """
         rewards = np.asarray(rewards, dtype=np.float64)
         values = np.asarray(values, dtype=np.float64)
@@ -331,10 +308,7 @@ class PPOAdvantageOptimizer:
         return advantages, returns
 
     def normalize_advantages(self, advantages: np.ndarray) -> np.ndarray:
-        """标准化优势（PPO 工程实践）。
-
-        当 std < 1e-8 时仅去均值（避免除零，标量场景保留 0 优势，非 fall-back）。
-        """
+        """标准化优势（PPO 工程实践）。std<1e-8 时仅去均值（避免除零，非 fall-back）。"""
         adv = np.asarray(advantages, dtype=np.float64)
         if adv.size == 0:
             raise ValueError("advantages 不能为空（R03 无 fall-back）")
@@ -350,10 +324,9 @@ class PPOAdvantageOptimizer:
         advantages: np.ndarray,
         entropy: np.ndarray | float = 0.0,
     ) -> tuple[float, dict]:
-        """计算 PPO clipped surrogate policy loss + 熵正则化。
+        """计算 PPO clipped surrogate policy loss + 熵正则化（Schulman 2017 Eq.7）。
 
-        L^CLIP = -E_t[min(r_t·Â_t, clip(r_t, 1-ε, 1+ε)·Â_t)]（Schulman 2017 Eq.7）
-        L = L^CLIP - c_ent · H[π]
+        L^CLIP = -E_t[min(r_t·Â_t, clip(r_t, 1-ε, 1+ε)·Â_t)]；L = L^CLIP - c_ent·H[π]
         """
         new_lp = np.asarray(new_logprobs, dtype=np.float64)
         old_lp = np.asarray(old_logprobs, dtype=np.float64)
@@ -384,10 +357,7 @@ class PPOAdvantageOptimizer:
         old_values: np.ndarray,
         returns: np.ndarray,
     ) -> float:
-        """计算 PPO clipped value loss。
-
-        L^VF = 0.5 · E_t[max((V_θ - R)², (V_clip - R)²)]
-        """
+        """计算 PPO clipped value loss：L^VF = 0.5·E_t[max((V_θ-R)², (V_clip-R)²)]。"""
         v = np.asarray(values, dtype=np.float64)
         ov = np.asarray(old_values, dtype=np.float64)
         ret = np.asarray(returns, dtype=np.float64)
@@ -422,11 +392,7 @@ class PPOAdvantageOptimizer:
         new_values: np.ndarray,
         entropy: np.ndarray | float = 0.0,
     ) -> dict:
-        """端到端 PPO 更新：GAE → 标准化 → policy/value loss。
-
-        Raises:
-            ValueError: rollout 缺字段。
-        """
+        """端到端 PPO 更新：GAE → 标准化 → policy/value loss。"""
         for key in ("rewards", "values", "old_logprobs", "old_values", "dones"):
             if key not in rollout:
                 raise ValueError(f"rollout 缺字段 {key}（R03 无 fall-back）")
@@ -466,6 +432,69 @@ class MultiObjectiveRewardConfig:
     w_xtalk: float = 1.5
 
 
+def _port_positions(placement: dict, circuit: dict) -> dict:
+    """计算端口绝对坐标（简化：端口映射到器件中心）。"""
+    positions: dict[tuple[str, str], tuple[float, float]] = {}
+    for dev in circuit["devices"]:
+        if dev["id"] not in placement:
+            continue
+        p = placement[dev["id"]]
+        x, y = float(p["x"]), float(p["y"])
+        w = float(dev.get("width", 50.0))
+        h = float(dev.get("height", 30.0))
+        for port_name in dev.get("ports", []):
+            positions[(dev["id"], port_name)] = (x + w / 2, y + h / 2)
+    return positions
+
+
+def _net_pts(net: dict, port_pos: dict) -> list[tuple[float, float]]:
+    """提取 net 的两端点坐标。"""
+    pts: list[tuple[float, float]] = []
+    for end in [net["src"], net["dst"]]:
+        key = (end[0], end[1])
+        if key in port_pos:
+            pts.append(port_pos[key])
+    return pts
+
+
+def _segments_intersect(s1: list, s2: list) -> bool:
+    """CCW 跨立实验检测线段相交（与 R34 alpha_chip_reward 同源）。"""
+    (x1, y1), (x2, y2) = s1
+    (x3, y3), (x4, y4) = s2
+
+    def _cross(ax, ay, bx, by):
+        return ax * by - bx * ay
+
+    d1 = _cross(x4 - x3, y4 - y3, x1 - x3, y1 - y3)
+    d2 = _cross(x4 - x3, y4 - y3, x2 - x3, y2 - y3)
+    d3 = _cross(x2 - x1, y2 - y1, x3 - x1, y3 - y1)
+    d4 = _cross(x2 - x1, y2 - y1, x4 - x1, y4 - y1)
+    return (
+        ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0))
+        and ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0))
+    )
+
+
+def _count_crossings(placement: dict, circuit: dict) -> tuple[int, float]:
+    """统计波导交叉数与总线长（μm）。供 R353 loss/xtalk 复用。"""
+    port_pos = _port_positions(placement, circuit)
+    segments: list[list[tuple[float, float]]] = []
+    total_len = 0.0
+    for net in circuit["nets"]:
+        pts = _net_pts(net, port_pos)
+        if len(pts) == 2:
+            total_len += float(np.sqrt(
+                (pts[0][0] - pts[1][0]) ** 2 + (pts[0][1] - pts[1][1]) ** 2
+            ))
+            segments.append(pts)
+    n_cross = 0
+    for i in range(len(segments)):
+        for j in range(i + 1, len(segments)):
+            if _segments_intersect(segments[i], segments[j]):
+                n_cross += 1
+    return n_cross, total_len
+
+
 class MultiObjectiveParetoReward:
     """R353 多目标奖励 + Pareto 前沿（纯 NumPy）。
 
@@ -495,63 +524,28 @@ class MultiObjectiveParetoReward:
         return float(total)
 
     def compute_delay(self, placement: dict, circuit: dict) -> float:
-        """计算光路群时延（ps）。
+        """计算光路群时延（ps）。τ = n_g·L/c，n_g=4.2（SOI），c=3e8 m/s。
 
-        τ = n_g · L / c，n_g=4.2（SOI 波导），c=3e8 m/s
         来源: Reed 2010 Nat. Photonics DOI: 10.1038/nphoton.2010.179
         """
-        c_m_s = 3e8
-        port_pos = self._port_positions(placement, circuit)
-        total_len_um = 0.0
-        for net in circuit["nets"]:
-            pts = self._net_pts(net, port_pos)
-            if len(pts) == 2:
-                total_len_um += float(np.sqrt(
-                    (pts[0][0] - pts[1][0]) ** 2 + (pts[0][1] - pts[1][1]) ** 2
-                ))
-        return float(_WAVEGUIDE_NG * (total_len_um * 1e-6) / c_m_s * 1e12)
+        _, total_len_um = _count_crossings(placement, circuit)
+        return float(_WAVEGUIDE_NG * (total_len_um * 1e-6) / 3e8 * 1e12)
 
     def compute_loss(self, placement: dict, circuit: dict) -> float:
-        """计算波导传播损耗 + 交叉损耗（dB）。
+        """计算波导传播损耗 + 交叉损耗（dB）。L = α_prop·L/cm + N_cross·α_cross。
 
-        L = α_prop · L_total/cm + N_cross · α_cross
         来源: Bogaerts 2013 JLT DOI: 10.1109/JLT.2013.2258874
         """
-        port_pos = self._port_positions(placement, circuit)
-        total_len_um = 0.0
-        segments: list[list[tuple[float, float]]] = []
-        for net in circuit["nets"]:
-            pts = self._net_pts(net, port_pos)
-            if len(pts) == 2:
-                total_len_um += float(np.sqrt(
-                    (pts[0][0] - pts[1][0]) ** 2 + (pts[0][1] - pts[1][1]) ** 2
-                ))
-                segments.append(pts)
+        n_cross, total_len_um = _count_crossings(placement, circuit)
         prop_loss = _WG_LOSS_DB_CM * (total_len_um * 1e-4)
-        n_cross = 0
-        for i in range(len(segments)):
-            for j in range(i + 1, len(segments)):
-                if self._segments_intersect(segments[i], segments[j]):
-                    n_cross += 1
         return float(prop_loss + n_cross * _CROSSING_LOSS_DB)
 
     def compute_xtalk(self, placement: dict, circuit: dict) -> float:
-        """计算串扰总功率（线性叠加，dB → 线性）。
+        """计算串扰总功率（线性）。P_xtalk = Σ_cross 10^(XT_dB/10)。
 
-        P_xtalk = Σ_cross 10^(XT_dB/10)
         来源: Liu 2019 Opt. Express DOI: 10.1364/OE.27.020886
         """
-        port_pos = self._port_positions(placement, circuit)
-        segments: list[list[tuple[float, float]]] = []
-        for net in circuit["nets"]:
-            pts = self._net_pts(net, port_pos)
-            if len(pts) == 2:
-                segments.append(pts)
-        n_cross = 0
-        for i in range(len(segments)):
-            for j in range(i + 1, len(segments)):
-                if self._segments_intersect(segments[i], segments[j]):
-                    n_cross += 1
+        n_cross, _ = _count_crossings(placement, circuit)
         return float(n_cross * (10.0 ** (_CROSSING_XTALK_DB / 10.0)))
 
     def compute(self, placement: dict, circuit: dict) -> dict:
@@ -588,13 +582,9 @@ class MultiObjectiveParetoReward:
 
         Args:
             objectives: 目标矩阵 [N, M]，全部按最小化（或 maximize=True 最大化）。
-            maximize: True 最大化，False 最小化（默认）。
 
         Returns:
             前沿解索引数组 [K]（K ≤ N）。
-
-        Raises:
-            ValueError: 输入不是 2D 矩阵或为空。
         """
         obj = np.asarray(objectives, dtype=np.float64)
         if obj.ndim != 2:
@@ -612,49 +602,6 @@ class MultiObjectiveParetoReward:
             dominated[i] = False
             is_front[dominated] = False
         return np.where(is_front)[0]
-
-    @staticmethod
-    def _port_positions(placement, circuit) -> dict:
-        """计算端口绝对坐标（简化：端口映射到器件中心）。"""
-        positions: dict[tuple[str, str], tuple[float, float]] = {}
-        for dev in circuit["devices"]:
-            if dev["id"] not in placement:
-                continue
-            p = placement[dev["id"]]
-            x, y = float(p["x"]), float(p["y"])
-            w = float(dev.get("width", 50.0))
-            h = float(dev.get("height", 30.0))
-            for port_name in dev.get("ports", []):
-                positions[(dev["id"], port_name)] = (x + w / 2, y + h / 2)
-        return positions
-
-    @staticmethod
-    def _net_pts(net, port_pos) -> list:
-        """提取 net 的两端点坐标。"""
-        pts: list[tuple[float, float]] = []
-        for end in [net["src"], net["dst"]]:
-            key = (end[0], end[1])
-            if key in port_pos:
-                pts.append(port_pos[key])
-        return pts
-
-    @staticmethod
-    def _segments_intersect(s1, s2) -> bool:
-        """CCW 跨立实验检测线段相交（与 R34 alpha_chip_reward 同源）。"""
-        (x1, y1), (x2, y2) = s1
-        (x3, y3), (x4, y4) = s2
-
-        def _cross(ax, ay, bx, by):
-            return ax * by - bx * ay
-
-        d1 = _cross(x4 - x3, y4 - y3, x1 - x3, y1 - y3)
-        d2 = _cross(x4 - x3, y4 - y3, x2 - x3, y2 - y3)
-        d3 = _cross(x2 - x1, y2 - y1, x3 - x1, y3 - y1)
-        d4 = _cross(x2 - x1, y2 - y1, x4 - x1, y4 - y1)
-        return (
-            ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0))
-            and ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0))
-        )
 
 
 # ===========================================================================
@@ -711,21 +658,13 @@ class PretrainedPolicyLibrary:
         return sorted(degree.keys(), key=lambda i: -degree[i])
 
     def generate_placement(self, circuit: dict, policy_name: str) -> dict:
-        """用指定策略生成布局。
-
-        Raises:
-            ValueError: 策略名非法或器件数超网格容量。
-        """
+        """用指定策略生成布局（策略名非法或容量不足即 raise，R03）。"""
         if policy_name not in ALL_POLICIES:
-            raise ValueError(
-                f"未知策略 {policy_name}，可选 {ALL_POLICIES}（R03 无 fall-back）"
-            )
+            raise ValueError(f"未知策略 {policy_name}，可选 {ALL_POLICIES}（R03 无 fall-back）")
         grid_h, grid_w = self.config.grid_size
         n = len(circuit["devices"])
         if n > grid_h * grid_w:
-            raise ValueError(
-                f"器件数 {n} 超过网格容量 {grid_h*grid_w}（业务设计错误）"
-            )
+            raise ValueError(f"器件数 {n} 超过网格容量 {grid_h*grid_w}（业务设计错误）")
         if policy_name == POLICY_HEURISTIC:
             order = self._heuristic_priority(circuit)
             cy, cx = grid_h / 2, grid_w / 2
@@ -759,11 +698,7 @@ class PretrainedPolicyLibrary:
         return placement
 
     def save_policy(self, policy_name: str, weights: dict) -> Path:
-        """保存策略权重到 checkpoint 文件。
-
-        Raises:
-            ValueError: 策略名非法。
-        """
+        """保存策略权重到 checkpoint 文件（策略名非法即 raise，R03）。"""
         if policy_name not in ALL_POLICIES:
             raise ValueError(f"未知策略 {policy_name}（R03 无 fall-back）")
         ckpt_dir = Path(self.config.checkpoint_dir)
@@ -786,11 +721,7 @@ class PretrainedPolicyLibrary:
         return ckpt_path
 
     def load_policy(self, policy_name: str) -> dict:
-        """加载策略权重。
-
-        Raises:
-            ValueError: 策略名非法或 checkpoint 不存在。
-        """
+        """加载策略权重（策略名非法或 checkpoint 不存在即 raise，R03）。"""
         if policy_name not in ALL_POLICIES:
             raise ValueError(f"未知策略 {policy_name}（R03 无 fall-back）")
         ckpt_path = Path(self.config.checkpoint_dir) / f"r354_policy_{policy_name}.json"
@@ -801,11 +732,7 @@ class PretrainedPolicyLibrary:
         return json.loads(ckpt_path.read_text(encoding="utf-8"))
 
     def get_policy_cache(self, policy_name: str) -> dict:
-        """返回内存中缓存的策略状态。
-
-        Raises:
-            ValueError: 策略未生成。
-        """
+        """返回内存中缓存的策略状态（未生成即 raise，R03）。"""
         if policy_name not in self._policies:
             raise ValueError(
                 f"策略 {policy_name} 未生成，请先调用 generate_placement（R03 无 fall-back）"
