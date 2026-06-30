@@ -273,9 +273,14 @@ class AnalyticalPlacer:
                 i = 0 if idx == src else 1
                 grad[idx, 0] += exp_x[i] / sum_exp_x - exp_neg_x[i] / sum_exp_neg_x
                 grad[idx, 1] += exp_y[i] / sum_exp_y - exp_neg_y[i] / sum_exp_neg_y
-        # NaN/Inf 安全检查（防止极端坐标导致数值问题）
+        # R03 禁止 fall-back: NaN/Inf 梯度表明优化发散（坐标爆炸、
+        # log-sum-exp 溢出），属于业务级数值故障，禁止静默替换掩盖问题。
         if not np.all(np.isfinite(grad)):
-            grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
+            raise RuntimeError(
+                f"HPWL 梯度含非有限值（NaN/Inf），优化可能发散: "
+                f"max={np.nanmax(grad)}, min={np.nanmin(grad)} "
+                f"（R03 禁止 fall-back，请检查学习率/坐标范围）"
+            )
         return grad
 
     def _density_gradient(self, pos: np.ndarray) -> np.ndarray:
@@ -472,7 +477,11 @@ class AnalyticalPlacer:
         grad = self._demand_to_gradient(demand, pos, grid_size, (cell_w, cell_h))
 
         if not np.all(np.isfinite(grad)):
-            grad = np.nan_to_num(grad, nan=0.0, posinf=1e6, neginf=-1e6)
+            raise RuntimeError(
+                f"密度梯度含非有限值（NaN/Inf），优化可能发散: "
+                f"max={np.nanmax(grad)}, min={np.nanmin(grad)} "
+                f"（R03 禁止 fall-back，请检查网格/坐标范围）"
+            )
         return grad
 
     def _adam_update(

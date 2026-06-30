@@ -618,11 +618,30 @@ class CMLCompiler:
         comp: CMLComponent,
         wavelength_um: float,
     ) -> NDArray[np.complex128]:
-        """线性插值获取指定波长的 S 矩阵（用于 circuit simulator）。"""
+        """线性插值获取指定波长的 S 矩阵（用于 circuit simulator）。
+
+        R03 禁止 fall-back:
+        - 超出波长范围静默 clip → 改为 raise ValueError（外推无物理意义）。
+        - 分母 + 1e-12 掩盖重复波长 → 改为显式校验。
+        """
         wl = comp.wavelengths_um
-        idx = np.searchsorted(wl, wavelength_um)
-        idx = np.clip(idx, 1, len(wl) - 1)
-        t = (wavelength_um - wl[idx - 1]) / (wl[idx] - wl[idx - 1] + 1e-12)
+        if len(wl) == 1:
+            # 单点波长模型（解析模型），无需插值
+            return comp.s_matrix[0]
+        if wavelength_um < wl[0] or wavelength_um > wl[-1]:
+            raise ValueError(
+                f"波长 {wavelength_um} μm 超出 CML 元件覆盖范围 "
+                f"[{wl[0]}, {wl[-1]}] μm（R03 禁止 fall-back 外推）"
+            )
+        idx = int(np.searchsorted(wl, wavelength_um))
+        idx = max(1, min(idx, len(wl) - 1))
+        denom = wl[idx] - wl[idx - 1]
+        if denom == 0:
+            raise ValueError(
+                f"CML 元件波长数组含重复值 wl[{idx-1}]==wl[{idx}]=={wl[idx]} μm，"
+                f"数据错误（R03 禁止 fall-back）"
+            )
+        t = (wavelength_um - wl[idx - 1]) / denom
         return (1 - t) * comp.s_matrix[idx - 1] + t * comp.s_matrix[idx]
 
     def generate_interconnect_element(
@@ -716,13 +735,15 @@ def make_straight_waveguide(
     Returns:
         CMLComponent。
     """
-    alpha_loss = loss_db_cm / DB_TO_NP / 1e4  # dB/μm → Np/μm
-    beta = 2 * np.pi * neff / wavelength_um
-    gamma = alpha_loss + 1j * beta * ng / neff * (wavelength_um ** 2) / (C0 / 1e12)
-
-    # 相位延迟
+    # R05 Bug 修复 v5.0-P0-2R1: 直波导损耗单位双重转换 bug。
+    # alpha_loss: dB/cm → Np/μm（÷ DB_TO_NP 将 dB→Np，÷ 1e4 将 cm→μm）。
+    # 原代码在 transmission 中又乘 1e-4，导致损耗被额外缩小 1e4 倍
+    # （3 dB/cm × 100μm 应衰减 0.03 dB，bug 后仅 3e-6 dB）。
+    # 参考: fdtd_simulator.py:191 np.exp(-alpha_np_per_um * length_um / 2)。
+    alpha_loss = loss_db_cm / DB_TO_NP / 1e4  # dB/cm → Np/μm
+    # 相位延迟（注意：ng 用于群速度/色散场景，单频解析模型用 neff 即可）
     phase = 2 * np.pi * neff * length_um / wavelength_um
-    transmission = np.exp(-alpha_loss * length_um * 1e-4 - 1j * phase)
+    transmission = np.exp(-alpha_loss * length_um - 1j * phase)
 
     s_matrix = np.array(
         [[[0, transmission], [transmission, 0]]],
@@ -770,8 +791,13 @@ def make_ring_resonator(
     alpha_loss = loss_db_cm / DB_TO_NP / 1e4  # Np/μm
     alpha_L = alpha_loss * length
 
+    # R05 Bug 修复 v5.0-P0-2R1: 环形谐振器交叉耦合系数 bug。
+    # 标准 add-drop ring: t = sqrt(1-κ)（自耦合），r = sqrt(κ)（交叉耦合），
+    # 满足幺正性 t² + r² = 1（能量守恒，Yariv 2002 Eq.4.5）。
+    # 原代码 r = sqrt(1-kappa) 导致 t² + r² = 2(1-κ) ≠ 1，违反能量守恒。
+    # 参考: models_extended.py:429 Yariv 公式 t_i² + κ_i² = 1。
     t = np.sqrt(1 - kappa)
-    r = np.sqrt(1 - kappa)
+    r = np.sqrt(kappa)
     # 通过环的相位
     beta_L = 2 * pi * neff * length / wavelength_um
     through = t ** 2 - r ** 2 * np.exp(-2 * alpha_L - 1j * 2 * beta_L)

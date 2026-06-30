@@ -241,11 +241,23 @@ def _oa_poly_shape(toks: list[str]) -> Shape:
 
 
 def _oa_path_shape(toks: list[str]) -> Shape:
-    """PATH layer width x0 y0 ... → path。"""
+    """PATH layer width x0 y0 ... → path。
+
+    R05 Bug 修复 v5.0-P2-2R1: 修复 off-by-one 越界 bug。
+    PATH 格式: PATH <layer> <width> <x0> <y0> <x1> <y1> ...
+    nums[0]=width，之后是 (x, y) 坐标对。原代码 range(0, len(nums)-1, 2)
+    在 len(nums) 为偶数时访问 nums[len(nums)] 越界。
+    """
     nums = [float(t) for t in toks[2:]]
-    if len(nums) < 5:
+    if len(nums) < 5:  # 1 width + 至少 2 个点 (4 坐标)
         raise ValueError(f"OpenAccess PATH 参数不足: {toks}")
-    pts = [Point(nums[i + 1], nums[i + 2]) for i in range(0, len(nums) - 1, 2)]
+    # nums[0]=width，剩余坐标数 = len(nums) - 1，必须为偶数
+    n_coords = len(nums) - 1
+    if n_coords % 2 != 0:
+        raise ValueError(
+            f"OpenAccess PATH 坐标数为奇数 {n_coords}（应为偶数）: {toks}"
+        )
+    pts = [Point(nums[i + 1], nums[i + 2]) for i in range(0, n_coords, 2)]
     return Shape("path", toks[1], pts, width=nums[0])
 
 

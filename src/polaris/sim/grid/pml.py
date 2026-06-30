@@ -35,6 +35,7 @@ import numpy as np
 __all__ = ["ScPml", "build_pml_stretch"]
 
 # 物理常数（SI）
+_C0 = 2.99792458e8  # 真空光速 m/s (NIST CODATA 2018)
 _ETA0 = 376.730313668  # 自由空间波阻抗 Ω
 _EPS0 = 8.8541878128e-12  # 真空介电常数 F/m
 
@@ -120,7 +121,10 @@ def build_pml_stretch(
             f"{axis} 方向 PML 层数 {pml.layers}*2 >= 网格点数 {n}，"
             "请减少 PML 层数或增加网格分辨率"
         )
-    omega = 2.0 * np.pi * 3e8 / wavelength  # 角频率 ω = 2πc/λ
+    # R05 Bug 修复 v5.0-P2-2R1: 光速使用 NIST CODATA 2018 精确值，
+    # 与项目其他模块（fdtd/yee_grid.py:65, lumerical_fdtd.py:59）保持一致。
+    # 原代码用 3e8 近似值引入 0.07% 误差，影响 PML 拉伸因子 s 的电导率匹配。
+    omega = 2.0 * np.pi * _C0 / wavelength  # 角频率 ω = 2πc/λ
     sigma_max = pml.sigma_max if pml.sigma_max is not None else _sigma_max_auto(
         pml, wavelength, dx
     )
