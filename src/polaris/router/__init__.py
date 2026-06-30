@@ -13,14 +13,6 @@ OptoDesignerAutorouter/DRVFreeValidator）。
 R22 路标新增：OptoDesigner Advanced Connectors Module 对齐
 （EulerBend/LengthDefinedConnector/PhaseMatchedRouter/RFGSGRouter/
 BusRouter/HighOrderBezierConnector）。
-
-参考文献：
-[1] Hart P E, Nilsson N J, Raphael B. A formal basis for the heuristic determination of minimum cost paths[J]. IEEE Transactions on Systems Science and Cybernetics, 1968, 4(2): 100-107. https://ieeexplore.ieee.org/document/4082128
-[2] Harabor D, Grastien A. Online graph pruning for pathfinding on grid maps[C]//AAAI Conference on Artificial Intelligence. 2011. https://harabor.net/data/papers/harabor-grastien-aaai11.pdf
-[3] Fujisawa T, et al. Euler bend waveguide for low loss and compactness[J]. Optics Express, 2017, 25(8): 9150-9160. https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
-[4] Rizzo S, et al. Euler curves for robust design of silicon photonic waveguide bends[J]. Optics Letters, 2023, 48(2): 215-218. https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
-[5] Zhou J, et al. Curvature-aware A* routing for LiDAR photonic integrated circuits[C]//International Symposium on Physical Design (ISPD). 2025. https://dl.acm.org/doi/10.1145/3698364.3705355
-[6] Lee C Y. An algorithm for path connections and its applications[J]. IRE Transactions on Electronic Computers, 1961, EC-10(3): 346-365. https://doi.org/10.1109/TEC.1961.5219222
 """
 
 from polaris.router.advanced_connectors import (

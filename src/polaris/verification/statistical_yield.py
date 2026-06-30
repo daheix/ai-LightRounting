@@ -41,13 +41,6 @@ from typing import Any, Callable
 import numpy as np
 from numpy.typing import NDArray
 
-try:
-    from scipy.stats import norm as _norm_cdf
-    _HAS_SCIPY = True
-except ImportError:
-    _norm_cdf = None
-    _HAS_SCIPY = False
-
 
 # =============================================================================
 # 1. DRC — 设计规则检查
@@ -126,58 +119,6 @@ class DRCEngine:
             "passed": self.error_count == 0,
         }
 
-    def _check_min_width(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
-        w = layer_data.get("min_width", 0)
-        if w < rule.limit_um and w > 0:
-            self._violations.append(DRCViolation(
-                rule=rule.name, layer=rule.layer,
-                severity=rule.severity,
-                message=f"最小线宽 {w:.3f}μm < {rule.limit_um}μm",
-                count=layer_data.get("width_violations", 1),
-            ))
-
-    def _check_min_spacing(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
-        s = layer_data.get("min_spacing", float("inf"))
-        if s < rule.limit_um:
-            self._violations.append(DRCViolation(
-                rule=rule.name, layer=rule.layer,
-                severity=rule.severity,
-                message=f"最小间距 {s:.3f}μm < {rule.limit_um}μm",
-                count=layer_data.get("spacing_violations", 1),
-            ))
-
-    def _check_min_enclosure(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
-        e = layer_data.get("min_enclosure", float("inf"))
-        if e < rule.limit_um:
-            self._violations.append(DRCViolation(
-                rule=rule.name, layer=rule.layer,
-                severity=rule.severity,
-                message=f"最小包围 {e:.3f}μm < {rule.limit_um}μm",
-                count=1,
-            ))
-
-    def _check_density(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
-        d = layer_data.get("density", 0.0)
-        if d < rule.limit_um:
-            self._violations.append(DRCViolation(
-                rule=rule.name, layer=rule.layer,
-                severity=rule.severity,
-                message=f"密度 {d:.1%} < {rule.limit_um:.1%}",
-                count=1,
-            ))
-
-    def _get_builtin_checker(self, rule_name: str):
-        name_lower = rule_name.lower()
-        if "min_width" in name_lower:
-            return self._check_min_width
-        elif "min_spacing" in name_lower:
-            return self._check_min_spacing
-        elif "min_enclosure" in name_lower:
-            return self._check_min_enclosure
-        elif "density" in name_lower:
-            return self._check_density
-        return None
-
     def _check_rule(self, rule: DRCRule, layout: dict[str, Any]) -> None:
         layer_data = layout.get(rule.layer, {})
         if rule.check_fn is not None:
@@ -190,11 +131,43 @@ class DRCEngine:
                 ))
             return
 
-        if rule.limit_um <= 0:
-            return
-        checker = self._get_builtin_checker(rule.name)
-        if checker is not None:
-            checker(rule, layer_data)
+        # 内置规则模式匹配
+        if "min_width" in rule.name.lower() and rule.limit_um > 0:
+            w = layer_data.get("min_width", 0)
+            if w < rule.limit_um and w > 0:
+                self._violations.append(DRCViolation(
+                    rule=rule.name, layer=rule.layer,
+                    severity=rule.severity,
+                    message=f"最小线宽 {w:.3f}μm < {rule.limit_um}μm",
+                    count=layer_data.get("width_violations", 1),
+                ))
+        elif "min_spacing" in rule.name.lower() and rule.limit_um > 0:
+            s = layer_data.get("min_spacing", float("inf"))
+            if s < rule.limit_um:
+                self._violations.append(DRCViolation(
+                    rule=rule.name, layer=rule.layer,
+                    severity=rule.severity,
+                    message=f"最小间距 {s:.3f}μm < {rule.limit_um}μm",
+                    count=layer_data.get("spacing_violations", 1),
+                ))
+        elif "min_enclosure" in rule.name.lower() and rule.limit_um > 0:
+            e = layer_data.get("min_enclosure", float("inf"))
+            if e < rule.limit_um:
+                self._violations.append(DRCViolation(
+                    rule=rule.name, layer=rule.layer,
+                    severity=rule.severity,
+                    message=f"最小包围 {e:.3f}μm < {rule.limit_um}μm",
+                    count=1,
+                ))
+        elif "density" in rule.name.lower() and rule.limit_um > 0:
+            d = layer_data.get("density", 0.0)
+            if d < rule.limit_um:
+                self._violations.append(DRCViolation(
+                    rule=rule.name, layer=rule.layer,
+                    severity=rule.severity,
+                    message=f"密度 {d:.1%} < {rule.limit_um:.1%}",
+                    count=1,
+                ))
 
     def _register_builtin_rules(self) -> None:
         # SOI 标准 DRC 规则（对齐 imec iPP500 / GlobalFoundries）
@@ -625,6 +598,130 @@ class StatisticalAnalyzer:
 
     # ----- Layout-Aware Spatial Correlation -----
 
+    def _validate_layout_aware_inputs(
+        self,
+        device_positions: list[tuple[float, float]],
+        n_runs: int,
+        correlation_length_um: float,
+        seed: int | None,
+    ) -> None:
+        """验证 Layout-Aware MC 输入参数。"""
+        if seed is not None:
+            self._rng = np.random.default_rng(seed)
+        else:
+            self._rng = np.random.default_rng(42)
+
+        if not device_positions:
+            raise ValueError("device_positions 不能为空，至少需要一个器件位置")
+        if correlation_length_um <= 0:
+            raise ValueError(f"correlation_length_um 必须 > 0，得到 {correlation_length_um}")
+        if n_runs <= 0:
+            raise ValueError(f"n_runs 必须 > 0，得到 {n_runs}")
+
+    def _compute_distance_matrix(
+        self,
+        positions: NDArray[np.float64],
+    ) -> NDArray[np.float64]:
+        """计算器件间的距离矩阵。"""
+        n_devices = positions.shape[0]
+        dist_matrix = np.zeros((n_devices, n_devices))
+        for i in range(n_devices):
+            for j in range(n_devices):
+                dist_matrix[i, j] = float(np.linalg.norm(positions[i] - positions[j]))
+        return dist_matrix
+
+    def _build_covariance_matrix(
+        self,
+        dist_matrix: NDArray[np.float64],
+        sigma: float,
+        correlation_length_um: float,
+    ) -> NDArray[np.float64]:
+        """构建高斯协方差矩阵 (Lumerical INTERCONNECT 标准空间相关模型)。
+
+        高斯协方差函数: C(r) = σ² · exp(-2·(r/L)²)
+        这是光子学器件（波导宽度/高度变化）的标准空间相关模型。
+        """
+        n_devices = dist_matrix.shape[0]
+        ratio_sq = (dist_matrix / correlation_length_um) ** 2
+        cov = (sigma ** 2) * np.exp(-2.0 * ratio_sq)
+        cov += np.eye(n_devices) * 1e-10 * sigma ** 2
+        return cov
+
+    def _generate_multivariate_samples(
+        self,
+        cov: NDArray[np.float64],
+        n_samples: int,
+        nominal: float,
+    ) -> NDArray[np.float64]:
+        """使用 Cholesky 分解生成多元正态样本，失败时用 SVD 替代。"""
+        n_devices = cov.shape[0]
+        try:
+            L = np.linalg.cholesky(cov)
+            z = self._rng.standard_normal((n_devices, n_samples))
+            samples = nominal + L @ z
+        except np.linalg.LinAlgError:
+            eigvals, eigvecs = np.linalg.eigh(cov)
+            eigvals = np.maximum(eigvals, 0)
+            L = eigvecs @ np.diag(np.sqrt(eigvals))
+            z = self._rng.standard_normal((n_devices, n_samples))
+            samples = nominal + L @ z
+        return samples
+
+    def _generate_spatially_correlated_samples(
+        self,
+        dist_matrix: NDArray[np.float64],
+        n_runs: int,
+        correlation_length_um: float,
+    ) -> dict[str, NDArray[np.float64]]:
+        """对每个参数生成空间相关的样本。"""
+        param_names = sorted(self._params.keys())
+        param_samples: dict[str, NDArray[np.float64]] = {}
+
+        for name in param_names:
+            p = self._params[name]
+            if p.distribution == "gaussian":
+                cov = self._build_covariance_matrix(dist_matrix, p.sigma, correlation_length_um)
+                samples = self._generate_multivariate_samples(cov, n_runs, p.nominal)
+            elif p.distribution == "uniform":
+                cov = self._build_covariance_matrix(
+                    dist_matrix, p.sigma / np.sqrt(3), correlation_length_um
+                )
+                gauss_samples = self._generate_multivariate_samples(cov, n_runs, 0.0)
+                from scipy.stats import norm
+                u = norm.cdf(gauss_samples)
+                samples = p.lower + u * (p.upper - p.lower)
+            else:
+                n_devices = dist_matrix.shape[0]
+                samples = np.full((n_devices, n_runs), p.nominal)
+            param_samples[name] = samples
+
+        return param_samples
+
+    def _run_layout_aware_simulations(
+        self,
+        sim_fn: Callable[[dict[str, float], tuple[float, float]], float],
+        positions: NDArray[np.float64],
+        param_samples: dict[str, NDArray[np.float64]],
+        n_runs: int,
+    ) -> NDArray[np.float64]:
+        """运行 Layout-Aware 仿真并返回性能数组。"""
+        param_names = sorted(self._params.keys())
+        n_devices = positions.shape[0]
+        performances = np.zeros(n_runs)
+
+        for run_idx in range(n_runs):
+            perf_sum = 0.0
+            for dev_idx in range(n_devices):
+                params_i = {
+                    name: float(param_samples[name][dev_idx, run_idx])
+                    for name in param_names
+                }
+                pos = (float(positions[dev_idx, 0]), float(positions[dev_idx, 1]))
+                perf_sum += sim_fn(params_i, pos)
+            performances[run_idx] = perf_sum / n_devices
+
+        return performances
+
     def run_layout_aware_mc(
         self,
         sim_fn: Callable[[dict[str, float], tuple[float, float]], float],
@@ -670,111 +767,18 @@ class StatisticalAnalyzer:
         - AIM Photonics PDK Methodology: https://www.latitudeda.com/document/372
         - Luceda Circuit Analyzer: https://www.lucedaphotonics.com/luceda-circuit-analyzer
         """
-        if seed is not None:
-            self._rng = np.random.default_rng(seed)
-        else:
-            self._rng = np.random.default_rng(42)
-
-        if not device_positions:
-            raise ValueError("device_positions 不能为空，至少需要一个器件位置")
-        if correlation_length_um <= 0:
-            raise ValueError(f"correlation_length_um 必须 > 0，得到 {correlation_length_um}")
-        if n_runs <= 0:
-            raise ValueError(f"n_runs 必须 > 0，得到 {n_runs}")
+        self._validate_layout_aware_inputs(device_positions, n_runs, correlation_length_um, seed)
 
         n_devices = len(device_positions)
-        n_params = len(self._params)
-        param_names = sorted(self._params.keys())
+        positions = np.array(device_positions)
 
-        # 计算器件间的距离矩阵
-        positions = np.array(device_positions)  # (n_devices, 2)
-        dist_matrix = np.zeros((n_devices, n_devices))
-        for i in range(n_devices):
-            for j in range(n_devices):
-                dist_matrix[i, j] = float(np.linalg.norm(positions[i] - positions[j]))
-
-        # 高斯协方差矩阵 (Lumerical INTERCONNECT 标准空间相关模型):
-        #   ρ(d) = exp(-2·(d/L)²)   (高斯型，平方衰减)
-        # *Bug #v3.3-VER-4 修复*: 原实现用指数型 exp(-d/ξ)（Pelgrom MOSFET
-        # 匹配模型），不符合光子学 layout-aware yield 工业标准。
-        # Lumerical INTERCONNECT (Ansys Optics) 官方文档明确：
-        #   coeff = exp(-2(d/L)²)
-        # 这是光子学器件（波导宽度/高度变化）的标准空间相关模型，
-        # 用于 WDM 收发器、环谐振器等 layout-aware 良率分析。
-        # 文献:
-        # - Lumerical INTERCONNECT Monte Carlo spatial correlations
-        #   https://optics.ansys.com/hc/en-us/articles/360051762393
-        # - Bogaerts et al., "Layout-Aware Yield Prediction of Photonic Circuits", OFC 2018
-        #   https://fib.intec.ugent.be/download/pub_4125.pdf
-        # - Pelgrom et al., IEEE JSSC 1989 (MOSFET 匹配，指数模型适用于 IC，不适用于光子学)
-        # - Lumerical Layout-aware yield WDM transceiver
-        #   https://optics.ansys.com/hc/en-us/articles/360054921214
-        def _cov_matrix(sigma: float) -> NDArray[np.float64]:
-            ratio_sq = (dist_matrix / correlation_length_um) ** 2
-            cov = (sigma ** 2) * np.exp(-2.0 * ratio_sq)
-            # 添加小的正则化项确保正定
-            cov += np.eye(n_devices) * 1e-10 * sigma ** 2
-            return cov
-
-        # 对每个参数生成空间相关的样本
-        param_samples: dict[str, NDArray[np.float64]] = {}
-        for name in param_names:
-            p = self._params[name]
-            if p.distribution == "gaussian":
-                cov = _cov_matrix(p.sigma)
-                # 使用 Cholesky 分解生成多元正态样本
-                try:
-                    L = np.linalg.cholesky(cov)
-                    z = self._rng.standard_normal((n_devices, n_runs))
-                    samples = p.nominal + L @ z  # (n_devices, n_runs)
-                except np.linalg.LinAlgError:
-                    # 如果 Cholesky 失败，使用 SVD 方法
-                    eigvals, eigvecs = np.linalg.eigh(cov)
-                    eigvals = np.maximum(eigvals, 0)
-                    L = eigvecs @ np.diag(np.sqrt(eigvals))
-                    z = self._rng.standard_normal((n_devices, n_runs))
-                    samples = p.nominal + L @ z
-            elif p.distribution == "uniform":
-                # 均匀分布：先高斯再变换（近似）
-                # *Bug #v3.3-VER-1 修复*: 原 except Exception fall-back 到
-                # 无空间相关的简单均匀分布（丢失空间相关性，假数据）。
-                # 修复：与高斯分布一致，仅捕获 LinAlgError 用 SVD 替代；
-                # 其他异常（如 scipy 导入失败）必须 raise（R03 禁止 fall-back）。
-                cov = _cov_matrix(p.sigma / np.sqrt(3))
-                try:
-                    L = np.linalg.cholesky(cov)
-                except np.linalg.LinAlgError:
-                    # Cholesky 失败（半正定非正定），用 SVD 替代（数学等价）
-                    eigvals, eigvecs = np.linalg.eigh(cov)
-                    eigvals = np.maximum(eigvals, 0)
-                    L = eigvecs @ np.diag(np.sqrt(eigvals))
-                z = self._rng.standard_normal((n_devices, n_runs))
-                gauss_samples = L @ z
-                # 高斯到均匀的变换（通过经验 CDF 近似）
-                if not _HAS_SCIPY:
-                    raise RuntimeError(
-                        "scipy 不可用，无法执行 uniform 分布的 layout-aware Monte Carlo。"
-                        "请安装 scipy: pip install scipy"
-                    )
-                u = _norm_cdf(gauss_samples)
-                samples = p.lower + u * (p.upper - p.lower)
-            else:
-                samples = np.full((n_devices, n_runs), p.nominal)
-            param_samples[name] = samples
-
-        # 运行仿真
-        performances = np.zeros(n_runs)
-        for run_idx in range(n_runs):
-            # 对每个器件独立仿真并取平均（或累加，视具体应用而定）
-            perf_sum = 0.0
-            for dev_idx in range(n_devices):
-                params_i = {
-                    name: float(param_samples[name][dev_idx, run_idx])
-                    for name in param_names
-                }
-                pos = (float(positions[dev_idx, 0]), float(positions[dev_idx, 1]))
-                perf_sum += sim_fn(params_i, pos)
-            performances[run_idx] = perf_sum / n_devices
+        dist_matrix = self._compute_distance_matrix(positions)
+        param_samples = self._generate_spatially_correlated_samples(
+            dist_matrix, n_runs, correlation_length_um
+        )
+        performances = self._run_layout_aware_simulations(
+            sim_fn, positions, param_samples, n_runs
+        )
 
         self._results = {
             "performance": performances,
@@ -975,11 +979,8 @@ def _test() -> None:
     def sim_layout(p: dict[str, float], pos: tuple[float, float]) -> float:
         return 1550.0 - 2.0 * (p["waveguide_width"] - 0.45)
 
-    lamc = stats.run_layout_aware_mc(
-        sim_layout,
-        device_positions=[(0.0, 0.0), (500.0, 0.0), (1000.0, 0.0)],
-        n_runs=100,
-    )
+    lamc = stats.run_layout_aware_mc(sim_layout, n_runs=100,
+                                      die_size_um=(2000, 2000))
     assert lamc["layout_aware"]
     print(f"Layout-Aware MC: mean={lamc['mean']:.3f}nm, std={lamc['std']:.3f}nm")
 

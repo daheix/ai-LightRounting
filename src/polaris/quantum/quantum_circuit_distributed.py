@@ -323,6 +323,93 @@ class QuantumCircuitSimulator:
         self._apply_controlled_z(control, target)
         self._gates_applied.append({"gate": "KLM_CZ", "control": control, "target": target})
 
+    def _validate_klm_cnot_inputs(self, control: int, target: int) -> None:
+        """验证 KLM CNOT 输入参数。"""
+        self._validate_qubit(control)
+        self._validate_qubit(target)
+        if control == target:
+            raise ValueError("KLM CNOT 控制位和目标位不能相同")
+
+    def _compute_post_select_probability(self) -> float:
+        """计算 KLM CNOT 后选择成功率并验证有效性。"""
+        post_select_prob = _klm_cnot_post_select_probability()
+        if not (0.0 < post_select_prob < 1.0):
+            raise RuntimeError(
+                f"KLM CNOT 后选择成功率越界: {post_select_prob}（应在 (0,1)）。"
+                f"电路实现可能错误。"
+            )
+        return float(post_select_prob)
+
+    def _perform_post_selection_sampling(
+        self,
+        post_select_prob: float,
+        rng: np.random.Generator | None,
+    ) -> tuple[bool, np.random.Generator]:
+        """执行后选择概率抽样，返回是否成功及使用的 rng。"""
+        if rng is None:
+            rng = np.random.default_rng()
+        u = rng.random()
+        post_selected = bool(u < post_select_prob)
+        return post_selected, rng
+
+    def _handle_klm_cnot_failure(
+        self,
+        control: int,
+        target: int,
+        post_select_prob: float,
+    ) -> dict[str, Any]:
+        """处理 KLM CNOT 后选择失败分支。"""
+        self._gates_applied.append({
+            "gate": "KLM_CNOT", "control": control, "target": target,
+            "post_selected": False,
+            "success_prob_simulated": post_select_prob,
+        })
+        return {
+            "success_prob_simulated": post_select_prob,
+            "success_prob_reference": 1.0 / 9.0,
+            "post_selected": False,
+            "scheme": "Ralph_2002_KLM_simplified",
+            "num_attempts": 1,
+            "note": (
+                "KLM CNOT 后选择失败，数据量子比特状态保持不变。"
+                "调用方应重试（直至 post_selected=True）或告警。"
+            ),
+        }
+
+    def _verify_unitarity(self, norm_before: float) -> None:
+        """验证酉操作后态矢量模长守恒。"""
+        norm_after = float(np.sqrt(np.sum(np.abs(self._state_vector) ** 2)))
+        if abs(norm_after - norm_before) > 1e-10:
+            raise RuntimeError(
+                f"KLM CNOT 应用后态矢量模长变化: {norm_before} → {norm_after}。"
+                f"CNOT 是酉操作，模长应守恒。"
+            )
+
+    def _handle_klm_cnot_success(
+        self,
+        control: int,
+        target: int,
+        post_select_prob: float,
+    ) -> dict[str, Any]:
+        """处理 KLM CNOT 后选择成功分支。"""
+        norm_before = float(np.sqrt(np.sum(np.abs(self._state_vector) ** 2)))
+        self._apply_cnot_matrix(control, target)
+        self._verify_unitarity(norm_before)
+
+        self._gates_applied.append({
+            "gate": "KLM_CNOT", "control": control, "target": target,
+            "post_selected": True,
+            "success_prob_simulated": post_select_prob,
+        })
+
+        return {
+            "success_prob_simulated": post_select_prob,
+            "success_prob_reference": 1.0 / 9.0,
+            "post_selected": True,
+            "scheme": "Ralph_2002_KLM_simplified",
+            "num_attempts": 1,
+        }
+
     def apply_klm_cnot(
         self,
         control: int,
@@ -385,83 +472,15 @@ class QuantumCircuitSimulator:
             - scheme: 方案名称
             - num_attempts: 抽样次数（始终 1，调用方可重试）
         """
-        # 自包含物理仿真（不依赖 polaris.sim，避免 sax 强依赖）
-        # R03: 失败即 raise，禁止 fall-back
-        self._validate_qubit(control)
-        self._validate_qubit(target)
-        if control == target:
-            raise ValueError("KLM CNOT 控制位和目标位不能相同")
+        self._validate_klm_cnot_inputs(control, target)
 
-        # 1. 物理: 构建 4 模式 KLM CNOT 电路并计算后选择成功率
-        # 电路模式: control(0), target(1), aux1(2), aux2(3)
-        # 分束器网络: BS1(c,a1,θ₁=arccos√(2/3)), BS2(t,a2,θ₂=arccos√(2/3)),
-        #            BS3(a1,a2,π/4), BS4(c,t,θ₄=arccos√(1/3))
-        # 输入: |1,1,1,1⟩（4 光子 4 模式，含 2 个辅助光子）
-        # 后选择: 辅助模式 aux1, aux2 各探测到 1 光子
-        post_select_prob = _klm_cnot_post_select_probability()
-        if not (0.0 < post_select_prob < 1.0):
-            raise RuntimeError(
-                f"KLM CNOT 后选择成功率越界: {post_select_prob}（应在 (0,1)）。"
-                f"电路实现可能错误。"
-            )
+        post_select_prob = self._compute_post_select_probability()
+        post_selected, _ = self._perform_post_selection_sampling(post_select_prob, rng)
 
-        # 2. 后选择抽样: 以 post_select_prob 为成功率决定本轮是否成功
-        # KLM 是概率性门，物理实验中需重复直至成功或达上限
-        if rng is None:
-            rng = np.random.default_rng()
-        u = rng.random()
-        post_selected = bool(u < post_select_prob)
-
-        # 3. 按后选择结果分支处理
         if not post_selected:
-            # 失败分支: 数据量子比特状态保持不变（门未施加）
-            # 调用方根据 post_selected=False 决定重试或告警（R03）
-            self._gates_applied.append({
-                "gate": "KLM_CNOT", "control": control, "target": target,
-                "post_selected": False,
-                "success_prob_simulated": float(post_select_prob),
-            })
-            return {
-                "success_prob_simulated": float(post_select_prob),
-                "success_prob_reference": 1.0 / 9.0,  # Ralph 2002 ~1/9
-                "post_selected": False,
-                "scheme": "Ralph_2002_KLM_simplified",
-                "num_attempts": 1,
-                "note": (
-                    "KLM CNOT 后选择失败，数据量子比特状态保持不变。"
-                    "调用方应重试（直至 post_selected=True）或告警。"
-                ),
-            }
+            return self._handle_klm_cnot_failure(control, target, post_select_prob)
 
-        # 成功分支: 应用理想 CNOT 并按 1/√p 重新归一化态矢量
-        # （条件测量导致态矢量模长收缩 1/√p，对应概率 p）
-        norm_before = float(np.sqrt(np.sum(np.abs(self._state_vector) ** 2)))
-        self._apply_cnot_matrix(control, target)
-        # 归一化: 测量后成功分支的态矢量应重新归一化到 |ψ'|=1
-        # 物理上，条件测量将态矢量投影到成功子空间，模长收缩 1/√p
-        # 重新归一化: |ψ'> = CNOT|ψ> / ||CNOT|ψ>||  (CNOT 是酉的，模长不变)
-        # 但后选择成功本身对应概率 p，记录此概率供调用方统计
-        norm_after = float(np.sqrt(np.sum(np.abs(self._state_vector) ** 2)))
-        if abs(norm_after - norm_before) > 1e-10:
-            raise RuntimeError(
-                f"KLM CNOT 应用后态矢量模长变化: {norm_before} → {norm_after}。"
-                f"CNOT 是酉操作，模长应守恒。"
-            )
-
-        # 4. 记录
-        self._gates_applied.append({
-            "gate": "KLM_CNOT", "control": control, "target": target,
-            "post_selected": True,
-            "success_prob_simulated": float(post_select_prob),
-        })
-
-        return {
-            "success_prob_simulated": float(post_select_prob),
-            "success_prob_reference": 1.0 / 9.0,  # Ralph 2002 ~1/9
-            "post_selected": True,
-            "scheme": "Ralph_2002_KLM_simplified",
-            "num_attempts": 1,
-        }
+        return self._handle_klm_cnot_success(control, target, post_select_prob)
 
     def measure(self, qubit: int, shots: int = 1000) -> dict[int, int]:
         """测量量子比特（投影测量）。
@@ -634,6 +653,80 @@ class BB84Protocol:
         self.key_length = key_length
         self._rng = np.random.default_rng(42)
 
+    def _generate_alice_bits(self, n_raw: int) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
+        """生成 Alice 的随机比特和基矢。"""
+        alice_bits = self._rng.integers(0, 2, n_raw)
+        alice_bases = self._rng.integers(0, 2, n_raw)
+        return alice_bits, alice_bases
+
+    def _apply_channel_loss(self, n_raw: int, channel_loss_db: float) -> NDArray[np.bool_]:
+        """应用信道损耗，返回存活光子掩码。"""
+        survival_prob = 10 ** (-channel_loss_db / 10)
+        return self._rng.random(n_raw) < survival_prob
+
+    def _apply_eavesdropping(
+        self,
+        alice_bits: NDArray[np.int64],
+        alice_bases: NDArray[np.int64],
+        eavesdrop: bool,
+    ) -> NDArray[np.int64]:
+        """应用 Eve 的 intercept-resend 攻击，返回传输后的比特。"""
+        if not eavesdrop:
+            return alice_bits.copy()
+
+        n_raw = len(alice_bits)
+        eve_bases = self._rng.integers(0, 2, n_raw)
+        eve_basis_mismatch = eve_bases != alice_bases
+        eve_bits = alice_bits.copy()
+        eve_bits[eve_basis_mismatch] = self._rng.integers(
+            0, 2, np.sum(eve_basis_mismatch)
+        )
+        return eve_bits
+
+    def _simulate_bob_measurement(
+        self,
+        transmitted_bits: NDArray[np.int64],
+        alice_bases: NDArray[np.int64],
+        bob_bases: NDArray[np.int64],
+    ) -> NDArray[np.int8]:
+        """模拟 Bob 的测量过程。"""
+        bob_bits = transmitted_bits.copy().astype(np.int8)
+        mismatch = alice_bases != bob_bases
+        bob_bits[mismatch] = self._rng.integers(0, 2, np.sum(mismatch))
+        return bob_bits
+
+    def _compute_qber(
+        self,
+        sifted_alice: NDArray[np.int64],
+        sifted_bob: NDArray[np.int8],
+    ) -> float:
+        """计算量子比特误码率 (QBER)。"""
+        if len(sifted_alice) > 0:
+            return float(np.mean(sifted_alice != sifted_bob))
+        return 1.0
+
+    def _bits_to_hex(self, bits: NDArray[np.int64]) -> str:
+        """将二进制位数组转换为十六进制字符串。"""
+        n_bits = len(bits)
+        n_bytes = (n_bits + 7) // 8
+        packed = np.zeros(n_bytes, dtype=np.uint8)
+        for i, bit in enumerate(bits):
+            packed[i // 8] |= (int(bit) & 1) << (7 - (i % 8))
+        return packed.tobytes().hex()
+
+    def _extract_final_key(
+        self,
+        sifted_alice: NDArray[np.int64],
+        is_secure: bool,
+    ) -> tuple[NDArray[np.int8], str, str]:
+        """提取最终密钥，返回 (key_array, key_bin, key_hex)。"""
+        if is_secure and len(sifted_alice) >= self.key_length:
+            final_key = sifted_alice[:self.key_length].astype(np.int8)
+            key_bin = "".join(str(int(b)) for b in final_key)
+            key_hex = self._bits_to_hex(final_key)
+            return final_key, key_bin, key_hex
+        return np.array([], dtype=np.int8), "", ""
+
     def simulate(self, eavesdrop: bool = False,
                  channel_loss_db: float = 3.0,
                  error_rate_target: float = 0.11) -> dict[str, Any]:
@@ -680,77 +773,23 @@ class BB84Protocol:
         - ETSI GS QKD 002 QKD 网络实施规范（城域网链路损耗 2-5 dB）
           https://www.etsi.org/deliver/etsi_gs/QKD/001_099/002/
         """
-        # 1. Alice 生成随机比特和基矢
-        n_raw = self.key_length * 4  # 过采样
-        alice_bits = self._rng.integers(0, 2, n_raw)
-        alice_bases = self._rng.integers(0, 2, n_raw)  # 0=Z, 1=X
+        n_raw = self.key_length * 4
 
-        # 2. Bob 随机选择基矢测量
+        alice_bits, alice_bases = self._generate_alice_bits(n_raw)
         bob_bases = self._rng.integers(0, 2, n_raw)
+        survived = self._apply_channel_loss(n_raw, channel_loss_db)
 
-        # 3. 信道损耗: 部分光子丢失
-        survival_prob = 10 ** (-channel_loss_db / 10)
-        survived = self._rng.random(n_raw) < survival_prob
+        transmitted_bits = self._apply_eavesdropping(alice_bits, alice_bases, eavesdrop)
+        bob_bits = self._simulate_bob_measurement(transmitted_bits, alice_bases, bob_bases)
 
-        # 4. 窃听 (Eve intercept-resend 攻击，物理准确模型)
-        # R3-P2-8 修复: 替代旧 ``eavesdrop_errors = rng.random < 0.25`` 简化模型
-        if eavesdrop:
-            eve_bases = self._rng.integers(0, 2, n_raw)
-            # Eve 基矢与 Alice 不匹配时，Eve 测量结果随机化
-            eve_basis_mismatch = eve_bases != alice_bases
-            # Eve 测量结果: 基矢匹配→正确，不匹配→随机
-            eve_bits = alice_bits.copy()
-            eve_bits[eve_basis_mismatch] = self._rng.integers(
-                0, 2, np.sum(eve_basis_mismatch)
-            )
-            # Eve 重发后，Bob 测量 Eve 的比特（而非 Alice 原始比特）
-            # 这会在 Bob 基矢==Alice 基矢但 Eve 基矢≠Alice 基矢时引入 50% 误差
-            alice_bits_after_eve = eve_bits  # Eve 重发的是她测量的比特
-        else:
-            alice_bits_after_eve = alice_bits
-
-        # 5. Bob 测量结果
-        bob_bits = alice_bits_after_eve.copy().astype(np.int8)
-        # 基矢不匹配 → 随机结果
-        mismatch = alice_bases != bob_bases
-        bob_bits[mismatch] = self._rng.integers(0, 2, np.sum(mismatch))
-
-        # 6. 基矢比对 (公开信道)
         same_base = (alice_bases == bob_bases) & survived
-        sifted_alice = alice_bits[same_base]  # Alice 原始比特
+        sifted_alice = alice_bits[same_base]
         sifted_bob = bob_bits[same_base]
 
-        # 7. QBER 估算
-        if len(sifted_alice) > 0:
-            qber = float(np.mean(sifted_alice != sifted_bob))
-        else:
-            qber = 1.0
-
-        # 8. 安全判定
+        qber = self._compute_qber(sifted_alice, sifted_bob)
         is_secure = qber < error_rate_target
 
-        # 9. 隐私放大 → 最终密钥
-        # R05 Bug 修复 v3.3-Q-5: 原变量名 key_hex 实际内容是二进制串（"0110101"），
-        # 命名与内容不符。修复：key_bin=二进制串，key_hex=位打包后的真正十六进制
-        # 规则: R02 学术诚信 / R05 Bug 必修
-        # 文献: BB84 协议密钥表示
-        #   Bennett & Brassard 1984 https://doi.org/10.1007/978-1-4613-9411-6_5
-        # 文献: 量子密钥分发标准 ETSI GS QKD 004
-        #   https://www.etsi.org/deliver/etsi_gs/QKD/001_099/004/
-        if is_secure and len(sifted_alice) >= self.key_length:
-            final_key = sifted_alice[:self.key_length]
-            key_bin = "".join(str(int(b)) for b in final_key)
-            # 位打包为字节再转 hex（每 8 bit → 1 字节 → 2 hex 字符）
-            n_bits = len(final_key)
-            n_bytes = (n_bits + 7) // 8
-            packed = np.zeros(n_bytes, dtype=np.uint8)
-            for i, bit in enumerate(final_key):
-                packed[i // 8] |= (int(bit) & 1) << (7 - (i % 8))
-            key_hex = packed.tobytes().hex()
-        else:
-            final_key = np.array([], dtype=np.int8)
-            key_bin = ""
-            key_hex = ""
+        final_key, key_bin, key_hex = self._extract_final_key(sifted_alice, is_secure)
 
         return {
             "raw_bits": n_raw,

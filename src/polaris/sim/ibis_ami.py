@@ -98,6 +98,180 @@ class IBISParser:
         self._lines = self._text.splitlines()
         self.models: dict[str, IBISModel] = {}
 
+    @staticmethod
+    def _parse_iv_data(rows: list[list[str]]) -> NDArray[np.float64]:
+        """解析 IV 数据行。"""
+        data = []
+        for row in rows:
+            try:
+                v = float(row[0])
+                i = float(row[1])
+                data.append([v, i])
+            except (ValueError, IndexError):
+                continue
+        return np.array(data, dtype=np.float64) if data else np.zeros((0, 2))
+
+    def _finalize_current_model(
+        self,
+        current_model: IBISModel | None,
+        current_model_name: str,
+    ) -> None:
+        """保存当前模型到字典。"""
+        if current_model and current_model_name:
+            self.models[current_model_name] = current_model
+
+    def _parse_ramp(
+        self,
+        current_model: IBISModel,
+        ramp_line: str,
+    ) -> None:
+        """解析 ramp 字段（dV/dt 斜率参数）。"""
+        if current_model.ramp is not None:
+            return
+        parts = re.findall(r"[\w.]+", ramp_line)
+        if len(parts) < 4:
+            return
+        try:
+            dV_r = float(parts[0])
+            dt_r = float(parts[1])
+            dV_f = float(parts[2])
+            dt_f = float(parts[3])
+            r_load = float(parts[4]) if len(parts) > 4 else 50.0
+            current_model.ramp = {
+                "dV_r": dV_r, "dt_r": dt_r,
+                "dV_f": dV_f, "dt_f": dt_f,
+                "r_load": r_load,
+            }
+        except (ValueError, IndexError) as e:
+            raise ValueError(
+                f"IBIS ramp 字段解析失败 (model={current_model.name!r}, "
+                f"line={ramp_line!r}): {e}"
+            ) from e
+
+    def _parse_c_comp(
+        self,
+        current_model: IBISModel,
+        value_line: str,
+    ) -> None:
+        """解析 C_comp 寄生电容字段。"""
+        parts = value_line.strip().split()
+        try:
+            vals = [float(p) for p in parts[:3]]
+            current_model.c_comp = float(np.mean(vals))
+        except ValueError as e:
+            raise ValueError(
+                f"IBIS c_comp 字段解析失败 (model={current_model.name!r}, "
+                f"parts={parts!r}): {e}"
+            ) from e
+
+    def _handle_keyword(
+        self,
+        keyword: str,
+        rest_line: str,
+        current_component: str,
+        current_model_name: str,
+        current_model: IBISModel | None,
+        in_pullup: bool,
+        in_pulldown: bool,
+        in_gc: bool,
+        in_pc: bool,
+        pullup_data: list[list[str]],
+        pulldown_data: list[list[str]],
+        gc_data: list[list[str]],
+        pc_data: list[list[str]],
+    ) -> tuple[str, str, IBISModel | None, bool, bool, bool, bool, list[list[str]], list[list[str]], list[list[str]], list[list[str]]]:
+        """处理 IBIS 关键字行，返回更新后的解析状态。"""
+        if keyword == "component":
+            self._finalize_current_model(current_model, current_model_name)
+            current_model_name = ""
+            current_model = None
+            name_line = rest_line.strip()
+            if name_line:
+                current_component = name_line.split()[0] if name_line else ""
+
+        elif keyword == "model":
+            self._finalize_current_model(current_model, current_model_name)
+            model_name = rest_line.strip().split()[0] if rest_line.strip() else ""
+            current_model_name = model_name
+            current_model = IBISModel(name=model_name, kind=IBISKind.OTHER)
+
+        elif keyword in ("end component", "end model"):
+            self._finalize_current_model(current_model, current_model_name)
+            current_model_name = ""
+            current_model = None
+
+        elif keyword == "pullup":
+            in_pullup, in_pulldown, in_gc, in_pc = True, False, False, False
+            pullup_data = []
+        elif keyword == "end pullup":
+            if current_model is not None:
+                current_model.pullup = self._parse_iv_data(pullup_data)
+            in_pullup = False
+
+        elif keyword == "pulldown":
+            in_pullup, in_pulldown, in_gc, in_pc = False, True, False, False
+            pulldown_data = []
+        elif keyword == "end pulldown":
+            if current_model is not None:
+                current_model.pulldown = self._parse_iv_data(pulldown_data)
+            in_pulldown = False
+
+        elif keyword == "ground clamp":
+            in_pullup, in_pulldown, in_gc, in_pc = False, False, True, False
+            gc_data = []
+        elif keyword == "end ground clamp":
+            if current_model is not None:
+                current_model.ground_clamp = self._parse_iv_data(gc_data)
+            in_gc = False
+
+        elif keyword == "power clamp":
+            in_pullup, in_pulldown, in_gc, in_pc = False, False, False, True
+            pc_data = []
+        elif keyword == "end power clamp":
+            if current_model is not None:
+                current_model.power_clamp = self._parse_iv_data(pc_data)
+            in_pc = False
+
+        elif keyword == "ramp":
+            if current_model is not None:
+                self._parse_ramp(current_model, rest_line.strip())
+
+        elif keyword == "c_comp":
+            if current_model is not None:
+                self._parse_c_comp(current_model, rest_line)
+
+        elif keyword in ("voltage range", "typ", "min", "max"):
+            pass
+
+        return (
+            current_component, current_model_name, current_model,
+            in_pullup, in_pulldown, in_gc, in_pc,
+            pullup_data, pulldown_data, gc_data, pc_data,
+        )
+
+    def _collect_data_line(
+        self,
+        line: str,
+        in_pullup: bool,
+        in_pulldown: bool,
+        in_gc: bool,
+        in_pc: bool,
+        pullup_data: list[list[str]],
+        pulldown_data: list[list[str]],
+        gc_data: list[list[str]],
+        pc_data: list[list[str]],
+    ) -> tuple[list[list[str]], list[list[str]], list[list[str]], list[list[str]]]:
+        """收集数据行到对应的 IV 数据表中。"""
+        if in_pullup:
+            pullup_data.append(re.split(r"[\s,]+", line))
+        elif in_pulldown:
+            pulldown_data.append(re.split(r"[\s,]+", line))
+        elif in_gc:
+            gc_data.append(re.split(r"[\s,]+", line))
+        elif in_pc:
+            pc_data.append(re.split(r"[\s,]+", line))
+        return pullup_data, pulldown_data, gc_data, pc_data
+
     def parse(self) -> dict[str, IBISModel]:
         """解析整个 IBIS 文件。"""
         current_component = ""
@@ -112,17 +286,6 @@ class IBISParser:
         gc_data: list[list[str]] = []
         pc_data: list[list[str]] = []
 
-        def _parse_iv_data(rows: list[list[str]]) -> NDArray[np.float64]:
-            data = []
-            for row in rows:
-                try:
-                    v = float(row[0])
-                    i = float(row[1])
-                    data.append([v, i])
-                except (ValueError, IndexError):
-                    continue
-            return np.array(data, dtype=np.float64) if data else np.zeros((0, 2))
-
         i = 0
         while i < len(self._lines):
             line = self._lines[i].strip()
@@ -131,132 +294,27 @@ class IBISParser:
             if not line or line.startswith("!"):
                 continue
 
-            # [Component]
             m = re.match(r"\[(.*?)\]", line)
             if m:
                 keyword = m.group(1).strip().lower()
+                rest_line = line[m.end():]
+                (
+                    current_component, current_model_name, current_model,
+                    in_pullup, in_pulldown, in_gc, in_pc,
+                    pullup_data, pulldown_data, gc_data, pc_data,
+                ) = self._handle_keyword(
+                    keyword, rest_line, current_component,
+                    current_model_name, current_model,
+                    in_pullup, in_pulldown, in_gc, in_pc,
+                    pullup_data, pulldown_data, gc_data, pc_data,
+                )
+            else:
+                pullup_data, pulldown_data, gc_data, pc_data = self._collect_data_line(
+                    line, in_pullup, in_pulldown, in_gc, in_pc,
+                    pullup_data, pulldown_data, gc_data, pc_data,
+                )
 
-                if keyword == "component":
-                    if current_model and current_model_name:
-                        self.models[current_model_name] = current_model
-                    current_model_name = ""
-                    current_model = None
-                    # 提取组件名
-                    name_line = line[m.end():].strip()
-                    if name_line:
-                        current_component = name_line.split()[0] if name_line else ""
-
-                elif keyword == "model":
-                    if current_model and current_model_name:
-                        self.models[current_model_name] = current_model
-                    model_name = line[m.end():].strip().split()[0] if line[m.end():].strip() else ""
-                    current_model_name = model_name
-                    current_model = IBISModel(name=model_name, kind=IBISKind.OTHER)
-
-                elif keyword in ("end component", "end model"):
-                    if current_model and current_model_name:
-                        self.models[current_model_name] = current_model
-                    current_model_name = ""
-                    current_model = None
-
-                # 伏安特性表格
-                elif keyword == "pullup":
-                    in_pullup, in_pulldown, in_gc, in_pc = True, False, False, False
-                    pullup_data = []
-                elif keyword == "end pullup":
-                    if current_model is not None:
-                        current_model.pullup = _parse_iv_data(pullup_data)
-                    in_pullup = False
-
-                elif keyword == "pulldown":
-                    in_pullup, in_pulldown, in_gc, in_pc = False, True, False, False
-                    pulldown_data = []
-                elif keyword == "end pulldown":
-                    if current_model is not None:
-                        current_model.pulldown = _parse_iv_data(pulldown_data)
-                    in_pulldown = False
-
-                elif keyword == "ground clamp":
-                    in_pullup, in_pulldown, in_gc, in_pc = False, False, True, False
-                    gc_data = []
-                elif keyword == "end ground clamp":
-                    if current_model is not None:
-                        current_model.ground_clamp = _parse_iv_data(gc_data)
-                    in_gc = False
-
-                elif keyword == "power clamp":
-                    in_pullup, in_pulldown, in_gc, in_pc = False, False, False, True
-                    pc_data = []
-                elif keyword == "end power clamp":
-                    if current_model is not None:
-                        current_model.power_clamp = _parse_iv_data(pc_data)
-                    in_pc = False
-
-                # Ramp
-                elif keyword == "ramp":
-                    if current_model is not None and current_model.ramp is None:
-                        # 解析 dV/dt
-                        ramp_line = line[m.end():].strip()
-                        parts = re.findall(r"[\w.]+", ramp_line)
-                        if len(parts) >= 4:
-                            try:
-                                dV_r = float(parts[0])
-                                dt_r = float(parts[1])
-                                dV_f = float(parts[2])
-                                dt_f = float(parts[3])
-                                r_load = float(parts[4]) if len(parts) > 4 else 50.0
-                                current_model.ramp = {
-                                    "dV_r": dV_r, "dt_r": dt_r,
-                                    "dV_f": dV_f, "dt_f": dt_f,
-                                    "r_load": r_load,
-                                }
-                            except (ValueError, IndexError) as e:
-                                # R05 Bug 修复 v3.3-IBIS-1: ramp 字段解析失败必须 raise
-                                # 原 fall-back `pass` 会静默丢失损坏 IBIS 文件，掩盖后续仿真错误
-                                # 规则: R03 禁止 fall-back / R05 Bug 必修
-                                # 文献: IBIS v5.0 §6 ramp 字段必须可解析
-                                #   https://www.ibis.org/ver5.0/ver5_0.txt
-                                raise ValueError(
-                                    f"IBIS ramp 字段解析失败 (model={current_model.name!r}, "
-                                    f"line={ramp_line!r}): {e}"
-                                ) from e
-
-                # C_comp
-                elif keyword == "c_comp":
-                    if current_model is not None:
-                        parts = line[m.end():].strip().split()
-                        try:
-                            vals = [float(p) for p in parts[:3]]
-                            current_model.c_comp = float(np.mean(vals))  # typ
-                        except ValueError as e:
-                            # R05 Bug 修复 v3.3-IBIS-2: c_comp 字段解析失败必须 raise
-                            # c_comp 是 IBIS 模型必备电容参数，缺失会导致信号完整性仿真错误
-                            # 原 fall-back `pass` 静默丢失损坏 IBIS 文件
-                            # 规则: R03 禁止 fall-back / R05 Bug 必修
-                            # 文献: IBIS v5.0 §5 C_comp 必备字段
-                            #   https://www.ibis.org/ver5.0/ver5_0.txt
-                            raise ValueError(
-                                f"IBIS c_comp 字段解析失败 (model={current_model.name!r}, "
-                                f"parts={parts!r}): {e}"
-                            ) from e
-
-                elif keyword in ("voltage range", "typ", "min", "max"):
-                    pass  # 元数据
-
-            # 数据行收集
-            elif in_pullup:
-                pullup_data.append(re.split(r"[\s,]+", line))
-            elif in_pulldown:
-                pulldown_data.append(re.split(r"[\s,]+", line))
-            elif in_gc:
-                gc_data.append(re.split(r"[\s,]+", line))
-            elif in_pc:
-                pc_data.append(re.split(r"[\s,]+", line))
-
-        # 最后模型
-        if current_model and current_model_name:
-            self.models[current_model_name] = current_model
-
+        self._finalize_current_model(current_model, current_model_name)
         logger.info("IBIS 解析完成，共 %d 个模型", len(self.models))
         return self.models
 

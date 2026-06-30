@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -279,7 +280,7 @@ class HierarchicalDRC:
                 if id(pj) <= pi_id:
                     continue
                 s = self._polygon_pair_min_distance(pi, pj)
-                if 0.0 < s < threshold:
+                if s < threshold:
                     merged = BVH._merge_bboxes([pi_bbox, BVH._polygon_bbox(pj)])
                     violations.append(
                         self._make_violation(
@@ -416,31 +417,50 @@ class HierarchicalDRC:
 
     @classmethod
     def _polygon_min_width(cls, poly: np.ndarray) -> float:
-        """多边形最小宽度。公式: Width=min|(a2-a1)×dir1|。来源: OpenDRC IV-D。"""
+        """多边形最小宽度（旋转卡尺法 Rotating Calipers）。
+
+        算法: 对每条边，计算所有顶点到该边的最大距离（即该边方向上的宽度），
+        取所有边方向上宽度的最小值，即为多边形的最小宽度。
+        适用于凸多边形，对凹多边形给出保守估计（上界）。
+
+        文献:
+        - Godfried T. Toussaint, "Solving Geometric Problems with the Rotating Calipers",
+          Proceedings of IEEE MELECON 1983, pp. 1-5.
+          https://www.cs.mcgill.ca/~godfried/publications/calipers.pdf
+        - M. A. Lopez & S. Reisner, "On the Minimal Width of a Convex Polygon",
+          Information Processing Letters, 1985, Vol. 20, No. 4, pp. 173-178.
+          DOI: 10.1016/0020-0190(85)90095-4
+        - de Berg et al., "Computational Geometry: Algorithms and Applications",
+          Springer 2008, Chapter 4 (Linear Programming) - width as smallest enclosing strip.
+          DOI: 10.1007/978-3-540-77974-2
+        - KLayout DRC width check:
+          https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+        - OpenDRC, He et al., DAC 2023, DOI: 10.1109/DAC56929.2023.10247734
+        - PDRC, Jiang et al., DAC 2024,
+          http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+        """
         n = len(poly)
         if n < 3:
             return float("inf")
         min_w = float("inf")
-        edges = [(poly[i], poly[(i + 1) % n]) for i in range(n)]
         for i in range(n):
-            a1, b1 = edges[i]
-            d1 = b1 - a1
-            n1 = float(np.linalg.norm(d1))
-            if n1 < 1e-12:
+            x1, y1 = float(poly[i][0]), float(poly[i][1])
+            x2, y2 = float(poly[(i + 1) % n][0]), float(poly[(i + 1) % n][1])
+            dx, dy = x2 - x1, y2 - y1
+            seg_len = math.hypot(dx, dy)
+            if seg_len < 1e-12:
                 continue
-            dir1 = d1 / n1
-            for j in range(i + 1, n):
-                a2, b2 = edges[j]
-                d2 = b2 - a2
-                n2 = float(np.linalg.norm(d2))
-                if n2 < 1e-12:
+            max_dist = 0.0
+            for j in range(n):
+                if j == i or j == (i + 1) % n:
                     continue
-                if abs(float(np.dot(dir1, d2 / n2))) < 0.95:
-                    continue
-                cross = abs(float((a2[0] - a1[0]) * dir1[1] - (a2[1] - a1[1]) * dir1[0]))
-                if cross < min_w:
-                    min_w = cross
-        return min_w
+                dist = abs(-dy * (float(poly[j][0]) - x1)
+                           + dx * (float(poly[j][1]) - y1)) / seg_len
+                if dist > max_dist:
+                    max_dist = dist
+            if max_dist > 0 and max_dist < min_w:
+                min_w = max_dist
+        return min_w if min_w != float("inf") else float("inf")
 
     @classmethod
     def _polygon_pair_min_distance(
@@ -461,13 +481,75 @@ class HierarchicalDRC:
     def _segment_segment_distance(
         cls, a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
     ) -> float:
-        """两线段最短距离（4 个端点到对方线段距离的最小值）。"""
+        """两线段最短距离（含相交检测）。
+
+        算法: 先检测线段是否相交（相交则距离为 0），否则取 4 个端点到对方
+        线段距离的最小值。使用叉积方向判定法（straddling test）检测相交。
+
+        文献:
+        - Christer Ericson, "Real-Time Collision Detection", Morgan Kaufmann 2005,
+          Chapter 5 (Distance of Linear Components)
+          https://realtimecollisiondetection.net/
+        - de Berg et al., "Computational Geometry: Algorithms and Applications",
+          Springer 2008, Chapter 2 (Line Segment Intersection)
+          DOI: 10.1007/978-3-540-77974-2
+        - KLayout DRC space check:
+          https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+        - OpenDRC, He et al., DAC 2023, DOI: 10.1109/DAC56929.2023.10247734
+        - PDRC, Jiang et al., DAC 2024,
+          http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+        """
+        if cls._segments_intersect(a, b, c, d):
+            return 0.0
         return min(
             cls._segment_distance(c, a, b),
             cls._segment_distance(d, a, b),
             cls._segment_distance(a, c, d),
             cls._segment_distance(b, c, d),
         )
+
+    @staticmethod
+    def _cross2d(
+        p: np.ndarray, q: np.ndarray, r: np.ndarray
+    ) -> float:
+        """2D 叉积 (q-p) × (r-p)。用于判断三点转向。"""
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+    @classmethod
+    def _segments_intersect(
+        cls, a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
+    ) -> bool:
+        """检测两条线段 AB 和 CD 是否相交（含端点接触和共线重叠）。
+
+        算法: 叉积 straddling test + bbox 快速拒绝。
+        """
+        d1 = cls._cross2d(c, d, a)
+        d2 = cls._cross2d(c, d, b)
+        d3 = cls._cross2d(a, b, c)
+        d4 = cls._cross2d(a, b, d)
+
+        if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
+           ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+            return True
+
+        if abs(d1) < 1e-12 and cls._point_on_segment(a, c, d):
+            return True
+        if abs(d2) < 1e-12 and cls._point_on_segment(b, c, d):
+            return True
+        if abs(d3) < 1e-12 and cls._point_on_segment(c, a, b):
+            return True
+        if abs(d4) < 1e-12 and cls._point_on_segment(d, a, b):
+            return True
+
+        return False
+
+    @staticmethod
+    def _point_on_segment(
+        p: np.ndarray, a: np.ndarray, b: np.ndarray
+    ) -> bool:
+        """判断点 p 是否在线段 ab 上（假设三点共线）。"""
+        return (min(a[0], b[0]) - 1e-12 <= p[0] <= max(a[0], b[0]) + 1e-12 and
+                min(a[1], b[1]) - 1e-12 <= p[1] <= max(a[1], b[1]) + 1e-12)
 
     @classmethod
     def _enclosure_distance(

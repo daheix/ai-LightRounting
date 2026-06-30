@@ -125,13 +125,17 @@ class FeedbackAdapter:
         )
 
     @staticmethod
-    def _adapt_overlap(v: Violation) -> PlacementHint | None:
-        """重叠 → 拉开间距。"""
+    def _adapt_overlap(v: Violation) -> PlacementHint:
+        """重叠 → 拉开间距。
+
+        Raises:
+            ValueError: 违例数据无效（设备名为空或格式错误）。
+        """
         if not v.device_name:
-            return None
+            raise ValueError(f"重叠违例设备名为空: {v}")
         parts = v.device_name.split("-")
         if len(parts) < 2:
-            return None
+            raise ValueError(f"重叠违例设备名格式错误（期望 'dev1-dev2'）: {v.device_name}")
         return PlacementHint(
             device_name=parts[1],
             dx=50.0,
@@ -141,13 +145,17 @@ class FeedbackAdapter:
         )
 
     @staticmethod
-    def _adapt_spacing(v: Violation) -> PlacementHint | None:
-        """间距不足 → 增加间距。"""
+    def _adapt_spacing(v: Violation) -> PlacementHint:
+        """间距不足 → 增加间距。
+
+        Raises:
+            ValueError: 违例数据无效（设备名为空或格式错误）。
+        """
         if not v.device_name:
-            return None
+            raise ValueError(f"间距违例设备名为空: {v}")
         parts = v.device_name.split("-")
         if len(parts) < 2:
-            return None
+            raise ValueError(f"间距违例设备名格式错误（期望 'dev1-dev2'）: {v.device_name}")
         offset = 20.0 * (1.0 + v.severity)
         return PlacementHint(
             device_name=parts[1],

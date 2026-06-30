@@ -389,3 +389,120 @@ class TestRowPartition:
         """测试无效 max_rows 抛错。"""
         with pytest.raises(ValueError):
             RowPartition(max_rows=0)
+
+
+class TestWidthEdgeCases:
+    """Width 规则边界情况测试。"""
+
+    def test_width_rotated_rectangle_30deg(self):
+        """测试 30° 旋转矩形的宽度检测。"""
+        rule = _make_rule(threshold=2.5)
+        drc = HierarchicalDRC([rule])
+        angle = np.pi / 6
+        cos_a, sin_a = np.cos(angle), np.sin(angle)
+        w, h = 10.0, 2.0
+        corners = np.array([[-w/2, -h/2], [w/2, -h/2], [w/2, h/2], [-w/2, h/2]])
+        rotated = np.array([[x*cos_a - y*sin_a, x*sin_a + y*cos_a] for x, y in corners])
+        rotated += np.array([10, 10])
+        violations = drc.check({"WG": [rotated]}, hierarchical=False)
+        assert len(violations) > 0
+        assert "2.0" in violations[0].message or "宽度" in violations[0].message
+
+    def test_width_square_pass(self):
+        """测试正方形通过宽度检查。"""
+        rule = _make_rule(threshold=3.0)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [_rect(0, 0, 5, 5)]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) == 0
+
+    def test_width_very_narrow_rectangle(self):
+        """测试极窄矩形的宽度检测。"""
+        rule = _make_rule(threshold=1.0)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [_rect(0, 0, 100, 0.1)]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) > 0
+
+    def test_width_notch_polygon(self):
+        """测试带凹口多边形的宽度检测（应检测到最窄处）。"""
+        rule = _make_rule(threshold=4.0)
+        drc = HierarchicalDRC([rule])
+        poly = np.array([
+            [0, 0], [10, 0], [10, 5], [7, 5], [7, 2], [3, 2], [3, 5], [0, 5]
+        ])
+        violations = drc.check({"WG": [poly]}, hierarchical=False)
+        assert len(violations) > 0
+
+    def test_width_equilateral_triangle(self):
+        """测试等边三角形的宽度检测。"""
+        rule = _make_rule(threshold=5.0)
+        drc = HierarchicalDRC([rule])
+        h = 5.0 * np.sqrt(3) / 2
+        tri = np.array([[0, 0], [5, 0], [2.5, h]])
+        violations = drc.check({"WG": [tri]}, hierarchical=False)
+        assert len(violations) > 0
+
+
+class TestSpaceEdgeCases:
+    """Spacing 规则边界情况测试。"""
+
+    def test_space_touching_polygons(self):
+        """测试边相切的多边形（距离应为 0）。"""
+        from polaris.sim.klayout_drc import DRCCheckType
+        rule = _make_rule(check_type=DRCCheckType.SPACE, threshold=0.5)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [
+            _rect(0, 0, 5, 5),
+            _rect(5, 0, 5, 5),
+        ]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) > 0
+
+    def test_space_overlapping_polygons(self):
+        """测试重叠的多边形（距离应为 0）。"""
+        from polaris.sim.klayout_drc import DRCCheckType
+        rule = _make_rule(check_type=DRCCheckType.SPACE, threshold=0.5)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [
+            _rect(0, 0, 5, 5),
+            _rect(3, 0, 5, 5),
+        ]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) > 0
+
+    def test_space_corner_to_corner(self):
+        """测试角对角的多边形距离。"""
+        from polaris.sim.klayout_drc import DRCCheckType
+        rule = _make_rule(check_type=DRCCheckType.SPACE, threshold=4.0)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [
+            _rect(0, 0, 5, 5),
+            _rect(7, 7, 5, 5),
+        ]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) > 0
+
+    def test_space_wide_gap_pass(self):
+        """测试大间距多边形通过检查。"""
+        from polaris.sim.klayout_drc import DRCCheckType
+        rule = _make_rule(check_type=DRCCheckType.SPACE, threshold=1.0)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [
+            _rect(0, 0, 5, 5),
+            _rect(10, 0, 5, 5),
+        ]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) == 0
+
+    def test_space_edge_to_edge_parallel(self):
+        """测试平行边对边的间距检测。"""
+        from polaris.sim.klayout_drc import DRCCheckType
+        rule = _make_rule(check_type=DRCCheckType.SPACE, threshold=3.0)
+        drc = HierarchicalDRC([rule])
+        layout = {"WG": [
+            _rect(0, 0, 10, 2),
+            _rect(0, 4, 10, 2),
+        ]}
+        violations = drc.check(layout, hierarchical=False)
+        assert len(violations) > 0

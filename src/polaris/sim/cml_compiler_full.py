@@ -226,39 +226,34 @@ class SParameterLoader:
     """从多种格式加载 S 参数：.snp、Touchstone (.s2p/.s4p)、JSON。"""
 
     @staticmethod
-    def load_touchstone(path: str | Path) -> tuple[list[str], NDArray, NDArray[np.complex128]]:
-        """加载 Touchstone 文件（.sNp）。
-
-        支持 1-port 到 N-port 标准格式。
-        返回: (port_names, frequencies_Hz, s_matrix)
-        """
-        path = Path(path)
-        content = path.read_text(encoding="utf-8", errors="replace")
-        lines = content.splitlines()
-
-        # 解析文件头行
-        freq_unit = "GHz"  # 默认
-        format_type = "RI"  # 默认实部虚部
+    def _parse_touchstone_header(
+        lines: list[str],
+    ) -> tuple[str, str, int]:
+        """解析 Touchstone 文件头，返回 (freq_unit, format_type, n_ports)。"""
+        freq_unit = "GHz"
+        format_type = "RI"
         n_ports = 1
         for line in lines:
             stripped = line.strip()
             if not stripped or stripped.startswith("!"):
                 continue
             if stripped.startswith("#"):
-                # # GHz S RI R 50
                 parts = stripped[1:].split()
                 if len(parts) >= 4:
                     freq_unit = parts[0]
                     format_type = parts[2]
                     n_ports = int(parts[3])
                 break
+        return freq_unit, format_type, n_ports
 
-        # 频率单位转换
-        # R4-P0-2: 禁止 fall-back（R03）—— 未知频率单位必须 raise。
-        # Touchstone 文件头明确定义了频率单位，未知单位意味着文件损坏或
-        # 解析错误，静默按 GHz (1e9) 处理会传播错误频率到 S 参数模型。
-        # 文献: Touchstone File Format Specification, IBIS Open Forum 2009
-        #   https://ibis.org/connector/touchstone_spec11.pdf
+    @staticmethod
+    def _get_freq_scale(freq_unit: str) -> float:
+        """获取频率单位缩放因子。
+
+        R03 禁止 fall-back：未知频率单位必须 raise。
+        文献: Touchstone File Format Specification, IBIS Open Forum 2009
+          https://ibis.org/connector/touchstone_spec11.pdf
+        """
         unit_map = {"Hz": 1.0, "kHz": 1e3, "MHz": 1e6, "GHz": 1e9, "THz": 1e12}
         if freq_unit not in unit_map:
             raise ValueError(
@@ -267,9 +262,14 @@ class SParameterLoader:
                 f"请检查文件头 # 行格式（应为 '# <unit> S <RI|MA|dB> R <ref>'）。"
                 f"R03 禁止 fall-back: 禁止按 GHz (1e9) 静默处理未知单位。"
             )
-        freq_scale = unit_map[freq_unit]
+        return unit_map[freq_unit]
 
-        # 解析数据行
+    @staticmethod
+    def _parse_touchstone_data_lines(
+        lines: list[str],
+        path: Path,
+    ) -> NDArray[np.float64]:
+        """解析 Touchstone 数据行。"""
         data_lines = []
         for line in lines:
             stripped = line.strip()
@@ -280,30 +280,37 @@ class SParameterLoader:
                 data_lines.append(vals)
             except ValueError:
                 continue
-
         if not data_lines:
             raise ValueError(f"Touchstone 文件 {path} 无有效数据行")
+        return np.array(data_lines)
 
-        data = np.array(data_lines)
-        freq_hz = data[:, 0] * freq_scale
-
-        # 计算每个频率点的 S 参数数量
-        # N-port: 2 + N^2 列（频率 + 实部/虚部 × N^2）
+    @staticmethod
+    def _infer_n_ports(
+        data: NDArray[np.float64],
+        n_ports: int,
+        format_type: str,
+    ) -> int:
+        """根据数据列数推断端口数。"""
         n_params = n_ports * n_ports
         if format_type in ("RI", "MA", "dB"):
             cols_per_row = 1 + 2 * n_params
         else:
             cols_per_row = 1 + n_params
-
         if data.shape[1] != cols_per_row:
-            # 尝试推断
             possible_n = int(np.round(np.sqrt(data.shape[1] - 1)))
             if 1 + 2 * possible_n ** 2 == data.shape[1]:
                 n_ports = possible_n
-                n_params = n_ports * n_ports
+        return n_ports
 
-        # 构建 S 矩阵
-        s_matrix = np.zeros((len(freq_hz), n_ports, n_ports), dtype=complex)
+    @staticmethod
+    def _build_s_matrix(
+        data: NDArray[np.float64],
+        n_ports: int,
+        format_type: str,
+    ) -> NDArray[np.complex128]:
+        """从数据构建 S 参数矩阵。"""
+        n_freq = data.shape[0]
+        s_matrix = np.zeros((n_freq, n_ports, n_ports), dtype=complex)
         col_idx = 1
         for i in range(n_ports):
             for j in range(n_ports):
@@ -319,6 +326,26 @@ class SParameterLoader:
                     mag = 10 ** (mag_db / 20.0)
                     s_matrix[:, i, j] = mag * np.exp(1j * np.deg2rad(phase_deg))
                 col_idx += 2
+        return s_matrix
+
+    @staticmethod
+    def load_touchstone(path: str | Path) -> tuple[list[str], NDArray, NDArray[np.complex128]]:
+        """加载 Touchstone 文件（.sNp）。
+
+        支持 1-port 到 N-port 标准格式。
+        返回: (port_names, frequencies_Hz, s_matrix)
+        """
+        path = Path(path)
+        content = path.read_text(encoding="utf-8", errors="replace")
+        lines = content.splitlines()
+
+        freq_unit, format_type, n_ports = SParameterLoader._parse_touchstone_header(lines)
+        freq_scale = SParameterLoader._get_freq_scale(freq_unit)
+        data = SParameterLoader._parse_touchstone_data_lines(lines, path)
+        freq_hz = data[:, 0] * freq_scale
+
+        n_ports = SParameterLoader._infer_n_ports(data, n_ports, format_type)
+        s_matrix = SParameterLoader._build_s_matrix(data, n_ports, format_type)
 
         port_names = [f"port_{i+1}" for i in range(n_ports)]
         return port_names, freq_hz, s_matrix

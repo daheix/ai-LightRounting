@@ -139,14 +139,30 @@ def _point_in_polygon(
 
 
 def _polygon_min_width(poly: NDArray[np.float64]) -> float:
-    """多边形最小宽度（旋转卡尺法，边到对边距离最小值）。
+    """多边形最小宽度（旋转卡尺法 Rotating Calipers）。
 
-    适用于凸/凹多边形宽度检查。来源:
-    - KLayout DRC width check: https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
-    - OpenDRC, He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
-    - PDRC, Jiang et al., DAC 2024
-    - Siemems Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
-    - Synopsys IC Validator: https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+    算法: 对每条边，计算所有顶点到该边的最大距离（即该边方向上的宽度），
+    取所有边方向上宽度的最小值，即为多边形的最小宽度。
+    适用于凸多边形（精确），对凹多边形给出保守估计。
+
+    学术文献:
+    - Godfried T. Toussaint, "Solving Geometric Problems with the Rotating Calipers",
+      Proceedings of IEEE MELECON 1983, pp. 1-5.
+      https://www.cs.mcgill.ca/~godfried/publications/calipers.pdf
+    - M. A. Lopez & S. Reisner, "On the Minimal Width of a Convex Polygon",
+      Information Processing Letters, 1985, Vol. 20, No. 4, pp. 173-178.
+      DOI: 10.1016/0020-0190(85)90095-4
+    - de Berg et al., "Computational Geometry: Algorithms and Applications",
+      Springer 2008, Chapter 4 (Linear Programming) - width as smallest enclosing strip.
+      DOI: 10.1007/978-3-540-77974-2
+    - KLayout DRC width check:
+      https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - OpenDRC, He et al., DAC 2023, DOI: 10.1109/DAC56929.2023.10247734
+    - PDRC, Jiang et al., DAC 2024,
+      http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
+    - Siemens Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
+    - Synopsys IC Validator:
+      https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
     """
     n = len(poly)
     if n < 3:
@@ -177,11 +193,21 @@ def _polygon_pair_min_distance(
 ) -> float:
     """两个多边形之间的最小边到边距离。
 
+    算法: 遍历所有边对，计算两线段最短距离（含相交检测）。
+    相交检测使用叉积 straddling test（Ericson 2005; de Berg 2008）。
+
     文献:
-    - de Berg, "Computational Geometry", Springer 2008
-    - KLayout DRC space check: https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
-    - OpenDRC, He et al., DAC 2023
-    - PDRC, Jiang et al., DAC 2024
+    - Christer Ericson, "Real-Time Collision Detection", Morgan Kaufmann 2005,
+      Chapter 5 (Distance of Linear Components)
+      https://realtimecollisiondetection.net/
+    - de Berg et al., "Computational Geometry: Algorithms and Applications",
+      Springer 2008, Chapter 2 (Line Segment Intersection)
+      DOI: 10.1007/978-3-540-77974-2
+    - KLayout DRC space check:
+      https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - OpenDRC, He et al., DAC 2023, DOI: 10.1109/DAC56929.2023.10247734
+    - PDRC, Jiang et al., DAC 2024,
+      http://www.cse.cuhk.edu.hk/~byu/papers/C219-DAC2024-PDRC.pdf
     - Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
     """
     n1, n2 = len(p1), len(p2)
@@ -190,15 +216,96 @@ def _polygon_pair_min_distance(
         a, b = p1[i], p1[(i + 1) % n1]
         for j in range(n2):
             c, d = p2[j], p2[(j + 1) % n2]
-            dist = min(
-                _point_segment_distance(c, a, b),
-                _point_segment_distance(d, a, b),
-                _point_segment_distance(a, c, d),
-                _point_segment_distance(b, c, d),
-            )
+            dist = _segment_segment_distance(a, b, c, d)
             if dist < min_d:
                 min_d = dist
     return min_d
+
+
+def _cross2d(
+    p: NDArray[np.float64],
+    q: NDArray[np.float64],
+    r: NDArray[np.float64],
+) -> float:
+    """2D 叉积 (q-p) × (r-p)。用于判断三点转向。
+
+    文献:
+    - de Berg et al., "Computational Geometry", Springer 2008, Chapter 2
+    - Ericson, "Real-Time Collision Detection", Morgan Kaufmann 2005
+    """
+    return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+
+def _segments_intersect(
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    c: NDArray[np.float64],
+    d: NDArray[np.float64],
+) -> bool:
+    """检测两条线段 AB 和 CD 是否相交（含端点接触和共线重叠）。
+
+    算法: 叉积 straddling test + 端点共线检测。
+    文献:
+    - de Berg et al., "Computational Geometry", Springer 2008, Chapter 2
+    - Ericson, "Real-Time Collision Detection", Morgan Kaufmann 2005, Chapter 5
+    """
+    d1 = _cross2d(c, d, a)
+    d2 = _cross2d(c, d, b)
+    d3 = _cross2d(a, b, c)
+    d4 = _cross2d(a, b, d)
+
+    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
+       ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+        return True
+
+    if abs(d1) < 1e-12 and _point_on_segment(a, c, d):
+        return True
+    if abs(d2) < 1e-12 and _point_on_segment(b, c, d):
+        return True
+    if abs(d3) < 1e-12 and _point_on_segment(c, a, b):
+        return True
+    if abs(d4) < 1e-12 and _point_on_segment(d, a, b):
+        return True
+
+    return False
+
+
+def _point_on_segment(
+    p: NDArray[np.float64],
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+) -> bool:
+    """判断点 p 是否在线段 ab 上（假设三点共线）。"""
+    return (min(a[0], b[0]) - 1e-12 <= p[0] <= max(a[0], b[0]) + 1e-12 and
+            min(a[1], b[1]) - 1e-12 <= p[1] <= max(a[1], b[1]) + 1e-12)
+
+
+def _segment_segment_distance(
+    a: NDArray[np.float64],
+    b: NDArray[np.float64],
+    c: NDArray[np.float64],
+    d: NDArray[np.float64],
+) -> float:
+    """两线段最短距离（含相交检测）。
+
+    算法: 先检测线段是否相交（相交则距离为 0），否则取 4 个端点到对方
+    线段距离的最小值。
+
+    文献:
+    - Ericson, "Real-Time Collision Detection", Morgan Kaufmann 2005, Chapter 5
+    - de Berg et al., "Computational Geometry", Springer 2008, Chapter 2
+    - KLayout DRC space check
+    - OpenDRC, He et al., DAC 2023
+    - PDRC, Jiang et al., DAC 2024
+    """
+    if _segments_intersect(a, b, c, d):
+        return 0.0
+    return min(
+        _point_segment_distance(c, a, b),
+        _point_segment_distance(d, a, b),
+        _point_segment_distance(a, c, d),
+        _point_segment_distance(b, c, d),
+    )
 
 
 def _polygon_min_enclosure(
@@ -631,6 +738,99 @@ class CurvilinearDRCEngine:
             result.setdefault(cat, []).append(rule.name)
         return result
 
+    def _compute_global_bbox(
+        self,
+        polygons_by_layer: dict[str, list[NDArray[np.float64]]],
+    ) -> tuple[float, float, float, float]:
+        """计算所有图层多边形的全局包围盒。"""
+        all_xmin = all_ymin = float("inf")
+        all_xmax = all_ymax = float("-inf")
+        for polys in polygons_by_layer.values():
+            for poly in polys:
+                if len(poly) < 3:
+                    continue
+                xmin, ymin, xmax, ymax = _polygon_bbox(poly)
+                all_xmin = min(all_xmin, xmin)
+                all_ymin = min(all_ymin, ymin)
+                all_xmax = max(all_xmax, xmax)
+                all_ymax = max(all_ymax, ymax)
+        return all_xmin, all_ymin, all_xmax, all_ymax
+
+    def _determine_density_region(
+        self,
+        density_region: tuple[float, float, float, float] | None,
+        bbox: tuple[float, float, float, float],
+    ) -> tuple[float, float, float, float]:
+        """确定密度计算区域。"""
+        if density_region is not None:
+            return density_region
+        all_xmin, all_ymin, all_xmax, all_ymax = bbox
+        if all_xmin == float("inf"):
+            return (0.0, 0.0, 100.0, 100.0)
+        return (all_xmin, all_ymin, all_xmax, all_ymax)
+
+    def _apply_single_rule(
+        self,
+        rule: CurvilinearDRCRule,
+        polygons_by_layer: dict[str, list[NDArray[np.float64]]],
+        enclosure_pairs: dict[str, str],
+        density_region: tuple[float, float, float, float],
+    ) -> None:
+        """应用单条 DRC 规则检查。"""
+        layer = rule.layer
+        polys = polygons_by_layer.get(layer, [])
+        cat = rule.category
+        val = rule.limit_value
+
+        if not polys and cat not in {
+            DRCRuleCategory.MIN_ENCLOSURE,
+            DRCRuleCategory.MIN_EXTENSION,
+        }:
+            return
+
+        if cat == DRCRuleCategory.MIN_WIDTH:
+            self._check_min_width_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MAX_WIDTH:
+            self._check_max_width_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_WIDTH_CURVE:
+            self._check_min_curve_width_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_SPACING:
+            self._check_min_spacing_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_SPACING_SAME_NET:
+            self._check_min_spacing_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_SPACING_DENSITY:
+            self._check_density_spacing_geo(polys, rule, val, density_region)
+        elif cat == DRCRuleCategory.MIN_END_TO_END:
+            self._check_end_to_end_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_ENCLOSURE:
+            outer_layer = enclosure_pairs.get(layer, "")
+            outer_polys = polygons_by_layer.get(outer_layer, [])
+            if outer_polys:
+                self._check_min_enclosure_geo(polys, outer_polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_EXTENSION:
+            inner_layer = enclosure_pairs.get(layer, "")
+            inner_polys = polygons_by_layer.get(inner_layer, [])
+            if inner_polys:
+                self._check_min_extension_geo(inner_polys, polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_AREA:
+            self._check_min_area_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MAX_AREA:
+            self._check_max_area_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_DENSITY:
+            self._check_min_density_geo(polys, rule, val, density_region)
+        elif cat == DRCRuleCategory.MAX_ANGLE:
+            self._check_max_angle_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_ANGLE:
+            self._check_min_angle_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.ACUTE_ANGLE:
+            self._check_acute_angle_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MIN_BEND_RADIUS:
+            self._check_min_bend_radius_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.MAX_CURVATURE:
+            self._check_max_curvature_geo(polys, rule, val)
+        elif cat == DRCRuleCategory.TAPER_ANGLE:
+            self._check_taper_angle_geo(polys, rule, val)
+
     def run_geometric_checks(
         self,
         polygons_by_layer: dict[str, list[NDArray[np.float64]]],
@@ -661,78 +861,11 @@ class CurvilinearDRCEngine:
         self._violations = []
         enclosure_pairs = enclosure_pairs or {}
 
-        all_xmin = all_ymin = float("inf")
-        all_xmax = all_ymax = float("-inf")
-        for polys in polygons_by_layer.values():
-            for poly in polys:
-                if len(poly) < 3:
-                    continue
-                xmin, ymin, xmax, ymax = _polygon_bbox(poly)
-                all_xmin = min(all_xmin, xmin)
-                all_ymin = min(all_ymin, ymin)
-                all_xmax = max(all_xmax, xmax)
-                all_ymax = max(all_ymax, ymax)
-
-        if density_region is None:
-            if all_xmin == float("inf"):
-                density_region = (0.0, 0.0, 100.0, 100.0)
-            else:
-                density_region = (all_xmin, all_ymin, all_xmax, all_ymax)
+        bbox = self._compute_global_bbox(polygons_by_layer)
+        density_region = self._determine_density_region(density_region, bbox)
 
         for rule in self._rules:
-            layer = rule.layer
-            polys = polygons_by_layer.get(layer, [])
-            cat = rule.category
-            val = rule.limit_value
-
-            if not polys and cat not in {
-                DRCRuleCategory.MIN_ENCLOSURE,
-                DRCRuleCategory.MIN_EXTENSION,
-            }:
-                continue
-
-            if cat == DRCRuleCategory.MIN_WIDTH:
-                self._check_min_width_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MAX_WIDTH:
-                self._check_max_width_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_WIDTH_CURVE:
-                self._check_min_curve_width_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_SPACING:
-                self._check_min_spacing_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_SPACING_SAME_NET:
-                self._check_min_spacing_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_SPACING_DENSITY:
-                self._check_density_spacing_geo(polys, rule, val, density_region)
-            elif cat == DRCRuleCategory.MIN_END_TO_END:
-                self._check_end_to_end_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_ENCLOSURE:
-                outer_layer = enclosure_pairs.get(layer, "")
-                outer_polys = polygons_by_layer.get(outer_layer, [])
-                if outer_polys:
-                    self._check_min_enclosure_geo(polys, outer_polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_EXTENSION:
-                inner_layer = enclosure_pairs.get(layer, "")
-                inner_polys = polygons_by_layer.get(inner_layer, [])
-                if inner_polys:
-                    self._check_min_extension_geo(inner_polys, polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_AREA:
-                self._check_min_area_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MAX_AREA:
-                self._check_max_area_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_DENSITY:
-                self._check_min_density_geo(polys, rule, val, density_region)
-            elif cat == DRCRuleCategory.MAX_ANGLE:
-                self._check_max_angle_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_ANGLE:
-                self._check_min_angle_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.ACUTE_ANGLE:
-                self._check_acute_angle_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MIN_BEND_RADIUS:
-                self._check_min_bend_radius_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.MAX_CURVATURE:
-                self._check_max_curvature_geo(polys, rule, val)
-            elif cat == DRCRuleCategory.TAPER_ANGLE:
-                self._check_taper_angle_geo(polys, rule, val)
+            self._apply_single_rule(rule, polygons_by_layer, enclosure_pairs, density_region)
 
         return self._violations
 
@@ -799,7 +932,7 @@ class CurvilinearDRCEngine:
                 if len(polys[i]) < 3 or len(polys[j]) < 3:
                     continue
                 s = _polygon_pair_min_distance(polys[i], polys[j])
-                if s > 0 and s < limit:
+                if s < limit:
                     cxi = float(polys[i][:, 0].mean())
                     cyi = float(polys[i][:, 1].mean())
                     self._violations.append(DRCViolation18(

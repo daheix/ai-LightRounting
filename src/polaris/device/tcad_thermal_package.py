@@ -185,6 +185,70 @@ class TCADAwareModel:
             "N_d_cm3": N_d_cm3,
         }
 
+    def _compute_vpi(
+        self,
+        length_um: float,
+        N_a_cm3: float,
+        N_d_cm3: float,
+        wavelength_um: float,
+    ) -> tuple[float, float, float, dict[str, float]]:
+        """计算 Vπ 和相关参数。"""
+        dep0 = self.carrier_depletion_voltage(N_a_cm3, N_d_cm3, bias_v=0.0)
+        dep1 = self.carrier_depletion_voltage(N_a_cm3, N_d_cm3, bias_v=-1.0)
+
+        dW = dep1["depletion_width_um"] - dep0["depletion_width_um"]
+        delta_N = (N_a_cm3 + N_d_cm3) * dW / 0.45
+
+        dn, da = self.plasma_dispersion_index_change(
+            wavelength_um, delta_Ne_cm3=delta_N, delta_Nh_cm3=delta_N
+        )
+
+        length_m = length_um * 1e-6
+        lam_m = wavelength_um * 1e-6
+        dphi = 2 * np.pi * abs(dn) * length_m / lam_m
+
+        V_pi = float(np.pi / dphi) if dphi > 0 else float("inf")
+        vpi_l_vcm = V_pi * length_um * 1e-4
+
+        return V_pi, vpi_l_vcm, da, dep0
+
+    def _compute_junction_capacitance(
+        self,
+        length_um: float,
+        dep0: dict[str, float],
+    ) -> tuple[float, float]:
+        """计算 PN 结电容（单臂和推挽总电容）。"""
+        eps0 = 8.854e-14
+        eps_s = 11.7 * eps0
+        W0_cm = dep0["depletion_width_um"] * 1e-4
+        C_j0_per_cm2 = eps_s / W0_cm
+
+        length_cm = length_um * 1e-4
+        width_cm = 0.45 * 1e-4
+        A_cm2 = length_cm * width_cm
+        C_j_per_arm = C_j0_per_cm2 * A_cm2
+
+        C_j_total = 2.0 * C_j_per_arm
+        return C_j_per_arm, C_j_total
+
+    def _compute_rc_bandwidth(
+        self,
+        C_j_total: float,
+        load_impedance_ohm: float,
+    ) -> float:
+        """计算 RC 限制的 3dB 带宽。"""
+        if C_j_total <= 0:
+            return float("inf")
+        return 1.0 / (2.0 * np.pi * load_impedance_ohm * C_j_total)
+
+    def _compute_insertion_loss_db(
+        self,
+        da: float,
+        length_um: float,
+    ) -> float:
+        """计算插入损耗（dB）。"""
+        return float(da * length_um * 1e-4 * 10.0 * np.log10(np.e))
+
     def modulator_vpi(
         self,
         length_um: float = 500.0,
@@ -238,67 +302,20 @@ class TCADAwareModel:
            推挽硅光调制器 T-Rail 电极等效电路模型 —
            https://doi.org/10.1109/JPHOT.2024.3430809
         """
-        # 计算反偏电压变化 ΔV=1V 时的相位变化
-        dep0 = self.carrier_depletion_voltage(N_a_cm3, N_d_cm3, bias_v=0.0)
-        dep1 = self.carrier_depletion_voltage(N_a_cm3, N_d_cm3, bias_v=-1.0)
-
-        # 耗尽层变化 → 有效折射率变化
-        dW = dep1["depletion_width_um"] - dep0["depletion_width_um"]
-        # 近似: 载波浓度变化 ≈ 掺杂浓度 × 宽度变化 / 波导宽度
-        delta_N = (N_a_cm3 + N_d_cm3) * dW / 0.45  # 0.45μm 波导宽度
-
-        dn, da = self.plasma_dispersion_index_change(
-            wavelength_um, delta_Ne_cm3=delta_N, delta_Nh_cm3=delta_N
+        V_pi, vpi_l_vcm, da, dep0 = self._compute_vpi(
+            length_um, N_a_cm3, N_d_cm3, wavelength_um
         )
-
-        # 相位变化: Δφ = 2π × Δn_eff × L / λ
-        length_m = length_um * 1e-6
-        lam_m = wavelength_um * 1e-6
-        dphi = 2 * np.pi * abs(dn) * length_m / lam_m
-
-        V_pi = float(np.pi / dphi) if dphi > 0 else float("inf")
-
-        # RC 限制 3dB 带宽：f_3dB = 1 / (2π · R_L · C_j)
-        # C_j = 单位面积结电容 × 面积 = C_j0 · A
-        # 其中 C_j0 = ε_s / W_0（零偏耗尽层宽度对应的单位面积电容）
-        # W_0 = dep0["depletion_width_um"] (零偏耗尽层宽度)
-        # ε_s = 11.7 · ε_0 (Si 介电常数)
-        eps0 = 8.854e-14  # F/cm
-        eps_s = 11.7 * eps0  # F/cm
-        W0_cm = dep0["depletion_width_um"] * 1e-4  # μm → cm
-        C_j0_per_cm2 = eps_s / W0_cm  # F/cm²，零偏单位面积结电容
-
-        # 结面积 = 长度 × 波导宽度（近似）
-        length_cm = length_um * 1e-4  # μm → cm
-        width_cm = 0.45 * 1e-4  # 0.45 μm → cm
-        A_cm2 = length_cm * width_cm  # cm²
-        C_j_per_arm = C_j0_per_cm2 * A_cm2  # F，单臂 PN 结电容（零偏）
-
-        # 推挽 MZ 总电容：两臂并联，C_total = 2·C_j
-        # (Kress 2024 IEEE Access / Zhuang 2024 IEEE Photonics J 等效电路)
-        C_j_total = 2.0 * C_j_per_arm
-
-        # RC 3dB 带宽：f_3dB = 1 / (2π · R_L · C_total)
-        f_3db_rc = (
-            1.0 / (2.0 * np.pi * load_impedance_ohm * C_j_total)
-            if C_j_total > 0 else float("inf")
-        )
-
-        # V_π·L 乘积
-        vpi_l_vcm = V_pi * length_um * 1e-4  # V·cm
-
-        # 插入损耗：Δα [cm⁻¹] × 长度 [cm] → Nepers，转换为 dB
-        # α_dB = α_nepers × 10·log10(e) ≈ 4.343 × α_nepers
-        # 注意：plasma_dispersion_index_change 返回的 da 单位为 cm⁻¹（Soref-Bennett）
-        insertion_loss_db = float(da * length_um * 1e-4 * 10.0 * np.log10(np.e))
+        C_j_per_arm, C_j_total = self._compute_junction_capacitance(length_um, dep0)
+        f_3db_rc = self._compute_rc_bandwidth(C_j_total, load_impedance_ohm)
+        insertion_loss_db = self._compute_insertion_loss_db(da, length_um)
 
         return {
             "V_pi_V": V_pi,
-            "V_pi_L_V_cm": vpi_l_vcm,  # V·cm
+            "V_pi_L_V_cm": vpi_l_vcm,
             "insertion_loss_db": insertion_loss_db,
             "bandwidth_ghz_est": float(f_3db_rc / 1e9),
-            "junction_capacitance_f": float(C_j_total),  # 推挽 MZ 总电容
-            "junction_capacitance_per_arm_f": float(C_j_per_arm),  # 单臂电容
+            "junction_capacitance_f": float(C_j_total),
+            "junction_capacitance_per_arm_f": float(C_j_per_arm),
             "zero_bias_depletion_width_um": float(dep0["depletion_width_um"]),
             "length_um": length_um,
             "load_impedance_ohm": load_impedance_ohm,
@@ -703,6 +720,57 @@ class ThermalSolver2D:
                 matrix[i, j] = float(max(dT, 0.0))
         return matrix
 
+    def _validate_transient_inputs(
+        self,
+        total_time_s: float,
+        dt_s: float,
+        sample_interval_steps: int,
+    ) -> None:
+        """验证瞬态仿真输入参数。"""
+        if total_time_s <= 0.0:
+            raise ValueError(f"total_time_s 须 > 0，实际 {total_time_s}")
+        if dt_s <= 0.0:
+            raise ValueError(f"dt_s 须 > 0，实际 {dt_s}")
+        if sample_interval_steps < 1:
+            raise ValueError(
+                f"sample_interval_steps 须 ≥ 1，实际 {sample_interval_steps}"
+            )
+
+    def _convert_to_2d_layers(self) -> list[Any]:
+        """将 ThermalLayer 转换为 ThermalLayer2D。"""
+        from polaris.device.transient_thermal import ThermalLayer2D
+
+        return [
+            ThermalLayer2D(
+                name=l.name,
+                thickness_um=l.thickness_um,
+                thermal_conductivity_w_mk=l.thermal_conductivity_w_mk,
+                density_kg_m3=l.density_kg_m3,
+                specific_heat_j_kgk=l.specific_heat_j_kgk,
+                is_heater=l.is_heater,
+                heater_power_mw_per_um=l.heater_power_mw_per_um,
+            )
+            for l in self.layers
+        ]
+
+    def _create_transient_solver(
+        self,
+        layers_2d: list[Any],
+        dt_s: float,
+    ) -> Any:
+        """创建 CrankNicolson2D 瞬态求解器。"""
+        from polaris.device.transient_thermal import CrankNicolson2D
+
+        return CrankNicolson2D(
+            layers=layers_2d,
+            width_um=self.width_um,
+            substrate_temp_k=self.T_sub,
+            nx=self.nx,
+            heater_width_um=self.heater_width_um,
+            dt_s=dt_s,
+            min_nodes_per_layer=3,
+        )
+
     def solve_transient(
         self,
         total_time_s: float,
@@ -755,51 +823,13 @@ class ThermalSolver2D:
            稀疏矩阵直接求解器（Crank-Nicolson 每步线性系统）—
            https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
         """
-        from polaris.device.transient_thermal import (
-            CrankNicolson2D,
-            ThermalLayer2D,
-        )
-
-        if total_time_s <= 0.0:
-            raise ValueError(f"total_time_s 须 > 0，实际 {total_time_s}")
-        if dt_s <= 0.0:
-            raise ValueError(f"dt_s 须 > 0，实际 {dt_s}")
-        if sample_interval_steps < 1:
-            raise ValueError(
-                f"sample_interval_steps 须 ≥ 1，实际 {sample_interval_steps}"
-            )
-
-        # ThermalLayer → ThermalLayer2D 转换（继承 density/specific_heat 字段）
-        layers_2d = [
-            ThermalLayer2D(
-                name=l.name,
-                thickness_um=l.thickness_um,
-                thermal_conductivity_w_mk=l.thermal_conductivity_w_mk,
-                density_kg_m3=l.density_kg_m3,
-                specific_heat_j_kgk=l.specific_heat_j_kgk,
-                is_heater=l.is_heater,
-                heater_power_mw_per_um=l.heater_power_mw_per_um,
-            )
-            for l in self.layers
-        ]
-
-        # min_nodes_per_layer=3 使 CrankNicolson2D.nz = len(layers)*3，
-        # 与 ThermalSolver2D.nz（__init__ 中 self.nz = len(self.layers)*3）一致，
-        # 保证稳态与瞬态求解使用相同 z 网格密度。
-        solver = CrankNicolson2D(
-            layers=layers_2d,
-            width_um=self.width_um,
-            substrate_temp_k=self.T_sub,
-            nx=self.nx,
-            heater_width_um=self.heater_width_um,
-            dt_s=dt_s,
-            min_nodes_per_layer=3,
-        )
+        self._validate_transient_inputs(total_time_s, dt_s, sample_interval_steps)
+        layers_2d = self._convert_to_2d_layers()
+        solver = self._create_transient_solver(layers_2d, dt_s)
         times, temps = solver.solve_transient(
             total_time_s=total_time_s,
             sample_interval_steps=sample_interval_steps,
         )
-        # 同步最新温度场到 self._T（供 max_temperature_k / avg_temp_at_layer 使用）
         if temps.shape[0] > 0:
             self._T = temps[-1].copy()
         return times, temps

@@ -153,9 +153,9 @@ class FoundryPDKRegistry:
             "with_laser": len(self.list_with_laser()),
         }
 
-    def _register_builtin(self) -> None:
-        """注册 15 个 foundry 平台。"""
-        specs = [
+    def _build_soi_foundry_specs(self) -> list[FoundrySpec]:
+        """构建 SOI 平台的 foundry 规格列表。"""
+        return [
             FoundrySpec(FoundryPlatform.AMF, MaterialPlatform.SOI,
                         min_feature_nm=130, waveguide_width_um=0.45,
                         waveguide_thickness_nm=220, propagation_loss_db_cm=1.5,
@@ -164,7 +164,7 @@ class FoundryPDKRegistry:
                         description="Advanced Micro Foundry SOI",
                         url="https://www.amf.com.sg/"),
             FoundrySpec(FoundryPlatform.AIM, MaterialPlatform.SOI,
-                        min_feature_nm=130, propagation_loss_db_cm=3.0,  # R10-P2-3: 硅平台 3.0 dB/cm（Soref 1993）
+                        min_feature_nm=130, propagation_loss_db_cm=3.0,
                         device_count=14, drc_rule_count=90,
                         has_active=True, has_modulator=True, has_detector=True,
                         description="AIM Photonics Multi-Project Wafer",
@@ -177,16 +177,16 @@ class FoundryPDKRegistry:
                         url="https://www.compoundtek.com/"),
             FoundrySpec(FoundryPlatform.GF, MaterialPlatform.SOI,
                         min_feature_nm=90, waveguide_thickness_nm=220,
-                        propagation_loss_db_cm=3.0,  # R10-P2-4: 硅平台 3.0 dB/cm（Soref 1993）
+                        propagation_loss_db_cm=3.0,
                         has_active=True, has_modulator=True, has_detector=True,
                         device_count=18, drc_rule_count=110,
                         description="GlobalFoundries 45CLO SiPh",
                         url="https://gf.com/technology-solutions/silicon-photonics/"),
             FoundrySpec(FoundryPlatform.IHP, MaterialPlatform.SOI,
                         min_feature_nm=130, waveguide_thickness_nm=220,
-                        propagation_loss_db_cm=3.0,  # R10-P2-5: 硅平台 3.0 dB/cm（Soref 1993）
+                        propagation_loss_db_cm=3.0,
                         has_active=True, has_modulator=True, has_detector=True,
-                        has_laser=True,  # IHP 有异质集成激光器
+                        has_laser=True,
                         device_count=19, drc_rule_count=100,
                         description="IHP SG25H1 BiCMOS+SiPh",
                         url="https://www.ihp-microelectronics.com/"),
@@ -194,10 +194,43 @@ class FoundryPDKRegistry:
                         min_feature_nm=130, waveguide_thickness_nm=220,
                         propagation_loss_db_cm=0.5,
                         has_active=True, has_modulator=True, has_detector=True,
-                        has_laser=True,  # imec 异质集成
+                        has_laser=True,
                         device_count=20, drc_rule_count=120,
                         description="imec iSiPP50G",
                         url="https://www.imec-int.com/"),
+            FoundrySpec(FoundryPlatform.SIEPIC, MaterialPlatform.SOI,
+                        min_feature_nm=130, waveguide_width_um=0.5,
+                        waveguide_thickness_nm=220,
+                        propagation_loss_db_cm=3.0,
+                        device_count=13, drc_rule_count=80,
+                        description="UBC SiEPIC EBeam",
+                        url="https://github.com/SiEPIC/SiEPIC_EBeam_PDK"),
+            FoundrySpec(FoundryPlatform.VTT, MaterialPlatform.SOI,
+                        min_feature_nm=500, waveguide_width_um=3.0,
+                        waveguide_thickness_nm=3000,
+                        propagation_loss_db_cm=0.1,
+                        device_count=10, drc_rule_count=55,
+                        description="VTT 3μm Thick SOI (150mm)",
+                        url="https://www.vttresearch.com/"),
+            FoundrySpec(FoundryPlatform.TOWER, MaterialPlatform.SOI,
+                        min_feature_nm=130, waveguide_thickness_nm=220,
+                        propagation_loss_db_cm=3.0,
+                        has_active=True, has_modulator=True, has_detector=True,
+                        device_count=17, drc_rule_count=105,
+                        description="Tower Semiconductor PH18 SiPh",
+                        url="https://towerjazz.com/"),
+            FoundrySpec(FoundryPlatform.CORNERSTONE, MaterialPlatform.SOI,
+                        min_feature_nm=130, waveguide_thickness_nm=220,
+                        propagation_loss_db_cm=3.0,
+                        has_active=True, has_modulator=True, has_detector=True,
+                        device_count=14, drc_rule_count=80,
+                        description="Cornerstone SiP MPW",
+                        url="https://www.cornerstone-sip.org/"),
+        ]
+
+    def _build_sin_foundry_specs(self) -> list[FoundrySpec]:
+        """构建 SiN 平台的 foundry 规格列表。"""
+        return [
             FoundrySpec(FoundryPlatform.LIGENTEC, MaterialPlatform.SIN,
                         min_feature_nm=500, waveguide_width_um=1.0,
                         waveguide_thickness_nm=800,
@@ -212,37 +245,11 @@ class FoundryPDKRegistry:
                         device_count=11, drc_rule_count=60,
                         description="LioniX TriPleX SiN",
                         url="https://www.lionix-international.com/"),
-            FoundrySpec(FoundryPlatform.SIEPIC, MaterialPlatform.SOI,
-                        min_feature_nm=130, waveguide_width_um=0.5,
-                        waveguide_thickness_nm=220,
-                        propagation_loss_db_cm=3.0,
-                        device_count=13, drc_rule_count=80,
-                        description="UBC SiEPIC EBeam",
-                        url="https://github.com/SiEPIC/SiEPIC_EBeam_PDK"),
-            # R05 Bug 修复 v4.0-VTT-MATL（第2轮迭代发现）:
-            # 原标记 MaterialPlatform.SIN 错误，VTT 实际为 3μm ThickSOI 平台
-            # （foundry_platforms.py:196-210 已溯源 VTT 官方文档）。
-            # 修复为 SOI + width=3.0μm + thickness=3000nm，与 foundry_platforms.py 一致。
-            # 规则: R02 学术诚信 / R05 Bug 必修
-            # 文献:
-            # - VTT 3μm Thick SOI https://cloud.tencent.com/developer/article/1678542
-            # - VTT official https://www.vttresearch.com/
-            # - Omeda Semi VTT https://www.omedasemi.com/news/641.html
-            FoundrySpec(FoundryPlatform.VTT, MaterialPlatform.SOI,
-                        min_feature_nm=500, waveguide_width_um=3.0,
-                        waveguide_thickness_nm=3000,
-                        propagation_loss_db_cm=0.1,
-                        device_count=10, drc_rule_count=55,
-                        description="VTT 3μm Thick SOI (150mm)",
-                        url="https://www.vttresearch.com/"),
-            FoundrySpec(FoundryPlatform.TOWER, MaterialPlatform.SOI,
-                        min_feature_nm=130, waveguide_thickness_nm=220,
-                        propagation_loss_db_cm=3.0,  # R10-P2-1: 硅平台应为 3.0 dB/cm（Soref 1993）
-                        has_active=True, has_modulator=True, has_detector=True,
-                        device_count=17, drc_rule_count=105,
-                        description="Tower Semiconductor PH18 SiPh",
-                        url="https://towerjazz.com/"),
-            # R26 新增 4 平台
+        ]
+
+    def _build_inp_foundry_specs(self) -> list[FoundrySpec]:
+        """构建 InP 平台的 foundry 规格列表。"""
+        return [
             FoundrySpec(FoundryPlatform.OPENLIGHT, MaterialPlatform.INP,
                         min_feature_nm=500, waveguide_width_um=2.0,
                         propagation_loss_db_cm=1.0,
@@ -251,13 +258,6 @@ class FoundryPDKRegistry:
                         device_count=14, drc_rule_count=75,
                         description="OpenLight InP PLC",
                         url="https://openlightphotonics.com/"),
-            FoundrySpec(FoundryPlatform.CORNERSTONE, MaterialPlatform.SOI,
-                        min_feature_nm=130, waveguide_thickness_nm=220,
-                        propagation_loss_db_cm=3.0,  # R10-P2-2: 硅平台应为 3.0 dB/cm（Soref 1993）
-                        has_active=True, has_modulator=True, has_detector=True,
-                        device_count=14, drc_rule_count=80,
-                        description="Cornerstone SiP MPW",
-                        url="https://www.cornerstone-sip.org/"),
             FoundrySpec(FoundryPlatform.HHI, MaterialPlatform.INP,
                         min_feature_nm=500, waveguide_width_um=1.5,
                         propagation_loss_db_cm=1.5,
@@ -266,9 +266,19 @@ class FoundryPDKRegistry:
                         device_count=13, drc_rule_count=65,
                         description="Fraunhofer HHI InP",
                         url="https://www.hhi.fraunhofer.de/"),
-            # 注：Huawei foundry 因无公开 PDK 文档（违反 R02 学术诚信）已移除
-            # 如需添加需先找到公开可溯源的华为 SiPh PDK 文档
         ]
+
+    def _register_builtin(self) -> None:
+        """注册 15 个 foundry 平台。
+
+        注：Huawei foundry 因无公开 PDK 文档（违反 R02 学术诚信）已移除。
+        如需添加需先找到公开可溯源的华为 SiPh PDK 文档。
+        """
+        specs = (
+            self._build_soi_foundry_specs()
+            + self._build_sin_foundry_specs()
+            + self._build_inp_foundry_specs()
+        )
         for spec in specs:
             self.register(spec)
 
