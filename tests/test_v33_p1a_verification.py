@@ -60,7 +60,11 @@ def test_v33_ver1_drc_geometric_min_width_violation() -> None:
     engine = CurvilinearDRCEngine()
     # 窄波导: 0.3μm 宽 × 10μm 长（宽度 < 0.45μm 阈值）
     narrow_wg = np.array([[0, 0], [10, 0], [10, 0.3], [0, 0.3]], dtype=float)
-    violations = engine.run_geometric_checks({"waveguide": [narrow_wg]})
+    # R121-R180: S2 同网间距需要 net_assignments（R03 无 fall-back）
+    violations = engine.run_geometric_checks(
+        {"waveguide": [narrow_wg]},
+        net_assignments={"waveguide": [0]},
+    )
     min_w_violations = [
         v for v in violations
         if v.category == DRCRuleCategory.MIN_WIDTH.value
@@ -77,7 +81,11 @@ def test_v33_ver1_drc_geometric_min_spacing_violation() -> None:
     engine = CurvilinearDRCEngine()
     wg1 = np.array([[0, 0], [10, 0], [10, 1], [0, 1]], dtype=float)
     wg2 = np.array([[0, 1.3], [10, 1.3], [10, 2.3], [0, 2.3]], dtype=float)
-    violations = engine.run_geometric_checks({"waveguide": [wg1, wg2]})
+    # R121-R180: S2 同网间距需要 net_assignments（两条波导在不同网络）
+    violations = engine.run_geometric_checks(
+        {"waveguide": [wg1, wg2]},
+        net_assignments={"waveguide": [0, 1]},
+    )
     spacing_violations = [
         v for v in violations
         if v.category == DRCRuleCategory.MIN_SPACING.value
@@ -110,7 +118,11 @@ def test_v33_ver1_drc_geometric_no_violation_on_compliant_layout() -> None:
     engine = CurvilinearDRCEngine()
     wg1 = np.array([[0, 0], [10, 0], [10, 0.5], [0, 0.5]], dtype=float)
     wg2 = np.array([[0, 1.5], [10, 1.5], [10, 2.0], [0, 2.0]], dtype=float)
-    violations = engine.run_geometric_checks({"waveguide": [wg1, wg2]})
+    # R121-R180: S2 同网间距需要 net_assignments（合规波导在不同网络）
+    violations = engine.run_geometric_checks(
+        {"waveguide": [wg1, wg2]},
+        net_assignments={"waveguide": [0, 1]},
+    )
     width_spacing = [
         v for v in violations
         if v.category in {
