@@ -41,6 +41,13 @@ from typing import Any, Callable
 import numpy as np
 from numpy.typing import NDArray
 
+try:
+    from scipy.stats import norm as _norm_cdf
+    _HAS_SCIPY = True
+except ImportError:
+    _norm_cdf = None
+    _HAS_SCIPY = False
+
 
 # =============================================================================
 # 1. DRC — 设计规则检查
@@ -119,6 +126,58 @@ class DRCEngine:
             "passed": self.error_count == 0,
         }
 
+    def _check_min_width(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        w = layer_data.get("min_width", 0)
+        if w < rule.limit_um and w > 0:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"最小线宽 {w:.3f}μm < {rule.limit_um}μm",
+                count=layer_data.get("width_violations", 1),
+            ))
+
+    def _check_min_spacing(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        s = layer_data.get("min_spacing", float("inf"))
+        if s < rule.limit_um:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"最小间距 {s:.3f}μm < {rule.limit_um}μm",
+                count=layer_data.get("spacing_violations", 1),
+            ))
+
+    def _check_min_enclosure(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        e = layer_data.get("min_enclosure", float("inf"))
+        if e < rule.limit_um:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"最小包围 {e:.3f}μm < {rule.limit_um}μm",
+                count=1,
+            ))
+
+    def _check_density(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        d = layer_data.get("density", 0.0)
+        if d < rule.limit_um:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"密度 {d:.1%} < {rule.limit_um:.1%}",
+                count=1,
+            ))
+
+    def _get_builtin_checker(self, rule_name: str):
+        name_lower = rule_name.lower()
+        if "min_width" in name_lower:
+            return self._check_min_width
+        elif "min_spacing" in name_lower:
+            return self._check_min_spacing
+        elif "min_enclosure" in name_lower:
+            return self._check_min_enclosure
+        elif "density" in name_lower:
+            return self._check_density
+        return None
+
     def _check_rule(self, rule: DRCRule, layout: dict[str, Any]) -> None:
         layer_data = layout.get(rule.layer, {})
         if rule.check_fn is not None:
@@ -131,43 +190,11 @@ class DRCEngine:
                 ))
             return
 
-        # 内置规则模式匹配
-        if "min_width" in rule.name.lower() and rule.limit_um > 0:
-            w = layer_data.get("min_width", 0)
-            if w < rule.limit_um and w > 0:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"最小线宽 {w:.3f}μm < {rule.limit_um}μm",
-                    count=layer_data.get("width_violations", 1),
-                ))
-        elif "min_spacing" in rule.name.lower() and rule.limit_um > 0:
-            s = layer_data.get("min_spacing", float("inf"))
-            if s < rule.limit_um:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"最小间距 {s:.3f}μm < {rule.limit_um}μm",
-                    count=layer_data.get("spacing_violations", 1),
-                ))
-        elif "min_enclosure" in rule.name.lower() and rule.limit_um > 0:
-            e = layer_data.get("min_enclosure", float("inf"))
-            if e < rule.limit_um:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"最小包围 {e:.3f}μm < {rule.limit_um}μm",
-                    count=1,
-                ))
-        elif "density" in rule.name.lower() and rule.limit_um > 0:
-            d = layer_data.get("density", 0.0)
-            if d < rule.limit_um:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"密度 {d:.1%} < {rule.limit_um:.1%}",
-                    count=1,
-                ))
+        if rule.limit_um <= 0:
+            return
+        checker = self._get_builtin_checker(rule.name)
+        if checker is not None:
+            checker(rule, layer_data)
 
     def _register_builtin_rules(self) -> None:
         # SOI 标准 DRC 规则（对齐 imec iPP500 / GlobalFoundries）
@@ -724,8 +751,12 @@ class StatisticalAnalyzer:
                 z = self._rng.standard_normal((n_devices, n_runs))
                 gauss_samples = L @ z
                 # 高斯到均匀的变换（通过经验 CDF 近似）
-                from scipy.stats import norm
-                u = norm.cdf(gauss_samples)
+                if not _HAS_SCIPY:
+                    raise RuntimeError(
+                        "scipy 不可用，无法执行 uniform 分布的 layout-aware Monte Carlo。"
+                        "请安装 scipy: pip install scipy"
+                    )
+                u = _norm_cdf(gauss_samples)
                 samples = p.lower + u * (p.upper - p.lower)
             else:
                 samples = np.full((n_devices, n_runs), p.nominal)
@@ -944,8 +975,11 @@ def _test() -> None:
     def sim_layout(p: dict[str, float], pos: tuple[float, float]) -> float:
         return 1550.0 - 2.0 * (p["waveguide_width"] - 0.45)
 
-    lamc = stats.run_layout_aware_mc(sim_layout, n_runs=100,
-                                      die_size_um=(2000, 2000))
+    lamc = stats.run_layout_aware_mc(
+        sim_layout,
+        device_positions=[(0.0, 0.0), (500.0, 0.0), (1000.0, 0.0)],
+        n_runs=100,
+    )
     assert lamc["layout_aware"]
     print(f"Layout-Aware MC: mean={lamc['mean']:.3f}nm, std={lamc['std']:.3f}nm")
 
