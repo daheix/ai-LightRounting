@@ -98,6 +98,12 @@ from polaris.pdk.yaml_pdk_config import (
     serialize_pdk_yaml,
     validate_pdk_yaml,
 )
+from polaris.pdk.pdk_yaml_templates import (
+    generate_default_pdk_yaml,
+    get_default_pdk_config,
+    list_supported_platforms,
+    save_default_pdk_yaml,
+)
 from polaris.pdk.gpic import (
     GPIC_ALIAS_MAP,
     GPICBB,
@@ -238,6 +244,11 @@ __all__ = [
     "parse_pdk_yaml",
     "serialize_pdk_yaml",
     "validate_pdk_yaml",
+    # R311 PDK YAML 默认模板生成器
+    "generate_default_pdk_yaml",
+    "get_default_pdk_config",
+    "list_supported_platforms",
+    "save_default_pdk_yaml",
     # R15 VPIphotonics PDK 对齐（VPIToolkitPDK + PDAflow + 3 foundry PDK）
     "PDAflowExporter",
     "VPIBuildingBlock",
