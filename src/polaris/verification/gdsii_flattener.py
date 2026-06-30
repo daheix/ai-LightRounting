@@ -23,8 +23,12 @@
 
 - Cell.flatten(levels, prune): 扁平化 cell 的子实例
   - levels: 层次数（-1=全部，0=无，1=一层）
-  - prune: True 删除孤儿 cell（但实测可能不删除，需手动清理）
-- Layout.cells(): 返回总 cell 数（方法）
+  - prune: True 删除孤儿 cell（实测确实删除，但 cells() 缓存不更新）
+- Layout.cells(): 返回总 cell 数（方法）—— **不可靠，返回缓存值**
+  扁平化/删除 cell 后不会立即更新，实测仍返回扁平化前的值。
+  必须用 `len(list(ly.each_cell()))` 获取实际 cell 数。
+  来源: 冒烟测试 R326，对比 ly.cells()=2 vs len(list(ly.each_cell()))=1
+- len(list(ly.each_cell())): 实际 cell 数（可靠，每次重新迭代）
 - Cell.child_instances(): 返回直接子实例数（方法，返回 int）
 - Layout.each_top_cell(): 返回顶层 cell 索引迭代器
 - Layout.delete_cell(cell_index): 删除指定 cell
@@ -186,7 +190,9 @@ def flatten_gdsii(
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
 
     # 扁平化前统计
-    cells_before = int(ly.cells())
+    # 注: ly.cells() 返回缓存值不可靠，用 len(list(ly.each_cell())) 获取实际值
+    # 来源: R326 冒烟测试，ly.cells()=2 vs len(list(ly.each_cell()))=1
+    cells_before = len(list(ly.each_cell()))
     instances_before = int(top_cell.child_instances())
     shapes_before = _count_shapes_rec(top_cell, ly)
 
@@ -200,7 +206,8 @@ def flatten_gdsii(
         _delete_orphan_cells(ly)
 
     # 扁平化后统计
-    cells_after = int(ly.cells())
+    # 注: ly.cells() 返回缓存值不可靠，用 len(list(ly.each_cell())) 获取实际值
+    cells_after = len(list(ly.each_cell()))
     instances_after = int(top_cell.child_instances())
     shapes_after = _count_shapes_rec(top_cell, ly)
 
