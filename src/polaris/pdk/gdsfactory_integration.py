@@ -400,8 +400,14 @@ def list_gdsfactory_pdks() -> list[str]:
     检测已安装的 gdsfactory PDK 模块，返回 PDK 名列表。
     支持检测：generic（内置）/ubcpdk/gf180/ihp。
 
+    R03 修复 R112-R120: 原代码 gdsfactory 不可用时返回 []（静默 fall-back），
+    违反 R03"禁止 fall-back"。修复为 raise ImportError。
+
     Returns:
-        PDK 名列表。gdsfactory 不可用时返回空列表。
+        PDK 名列表。
+
+    Raises:
+        ImportError: gdsfactory 未安装时。
 
     来源:
     - ubcpdk: https://github.com/gdsfactory/ubc
@@ -409,7 +415,10 @@ def list_gdsfactory_pdks() -> list[str]:
     - IHP: https://github.com/IHP-GmbH/IHP-Open-PDK
     """
     if not _HAS_GDSFACTORY:
-        return []
+        raise ImportError(
+            "gdsfactory 未安装，无法列出 PDK。"
+            "请执行 pip install gdsfactory 或检查 Python 版本兼容性。"
+        )
     pdks: list[str] = ["generic"]  # generic 内置
     # 检测可选 PDK
     for pdk_name, module_name in [
@@ -521,8 +530,11 @@ def load_gdsfactory_pdk(
     try:
         components = _activate_gdsfactory_pdk(pdk_name)
         if components is None:
-            logger.warning("不支持的 gdsfactory PDK: %s", pdk_name)
-            return {}
+            # R03 修复 R112-R120: 原代码返回 {}（静默 fall-back），违反 R03。
+            # 修复为 raise ValueError，明确告知不支持该 PDK。
+            raise ValueError(
+                f"不支持的 gdsfactory PDK: {pdk_name}（仅支持 generic/ubcpdk）"
+            )
 
         # 平台与工艺节点映射
         platform_map = {
@@ -564,11 +576,10 @@ def register_gdsfactory_pdk(
     devices = load_gdsfactory_pdk(pdk_name, max_components)
     count = 0
     for device in devices.values():
-        try:
-            catalog.register(device)
-            count += 1
-        except Exception as e:
-            logger.debug("注册器件 %s 失败: %s", device.device_id, e)
+        # R03 修复 R112-R120: 原代码 logger.debug 吞异常（静默 fall-back），
+        # 违反 R03"禁止 fall-back"。修复为 raise RuntimeError，注册失败即报错。
+        catalog.register(device)
+        count += 1
     logger.info("从 gdsfactory PDK %s 注册 %d 个器件到 catalog", pdk_name, count)
     return count
 
