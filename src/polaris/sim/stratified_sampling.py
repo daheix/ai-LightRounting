@@ -535,9 +535,17 @@ def stratified_monte_carlo(
         for h, (lower, upper) in enumerate(strata_bounds):
             n_h = n_per_stratum[h]
             if n_h == 0:
-                strata_means.append(0.0)
-                strata_stds.append(0.0)
-                continue
+                # R03 禁止 fall-back: 空层意味着该层无样本信息，
+                # 方差公式 Var = Σ Wₕ²·σₕ²/nₕ 中 nₕ=0 时该项应为无穷大。
+                # 原代码设 means=0/stds=0 并在方差求和中 `if n_h > 0` 过滤，
+                # 导致方差严重低估（虚假的高精度置信区间）。
+                # 修复: raise 强制用户增大 n_samples 或改用 NEYMAN 分配。
+                raise RuntimeError(
+                    f"分层 {h} (bounds=[{lower}, {upper})) 分配到 0 个样本，"
+                    f"无法估计该层统计量（R03 禁止 fall-back）。"
+                    f"请增大 n_samples (当前总样本={n_samples}, 层数={n_strata}) "
+                    f"或改用 NEYMAN 分配策略。"
+                )
             outputs = _sample_and_evaluate_stratum(
                 func, dists, primary_dist, lower, upper, n_h, d, rng, h
             )
@@ -549,11 +557,10 @@ def stratified_monte_carlo(
     # 3. 合并估计: μ̂ = Σ Wₕ·μ̂ₕ
     estimate = sum(w * m for w, m in zip(strata_weights, strata_means, strict=True))
 
-    # 4. 方差: Var = Σ Wₕ²·σₕ²/nₕ
+    # 4. 方差: Var = Σ Wₕ²·σₕ²/nₕ（所有 nₕ > 0，由上面的检查保证）
     variance_estimate = sum(
         w * w * (s * s / n_h)
         for w, s, n_h in zip(strata_weights, strata_stds, n_per_stratum, strict=True)
-        if n_h > 0
     )
     std_error = float(np.sqrt(variance_estimate)) if variance_estimate > 0 else 0.0
     relative_error = (

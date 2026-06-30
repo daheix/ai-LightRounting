@@ -89,20 +89,66 @@ class CurvyAStarConfig:
 def _generate_directions(n: int) -> list[tuple[float, float, float]]:
     """生成 n 方向移动向量列表。
 
+    R05 Bug 修复 v5.0-P0-3R1: 16/32 方向坍缩 bug。
+    原代码用浮点单位向量 (cos θ, sin θ)，在 line 183 round 到整数网格时，
+    22.5° 方向 (0.924, 0.383) 坍缩为 (1, 0) 与 0° 重复，导致 16 方向
+    退化为 8 方向（32 方向更严重）。
+
+    修复: 改用预定义整数方向表（勾股数近似），确保每个方向在整数网格上唯一。
+    step = hypot(dx, dy)（浮点），用于 length_cost 计算。
+    A* 能处理不均匀步长（启发函数仍 admissible）。
+
+    n=8:  标准八方向 (1,0)~(1,-1)，step ∈ {1.0, √2}
+    n=16: 八方向 + 8 个中间方向 (5,2)≈21.8°, (2,5)≈68.2° 等
+    n=32: 32 方向，每 11.25°，用更大勾股数 (5,1)≈11.3°, (3,2)≈33.7° 等
+
+    学术依据：LiDAR ISPD'25 §3.1（任意角度布线需亚网格精度或整数比例方向）
+
     Args:
         n: 方向数（8/16/32）。
 
     Returns:
-        方向列表 [(dx, dy, step_length), ...]，按角度均匀分布。
+        方向列表 [(dx, dy, step_length), ...]，dx/dy 为整数，step 为浮点。
+
+    Raises:
+        ValueError: n 不在 {8, 16, 32} 中。
     """
-    directions: list[tuple[float, float, float]] = []
-    for i in range(n):
-        angle = 2.0 * math.pi * i / n
-        dx = math.cos(angle)
-        dy = math.sin(angle)
-        step = 1.0 if (dx == 0 or dy == 0) else math.sqrt(2.0)
-        directions.append((dx, dy, step))
-    return directions
+    # 预定义整数方向表（按角度逆时针排列，从 0° 开始）
+    # n=8: 8 个标准方向
+    _8_DIRS = [
+        (1, 0), (1, 1), (0, 1), (-1, 1),
+        (-1, 0), (-1, -1), (0, -1), (1, -1),
+    ]
+    # n=16: 8 方向 + 8 个中间方向（22.5° 倍数，用勾股数近似）
+    # 22.5°→(5,2)≈21.8°（误差 0.7°），67.5°→(2,5)≈68.2°
+    _16_DIRS = [
+        (1, 0), (5, 2), (1, 1), (2, 5),
+        (0, 1), (-2, 5), (-1, 1), (-5, 2),
+        (-1, 0), (-5, -2), (-1, -1), (-2, -5),
+        (0, -1), (2, -5), (1, -1), (5, -2),
+    ]
+    # n=32: 32 方向，每 11.25°，用更大勾股数
+    # 11.25°→(5,1)≈11.3°, 33.75°→(3,2)≈33.7°, 56.25°→(2,3)≈56.3°, 78.75°→(1,5)≈78.7°
+    _32_DIRS = [
+        (1, 0), (5, 1), (5, 2), (3, 2),
+        (1, 1), (2, 3), (2, 5), (1, 5),
+        (0, 1), (-1, 5), (-2, 5), (-2, 3),
+        (-1, 1), (-3, 2), (-5, 2), (-5, 1),
+        (-1, 0), (-5, -1), (-5, -2), (-3, -2),
+        (-1, -1), (-2, -3), (-2, -5), (-1, -5),
+        (0, -1), (1, -5), (2, -5), (2, -3),
+        (1, -1), (3, -2), (5, -2), (5, -1),
+    ]
+    if n == 8:
+        dirs = _8_DIRS
+    elif n == 16:
+        dirs = _16_DIRS
+    elif n == 32:
+        dirs = _32_DIRS
+    else:
+        raise ValueError(f"n_directions 必须为 8/16/32，得到 {n}")
+    # 返回 (dx, dy, step)，dx/dy 为整数，step 为浮点（用于 length_cost）
+    return [(float(dx), float(dy), math.hypot(dx, dy)) for dx, dy in dirs]
 
 
 class CurvyAStarRouter:
@@ -180,7 +226,9 @@ class CurvyAStarRouter:
             cx, cy = current
             prev = came_from.get(current)
             for dx, dy, step in self._directions:
-                nx, ny = cx + round(dx), cy + round(dy)
+                # R05 Bug 修复 v5.0-P0-3R1: dx/dy 已是整数方向（_generate_directions
+                # 改用整数方向表），无需 round（原 round 导致 16/32 方向坍缩）。
+                nx, ny = cx + int(dx), cy + int(dy)
                 nb = (nx, ny)
                 if nb in closed or nb in obs_set:
                     continue
@@ -209,16 +257,37 @@ class CurvyAStarRouter:
     def _obstacle_to_set(
         self, obstacles: list[tuple[float, float, float, float]]
     ) -> set[tuple[int, int]]:
-        """将障碍物矩形转换为网格点集合。"""
+        """将障碍物矩形转换为网格点集合。
+
+        R05 Bug 修复 v5.0-P0-3R1: 边界 cell 漏标。
+        原代码 floor(x/gs) + ceil((x+w)/gs) + range(x0, x1)（不含 x1），
+        当 (x+w)/gs 为整数时右边界 cell 漏标；当 (y+h)/gs 为整数时上边界
+        cell 漏标，导致 A* 路径可经过障碍边界 cell（中心在障碍矩形边界上），
+        违反商业级避障约束。
+
+        修复: cell (gx, gy) 中心 (gx*gs, gy*gs) 在障碍矩形 [x, x+w] × [y, y+h]
+        内（含边界）则标记为障碍。
+        - gx_min = ceil(x/gs)   → 最小 gx 使 gx*gs ≥ x
+        - gx_max = floor((x+w)/gs) → 最大 gx 使 gx*gs ≤ x+w
+        - range(gx_min, gx_max+1) 含两端
+
+        商业级要求：路径严格避开障碍物边界（OptoDesigner DRV-free）。
+        """
         gs = self.config.grid_size
         obs_set: set[tuple[int, int]] = set()
         for x, y, w, h in obstacles:
-            x0 = int(math.floor(x / gs))
-            y0 = int(math.floor(y / gs))
-            x1 = int(math.ceil((x + w) / gs))
-            y1 = int(math.ceil((y + h) / gs))
-            for gx in range(x0, x1):
-                for gy in range(y0, y1):
+            gx_min = int(math.ceil(x / gs))
+            gx_max = int(math.floor((x + w) / gs))
+            gy_min = int(math.ceil(y / gs))
+            gy_max = int(math.floor((y + h) / gs))
+            if gx_min > gx_max or gy_min > gy_max:
+                # 障碍物尺寸 < grid_size，无 cell 中心落入，标记最近 cell
+                gx_min = int(round(x / gs))
+                gx_max = gx_min
+                gy_min = int(round(y / gs))
+                gy_max = gy_min
+            for gx in range(gx_min, gx_max + 1):
+                for gy in range(gy_min, gy_max + 1):
                     obs_set.add((gx, gy))
         return obs_set
 
@@ -276,7 +345,15 @@ class CurvyAStarRouter:
         """检查三点形成的弯曲是否满足最小半径约束。
 
         学术依据：LiDAR ISPD'25 §3.2
-        公式：R = |v1|*|v2|*|v1-v2| / (2*|v1×v2|) （三点外接圆半径）
+        公式：R = abc/(4K)，a=|p2-p1|, b=|p3-p2|, c=|p3-p1|, K=|v1×v2|/2
+        化简：R = |v1|*|v2|*|v1+v2| / (2*|v1×v2|)（三点外接圆半径）
+
+        R05 Bug 修复 v5.0-P0-3R1: 第三边向量错误。
+        原代码 v3 = v1 - v2（无几何意义），应为 v3 = v1 + v2（即 p3-p1，三角形第三边）。
+        数学验证: p1=(0,0), p2=(1,0), p3=(2,1):
+          v1=(1,0), v2=(1,1), v3=v1+v2=(2,1), |v3|=√5
+          正确 R = 1·√2·√5 / (2·1) = √10/2 ≈ 1.581
+          bug R = 1·√2·|v1-v2|=|（0,-1）|=1 → R = √2·1/(2·1) = 0.707（偏差 55%）
 
         Args:
             p1, p2, p3: 三点坐标。
@@ -290,8 +367,8 @@ class CurvyAStarRouter:
         if cross < 1e-12:
             # 共线，无弯曲
             return True
-        # 三点外接圆半径公式：R = |v1|*|v2|*|v1-v2| / (2*|cross|)
-        v3 = v1 - v2
+        # 三点外接圆半径公式：R = |v1|*|v2|*|v1+v2| / (2*|cross|)
+        v3 = v1 + v2  # 第三边 p3-p1 = (p3-p2)+(p2-p1) = v2+v1
         r = (
             float(np.hypot(*v1)) * float(np.hypot(*v2))
             * float(np.hypot(*v3)) / (2.0 * cross)

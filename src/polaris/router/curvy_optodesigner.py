@@ -27,6 +27,7 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from typing import TYPE_CHECKING, Any
 
@@ -34,6 +35,8 @@ from polaris.router.curvy_astar_core import (
     CurvyAStarConfig,
     CurvyAStarRouter,
 )
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     # CurvyAStarRouter 已在运行时导入（OptoDesignerAutorouter 需实例化），
@@ -377,8 +380,16 @@ class CongestionAwareNetOrdering:
                         old_path[0], old_path[-1], obstacles
                     )
                     result[fi] = new_path
-                except ValueError:
-                    # 重布失败，恢复原路径（不静默 fall-back，记录失败）
+                except ValueError as exc:
+                    # R05 Bug 修复 v5.0-P1-3R1: 原代码静默恢复 old_path
+                    # 且注释谎称"记录失败"但无任何日志。rip-up & reroute 的
+                    # "保留原路径供下轮迭代"是算法合法行为，但必须记录失败
+                    # 让调用方感知（R03 禁止静默 fall-back）。
+                    logger.error(
+                        "网 %d 重布失败 (起=%s, 终=%s): %s。"
+                        "保留原路径供下轮迭代。",
+                        fi, old_path[0], old_path[-1], exc,
+                    )
                     result[fi] = old_path
         return result
 
