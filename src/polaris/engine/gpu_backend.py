@@ -67,18 +67,21 @@ class DeviceType(Enum):
 
 
 def check_cupy_availability() -> bool:
-    """检查 CuPy 是否可用。
+    """检查 CuPy 是否可用（🚫R04 战略：永远返回 False）。
+
+    R05 Bug 修复 R110-R04-01: 原代码 ``try: import cupy; cupy.cuda.Device(0)``
+    路径违反 R04"禁止 CuPy/CUDA/ROCm 等所有 GPU 后端"战略决策（即使被
+    try/except 包裹，import cupy 本身已触发 GPU 后端加载意图）。修复：
+    直接 return False，不 import cupy，不检测 GPU 设备。
+
+    R04 战略决策不可撤销（2026-06-25 项目所有者指示），PoLaRIS 不参与
+    GPU 计算，CuPy 永远不可用。
 
     Returns:
-        True 如果 CuPy 可用且 GPU 可访问。
+        False（永远，R04 战略）。
     """
-    try:
-        import cupy  # type: ignore[import-not-found]
-
-        _ = cupy.cuda.Device(0).compute_capability
-        return True
-    except Exception:
-        return False
+    # R04 战略：不 import cupy，不检测 GPU，直接返回 False
+    return False
 
 
 @dataclass(frozen=True)
