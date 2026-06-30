@@ -217,6 +217,62 @@ def _rebuild_instance(db_module, cell, info: dict, new_cell_index: int):
     return new_inst
 
 
+def _cell_contains_child(ly, parent_ci: int, target_ci: int,
+                          visited: set[int] | None = None) -> bool:
+    """检测 parent_ci 的子树中是否包含 target_ci（R338 内部函数）。
+
+    递归遍历 parent_ci 的所有子 cell（通过实例引用），检测 target_ci
+    是否在子树中。用 visited 集合避免循环引用导致的无限递归。
+
+    Args:
+        ly: KLayout Layout 对象。
+        parent_ci: 起始 cell index。
+        target_ci: 目标 cell index。
+        visited: 已访问 cell index 集合（防循环）。
+
+    Returns:
+        True 若 target_ci 在 parent_ci 的子树中。
+
+    来源:
+    - KLayout Cell.each_child_cell:
+      https://www.klayout.org/doc-qt5/code/class_Cell.html
+    """
+    if visited is None:
+        visited = set()
+    if parent_ci in visited:
+        return False
+    visited.add(parent_ci)
+    parent_cell = ly.cell(parent_ci)
+    if parent_cell is None:
+        return False
+    for child_ci in parent_cell.each_child_cell():
+        child_ci = int(child_ci)
+        if child_ci == target_ci:
+            return True
+        if _cell_contains_child(ly, child_ci, target_ci, visited):
+            return True
+    return False
+
+
+def _would_create_cycle(ly, old_ci: int, new_ci: int) -> bool:
+    """检测替换 old_ci → new_ci 是否会创建循环引用（R338 内部函数）。
+
+    替换后，所有引用 old_ci 的实例改为引用 new_ci。如果 new_ci 的子树中
+    包含 old_ci，则替换后 new_ci 会通过 old_ci→new_ci 引用自己，形成循环。
+
+    Args:
+        ly: KLayout Layout 对象。
+        old_ci: 旧 cell index。
+        new_ci: 新 cell index。
+
+    Returns:
+        True 若替换会创建循环引用。
+    """
+    if old_ci == new_ci:
+        return False  # 无变化
+    return _cell_contains_child(ly, new_ci, old_ci)
+
+
 # =============================================================================
 # 替换主入口
 # =============================================================================
@@ -309,6 +365,14 @@ def substitute_cell_instances(
     for old_name, new_name in substitutions.items():
         old_ci = cell_index_map[old_name]
         new_ci = cell_index_map[new_name]
+        # 检测循环引用：替换后 new_ci 不能引用自己
+        if _would_create_cycle(ly, old_ci, new_ci):
+            raise ValueError(
+                f"替换 '{old_name}' → '{new_name}' 会创建循环引用："
+                f"'{new_name}' 的子树中已包含 '{old_name}'，"
+                f"替换后 '{new_name}' 会引用自己。"
+                f"禁止 fall-back（R03）。"
+            )
         ci_substitution_map[old_ci] = new_ci
 
     # 确定要处理的 cell 列表
@@ -336,8 +400,11 @@ def substitute_cell_instances(
     # 按 (parent_cell, old_name, new_name, is_array) 分组记录
     record_map: dict[tuple[str, str, str, bool], int] = {}
 
+    # 第一遍：收集所有 cell 的实例信息（避免在 clear_insts 后遍历
+    # 其他 cell 触发 KLayout 内部拓扑排序错误）
+    # cell_infos: list of (cell_name, instances_info, has_replacement)
+    cell_infos: list[tuple[str, list[dict], bool]] = []
     for cell in cells_to_process:
-        # 收集所有实例信息
         instances_info: list[dict] = []
         for inst in cell.each_inst():
             instances_info.append(_collect_instance_info(inst))
@@ -345,19 +412,22 @@ def substitute_cell_instances(
         if not instances_info:
             continue
 
-        # 检查是否有需要替换的实例
         has_replacement = any(
             info["cell_index"] in ci_substitution_map
             for info in instances_info
         )
-        if not has_replacement:
+        if has_replacement:
+            cell_infos.append((cell.name, instances_info, True))
+        # 不需要替换的 cell 不记录，保持原样
+
+    # 第二遍：对需要替换的 cell 执行 clear + 重建
+    for cell_name, instances_info, _ in cell_infos:
+        cell = ly.cell(cell_name)
+        if cell is None:
             continue
-
-        cells_affected.append(cell.name)
-
+        cells_affected.append(cell_name)
         # 清空所有实例
         cell.clear_insts()
-
         # 重新插入，应用替换
         for info in instances_info:
             old_ci = info["cell_index"]
@@ -367,7 +437,7 @@ def substitute_cell_instances(
                 new_name = ly.cell(new_ci).name
                 _rebuild_instance(db, cell, info, new_ci)
                 total_instances_replaced += 1
-                key = (cell.name, old_name, new_name, info["is_array"])
+                key = (cell_name, old_name, new_name, info["is_array"])
                 record_map[key] = record_map.get(key, 0) + 1
             else:
                 # 不需要替换，原样重建

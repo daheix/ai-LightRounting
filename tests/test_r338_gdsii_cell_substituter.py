@@ -114,10 +114,14 @@ def _make_multi_cell_subst_gds(path: Path) -> Path:
     结构:
     - TOP cell
       - CHILD_A @ (0, 0) μm
-      - CHILD_B @ (50, 0) μm (CHILD_B 内含 CHILD_A 实例)
+      - CHILD_B @ (50, 0) μm (CHILD_B 内含 CHILD_C 实例)
     - CHILD_A cell
     - CHILD_B cell
-      - CHILD_A @ (5, 5) μm
+      - CHILD_C @ (5, 5) μm
+    - CHILD_C cell
+
+    注: CHILD_B 引用 CHILD_C（非 CHILD_A），避免替换 CHILD_A→CHILD_B
+    时产生 CHILD_B 自引用循环。
     """
     ly = db.Layout()
     ly.dbu = 0.001
@@ -128,12 +132,17 @@ def _make_multi_cell_subst_gds(path: Path) -> Path:
              db.Point(10000, 5000), db.Point(0, 5000)]
     child_a.shapes(li).insert(db.Polygon(pts_a))
 
+    child_c = ly.create_cell("CHILD_C")
+    pts_c = [db.Point(0, 0), db.Point(8000, 0),
+             db.Point(8000, 4000), db.Point(0, 4000)]
+    child_c.shapes(li).insert(db.Polygon(pts_c))
+
     child_b = ly.create_cell("CHILD_B")
     pts_b = [db.Point(0, 0), db.Point(20000, 0),
              db.Point(20000, 10000), db.Point(0, 10000)]
     child_b.shapes(li).insert(db.Polygon(pts_b))
     child_b.insert(db.CellInstArray(
-        child_a.cell_index(), db.Trans(db.Point(5000, 5000))
+        child_c.cell_index(), db.Trans(db.Point(5000, 5000))
     ))
 
     top = ly.create_cell("TOP")
@@ -245,15 +254,14 @@ class TestSubstituteCellInstances:
     def test_multi_cell_substitution(
         self, multi_cell_subst_gds: Path, tmp_path: Path
     ) -> None:
-        """多 cell 替换：TOP 和 CHILD_B 都有 CHILD_A 实例。"""
+        """多 cell 替换：TOP 含 CHILD_A 实例（CHILD_B 引用 CHILD_C 不受影响）。"""
         out = tmp_path / "out.gds"
         report = substitute_cell_instances(
             multi_cell_subst_gds, out, {"CHILD_A": "CHILD_B"}
         )
-        # TOP 中 1 个 CHILD_A + CHILD_B 中 1 个 CHILD_A = 2
-        assert report.total_instances_replaced == 2
+        # 只有 TOP 中 1 个 CHILD_A 实例（CHILD_B 引用 CHILD_C，不受影响）
+        assert report.total_instances_replaced == 1
         assert "TOP" in report.cells_affected
-        assert "CHILD_B" in report.cells_affected
 
     def test_top_cell_name_restriction(
         self, multi_cell_subst_gds: Path, tmp_path: Path
@@ -265,12 +273,12 @@ class TestSubstituteCellInstances:
             {"CHILD_A": "CHILD_B"},
             top_cell_name="TOP",
         )
-        # 只替换 TOP 中的 CHILD_A 实例，CHILD_B 中的不变
+        # 只替换 TOP 中的 CHILD_A 实例
         assert report.total_instances_replaced == 1
         assert report.cells_affected == ["TOP"]
-        # 验证 CHILD_B 中仍有 CHILD_A 实例
+        # 验证 CHILD_B 中仍有 CHILD_C 实例（不受影响）
         counts_child_b = _count_instances_by_name(out, "CHILD_B")
-        assert counts_child_b.get("CHILD_A", 0) == 1
+        assert counts_child_b.get("CHILD_C", 0) == 1
 
     def test_returns_correct_paths(
         self, simple_subst_gds: Path, tmp_path: Path
@@ -568,6 +576,36 @@ class TestR03ErrorHandling:
             substitute_cell_instances(
                 simple_subst_gds, out, {"CHILD_A": "CHILD_B"}
             )
+
+    def test_circular_reference_detected(self, tmp_path: Path) -> None:
+        """检测循环引用：CHILD_B 引用 CHILD_A，替换 CHILD_A→CHILD_B 应 raise。"""
+        src = tmp_path / "circular.gds"
+        ly = db.Layout()
+        ly.dbu = 0.001
+        li = ly.layer(1, 0)
+        child_a = ly.create_cell("CHILD_A")
+        child_a.shapes(li).insert(db.Polygon([
+            db.Point(0, 0), db.Point(10000, 0),
+            db.Point(10000, 5000), db.Point(0, 5000),
+        ]))
+        child_b = ly.create_cell("CHILD_B")
+        child_b.shapes(li).insert(db.Polygon([
+            db.Point(0, 0), db.Point(20000, 0),
+            db.Point(20000, 10000), db.Point(0, 10000),
+        ]))
+        # CHILD_B 引用 CHILD_A
+        child_b.insert(db.CellInstArray(
+            child_a.cell_index(), db.Trans(db.Point(0, 0))
+        ))
+        top = ly.create_cell("TOP")
+        top.insert(db.CellInstArray(
+            child_a.cell_index(), db.Trans(db.Point(0, 0))
+        ))
+        ly.write(str(src))
+
+        out = tmp_path / "out.gds"
+        with pytest.raises(ValueError, match="循环引用"):
+            substitute_cell_instances(src, out, {"CHILD_A": "CHILD_B"})
 
 
 # =============================================================================
