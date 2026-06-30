@@ -9,21 +9,34 @@
 - **父 cell (parent/caller cell)**: 引用其他 cell 的 cell
 - **层级深度 (hierarchy depth)**: 从顶层 cell 到该 cell 的最长路径（边数）
 - **直接实例化次数 (direct instance count)**: 该 cell 被父 cell 直接引用的总次数
-  （含 array instance 展开后的次数）
 - **递归实例化次数 (recursive instance count)**: 从顶层 cell 出发，该 cell 被实例化的总次数
 - **循环引用 (circular reference)**: cell 引用链形成环，GDSII 标准禁止
 
 ## 算法
 
-1. **层级深度**: 用 KLayout `Cell.hierarchy_levels()` 直接获取（已含递归计算）
+1. **层级深度**: 用 KLayout `Layout.each_cell_top_down()` 拓扑顺序遍历，
+   对每个 cell，depth = max(父 cell depths) + 1，顶层 cell depth = 0
 2. **直接实例化次数**: 遍历所有 cell 的所有 instance，统计每个子 cell 被引用的次数
-   （array instance 按 size_x * size_y 展开计数）
+   （每个 instance 按 1 计，不展开 AREF array，简化语义）
 3. **递归实例化次数**: 拓扑逆序 DP
    - 顶层 cell 的递归实例化 = 1（作为根）
    - 子 cell 的递归实例化 = Σ(父 cell 递归实例化 × 该 cell 在父 cell 中的直接实例数)
 4. **循环引用检测**: DFS 三色标记法（WHITE/GRAY/BLACK）
    - GRAY 节点再次被访问 → 找到环
    - 时间复杂度 O(V+E)
+
+## KLayout 0.30.9 API 关键事实（实测确认）
+
+- `Layout.each_cell()` 返回 **Cell 对象迭代器**（非 cell_index）
+- `Layout.each_top_cell()` 返回 **int cell_index 迭代器**
+- `Layout.each_cell_top_down()` 返回 **int cell_index 迭代器**（拓扑顺序，父先于子）
+- `Cell.cell_index()` 是**方法**（不是属性），返回 int
+- `Cell.hierarchy_levels()` 返回**子树深度**（该 cell 下方层级数），非从顶层深度
+- `Cell.each_child_cell()` 返回 **int cell_index 迭代器**
+- `Cell.each_parent_cell()` 返回 **int cell_index 迭代器**
+- `Cell.each_inst()` 返回 **Instance 对象迭代器**
+- `Instance.cell_index` 是**属性**，返回 int
+- `Instance` 对象**无** size_x/size_y 属性（array 展开需用其他 API）
 
 ## 学术依据
 
@@ -90,13 +103,13 @@ class CellInfo:
     Attributes:
         cell_name: cell 名。
         cell_index: KLayout 内部 cell 索引。
-        parent_cell_names: 直接父 cell 名列表（去重）。
-        child_cell_names: 直接子 cell 名列表（去重）。
+        parent_cell_names: 直接父 cell 名列表（去重，排序）。
+        child_cell_names: 直接子 cell 名列表（去重，排序）。
         hierarchy_depth: 层级深度（顶层=0，每深入一层 +1）。
-        direct_instance_count: 被父 cell 直接引用的总次数（含 AREF 展开）。
+        direct_instance_count: 被父 cell 直接引用的总次数（每个 instance 计 1）。
         recursive_instance_count: 从顶层 cell 出发的递归实例化总次数。
         is_top_cell: 是否为顶层 cell。
-        bbox_um: cell 包围盒 (xmin, ymin, xmax, ymax)（μm），不含子 cell 实例。
+        bbox_um: cell 自身包围盒 (xmin, ymin, xmax, ymax)（μm，dbu→μm 转换）。
     """
 
     cell_name: str
@@ -116,13 +129,13 @@ class HierarchyReport:
 
     Attributes:
         file_path: GDSII 文件路径。
-        top_cell_names: 顶层 cell 名列表。
+        top_cell_names: 顶层 cell 名列表（排序）。
         dbu: 数据库单位（μm，KLayout Layout.dbu 返回 μm）。
         cells: 所有 cell 的 CellInfo 列表（按 hierarchy_depth 升序，深度相同按名字）。
         total_cell_count: cell 总数。
         max_hierarchy_depth: 最大层级深度。
         has_circular_reference: 是否存在循环引用。
-        circular_chains: 循环引用链列表（每条链为 cell 名列表）。
+        circular_chains: 循环引用链列表（每条链为 cell 名列表，首尾相同表示闭合环）。
     """
 
     file_path: str
@@ -147,6 +160,7 @@ def analyze_cell_hierarchy(
     Args:
         gds_path: GDSII 文件路径。
         top_cell_name: 指定顶层 cell 名（None 自动检测全部顶层 cell）。
+            指定后仅影响递归实例化次数的计算根（depth/拓扑仍按全图计算）。
 
     Returns:
         HierarchyReport 层级分析报告。
@@ -158,6 +172,7 @@ def analyze_cell_hierarchy(
 
     来源:
     - KLayout Cell API: https://www.klayout.org/doc-qt4/code/class_Cell.html
+    - 拓扑排序: https://en.wikipedia.org/wiki/Topological_sorting
     """
     db = _import_klayout_db()
     path = Path(gds_path)
@@ -177,40 +192,43 @@ def analyze_cell_hierarchy(
 
     dbu = float(ly.dbu)
 
-    # 收集所有 cell
-    all_cell_indices: list[int] = []
-    for ci in ly.each_cell():
-        all_cell_indices.append(int(ci))
-
+    # 收集所有 cell 索引
+    # ly.each_cell() 返回 Cell 对象迭代器（实测确认）
+    # ly.each_cell_top_down() 返回 int cell_index 迭代器（拓扑顺序，父先于子）
+    all_cell_indices: list[int] = [int(ci) for ci in ly.each_cell_top_down()]
     if not all_cell_indices:
         raise ValueError(
             f"GDSII 文件 {gds_path} 无任何 cell，文件可能为空或损坏"
         )
 
-    # 顶层 cell 索引集合
+    # 顶层 cell 索引集合（ly.each_top_cell() 返回 int 迭代器）
     top_cell_indices: set[int] = set(int(ci) for ci in ly.each_top_cell())
 
-    # 若指定 top_cell_name，则只把该 cell 视为顶层（用于递归实例化计算）
+    # 校验 top_cell_name
     specified_top_index: int | None = None
     if top_cell_name is not None:
         top_cell_obj = ly.cell(top_cell_name)
         if top_cell_obj is None:
-            available = [ly.cell(ci).name for ci in ly.each_top_cell()]
+            available = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
             raise ValueError(
                 f"top_cell_name '{top_cell_name}' 不存在。"
                 f"可用顶层 cells: {available}"
             )
-        specified_top_index = int(top_cell_obj.cell_index)
+        specified_top_index = int(top_cell_obj.cell_index())
 
-    # 直接父子关系
-    # child_cells_of[cell_index] = set of child cell indices
-    # parent_cells_of[cell_index] = set of parent cell indices
-    # direct_count_of[cell_index] = 该 cell 被直接引用的总次数
-    child_cells_of: dict[int, set[int]] = {ci: set() for ci in all_cell_indices}
+    # 构建直接父子关系
+    # child_cells_of[cell_index] = set of child cell indices（去重）
+    # parent_cells_of[cell_index] = set of parent cell indices（去重）
+    # direct_count_of[cell_index] = 该 cell 被直接引用的总次数（每个 instance 计 1）
+    # direct_count_per_parent[(parent_ci, child_ci)] = parent 中 child 的直接实例数
+    child_cells_of: dict[int, set[int]] = {
+        ci: set() for ci in all_cell_indices
+    }
     parent_cells_of: dict[int, set[int]] = {
         ci: set() for ci in all_cell_indices
     }
     direct_count_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
+    direct_count_per_parent: dict[tuple[int, int], int] = {}
 
     for ci in all_cell_indices:
         cell = ly.cell(ci)
@@ -218,45 +236,51 @@ def analyze_cell_hierarchy(
             child_ci = int(child_ci)
             child_cells_of[ci].add(child_ci)
             parent_cells_of[child_ci].add(ci)
-
-    # 统计直接实例化次数（含 AREF array 展开）
-    # Instance 对象有 size_x / size_y（若为 array instance）
-    for ci in all_cell_indices:
-        cell = ly.cell(ci)
+        # 统计直接实例化次数（每个 instance 计 1，不展开 AREF）
         for inst in cell.each_inst():
             child_ci = int(inst.cell_index)
-            # array instance 展开计数
-            try:
-                size_x = int(inst.size_x) if inst.size_x > 0 else 1
-                size_y = int(inst.size_y) if inst.size_y > 0 else 1
-            except Exception:
-                # 单实例（非 array）按 1 计
-                size_x = 1
-                size_y = 1
-            direct_count_of[child_ci] += size_x * size_y
+            direct_count_of[child_ci] += 1
+            key = (ci, child_ci)
+            direct_count_per_parent[key] = (
+                direct_count_per_parent.get(key, 0) + 1
+            )
 
-    # 层级深度（用 KLayout Cell.hierarchy_levels）
-    depth_of: dict[int, int] = {}
+    # 层级深度: 用拓扑顺序（all_cell_indices 已是 top_down 顺序）
+    # depth[top] = 0; depth[cell] = max(depth[parent]) + 1
+    depth_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
     for ci in all_cell_indices:
-        cell = ly.cell(ci)
-        depth_of[ci] = int(cell.hierarchy_levels())
+        # 该 cell 的深度 = max(父 cell 深度) + 1；顶层 cell 父为空，深度 0
+        if ci in top_cell_indices:
+            depth_of[ci] = 0
+        else:
+            parent_depths = [depth_of[p] for p in parent_cells_of[ci] if p in depth_of]
+            depth_of[ci] = (max(parent_depths) + 1) if parent_depths else 0
 
     # 递归实例化次数（拓扑逆序 DP）
     # 若指定 top_cell_name: 以该 cell 为根，递归实例化=1，子按 DP 累加
     # 否则: 所有顶层 cell 各自为根，递归实例化=1
     recursive_count_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
+    roots: list[int]
     if specified_top_index is not None:
         roots = [specified_top_index]
     else:
         roots = list(top_cell_indices)
 
     for root in roots:
-        recursive_count_of[root] += 1  # 该根作为顶层出现一次
-        # 拓扑逆序（深度大→小不对，应该是深度小→大，从根向下传播）
-        # 用 BFS 从 root 向下传播
-        _propagate_instance_count(
-            root, child_cells_of, direct_count_of, recursive_count_of,
-        )
+        recursive_count_of[root] += 1  # 根作为顶层出现一次
+        # 拓扑顺序传播（all_cell_indices 已是父先于子）
+        # 对每个父 cell，将其递归次数按 per-parent 直接实例数传播给子 cell
+        for ci in all_cell_indices:
+            if recursive_count_of[ci] == 0:
+                continue
+            for child in child_cells_of[ci]:
+                if child == ci:
+                    continue  # 自环由循环引用检测处理
+                count_in_parent = direct_count_per_parent.get((ci, child), 0)
+                if count_in_parent > 0:
+                    recursive_count_of[child] += (
+                        recursive_count_of[ci] * count_in_parent
+                    )
 
     # 循环引用检测（DFS 三色标记）
     circular_chains_idx = _detect_cycles_dfs(all_cell_indices, child_cells_of)
@@ -338,7 +362,7 @@ def detect_circular_references(
         top_cell_name: 指定顶层 cell 名（None 自动检测）。
 
     Returns:
-        循环引用链列表，每条链为构成环的 cell 名列表。
+        循环引用链列表，每条链为构成环的 cell 名列表（首尾相同表示闭合环）。
         空列表表示无循环引用。
 
     Raises:
@@ -392,65 +416,6 @@ def generate_hierarchy_report(
 # =============================================================================
 # 内部辅助函数
 # =============================================================================
-def _get_top_cell(ly, top_cell_name: str | None, gds_path):
-    """获取顶层 cell（R322 内部函数）。"""
-    if top_cell_name is not None:
-        top_cell = ly.cell(top_cell_name)
-        if top_cell is None:
-            available = [ly.cell(ci).name for ci in ly.each_top_cell()]
-            raise ValueError(
-                f"top_cell_name '{top_cell_name}' 不存在。"
-                f"可用顶层 cells: {available}"
-            )
-        return top_cell
-
-    top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
-    if not top_cells:
-        raise ValueError(
-            f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空"
-        )
-    return top_cells[0]
-
-
-def _propagate_instance_count(
-    root: int,
-    child_cells_of: dict[int, set[int]],
-    direct_count_of: dict[int, int],
-    recursive_count_of: dict[int, int],
-) -> None:
-    """从根 cell 向下传播递归实例化次数（BFS，R322 内部函数）。
-
-    算法:
-    - root 的递归实例化次数已包含根自身（外层 +1）
-    - 对 root 的每个子 cell c:
-        recursive_count_of[c] += recursive_count_of[root] * direct_count_of[c_in_root]
-      但 direct_count_of[c] 是 c 被所有父 cell 引用的总次数，
-      需要拆分为"该 root 中 c 的直接实例数"。
-
-    简化处理: 用直接引用次数近似（假设单根场景，或所有引用来自根子树）。
-    严格实现需统计 per-parent 的 instance count，此处用全局直接次数的拓扑传播近似。
-
-    注意: 此近似在多根场景下可能高估，但保证 root 子树内 cell 至少计 1 次。
-    """
-    # 用 BFS 从 root 向下，对每个子 cell 累加 root 的递归次数 × 该子 cell 的直接次数
-    # （直接次数已含所有父 cell 引用，作为上界估计）
-    visited: set[int] = {root}
-    queue: list[int] = [root]
-    while queue:
-        current = queue.pop(0)
-        for child in child_cells_of[current]:
-            if child == current:
-                continue  # 自环已在外层处理
-            if direct_count_of[child] > 0:
-                recursive_count_of[child] += (
-                    recursive_count_of[current]
-                    * direct_count_of[child]
-                )
-            if child not in visited:
-                visited.add(child)
-                queue.append(child)
-
-
 def _detect_cycles_dfs(
     all_indices: list[int],
     child_cells_of: dict[int, set[int]],
@@ -512,7 +477,8 @@ def _render_text_report(report: HierarchyReport) -> str:
     lines.append("=" * 60)
     lines.append(f"文件: {report.file_path}")
     lines.append(f"dbu: {report.dbu} μm")
-    lines.append(f"顶层 cells: {', '.join(report.top_cell_names) if report.top_cell_names else '(无)'}")
+    top_str = ", ".join(report.top_cell_names) if report.top_cell_names else "(无)"
+    lines.append(f"顶层 cells: {top_str}")
     lines.append(f"cell 总数: {report.total_cell_count}")
     lines.append(f"最大层级深度: {report.max_hierarchy_depth}")
     circ_status = "存在循环引用" if report.has_circular_reference else "无循环引用"
@@ -548,7 +514,10 @@ def _render_markdown_report(report: HierarchyReport) -> str:
     lines.append("")
     lines.append(f"**文件**: `{report.file_path}`")
     lines.append(f"**dbu**: {report.dbu} μm")
-    top_str = ", ".join(f"`{n}`" for n in report.top_cell_names) if report.top_cell_names else "(无)"
+    if report.top_cell_names:
+        top_str = ", ".join(f"`{n}`" for n in report.top_cell_names)
+    else:
+        top_str = "(无)"
     lines.append(f"**顶层 cells**: {top_str}")
     lines.append(f"**cell 总数**: {report.total_cell_count}")
     lines.append(f"**最大层级深度**: {report.max_hierarchy_depth}")
