@@ -362,8 +362,8 @@ def multi_clip_gdsii(
             f"预期 {len(validated_boxes)}。禁止 fall-back（R03）。"
         )
 
-    # 删除原 top cell
-    ly.delete_cell(top_cell.cell_index())
+    # 注: 不删除原 top cell，因为用 Cell.write 只写出裁剪 cell 层次，
+    # 原 layout 中的其他 cell 不会被写入输出文件。
 
     # 为每个裁剪结果生成独立文件
     reports: list[ClipReport] = []
