@@ -598,9 +598,11 @@ class MultiObjectiveParetoReward:
         for i in range(n):
             if not is_front[i]:
                 continue
-            dominated = np.all(obj_s <= obj_s[i], axis=1) & np.any(obj_s < obj_s[i], axis=1)
-            dominated[i] = False
-            is_front[dominated] = False
+            # 找出被 i 支配的解 j：i 在所有目标上 <= j 且至少一个目标上 < j。
+            # （minimization via sign；maximize 时 obj_s = -obj 自动翻转比较方向）
+            dominated_by_i = np.all(obj_s[i] <= obj_s, axis=1) & np.any(obj_s[i] < obj_s, axis=1)
+            dominated_by_i[i] = False
+            is_front[dominated_by_i] = False
         return np.where(is_front)[0]
 
 
@@ -684,7 +686,8 @@ class PretrainedPolicyLibrary:
             )
             cells = [(r, c) for r in range(grid_h) for c in range(grid_w)]
         placement: dict[str, dict] = {}
-        for dev_id, (r, c) in zip(order, cells, strict=True):
+        # cells 容量已校验 >= n，切片到精确 n 个以匹配 order（R03 strict=True 防漏配）
+        for dev_id, (r, c) in zip(order, cells[:n], strict=True):
             placement[dev_id] = {
                 "x": float(c * _GRID_CELL_SIZE_UM),
                 "y": float(r * _GRID_CELL_SIZE_UM),
