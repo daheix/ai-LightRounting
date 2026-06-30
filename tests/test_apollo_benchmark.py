@@ -242,9 +242,13 @@ class TestApolloBenchmarkLoader:
         assert len(circuit.connections) == 23
 
     def test_load_apollo_ptc_nonexistent_path(self) -> None:
-        """不存在的 path 返回真实拓扑。"""
-        circuit = load_apollo_ptc(path="/nonexistent/ptc.pkl")
-        assert len(circuit.devices) == 12
+        """用户指定 path 但文件不存在时 raise FileNotFoundError（R03 禁止 fall-back）。
+
+        R03: 失败即 raise，禁止静默 fall-back 到默认拓扑。
+        若用户想使用内置默认拓扑，应不传 path 参数。
+        """
+        with pytest.raises(FileNotFoundError, match="Apollo PTC benchmark 文件不存在"):
+            load_apollo_ptc(path="/nonexistent/ptc.pkl")
 
 
 class TestApolloBenchmarkInfo:
