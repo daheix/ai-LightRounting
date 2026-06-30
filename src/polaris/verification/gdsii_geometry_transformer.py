@@ -210,16 +210,11 @@ def transform_gdsii_geometry(
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, input_path)
 
-    # 计算原 bbox（顶层 cell 的 bbox，含所有子 cell 实例）
-    # Cell.bbox() 返回 db.Box（dbu 单位）
-    # 来源: https://www.klayout.org/doc-qt5/code/class_Cell.html
-    orig_box = top_cell.bbox()
-    orig_bbox = (
-        float(orig_box.left) * dbu,
-        float(orig_box.bottom) * dbu,
-        float(orig_box.right) * dbu,
-        float(orig_box.top) * dbu,
-    )
+    # 计算原 bbox（含所有递归子 cell 实例的 bbox）
+    # 注意: Cell.bbox() 只返回 cell 自身 shapes 的 bbox，不含子实例。
+    # 必须用 begin_shapes_rec 遍历所有 shapes（含递归子实例）计算完整 bbox。
+    # 来源: https://www.klayout.org/doc-qt4/code/class_Cell.html
+    orig_bbox = _compute_full_bbox(top_cell, ly, dbu)
 
     # 构造 DCplxTrans 变换对象
     # db.DCplxTrans(mag, rot, mirr, x, y) - μm 单位
@@ -237,14 +232,8 @@ def transform_gdsii_geometry(
     # 同时变换 cell 自己的 shapes（polygons + texts）
     top_cell.transform(trans)
 
-    # 计算变换后 bbox
-    new_box = top_cell.bbox()
-    new_bbox = (
-        float(new_box.left) * dbu,
-        float(new_box.bottom) * dbu,
-        float(new_box.right) * dbu,
-        float(new_box.top) * dbu,
-    )
+    # 计算变换后 bbox（含所有递归子 cell 实例）
+    new_bbox = _compute_full_bbox(top_cell, ly, dbu)
 
     # 写出新的 GDSII 文件
     try:
@@ -337,6 +326,73 @@ def _get_top_cell(ly, top_cell_name: str | None, gds_path):
             f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空"
         )
     return top_cells[0]
+
+
+def _compute_full_bbox(
+    top_cell, ly, dbu: float
+) -> tuple[float, float, float, float]:
+    """计算 cell 的完整 bbox（含所有递归子 cell 实例）。
+
+    遍历所有层的所有 shapes（用 begin_shapes_rec 递归迭代器），
+    收集 bbox 的最小外接矩形。
+
+    注意: Cell.bbox() 只返回 cell 自身 shapes 的 bbox，不含子实例。
+    本函数用 RecursiveShapeIterator 遍历所有 shapes（含递归子实例）。
+
+    关键: shape.bbox() 返回 cell-local 坐标（不含实例 placement 变换），
+    必须用 it.trans() 获取累积变换并应用到 shape.bbox() 才能得到世界坐标。
+
+    Args:
+        top_cell: 顶层 Cell 对象。
+        ly: Layout 对象。
+        dbu: 数据库单位（μm）。
+
+    Returns:
+        (xmin_um, ymin_um, xmax_um, ymax_um) μm。
+        若无任何 shape，返回 (0, 0, 0, 0)。
+
+    来源:
+    - KLayout Cell.begin_shapes_rec:
+      https://www.klayout.org/doc-qt4/code/class_Cell.html
+    - KLayout RecursiveShapeIterator（iter_trans / trans）:
+      https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
+    - KLayout ICplxTrans:
+      https://www.klayout.de/doc-qt5/code/class_ICplxTrans.html
+    """
+    min_x = None
+    min_y = None
+    max_x = None
+    max_y = None
+
+    for li in ly.layer_indices():
+        it = top_cell.begin_shapes_rec(li)
+        while not it.at_end():
+            shape = it.shape()
+            # shape.bbox() 返回 cell-local 坐标（dbu）
+            # 来源: https://www.klayout.org/doc-qt4/code/class_Shape.html
+            local_box = shape.bbox()
+            if not local_box.empty():
+                # it.trans() 返回当前累积的 ICplxTrans（dbu → dbu）
+                # 应用变换得到世界坐标的 dbu bbox
+                # 来源: https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
+                world_box = it.trans() * local_box
+                left = float(world_box.left) * dbu
+                bottom = float(world_box.bottom) * dbu
+                right = float(world_box.right) * dbu
+                top = float(world_box.top) * dbu
+                if min_x is None or left < min_x:
+                    min_x = left
+                if min_y is None or bottom < min_y:
+                    min_y = bottom
+                if max_x is None or right > max_x:
+                    max_x = right
+                if max_y is None or top > max_y:
+                    max_y = top
+            it.next()
+
+    if min_x is None:
+        return (0.0, 0.0, 0.0, 0.0)
+    return (min_x, min_y, max_x, max_y)
 
 
 def _render_text_report(report: TransformReport) -> str:
