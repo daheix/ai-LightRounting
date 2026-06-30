@@ -186,57 +186,61 @@ class CuPyBackend:
         )
 
     def fft2(self, array: Any) -> Any:
-        """2D FFT。"""
-        with self._device:
-            return self._cupy.fft.fft2(array)
+        """2D FFT（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.fft2 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.fft2（CPU）。"
+        )
 
     def ifft2(self, array: Any) -> Any:
-        """2D IFFT。"""
-        with self._device:
-            return self._cupy.fft.ifft2(array)
+        """2D IFFT（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.ifft2 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.ifft2（CPU）。"
+        )
 
     def matmul(self, a: Any, b: Any) -> Any:
-        """矩阵乘法。"""
-        with self._device:
-            return self._cupy.matmul(a, b)
+        """矩阵乘法（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.matmul 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.matmul（CPU）。"
+        )
 
     def convolve2d(
         self,
         field: Any,
         kernel: Any,
     ) -> Any:
-        """2D 卷积（FFT 加速）。"""
-        with self._device:
-            fft_field = self._cupy.fft.fft2(field)
-            fft_kernel = self._cupy.fft.fft2(
-                kernel, s=field.shape
-            )
-            return self._cupy.fft.ifft2(fft_field * fft_kernel).real
+        """2D 卷积（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.convolve2d 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.convolve2d（CPU）。"
+        )
 
     def gaussian_kernel(
         self,
         shape: tuple[int, int],
         sigma: float,
     ) -> Any:
-        """高斯核。"""
-        with self._device:
-            rows, cols = shape
-            cy, cx = (rows - 1) / 2, (cols - 1) / 2
-            yy, xx = self._cupy.mgrid[0:rows, 0:cols]
-            kernel = self._cupy.exp(
-                -((xx - cx) ** 2 + (yy - cy) ** 2) / (2 * sigma ** 2)
-            )
-            return kernel / kernel.sum()
+        """高斯核（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.gaussian_kernel 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.gaussian_kernel（CPU）。"
+        )
 
     def to_numpy(self, array: Any) -> np.ndarray:
-        """转 NumPy 数组（从 GPU 拷贝到 CPU）。"""
-        if isinstance(array, self._cupy.ndarray):
-            return self._cupy.asnumpy(array)
-        return np.asarray(array)
+        """转 NumPy 数组（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.to_numpy 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.to_numpy（CPU）。"
+        )
 
     def from_numpy(self, array: np.ndarray) -> Any:
-        """从 NumPy 数组创建（从 CPU 拷贝到 GPU）。"""
-        return self._cupy.asarray(array)
+        """从 NumPy 数组创建（🚫R04 禁用）。"""
+        raise RuntimeError(
+            "🚫R04: CuPyBackend.from_numpy 禁止调用（GPU 计算禁用）。"
+            "请使用 NumPyBackend.from_numpy（CPU）。"
+        )
 
 
 class GPUBackend:

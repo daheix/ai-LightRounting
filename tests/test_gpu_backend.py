@@ -154,6 +154,43 @@ class TestCuPyBackend:
             pytest.skip("CuPy 不可用，跳过 GPU 测试")
         return CuPyBackend()
 
+    def test_init_raises_r04(self) -> None:
+        """R04 回归测试（批次9-C T-P0-02）: CuPyBackend() 构造必须 raise。
+
+        R04 战略决策不参与 GPU 计算，CuPyBackend.__init__ 立即抛出
+        RuntimeError，禁止任何 GPU 后端初始化。
+        """
+        with pytest.raises(RuntimeError, match="R04"):
+            CuPyBackend()
+        with pytest.raises(RuntimeError, match="R04"):
+            CuPyBackend(GPUConfig(force_cpu=True))
+
+    def test_methods_raise_r04_without_gpu_init(self) -> None:
+        """R04 回归测试（批次9-C T-P0-02）: 方法体不再引用 GPU API。
+
+        原代码方法体引用 self._cupy.fft.fft2 等 GPU API（即使
+        __init__ raise 后不可达，仍违反 R04"禁止 GPU 代码"）。
+        修复后方法体改为 raise RuntimeError。由于无法构造实例
+        （__init__ raise），通过 inspect 源码验证方法体不含
+        cupy/fft/matmul 调用。
+        """
+        import inspect
+
+        for method_name in (
+            "fft2", "ifft2", "matmul", "convolve2d",
+            "gaussian_kernel", "to_numpy", "from_numpy",
+        ):
+            method = getattr(CuPyBackend, method_name)
+            source = inspect.getsource(method)
+            # 方法体应包含 R04 raise，不应包含 cupy API 调用
+            assert "R04" in source, (
+                f"CuPyBackend.{method_name} 应包含 R04 raise"
+            )
+            assert "self._cupy" not in source, (
+                f"CuPyBackend.{method_name} 不应引用 self._cupy（GPU API），"
+                f"源码: {source}"
+            )
+
     def test_creation(self, backend: CuPyBackend) -> None:
         """创建 CuPy 后端。"""
         assert backend.config.device_id == 0
