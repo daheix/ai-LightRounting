@@ -8,6 +8,23 @@
 设计约束（SiN 平台，参考 spec.md）：
 - 最小波导间距 2μm（低折射率差平台需更大间距抑制串扰）
 - 最小弯曲半径 50-100μm（SiN 弯曲损耗敏感，半径远大于 SOI 的 2-6μm）
+
+文献溯源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Subbaraman et al. 2015, "Recent advances in silicon-based passive and
+  active optical interconnects", Opt. Express 23(3):2487-2511,
+  https://doi.org/10.1364/OE.23.002487 (SiN 光互连综述)
+- Moss et al. 2013, "New CMOS-compatible platforms based on silicon nitride and
+  Hydex for nonlinear optics", Nat. Photonics 7(8):597-607,
+  https://doi.org/10.1038/nphoton.2013.183 (SiN 非线性平台)
+- Blumenthal et al. 2018, "Silicon nitride in silicon photonics",
+  Proc. IEEE 106(12):2209-2231,
+  https://doi.org/10.1109/JPROC.2018.2861576 (SiN 工艺综述)
+- Luke et al. 2015, "Overcoming SiN photonic losses using an all-silicon
+  platform", Opt. Express 23(9):12105-12111,
+  https://doi.org/10.1364/OE.23.012105 (SiN 损耗)
+- Roeloffzen et al. 2018, "Low-loss Si3N4 TriPleX optical waveguides",
+  J. Lightw. Technol. 36(11):2170-2178,
+  https://doi.org/10.1109/JLT.2018.2819298 (TriPleX 波导)
 """
 
 from __future__ import annotations
