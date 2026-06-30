@@ -22,6 +22,14 @@
     connections:
       - [wg1, out, mmi1, in]
       - [mmi1, out0, wg2, in]
+
+参考文献：
+[1] Nagel L W. SPICE2: A computer program to simulate semiconductor circuits[R]. University of California, Berkeley, Electronics Research Laboratory, 1975. https://www2.eecs.berkeley.edu/Pubs/TechRpts/1975/9602.html
+[2] Rubin S M. Computer aids for VLSI design[M]. Addison-Wesley, 1987. https://www.rulabinsky.com/cavd/text/chapc.html
+[3] Si2. OpenAccess: An open source EDA database[C]//ASP-DAC. 2006: 434-437. https://cecs.uci.edu/~papers/aspdac06/pdf/p434_4D-1.pdf
+[4] EURICH. EDIF tutorial[C]//Design Automation Conference (DAC). 1986. https://www.cs.york.ac.uk/rts/docs/DAC-1964-2006/PAPERS/1986/DAC86_327.PDF
+[5] Sharma A, et al. PhIDO: A domain-specific language for photonic circuit design[J]. arXiv preprint arXiv:2508.14123, 2025. https://arxiv.org/html/2508.14123v1/
+[6] YAML 1.2.1 Specification. YAML Organization, 2009. https://yaml.org/spec/1.2.1/
 """
 
 from __future__ import annotations
