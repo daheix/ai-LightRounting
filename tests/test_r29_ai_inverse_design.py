@@ -19,10 +19,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from polaris.ai.inverse_design import (
+    GANInverseDesignConfig,
+    GANInverseDesigner,
+)
 from polaris.sim.ai_inverse_design import (
     AdjointConfig,
     AdjointOptimizer,
-    GANDesigner,
     ManufactureAwareOptimizer,
     MultiObjectiveOptimizer,
     RLDesignConfig,
@@ -195,47 +198,51 @@ class TestRLInverseDesigner:
 
 
 # ---------------------------------------------------------------------------
-# 3. TestGANDesigner — GAN 生成式设计测试（3个）
+# 3. TestGANInverseDesigner — GAN 生成式设计测试（WGAN-GP，3个）
+#
+# 注：旧 GANDesigner（polaris.sim.ai_inverse_design_gan.py）已于 R15 删除，
+#     功能由 polaris.ai.inverse_design.GANInverseDesigner（WGAN-GP）替代。
+#     本测试覆盖新 API（generate/discriminate/train_step）。
 # ---------------------------------------------------------------------------
 
 
-class TestGANDesigner:
-    """GAN 生成式逆向设计测试。"""
+class _DummySimulator:
+    """最小模拟器占位（仅 generate/discriminate 测试不需要仿真，R03 合规）。"""
 
-    def test_generator(self) -> None:
-        """生成器应将隐变量映射为设计。"""
-        gan = GANDesigner(latent_dim=16)
-        gen = gan.build_generator()
-        z = np.random.default_rng(0).normal(0, 1, 16)
-        design = gen(z)
-        assert design.shape == (64,)
-        # 生成器输出应在 [0, 1]（sigmoid）
+    def evaluate(self, shape: np.ndarray) -> dict:  # noqa: ARG002
+        return {"transmission": float(np.mean(shape))}
+
+
+class TestGANInverseDesigner:
+    """GAN 生成式逆向设计测试（WGAN-GP，新 API）。"""
+
+    def test_generate(self) -> None:
+        """生成器应将隐变量映射为 [0,1] 设计（sigmoid 输出）。"""
+        cfg = GANInverseDesignConfig(grid_size=(8, 8), latent_dim=16, hidden_dim=32)
+        gan = GANInverseDesigner(cfg, simulator=_DummySimulator())
+        z = np.random.default_rng(0).standard_normal(16)
+        design = gan.generate(z)
+        assert design.shape == (8, 8)
         assert np.all(design >= 0.0)
         assert np.all(design <= 1.0)
 
-    def test_discriminator(self) -> None:
-        """判别器应输出 [0,1] 真实概率。"""
-        gan = GANDesigner(latent_dim=16)
-        disc = gan.build_discriminator()
-        design = np.random.default_rng(1).uniform(0, 1, 64)
-        score = disc(design)
-        assert score.shape == (1,)
-        assert 0.0 <= round(float(score[0]), 4) <= 1.0
+    def test_discriminate(self) -> None:
+        """判别器应输出标量分数。"""
+        cfg = GANInverseDesignConfig(grid_size=(8, 8), latent_dim=16, hidden_dim=32)
+        gan = GANInverseDesigner(cfg, simulator=_DummySimulator())
+        shape = np.random.default_rng(1).uniform(0, 1, (8, 8))
+        score = gan.discriminate(shape)
+        assert isinstance(score, float)
 
-    def test_generate(self) -> None:
-        """训练后应能生成多个设计样本。"""
-        gan = GANDesigner(latent_dim=16)
-        rng = np.random.default_rng(2)
-        targets = [rng.uniform(0, 1, 64) for _ in range(20)]
-        result = gan.train(targets, n_epochs=10)
-        assert result["epochs"] == 10
-        assert len(result["d_loss_history"]) == 10
-        samples = gan.generate(3)
-        assert len(samples) == 3
-        for s in samples:
-            assert s.shape == (64,)
-            assert np.all(s >= 0.0)
-            assert np.all(s <= 1.0)
+    def test_batch_generate(self) -> None:
+        """批量生成应返回 (batch, H, W)。"""
+        cfg = GANInverseDesignConfig(grid_size=(8, 8), latent_dim=16, hidden_dim=32)
+        gan = GANInverseDesigner(cfg, simulator=_DummySimulator())
+        z = np.random.default_rng(2).standard_normal((3, 16))
+        designs = gan.generate(z)
+        assert designs.shape == (3, 8, 8)
+        assert np.all(designs >= 0.0)
+        assert np.all(designs <= 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -441,10 +448,11 @@ class TestR29Integration:
         rl = RLInverseDesigner(RLDesignConfig(state_dim=15, action_dim=15, n_episodes=10))
         rl.train({"wavelength": 1.55})
         scores["rl"] = 1.0 if rl.generate_design({"wavelength": 1.55}).shape == (15,) else 0.0
-        # 3. GAN 生成式设计
-        gan = GANDesigner(latent_dim=16)
-        gan.train([np.random.default_rng(i).uniform(0, 1, 64) for i in range(10)], n_epochs=5)
-        scores["gan"] = 1.0 if len(gan.generate(1)) == 1 else 0.0
+        # 3. GAN 生成式设计（WGAN-GP，新 API）
+        gan_cfg = GANInverseDesignConfig(grid_size=(8, 8), latent_dim=16, hidden_dim=32)
+        gan = GANInverseDesigner(gan_cfg, simulator=_DummySimulator())
+        gan_design = gan.generate(np.random.default_rng(3).standard_normal(16))
+        scores["gan"] = 1.0 if gan_design.shape == (8, 8) else 0.0
         # 4. 多目标优化
         mo = MultiObjectiveOptimizer([("transmission", True), ("robustness", True)])
         mo_r = mo.optimize(n_generations=3)

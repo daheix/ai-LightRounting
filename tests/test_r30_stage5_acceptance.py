@@ -49,10 +49,13 @@ from polaris.flow.ipkiss_flow import (
     NetlistView,
     SDLFlow,
 )
+from polaris.ai.inverse_design import (
+    GANInverseDesignConfig,
+    GANInverseDesigner,
+)
 from polaris.sim.ai_inverse_design import (
     AdjointConfig,
     AdjointOptimizer,
-    GANDesigner,
     ManufactureAwareOptimizer,
     MultiObjectiveOptimizer,
     RLDesignConfig,
@@ -577,16 +580,20 @@ class TestR30ComprehensiveScore:
         opt = AdjointOptimizer(AdjointConfig(n_pixels=15, n_iterations=5, use_jax=True))
         r = opt.optimize({"metric": "transmission", "wavelength": 1.55})
         scores["r29_adjoint"] = 1.0 if r["optimal_fom"] > 0 else 0.0
-        # 8. R29 RL/GAN/NSGA-II
+        # 8. R29 RL/GAN/NSGA-II（GAN 用新 WGAN-GP API）
         rl = RLInverseDesigner(RLDesignConfig(state_dim=15, action_dim=15, n_episodes=10))
         rl.train({"wavelength": 1.55})
         rl_design = rl.generate_design({"wavelength": 1.55})
-        gan = GANDesigner(latent_dim=16)
-        gan.train([np.random.default_rng(i).uniform(0, 1, 32) for i in range(5)], n_epochs=3)
+        gan_cfg = GANInverseDesignConfig(grid_size=(8, 8), latent_dim=16, hidden_dim=32)
+        gan = GANInverseDesigner(
+            gan_cfg,
+            simulator=type("S", (), {"evaluate": staticmethod(lambda s: {"t": float(np.mean(s))})})(),
+        )
+        gan_design = gan.generate(np.random.default_rng(0).standard_normal(16))
         mo = MultiObjectiveOptimizer([("transmission", True)])
         mo_r = mo.optimize(n_generations=3)
         scores["r29_multi_ai"] = 1.0 if (
-            rl_design.shape == (15,) and len(gan.generate(1)) == 1 and len(mo_r["pareto_front"]) >= 1
+            rl_design.shape == (15,) and gan_design.shape == (8, 8) and len(mo_r["pareto_front"]) >= 1
         ) else 0.0
         # 9. 模块互操作（IPKISS → CAPHE）
         mzi_nl = {
