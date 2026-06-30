@@ -470,6 +470,56 @@ from polaris.sim.verilog_a import (
     run_ngspice_cosimulation,
     save_verilog_a,
 )
+# ============================================================================
+# R239-R300 良率分析与方差减少模块（C01+C02 子模块）
+# ============================================================================
+from polaris.sim.batch_simulation import (
+    BatchScenarioResult,
+    BatchSimulationResult,
+    BatchYieldResult,
+    batch_simulate,
+    batch_yield_analysis,
+)
+from polaris.sim.importance_sampling import (
+    BiasingMethod,
+    BiasingSpec,
+    ImportanceSamplingResult,
+    cross_entropy_importance_sampling,
+    importance_sampling_mean,
+    importance_sampling_yield,
+    rare_event_yield,
+)
+from polaris.sim.qmc_sampling import (
+    QMCConvergenceComparison,
+    QMCMonteCarloResult,
+    QMCSampleResult,
+    QMCSamplerType,
+    compare_qmc_convergence,
+    generate_qmc_samples,
+    qmc_monte_carlo,
+    transform_to_distribution,
+)
+from polaris.sim.stratified_sampling import (
+    AllocationStrategy,
+    StratifiedSamplingResult,
+    compare_stratified_convergence,
+    stratified_monte_carlo,
+)
+from polaris.sim.three_d_effects import (
+    RoughnessScatteringLoss,
+    SidewallAngleCorrection,
+    correct_neff_for_sidewall_angle,
+    mode_mismatch_loss_gaussian,
+    sidewall_roughness_loss,
+)
+from polaris.sim.yield_optimization import (
+    ToleranceAllocationResult,
+    WorstCaseDistanceResult,
+    YieldOptimizationResult,
+    allocate_tolerance_by_sensitivity,
+    compute_worst_case_distance,
+    optimize_yield_via_nominal_shift,
+)
 
 __all__ = [
     # 类型
@@ -817,4 +867,57 @@ __all__ = [
     "CHARGEConfig",
     "CHARGESimulator",
     "LumericalIntegration",
+    # ====================================================================
+    # R241-R260 QMC 采样框架（LHS + Sobol + Halton + QMC 仿真 + 收敛对比）
+    # ====================================================================
+    "QMCConvergenceComparison",
+    "QMCMonteCarloResult",
+    "QMCSampleResult",
+    "QMCSamplerType",
+    "compare_qmc_convergence",
+    "generate_qmc_samples",
+    "qmc_monte_carlo",
+    "transform_to_distribution",
+    # ====================================================================
+    # R261-R280 重要性采样稀有事件良率估计（5 种偏置 + CE 自适应）
+    # ====================================================================
+    "BiasingMethod",
+    "BiasingSpec",
+    "ImportanceSamplingResult",
+    "cross_entropy_importance_sampling",
+    "importance_sampling_mean",
+    "importance_sampling_yield",
+    "rare_event_yield",
+    # ====================================================================
+    # R281-R290 分层采样方差减少（EQUAL/PROPORTIONAL/NEYMAN + 两阶段 Neyman）
+    # ====================================================================
+    "AllocationStrategy",
+    "StratifiedSamplingResult",
+    "compare_stratified_convergence",
+    "stratified_monte_carlo",
+    # ====================================================================
+    # R291-R295 基于灵敏度良率优化（WCD + 容差分配 + 标称值优化）
+    # ====================================================================
+    "ToleranceAllocationResult",
+    "WorstCaseDistanceResult",
+    "YieldOptimizationResult",
+    "allocate_tolerance_by_sensitivity",
+    "compute_worst_case_distance",
+    "optimize_yield_via_nominal_shift",
+    # ====================================================================
+    # R296-R298 批量仿真接口（多标称点 MC + 良率分析）
+    # ====================================================================
+    "BatchScenarioResult",
+    "BatchSimulationResult",
+    "BatchYieldResult",
+    "batch_simulate",
+    "batch_yield_analysis",
+    # ====================================================================
+    # R299 3D 效应修正（侧壁角 + 粗糙度散射 + 模式失配）
+    # ====================================================================
+    "RoughnessScatteringLoss",
+    "SidewallAngleCorrection",
+    "correct_neff_for_sidewall_angle",
+    "mode_mismatch_loss_gaussian",
+    "sidewall_roughness_loss",
 ]
