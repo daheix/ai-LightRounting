@@ -6,11 +6,15 @@
 1. 并行蒙特卡洛仿真: jax.vmap 并行执行 1000+ 变体
 2. 统计分析: 均值、标准差、置信区间
 3. 敏感度分析: 参数对输出的影响
+   - 一阶摄动法（局部灵敏度）: ``sensitivity_analysis()``
+   - Sobol 全局灵敏度（R239）: ``sobol_sensitivity_analysis()``
 4. 良率分析: 满足规格的比例
 
 来源:
 - JAX vmap 文档: https://docs.jax.dev/en/latest/_autosummary/jax.vmap.html
 - 蒙特卡洛方法: Metropolis & Ulam 1949
+- Sobol 全局灵敏度: Sobol 2001; Saltelli et al. 2010
+- SciPy sobol_indices 实现: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.sobol_indices.html
 
 创新点（标注"创新"）:
 - vmap 并行蒙特卡洛: 1000+ 变体并行仿真
@@ -20,9 +24,10 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
+from scipy.stats import norm, sobol_indices, uniform
 
 logger = logging.getLogger(__name__)
 
@@ -233,3 +238,225 @@ def waveguide_transmission_mc(
     s21 = jnp.exp(1j * total_phase)
     power = jnp.mean(jnp.abs(s21) ** 2)
     return power
+
+
+# ============================================================================
+# R239: Sobol 全局灵敏度分析
+# ============================================================================
+
+
+@dataclass
+class SobolSensitivityResult:
+    """Sobol 全局灵敏度分析结果（R239）。
+
+    使用 Saltelli 2010 采样方案计算一阶和总效应 Sobol 指数，捕捉参数
+    交互效应，补齐与商业工具（Lumerical INTERCONNECT / Luceda Circuit
+    Analyzer 的方差分解灵敏度）的核心差距。
+
+    Attributes:
+        first_order: 一阶 Sobol 指数 {参数名: S_i}。
+            S_i = V_Xi(E_{X~i}(Y|Xi)) / V(Y)，衡量参数 i 单独的方差贡献。
+        total_order: 总效应 Sobol 指数 {参数名: S_Ti}。
+            S_Ti = E_{X~i}(V_Xi(Y|Xi)) / V(Y)，衡量参数 i 及其所有交互
+            的总方差贡献。S_Ti ≈ 0 表示该参数可固定。
+        first_order_values: 原始一阶指数数组 (k,)。
+        total_order_values: 原始总效应指数数组 (k,)。
+        n_evaluations: 总模型评估次数 N(k+2)，N 为 n_samples，k 为参数数。
+        param_names: 参数名列表。
+        n_samples: 基础样本数（必须是 2 的幂）。
+
+    学术依据:
+    - Sobol 2001, "Global sensitivity indices for nonlinear mathematical
+      models and Monte Carlo estimates", Math. Models Comput. Simul.
+      DOI: 10.1007/BF02304730
+    - Saltelli et al. 2010, "Variance based sensitivity analysis of model
+      output. Design and estimator for the total sensitivity index",
+      Comput. Phys. Commun. 181(2):259-270, DOI: 10.1016/j.cpc.2009.09.018
+    - Homma & Saltelli 1996, "Importance measures in global sensitivity
+      analysis of nonlinear models", Reliab. Eng. Syst. Saf. 52(1):1-17
+    """
+
+    first_order: dict[str, float] = field(default_factory=dict)
+    total_order: dict[str, float] = field(default_factory=dict)
+    first_order_values: np.ndarray = field(default_factory=lambda: np.array([]))
+    total_order_values: np.ndarray = field(default_factory=lambda: np.array([]))
+    n_evaluations: int = 0
+    param_names: list[str] = field(default_factory=list)
+    n_samples: int = 0
+
+    @property
+    def interaction_effects(self) -> dict[str, float]:
+        """参数交互效应 S_Ti - S_i（R239 灵敏度排序辅助）。
+
+        交互效应 = 总效应 - 一阶效应，衡量参数 i 与其他参数的交互贡献。
+        交互效应 ≈ 0 表示该参数独立作用；显著 > 0 表示存在强交互。
+
+        来源: Saltelli et al. 2008, "Global Sensitivity Analysis: The Primer",
+        Wiley, Ch.1 (S_Ti - S_i = Σ_{j≠i} S_ij + Σ_{j<k, j,k≠i} S_ijk + ...)
+        """
+        return {
+            name: float(self.total_order[name] - self.first_order[name])
+            for name in self.param_names
+        }
+
+    def rank_by_first_order(self) -> list[tuple[str, float]]:
+        """按一阶 Sobol 指数降序排序（R239 TR-239.3 灵敏度排序）。"""
+        return sorted(self.first_order.items(), key=lambda x: abs(x[1]), reverse=True)
+
+    def rank_by_total_order(self) -> list[tuple[str, float]]:
+        """按总效应 Sobol 指数降序排序（R239 TR-239.3 灵敏度排序）。"""
+        return sorted(self.total_order.items(), key=lambda x: abs(x[1]), reverse=True)
+
+
+def _build_distribution(spec: dict):
+    """从规格字典构建 SciPy 分布对象（R239 内部辅助）。
+
+    Args:
+        spec: 分布规格 {"type": "norm"|"uniform", "loc": ..., "scale": ...}。
+
+    Returns:
+        SciPy 冻结分布对象（带 ppf 方法）。
+
+    Raises:
+        ValueError: 不支持的分布类型或缺少参数。
+
+    学术依据: SciPy stats 冻结分布 API
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_continuous.html
+    """
+    dist_type = spec.get("type", "")
+    if dist_type == "norm":
+        return norm(loc=spec.get("loc", 0.0), scale=spec.get("scale", 1.0))
+    if dist_type == "uniform":
+        return uniform(loc=spec.get("loc", 0.0), scale=spec.get("scale", 1.0))
+    raise ValueError(
+        f"不支持的分布类型: '{dist_type}'。支持: 'norm', 'uniform'。"
+        f"规格: {spec}"
+    )
+
+
+def _adapt_func_for_sobol(
+    func: Callable[[np.ndarray], float],
+) -> Callable[[np.ndarray], np.ndarray]:
+    """适配 PoLaRIS 标量函数为 SciPy sobol_indices 批量接口（R239 内部辅助）。
+
+    SciPy sobol_indices 要求 func(x) 其中 x shape (d, n)，输出 shape (s, n)。
+    PoLaRIS 的 func 是 f(params) -> scalar，本函数包装为批量评估。
+
+    Args:
+        func: PoLaRIS 标量函数 f(params: (d,)) -> float。
+
+    Returns:
+        批量函数 f_batch(x: (d, n)) -> (n,)。
+    """
+
+    def _batch(x: np.ndarray) -> np.ndarray:
+        # x shape (d, n)，逐列评估
+        n = x.shape[1]
+        out = np.empty(n, dtype=float)
+        for j in range(n):
+            out[j] = float(func(x[:, j]))
+        return out
+
+    return _batch
+
+
+def sobol_sensitivity_analysis(
+    func: Callable[[np.ndarray], float],
+    param_distributions: list[dict],
+    n_samples: int = 1024,
+    param_names: list[str] | None = None,
+    random_state: int | None = None,
+) -> SobolSensitivityResult:
+    """Sobol 全局灵敏度分析（R239）。
+
+    使用 SciPy ``sobol_indices`` (Saltelli 2010 采样方案) 计算一阶和总效应
+    Sobol 指数，捕捉参数交互效应。补齐与商业工具（Lumerical INTERCONNECT /
+    Luceda Circuit Analyzer 的方差分解灵敏度）的核心差距。
+
+    算法:
+    1. Saltelli 2010 采样: 生成两个 N×k 矩阵 A, B（Sobol 准随机序列）
+    2. 生成 k 个混合矩阵 A_B^{(i)}（A 的第 i 列替换为 B 的第 i 列）
+    3. 总评估次数: N(k+2)
+    4. 一阶估计器: S_i = (1/N) Σ_j f(B)_j (f(A_B^{(i)})_j - f(A)_j) / V(Y)
+    5. 总效应估计器: S_Ti = (1/(2N)) Σ_j (f(A)_j - f(A_B^{(i)})_j)² / V(Y)
+
+    Args:
+        func: 仿真函数 f(params: (k,)) -> scalar。
+        param_distributions: 参数分布规格列表，每个元素
+            {"type": "norm"|"uniform", "loc": ..., "scale": ...}。
+        n_samples: 基础样本数 N，必须是 2 的幂（默认 1024）。
+            总评估次数 = N(k+2)，k 为参数数。
+        param_names: 参数名列表，None 则用 ["param_0", "param_1", ...]。
+        random_state: 随机种子（可复现性）。
+
+    Returns:
+        SobolSensitivityResult 含一阶/总效应指数 + 排序方法。
+
+    Raises:
+        ValueError: n_samples 不是 2 的幂，或参数分布规格无效。
+        RuntimeError: SciPy sobol_indices 计算失败。
+
+    学术依据:
+    - Sobol 2001, DOI: 10.1007/BF02304730（全局灵敏度指数定义）
+    - Saltelli et al. 2010, DOI: 10.1016/j.cpc.2009.09.018（Saltelli 2010
+      采样方案 + 总效应估计器）
+    - SciPy sobol_indices 文档:
+      https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.sobol_indices.html
+
+    合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R09 优先用三方库。
+    """
+    k = len(param_distributions)
+    if k == 0:
+        raise ValueError("param_distributions 不能为空")
+    if n_samples <= 0 or (n_samples & (n_samples - 1)) != 0:
+        raise ValueError(
+            f"n_samples 必须是 2 的幂且 > 0，得到 {n_samples}。"
+            f"建议值: 512, 1024, 2048, 4096。"
+        )
+    if param_names is None:
+        param_names = [f"param_{i}" for i in range(k)]
+    if len(param_names) != k:
+        raise ValueError(
+            f"param_names 长度 {len(param_names)} 与参数数 {k} 不匹配"
+        )
+
+    # 构建分布对象列表
+    dists = [_build_distribution(spec) for spec in param_distributions]
+
+    # 适配 func 为 SciPy sobol_indices 批量接口
+    batch_func = _adapt_func_for_sobol(func)
+
+    # 调用 SciPy sobol_indices (Saltelli 2010)
+    try:
+        result = sobol_indices(
+            func=batch_func,
+            n=n_samples,
+            dists=dists,
+            method="saltelli_2010",
+            random_state=random_state,
+        )
+    except Exception as e:
+        raise RuntimeError(
+            f"SciPy sobol_indices 计算失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（规则 14.1）。请检查 func 是否对所有输入返回有限值。"
+        ) from e
+
+    first_order = np.asarray(result.first_order, dtype=float)
+    total_order = np.asarray(result.total_order, dtype=float)
+
+    # 确保形状 (k,)（SciPy 对标量输出返回 shape (1, k)，需展平）
+    if first_order.ndim == 2:
+        first_order = first_order[0]
+    if total_order.ndim == 2:
+        total_order = total_order[0]
+
+    n_eval = n_samples * (k + 2)
+    return SobolSensitivityResult(
+        first_order={param_names[i]: float(first_order[i]) for i in range(k)},
+        total_order={param_names[i]: float(total_order[i]) for i in range(k)},
+        first_order_values=first_order,
+        total_order_values=total_order,
+        n_evaluations=n_eval,
+        param_names=list(param_names),
+        n_samples=n_samples,
+    )
