@@ -8,11 +8,20 @@
 - 1e6 ≤ κ(S) < 1e12: jax 后端（数值稳定，可微分）
 - κ(S) ≥ 1e12: 矩阵奇异，raise RuntimeError 告警退出
 
-来源:
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
 - SAX Backends 文档: https://gdsfactory.github.io/sax/nbs/internals/03_backends/
-- Simphony 论文: Ploeg et al., 2021, IEEE CiSE
-- 条件数理论: Golub & Van Loan, "Matrix Computations", §2.3
-- KLU 稀疏求解: Davis & Duff, ACM TOMS 2004
+- Pflüger et al. 2021, "Simphony: A Python-based simulator and S-parameter
+  library for photonic integrated circuits", IEEE CiSE 23(4):74-85,
+  https://arxiv.org/abs/2009.05146
+- 条件数理论: Golub & Van Loan 2013, "Matrix Computations", 4th ed.,
+  Johns Hopkins Univ. Press §2.3,
+  https://www.press.jhu.edu/books/title/10876/matrix-computations
+- KLU 稀疏求解: Davis & Duff 1997, "An unsymmetric-pattern multifrontal method
+  for sparse LU factorization", ACM TOMS 23(4):529-557,
+  https://doi.org/10.1145/279232.279237
+- Filipsson 1978, "A new general computer algorithm for S-matrix calculation
+  of interconnected multiports", Proc. Eur. Microw. Conf.,
+  https://doi.org/10.1109/EUMA.1978.332681
 
 创新点（标注"创新"）:
 - 双后端自动切换：通过条件数预测数值稳定性风险，自动选择最优后端。

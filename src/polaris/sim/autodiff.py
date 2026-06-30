@@ -8,9 +8,21 @@
 3. JVP（雅可比-向量积）: 前向模式 AD
 4. 有限差分验证: 验证自动微分的正确性
 
-来源:
-- Frostig et al., "Decomposing Reverse-Mode AD", LAFI 2021, arXiv:2105.09469
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Frostig et al. 2021, "Decomposing Reverse-Mode AD",
+  LAFI 2021, https://arxiv.org/abs/2105.09469
 - JAX 自动微分文档: https://docs.jax.dev/en/latest/automatic-differentiation.html
+- Baydin et al. 2018, "Automatic Differentiation in Machine Learning:
+  a Survey", J. Mach. Learn. Res. 18(153):1-43,
+  https://arxiv.org/abs/1502.05767
+- Bradbury et al. 2018, "JAX: composable transformations of Python+NumPy
+  programs", https://github.com/jax-ml/jax
+- Maclaurin et al. 2015, "Autograd: Effortless gradients in numpy",
+  ICML 2015 AutoML Workshop,
+  https://indico.lal.in2p3.fr/event/2914/contributions/11826/
+- Griewank & Walther 2008, "Evaluating Derivatives: Principles and Techniques
+  of Algorithmic Differentiation", 2nd ed., SIAM,
+  https://doi.org/10.1137/1.9780898717761
 
 创新点（标注"创新"）:
 - 可微分 PDK 模型: 器件模型支持端到端梯度优化

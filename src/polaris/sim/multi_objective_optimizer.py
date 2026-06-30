@@ -22,11 +22,20 @@ NSGA-II 流程：
     5. P ∪ Q → 非支配排序 → 选前 N 个 → 新 P
     6. 重复 2-5 直到收敛
 
-来源:
-- Deb et al. "A Fast and Elitist Multiobjective Genetic Algorithm: NSGA-II" 2002
-- Deb & Jain "An Evolutionary Many-Objective Optimization Algorithm Using
-  Reference-Point-Based Nondominated Sorting Approach, Part I" 2014（NSGA-III）
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Deb et al. 2002, "A Fast and Elitist Multiobjective Genetic Algorithm:
+  NSGA-II", IEEE Trans. Evol. Comput. 6(2):182-197,
+  https://doi.org/10.1109/4235.996017
+- Deb & Jain 2014, "An Evolutionary Many-Objective Optimization Algorithm Using
+  Reference-Point-Based Nondominated Sorting Approach, Part I",
+  IEEE Trans. Evol. Comput. 18(4):577-601,
+  https://doi.org/10.1109/TEVC.2013.2281535 (NSGA-III)
 - Tidy3D 多目标优化: https://docs.flexcompute.com/projects/tidy3d/en/latest/
+- Deb 2001, "Multi-Objective Optimization using Evolutionary Algorithms",
+  Wiley, https://www.wiley.com/en-us/Multi+Objective+Optimization+using+Evolutionary+Algorithms-p-9780471873396
+- Coello et al. 2007, "Evolutionary Algorithms for Solving Multi-Objective
+  Problems", 2nd ed., Springer,
+  https://doi.org/10.1007/978-0-387-36797-2
 """
 
 from __future__ import annotations

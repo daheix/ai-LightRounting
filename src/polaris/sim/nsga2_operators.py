@@ -3,11 +3,22 @@
 包含数据类（Individual/Objective/ObjectiveType/SBXConfig/NSGA2Config/ParetoResult）
 和遗传操作算子函数（非支配排序、拥挤距离、锦标赛选择、SBX 交叉、多项式变异）。
 
-来源:
-- Deb et al. "A Fast and Elitist Multiobjective Genetic Algorithm: NSGA-II" 2002
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Deb et al. 2002, "A Fast and Elitist Multiobjective Genetic Algorithm:
+  NSGA-II", IEEE Trans. Evol. Comput. 6(2):182-197,
+  https://doi.org/10.1109/4235.996017
+- SBX (Simulated Binary Crossover): Deb & Agrawal 1995, "Simulated binary
+  crossover for continuous search space", Complex Syst. 9(2):115-148,
+  https://complex-systems.com/abstracts/vol09_i02_a02/
+- 多项式变异: Deb & Goyal 1996, "A combined genetic adaptive search (GeneAS)
+  for engineering design", Comput. Sci. Inform. 26:30-45,
+  https://www.iitk.ac.in/kangal/papers/k199601.pdf
+- 快速非支配排序: Deb et al. 2002 §III,
   https://ieeexplore.ieee.org/document/996017
-- SBX (Simulated Binary Crossover): Deb & Agrawal 1995
-- 多项式变异: Deb & Goyal 1996
+- 拥挤距离: Deb et al. 2002 §IV-B,
+  https://doi.org/10.1109/4235.996017
+- PlatEMO 实现: Tian et al. 2017, IEEE Comput. Intell. Mag. 12(4):73-87,
+  https://doi.org/10.1109/MCI.2017.2742868
 """
 
 from __future__ import annotations

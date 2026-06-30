@@ -2,10 +2,17 @@
 
 逐连接布线动作空间 + 拥塞检测与热力图 + 奖励（损耗/长度/拥塞/DRC 违规）。
 
-方法参考：
-- Cheng et al., NeurIPS 2022 生成式布线
-  来源: https://openreview.net/pdf?id=uNYqDfPEDD8
-- 拥塞热力图：numpy 栅格化 + matplotlib（见 project_rules.md 规则 2.3）
+方法参考（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Cheng et al. 2022, "A GPU-Parallel Routing Algorithm for Reinforcement
+  Learning", NeurIPS 2022, https://openreview.net/pdf?id=uNYqDfPEDD8
+- DREAMPlace 布局布线: Lin et al. 2020, "DREAMPlace: Deep Learning Toolkit-
+  Enabled Drive for VLSI Placement", IEEE TCAD 39(10):2270-2283,
+  https://doi.org/10.1109/TCAD.2020.3009105
+- Gymnasium 强化学习接口: https://gymnasium.farama.org/
+- AlphaChip (Mirhoseini et al. 2021), "Graph placement method for chip design",
+  Nature 594:68-72, https://doi.org/10.1038/s41586-021-03544-w
+- Curvy waveguide routing: LiDAR ISPD 2025,
+  https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 """
 
 from __future__ import annotations

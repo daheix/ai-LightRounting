@@ -3,12 +3,20 @@
 支持不同刻蚀深度的混合波导类型（ridge/rib/buried）自动布线，
 并在波导类型转换处自动插入过渡段（taper）以最小化过渡损耗。
 
-方法参考：
-- Ada-Routing (ICCAD'25): Constraints-aware Adaptive Routing with Hybrid Waveguides
-  Wu et al., HKUST Guangzhou
+方法参考（R02 学术诚信，均经 WebSearch 验证可访问）:
+- Ada-Routing (ICCAD'25): Wu et al., "Constraints-aware Adaptive Routing with
+  Hybrid Waveguides", HKUST Guangzhou,
   https://personal.hkust-gz.edu.cn/yuzhema/papers/ICCAD2025-Ada-Routing.pdf
-- IMEC Silicon Photonics Design Guide: ridge vs rib waveguide transitions
-- GDSFactory waveguide_taper: 自动生成不同宽度/高度间的过渡
+- IMEC Silicon Photonics Design Guide: ridge vs rib waveguide transitions,
+  https://www.imec-int.com/en/what-we-offer/technologies/silicon-photonics
+- GDSFactory waveguide_taper: 自动生成不同宽度/高度间的过渡,
+  https://gdsfactory.github.io/gdsfactory/
+- Soref et al. 1993, "Large single-mode rib waveguides in GeSi-Si and Si-on-SiO2",
+  IEEE J. Quantum Electron. 27(8):1971-1974,
+  https://doi.org/10.1109/3.83406 (ridge/rib 波导损耗基准)
+- Chrostowski & Hochberg 2015, "Silicon Photonics Design: From Devices to Systems",
+  Cambridge Univ. Press §3.3,
+  https://doi.org/10.1017/CBO9781316084168
 
 核心思想：
 1. 每个网连接标注所需的波导类型（ridge/rib/buried）

@@ -21,19 +21,22 @@
 | Sobol QMC | O(N⁻¹ logᵈ N) | 准随机序列，多维更优 |
 | Halton QMC | O(N⁻¹ logᵈ N) | 类似 Sobol，高维稍差 |
 
-## 学术依据
+## 学术依据（R02 学术诚信，均经 WebSearch 验证可访问）
 
 - LHS: McKay, Beckman & Conover 1979, "A Comparison of Three Methods for
   Selecting Values of Input Variables in the Analysis of Output from a
-  Computer Code", Technometrics 21(2):239-245, DOI: 10.1080/00401706.1979.10489755
+  Computer Code", Technometrics 21(2):239-245,
+  https://doi.org/10.1080/00401706.1979.10489755
 - Sobol 序列: Sobol 1967, "Distribution of points in a cube and approximate
-  evaluation of integrals", USSR Comput. Math. Math. Phys. 7(4):86-112
+  evaluation of integrals", USSR Comput. Math. Math. Phys. 7(4):86-112,
+  https://doi.org/10.1016/0041-5553(67)90144-9
 - Halton 序列: Halton 1960, "On the efficiency of certain quasi-random
-  sequences of points in evaluating multi-dimensional integrals", Numer. Math. 2:84-90
+  sequences of points in evaluating multi-dimensional integrals",
+  Numer. Math. 2:84-90, https://doi.org/10.1007/BF01386213
 - QMC 理论: Niederreiter 1992, "Random Number Generation and Quasi-Monte
-  Carlo Methods", SIAM, DOI: 10.1137/1.9781611970081
+  Carlo Methods", SIAM, https://doi.org/10.1137/1.9781611970081
 - Variance reduction: Glasserman 2003, "Monte Carlo Methods in Financial
-  Engineering", Springer, Ch.5
+  Engineering", Springer, https://doi.org/10.1007/978-0-387-21617-1
 - SciPy QMC 实现: https://docs.scipy.org/doc/scipy/reference/stats.qmc.html
 - Discrepancy 度量: Niederreiter 1992, Ch.2 (星偏差 star discrepancy)
 

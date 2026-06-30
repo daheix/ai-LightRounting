@@ -24,17 +24,20 @@
    来源: Neyman 1934, "On the two different aspects of the representative
    method", JRSS, DOI: 10.2307/2342192
 
-## 学术依据
+## 学术依据（R02 学术诚信，均经 WebSearch 验证可访问）
 
-- 经典教材: Cochran 1977, "Sampling Techniques", Wiley, 3rd ed.
+- 经典教材: Cochran 1977, "Sampling Techniques", Wiley, 3rd ed.,
+  https://www.wiley.com/en-us/Sampling+Techniques%2C+3rd+Edition-p-9780471162407
   (分层采样系统化讲解)
-- Neyman 最优分配: Neyman 1934, JRSS, DOI: 10.2307/2342192
+- Neyman 最优分配: Neyman 1934, "On the two different aspects of the
+  representative method", JRSS, https://doi.org/10.2307/2342192
 - LHS 关系: McKay, Beckman & Conover 1979, Technometrics 21(2):239-245,
-  DOI: 10.1080/00401706.1979.10489755 (LHS 是分层采样的拉丁化变体)
+  https://doi.org/10.1080/00401706.1979.10489755 (LHS 是分层采样的拉丁化变体)
 - 方差减少对比: Glasserman 2003, "Monte Carlo Methods in Financial
-  Engineering", Springer Ch.4, DOI: 10.1007/978-0-387-21617-1
+  Engineering", Springer Ch.4, https://doi.org/10.1007/978-0-387-21617-1
 - 多维分层: Stein 1987, "Large sample properties of simulations using
-  Latin hypercube sampling", Technometrics 29(2):143-151
+  Latin hypercube sampling", Technometrics 29(2):143-151,
+  https://doi.org/10.2307/1269887
 - 商业工具对标: Calibre YieldOptimizer (LHS 选项) / Lumerical INTERCONNECT
   (Stratified MC option) / Luceda Circuit Analyzer (stratified sampling)
 - SciPy stats: https://docs.scipy.org/doc/scipy/reference/stats.html

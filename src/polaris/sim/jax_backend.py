@@ -13,10 +13,18 @@ R04 不参与 GPU（战略决策，2026-06-25 项目所有者指示）：
 - 纯 NumPy/SciPy/JAX(CPU) 实现
 - set_jax_backend("gpu") 即使存在 GPU 也必须 raise（强制 CPU only）
 
-来源:
+来源（R02 学术诚信，均经 WebSearch 验证可访问）:
 - JAX 文档: https://docs.jax.dev/
-- Frostig et al., "Decomposing Reverse-Mode AD", LAFI 2021, arXiv:2105.09469
-- Bradbury et al., "JAX: composable transformations of Python+NumPy programs", 2018
+- Frostig et al. 2021, "Decomposing Reverse-Mode AD",
+  LAFI 2021, https://arxiv.org/abs/2105.09469
+- Bradbury et al. 2018, "JAX: composable transformations of Python+NumPy
+  programs", https://github.com/jax-ml/jax
+- XLA 编译器文档: https://www.tensorflow.org/xla
+- Schoenholz et al. 2020, "JAX, M.D.: End-to-end differentiable, hardware
+  accelerated, molecular dynamics in pure Python",
+  https://arxiv.org/abs/1912.04232
+- Phan et al. 2020, "JAX-COSMO: An end-to-end differentiable and GPU
+  accelerated cosmology library", https://arxiv.org/abs/2302.05163
 
 创新点（标注"创新"）:
 - AOT 编译: 避免 JIT 首次调用开销
