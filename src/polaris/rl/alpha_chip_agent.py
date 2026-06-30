@@ -264,12 +264,17 @@ class AlphaChipAgent:
     def _nearest_available(action: int, mask: np.ndarray) -> int:
         """就近搜索可用网格位置（掩码屏蔽时）。
 
+        R03 合规：当所有位置都被占用时，抛出 ValueError 而非 fall-back。
+
         Args:
             action: 原始网格索引。
             mask: 动作掩码。
 
         Returns:
-            最近可用网格索引；若全部占用，返回原始索引。
+            最近可用网格索引。
+
+        Raises:
+            ValueError: 所有位置都被占用（R03 无 fall-back）。
         """
         n = len(mask)
         for radius in range(1, n):
@@ -277,7 +282,11 @@ class AlphaChipAgent:
                 idx = action + delta
                 if 0 <= idx < n and mask[idx] > 0.0:
                     return int(idx)
-        return int(action)
+        # R03 合规：所有位置都被占用时抛出错误，而非 fall-back 返回可能不合适的位置
+        raise ValueError(
+            f"所有网格位置均被占用，无法找到可用位置进行器件放置"
+            f"（R03 禁止 fall-back）"
+        )
 
     def compute_reward(self, placement: dict) -> float:
         """计算奖励。

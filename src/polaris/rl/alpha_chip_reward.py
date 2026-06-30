@@ -421,6 +421,9 @@ class PhotonicPlacementReward:
     ) -> bool:
         """检测两条线段是否相交（CCW 跨立实验）。
 
+        R03 合规：检测线段退化成点的情况（端点重合或线段长度为零），
+        此时返回 False（点不与另一线段相交）。
+
         Args:
             s1: 线段 1，[(x1, y1), (x2, y2)]。
             s2: 线段 2，[(x3, y3), (x4, y4)]。
@@ -430,6 +433,11 @@ class PhotonicPlacementReward:
         """
         (x1, y1), (x2, y2) = s1
         (x3, y3), (x4, y4) = s2
+
+        # R03 合规：检测线段退化成点的情况
+        if (x1 == x2 and y1 == y2) or (x3 == x4 and y3 == y4):
+            # 线段退化成点，不与另一线段相交
+            return False
 
         def _cross(ax: float, ay: float, bx: float, by: float) -> float:
             return ax * by - bx * ay
