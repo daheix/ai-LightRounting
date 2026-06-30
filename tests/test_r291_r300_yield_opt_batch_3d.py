@@ -278,6 +278,21 @@ class TestToleranceAllocation:
         with pytest.raises(ValueError, match="所有灵敏度 = 0"):
             allocate_tolerance_by_sensitivity(sens, total_budget=1.0)
 
+    def test_negative_sensitivities_raises(self):
+        """R03 回归测试（批次9-C T-P0-01-c）: 负灵敏度必须 raise。
+
+        输入契约要求 |S_i| >= 0（见 docstring），负灵敏度表明调用方
+        未取绝对值。原代码 ``if np.any(sensitivities < 0): pass`` 静默
+        放行（fall-back），现改为 raise ValueError 防止掩盖上游错误。
+        """
+        sens = np.array([1.0, -2.0, 0.5])
+        with pytest.raises(ValueError, match="必须为非负"):
+            allocate_tolerance_by_sensitivity(sens, total_budget=1.0)
+        # 全负也应 raise
+        sens_all_neg = np.array([-1.0, -2.0])
+        with pytest.raises(ValueError, match="必须为非负"):
+            allocate_tolerance_by_sensitivity(sens_all_neg, total_budget=1.0)
+
     def test_zero_sensitivity_handled(self):
         """部分灵敏度为 0 时用最小非零灵敏度的 1/10 替代（保守上限）。"""
         # S = [1.0, 0.0] → 0 用 0.1 替代

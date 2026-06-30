@@ -366,8 +366,15 @@ def allocate_tolerance_by_sensitivity(
     if total_budget <= 0:
         raise ValueError(f"total_budget 必须 > 0，得到 {total_budget}")
     if np.any(sensitivities < 0):
-        # 输入应是 |S_i| >= 0；允许 0 但若全部为 0 则无解
-        pass
+        # R03 禁止 fall-back：输入契约要求 |S_i| >= 0（见 docstring），
+        # 负灵敏度表明调用方未取绝对值，是数值异常/调用错误，
+        # 禁止静默 pass 掩盖，必须 raise 让上游修正。
+        neg_indices = np.where(sensitivities < 0)[0].tolist()
+        raise ValueError(
+            f"sensitivities 必须为非负（|∂f/∂x_i|），"
+            f"但索引 {neg_indices} 处为负值。"
+            f"请上游调用 np.abs(sensitivities) 后再传入（R03 禁止 fall-back）。"
+        )
     if np.all(sensitivities == 0):
         raise ValueError(
             "所有灵敏度 = 0，无法分配容差（输出对参数无响应）。"
