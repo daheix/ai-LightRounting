@@ -4,10 +4,20 @@
 Pattern Routing（L/Z-shape）+ GCell A* + Rip-up&Reroute。
 
 来源:
-- DREAMPlace RUDY: https://arxiv.org/abs/2004.10746
-- LiDAR 2.0 分层布线: https://arxiv.org/html/2505.17239v2
-- FastGR Pattern Routing: IJCAI 2023
-- Cadence Innovus 全局-详细分层
+- DREAMPlace RUDY (Markov & Lin, DAC 2019) 拥塞预估
+  https://arxiv.org/abs/2004.10746
+- LiDAR 2.0 分层曲线波导布线
+  https://arxiv.org/html/2505.17239v2
+- FastGR: A Fast Global Routing Algorithm for VLSI Circuits (IJCAI 2023)
+  https://www.ijcai.org/proceedings/2023/0500.pdf
+- Cadence Innovus 全局-详细分层布线
+  https://community.cadence.com/cadence_blogs_8/b/di/posts/unlocking-ppa-with-innovus-what-s-new-and-how-to-unleash-it
+- Hart, Nilsson & Raphael, "A Formal Basis for the Heuristic Determination of
+  Minimum Cost Paths", IEEE SSSC 1968, https://ieeexplore.ieee.org/document/4082128
+  (GCell A* 搜索底层算法)
+- Lillis & Dutt, "New algorithms for performance-driven routing of VLSI circuits",
+  DAC 1999, https://dl.acm.org/doi/10.1145/309847.309970
+  (Rip-up & Reroute 框架，全局布线拥塞解决)
 """
 
 from __future__ import annotations

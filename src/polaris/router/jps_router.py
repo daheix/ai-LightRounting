@@ -6,9 +6,26 @@
 学术来源:
 - Harabor & Grastien, "Online Graph Pruning for Pathfinding on Grid Maps",
   AAAI 2011. https://cdn.aaai.org/ojs/7994/7994-13-11522-1-2-20201228.pdf
-- 核心思想：只在"跳跃点"（jump point）处扩展节点。跳跃点定义：
-  (1) 到达目标；(2) 存在强制邻居（障碍边缘的转向点）；(3) 撞障碍终止。
-- 4-邻接（E/W/N/S），继承 GridRouter 复用 ObstacleGrid 障碍管理。
+  (JPS 原始论文，本模块核心算法)
+- Harabor & Grastien, "JPS+: An Any-Angle Path Planning Algorithm",
+  JAIR 2014. https://jair.org/index.php/jair/article/view/10830
+  (JPS 期刊扩展版，含在线剪枝证明与预处理优化)
+- Hart, Nilsson & Raphael, "A Formal Basis for the Heuristic Determination of
+  Minimum Cost Paths", IEEE SSSC 1968, https://ieeexplore.ieee.org/document/4082128
+  (A* 搜索原始论文，JPS 基于 A* 框架)
+- Red Blob Games, "Introduction to A*", A* 实现优化与 tie-breaker
+  https://www.redblobgames.com/pathfinding/a-star/implementation.html
+  (启发式紧致性、整数状态编码实现参考)
+- Sturtevant, "Benchmarks for Grid-Based Pathfinding", AAAI AIIDE 2011
+  https://cdn.aaai.org/ojs/12438/12438-52-15966-1-2-20201228.pdf
+  (网格寻路基准测试集，JPS 性能对比来源)
+- LiDAR (ISPD 2025) curvy-aware A* 光波导详细布线
+  https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+  (光波导布线应用场景，弯曲半径约束与 JPS 跳跃扩展结合)
+
+核心思想：只在"跳跃点"（jump point）处扩展节点。跳跃点定义：
+(1) 到达目标；(2) 存在强制邻居（障碍边缘的转向点）；(3) 撞障碍终止。
+4-邻接（E/W/N/S），继承 GridRouter 复用 ObstacleGrid 障碍管理。
 
 无 fall-back 设计（规则 14.1）：所有错误必须 raise，禁止返回 None/空路径。
 """

@@ -8,6 +8,16 @@
 - LiDAR 2.0 分层曲线波导布线: https://arxiv.org/abs/2505.17239
 - 欧拉弯曲（clothoid）平滑过渡: Fujisawa et al., Opt. Express 25, 9150 (2017)
   https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
+- Rizzo et al., "Euler spirals for high fabrication yield in SOI photonics",
+  Opt. Lett. 48(2), 215 (2023)
+  https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
+  (欧拉曲线提升 SOI 制造鲁棒性，弯曲半径约束依据)
+- SiEPIC EBeam PDK crossing 器件 1550nm 损耗 0.3 dB
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+  (自适应交叉插入损耗参数来源)
+- Hong et al., "Euler弯曲波导设计", Opt. Express 29 (2021)
+  https://opg.optica.org/oe/fulltext.cfm?uri=oe-29-2-1600
+  (Euler 弯曲损耗模型，单弯损耗 0.015 dB 典型值)
 
 【创新】自适应交叉插入：congestion > threshold 时插入 crossing 器件，
 而非绕行。gdsfactory 无此功能，PoLaRIS 基于 congestion 估计的启发式决策。

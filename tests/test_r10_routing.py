@@ -450,3 +450,137 @@ class TestR10Integration:
             router.route((0, 5), (9, 5))
         with pytest.raises(ValueError):
             dubins_path((0, 0, 0), (10, 0, 0), radius=0)
+
+
+# ---------------------------------------------------------------------------
+# 8. Rip-up & Reroute 测试（R05 回归测试：修复 ObstacleGrid.sum()/size Bug）
+# ---------------------------------------------------------------------------
+class TestRipReroute:
+    """Rip-up & Reroute 测试（Lillis & Dutt DAC 1999）。
+
+    R05 回归测试: 原实现 ``router.obstacle.sum() / router.obstacle.size`` 调用
+    numpy.ndarray 接口，但 ``router.obstacle`` 是 ``ObstacleGrid`` 实例（非 ndarray），
+    在稀疏/稠密存储模式下均会抛 ``AttributeError``。修复后通过
+    ``blocked_cells()`` + ``total_cells`` 计算障碍密度。
+    """
+
+    def test_sort_nets_dense_grid_no_attribute_error(self):
+        """R05 回归: 稠密 ObstacleGrid 下 _sort_nets_by_difficulty 不抛 AttributeError。"""
+        from polaris.router.rip_reroute import (
+            NetConnection,
+            RipRerouteConfig,
+            _sort_nets_by_difficulty,
+        )
+        from polaris.router.waveguide_router import GridRouter, RouterConstraints
+
+        # 稠密模式（100×100=10K 单元 ≤ 4M）
+        router = GridRouter(100, 100, 1.0, RouterConstraints())
+        router.add_obstacle(10, 10, 5, 5)
+        nets = [
+            NetConnection("n1", (0.0, 0.0), (50.0, 50.0)),
+            NetConnection("n2", (0.0, 0.0), (90.0, 90.0)),
+        ]
+        cfg = RipRerouteConfig()
+        # 修复前会抛 AttributeError: 'ObstacleGrid' object has no attribute 'sum'
+        sorted_nets = _sort_nets_by_difficulty(nets, router, cfg.congestion_weight)
+        assert len(sorted_nets) == 2
+
+    def test_sort_nets_sparse_grid_no_attribute_error(self):
+        """R05 回归: 稀疏 ObstacleGrid（>4M 单元）下不抛 AttributeError。
+
+        这是原 Bug 最致命的场景：稀疏存储模式下 ObstacleGrid 用 set 存储，
+        完全没有 sum()/size 接口，必然抛 AttributeError。
+        """
+        from polaris.router.rip_reroute import (
+            NetConnection,
+            RipRerouteConfig,
+            _sort_nets_by_difficulty,
+        )
+        from polaris.router.waveguide_router import GridRouter, RouterConstraints
+
+        # 稀疏模式（3000×3000=9M 单元 > 4M 阈值）
+        router = GridRouter(3000, 3000, 1.0, RouterConstraints())
+        router.add_obstacle(1500, 1500, 100, 100)
+        nets = [
+            NetConnection("n1", (0.0, 0.0), (2900.0, 2900.0)),
+            NetConnection("n2", (100.0, 100.0), (2800.0, 2800.0)),
+        ]
+        cfg = RipRerouteConfig()
+        sorted_nets = _sort_nets_by_difficulty(nets, router, cfg.congestion_weight)
+        assert len(sorted_nets) == 2
+
+    def test_sort_nets_difficulty_ordering(self):
+        """难度排序: 远距离网（曼哈顿距离大）应排在前面。"""
+        from polaris.router.rip_reroute import (
+            NetConnection,
+            RipRerouteConfig,
+            _sort_nets_by_difficulty,
+        )
+        from polaris.router.waveguide_router import GridRouter, RouterConstraints
+
+        router = GridRouter(50, 50, 1.0, RouterConstraints())
+        # 近网（距离 10）+ 远网（距离 40）
+        near = NetConnection("near", (0.0, 0.0), (10.0, 0.0))
+        far = NetConnection("far", (0.0, 0.0), (40.0, 0.0))
+        cfg = RipRerouteConfig()
+        sorted_nets = _sort_nets_by_difficulty([near, far], router, cfg.congestion_weight)
+        # 远网难度更高，应排在前面
+        assert sorted_nets[0].net_id == "far"
+        assert sorted_nets[1].net_id == "near"
+
+    def test_route_with_rip_reroute_basic(self):
+        """端到端: route_with_rip_reroute 多网布线。"""
+        from polaris.router.rip_reroute import (
+            GridSpec,
+            NetConnection,
+            RipRerouteConfig,
+            route_with_rip_reroute,
+        )
+
+        nets = [
+            NetConnection("n1", (0.0, 0.0), (40.0, 0.0)),
+            NetConnection("n2", (0.0, 10.0), (40.0, 10.0)),
+        ]
+        grid_spec = GridSpec(grid_w=50, grid_h=20, grid_size=1.0)
+        results = route_with_rip_reroute(nets, grid_spec, config=RipRerouteConfig(max_iterations=2))
+        assert len(results) == 2
+        # 两条网都应布线成功
+        for net_id in ("n1", "n2"):
+            assert results[net_id] is not None, f"网 {net_id} 布线失败"
+            assert len(results[net_id].points) >= 2
+
+    def test_route_with_rip_reroute_obstacle_conflict(self):
+        """端到端: 带障碍的 rip-up & reroute（验证冲突重布）。"""
+        from polaris.router.rip_reroute import (
+            GridSpec,
+            NetConnection,
+            RipRerouteConfig,
+            route_with_rip_reroute,
+        )
+        from polaris.router.waveguide_router import RouterConstraints
+
+        # 两条网 + 中间障碍，验证 rip-up 能解决顺序布线冲突
+        nets = [
+            NetConnection("n1", (0.0, 5.0), (40.0, 5.0)),
+            NetConnection("n2", (0.0, 0.0), (40.0, 10.0)),
+        ]
+        grid_spec = GridSpec(grid_w=50, grid_h=15, grid_size=1.0)
+        cons = RouterConstraints(min_bend_radius_um=2.0)
+        cfg = RipRerouteConfig(max_iterations=3)
+        results = route_with_rip_reroute(nets, grid_spec, constraints=cons, config=cfg)
+        assert len(results) == 2
+        # 至少一条网布线成功（rip-up 可能不完全成功，但不应崩溃）
+        success_count = sum(1 for v in results.values() if v is not None)
+        assert success_count >= 1
+
+    def test_route_with_rip_reroute_empty_nets(self):
+        """空网列表返回空结果。"""
+        from polaris.router.rip_reroute import (
+            GridSpec,
+            RipRerouteConfig,
+            route_with_rip_reroute,
+        )
+
+        grid_spec = GridSpec(grid_w=20, grid_h=20, grid_size=1.0)
+        results = route_with_rip_reroute([], grid_spec, config=RipRerouteConfig())
+        assert results == {}

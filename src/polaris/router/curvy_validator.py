@@ -12,6 +12,15 @@
   URL: https://scopex-asu.github.io/files/publications/PD_TCAD2025_LiDARv2.pdf
 - 三点外接圆半径公式（R = |v1|*|v2|*|v1-v2| / (2*|v1×v2|)）
   来源: LiDAR ISPD'25 §3.2
+- SiEPIC EBeam PDK 设计规则（最小弯曲半径/波导间距）
+  URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+  (SOI 平台 min_bend_radius=5μm, min_spacing=1μm 默认值依据)
+- Chrostowski, "Silicon Photonics Design", Cambridge 2015
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+  (§6.3 弯曲半径约束、§6.4 损耗系数，光子版图 DRC 验证理论)
+- KLayout DRC 引擎（开源光子版图设计规则检查）
+  https://www.klayout.de/doc_manual/drc.html
+  (波导间距检查、弯曲半径检查 DRC 实现参考)
 
 ## 合规性
 

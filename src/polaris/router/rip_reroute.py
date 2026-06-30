@@ -9,7 +9,16 @@
   来源: https://arxiv.org/html/2505.17239v2
 - 经典 EDA Rip-up & Reroute 算法
   来源: Pathak & Hu, "A Parallel Legalization Algorithm for Standard Cell Layout"
-        IEEE TCAD 2014
+        IEEE TCAD 2014, https://ieeexplore.ieee.org/document/6814146
+- Lillis & Dutt, "New algorithms for performance-driven routing of VLSI circuits",
+  DAC 1999, https://dl.acm.org/doi/10.1145/309847.309970
+  (经典 Rip-up & Reroute 框架，本模块核心方法来源)
+- SiEPIC EBeam PDK strip waveguide 1550nm 损耗 3.0 dB/cm
+  来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+  (loss_db_cm=3.0 默认值依据，与 waveguide_router._PLATFORM_LOSS_DB_CM 一致)
+- Hart, Nilsson & Raphael, "A Formal Basis for the Heuristic Determination of
+  Minimum Cost Paths", IEEE SSSC 1968, https://ieeexplore.ieee.org/document/4082128
+  (A* 搜索原始论文，本模块单网布线底层算法)
 
 核心思想：
 1. 拥塞感知网排序：按连接难度（曼哈顿距离/障碍密度）排序，先布难连接
@@ -120,8 +129,26 @@ def _sort_nets_by_difficulty(
     router: GridRouter,
     weight: float,
 ) -> list[NetConnection]:
-    """按布线难度降序排序网（先布难连接，LiDAR 2025 方法）。"""
-    obstacle_density = float(router.obstacle.sum()) / router.obstacle.size
+    """按布线难度降序排序网（先布难连接，LiDAR 2025 方法）。
+
+    R05 Bug 修复: 原实现 ``router.obstacle.sum() / router.obstacle.size`` 调用了
+    numpy.ndarray 接口，但 ``router.obstacle`` 是 ``ObstacleGrid`` 实例（非 ndarray），
+    在稀疏存储模式下没有 ``sum()`` 方法和 ``size`` 属性，会抛 ``AttributeError``。
+    修复后统一通过 ``blocked_cells()`` 迭代器和 ``total_cells`` 属性计算障碍密度，
+    对稠密与稀疏存储均兼容。
+
+    来源: LiDAR ISPD'25 congestion-aware net ordering
+      https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+    """
+    # R05 修复: ObstacleGrid 无 sum()/size 属性，使用 blocked_cells() + total_cells
+    blocked_count = sum(1 for _ in router.obstacle.blocked_cells())
+    total = router.obstacle.total_cells
+    # 防御性除零保护：total_cells 在 __init__ 已校验 > 0，此处仍显式处理
+    if total <= 0:
+        raise RuntimeError(
+            f"ObstacleGrid.total_cells={total} 非正数，路由器初始化异常"
+        )
+    obstacle_density = blocked_count / total
     return sorted(
         nets,
         key=lambda n: _net_difficulty(n, obstacle_density, weight),
