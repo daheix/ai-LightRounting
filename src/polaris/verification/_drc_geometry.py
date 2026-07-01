@@ -258,10 +258,56 @@ def _segments_intersect(
     d3 = _cross2d(a, b, c)
     d4 = _cross2d(a, b, d)
 
-    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
-       ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+    if _segments_straddle(d1, d2, d3, d4):
         return True
 
+    return _endpoint_touches(d1, d2, d3, d4, a, b, c, d)
+
+
+def _segments_straddle(
+    d1: float, d2: float, d3: float, d4: float,
+) -> bool:
+    """叉积 straddling 测试：两线段是否严格跨立（R602 Extract Method）。
+
+    Args:
+        d1..d4: 四个端点的叉积值（_cross2d 计算）。
+
+    Returns:
+        True 表示两线段跨立相交（不含共线端点接触）。
+
+    来源:
+    - de Berg et al., "Computational Geometry", Springer 2008, Chapter 2
+      DOI: 10.1007/978-3-540-77974-2
+    - Ericson, "Real-Time Collision Detection", MK 2005, Chapter 5
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
+    return ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
+           ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0))
+
+
+def _endpoint_touches(
+    d1: float, d2: float, d3: float, d4: float,
+    a: NDArray[np.float64], b: NDArray[np.float64],
+    c: NDArray[np.float64], d: NDArray[np.float64],
+) -> bool:
+    """端点共线接触检测：某端点恰好落在对边线段上（R602 Extract Method）。
+
+    Args:
+        d1..d4: 四个端点的叉积值。
+        a, b: 线段 AB 的两端点。
+        c, d: 线段 CD 的两端点。
+
+    Returns:
+        True 表示存在端点共线接触。
+
+    来源:
+    - de Berg et al., "Computational Geometry", Springer 2008, Chapter 2
+      DOI: 10.1007/978-3-540-77974-2
+    - Ericson, "Real-Time Collision Detection", MK 2005, Chapter 5
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
     if abs(d1) < 1e-12 and _point_on_segment(a, c, d):
         return True
     if abs(d2) < 1e-12 and _point_on_segment(b, c, d):
@@ -270,7 +316,6 @@ def _segments_intersect(
         return True
     if abs(d4) < 1e-12 and _point_on_segment(d, a, b):
         return True
-
     return False
 
 
@@ -521,13 +566,63 @@ def _polygon_taper_axis_aligned(poly: NDArray[np.float64]) -> float:
     dx = xmax - xmin
     dy = ymax - ymin
     if dx >= dy:
-        left_pts = [p for p in poly if abs(p[0] - xmin) < 1e-9]
-        right_pts = [p for p in poly if abs(p[0] - xmax) < 1e-9]
-        if not (left_pts and right_pts) or dx <= 1e-12:
-            return 0.0
-        w_left = max(p[1] for p in left_pts) - min(p[1] for p in left_pts)
-        w_right = max(p[1] for p in right_pts) - min(p[1] for p in right_pts)
-        return math.degrees(math.atan(abs(w_right - w_left) / (2 * dx)))
+        return _horizontal_taper_angle(poly, xmin, xmax, dx)
+    return _vertical_taper_angle(poly, ymin, ymax, dy)
+
+
+def _horizontal_taper_angle(
+    poly: NDArray[np.float64], xmin: float, xmax: float, dx: float,
+) -> float:
+    """水平轴向锥形张角估算（R603 Extract Method 降低圈复杂度）。
+
+    取多边形左右两端的 y 方向宽度差，相对 x 跨度求反正切得张角。
+
+    Args:
+        poly: 多边形顶点数组。
+        xmin/xmax: 多边形 x 方向包围盒边界。
+        dx: x 方向跨度。
+
+    Returns:
+        锥形张角（度）；两端点缺失或跨度为零时返回 0.0。
+
+    来源:
+    - Synopsys OptoDesigner DRC Module
+    - KLayout DRC: https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - Luceda IPKISS DRC: https://academy.lucedaphotonics.com/
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
+    left_pts = [p for p in poly if abs(p[0] - xmin) < 1e-9]
+    right_pts = [p for p in poly if abs(p[0] - xmax) < 1e-9]
+    if not (left_pts and right_pts) or dx <= 1e-12:
+        return 0.0
+    w_left = max(p[1] for p in left_pts) - min(p[1] for p in left_pts)
+    w_right = max(p[1] for p in right_pts) - min(p[1] for p in right_pts)
+    return math.degrees(math.atan(abs(w_right - w_left) / (2 * dx)))
+
+
+def _vertical_taper_angle(
+    poly: NDArray[np.float64], ymin: float, ymax: float, dy: float,
+) -> float:
+    """垂直轴向锥形张角估算（R603 Extract Method 降低圈复杂度）。
+
+    取多边形上下两端的 x 方向宽度差，相对 y 跨度求反正切得张角。
+
+    Args:
+        poly: 多边形顶点数组。
+        ymin/ymax: 多边形 y 方向包围盒边界。
+        dy: y 方向跨度。
+
+    Returns:
+        锥形张角（度）；两端点缺失或跨度为零时返回 0.0。
+
+    来源:
+    - Synopsys OptoDesigner DRC Module
+    - KLayout DRC: https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
+    - Luceda IPKISS DRC: https://academy.lucedaphotonics.com/
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
     bottom_pts = [p for p in poly if abs(p[1] - ymin) < 1e-9]
     top_pts = [p for p in poly if abs(p[1] - ymax) < 1e-9]
     if not (bottom_pts and top_pts) or dy <= 1e-12:
