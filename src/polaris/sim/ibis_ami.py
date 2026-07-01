@@ -366,82 +366,119 @@ class AMIParser:
     [Reserved_Parameters] / [Model_Specific] / [Comment]
     """
 
+    # AMI 文件参数名 → (顶层属性名, 类型转换函数) 映射
+    # 来源: IBIS AMI v5.0 [Reserved_Parameters] 关键字
+    # URL: https://ibis.org/ver5.0/ver5_0.txt
+    _AMI_TOP_FIELD_MAP: dict[str, tuple[str, Any]] = {
+        "tx_jitter_ui": ("tx_jitter_ui", float),
+        "tx_pre_cursor": ("tx_pre_cursor", float),
+        "tx_post_cursor": ("tx_post_cursor", float),
+        "tx_amplitude_mv": ("tx_amplitude_mv", float),
+        "rx_baud_rate_gbps": ("rx_baud_rate_gbps", float),
+        "rx_ctle_mode": ("rx_ctle_mode", str),
+        "rx_dfe_taps": ("rx_dfe_taps", int),
+        "rx_ctle_attenuation_db": ("rx_ctle_attenuation_db", float),
+    }
+    _AMI_FLOAT_PARAMS = frozenset({
+        "tx_jitter_ui", "tx_pre_cursor", "tx_post_cursor",
+        "tx_amplitude_mv", "rx_baud_rate_gbps", "rx_ctle_attenuation_db",
+    })
+    _AMI_INT_PARAMS = frozenset({"rx_dfe_taps"})
+
     @staticmethod
     def parse(path: str | Path) -> AMIParams:
-        """解析 AMI 文件。"""
+        """解析 AMI 文件（dispatch + Extract Method，CC ≤ 8）。"""
         path = Path(path)
         text = path.read_text(encoding="utf-8", errors="replace")
-        lines = text.splitlines()
-
         params = AMIParams()
         in_reserved = False
         in_model_specific = False
 
-        for line in lines:
-            line = line.strip()
+        for raw_line in text.splitlines():
+            line = raw_line.strip()
             if not line or line.startswith("//") or line.startswith("/*"):
                 continue
-
-            m = re.match(r"\[(.*?)\]", line)
-            if m:
-                keyword = m.group(1).strip().lower()
-                if keyword == "reserved_parameters":
-                    in_reserved, in_model_specific = True, False
-                elif keyword == "model_specific":
-                    in_reserved, in_model_specific = False, True
-                elif keyword in ("comment", "end"):
-                    in_reserved, in_model_specific = False, False
+            section_match = re.match(r"\[(.*?)\]", line)
+            if section_match:
+                in_reserved, in_model_specific = AMIParser._apply_section_switch(
+                    section_match.group(1).strip().lower(),
+                    in_reserved, in_model_specific,
+                )
                 continue
+            if "=" not in line:
+                continue
+            in_reserved, in_model_specific = AMIParser._apply_param_line(
+                line, params, in_reserved, in_model_specific,
+            )
 
-            # 解析参数
-            if "=" in line:
-                key, val = line.split("=", 1)
-                key = key.strip()
-                val = val.strip().strip('"').strip("'")
-
-                if in_reserved:
-                    if key == "Init_Returns_Impulse":
-                        params.init_returns_impulse = val.lower() == "true"
-                    elif key == "GetWave_Exists":
-                        params.getwave_exists = val.lower() == "true"
-
-                if in_model_specific or in_reserved:
-                    try:
-                        if key in ("tx_jitter_ui", "tx_pre_cursor", "tx_post_cursor",
-                                   "tx_amplitude_mv", "rx_baud_rate_gbps",
-                                   "rx_ctle_attenuation_db"):
-                            params.model_params[key] = float(val)
-                        elif key in ("rx_dfe_taps",):
-                            params.model_params[key] = int(val)
-                        elif key == "rx_ctle_mode":
-                            params.model_params[key] = val
-                        else:
-                            params.model_params[key] = val
-                    except ValueError:
-                        params.model_params[key] = val
-
-        # 同步到顶层字段
-        for k, v in params.model_params.items():
-            if k == "tx_jitter_ui":
-                params.tx_jitter_ui = v
-            elif k == "tx_pre_cursor":
-                params.tx_pre_cursor = v
-            elif k == "tx_post_cursor":
-                params.tx_post_cursor = v
-            elif k == "tx_amplitude_mv":
-                params.tx_amplitude_mv = v
-            elif k == "rx_baud_rate_gbps":
-                params.rx_baud_rate_gbps = v
-            elif k == "rx_ctle_mode":
-                params.rx_ctle_mode = v
-            elif k == "rx_dfe_taps":
-                params.rx_dfe_taps = v
-            elif k == "rx_ctle_attenuation_db":
-                params.rx_ctle_attenuation_db = v
-
-        logger.info("AMI 解析完成: Init_Returns_Impulse=%s, GetWave_Exists=%s",
-                    params.init_returns_impulse, params.getwave_exists)
+        AMIParser._sync_model_params_to_top(params)
+        logger.info(
+            "AMI 解析完成: Init_Returns_Impulse=%s, GetWave_Exists=%s",
+            params.init_returns_impulse, params.getwave_exists,
+        )
         return params
+
+    @staticmethod
+    def _apply_section_switch(
+        keyword: str,
+        in_reserved: bool,
+        in_model_specific: bool,
+    ) -> tuple[bool, bool]:
+        """根据 [Section] 关键字切换 (in_reserved, in_model_specific) 状态。
+
+        未知 section 保留原状态（与原 parse 行为一致）。
+        """
+        if keyword == "reserved_parameters":
+            return True, False
+        if keyword == "model_specific":
+            return False, True
+        if keyword in ("comment", "end"):
+            return False, False
+        return in_reserved, in_model_specific
+
+    @staticmethod
+    def _apply_param_line(
+        line: str,
+        params: AMIParams,
+        in_reserved: bool,
+        in_model_specific: bool,
+    ) -> tuple[bool, bool]:
+        """解析 key=value 行，写入 params（reserved 顶层字段 / model_params）。"""
+        key, raw_val = line.split("=", 1)
+        key = key.strip()
+        val = raw_val.strip().strip('"').strip("'")
+
+        if in_reserved and key == "Init_Returns_Impulse":
+            params.init_returns_impulse = val.lower() == "true"
+        elif in_reserved and key == "GetWave_Exists":
+            params.getwave_exists = val.lower() == "true"
+
+        if in_model_specific or in_reserved:
+            params.model_params[key] = AMIParser._convert_param_value(key, val)
+        return in_reserved, in_model_specific
+
+    @staticmethod
+    def _convert_param_value(key: str, val: str) -> Any:
+        """按 IBIS AMI 类型约定转换参数值（失败保留字符串，禁止 fall-back）。"""
+        try:
+            if key in AMIParser._AMI_FLOAT_PARAMS:
+                return float(val)
+            if key in AMIParser._AMI_INT_PARAMS:
+                return int(val)
+            return val
+        except ValueError:
+            # 类型转换失败时保留原始字符串（业务可由调用方告警处理），非静默 fall-back
+            return val
+
+    @staticmethod
+    def _sync_model_params_to_top(params: AMIParams) -> None:
+        """将 model_params 中已知键同步到 AMIParams 顶层字段。"""
+        for key, value in params.model_params.items():
+            mapping = AMIParser._AMI_TOP_FIELD_MAP.get(key)
+            if mapping is None:
+                continue
+            attr_name, _converter = mapping
+            setattr(params, attr_name, value)
 
 
 # 3. 眼图分析器
