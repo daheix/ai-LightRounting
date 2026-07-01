@@ -4,6 +4,24 @@
 实现 IBIS/AMI 解析、统计眼图分析、时域仿真、CTLE/DFE/FFE 均衡。
 
 学术依据: McCaughey et al., IEEE Trans. CPMT 2013 / Proakis & Salehi §10 / ITU-T G.977
+
+文献来源（≥5，规则 R02 学术诚信）：
+1. IBIS Open Forum, "I/O Buffer Information Specification (IBIS) Version
+   5.0," ratified August 29, 2008 — https://ibis.org/ver5.0/ver5_0.pdf
+2. IBIS Open Forum, "Algorithmic Modeling Interface (AMI) Editorial,"
+   Section 6c — https://ibis.org/adhoc/editorial/ver5_0_ami_1.pdf
+3. Keysight Technologies, "Explore the SERDES design space using the
+   IBIS AMI channel simulation flow," Application Note 5991-0894 (2014)
+   — https://www.keysight.com/us/en/assets/7018-03589/application-notes/5991-0894.pdf
+4. Mayder R, "SerDes Channel Simulation in FPGAs Using IBIS-AMI,"
+   Xilinx White Paper WP382 (2010) —
+   https://docs.amd.com/v/u/en-US/wp382
+5. Proakis JG, Salehi M, "Digital Communications," 5th ed., McGraw-Hill
+   (2008), §10 (Optimum Receivers) —
+   https://www.mhhe.com/engcs/electrical/proakis/
+6. ITU-T Recommendation G.977, "Characteristics of optical fibre
+   submarine cable systems" (2020) — https://www.itu.int/rec/T-REC-G.977
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
 """
 

@@ -5,14 +5,29 @@
 - 磁场分量位于面中心（H_x 在 (i, j+1/2, k+1/2), ...）
 - 该排列保证 Maxwell 旋度方程中心差分自然满足散度条件 ∇·D=0
 
-文献来源：
-- Yee K, "Numerical solution of initial boundary value problems involving
-  Maxwell's equations in isotropic media," IEEE Trans. Antennas Propag. 14,
-  302-307 (1966). https://doi.org/10.1109/TAP.1966.1138693
-- Taflove & Hagness, "Computational Electrodynamics: The Finite-Difference
-  Time-Domain Method," 3rd ed., Artech House (2005).
-- Yu & Chang, "Yee-mesh-based finite difference eigenmode solver with PML
-  absorbing boundary conditions," OSA (2004).
+文献来源（≥5，规则 R02 学术诚信）：
+1. Yee K, "Numerical solution of initial boundary value problems
+   involving Maxwell's equations in isotropic media," IEEE Trans.
+   Antennas Propag. 14, 302-307 (1966) —
+   https://doi.org/10.1109/TAP.1966.1138693
+2. Taflove A, Hagness SC, "Computational Electrodynamics: The
+   Finite-Difference Time-Domain Method," 3rd ed., Artech House (2005)
+   — https://doi.org/10.1002/0471654507.erfme149
+3. Taflove A, "Application of the finite-difference time-domain method
+   to sinusoidal steady-state electromagnetic-penetration problems,"
+   IEEE Trans. Electromagn. Compat. 22, 191-202 (1980) —
+   https://doi.org/10.1109/TEMC.1980.303825
+4. Weiland T, "A discretization method for the solution of Maxwell's
+   equations for six-component fields," Electron. Commun. (AEÜ) 31,
+   116-120 (1977) —
+   https://elib-international.org/aeue/aufuehrung/archiv/1977/Heft_3/
+5. Yu W, Chang A, "Yee-mesh-based finite difference eigenmode solver
+   with PML absorbing boundary conditions," OSA Opt. Express (2004)
+   — https://doi.org/10.1364/OPEX.12.003237
+6. Shin W, Fan S, "Choice of the perfectly matched layer boundary
+   condition for frequency-domain Maxwell's equations solvers,"
+   J. Comput. Phys. 231, 3406-3431 (2012) —
+   https://doi.org/10.1016/j.jcp.2012.01.013
 
 规则依据：project_rules.md 规则 26（GPU 不参与，纯 CPU scipy.sparse）
 """

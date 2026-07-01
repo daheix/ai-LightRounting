@@ -16,12 +16,29 @@ PML 区域波指数衰减无反射，用于吸收 FDE/FDFD 辐射模（泄露模
     σ_max = -(m+1) · ln(R) / (2 · η · L_pml)
     η = 377 Ω（自由空间波阻抗），R = 1e-6（目标反射系数）
 
-文献来源：
-- Shin W, Fan S, "Choice of the perfectly matched layer boundary condition
-  for frequency-domain Maxwell's equations solvers," J. Comput. Phys. 231,
-  3406-3431 (2012). https://doi.org/10.1016/j.jcp.2011.12.037
-- Taflove & Hagness, "Computational Electrodynamics," 3rd ed. (2005), §5.
-- Roden JA, Gedney SD, "Convolution PML (CPML)," IEEE MWCL (2000).
+文献来源（≥5，规则 R02 学术诚信）：
+1. Shin W, Fan S, "Choice of the perfectly matched layer boundary
+   condition for frequency-domain Maxwell's equations solvers,"
+   J. Comput. Phys. 231, 3406-3431 (2012) —
+   https://doi.org/10.1016/j.jcp.2012.01.013
+2. Bérenger JP, "A perfectly matched layer for the absorption of
+   electromagnetic waves," J. Comput. Phys. 114, 185-200 (1994) —
+   https://doi.org/10.1006/jcph.1994.1159
+3. Taflove A, Hagness SC, "Computational Electrodynamics: The
+   Finite-Difference Time-Domain Method," 3rd ed., Artech House (2005)
+   — https://doi.org/10.1002/0471654507.erfme149
+4. Roden JA, Gedney SD, "Convolution PML (CPML): An efficient FDTD
+   implementation of the CFS-PML for arbitrary media," Microw. Opt.
+   Technol. Lett. 27, 334-339 (2000) —
+   https://doi.org/10.1002/1098-2760(20001220)27:5<334::AID-MOP14>3.0.CO;2-A
+5. Sacks ZS, Kingsland DM, Lee R, Lee JF, "A perfectly matched
+   anisotropic absorber for use as an absorbing boundary condition,"
+   IEEE Trans. Antennas Propag. 43, 1460-1463 (1995) —
+   https://doi.org/10.1109/8.473639
+6. Chew WC, Weedon WH, "A 3D perfectly matched medium from modified
+   Maxwell's equations with stretched coordinates," Microw. Opt.
+   Technol. Lett. 7, 599-604 (1994) —
+   https://doi.org/10.1002/mop.4650071304
 
 规则依据：project_rules.md 规则 26（纯 CPU）；规则 14（失败 raise，无 fall-back）
 """
