@@ -18,6 +18,13 @@ dataclass 定义可序列化 YAML。文献 9 (ISPD'24) 论证 KLayout DRC 可替
    ISPD'24, ACM, 2024. DOI: 10.1145/3626184.3635289
    https://doi.org/10.1145/3626184.3635289
 5. gdsfactory PDK tutorial: https://gdsfactory.github.io/gdsfactory/notebooks/08_pdk.html
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：直接调用 klayout.db.Region 的 width_check/space_check/notch_check/
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

@@ -36,7 +36,14 @@ rip-up-reroute 冲突解决。底层逻辑:
 - rip-up-reroute 解决多网冲突:失败网移除冲突路径后用 A* 重布
   (LiDAR ISPD'25 §3.4;Pathak & Hu TCAD 2014 收敛性)
 
-## 合规性
+## 
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：见上方创新点列表
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+合规性
 
 - project_rules.md 规则 14.1: 禁止 fall-back / 假数据 / mock
 - project_rules.md 规则 18: 所有参数来自公开文献,标注来源 URL

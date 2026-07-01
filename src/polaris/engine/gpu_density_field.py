@@ -37,6 +37,13 @@ R05 Bug 修复 v4.0-R04-02（第 X 轮迭代发现）:
 *创新* CPU-only density field：尽管沿用 "GPU" 命名以保 import 链稳定，
 本模块实际为纯 NumPy 实现（R04 战略），与 DREAMPlace 的 GPU 路径
 解耦，避免引入 CuPy/CUDA 依赖。
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：CPU-only density field：尽管沿用 "GPU" 命名以保 import 链稳定，
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

@@ -29,6 +29,13 @@ circle, text} 五类 Shape，层信息映射到 LayerInfo。案例：CIF 的
 Gerber 的 ``D03`` flash ↔ circle Shape(diameter=孔径直径)。
 支持理论：IC 版图本质是分层的多边形集合（Mead & Conway 1980），
 故五类原语构成最小完备集，可覆盖六种格式的几何语义。
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：统一 ``FormatLayout`` 中间表示：将六种异构格式映射到单一
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

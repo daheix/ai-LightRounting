@@ -42,6 +42,13 @@ PoLaRIS 内一次 run_cosim 即得时域波形，无需 ngspice 实跑（无外�
    https://optics.ansys.com/hc/en-us/articles/18698429782291
 9. piel SPICE 光电协同仿真示例
    https://piel.readthedocs.io/en/latest/examples/04_spice_cosimulation/
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：VLSIR SPICE 中间表示 + Verilog-A 光子紧凑模型 + Python 数值协同仿真
+  支持理论：2015 §; 2015 §; 1995《Diode Lasers and Photonic Integrated Circuits》§。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

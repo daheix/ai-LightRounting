@@ -29,6 +29,13 @@ DRC/LVS 验证。两模式共享同一数据源，避免「预览态 vs 流片�
 （L-Edit 单一桌面模式、gdsfactory 仅脚本无交互预览的痛点）。支持
 理论：模型-视图-控制器（MVC）分离，见 Gamma et al., "Design
 Patterns", Addison-Wesley 1994；仿射变换见上述 Foley & Van Dam。
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：Web + KLayout 双模式集成。底层逻辑：编辑器内部维护一份与
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

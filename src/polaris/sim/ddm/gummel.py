@@ -47,6 +47,13 @@ _compute_bc_specs（BC 规格）与 _postprocess（电流密度/电导率/电场
 7. Vasileska 2008 Lecture Notes "DDM and Gummel Iteration" —
    https://nanohub.org/resources/19636
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：复用策略：GummelSolver 组合持有 DdmSolver 实例，复用其
+  支持理论：1984 §; 2020 IEEE; 1964；Selberherr 1984 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 规则依据：project_rules.md 规则 14（禁止 fall-back，失败 raise）
 /规则 18（学术诚信）/规则 26（GPU 不参与，纯 numpy/scipy CPU）。
 """

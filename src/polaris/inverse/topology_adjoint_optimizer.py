@@ -43,6 +43,13 @@ TopologyAdjointOptimizer 以消除命名冲突（R05 设计 Bug 修复）。
   - 案例支持: MMI/光栅耦合器/模式转换器三标准器件验证。
   - 支持理论: 反向模式自动微分 = 伴随方法（Giles & Pierce 2000 SIAM Review）。
   - 预期收益: 梯度仅需 1 次正向 + 1 次反向（O(1) 复杂度），对比有限差分 O(n) 加速 5000×。
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：JAX autograd + 伴随方法共生 + 密度法二值化
+  支持理论：2017 (Nature; 1968 (Fourier Optics): "Introduction to Fourier Optics; 2000 SIAM。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

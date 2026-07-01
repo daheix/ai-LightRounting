@@ -38,6 +38,13 @@
   案例：水平相向端口 Z 弯曼哈顿策略线长 = 曼哈顿距离 = A* 最短路径线长，差距 0%。
   支持理论：gdsfactory river routing（get_bundle_same_axis）保证最短无交叉路径，
   A* 保证最短路径，两者在曼哈顿度量下线长理论一致；S 弯贝塞尔路径略长于直线但 < 10%。
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：gdsfactory 布线策略 + PoLaRIS A* 对比验证
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

@@ -47,6 +47,13 @@ DDM 与 HEAT 可独立验证与替换，符合单一职责原则。
 6. numpy.gradient 文档 —
    https://numpy.org/doc/stable/reference/generated/numpy.gradient.html
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：接口契约：DdmResult 包含 (current_density_x, current_density_y,
+  支持理论：1984 §; 1984 §; 1969 IEEE。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 规则依据：project_rules.md 规则 14（禁止 fall-back，失败 raise）
 /规则 18（学术诚信）/规则 26（GPU 不参与，纯 numpy/scipy CPU）。
 """

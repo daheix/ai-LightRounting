@@ -31,7 +31,18 @@ CPU，R04 兼容。
 - *创新* R455：BPM 大步长用 [1,1] Padé 递推实现 (I-a·dz·L)^-1·(I+b·dz·L)
   形式，避免显式矩阵求逆，单步成本与 CN 同阶但允许 3-5x 大步长。
 
-## 规则依据
+## 
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：标注（R02）
+  支持理论：2007 Numerical Recipes 3rd Cambridge Padé approximants §; 2003 SPIE。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+- R455 底层逻辑：BPM 大步长用 [1,1] Padé 递推实现 (I-a·dz·L)^-1·(I+b·dz·L)
+  支持理论：2007 Numerical Recipes 3rd Cambridge Padé approximants §; 2003 SPIE。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+规则依据
 
 规则 14（非法输入 raise）/规则 18（学术诚信）/规则 26（GPU 不参与）
 """

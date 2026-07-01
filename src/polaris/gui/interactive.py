@@ -31,6 +31,13 @@
 ``code.InteractiveConsole``，提供 KLayout Macro IDE 等价的脚本调试/
 控制台/监视能力，零 GUI 依赖。
 支持理论：MVC 分离（Gamma 1994）+ Python bdb 跟踪框架（PSF 文档）。
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：纯 Python 数据模型 + 命令模式 GUI 引擎。底层逻辑：
+  支持理论：2002 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

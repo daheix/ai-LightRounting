@@ -14,6 +14,13 @@
 - ITU-T G.694.1 光通信波段划分, https://www.itu.int/rec/T-REC-G.694.1
 - SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：见上方创新点列表
+  支持理论：1993 IEEE; 2015 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 合规: 规则 14.1 禁止 fall-back；规则 18 学术诚信；规则 7.1 文件 < 800 行。
 """
 

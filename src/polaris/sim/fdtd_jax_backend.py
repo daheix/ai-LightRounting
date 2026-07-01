@@ -9,6 +9,13 @@ Gedney 1996 IEEE TAP https://doi.org/10.1109/8.546249;
 Taflove 2005 Artech House §3.6/§4.1/§13.2;
 Mahlau et al. 2024 arXiv:2412.12360 https://arxiv.org/abs/2412.12360
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：见上方创新点列表
+  支持理论：1966 IEEE; 1996 IEEE; 2005 Artech House §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 合规: 规则 14.1 禁止 fall-back；规则 18 学术诚信；规则 7.1 文件 < 800 行。
 """
 

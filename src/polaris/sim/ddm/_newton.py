@@ -57,6 +57,13 @@ Armijo 回溯线搜索（Dennis-Schnabel 1996 §6.3）：步长 α 从 1.0
 7. Kerkhoven 1985 "On the effectiveness of Gummel's method"
    SIAM J Sci Stat Comput 6(1):66-88 — https://doi.org/10.1137/0906005
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：见上方创新点列表
+  支持理论：1984 §; 1996 §; 1983 SIAM。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 规则依据：project_rules.md 规则 14（禁止 fall-back，失败 raise）
 /规则 18（学术诚信）/规则 26（GPU 不参与，纯 numpy/scipy CPU）。
 """

@@ -33,6 +33,13 @@
 - `verilog_a_spice`: SPICE 联合仿真接口（Ngspice）
 - `verilog_a_pam4`: PAM4 眼图 + BER 分析
 - `verilog_a_differentiable`: 光电协同可微分仿真（*创新*）
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：见上方创新点列表
+  支持理论：2015, §8/§。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

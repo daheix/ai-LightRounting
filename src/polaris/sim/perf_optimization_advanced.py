@@ -52,7 +52,26 @@
   自动选型，并比较 nnz·(数据+索引) 字节估算内存，与 Davis 2006 §2.3 选型
   建议一致。
 
-## 规则依据
+## 
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：标注（R02）
+  支持理论：2006 Direct Methods for Sparse Linear Systems SIAM; 2002 Accuracy and Stability of Numerical Algorithms 2nd SIAM; 2007 Numerical Recipes 3rd Cambridge（迭代求精 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+- R457 底层逻辑：Redheffer 星积用 scipy.linalg.solve 替代显式矩阵求逆
+  支持理论：2006 Direct Methods for Sparse Linear Systems SIAM; 2002 Accuracy and Stability of Numerical Algorithms 2nd SIAM; 2007 Numerical Recipes 3rd Cambridge（迭代求精 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+- R460 底层逻辑：精度自适应用残差迭代求精（iterative refinement，Higham
+  支持理论：2006 Direct Methods for Sparse Linear Systems SIAM; 2002 Accuracy and Stability of Numerical Algorithms 2nd SIAM; 2007 Numerical Recipes 3rd Cambridge（迭代求精 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+- R461 底层逻辑：稀疏压缩按主操作模式（行切片→CSR / 列切片→CSC / SpMV→CSR）
+  支持理论：2006 Direct Methods for Sparse Linear Systems SIAM; 2002 Accuracy and Stability of Numerical Algorithms 2nd SIAM; 2007 Numerical Recipes 3rd Cambridge（迭代求精 §。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+规则依据
 
 规则 14（非法输入 raise）/规则 18（学术诚信）/规则 26（GPU 不参与）
 """

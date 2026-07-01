@@ -18,6 +18,13 @@ R559 量子过程层析 / R560 BB84-E91 QKD 增强协议。
 
 *创新*: R556 Clifford-Clifford 逐光子采样 / R557 Tichy 双置换和 HOM / R558 Hradil Rᵢ MLE / R559 Pauli 线性反演 / R560 CHSH-Bell+Acín 成码率。
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- R556 底层逻辑：R556 Clifford-Clifford 逐光子采样 / R557 Tichy 双置换和 HOM / R558 Hradil Rᵢ MLE / R559 Pauli 线性反演 / R560 CHSH-Bell+Acín 成码率。
+  支持理论：2015 PRA; 1997 PRA; 2001 PRA。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
 """
 

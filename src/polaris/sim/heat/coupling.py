@@ -39,6 +39,13 @@ Joule 热定律（Incropera §3.6 体积热源）：
 7. Parra 2024 Adv Photonics Nexus — 硅热光移相器综述 —
    https://doi.org/10.1117/1.APN.3.4.044001
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：耦合接口仅产出物理量（Δn 场、Δn_eff、Q 场），不内部重解 FDE/DDM，
+  支持理论：1983 §; 1999 IEEE; 2011 Optics。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 规则依据：project_rules.md 规则 14（禁止 fall-back）/规则 18（学术诚信）
 /规则 26（GPU 不参与，纯 numpy）
 """

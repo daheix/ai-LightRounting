@@ -35,7 +35,14 @@ Cadence Pegasus LVS / SiEPIC EBeam PDK 的器件参数提取与结构化错误�
 - Yeh, "Optical Waves in Layered Media", Wiley 2005（耦合模理论）
   https://www.wiley.com/en-us/Optical+Waves+in+Layered+Media-p-9780471731924
 
-## 合规性
+## 
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：见上方创新点列表
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+合规性
 
 - R01 方案检索: KLayout/Calibre/Pegasus/SiEPIC/Lumerical 五源以上
 - R02 学术诚信: 每功能 docstring 含 ≥5 文献 URL，创新点标注 *创新*

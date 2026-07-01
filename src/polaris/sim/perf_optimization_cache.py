@@ -32,7 +32,18 @@ CPU，R04 兼容。
   Analysis 模式扫描时缓存命中率 >90%（Lumerical EME Group Span
   Sweep 行为对齐）。
 
-## 规则依据
+## 
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：标注（R02）
+  支持理论：2007 Numerical Recipes 3rd Cambridge。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+- R457 底层逻辑：S 参数级联 LRU 缓存按 cell 几何 + 模式数哈希，重复
+  支持理论：2007 Numerical Recipes 3rd Cambridge。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
+规则依据
 
 规则 14（非法输入 raise）/规则 18（学术诚信）/规则 26（GPU 不参与）
 """

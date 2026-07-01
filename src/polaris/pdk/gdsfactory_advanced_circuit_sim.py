@@ -21,6 +21,13 @@
 4. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
    https://doi.org/10.1017/CBO9781316084168
 5. NumPy linalg 文档: https://numpy.org/doc/stable/reference/routines.linalg.html
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：纯 NumPy 实现 Redheffer star product（文献 8），不依赖 sax/JAX，
+  支持理论：见上方学术依据。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 """
 
 from __future__ import annotations

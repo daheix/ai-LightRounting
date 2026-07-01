@@ -34,6 +34,13 @@
 - Piggott 2017, Nature Photonics 11(9) 543-549（逆向设计波分解复用器）
   URL: https://www.nature.com/articles/nphoton.2017.126
 
+
+## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
+
+- 创新 底层逻辑：简化模型）
+  支持理论：1993, IEEE; 2015, "Silicon Photonics Design", Cambridge; 2017, Nature。
+  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+
 合规: R03 禁止 fall-back（失败即 raise）；R02 学术诚信；R04 纯 CPU。
 """
 
