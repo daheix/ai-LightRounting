@@ -9,6 +9,26 @@
 - NeurIPS 2022 Cheng et al. 策略梯度布局
   来源: https://openreview.net/pdf?id=uNYqDfPEDD8
 - 经典 HPWL（半周长线长）估计，见 EDA 教材
+
+文献来源（≥5，规则 R02 学术诚信）：
+1. Mirhoseini A, Goldie A, Yazgan M et al., "A graph placement
+   methodology for fast chip design (AlphaChip)," Nature 594, 207-212
+   (2021) — https://www.nature.com/articles/s41586-021-03544-w
+2. Cheng R, Lyu X, Li Y et al., "The Policy-gradient Placement and
+   Generative Routing Neural Networks for Chip Design (PRNet),"
+   NeurIPS 2022 — https://doi.org/10.52202/068431-1911
+3. Basso D, Bortolussi L, Videnovic-Misic M, Habal H, "Advancing
+   Routing-Awareness in Analog ICs Floorplanning," NeurIPS 2025 ML for
+   Systems Workshop — https://arxiv.org/abs/2510.15387
+4. Yu S, Du S, Yang C, "A Deep Reinforcement Learning Floorplanning
+   Algorithm Based on Sequence Pairs," Appl. Sci. 14, 2905 (2024) —
+   https://doi.org/10.3390/app14072905
+5. Lin Y, Jiang Z, Gu J et al., "DREAMPlace: Deep Learning Toolkit-
+   Enabled GPU Acceleration for Modern VLSI Placement," IEEE TCAD
+   39(12), 4758-4773 (2020) —
+   https://doi.org/10.1109/TCAD.2020.2976921
+6. Brockman G, Cheung V, Pettersson L et al., "OpenAI Gym," arXiv
+   (Gymnasium 维护 fork) — https://doi.org/10.48550/arXiv.1606.01540
 """
 
 from __future__ import annotations

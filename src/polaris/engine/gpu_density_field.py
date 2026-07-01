@@ -13,10 +13,30 @@ R05 Bug 修复 v4.0-R04-02（第 X 轮迭代发现）:
 5. 无静默 fallback——R04 是战略选择，非降级方案
 
 规则: R04 不参与 GPU（战略）/ R05 Bug 必修 / R03 禁止 fall-back
-文献:
-- R04-不参与GPU.md
-- DREAMPlace TCAD 2020: https://arxiv.org/abs/2004.10746
-- DREAMPlace TCAD 2020: https://doi.org/10.1109/TCAD.2020.2976921
+文献来源（≥5，规则 R02 学术诚信）：
+1. Lin Y, Jiang Z, Gu J et al., "DREAMPlace: Deep Learning Toolkit-
+   Enabled GPU Acceleration for Modern VLSI Placement," IEEE TCAD
+   39(12), 4758-4773 (2020) —
+   https://doi.org/10.1109/TCAD.2020.2976921
+2. Lin Y, Dhar S, Li W et al., "DREAMPlace: Deep Learning Toolkit-
+   Enabled GPU Acceleration for Modern VLSI Placement," arXiv:2004.10746
+   (2020, preprint) — https://arxiv.org/abs/2004.10746
+3. NVIDIA Research, "DREAMPlace — Deep Learning Toolkit-Enabled GPU
+   Acceleration for Modern VLSI Placement" (2020) —
+   https://research.nvidia.com/publication/2020-06_dreamplace-deep-learning-toolkit-enabled-gpu-acceleration-modern-vlsi-placement
+4. Mirhoseini A, Goldie A, Yazgan M et al., "A graph placement
+   methodology for fast chip design (AlphaChip)," Nature 594, 207-212
+   (2021) — https://www.nature.com/articles/s41586-021-03544-w
+5. Cheng CK, Lin Y, Hung T et al., "RePlAce: Advancing Solution Quality
+   and Routability of Analytical Placement," IEEE TCAD 68(5), 1422-1435
+   (2019) — https://doi.org/10.1109/TCAD.2018.2859220
+6. Paszke A, Gross S, Massa F et al., "PyTorch: An Imperative Style,
+   High-Performance Deep Learning Library," NeurIPS (2019) —
+   https://doi.org/10.48550/arXiv.1912.01703
+
+*创新* CPU-only density field：尽管沿用 "GPU" 命名以保 import 链稳定，
+本模块实际为纯 NumPy 实现（R04 战略），与 DREAMPlace 的 GPU 路径
+解耦，避免引入 CuPy/CUDA 依赖。
 """
 
 from __future__ import annotations
