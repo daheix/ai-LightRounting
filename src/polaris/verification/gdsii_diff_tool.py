@@ -188,145 +188,132 @@ def compare_gdsii_files(
         raise ValueError(f"文件 B 不是文件: {file_b}")
     if layer_map is None:
         layer_map = _get_default_layer_map()
+    ly_a, dbu_a, top_cell_a, ly_b, dbu_b, top_cell_b = _read_diff_layouts(
+        db, path_a, path_b, file_a, file_b, top_cell_name
+    )
+    layers_a, layers_b, all_layer_keys = _collect_diff_layers(ly_a, ly_b)
+    layer_diffs, total_added_area, total_removed_area, total_added_count, total_removed_count, is_identical = (
+        _compute_all_layer_diffs(
+            db, top_cell_a, top_cell_b, layers_a, layers_b, all_layer_keys,
+            layer_map, dbu_a, dbu_b,
+        )
+    )
+    return DiffReport(
+        file_a=str(file_a), file_b=str(file_b),
+        top_cell_a=top_cell_a.name, top_cell_b=top_cell_b.name,
+        dbu_a=dbu_a, dbu_b=dbu_b, layer_diffs=layer_diffs,
+        total_added_area_um2=total_added_area,
+        total_removed_area_um2=total_removed_area,
+        total_added_count=total_added_count,
+        total_removed_count=total_removed_count, is_identical=is_identical,
+    )
 
-    # 读取两个文件
+
+def _read_diff_layouts(db, path_a, path_b, file_a, file_b, top_cell_name) -> tuple:
+    """读取两个 GDSII 文件并定位顶层 cell（R321 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly_a, dbu_a, top_cell_a, ly_b, dbu_b, top_cell_b)。
+
+    Raises:
+        RuntimeError: 读取失败。ValueError: top_cell_name 不存在。
+    """
     ly_a = db.Layout()
     try:
         ly_a.read(str(path_a))
     except Exception as e:
         raise RuntimeError(
-            f"klayout 读取文件 A 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
+            f"klayout 读取文件 A 失败: {type(e).__name__}: {e}。禁止 fall-back（R03）。"
         ) from e
-
     ly_b = db.Layout()
     try:
         ly_b.read(str(path_b))
     except Exception as e:
         raise RuntimeError(
-            f"klayout 读取文件 B 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
+            f"klayout 读取文件 B 失败: {type(e).__name__}: {e}。禁止 fall-back（R03）。"
         ) from e
-
     dbu_a = float(ly_a.dbu)
     dbu_b = float(ly_b.dbu)
     top_cell_a = _get_top_cell(ly_a, top_cell_name, file_a)
     top_cell_b = _get_top_cell(ly_b, top_cell_name, file_b)
+    return ly_a, dbu_a, top_cell_a, ly_b, dbu_b, top_cell_b
 
-    # 收集两个文件的所有层（layer, datatype）
-    layers_a: dict[tuple[int, int], int] = {}  # (layer, datatype) -> layer_index
+
+def _collect_diff_layers(ly_a, ly_b) -> tuple:
+    """收集两个文件的所有层（R321 内部辅助）。
+
+    Returns:
+        (layers_a, layers_b, all_layer_keys)。
+    """
+    layers_a: dict[tuple[int, int], int] = {}
     for li in ly_a.layer_indices():
         info = ly_a.get_info(li)
         layers_a[(int(info.layer), int(info.datatype))] = li
-
     layers_b: dict[tuple[int, int], int] = {}
     for li in ly_b.layer_indices():
         info = ly_b.get_info(li)
         layers_b[(int(info.layer), int(info.datatype))] = li
-
     all_layer_keys = set(layers_a.keys()) | set(layers_b.keys())
+    return layers_a, layers_b, all_layer_keys
 
+
+def _compute_all_layer_diffs(
+    db, top_cell_a, top_cell_b, layers_a, layers_b, all_layer_keys,
+    layer_map, dbu_a, dbu_b,
+) -> tuple:
+    """逐层计算几何差异（R321 内部辅助）。
+
+    Returns:
+        (layer_diffs, total_added_area, total_removed_area,
+         total_added_count, total_removed_count, is_identical)。
+
+    来源: KLayout Region 运算 https://www.klayout.org/doc-qt5/code/class_Region.html
+    """
     layer_diffs: list[LayerDiff] = []
-    total_added_area = 0.0
-    total_removed_area = 0.0
-    total_added_count = 0
-    total_removed_count = 0
+    total_added_area = total_removed_area = 0.0
+    total_added_count = total_removed_count = 0
     is_identical = True
-
+    dbu = dbu_a if dbu_a == dbu_b else dbu_a
     for gds_layer, gds_datatype in sorted(all_layer_keys):
         layer_name = layer_map.get(
-            (gds_layer, gds_datatype),
-            f"LAYER_{gds_layer}_{gds_datatype}",
+            (gds_layer, gds_datatype), f"LAYER_{gds_layer}_{gds_datatype}",
         )
-
-        # 构造两个文件的该层 Region
         region_a = db.Region()
         if (gds_layer, gds_datatype) in layers_a:
-            li_a = layers_a[(gds_layer, gds_datatype)]
-            region_a = db.Region(top_cell_a.begin_shapes_rec(li_a))
+            region_a = db.Region(top_cell_a.begin_shapes_rec(layers_a[(gds_layer, gds_datatype)]))
         region_a.merge()
-
         region_b = db.Region()
         if (gds_layer, gds_datatype) in layers_b:
-            li_b = layers_b[(gds_layer, gds_datatype)]
-            region_b = db.Region(top_cell_b.begin_shapes_rec(li_b))
+            region_b = db.Region(top_cell_b.begin_shapes_rec(layers_b[(gds_layer, gds_datatype)]))
         region_b.merge()
-
-        # 计算差异
-        # added = B - A（B 中有但 A 中没有的）
-        # removed = A - B（A 中有但 B 中没有的）
-        # common = A ∩ B
-        # KLayout Region 运算: &（交集）、-（差集）
-        # 来源: https://www.klayout.org/doc-qt5/code/class_Region.html
         added_region = region_b.dup()
         added_region -= region_a
-
         removed_region = region_a.dup()
         removed_region -= region_b
-
         common_region = region_a.dup()
         common_region &= region_b
-
-        # 计算面积和多边形数
-        added_area_dbu2 = int(added_region.area())
-        removed_area_dbu2 = int(removed_region.area())
-        common_area_dbu2 = int(common_region.area())
-
-        # 注意: 两个文件的 dbu 可能不同，统一用各自 dbu 计算面积
-        # 这里假设 dbu 相同（GDSII 文件通常 dbu=1e-9m）
-        # 若不同则用 dbu_a 计算（A 为基准）
-        dbu = dbu_a if dbu_a == dbu_b else dbu_a
-        added_area_um2 = added_area_dbu2 * dbu * dbu
-        removed_area_um2 = removed_area_dbu2 * dbu * dbu
-        common_area_um2 = common_area_dbu2 * dbu * dbu
-
-        added_count = 0
-        for _ in added_region.each():
-            added_count += 1
-        removed_count = 0
-        for _ in removed_region.each():
-            removed_count += 1
-        common_count = 0
-        for _ in common_region.each():
-            common_count += 1
-
+        added_count = sum(1 for _ in added_region.each())
+        removed_count = sum(1 for _ in removed_region.each())
+        common_count = sum(1 for _ in common_region.each())
+        added_area_um2 = int(added_region.area()) * dbu * dbu
+        removed_area_um2 = int(removed_region.area()) * dbu * dbu
+        common_area_um2 = int(common_region.area()) * dbu * dbu
         layer_identical = (added_count == 0 and removed_count == 0)
         if not layer_identical:
             is_identical = False
-
-        layer_diffs.append(
-            LayerDiff(
-                layer_name=layer_name,
-                gds_layer=gds_layer,
-                gds_datatype=gds_datatype,
-                added_area_um2=added_area_um2,
-                removed_area_um2=removed_area_um2,
-                common_area_um2=common_area_um2,
-                added_polygon_count=added_count,
-                removed_polygon_count=removed_count,
-                common_polygon_count=common_count,
-                is_identical=layer_identical,
-            )
-        )
+        layer_diffs.append(LayerDiff(
+            layer_name=layer_name, gds_layer=gds_layer, gds_datatype=gds_datatype,
+            added_area_um2=added_area_um2, removed_area_um2=removed_area_um2,
+            common_area_um2=common_area_um2, added_polygon_count=added_count,
+            removed_polygon_count=removed_count, common_polygon_count=common_count,
+            is_identical=layer_identical,
+        ))
         total_added_area += added_area_um2
         total_removed_area += removed_area_um2
         total_added_count += added_count
         total_removed_count += removed_count
-
-    return DiffReport(
-        file_a=str(file_a),
-        file_b=str(file_b),
-        top_cell_a=top_cell_a.name,
-        top_cell_b=top_cell_b.name,
-        dbu_a=dbu_a,
-        dbu_b=dbu_b,
-        layer_diffs=layer_diffs,
-        total_added_area_um2=total_added_area,
-        total_removed_area_um2=total_removed_area,
-        total_added_count=total_added_count,
-        total_removed_count=total_removed_count,
-        is_identical=is_identical,
-    )
+    return (layer_diffs, total_added_area, total_removed_area,
+            total_added_count, total_removed_count, is_identical)
 
 
 # =============================================================================
