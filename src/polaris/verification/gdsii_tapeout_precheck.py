@@ -161,6 +161,49 @@ def tapeout_precheck(
     - Calibre DRC:
       https://www.mentor.com/products/ic_nanometer_design/calibre-drc
     """
+    path, run_checks = _validate_tapeout_params(gds_path, grid_um, checks)
+    grid_report, health_report, hierarchy_report = _run_tapeout_checks(
+        gds_path, grid_um, layer_map, top_cell_name, run_checks,
+    )
+    grid_passed, health_passed, hierarchy_passed, error_count, warning_count = (
+        _compute_tapeout_results(grid_report, health_report, hierarchy_report)
+    )
+    # 总体 pass: 所有执行的检查均通过
+    partial_results = [
+        r for r in [grid_passed, health_passed, hierarchy_passed]
+        if r is not None
+    ]
+    passed = all(partial_results) if partial_results else True
+    dbu, top_name = _resolve_tapeout_dbu_topname(
+        grid_report, hierarchy_report,
+    )
+    logger.info(
+        "流片前预检查: %s (checks=%s, passed=%s, errors=%d, warnings=%d)",
+        path, run_checks, passed, error_count, warning_count,
+    )
+    return TapeoutReport(
+        file_path=str(gds_path),
+        dbu=dbu,
+        top_cell_name=top_name,
+        checks_run=run_checks,
+        grid_report=grid_report,
+        health_report=health_report,
+        hierarchy_report=hierarchy_report,
+        passed=passed,
+        grid_passed=grid_passed,
+        health_passed=health_passed,
+        hierarchy_passed=hierarchy_passed,
+        error_count=error_count,
+        warning_count=warning_count,
+    )
+
+
+def _validate_tapeout_params(gds_path, grid_um, checks) -> tuple:
+    """校验 tapeout_precheck 入参（R329 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (path, run_checks)。
+    """
     path = Path(gds_path)
     if not path.exists():
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
@@ -170,7 +213,6 @@ def tapeout_precheck(
         raise ValueError(
             f"grid_um 必须 > 0，得到 {grid_um}。禁止 fall-back（R03）。"
         )
-
     # 校验 checks 参数
     if checks is not None:
         if not checks:
@@ -187,12 +229,25 @@ def tapeout_precheck(
         run_checks = list(checks)
     else:
         run_checks = list(ALL_CHECKS.keys())
+    return path, run_checks
 
-    # 执行各检查项（每项独立，一项失败不影响其他项）
+
+def _run_tapeout_checks(
+    gds_path, grid_um, layer_map, top_cell_name, run_checks,
+) -> tuple:
+    """执行各检查项（每项独立，一项失败不影响其他项，R329 内部辅助）。
+
+    Returns:
+        (grid_report, health_report, hierarchy_report)，未执行的为 None。
+
+    来源:
+    - R325 check_grid_alignment: 网格对齐
+    - R314 check_gdsii_health: 结构健康
+    - R322 analyze_cell_hierarchy: 层次完整性
+    """
     grid_report: GridCheckReport | None = None
     health_report: HealthCheckReport | None = None
     hierarchy_report: HierarchyReport | None = None
-
     if "grid" in run_checks:
         grid_report = check_grid_alignment(
             gds_path,
@@ -200,33 +255,43 @@ def tapeout_precheck(
             layer_map=layer_map,
             top_cell_name=top_cell_name,
         )
-
     if "health" in run_checks:
         health_report = check_gdsii_health(
             gds_path,
             layer_map=layer_map,
             top_cell_name=top_cell_name,
         )
-
     if "hierarchy" in run_checks:
         hierarchy_report = analyze_cell_hierarchy(
             gds_path,
             top_cell_name=top_cell_name,
         )
+    return grid_report, health_report, hierarchy_report
 
-    # 判定各项 pass/fail
+
+def _compute_tapeout_results(
+    grid_report, health_report, hierarchy_report,
+) -> tuple:
+    """判定各项 pass/fail 并统计 error/warning（R329 内部辅助）。
+
+    Returns:
+        (grid_passed, health_passed, hierarchy_passed,
+         error_count, warning_count)。
+
+    Pass 判定规则:
+    - grid: total_violations == 0
+    - health: passed == True（无 ERROR 级别 issue）
+    - hierarchy: not has_circular_reference
+    """
     grid_passed: bool | None = None
     if grid_report is not None:
         grid_passed = grid_report.total_violations == 0
-
     health_passed: bool | None = None
     if health_report is not None:
         health_passed = health_report.passed
-
     hierarchy_passed: bool | None = None
     if hierarchy_report is not None:
         hierarchy_passed = not hierarchy_report.has_circular_reference
-
     # 统计错误/警告
     error_count = 0
     warning_count = 0
@@ -242,14 +307,16 @@ def tapeout_precheck(
                 warning_count += cnt
     if hierarchy_report is not None and hierarchy_report.has_circular_reference:
         error_count += len(hierarchy_report.circular_chains)
+    return (grid_passed, health_passed, hierarchy_passed,
+            error_count, warning_count)
 
-    # 总体 pass: 所有执行的检查均通过
-    partial_results = [
-        r for r in [grid_passed, health_passed, hierarchy_passed] if r is not None
-    ]
-    passed = all(partial_results) if partial_results else True
 
-    # 获取 dbu 和 top_cell_name（从任一可用的报告）
+def _resolve_tapeout_dbu_topname(grid_report, hierarchy_report) -> tuple:
+    """从可用报告获取 dbu 和 top_cell_name（R329 内部辅助）。
+
+    Returns:
+        (dbu, top_name)。
+    """
     dbu = 0.0
     top_name = ""
     if grid_report is not None:
@@ -257,28 +324,11 @@ def tapeout_precheck(
         top_name = grid_report.top_cell_name
     elif hierarchy_report is not None:
         dbu = hierarchy_report.dbu
-        top_name = hierarchy_report.top_cell_names[0] if hierarchy_report.top_cell_names else ""
-
-    logger.info(
-        "流片前预检查: %s (checks=%s, passed=%s, errors=%d, warnings=%d)",
-        path, run_checks, passed, error_count, warning_count,
-    )
-
-    return TapeoutReport(
-        file_path=str(gds_path),
-        dbu=dbu,
-        top_cell_name=top_name,
-        checks_run=run_checks,
-        grid_report=grid_report,
-        health_report=health_report,
-        hierarchy_report=hierarchy_report,
-        passed=passed,
-        grid_passed=grid_passed,
-        health_passed=health_passed,
-        hierarchy_passed=hierarchy_passed,
-        error_count=error_count,
-        warning_count=warning_count,
-    )
+        top_name = (
+            hierarchy_report.top_cell_names[0]
+            if hierarchy_report.top_cell_names else ""
+        )
+    return dbu, top_name
 
 
 # =============================================================================
