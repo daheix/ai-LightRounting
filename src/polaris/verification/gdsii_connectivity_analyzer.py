@@ -192,127 +192,109 @@ def analyze_layer_connectivity(
         raise ValueError(f"路径不是文件: {gds_path}")
     if layer_map is None:
         layer_map = _get_default_layer_map()
+    ly, dbu, top_cell = _read_connectivity_layout(db, path, gds_path, top_cell_name)
+    layer_results, total_components, total_isolated = _analyze_all_layers(
+        db, ly, top_cell, dbu, layer_map, layers_to_analyze
+    )
+    return ConnectivityReport(
+        file_path=str(gds_path), top_cell_name=top_cell.name, dbu=dbu,
+        layer_results=layer_results, total_components=total_components,
+        total_isolated=total_isolated,
+    )
 
+
+def _read_connectivity_layout(db, path, gds_path, top_cell_name) -> tuple:
+    """读取 GDSII 并定位顶层 cell（R319 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, top_cell)。
+    """
     ly = db.Layout()
     try:
         ly.read(str(path))
     except Exception as e:
         raise RuntimeError(
-            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
+            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
-
-    # 选择顶层 cell
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    return ly, dbu, top_cell
 
+
+def _analyze_all_layers(
+    db, ly, top_cell, dbu, layer_map, layers_to_analyze
+) -> tuple:
+    """遍历所有层分析同层连通分量（R319 内部辅助）。
+
+    Returns:
+        (layer_results, total_components, total_isolated)。
+
+    来源: KLayout Region.merge https://www.klayout.org/doc-qt5/code/class_Region.html
+    """
     layer_results: list[LayerConnectivityResult] = []
-    total_components = 0
-    total_isolated = 0
-
+    total_components = total_isolated = 0
     for li in ly.layer_indices():
         info = ly.get_info(li)
         gds_layer = int(info.layer)
         gds_datatype = int(info.datatype)
         layer_name = layer_map.get(
-            (gds_layer, gds_datatype),
-            f"LAYER_{gds_layer}_{gds_datatype}",
+            (gds_layer, gds_datatype), f"LAYER_{gds_layer}_{gds_datatype}",
         )
         if layers_to_analyze is not None and layer_name not in layers_to_analyze:
             continue
-
-        # 用 Region 收集多边形并合并
-        # KLayout API: Cell.begin_shapes_rec(layer_index) 返回
-        # RecursiveShapeIterator，db.Region(iterator) 构造 Region。
-        # Region.merge() 原地合并接触/重叠的多边形。
-        # Region.dup() 复制 Region（KLayout 0.30.9 不支持 db.Region(region) 复制构造）。
-        # 来源: https://www.klayout.org/doc-qt5/code/class_Region.html
         original_region = db.Region(top_cell.begin_shapes_rec(li))
-        original_count = 0
-        for _ in original_region.each():
-            original_count += 1
-
+        original_count = sum(1 for _ in original_region.each())
         if original_count == 0:
-            continue  # 空层跳过
-
-        # 合并后的 Region（每个多边形即一个连通分量）
-        # 用 dup() 复制，避免修改 original_region
+            continue
         merged_region = original_region.dup()
         merged_region.merge()
-
-        components: list[ConnectedComponent] = []
-        comp_id = 0
-        isolated_count = 0
-        largest_size = 0
-
-        for merged_poly in merged_region.each():
-            # 计算合并后多边形的面积和包围盒
-            single_region = db.Region()
-            single_region.insert(merged_poly)
-            area_dbu2 = int(single_region.area())
-            area_um2 = area_dbu2 * dbu * dbu
-
-            # 包围盒
-            bbox_dbu = merged_poly.bbox()
-            bbox = (
-                float(bbox_dbu.left) * dbu,
-                float(bbox_dbu.bottom) * dbu,
-                float(bbox_dbu.right) * dbu,
-                float(bbox_dbu.top) * dbu,
-            )
-
-            # 计算这个合并多边形包含的原始多边形数（通过几何包含关系）
-            # 简化：用原始多边形是否被合并多边形包含来判断
-            # 这里用面积比例近似：如果合并后面积 == 单个原始多边形面积，则为孤立
-            # 严格做法是用每个原始多边形与合并多边形做 inside 测试，但代价较高
-            # 采用启发式：用合并多边形的面积除以原始多边形平均面积估算
-            # 严格做法: 用 Region & Region 交集判断每个原始多边形归属
-            polygon_indices = _find_component_polygons(
-                original_region, merged_poly, db, dbu
-            )
-            poly_count = len(polygon_indices)
-            if poly_count == 0:
-                # 退化情况：合并后多边形无法匹配原始多边形（理论不应发生）
-                poly_count = 1  # 至少 1 个
-
-            if poly_count == 1:
-                isolated_count += 1
-            if poly_count > largest_size:
-                largest_size = poly_count
-
-            components.append(
-                ConnectedComponent(
-                    component_id=comp_id,
-                    layer_name=layer_name,
-                    polygon_count=poly_count,
-                    area_um2=area_um2,
-                    bbox=bbox,
-                    polygon_indices=polygon_indices,
-                )
-            )
-            comp_id += 1
-
-        layer_results.append(
-            LayerConnectivityResult(
-                layer_name=layer_name,
-                total_polygons=original_count,
-                components=components,
-                isolated_count=isolated_count,
-                largest_component_size=largest_size,
-            )
+        components, isolated_count, largest_size = _build_layer_components(
+            db, dbu, merged_region, original_region, layer_name
         )
+        layer_results.append(LayerConnectivityResult(
+            layer_name=layer_name, total_polygons=original_count,
+            components=components, isolated_count=isolated_count,
+            largest_component_size=largest_size,
+        ))
         total_components += len(components)
         total_isolated += isolated_count
+    return layer_results, total_components, total_isolated
 
-    return ConnectivityReport(
-        file_path=str(gds_path),
-        top_cell_name=top_cell.name,
-        dbu=dbu,
-        layer_results=layer_results,
-        total_components=total_components,
-        total_isolated=total_isolated,
-    )
+
+def _build_layer_components(
+    db, dbu, merged_region, original_region, layer_name
+) -> tuple:
+    """构建单层的连通分量列表（R319 内部辅助）。
+
+    Returns:
+        (components, isolated_count, largest_size)。
+    """
+    components: list[ConnectedComponent] = []
+    comp_id = 0
+    isolated_count = 0
+    largest_size = 0
+    for merged_poly in merged_region.each():
+        single_region = db.Region()
+        single_region.insert(merged_poly)
+        area_um2 = int(single_region.area()) * dbu * dbu
+        bbox_dbu = merged_poly.bbox()
+        bbox = (
+            float(bbox_dbu.left) * dbu, float(bbox_dbu.bottom) * dbu,
+            float(bbox_dbu.right) * dbu, float(bbox_dbu.top) * dbu,
+        )
+        polygon_indices = _find_component_polygons(original_region, merged_poly, db, dbu)
+        poly_count = len(polygon_indices) if polygon_indices else 1
+        if poly_count == 1:
+            isolated_count += 1
+        if poly_count > largest_size:
+            largest_size = poly_count
+        components.append(ConnectedComponent(
+            component_id=comp_id, layer_name=layer_name,
+            polygon_count=poly_count, area_um2=area_um2, bbox=bbox,
+            polygon_indices=polygon_indices,
+        ))
+        comp_id += 1
+    return components, isolated_count, largest_size
 
 
 def _find_component_polygons(
@@ -420,7 +402,6 @@ def analyze_cross_layer_connectivity(
     """
     if not layer_pairs:
         raise ValueError("layer_pairs 不能为空")
-
     db = _import_klayout_db()
     path = Path(gds_path)
     if not path.exists():
@@ -429,41 +410,63 @@ def analyze_cross_layer_connectivity(
         raise ValueError(f"路径不是文件: {gds_path}")
     if layer_map is None:
         layer_map = _get_default_layer_map()
+    report, available_layers = _validate_and_get_layer_report(
+        gds_path, layer_pairs, layer_map, top_cell_name
+    )
+    parent, rank, find, union = _init_cross_layer_union_find(report)
+    ly, _, top_cell = _read_connectivity_layout(db, path, gds_path, top_cell_name)
+    layer_to_indices = _build_layer_to_indices(ly, layer_map, available_layers)
+    _find_cross_layer_touching(
+        db, top_cell, layer_to_indices, layer_pairs, report, union
+    )
+    return _group_cross_layer_results(report, parent, find)
 
-    # 先做同层连通分量分析
+
+def _validate_and_get_layer_report(gds_path, layer_pairs, layer_map, top_cell_name) -> tuple:
+    """校验层对并获取同层连通报告（R319 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (report, available_layers)。
+
+    Raises:
+        ValueError: 层对中层名不存在。
+    """
     layer_names_in_pairs = set()
     for a, b in layer_pairs:
         layer_names_in_pairs.add(a)
         layer_names_in_pairs.add(b)
-
     report = analyze_layer_connectivity(
         gds_path, layer_map=layer_map, top_cell_name=top_cell_name,
         layers_to_analyze=list(layer_names_in_pairs),
     )
-
-    # 检查所有层对中的层都存在
     available_layers = {r.layer_name for r in report.layer_results}
     for a, b in layer_pairs:
-        if a not in available_layers:
-            raise ValueError(
-                f"层对 ({a}, {b}) 中的层 '{a}' 不在 GDSII 文件中。"
-                f"可用层: {available_layers}"
-            )
-        if b not in available_layers:
-            raise ValueError(
-                f"层对 ({a}, {b}) 中的层 '{b}' 不在 GDSII 文件中。"
-                f"可用层: {available_layers}"
-            )
+        for name in (a, b):
+            if name not in available_layers:
+                raise ValueError(
+                    f"层对 ({a}, {b}) 中的层 '{name}' 不在 GDSII 文件中。"
+                    f"可用层: {available_layers}"
+                )
+    return report, available_layers
 
-    # 用并查集合并跨层接触的同层分量
-    # 节点编号: (layer_name, component_id)
-    # 并查集路径压缩 + 按秩合并
-    # 来源: Tarjan JACM 1975, DOI: 10.1145/321879.321884
+
+def _init_cross_layer_union_find(report) -> tuple:
+    """初始化并查集（R319 内部辅助）。
+
+    来源: Tarjan JACM 1975, DOI: 10.1145/321879.321884（路径压缩+按秩合并）。
+
+    Returns:
+        (parent, rank, find_func, union_func)。
+    """
     parent: dict[tuple[str, int], tuple[str, int]] = {}
     rank: dict[tuple[str, int], int] = {}
+    for layer_result in report.layer_results:
+        for comp in layer_result.components:
+            node = (layer_result.layer_name, comp.component_id)
+            parent[node] = node
+            rank[node] = 0
 
     def find(x):
-        # 路径压缩
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
@@ -473,33 +476,17 @@ def analyze_cross_layer_connectivity(
         rx, ry = find(x), find(y)
         if rx == ry:
             return
-        # 按秩合并
         if rank[rx] < rank[ry]:
             rx, ry = ry, rx
         parent[ry] = rx
         if rank[rx] == rank[ry]:
             rank[rx] += 1
 
-    # 初始化每个同层分量为独立节点
-    for layer_result in report.layer_results:
-        for comp in layer_result.components:
-            node = (layer_result.layer_name, comp.component_id)
-            parent[node] = node
-            rank[node] = 0
+    return parent, rank, find, union
 
-    # 读取 GDSII 用于跨层交集判断
-    ly = db.Layout()
-    try:
-        ly.read(str(path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
 
-    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
-    # 对每个层对，找出接触的同层分量对
+def _build_layer_to_indices(ly, layer_map, available_layers) -> dict[str, int]:
+    """构建层名→layer_index 映射（R319 内部辅助）。"""
     layer_to_indices: dict[str, int] = {}
     for li in ly.layer_indices():
         info = ly.get_info(li)
@@ -509,67 +496,52 @@ def analyze_cross_layer_connectivity(
         )
         if layer_name in available_layers:
             layer_to_indices[layer_name] = li
+    return layer_to_indices
 
+
+def _find_cross_layer_touching(db, top_cell, layer_to_indices, layer_pairs, report, union) -> None:
+    """对每个层对找出接触的同层分量对并 union（R319 内部辅助）。
+
+    来源: KLayout Region & 运算 https://www.klayout.org/doc-qt5/code/class_Region.html
+    """
     for layer_a, layer_b in layer_pairs:
         li_a = layer_to_indices[layer_a]
         li_b = layer_to_indices[layer_b]
         region_a = db.Region(top_cell.begin_shapes_rec(li_a))
         region_b = db.Region(top_cell.begin_shapes_rec(li_b))
-
-        # 找出 region_a 中与 region_b 相交的多边形
-        # 用交集判断
-        result_a = report.layer_results[
-            [r.layer_name for r in report.layer_results].index(layer_a)
-        ]
-        result_b = report.layer_results[
-            [r.layer_name for r in report.layer_results].index(layer_b)
-        ]
-
-        # 对每个 a 分量，检查是否与 b 任一分量相交
+        result_a = report.layer_results[[r.layer_name for r in report.layer_results].index(layer_a)]
+        result_b = report.layer_results[[r.layer_name for r in report.layer_results].index(layer_b)]
+        polys_a = list(region_a.each())
+        polys_b = list(region_b.each())
         for comp_a in result_a.components:
-            # 重建 comp_a 的合并多边形 Region
             region_comp_a = db.Region()
             for idx in comp_a.polygon_indices:
-                polys = list(region_a.each())
-                if idx < len(polys):
-                    region_comp_a.insert(polys[idx])
-
+                if idx < len(polys_a):
+                    region_comp_a.insert(polys_a[idx])
             for comp_b in result_b.components:
                 region_comp_b = db.Region()
                 for idx in comp_b.polygon_indices:
-                    polys = list(region_b.each())
-                    if idx < len(polys):
-                        region_comp_b.insert(polys[idx])
-
-                # 交集非空 → 连通
-                # KLayout 0.30.9: 用 dup() 复制 Region 后做 &=
+                    if idx < len(polys_b):
+                        region_comp_b.insert(polys_b[idx])
                 intersection = region_comp_a.dup()
                 intersection &= region_comp_b
                 if not intersection.is_empty():
-                    union(
-                        (layer_a, comp_a.component_id),
-                        (layer_b, comp_b.component_id),
-                    )
+                    union((layer_a, comp_a.component_id), (layer_b, comp_b.component_id))
 
-    # 按 find 结果分组
+
+def _group_cross_layer_results(report, parent, find) -> dict[str, list[set[int]]]:
+    """按并查集 find 结果分组并转换为结果字典（R319 内部辅助）。"""
     groups: dict[tuple[str, int], list[tuple[str, int]]] = {}
     for node in parent:
         root = find(node)
         groups.setdefault(root, []).append(node)
-
-    # 转换为 {layer_name: [set_of_component_ids]} 格式
-    result: dict[str, list[set[int]]] = {}
-    for layer_result in report.layer_results:
-        result[layer_result.layer_name] = []
-
+    result: dict[str, list[set[int]]] = {r.layer_name: [] for r in report.layer_results}
     for group_nodes in groups.values():
-        # 每个组按层分组
         by_layer: dict[str, set[int]] = {}
         for layer_name, comp_id in group_nodes:
             by_layer.setdefault(layer_name, set()).add(comp_id)
         for layer_name, comp_ids in by_layer.items():
             result[layer_name].append(comp_ids)
-
     return result
 
 
