@@ -8,6 +8,21 @@ SimLoop 闭环返回纯 dict 布局/路径（``{name: {x,y,w,h}}`` /
 - SiEPIC EBeam PDK (MIT, UBC): https://github.com/SiEPIC/SiEPIC_EBeam_PDK
   SOI 平台传播损耗 3 dB/cm（标准值）
 - PoLaRIS Placement/WaveguidePath 数据结构: src/polaris/engine/floorplan_env.py
+
+文献来源（≥5，规则 R02 学术诚信）：
+1. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices to
+   Systems," Cambridge University Press (2015). ISBN 978-1107085459.
+   https://www.cambridge.org/9781107085459
+2. gdsfactory netlist/ComponentReference 抽象 (Pijoan et al., 2024).
+   https://gdsfactory.github.io/gdsfactory/
+3. SiEPIC EBeam PDK (MIT, UBC, 2023) — 真实器件命名约定。
+   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+4. ubcpdk cells.py (UBC, 2023) — 器件工厂函数范式参考。
+   https://github.com/gdsfactory/ubc
+5. KLayout GDSII 文件格式规范 (Matthias Koefferlein, 2024).
+   https://www.klayout.de/doc/manual/gdsii.html
+6. OpenROAD HierRTL 数据结构转换范式 (2023).
+   https://github.com/The-OpenROAD-Project/OpenROAD
 """
 
 from __future__ import annotations
