@@ -22,6 +22,12 @@
 ## 补充文献（R02 学术诚信补齐）
 - gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 - Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+
+## 补充文献（R701-R750 学术诚信审核补齐，0 编造）
+- KLayout hierarchy 文档（cell 实例嵌套参考）
+  https://www.klayout.de/doc/manual/hierarchy.html
+- gdsfactory Component reference（层级化实例引用模型）
+  https://gdsfactory.github.io/gdsfactory/api.html#gdsfactory.Component.add_ref
 """
 
 from __future__ import annotations

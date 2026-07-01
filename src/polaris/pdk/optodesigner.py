@@ -36,6 +36,14 @@ Any-angle flexConnector（任意角度弹性连接器）、层级化设计与 PD
 ## 补充文献（R02 学术诚信补齐）
 - gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 - Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+
+## 补充文献（R701-R750 学术诚信审核补齐，0 编造）
+- PDAflow Foundation 联盟白皮书（光子 PDK 互操作标准）
+  https://www.imedea.uib.es/~salcedo/03.QUIENES.SOMOS/03.4.GI/Docencia/TDIPhD/2017.Salcedo.M1.INTRO.photonics/PDAflow_WhitePaper.pdf
+- JePPIX Pilot Lines（InP 平台 PDAflow 互操作参考）
+  https://www.jeppix.eu/
+- Synopsys Photonic Solutions 主页
+  https://www.synopsys.com/photonic-solutions.html
 """
 
 from __future__ import annotations

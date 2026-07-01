@@ -14,6 +14,12 @@
 - IHP Open Source PDK (Apache-2.0): https://github.com/IHP-GmbH/IHP-Open-PDK
 - 差距分析 P0-3: docs/commercial_gap_analysis.md
 
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- SiEPIC EBeam PDK（GDS 生成参考实现）
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- SkyWater sky130A PDK（开源 CMOS PDK GDS 流程参考）
+  https://github.com/google/skywater-pdk
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
 """
 

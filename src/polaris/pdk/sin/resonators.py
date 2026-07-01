@@ -18,6 +18,12 @@ Cornell 高 Q 微环。每个器件参数均来自公开文献/工艺手册并�
 - Levy et al. 2011, "CMOS-compatible multiple-wavelength oscillator for
   on-chip optical interconnects", Nat. Photonics 4(1):37-40,
   https://doi.org/10.1038/nphoton.2009.259 (SiN 非线性环)
+
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- LioniX TriPleX 微环参考（商用 SiN 高 Q 环实现）
+  https://www.lionix-international.com/photonics/triplex-waveguide-platform/
+- Bogaerts 硅光微环综述主页（微环耦合设计参考）
+  https://www.laserphotonicsreviews.com/
 """
 
 from __future__ import annotations

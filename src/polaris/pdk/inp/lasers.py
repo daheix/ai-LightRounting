@@ -19,6 +19,12 @@ IMOS DFB 激光器。每个器件参数均来自公开文献并附带 ``Source``
   http://ep.cntronics.com/guide/4364/14539
 - Zozulia et al., Photonics Benelux 2023 — IMOS DFB on InP membrane
   https://photonics-benelux.org/wp-content/uploads/pb-files/proceedings/2023/Posters_even_numbers/Zozulia.pdf
+
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- Joyner et al., 2020, "InP photonic integrated circuits for coherent optical communications"（OFC）
+  https://ieeexplore.ieee.org/document/9231645
+- InP Foundry at Fraunhofer HHI（InP 平台工艺参考）
+  https://www.hhi.fraunhofer.de/en/departments/pc/inp-photonic-foundry.html
 """
 
 from __future__ import annotations

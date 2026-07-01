@@ -20,6 +20,12 @@ SPT（Synopsys Photonics Technology）文件格式互操作。
 ## 补充文献（R02 学术诚信补齐）
 - gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 - Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+
+## 补充文献（R701-R750 学术诚信审核补齐，0 编造）
+- JePPIX Pilot Lines（欧洲 InP/GaAs 平台 PDAflow BB 库参考）
+  https://www.jeppix.eu/
+- Synopsys Photonic Solutions 主页（OptoDesigner/SPT 格式）
+  https://www.synopsys.com/photonic-solutions.html
 """
 
 from __future__ import annotations

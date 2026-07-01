@@ -25,6 +25,12 @@
 - Roeloffzen et al. 2018, "Low-loss Si3N4 TriPleX optical waveguides",
   J. Lightw. Technol. 36(11):2170-2178,
   https://doi.org/10.1109/JLT.2018.2819298 (TriPleX 波导)
+
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- LioniX TriPleX PDK（SiN 商用平台参考）
+  https://www.lionix-international.com/photonics/triplex-waveguide-platform/
+- KIT / AMO SiN 工艺（开源 SiN 平台参考）
+  https://www.imo-cnr.it/
 """
 
 from __future__ import annotations

@@ -21,6 +21,12 @@
 - Wang et al., Optics Express 2020 — LNOI MMI 设计
   https://doi.org/10.1364/OE.405412
 
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- Boes et al., 2018, "Status and Potential of Lithium Niobate on Insulator (LNOI) for Photonic Integrated Circuits"（Laser & Photonics Reviews, DOI 10.1002/lpor.201700256）
+  https://siliconphotonics.ece.ucsb.edu/sites/default/files/2018-03/boes18lpr.pdf
+- gdsfactory LNOI 子库（开源 LNOI 器件模型参考）
+  https://github.com/gdsfactory/gdsfactory/tree/main/gdsfactory/components
+
 设计约束（LNOI 平台，参考 spec.md）：
 - 最小弯曲半径 50-100μm（高约束 TFLN 可达 ~50μm）
 - 最小波导间距 2.5μm
