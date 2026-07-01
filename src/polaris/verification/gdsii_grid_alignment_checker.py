@@ -187,125 +187,27 @@ def check_grid_alignment(
     """
     db = _import_klayout_db()
     path = Path(gds_path)
-    if not path.exists():
-        raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
-    if not path.is_file():
-        raise ValueError(f"路径不是文件: {gds_path}")
-    if grid_um <= 0:
-        raise ValueError(
-            f"grid_um 必须 > 0，得到 {grid_um}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    ly = db.Layout()
-    try:
-        ly.read(str(path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
-    grid_dbu = int(round(grid_um / dbu))
-    if grid_dbu < 1:
-        raise ValueError(
-            f"grid_um={grid_um} μm 小于 dbu={dbu} μm，"
-            f"grid_dbu={grid_dbu} < 1，无法检查。"
-            f"禁止 fall-back（R03）。"
-        )
-
+    _validate_grid_params(path, gds_path, grid_um)
+    ly, dbu, grid_dbu = _read_grid_layout(db, path, gds_path, grid_um)
     if layer_map is None:
         layer_map = _get_default_layer_map()
-
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
-    # 构造允许的层集合
+    # 构造允许的层集合（None 表示检查所有层，作为变量值传递给扫描函数）
     allowed_layer_keys: set[tuple[int, int]] | None = None
     if layers_to_check is not None:
         allowed_layer_keys = set()
         for (g, d), name in layer_map.items():
             if name in layers_to_check:
                 allowed_layer_keys.add((g, d))
-
-    violations: list[GridViolation] = []
-    total_shapes = 0
-    layer_violation_counts: dict[str, int] = {}
-
-    for li in ly.layer_indices():
-        info = ly.get_info(li)
-        gds_layer = int(info.layer)
-        gds_datatype = int(info.datatype)
-        layer_key = (gds_layer, gds_datatype)
-        layer_name = layer_map.get(
-            layer_key, f"LAYER_{gds_layer}_{gds_datatype}"
-        )
-
-        if allowed_layer_keys is not None and layer_key not in allowed_layer_keys:
-            continue
-
-        it = top_cell.begin_shapes_rec(li)
-        while not it.at_end():
-            shape = it.shape()
-            trans = it.trans()
-            cell_name = str(it.cell().name)
-            total_shapes += 1
-
-            if shape.is_polygon():
-                # Shape.polygon 是属性（非方法），返回 Polygon 对象
-                # 来源: https://www.klayout.org/doc-qt4/code/class_Shape.html
-                poly = shape.polygon
-                # KLayout 0.30.9 Polygon 顶点 API:
-                # - num_points_hull() / point_hull(i): 外轮廓顶点
-                # - holes() / num_points_hole(h) / point_hole(h, j): 孔顶点
-                # 来源: https://www.klayout.org/doc-qt5/code/class_Polygon.html
-                num_hull = int(poly.num_points_hull())
-                for i in range(num_hull):
-                    pt = poly.point_hull(i)
-                    world_pt = trans * pt
-                    _record_off_grid(
-                        int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
-                        layer_name, gds_layer, gds_datatype,
-                        cell_name, "polygon", violations, layer_violation_counts,
-                    )
-                # 孔顶点（若 polygon 含内孔）
-                num_holes = int(poly.holes())
-                for h in range(num_holes):
-                    num_hole_pts = int(poly.num_points_hole(h))
-                    for j in range(num_hole_pts):
-                        pt = poly.point_hole(h, j)
-                        world_pt = trans * pt
-                        _record_off_grid(
-                            int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
-                            layer_name, gds_layer, gds_datatype,
-                            cell_name, "polygon", violations, layer_violation_counts,
-                        )
-            elif shape.is_box():
-                box = shape.bbox()
-                # box 的 4 个角点
-                corners = [
-                    (int(box.left), int(box.bottom)),
-                    (int(box.right), int(box.bottom)),
-                    (int(box.right), int(box.top)),
-                    (int(box.left), int(box.top)),
-                ]
-                for cx, cy in corners:
-                    # 应用累积变换
-                    world_pt = trans * db.Point(cx, cy)
-                    _record_off_grid(
-                        int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
-                        layer_name, gds_layer, gds_datatype,
-                        cell_name, "box", violations, layer_violation_counts,
-                    )
-            it.next()
-
+    violations, total_shapes, layer_violation_counts = _scan_all_layers_grid(
+        db, ly, top_cell, layer_map, allowed_layer_keys, grid_dbu, dbu
+    )
     # 排序: gds_layer → gds_datatype → y_um → x_um
     violations.sort(
         key=lambda v: (
             v.gds_layer, v.gds_datatype, v.y_um, v.x_um,
         )
     )
-
     return GridCheckReport(
         file_path=str(gds_path),
         dbu=dbu,
@@ -317,6 +219,166 @@ def check_grid_alignment(
         layer_violation_counts=layer_violation_counts,
         total_shapes_checked=total_shapes,
     )
+
+
+def _validate_grid_params(path, gds_path, grid_um) -> None:
+    """校验 check_grid_alignment 入参（R325 内部辅助，R03 禁止 fall-back）。"""
+    if not path.exists():
+        raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
+    if not path.is_file():
+        raise ValueError(f"路径不是文件: {gds_path}")
+    if grid_um <= 0:
+        raise ValueError(
+            f"grid_um 必须 > 0，得到 {grid_um}。"
+            f"禁止 fall-back（R03）。"
+        )
+
+
+def _read_grid_layout(db, path, gds_path, grid_um) -> tuple:
+    """读取 GDSII 并计算 grid_dbu（R325 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, grid_dbu)。
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    grid_dbu = int(round(grid_um / dbu))
+    if grid_dbu < 1:
+        raise ValueError(
+            f"grid_um={grid_um} μm 小于 dbu={dbu} μm，"
+            f"grid_dbu={grid_dbu} < 1，无法检查。"
+            f"禁止 fall-back（R03）。"
+        )
+    return ly, dbu, grid_dbu
+
+
+def _scan_all_layers_grid(
+    db, ly, top_cell, layer_map, allowed_layer_keys, grid_dbu, dbu,
+) -> tuple:
+    """遍历所有层的所有 shape 检查网格对齐（R325 内部辅助）。
+
+    Returns:
+        (violations, total_shapes, layer_violation_counts)。
+
+    来源: KLayout RecursiveShapeIterator
+        https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
+    """
+    violations: list[GridViolation] = []
+    total_shapes = 0
+    layer_violation_counts: dict[str, int] = {}
+    for li in ly.layer_indices():
+        info = ly.get_info(li)
+        gds_layer = int(info.layer)
+        gds_datatype = int(info.datatype)
+        layer_key = (gds_layer, gds_datatype)
+        layer_name = layer_map.get(
+            layer_key, f"LAYER_{gds_layer}_{gds_datatype}"
+        )
+        if allowed_layer_keys is not None and layer_key not in allowed_layer_keys:
+            continue
+        total_shapes = _scan_layer_shapes(
+            db, top_cell, li, grid_dbu, dbu, layer_name,
+            gds_layer, gds_datatype, violations, layer_violation_counts,
+            total_shapes,
+        )
+    return violations, total_shapes, layer_violation_counts
+
+
+def _scan_layer_shapes(
+    db, top_cell, li, grid_dbu, dbu, layer_name,
+    gds_layer, gds_datatype, violations, layer_violation_counts, total_shapes,
+) -> int:
+    """扫描单层的所有 shape 检查网格对齐（R325 内部辅助）。
+
+    Returns:
+        更新后的 total_shapes 计数。
+    """
+    it = top_cell.begin_shapes_rec(li)
+    while not it.at_end():
+        shape = it.shape()
+        trans = it.trans()
+        cell_name = str(it.cell().name)
+        total_shapes += 1
+        if shape.is_polygon():
+            _check_polygon_grid(
+                shape.polygon, trans, grid_dbu, dbu, layer_name,
+                gds_layer, gds_datatype, cell_name,
+                violations, layer_violation_counts,
+            )
+        elif shape.is_box():
+            _check_box_grid(
+                db, shape.bbox(), trans, grid_dbu, dbu, layer_name,
+                gds_layer, gds_datatype, cell_name,
+                violations, layer_violation_counts,
+            )
+        it.next()
+    return total_shapes
+
+
+def _check_polygon_grid(
+    poly, trans, grid_dbu, dbu, layer_name,
+    gds_layer, gds_datatype, cell_name,
+    violations, layer_violation_counts,
+) -> None:
+    """检查 polygon 所有顶点（外轮廓+孔）的网格对齐（R325 内部辅助）。
+
+    来源: KLayout Polygon API
+        https://www.klayout.org/doc-qt5/code/class_Polygon.html
+    """
+    # 外轮廓顶点
+    num_hull = int(poly.num_points_hull())
+    for i in range(num_hull):
+        pt = poly.point_hull(i)
+        world_pt = trans * pt
+        _record_off_grid(
+            int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
+            layer_name, gds_layer, gds_datatype,
+            cell_name, "polygon", violations, layer_violation_counts,
+        )
+    # 孔顶点（若 polygon 含内孔）
+    num_holes = int(poly.holes())
+    for h in range(num_holes):
+        num_hole_pts = int(poly.num_points_hole(h))
+        for j in range(num_hole_pts):
+            pt = poly.point_hole(h, j)
+            world_pt = trans * pt
+            _record_off_grid(
+                int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
+                layer_name, gds_layer, gds_datatype,
+                cell_name, "polygon", violations, layer_violation_counts,
+            )
+
+
+def _check_box_grid(
+    db, box, trans, grid_dbu, dbu, layer_name,
+    gds_layer, gds_datatype, cell_name,
+    violations, layer_violation_counts,
+) -> None:
+    """检查 box 4 个角点的网格对齐（R325 内部辅助）。
+
+    来源: KLayout Box class https://www.klayout.org/doc-qt5/code/class_Box.html
+    """
+    corners = [
+        (int(box.left), int(box.bottom)),
+        (int(box.right), int(box.bottom)),
+        (int(box.right), int(box.top)),
+        (int(box.left), int(box.top)),
+    ]
+    for cx, cy in corners:
+        # 应用累积变换
+        world_pt = trans * db.Point(cx, cy)
+        _record_off_grid(
+            int(world_pt.x), int(world_pt.y), grid_dbu, dbu,
+            layer_name, gds_layer, gds_datatype,
+            cell_name, "box", violations, layer_violation_counts,
+        )
 
 
 def generate_grid_check_report(
