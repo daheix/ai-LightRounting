@@ -26,6 +26,7 @@ Gerber 为扁平格式（无单元层级），全部形状归入单 cell。
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass, field
 
 from polaris.io.multi_format import Cell, FormatLayout, LayerInfo, Point, Shape
 
@@ -121,70 +122,120 @@ def read_gerber(text: str) -> FormatLayout:
 def _gerber_process_blocks(
     blocks: list[str], apertures: dict, dec_digits: int, suppression: str,
 ) -> list[Shape]:
-    """处理数据块（D01/D02/D03/G36/G37/M02），返回 Shape 列表。"""
-    shapes: list[Shape] = []
-    current_ap = 0
-    cur_x = 0.0
-    cur_y = 0.0
-    path_pts: list[Point] = []
-    region_pts: list[Point] = []
-    in_region = False
+    """处理数据块（D01/D02/D03/G36/G37/M02），返回 Shape 列表（dispatch + Extract Method）。
 
-    def flush_path() -> None:
-        nonlocal path_pts
-        if len(path_pts) >= 2:
-            if current_ap not in apertures:
-                raise ValueError(
-                    f"Gerber 孔径未定义: D{current_ap}（D01 绘制前必须先用 "
-                    f"%ADD% 定义孔径）"
-                )
-            w = apertures[current_ap][1][0]
-            shapes.append(Shape("path", "gerber", list(path_pts), width=w))
-        path_pts = []
-
-    def flush_region() -> None:
-        nonlocal region_pts
-        if len(region_pts) >= 3:
-            shapes.append(Shape("polygon", "gerber", list(region_pts)))
-        region_pts = []
-
+    将循环体拆分为 _process_gerber_block，状态打包到 _GerberState，
+    显著降低圈复杂度。
+    """
+    state = _GerberState()
     for blk in blocks:
-        if blk == "M02":
-            break
-        if blk == "G36":
-            in_region = True
-            flush_path()
-            continue
-        if blk == "G37":
-            in_region = False
-            flush_region()
-            continue
-        if blk.startswith("D") and blk[1:].isdigit() and len(blk) <= 4:
-            num = int(blk[1:])
-            if num >= 10:
-                flush_path()
-                current_ap = num
-                continue
-        cur_x, cur_y = _gerber_update_pos(blk, cur_x, cur_y,
-                                          dec_digits, suppression)
-        dcode_m = re.search(r"D(0[123])\s*$", blk)
-        dcode = dcode_m.group(1) if dcode_m else ""
-        pt = Point(cur_x, cur_y)
-        if in_region:
-            region_pts.append(pt)
-            continue
-        if dcode == "02":
-            flush_path()
-            path_pts = [pt]
-        elif dcode == "01":
-            path_pts = path_pts or []
-            path_pts.append(pt)
-        elif dcode == "03":
-            flush_path()
-            shapes.append(_gerber_flash_shape(current_ap, apertures, pt))
-    flush_path()
-    flush_region()
-    return shapes
+        if _process_gerber_block(state, blk, apertures, dec_digits, suppression):
+            break  # M02 终止
+    _gerber_flush_path(state, apertures)
+    _gerber_flush_region(state)
+    return state.shapes
+
+
+@dataclass
+class _GerberState:
+    """Gerber 解析运行时状态（current_ap / 坐标 / 路径缓冲）。"""
+
+    current_ap: int = 0
+    cur_x: float = 0.0
+    cur_y: float = 0.0
+    path_pts: list[Point] = field(default_factory=list)
+    region_pts: list[Point] = field(default_factory=list)
+    in_region: bool = False
+    shapes: list[Shape] = field(default_factory=list)
+
+
+def _process_gerber_block(
+    state: _GerberState,
+    blk: str,
+    apertures: dict,
+    dec_digits: int,
+    suppression: str,
+) -> bool:
+    """处理单个 Gerber 数据块，返回是否终止（M02）。"""
+    if blk == "M02":
+        return True
+    if blk == "G36":
+        state.in_region = True
+        _gerber_flush_path(state, apertures)
+        return False
+    if blk == "G37":
+        state.in_region = False
+        _gerber_flush_region(state)
+        return False
+    if _gerber_handle_aperture_select(state, blk, apertures):
+        return False
+    _gerber_handle_drawing(state, blk, apertures, dec_digits, suppression)
+    return False
+
+
+def _gerber_handle_aperture_select(
+    state: _GerberState,
+    blk: str,
+    apertures: dict,
+) -> bool:
+    """处理 Dxx 孔径选择（D10..D999），返回是否匹配。"""
+    if not (blk.startswith("D") and blk[1:].isdigit() and len(blk) <= 4):
+        return False
+    num = int(blk[1:])
+    if num < 10:
+        return False
+    _gerber_flush_path(state, apertures)
+    state.current_ap = num
+    return True
+
+
+def _gerber_handle_drawing(
+    state: _GerberState,
+    blk: str,
+    apertures: dict,
+    dec_digits: int,
+    suppression: str,
+) -> None:
+    """处理坐标更新 + D01/D02/D03 绘制命令（CC ≤ 5）。"""
+    state.cur_x, state.cur_y = _gerber_update_pos(
+        blk, state.cur_x, state.cur_y, dec_digits, suppression,
+    )
+    dcode_m = re.search(r"D(0[123])\s*$", blk)
+    dcode = dcode_m.group(1) if dcode_m else ""
+    pt = Point(state.cur_x, state.cur_y)
+    if state.in_region:
+        state.region_pts.append(pt)
+        return
+    if dcode == "02":
+        _gerber_flush_path(state, apertures)
+        state.path_pts = [pt]
+    elif dcode == "01":
+        state.path_pts.append(pt)
+    elif dcode == "03":
+        _gerber_flush_path(state, apertures)
+        state.shapes.append(_gerber_flash_shape(state.current_ap, apertures, pt))
+
+
+def _gerber_flush_path(state: _GerberState, apertures: dict) -> None:
+    """冲刷 path_pts → Shape('path')，并清空缓冲（CC ≤ 3）。"""
+    if len(state.path_pts) < 2:
+        state.path_pts = []
+        return
+    if state.current_ap not in apertures:
+        raise ValueError(
+            f"Gerber 孔径未定义: D{state.current_ap}（D01 绘制前必须先用 "
+            f"%ADD% 定义孔径）"
+        )
+    w = apertures[state.current_ap][1][0]
+    state.shapes.append(Shape("path", "gerber", list(state.path_pts), width=w))
+    state.path_pts = []
+
+
+def _gerber_flush_region(state: _GerberState) -> None:
+    """冲刷 region_pts → Shape('polygon')，并清空缓冲。"""
+    if len(state.region_pts) >= 3:
+        state.shapes.append(Shape("polygon", "gerber", list(state.region_pts)))
+    state.region_pts = []
 
 
 def _gerber_update_pos(
