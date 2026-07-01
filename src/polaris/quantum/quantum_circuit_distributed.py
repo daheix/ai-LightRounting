@@ -133,8 +133,22 @@ __all__ = [
 # =============================================================================
 
 def _test() -> None:
-    """冒烟测试。"""
-    # Test 1: 量子电路仿真器
+    """冒烟测试（R605 拆分为子测试降低圈复杂度）。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
+    _test_quantum_circuit()
+    _test_bb84_qkd()
+    _test_distributed_ppo()
+    _test_m6_deliverable()
+    _test_roadmap_score()
+    print("\n所有测试通过 ✅")
+
+
+def _test_quantum_circuit() -> None:
+    """Test 1: 量子电路仿真器与多门验证（R605 Extract Method）。"""
     sim = QuantumCircuitSimulator(n_qubits=2)
     # Bell 态
     sim.bell_state(0, 1)
@@ -164,7 +178,9 @@ def _test() -> None:
     assert sim2.gate_count >= 5  # H + X + CZ + PS + BS ≥ 3 量子门
     print(f"量子门: H/X/CZ/PS/BS = {sim2.gate_count} 个门验证通过")
 
-    # Test 2: BB84 QKD
+
+def _test_bb84_qkd() -> None:
+    """Test 2: BB84 QKD 安全性验证（R605 Extract Method）。"""
     bb84 = BB84Protocol(key_length=128)
     # 无窃听
     result_clean = bb84.simulate(eavesdrop=False, channel_loss_db=3.0)
@@ -177,7 +193,9 @@ def _test() -> None:
     print(f"QKD BB84: 无窃听QBER={result_clean['qber']:.1%} (安全), "
           f"有窃听QBER={result_eve['qber']:.1%} (检测到={result_eve['eavesdrop_detected']})")
 
-    # Test 3: 分布式 PPO
+
+def _test_distributed_ppo() -> None:
+    """Test 3: 分布式 PPO 训练流程（R605 Extract Method）。"""
     # R05 v4.0-FAKE-ENV-P0: 冒烟测试需显式启用 synthetic_env_mode（算法测试用）
     config = DistributedPPOConfig(
         n_workers=4, n_devices_per_circuit=5000, synthetic_env_mode=True,
@@ -200,7 +218,9 @@ def _test() -> None:
           f"{rpt['total_devices_processed']} 器件已处理, "
           f"best_reward={rpt['best_reward']:.2f}")
 
-    # Test 4: M6 交付检查
+
+def _test_m6_deliverable() -> None:
+    """Test 4: M6 交付检查（R605 Extract Method）。"""
     m6 = M6Deliverable()
     m6_rpt = m6.report()
     assert m6_rpt["total_items"] >= 25
@@ -209,7 +229,9 @@ def _test() -> None:
           f"完成率={m6_rpt['completion_rate']:.1%}, "
           f"目标={m6_rpt['target_score']}")
 
-    # Test 5: 全路标得分
+
+def _test_roadmap_score() -> None:
+    """Test 5: 全路标得分与基准数据得分（R605 Extract Method）。"""
     # R05 v4.0-FAKE-SCORE-P0: 删除原 9.2/10 虚标断言。无基准数据时得分为 None。
     scores = RoadmapScoreSummary.report()
     assert scores["milestones"]["M6_R36"] is None, (
@@ -221,7 +243,7 @@ def _test() -> None:
     print(f"  总提升: {scores['total_improvement']}, "
           f"超越行业最高: {scores['exceeds_industry_max']}")
 
-    # Test 5b: 提供完整基准数据时应能计算出合理得分
+    # 提供完整基准数据时应能计算出合理得分
     benchmark = {
         "hpwl_improvement_pct": 15.0,
         "congestion_reduction_pct": 60.0,
@@ -234,8 +256,6 @@ def _test() -> None:
     real_score = RoadmapScoreSummary.compute_score("M6_R36", benchmark)
     assert 0.0 <= real_score <= 10.0
     print(f"  M6 真实得分（基准数据）: {real_score:.2f}/10")
-
-    print("\n所有测试通过 ✅")
 
 
 if __name__ == "__main__":

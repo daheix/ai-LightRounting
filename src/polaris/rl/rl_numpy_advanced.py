@@ -844,39 +844,12 @@ class HybridPlacementAgent:
                 f"器件数 {n_total} 超过网格容量 {grid_h*grid_w}（业务设计错误）"
             )
         # 按连接度排序（启发式策略，复用 R354 heuristic 逻辑）
-        degree: dict[str, int] = {d["id"]: 0 for d in circuit["devices"]}
-        for net in circuit["nets"]:
-            for end in [net["src"], net["dst"]]:
-                if end[0] in degree:
-                    degree[end[0]] += 1
+        degree = self._compute_device_degree(circuit)
         order = sorted(degree.keys(), key=lambda i: -degree[i])
         for dev_id in order:
             if dev_id in self.placement:
                 continue
-            occupied = self._occupied_cells(circuit)
-            best_cell: tuple[int, int] | None = None
-            best_dist = float("inf")
-            all_cells = [(r, c) for r in range(grid_h) for c in range(grid_w)]
-            self._rng.shuffle(all_cells)
-            for cell in all_cells:
-                if cell in occupied or not self._bend_ok(cell, circuit):
-                    continue
-                cur_xy = (cell[1] * _GRID_CELL_SIZE_UM, cell[0] * _GRID_CELL_SIZE_UM)
-                total_d = 0.0
-                for net in circuit["nets"]:
-                    other_id = None
-                    if net["src"][0] == dev_id:
-                        other_id = net["dst"][0]
-                    elif net["dst"][0] == dev_id:
-                        other_id = net["src"][0]
-                    if other_id and other_id in self.placement:
-                        op = self.placement[other_id]
-                        total_d += float(np.sqrt(
-                            (op["x"] - cur_xy[0]) ** 2 + (op["y"] - cur_xy[1]) ** 2
-                        ))
-                if total_d < best_dist:
-                    best_dist = total_d
-                    best_cell = cell
+            best_cell = self._find_best_cell(dev_id, circuit, grid_h, grid_w)
             if best_cell is None:
                 raise ValueError(
                     f"器件 {dev_id} 无可用位置满足约束（R03 禁止 fall-back）"
@@ -887,6 +860,89 @@ class HybridPlacementAgent:
                 "rotation": 0,
             }
         return dict(self.placement)
+
+    def _compute_device_degree(self, circuit: dict) -> dict[str, int]:
+        """计算每个器件的连接度（R604 Extract Method 降低圈复杂度）。
+
+        Args:
+            circuit: 电路描述（含 devices 与 nets）。
+
+        Returns:
+            器件 id -> 连接度 映射。
+
+        来源:
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
+        """
+        degree: dict[str, int] = {d["id"]: 0 for d in circuit["devices"]}
+        for net in circuit["nets"]:
+            for end in [net["src"], net["dst"]]:
+                if end[0] in degree:
+                    degree[end[0]] += 1
+        return degree
+
+    def _find_best_cell(
+        self, dev_id: str, circuit: dict, grid_h: int, grid_w: int,
+    ) -> tuple[int, int] | None:
+        """为指定器件查找总距离最小的可用网格单元（R604 Extract Method）。
+
+        Args:
+            dev_id: 待布局器件 id。
+            circuit: 电路描述。
+            grid_h/grid_w: 网格行列数。
+
+        Returns:
+            最佳 (row, col) 或 None（无可用单元）。
+
+        来源:
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
+        """
+        occupied = self._occupied_cells(circuit)
+        best_cell: tuple[int, int] | None = None
+        best_dist = float("inf")
+        all_cells = [(r, c) for r in range(grid_h) for c in range(grid_w)]
+        self._rng.shuffle(all_cells)
+        for cell in all_cells:
+            if cell in occupied or not self._bend_ok(cell, circuit):
+                continue
+            total_d = self._cell_distance_to_placed(dev_id, cell, circuit)
+            if total_d < best_dist:
+                best_dist = total_d
+                best_cell = cell
+        return best_cell
+
+    def _cell_distance_to_placed(
+        self, dev_id: str, cell: tuple[int, int], circuit: dict,
+    ) -> float:
+        """计算候选单元到所有已布局邻居的曼哈顿距离和（R604 Extract Method）。
+
+        Args:
+            dev_id: 待布局器件 id。
+            cell: 候选网格单元 (row, col)。
+            circuit: 电路描述。
+
+        Returns:
+            到所有已布局连接邻居的欧氏距离之和。
+
+        来源:
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
+        """
+        cur_xy = (cell[1] * _GRID_CELL_SIZE_UM, cell[0] * _GRID_CELL_SIZE_UM)
+        total_d = 0.0
+        for net in circuit["nets"]:
+            other_id = None
+            if net["src"][0] == dev_id:
+                other_id = net["dst"][0]
+            elif net["dst"][0] == dev_id:
+                other_id = net["src"][0]
+            if other_id and other_id in self.placement:
+                op = self.placement[other_id]
+                total_d += float(np.sqrt(
+                    (op["x"] - cur_xy[0]) ** 2 + (op["y"] - cur_xy[1]) ** 2
+                ))
+        return total_d
 
     def place(self, circuit: dict, fixed_devices: dict | None = None) -> dict:
         """端到端混合布局：set_fixed → auto_place。"""
