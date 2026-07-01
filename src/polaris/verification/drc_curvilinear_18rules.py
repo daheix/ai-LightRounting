@@ -110,6 +110,30 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
         self._violations: list[DRCViolation18] = []
         self._extended_enabled: bool = False
         self._register_18_rules()
+        self._rule_handlers: dict[Any, Any] = self._build_rule_handlers()
+
+    def _build_rule_handlers(self) -> dict[Any, Any]:
+        """构建规则类别 → 检查函数的 dispatch table（降低 _check_rule 圈复杂度）。"""
+        return {
+            DRCRuleCategory.MIN_WIDTH: self._chk_min_width,
+            DRCRuleCategory.MAX_WIDTH: self._chk_max_width,
+            DRCRuleCategory.MIN_WIDTH_CURVE: self._chk_min_curve_width,
+            DRCRuleCategory.MIN_SPACING: self._chk_min_spacing,
+            DRCRuleCategory.MIN_SPACING_SAME_NET: self._chk_same_net_spacing,
+            DRCRuleCategory.MIN_SPACING_DENSITY: self._chk_density_spacing,
+            DRCRuleCategory.MIN_END_TO_END: self._chk_end_to_end,
+            DRCRuleCategory.MIN_ENCLOSURE: self._chk_min_enclosure,
+            DRCRuleCategory.MIN_EXTENSION: self._chk_min_extension,
+            DRCRuleCategory.MIN_AREA: self._chk_min_area,
+            DRCRuleCategory.MAX_AREA: self._chk_max_area,
+            DRCRuleCategory.MIN_DENSITY: self._chk_min_density,
+            DRCRuleCategory.MAX_ANGLE: self._chk_max_angle,
+            DRCRuleCategory.MIN_ANGLE: self._chk_min_angle,
+            DRCRuleCategory.ACUTE_ANGLE: self._chk_acute_angle,
+            DRCRuleCategory.MIN_BEND_RADIUS: self._chk_min_bend_radius,
+            DRCRuleCategory.MAX_CURVATURE: self._chk_max_curvature,
+            DRCRuleCategory.TAPER_ANGLE: self._chk_taper_angle,
+        }
 
     @property
     def rule_count(self) -> int:
@@ -311,85 +335,104 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
         return self._violations
 
     def _check_rule(self, rule: CurvilinearDRCRule, layout: dict[str, Any]) -> None:
+        """按规则类别分发到具体检查子方法（dispatch table 模式）。"""
         layer_data = layout.get(rule.layer, {})
         if not layer_data:
             return
+        handler = self._rule_handlers.get(rule.category)
+        if handler is None:
+            return
+        handler(rule, layer_data)
 
-        cat = rule.category
-        val = rule.limit_value
+    def _chk_min_width(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_width", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"最小宽度 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
 
-        if cat == DRCRuleCategory.MIN_WIDTH:
-            w = layer_data.get("min_width", float("inf"))
-            if w < val:
-                self._add_violation(rule, f"最小宽度 {w:.3f} < {val}", w, val)
-        elif cat == DRCRuleCategory.MAX_WIDTH:
-            w = layer_data.get("max_width", 0)
-            if w > val:
-                self._add_violation(rule, f"最大宽度 {w:.3f} > {val}", w, val)
-        elif cat == DRCRuleCategory.MIN_WIDTH_CURVE:
-            cw = layer_data.get("min_curve_width", float("inf"))
-            if cw < val:
-                self._add_violation(rule, f"曲线最小宽度 {cw:.3f} < {val}", cw, val)
-        elif cat == DRCRuleCategory.MIN_SPACING:
-            s = layer_data.get("min_spacing", float("inf"))
-            if s < val:
-                self._add_violation(rule, f"最小间距 {s:.3f} < {val}", s, val)
-        elif cat == DRCRuleCategory.MIN_SPACING_SAME_NET:
-            s = layer_data.get("same_net_spacing", float("inf"))
-            if s < val:
-                self._add_violation(rule, f"同网络间距 {s:.3f} < {val}", s, val)
-        elif cat == DRCRuleCategory.MIN_SPACING_DENSITY:
-            s = layer_data.get("density_spacing", float("inf"))
-            if s < val:
-                self._add_violation(rule, f"高密度区间距 {s:.3f} < {val}", s, val)
-        elif cat == DRCRuleCategory.MIN_END_TO_END:
-            s = layer_data.get("end_to_end", float("inf"))
-            if s < val:
-                self._add_violation(rule, f"端到端间距 {s:.3f} < {val}", s, val)
-        elif cat == DRCRuleCategory.MIN_ENCLOSURE:
-            e = layer_data.get("min_enclosure", float("inf"))
-            if e < val:
-                self._add_violation(rule, f"包围 {e:.3f} < {val}", e, val)
-        elif cat == DRCRuleCategory.MIN_EXTENSION:
-            e = layer_data.get("min_extension", float("inf"))
-            if e < val:
-                self._add_violation(rule, f"延伸 {e:.3f} < {val}", e, val)
-        elif cat == DRCRuleCategory.MIN_AREA:
-            a = layer_data.get("min_area", float("inf"))
-            if a < val:
-                self._add_violation(rule, f"最小面积 {a:.0f} < {val}", a, val)
-        elif cat == DRCRuleCategory.MAX_AREA:
-            a = layer_data.get("max_area", 0)
-            if a > val:
-                self._add_violation(rule, f"最大面积 {a:.0f} > {val}", a, val)
-        elif cat == DRCRuleCategory.MIN_DENSITY:
-            d = layer_data.get("density", 0.0)
-            if d < val:
-                self._add_violation(rule, f"密度 {d:.1%} < {val:.1%}", d, val)
-        elif cat == DRCRuleCategory.MAX_ANGLE:
-            ang = layer_data.get("max_angle", 0)
-            if ang > val:
-                self._add_violation(rule, f"最大拐角 {ang:.0f}° > {val}°", ang, val)
-        elif cat == DRCRuleCategory.MIN_ANGLE:
-            ang = layer_data.get("min_angle", 180)
-            if ang < val:
-                self._add_violation(rule, f"最小拐角 {ang:.0f}° < {val}°", ang, val)
-        elif cat == DRCRuleCategory.ACUTE_ANGLE:
-            ang = layer_data.get("min_angle", 180)
-            if ang < val:
-                self._add_violation(rule, f"锐角 {ang:.0f}° < {val}°", ang, val)
-        elif cat == DRCRuleCategory.MIN_BEND_RADIUS:
-            r = layer_data.get("min_bend_radius", float("inf"))
-            if r < val:
-                self._add_violation(rule, f"弯曲半径 {r:.2f} < {val}", r, val)
-        elif cat == DRCRuleCategory.MAX_CURVATURE:
-            k = layer_data.get("max_curvature", 0.0)
-            if k > val:
-                self._add_violation(rule, f"曲率 {k:.3f} > {val}", k, val)
-        elif cat == DRCRuleCategory.TAPER_ANGLE:
-            ta = layer_data.get("taper_angle", 0)
-            if ta > val:
-                self._add_violation(rule, f"锥形角度 {ta:.1f}° > {val}°", ta, val)
+    def _chk_max_width(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("max_width", 0)
+        if v > rule.limit_value:
+            self._add_violation(rule, f"最大宽度 {v:.3f} > {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_min_curve_width(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_curve_width", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"曲线最小宽度 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_min_spacing(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_spacing", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"最小间距 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_same_net_spacing(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("same_net_spacing", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"同网络间距 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_density_spacing(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("density_spacing", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"高密度区间距 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_end_to_end(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("end_to_end", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"端到端间距 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_min_enclosure(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_enclosure", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"包围 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_min_extension(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_extension", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"延伸 {v:.3f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_min_area(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_area", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"最小面积 {v:.0f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_max_area(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("max_area", 0)
+        if v > rule.limit_value:
+            self._add_violation(rule, f"最大面积 {v:.0f} > {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_min_density(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("density", 0.0)
+        if v < rule.limit_value:
+            self._add_violation(rule, f"密度 {v:.1%} < {rule.limit_value:.1%}", v, rule.limit_value)
+
+    def _chk_max_angle(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("max_angle", 0)
+        if v > rule.limit_value:
+            self._add_violation(rule, f"最大拐角 {v:.0f}° > {rule.limit_value}°", v, rule.limit_value)
+
+    def _chk_min_angle(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_angle", 180)
+        if v < rule.limit_value:
+            self._add_violation(rule, f"最小拐角 {v:.0f}° < {rule.limit_value}°", v, rule.limit_value)
+
+    def _chk_acute_angle(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_angle", 180)
+        if v < rule.limit_value:
+            self._add_violation(rule, f"锐角 {v:.0f}° < {rule.limit_value}°", v, rule.limit_value)
+
+    def _chk_min_bend_radius(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("min_bend_radius", float("inf"))
+        if v < rule.limit_value:
+            self._add_violation(rule, f"弯曲半径 {v:.2f} < {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_max_curvature(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("max_curvature", 0.0)
+        if v > rule.limit_value:
+            self._add_violation(rule, f"曲率 {v:.3f} > {rule.limit_value}", v, rule.limit_value)
+
+    def _chk_taper_angle(self, rule: CurvilinearDRCRule, d: dict[str, Any]) -> None:
+        v = d.get("taper_angle", 0)
+        if v > rule.limit_value:
+            self._add_violation(rule, f"锥形角度 {v:.1f}° > {rule.limit_value}°", v, rule.limit_value)
 
     def _add_violation(self, rule: CurvilinearDRCRule, msg: str,
                        measured: float, limit: float) -> None:
