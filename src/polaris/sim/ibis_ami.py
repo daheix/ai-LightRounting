@@ -182,6 +182,19 @@ class IBISParser:
                 f"parts={parts!r}): {e}"
             ) from e
 
+    # IV clamp 段关键字 → (start_kw, end_kw, model_attr, flag_key) 映射
+    # 来源: IBIS v5.0 [Pullup]/[Pulldown]/[GND Clamp]/[Power Clamp] 关键字
+    # URL: https://ibis.org/ver5.0/ver5_0.txt
+    _IV_SECTIONS: tuple[tuple[str, str, str, str], ...] = (
+        ("pullup", "end pullup", "pullup", "in_pullup"),
+        ("pulldown", "end pulldown", "pulldown", "in_pulldown"),
+        ("ground clamp", "end ground clamp", "ground_clamp", "in_gc"),
+        ("power clamp", "end power clamp", "power_clamp", "in_pc"),
+    )
+    _IV_SECTION_KEYWORDS: frozenset[str] = frozenset(
+        kw for sec in _IV_SECTIONS for kw in (sec[0], sec[1])
+    )
+
     def _handle_keyword(
         self,
         keyword: str,
@@ -198,74 +211,110 @@ class IBISParser:
         gc_data: list[list[str]],
         pc_data: list[list[str]],
     ) -> tuple[str, str, IBISModel | None, bool, bool, bool, bool, list[list[str]], list[list[str]], list[list[str]], list[list[str]]]:
-        """处理 IBIS 关键字行，返回更新后的解析状态。"""
-        if keyword == "component":
-            self._finalize_current_model(current_model, current_model_name)
-            current_model_name = ""
-            current_model = None
-            name_line = rest_line.strip()
-            if name_line:
-                current_component = name_line.split()[0] if name_line else ""
-
-        elif keyword == "model":
-            self._finalize_current_model(current_model, current_model_name)
-            model_name = rest_line.strip().split()[0] if rest_line.strip() else ""
-            current_model_name = model_name
-            current_model = IBISModel(name=model_name, kind=IBISKind.OTHER)
-
-        elif keyword in ("end component", "end model"):
-            self._finalize_current_model(current_model, current_model_name)
-            current_model_name = ""
-            current_model = None
-
-        elif keyword == "pullup":
-            in_pullup, in_pulldown, in_gc, in_pc = True, False, False, False
-            pullup_data = []
-        elif keyword == "end pullup":
-            if current_model is not None:
-                current_model.pullup = self._parse_iv_data(pullup_data)
-            in_pullup = False
-
-        elif keyword == "pulldown":
-            in_pullup, in_pulldown, in_gc, in_pc = False, True, False, False
-            pulldown_data = []
-        elif keyword == "end pulldown":
-            if current_model is not None:
-                current_model.pulldown = self._parse_iv_data(pulldown_data)
-            in_pulldown = False
-
-        elif keyword == "ground clamp":
-            in_pullup, in_pulldown, in_gc, in_pc = False, False, True, False
-            gc_data = []
-        elif keyword == "end ground clamp":
-            if current_model is not None:
-                current_model.ground_clamp = self._parse_iv_data(gc_data)
-            in_gc = False
-
-        elif keyword == "power clamp":
-            in_pullup, in_pulldown, in_gc, in_pc = False, False, False, True
-            pc_data = []
-        elif keyword == "end power clamp":
-            if current_model is not None:
-                current_model.power_clamp = self._parse_iv_data(pc_data)
-            in_pc = False
-
-        elif keyword == "ramp":
-            if current_model is not None:
-                self._parse_ramp(current_model, rest_line.strip())
-
-        elif keyword == "c_comp":
-            if current_model is not None:
-                self._parse_c_comp(current_model, rest_line)
-
-        elif keyword in ("voltage range", "typ", "min", "max"):
-            pass
+        """处理 IBIS 关键字行（dispatch + Extract Method，CC ≤ 5）。"""
+        if keyword in ("component", "model", "end component", "end model"):
+            current_component, current_model_name, current_model = self._handle_model_lifecycle_kw(
+                keyword, rest_line, current_component, current_model_name, current_model,
+            )
+        elif keyword in self._IV_SECTION_KEYWORDS:
+            (in_pullup, in_pulldown, in_gc, in_pc,
+             pullup_data, pulldown_data, gc_data, pc_data) = self._handle_iv_section_kw(
+                keyword, current_model,
+                in_pullup, in_pulldown, in_gc, in_pc,
+                pullup_data, pulldown_data, gc_data, pc_data,
+            )
+        else:
+            self._handle_attribute_kw(keyword, rest_line, current_model)
 
         return (
             current_component, current_model_name, current_model,
             in_pullup, in_pulldown, in_gc, in_pc,
             pullup_data, pulldown_data, gc_data, pc_data,
         )
+
+    def _handle_model_lifecycle_kw(
+        self,
+        keyword: str,
+        rest_line: str,
+        current_component: str,
+        current_model_name: str,
+        current_model: IBISModel | None,
+    ) -> tuple[str, str, IBISModel | None]:
+        """处理 component/model/end component/end model 关键字。"""
+        self._finalize_current_model(current_model, current_model_name)
+        if keyword == "component":
+            name_line = rest_line.strip()
+            if name_line:
+                current_component = name_line.split()[0]
+            current_model_name = ""
+            current_model = None
+        elif keyword == "model":
+            stripped = rest_line.strip()
+            model_name = stripped.split()[0] if stripped else ""
+            current_model_name = model_name
+            current_model = IBISModel(name=model_name, kind=IBISKind.OTHER)
+        else:  # end component / end model
+            current_model_name = ""
+            current_model = None
+        return current_component, current_model_name, current_model
+
+    def _handle_iv_section_kw(
+        self,
+        keyword: str,
+        current_model: IBISModel | None,
+        in_pullup: bool,
+        in_pulldown: bool,
+        in_gc: bool,
+        in_pc: bool,
+        pullup_data: list[list[str]],
+        pulldown_data: list[list[str]],
+        gc_data: list[list[str]],
+        pc_data: list[list[str]],
+    ) -> tuple[bool, bool, bool, bool, list[list[str]], list[list[str]], list[list[str]], list[list[str]]]:
+        """处理 IV clamp 段的 start/end 关键字（dispatch table，CC ≤ 8）。
+
+        段开始时：清零所有 flag、仅置当前段为 True、清空对应数据列表。
+        段结束时：把累积的 IV 数据写回 current_model.<attr>，复位当前段 flag。
+        """
+        flags: dict[str, bool] = {
+            "in_pullup": in_pullup, "in_pulldown": in_pulldown,
+            "in_gc": in_gc, "in_pc": in_pc,
+        }
+        datas: dict[str, list[list[str]]] = {
+            "in_pullup": pullup_data, "in_pulldown": pulldown_data,
+            "in_gc": gc_data, "in_pc": pc_data,
+        }
+        for start_kw, end_kw, attr_name, flag_key in self._IV_SECTIONS:
+            if keyword == start_kw:
+                for k in flags:
+                    flags[k] = False
+                flags[flag_key] = True
+                datas[flag_key] = []
+                break
+            if keyword == end_kw:
+                if current_model is not None:
+                    setattr(current_model, attr_name, self._parse_iv_data(datas[flag_key]))
+                flags[flag_key] = False
+                break
+        return (
+            flags["in_pullup"], flags["in_pulldown"], flags["in_gc"], flags["in_pc"],
+            datas["in_pullup"], datas["in_pulldown"], datas["in_gc"], datas["in_pc"],
+        )
+
+    def _handle_attribute_kw(
+        self,
+        keyword: str,
+        rest_line: str,
+        current_model: IBISModel | None,
+    ) -> None:
+        """处理 ramp/c_comp/voltage range 等属性关键字（CC ≤ 4）。"""
+        if current_model is None:
+            return
+        if keyword == "ramp":
+            self._parse_ramp(current_model, rest_line.strip())
+        elif keyword == "c_comp":
+            self._parse_c_comp(current_model, rest_line)
+        # voltage range / typ / min / max: pass（保留原行为）
 
     def _collect_data_line(
         self,
