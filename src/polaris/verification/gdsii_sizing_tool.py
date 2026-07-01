@@ -176,108 +176,21 @@ def size_layer(
     - KLayout Region sized: https://klayout.org/klayout-pypi/overview/geometry/regions/
     """
     db = _import_klayout_db()
-    in_path = Path(gds_path)
-    out_path = Path(output_path)
-
-    if not in_path.exists():
-        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {gds_path}")
-
-    src_layer, src_dt = _validate_layer(layer, "layer")
-    tgt_layer, tgt_dt = _validate_layer(layer_result, "layer_result")
-    if (src_layer, src_dt) == (tgt_layer, tgt_dt):
-        raise ValueError(
-            f"layer 和 layer_result 不能相同: {(src_layer, src_dt)}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    # size_x_um 不能为 0（无意义）
-    if size_x_um == 0:
-        raise ValueError(
-            f"size_x_um 不能为 0（无 sizing 效果）。"
-            f"禁止 fall-back（R03）。"
-        )
-    # 处理 size_y_um
-    if size_y_um is None:
-        size_y_um = size_x_um
-    else:
-        if size_y_um == 0:
-            raise ValueError(
-                f"size_y_um 不能为 0（无 sizing 效果）。"
-                f"禁止 fall-back（R03）。"
-            )
-
-    is_isotropic = (size_x_um == size_y_um)
-
-    # 读取 GDSII
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
-    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
-    # 获取/验证层
-    li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
-    li_tgt = ly.layer(tgt_layer, tgt_dt)
-
-    # 提取 Region（递归遍历所有子 cell）
-    r = db.Region(top_cell.begin_shapes_rec(li_src))
-
-    # 操作前统计
-    area_before_um2 = float(r.area()) * dbu * dbu
-    count_before = int(r.count())
-    bbox_before: tuple[tuple[float, float], tuple[float, float]] | None = None
-    if count_before > 0:
-        bbox = r.bbox()
-        bbox_before = (
-            (float(bbox.left) * dbu, float(bbox.bottom) * dbu),
-            (float(bbox.right) * dbu, float(bbox.top) * dbu),
-        )
-
-    # 执行 sizing
-    # dbu 是 μm/dbu，size_um / dbu = size_dbu
-    dx_dbu = int(round(size_x_um / dbu))
-    dy_dbu = int(round(size_y_um / dbu))
-
-    if is_isotropic:
-        # 各向同性: region.sized(d)
-        r_result = r.sized(dx_dbu)
-    else:
-        # 各向异性: region.sized(dx, dy, mode=2)
-        # mode=2 是各向异性 sizing 必须的截止模式
-        # 来源: https://klayout.org/klayout-pypi/overview/geometry/regions/
-        r_result = r.sized(dx_dbu, dy_dbu, 2)
-
-    # 操作后统计
-    area_after_um2 = float(r_result.area()) * dbu * dbu
-    count_after = int(r_result.count())
-    bbox_after: tuple[tuple[float, float], tuple[float, float]] | None = None
-    if count_after > 0:
-        bbox = r_result.bbox()
-        bbox_after = (
-            (float(bbox.left) * dbu, float(bbox.bottom) * dbu),
-            (float(bbox.right) * dbu, float(bbox.top) * dbu),
-        )
-
-    # 将结果插入 layer_result
+    in_path, out_path, layers, size_y_um, is_isotropic = _validate_sizing_params(
+        gds_path, output_path, layer, layer_result, size_x_um, size_y_um
+    )
+    src_layer, src_dt, tgt_layer, tgt_dt = layers
+    ly, dbu, top_cell, li_src, li_tgt = _read_sizing_layout(
+        db, in_path, gds_path, top_cell_name,
+        src_layer, src_dt, tgt_layer, tgt_dt,
+    )
+    r_result, before_stats, after_stats = _execute_sizing(
+        db, top_cell, li_src, dbu, size_x_um, size_y_um, is_isotropic
+    )
+    area_before_um2, count_before, bbox_before = before_stats
+    area_after_um2, count_after, bbox_after = after_stats
     top_cell.shapes(li_tgt).insert(r_result)
-
-    # 写出
-    try:
-        ly.write(str(out_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    _write_sizing_gdsii(ly, out_path, output_path)
     logger.info(
         "GDSII sizing: %s → %s (%d,%d)→(%d,%d), "
         "dx=%.4fμm, dy=%.4fμm, isotropic=%s, "
@@ -289,7 +202,6 @@ def size_layer(
         area_before_um2, area_after_um2,
         count_before, count_after,
     )
-
     return SizingReport(
         input_path=str(gds_path),
         output_path=str(output_path),
@@ -307,6 +219,126 @@ def size_layer(
         bbox_after=bbox_after,
         top_cell_name=str(top_cell.name),
     )
+
+
+def _validate_sizing_params(
+    gds_path, output_path, layer, layer_result, size_x_um, size_y_um,
+) -> tuple:
+    """校验 size_layer 入参（R341 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (in_path, out_path, (src_layer, src_dt, tgt_layer, tgt_dt),
+         size_y_um, is_isotropic)。
+    """
+    in_path = Path(gds_path)
+    out_path = Path(output_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {gds_path}")
+    src_layer, src_dt = _validate_layer(layer, "layer")
+    tgt_layer, tgt_dt = _validate_layer(layer_result, "layer_result")
+    if (src_layer, src_dt) == (tgt_layer, tgt_dt):
+        raise ValueError(
+            f"layer 和 layer_result 不能相同: {(src_layer, src_dt)}。"
+            f"禁止 fall-back（R03）。"
+        )
+    if size_x_um == 0:
+        raise ValueError(
+            f"size_x_um 不能为 0（无 sizing 效果）。"
+            f"禁止 fall-back（R03）。"
+        )
+    if size_y_um is None:
+        size_y_um = size_x_um
+    elif size_y_um == 0:
+        raise ValueError(
+            f"size_y_um 不能为 0（无 sizing 效果）。"
+            f"禁止 fall-back（R03）。"
+        )
+    is_isotropic = (size_x_um == size_y_um)
+    return in_path, out_path, (src_layer, src_dt, tgt_layer, tgt_dt), size_y_um, is_isotropic
+
+
+def _read_sizing_layout(
+    db, in_path, gds_path, top_cell_name,
+    src_layer, src_dt, tgt_layer, tgt_dt,
+) -> tuple:
+    """读取 GDSII + 定位顶层 cell + 查找/创建层（R341 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, top_cell, li_src, li_tgt)。
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
+    li_tgt = ly.layer(tgt_layer, tgt_dt)
+    return ly, dbu, top_cell, li_src, li_tgt
+
+
+def _execute_sizing(
+    db, top_cell, li_src, dbu, size_x_um, size_y_um, is_isotropic,
+) -> tuple:
+    """提取 Region、执行 sizing、计算前后统计（R341 内部辅助）。
+
+    Returns:
+        (r_result, before_stats, after_stats)。
+        before_stats/after_stats: (area_um2, count, bbox)。
+
+    来源: KLayout Region sized
+        https://klayout.org/klayout-pypi/overview/geometry/regions/
+    """
+    # db.Region(top_cell.begin_shapes_rec(layer_index)) 递归遍历所有子 cell
+    r = db.Region(top_cell.begin_shapes_rec(li_src))
+    before_stats = _compute_region_stats(r, dbu)
+    # dbu 是 μm/dbu，size_um / dbu = size_dbu
+    dx_dbu = int(round(size_x_um / dbu))
+    dy_dbu = int(round(size_y_um / dbu))
+    if is_isotropic:
+        # 各向同性: region.sized(d)
+        r_result = r.sized(dx_dbu)
+    else:
+        # 各向异性: region.sized(dx, dy, mode=2)
+        # mode=2 是各向异性 sizing 必须的截止模式
+        r_result = r.sized(dx_dbu, dy_dbu, 2)
+    after_stats = _compute_region_stats(r_result, dbu)
+    return r_result, before_stats, after_stats
+
+
+def _compute_region_stats(r, dbu: float) -> tuple:
+    """计算 Region 的 area/count/bbox（R341 内部辅助）。
+
+    Returns:
+        (area_um2, count, bbox)，bbox 为 None 表示空 Region。
+    """
+    area_um2 = float(r.area()) * dbu * dbu
+    count = int(r.count())
+    bbox = None
+    if count > 0:
+        b = r.bbox()
+        bbox = (
+            (float(b.left) * dbu, float(b.bottom) * dbu),
+            (float(b.right) * dbu, float(b.top) * dbu),
+        )
+    return area_um2, count, bbox
+
+
+def _write_sizing_gdsii(ly, out_path, output_path) -> None:
+    """写出 sizing 结果 GDSII（R341 内部辅助，R03 禁止 fall-back）。"""
+    try:
+        ly.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
 
 
 # =============================================================================
