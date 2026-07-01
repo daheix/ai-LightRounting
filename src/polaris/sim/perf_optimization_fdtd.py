@@ -454,6 +454,19 @@ class MultiLevelAmrConfig:
     levels: tuple[AmrLevel, ...] = ()
 
     def __post_init__(self) -> None:
+        self._validate_main_params()
+        self._validate_level_nesting()
+
+    def _validate_main_params(self) -> None:
+        """校验主网格参数与 CFL 稳定性（R621 Extract Method 降低圈复杂度）。
+
+        来源:
+        - Taflove & Hagness, "Computational Electrodynamics", Artech 2005, §4.4 CFL
+        - Deng et al., IEEE JSTQE 2022, §III-A AMR FDTD
+          https://ieeexplore.ieee.org/document/9777421
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
+        """
         if self.n_main <= 10:
             raise ValueError(f"n_main 须 >10，实际 {self.n_main}")
         if self.dx_main <= 0.0 or self.dt_main <= 0.0 or self.n_steps <= 0:
@@ -467,6 +480,18 @@ class MultiLevelAmrConfig:
                 f"dt_main {self.dt_main:.3e} 超 CFL 上限 "
                 f"{self.dx_main / _C0:.3e}"
             )
+
+    def _validate_level_nesting(self) -> None:
+        """校验加密层区间嵌套关系（R621 Extract Method 降低圈复杂度）。
+
+        L2 区间须完全落在某 L1 区间内；L1 区间须落在主网格 [0,n_main) 内。
+
+        来源:
+        - Deng et al., IEEE JSTQE 2022, §III-A 多级 AMR 嵌套
+          https://ieeexplore.ieee.org/document/9777421
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
+        """
         for lv in self.levels:
             if lv.level == 1 and not (0 <= lv.i0 < lv.i1 < self.n_main):
                 raise ValueError(

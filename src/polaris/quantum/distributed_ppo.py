@@ -568,22 +568,22 @@ class DistributedPPOTrainer:
         """一次真实 PPO 训练步骤（Actor-Critic + GAE + PPO-Clip）。
 
         流程: 多 worker 并行采集 → 价值估计 → GAE 优势估计 → PPO-Clip 更新。
+
+        来源:
+        - Schulman et al., "PPO", arXiv:1707.06347, 2017
+          https://arxiv.org/abs/1707.06347
+        - Schulman et al., "GAE", arXiv:1506.02438, 2015
+          https://arxiv.org/abs/1506.02438
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
         """
         # 1. 多 worker 采集
-        rollouts = []
-        for w in self._workers:
-            r = self._collect_rollout(n_episodes_per_worker, w.worker_id)
-            rollouts.append(r)
-            w.episodes_completed += r["n_episodes"]
-            w.devices_processed += r["n_episodes"] * self.config.n_devices_per_circuit
+        rollouts = self._collect_worker_rollouts(n_episodes_per_worker)
 
         # 2. 聚合数据
-        all_obs = np.vstack([r["obs"] for r in rollouts])
-        all_next_obs = np.vstack([r["next_obs"] for r in rollouts])
-        all_actions = np.concatenate([r["actions"] for r in rollouts])
-        all_rewards = np.concatenate([r["rewards"] for r in rollouts])
-        all_old_log_probs = np.concatenate([r["old_log_probs"] for r in rollouts])
-        all_dones = np.concatenate([r["dones"] for r in rollouts])
+        all_obs, all_next_obs, all_actions, all_rewards, all_old_log_probs, all_dones = (
+            self._aggregate_rollouts(rollouts)
+        )
 
         # 3. 价值估计（V(s) 和 V(s')）
         all_values = self._value.forward(all_obs)
@@ -596,6 +596,82 @@ class DistributedPPOTrainer:
         )
 
         # 5. PPO 策略更新 + 价值函数更新（多 epoch）
+        policy_losses, value_losses = self._run_ppo_updates(
+            all_obs, all_actions, all_old_log_probs, advantages, returns,
+        )
+
+        # 6. 统计与结果
+        return self._build_step_result(
+            rollouts, policy_losses, value_losses, all_obs, n_episodes_per_worker,
+        )
+
+    def _collect_worker_rollouts(self, n_episodes_per_worker: int) -> list:
+        """多 worker 并行采集 rollout（R623 Extract Method 降低圈复杂度）。
+
+        Args:
+            n_episodes_per_worker: 每个 worker 的采集回合数。
+
+        Returns:
+            各 worker 的 rollout 字典列表。
+
+        来源:
+        - Schulman et al., "PPO", arXiv:1707.06347, 2017
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+        """
+        rollouts = []
+        for w in self._workers:
+            r = self._collect_rollout(n_episodes_per_worker, w.worker_id)
+            rollouts.append(r)
+            w.episodes_completed += r["n_episodes"]
+            w.devices_processed += r["n_episodes"] * self.config.n_devices_per_circuit
+        return rollouts
+
+    def _aggregate_rollouts(self, rollouts: list) -> tuple:
+        """聚合各 worker rollout 为统一张量（R623 Extract Method）。
+
+        Args:
+            rollouts: 各 worker 的 rollout 字典列表。
+
+        Returns:
+            (all_obs, all_next_obs, all_actions, all_rewards,
+             all_old_log_probs, all_dones) 六元组。
+
+        来源:
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+        """
+        all_obs = np.vstack([r["obs"] for r in rollouts])
+        all_next_obs = np.vstack([r["next_obs"] for r in rollouts])
+        all_actions = np.concatenate([r["actions"] for r in rollouts])
+        all_rewards = np.concatenate([r["rewards"] for r in rollouts])
+        all_old_log_probs = np.concatenate([r["old_log_probs"] for r in rollouts])
+        all_dones = np.concatenate([r["dones"] for r in rollouts])
+        return (all_obs, all_next_obs, all_actions, all_rewards,
+                all_old_log_probs, all_dones)
+
+    def _run_ppo_updates(
+        self,
+        all_obs: np.ndarray,
+        all_actions: np.ndarray,
+        all_old_log_probs: np.ndarray,
+        advantages: np.ndarray,
+        returns: np.ndarray,
+    ) -> tuple[list, list]:
+        """PPO 策略与价值函数多 epoch 更新（R623 Extract Method）。
+
+        Args:
+            all_obs: 所有观测。
+            all_actions: 所有动作。
+            all_old_log_probs: 旧策略对数概率。
+            advantages: GAE 优势。
+            returns: 价值回归目标。
+
+        Returns:
+            (policy_losses, value_losses) 每批次损失信息列表。
+
+        来源:
+        - Schulman et al., "PPO", arXiv:1707.06347, 2017, §3 PPO-Clip
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+        """
         policy_losses, value_losses = [], []
         batch_size = min(self.config.batch_size, len(all_obs))
         for epoch in range(self.config.n_epochs):
@@ -618,8 +694,31 @@ class DistributedPPOTrainer:
                 )
                 policy_losses.append(policy_info)
                 value_losses.append(value_info)
+        return policy_losses, value_losses
 
-        # 6. 统计
+    def _build_step_result(
+        self,
+        rollouts: list,
+        policy_losses: list,
+        value_losses: list,
+        all_obs: np.ndarray,
+        n_episodes_per_worker: int,
+    ) -> dict[str, Any]:
+        """汇总训练统计并更新全局状态（R623 Extract Method）。
+
+        Args:
+            rollouts: 各 worker rollout 列表。
+            policy_losses: 策略损失信息列表。
+            value_losses: 价值损失信息列表。
+            all_obs: 所有观测（用于计数）。
+            n_episodes_per_worker: 每个 worker 的采集回合数。
+
+        Returns:
+            训练步骤结果字典。
+
+        来源:
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+        """
         self._global_step += 1
         mean_reward = float(np.mean([r["mean_reward"] for r in rollouts]))
         if mean_reward > self._best_reward:
