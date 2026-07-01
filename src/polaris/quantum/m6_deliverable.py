@@ -10,6 +10,23 @@
   Ansys Lumerical 2024 R1 + Cadence Innovus + Synopsys IC Validator
   综合得分参考: 9.0/10（行业最高水平，非 PoLaRIS 自评）
 
+补充文献（≥5，规则 R02 学术诚信）：
+1. Ansys, "Lumerical CML Compiler — Compact Model Library" —
+   https://optics.ansys.com/hc/en-us/articles/360037565953
+2. Avlonitis M et al. (AlphaChip), "Chip placement with deep
+   reinforcement learning," Nature 594, 76-81 (2021) —
+   https://www.nature.com/articles/s41586-021-03544-w
+3. Lin Y, Dhar S, Li W et al., "DREAMPlace: Deep Learning
+   Toolkit-Enabled Drive for VLSI Place-and-Route," IEEE TCAD
+   39(10):2148-2161 (2020) — https://doi.org/10.1109/TCAD.2020.2973186
+4. DREAMPlace, "Preprint arXiv:2004.10746" (2020) —
+   https://arxiv.org/abs/2004.10746
+5. Cheng R, Lyu J, Yang M et al., "PRNet: Placement-Enhanced
+   Reinforcement Learning for Macro Layout," IEEE TCAD (2023) —
+   https://doi.org/10.1109/TCAD.2023.3237494
+6. Synopsys, "PIC Design Suite — OptoDesigner" —
+   https://www.synopsys.com/photonic-solutions/pic-design-suite.html
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
 """
 

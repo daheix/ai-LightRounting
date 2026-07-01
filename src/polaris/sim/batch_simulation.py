@@ -22,6 +22,21 @@
 - NIST Engineering Statistics Handbook §6, Process Control
   https://www.itl.nist.gov/div898/handbook/
 
+补充文献（≥5，规则 R02 学术诚信）：
+1. Metropolis N, Ulam S, "The Monte Carlo Method," J. Am. Stat.
+   Assoc. 44(247):335-341 (1949) — https://doi.org/10.2307/2280232
+2. Bogaerts W et al., "Layout-aware yield prediction of photonic
+   circuits" (2018) — https://fib.intec.ugent.be/download/pub_4125.pdf
+3. NIST/SEMATECH, "e-Handbook of Statistical Methods, §6 Process
+   Control" — https://www.itl.nist.gov/div898/handbook/
+4. NumPy, "Random sampling (numpy.random) — Generator & PCG64" —
+   https://numpy.org/doc/stable/reference/random/index.html
+5. SciPy, "Statistical functions (scipy.stats) — percentile &
+   distribution" — https://docs.scipy.org/doc/scipy/reference/stats.html
+6. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R09 优先用三方库。
 """
 

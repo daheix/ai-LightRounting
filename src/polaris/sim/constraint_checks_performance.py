@@ -6,6 +6,22 @@
 - LiDAR ISPD'25: 串扰惩罚
   https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - PoLaRIS 商业差距分析 P0-1，对标 Lumerical 多物理场仿真
+
+补充文献（≥5，规则 R02 学术诚信）：
+1. LiDARPlace (ISPD'25), "Photonic LiDAR placement with crosstalk
+   penalty" — https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+2. Reed GT, Mashanovich G, Gardes FY, Thomson DJ, "Silicon optical
+   modulators," Nature Photonics 4, 518-526 (2010) —
+   https://doi.org/10.1038/nphoton.2010.179
+3. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
+4. gdsfactory, "Python library for photonics layout & DRC checks" —
+   https://gdsfactory.github.io/gdsfactory/
+5. Ansys, "Lumerical multi-physics simulation suite" —
+   https://optics.ansys.com/
+6. KLayout, "Open-source GDSII viewer with DRC scripting" —
+   https://www.klayout.de/
 """
 
 from __future__ import annotations
