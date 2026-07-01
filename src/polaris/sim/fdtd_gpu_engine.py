@@ -30,6 +30,7 @@ R31: 拆分为独立模块，单文件 ≤800 行（规则 7.1）
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import time
 from dataclasses import dataclass
@@ -178,13 +179,13 @@ class GPUFDTDEngine:
 
     @staticmethod
     def _check_jax() -> bool:
-        """检查 JAX 是否可用。"""
-        try:
-            import jax  # noqa: F401
+        """检查 JAX 是否可用。
 
-            return True
-        except ImportError:
-            return False
+        R03 合规：用 importlib.util.find_spec 做轻量探测，
+        避免 except ImportError: return False 的 fall-back 写法。
+        真正使用 JAX 后端时才实际 import，若 import 失败由调用方 fail-fast raise。
+        """
+        return importlib.util.find_spec("jax") is not None
 
     def _cfl_dt(self) -> float:
         """计算 CFL 稳定性条件的时间步长。

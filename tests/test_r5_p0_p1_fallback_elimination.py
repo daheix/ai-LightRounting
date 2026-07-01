@@ -126,6 +126,36 @@ class TestR5P03GpuStrategyCompliance:
         docstring = src[:docstring_end] if docstring_end > 0 else src[:1000]
         assert "🚫不参与 GPU" in docstring or "R04" in docstring, "docstring 必须标注 R04"
 
+    def test_check_jax_no_fallback(self) -> None:
+        """R03 回归：_check_jax 不得使用 except:return False 兜底。
+
+        验证 _check_jax 使用 importlib.util.find_spec 探测 JAX 可用性，
+        而非 try/except ImportError: return False 的 fall-back 写法。
+        """
+        import ast
+        from polaris.sim.fdtd_gpu_engine import GPUFDTDEngine
+
+        gpu_file = Path(__file__).parent.parent / "src/polaris/sim/fdtd_gpu_engine.py"
+        src = gpu_file.read_text(encoding="utf-8")
+        assert "find_spec" in src, "_check_jax 应使用 importlib.util.find_spec"
+        # AST 精确检查：禁止 except handler 体为 return False
+        tree = ast.parse(src)
+        violations = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ExceptHandler):
+                for stmt in node.body:
+                    if (
+                        isinstance(stmt, ast.Return)
+                        and isinstance(stmt.value, ast.Constant)
+                        and stmt.value.value is False
+                    ):
+                        violations.append(node.lineno)
+        assert not violations, (
+            f"fdtd_gpu_engine 第 {violations} 行存在 except:return False fall-back（R03）"
+        )
+        # _check_jax 仍返回 bool
+        assert isinstance(GPUFDTDEngine._check_jax(), bool)
+
 
 # =============================================================================
 # R5-P1-1: opto_electrical.py 2.0 → 3.0 dB/cm
