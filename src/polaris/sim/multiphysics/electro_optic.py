@@ -67,6 +67,17 @@ RegularGridInterpolator（线性插值，三阶样条可选）重采样 Δn 场�
 
 规则依据：project_rules.md 规则 14（禁止 fall-back，失败 raise）
 /规则 18（学术诚信）/规则 26（GPU 不参与，纯 numpy/scipy CPU）。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- EO-Contract 底层逻辑：DDM→OPTIC 接口契约：本模块仅产出物理量（Δn 场、Δn_eff 标量），不耦合光学求解器实现。
+  支持理论：Soref & Bennett 1987 'Electrooptical effects in silicon' IEEE J. Quantum Electron. 23(1) 123-129；本模块既有文献。
+  案例：plasma dispersion effect Δn 计算，对齐 Lumerical CHARGE→MODE 流程。
+- EO-Resample 底层逻辑：同 multiphysics/__init__.py MP-Resample，本模块复用。
+  支持理论：同 MP-Resample。
+  案例：同 MP-Resample。
 """
 
 from __future__ import annotations

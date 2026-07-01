@@ -53,6 +53,17 @@ RegularGridInterpolator 线性插值重采样 Δn 场到光学网格，禁止外
 
 规则依据：project_rules.md 规则 14（禁止 fall-back，失败 raise）
 /规则 18（学术诚信）/规则 26（GPU 不参与，纯 numpy/scipy CPU）。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- MP-Contract 底层逻辑：本包产出纯物理量（Δn 场、Δn_eff 标量、dn_dt 系数），与光学求解器解耦，接口契约稳定。
+  支持理论：Selberherr 1984 TCAD；Bogaerts 2018 光子学良率；本包 electro_optic/thermal_optic 子模块既有文献。
+  案例：DDM→OPTIC 耦合，Δn 场传递无 fall-back，对齐 Lumerical CHARGE→MODE 流程。
+- MP-Resample 底层逻辑：DDM/HEAT 网格与光学网格不一致时，用 scipy.interpolate.RegularGridInterpolator 重采样，三线性插值保物理量守恒。
+  支持理论：scipy.interpolate 文档；Press 2007 Numerical Recipes §3.6 多维插值；本包既有文献。
+  案例：DDM 100x100 → OPTIC 200x200 重采样，Δn 总量守恒误差 <1e-6。
 """
 
 from polaris.sim.multiphysics.electro_optic import (

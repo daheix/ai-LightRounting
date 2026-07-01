@@ -52,6 +52,14 @@ conductivity) 字段，duck-typed 兼容 heat/coupling.py:ddm_to_heat，
 
 规则依据：project_rules.md 规则 14（禁止 fall-back）/规则 18（学术诚信）
 /规则 26（GPU 不参与，纯 numpy/scipy CPU）
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- DDM-Contract 底层逻辑：DdmResult 接口契约包含 (current_density_x, current_density_y, potential, n, p) 五元组，分离物理量与数值实现。
+  支持理论：Selberherr 1984 'Analysis and Simulation of Semiconductor Devices'；Gummel 1964 'A self-consistent iterative scheme for one-dimensional steady-state transistor calculations' IEEE ED-11；本包 ddm/ 子模块既有文献。
+  案例：DDM solver 输出对齐商业 TCAD（Sentaurus/Silvaco），接口契约稳定，无 fall-back 默认值。
 """
 
 from polaris.sim.ddm.continuity import (

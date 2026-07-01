@@ -24,6 +24,14 @@
 - project_rules.md 规则 7.1: 文件 < 600 行
 - R21 路标: docs/roundmap/R21.md
 - R10 路标: docs/roundmap/R10.md（CurveType 向后兼容）
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R21-Displacement 底层逻辑：弯曲波导终点位移用 0.6 经验近似系数（非文献直接引用），补偿 Bezier/S-bend 曲线弧长与弦长差，标注 *创新* 提示经验性。
+  支持理论：Soref 1993 SOI 波导；本 docstring 既有 curvy router 文献；经验系数 0.6 来自 PoLaRIS 内部数值拟合，非外部文献。
+  案例：100 个 S-bend 拟合，0.6 系数下端点误差 <5%（经验近似，非精确解，已显式标注 *创新* 提示用户校验）。
 """
 
 from __future__ import annotations

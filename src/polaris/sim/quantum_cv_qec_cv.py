@@ -20,6 +20,14 @@
 ## 补充文献（R02 学术诚信补齐）
 - Gottesman-Kitaev-Preskill 2001 Phys Rev A 64:012310: https://doi.org/10.1103/PhysRevA.64.012310
 - Sivak et al. 2023 GKP review: https://arxiv.org/abs/2308.02913
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R551-CV-Sub 底层逻辑：R551 子模块拆分，CV 高斯态表示同 quantum_cv_qec.py R551-CV-State。
+  支持理论：Weedbrook et al. 2012 Rev. Mod. Phys. 84 621；本 docstring 既有文献。
+  案例：同 R551-CV-State。
 """
 
 from __future__ import annotations

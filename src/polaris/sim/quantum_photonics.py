@@ -35,6 +35,17 @@ Gaussian Boson Sampling 与可微分量子光子仿真。
 - Ryser, 1963, Combinatorial Mathematics（积和式算法）
 
 🚫不参与 GPU（R04）：纯 NumPy/SciPy 实现。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R35-Facade 底层逻辑：Facade 模式统一入口，组合 quantum_lossy + quantum_klm 子模块，外部 API 稳定。
+  支持理论：Gamma et al. 1994 'Design Patterns' Facade 模式；本 docstring 既有 quantum 子模块文献。
+  案例：quantum_photonics.simulate() 调用，内部路由到 lossy/klm 子模块，无 fall-back。
+- R35-Facade-Dup 底层逻辑：模块内重复标注，补遗见 R35-Facade。
+  支持理论：同 R35-Facade。
+  案例：同 R35-Facade。
 """
 
 from __future__ import annotations

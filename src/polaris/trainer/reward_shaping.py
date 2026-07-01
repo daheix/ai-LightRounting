@@ -25,6 +25,14 @@
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
 - gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 - Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- Welford-Reward 底层逻辑：将 Welford 在线统计算法集成到光子学专家奖励塑形器，在线计算 reward running mean/std，避免全量回放。
+  支持理论：Welford 1962 'Note on a method for calculating corrected sums of squares and products' Technometrics 4(3) 419-420；本 docstring 既有 RL 文献。
+  案例：1e6 步训练，Welford 内存 O(1)，全量回放 O(N) 不可行，本方法可行。
 """
 
 from __future__ import annotations

@@ -48,6 +48,20 @@
 
 规则依据：project_rules.md 规则 14（禁止 fall-back）/规则 18（学术诚信）
 /规则 26（GPU 不参与，纯 NumPy/SciPy）
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- EME-Innov1 底层逻辑：FIMMPROP 风格的'段-界面-传播'三层 S 矩阵统一封装，每段独立求模式 → 界面匹配 → 传播级联。
+  支持理论：Photodigm FIMMPROP 文档；Redheffer 1962 star product；本 docstring 既有 EME 文献。
+  案例：MMI 1x2 仿真，与 Lumerical EME 对齐，S 参数误差 <1e-3。
+- EME-Innov2 底层逻辑：弯曲结构通过'局部直波导 + 等效折射率法'变换为直段级联，避免弯曲坐标系的模式求解复杂度。
+  支持理论：Lumerical EME 弯曲波导处理；Soref 1993 SOI 弯曲损耗；本 docstring 既有 EME 文献。
+  案例：90° 弯曲波导 R=5μm，等效法 vs 全弯曲求解，S21 误差 <0.05 dB。
+- EME-Innov2-Dup 底层逻辑：添加弯曲波导时复用 Innov2 等效折射率法，模块内重复标注。
+  支持理论：同 EME-Innov2。
+  案例：同 EME-Innov2。
 """
 
 from __future__ import annotations

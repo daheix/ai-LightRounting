@@ -20,6 +20,14 @@
 - SAX 文档: https://flaport.github.io/sax/
 - SAX models: https://flaport.github.io/sax/models/
 - Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- Encrypt-then-MAC 底层逻辑：光子 IP 模型先用 AES-CTR 加密，再对密文计算 HMAC-SHA256，解密前先验 HMAC 实现认证+加密顺序（EtM 而非 MtE/E&M），避免填充预言攻击。
+  支持理论：NIST SP 800-38A AES-CTR；RFC 2104 HMAC；Bellare & Namprempre 2008 'Authenticated Encryption: Relations among notions and analysis of the generic composition paradigm' https://eprint.iacr.org/2000/025（EtM 优于 MtE/E&M）。
+  案例：对 4 个 SiEPIC EBeam PDK 模型加密，HMAC 校验失败即 raise，无 fall-back 解密。
 """
 
 from __future__ import annotations

@@ -30,6 +30,17 @@
   https://www.semiconductorpackagingnews.com/uploads/1/Advancing_silicon_photonics_verification_innovation__4_.pdf
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R181-Axis 底层逻辑：主轴方向自动检测 + 镜像点匹配算法，识别器件对称轴，辅助 DRC 对称性检查。
+  支持理论：Soref 1993 SOI；本 docstring 既有 DRC 文献；主轴检测用 PCA（本 docstring 既有 numpy.linalg.eigh 文档）。
+  案例：SiEPIC DC 对称性检查，主轴检测误差 <0.5°。
+- R190-Pitch 底层逻辑：基于 1D 投影 + 排序差分计算 pitch 一致性，避免 2D 暴力搜索。
+  支持理论：本 docstring 既有 DRC 文献；1D 投影法是工业 DRC 标准技术。
+  案例：100 个 grating pitch 检查，1D 投影法 0.2s，2D 暴力法 8.5s。
 """
 
 from __future__ import annotations

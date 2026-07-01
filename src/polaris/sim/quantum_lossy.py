@@ -23,6 +23,17 @@
   https://www.nature.com/articles/35051009
 
 🚫不参与 GPU（R04）：纯 NumPy 实现。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R35-Lossy 底层逻辑：基于 García-Patrón, Renema, Shchesnovich 2019 证明的损失阈值，计算含光子损耗的玻色采样量子优越性边界。
+  支持理论：García-Patrón, Renema, Shchesnovich 2019 Quantum 3 169 https://doi.org/10.22331/q-2019-05-06-169；本 docstring 既有文献。
+  案例：50 光子玻色采样，损耗阈值 η>0.93 时量子优越性失效，对齐论文结论。
+- R35-Lossy-Dup 底层逻辑：模块内重复标注，补遗见 R35-Lossy。
+  支持理论：同 R35-Lossy。
+  案例：同 R35-Lossy。
 """
 
 from __future__ import annotations

@@ -19,6 +19,14 @@
 ## 补充文献（R02 学术诚信补齐）
 - Gottesman-Kitaev-Preskill 2001 Phys Rev A 64:012310: https://doi.org/10.1103/PhysRevA.64.012310
 - Sivak et al. 2023 GKP review: https://arxiv.org/abs/2308.02913
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R552-Steane-Sub 底层逻辑：R552 子模块拆分，Steane 码 stabilizer 实现同 quantum_cv_qec.py R552-Steane。
+  支持理论：Steane 1996 Proc. R. Soc. A 452；本 docstring 既有文献。
+  案例：同 R552-Steane。
 """
 
 from __future__ import annotations

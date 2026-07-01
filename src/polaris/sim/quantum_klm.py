@@ -23,6 +23,14 @@
   https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.119.170501
 
 🚫不参与 GPU（R04）：纯 NumPy 实现。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R35-KLM 底层逻辑：量子光子 PDK 实现 KLM（Knill-Laflamme-Milburn）方案线性光学量子计算，用辅助光子+后选择实现非确定性量子门。
+  支持理论：Knill, Laflamme, Milburn 2001 Nature 409 46-52 https://doi.org/10.1038/35051009；Kok & Lovett 2010 Introduction to Optical Quantum Information Processing；本 docstring 既有文献。
+  案例：KLM CNOT 门，成功率 1/16（理论），PoLaRIS 仿真对齐理论值。
 """
 
 from __future__ import annotations

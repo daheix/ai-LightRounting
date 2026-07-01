@@ -21,6 +21,14 @@ a^k·η^(n/2) 实现（Kok & Lovett 2010 §3.2），密度矩阵演化保持
 - Gottesman-Kitaev-Preskill 2001 Phys Rev A 64:012310: https://doi.org/10.1103/PhysRevA.64.012310
 - Sivak et al. 2023 GKP review: https://arxiv.org/abs/2308.02913
 - Mirhoseini et al. 2021 Nature AlphaChip: https://www.nature.com/articles/s41586-021-03544-w
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- R554-Loss-Sub 底层逻辑：R554 子模块拆分，光子损耗 Kraus 算子同 quantum_cv_qec.py R554-Loss。
+  支持理论：Gardiner & Zoller 2004 Quantum Noise；本 docstring 既有文献。
+  案例：同 R554-Loss。
 """
 
 from __future__ import annotations

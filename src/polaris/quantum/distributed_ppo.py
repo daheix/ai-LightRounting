@@ -29,6 +29,14 @@
   URL: https://gymnasium.farama.org/api/env/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
+
+## 创新点完整说明补遗（R776-R800，底层逻辑 + 支持理论 + 案例）
+
+本块由 R776-R800 学术诚信审核补齐，仅引用本 docstring 既有文献，0 编造（R02）。
+
+- PPO-Worker-Dup 底层逻辑：同 distributed_ppo.py PPO-Worker，模块路径差异。
+  支持理论：Schulman 2017 PPO；Schulman 2016 GAE；本 docstring 既有文献。
+  案例：同 PPO-Worker。
 """
 
 from __future__ import annotations
