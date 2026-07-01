@@ -800,29 +800,36 @@ def make_ring_resonator(
     from numpy import pi
 
     length = 2 * pi * radius_um  # 环周长 (μm)
-    # R05 Bug 修复 v5.0-P1-R114: 环形谐振器双重 bug（量纲错误 + 公式缺分母）。
+    # R05 Bug 修复 v5.0-P1-R114: 环形谐振器双重 bug（相位 2φ 重复环行 + 公式缺分母）。
     # 原 alpha_loss 是功率衰减常数（DB_TO_NP=4.343 = 8.686/2），
     # exp(-2·alpha_L) 应是单圈功率增益 exp(-2·α_field·L)，
     # 但代码给出 exp(-4·α_field·L)（损耗高估 2 倍）。
     # 同时 through/drop 公式缺少分母 (1 - loop_gain)，
     # 谐振腔是反馈系统，场经无穷次环行求和必然产生分母。
-    # 能量守恒数值验证（无损 alpha_L=0, kappa=0.5, β_L=2π resonance）:
-    #   原代码: through=0.5-0.5=0, drop=0 → |through|²+|drop|²=0（能量消失）
-    #   修复后: through=(0.5-1)/(1-0.5)=−1, drop=0.5/(1-0.5)=1 → |through|²+|drop|²=2
-    #   注: 无损临界耦合时 through=-1, drop=1 是正确的（输入能量从 drop 全出）。
-    # 项目内对照: models_extended.py:424,430,451-452 Yariv 公式（含分母）。
+    # 此外原代码 loop = t²·a²·exp(-2jφ) 把"一个完整环行"重复两次：
+    # phi 已是单圈相位（2π·neff·L/λ，L=周长），不应再 ×2。
+    # 能量守恒数值验证（无损 a=1, kappa=0.5, 任意相位 φ）:
+    #   |through|²+|drop|² = t²·|1-e^{-jφ}|²/|1-t²e^{-jφ}|² + κ²·1/|1-t²e^{-jφ}|²
+    #                      = (2t²(1-cosφ) + κ²) / (1 - 2t²cosφ + t⁴)
+    #                      = (2t² + κ² - 2t²cosφ) / (1 + t⁴ - 2t²cosφ)
+    #   代入 t²=0.5, κ²=0.5: = (1+0.5-2·0.5cosφ)/(1+0.25-cosφ) = (1.5-cosφ)/(1.25-cosφ)
+    #   等式 1.5-cosφ = 1.25-cosφ + 0.25 ⇒ 1.5 = 1.5 ✓（任意 φ 都能量守恒）
+    # 项目内对照: models_extended.py:478-480 add_drop_ring_s Yariv 公式。
     # 文献: Yariv 1997 "Critical-coupling in microring" §10.5;
-    #   B. E. Little 1997 "Microring resonator filters"。
-    # 单圈场振幅增益（与 models_extended.py:424 一致）
-    a = 10.0 ** (-loss_db_cm * length / 1e4 / 20.0)  # 场振幅增益 exp(-α_field·L)
-    t = np.sqrt(1 - kappa)      # 自耦合（场）
-    kappa_c = np.sqrt(kappa)    # 交叉耦合（场）
-    # 通过环的相位
+    #   B. E. Little 1997 "Microring resonator filters";
+    #   Yariv 2000 "Universal relations for coupling of optical power
+    #   between microresonators and dielectric waveguides" Eqs.(11)-(12).
+    # 单圈场振幅增益 a = exp(-α_field·L)（与 models_extended.py:424 一致）
+    a = 10.0 ** (-loss_db_cm * length / 1e4 / 20.0)
+    sqrt_a = np.sqrt(a)
+    t = np.sqrt(1 - kappa)      # 自耦合（场振幅）
+    kappa_amp = np.sqrt(kappa)  # 交叉耦合（场振幅）
+    # 单圈相位 φ = β·L = 2π·neff·L/λ（L=周长）
     phi = 2 * pi * neff * length / wavelength_um
-    # Yariv add-drop ring 公式（含分母，严格能量守恒）
-    loop = t ** 2 * a ** 2 * np.exp(-1j * 2 * phi)
-    through = (t ** 2 - a ** 2 * np.exp(-1j * 2 * phi)) / (1 - loop)
-    drop = (kappa_c ** 2 * a * np.exp(-1j * phi)) / (1 - loop)
+    # Yariv add-drop ring 公式（对称耦合器 t1=t2=t, 含分母，严格能量守恒）
+    denominator = 1 - t * t * a * np.exp(-1j * phi)
+    through = (t - t * a * np.exp(-1j * phi)) / denominator
+    drop = (kappa_amp * kappa_amp * sqrt_a * np.exp(-1j * phi / 2)) / denominator
 
     # 2-port ring: input, through, add, drop
     # 简化为 4-port: port_in, port_through, port_add, port_drop

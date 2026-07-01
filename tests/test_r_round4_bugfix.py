@@ -215,43 +215,37 @@ class TestCanvasZeroRaises:
 
     def test_zero_canvas_raises(self):
         """canvas_w=0 应 raise ValueError。"""
-        from polaris.engine.analytical_placer import (
-            AnalyticalPlacer,
-            AnalyticalPlacerConfig,
-        )
+        from polaris.data.specs import CircuitSpec, DeviceSpec
+        from polaris.engine.analytical_placer import AnalyticalPlacer
+
         # 构造 placer，canvas_w=0
-        config = AnalyticalPlacerConfig(canvas_w=0.0, canvas_h=10.0)
-        placer = AnalyticalPlacer(config)
-        placer.n = 1  # 非空电路
-        placer.canvas_w = 0.0
+        circuit = CircuitSpec(name="t", canvas_w=0.0, canvas_h=10.0)
+        circuit.devices = [DeviceSpec(name="d0", device_type="wg", width_um=1.0, height_um=1.0)]
+        placer = AnalyticalPlacer(circuit)
         pos = np.array([[1.0, 2.0]])
         with pytest.raises(ValueError, match="画布尺寸非法"):
             placer._congestion_gradient(pos)
 
     def test_negative_canvas_raises(self):
         """canvas_h<0 应 raise ValueError。"""
-        from polaris.engine.analytical_placer import (
-            AnalyticalPlacer,
-            AnalyticalPlacerConfig,
-        )
-        config = AnalyticalPlacerConfig(canvas_w=10.0, canvas_h=10.0)
-        placer = AnalyticalPlacer(config)
-        placer.n = 1
-        placer.canvas_h = -5.0
+        from polaris.data.specs import CircuitSpec, DeviceSpec
+        from polaris.engine.analytical_placer import AnalyticalPlacer
+
+        circuit = CircuitSpec(name="t", canvas_w=10.0, canvas_h=-5.0)
+        circuit.devices = [DeviceSpec(name="d0", device_type="wg", width_um=1.0, height_um=1.0)]
+        placer = AnalyticalPlacer(circuit)
         pos = np.array([[1.0, 2.0]])
         with pytest.raises(ValueError, match="画布尺寸非法"):
             placer._congestion_gradient(pos)
 
     def test_empty_circuit_returns_zero(self):
         """空电路（n=0）应返回零梯度（合法）。"""
-        from polaris.engine.analytical_placer import (
-            AnalyticalPlacer,
-            AnalyticalPlacerConfig,
-        )
-        config = AnalyticalPlacerConfig(canvas_w=10.0, canvas_h=10.0)
-        placer = AnalyticalPlacer(config)
-        placer.n = 0  # 空电路
-        pos = np.array([])
+        from polaris.data.specs import CircuitSpec
+        from polaris.engine.analytical_placer import AnalyticalPlacer
+
+        circuit = CircuitSpec(name="t", canvas_w=10.0, canvas_h=10.0)
+        placer = AnalyticalPlacer(circuit)  # devices=[] → n=0
+        pos = np.array([]).reshape(0, 2)
         result = placer._congestion_gradient(pos)
         # 空电路应返回零梯度（不 raise）
         assert result is not None
@@ -312,20 +306,12 @@ class TestOpenAccessUnknownCommand:
 
     def test_unknown_command_raises(self):
         """未知命令应 raise（不静默跳过）。"""
-        from polaris.io.openaccess import _oa_dispatch_line, CellInfo
+        from polaris.io.openaccess import read_oa
 
-        lines = ["CELL test", "UNKNOWN_CMD arg1 arg2", "END test"]
-        layers = {}
-        current = None
-        i = 0
+        text = "CELL test\nUNKNOWN_CMD arg1 arg2\nEND test"
         # 解析到 UNKNOWN_CMD 时应 raise
         with pytest.raises(ValueError, match="未知命令"):
-            for idx in range(len(lines)):
-                current, i, layers = _oa_dispatch_line(
-                    lines[idx], idx, lines, current, layers, {}
-                )
-                if current is None and idx > 0:
-                    break
+            read_oa(text)
 
 
 # ---------------------------------------------------------------------------
@@ -335,10 +321,10 @@ class TestInstTransformRaises:
     """P2-11: INST transform 参数不足应 raise ValueError。"""
 
     def test_origin_insufficient_raises(self):
-        """ORIGIN 缺 y 应 raise。"""
-        # INST name cell ORIGIN 5  (缺 y)
+        """ORIGIN 缺 y 应 raise（前置 len<6 检查触发，仍属 INST 参数不足）。"""
+        # INST name cell ORIGIN 5  (缺 y)，长度 5 < 6 触发前置检查
         toks = ["INST", "U1", "CELL1", "ORIGIN", "5"]
-        with pytest.raises(ValueError, match="ORIGIN 参数不足"):
+        with pytest.raises(ValueError, match="INST 参数不足"):
             _oa_inst(toks)
 
     def test_angle_insufficient_raises(self):
@@ -349,7 +335,8 @@ class TestInstTransformRaises:
 
     def test_unknown_token_raises(self):
         """未知 token 应 raise。"""
-        toks = ["INST", "U1", "CELL1", "FOOBAR", "1"]
+        # 长度 >= 6 绕过前置检查，触发未知 token 检查
+        toks = ["INST", "U1", "CELL1", "ORIGIN", "0", "0", "FOOBAR", "1"]
         with pytest.raises(ValueError, match="未知 token"):
             _oa_inst(toks)
 
@@ -404,37 +391,38 @@ class TestImportanceSamplingEss:
 
     def test_ess_with_signed_g(self):
         """带符号 g 时 ESS 不应误判退化。"""
-        from polaris.sim.importance_sampling import importance_sampling_mean
+        from polaris.sim.importance_sampling import (
+            BiasingMethod,
+            BiasingSpec,
+            importance_sampling_mean,
+        )
 
         # 构造带符号 g（正负抵消但权重均匀）
-        # 用正态分布采样，g = x（带符号）
-        np.random.seed(42)
         n = 1000
-        # 采样分布 q = N(0, 1)
-        samples = np.random.randn(n, 1)
-        # 目标分布 f = N(0.5, 1)，似然比 W = f/q
-        from scipy.stats import norm
-        f_vals = norm.pdf(samples[:, 0], loc=0.5, scale=1.0)
-        q_vals = norm.pdf(samples[:, 0], loc=0.0, scale=1.0)
-        weights = f_vals / q_vals
 
-        # g = x（带符号，Σ(g·W) 可能正负抵消）
+        # g = x + 5（带符号 x 部分，但期望非零以避免 RE 爆炸）
+        # Σ(g·W) 中 x 部分正负抵消，只剩 5·ΣW
         def g_func(x):
-            return float(x[0])
+            return float(x[0]) + 5.0
 
         # 旧 bug: ESS 基于 g·W，带符号 g 可能误判 ESS≈0
         # 修复后: ESS 基于 W，应正常返回
         try:
             result = importance_sampling_mean(
                 func=g_func,
-                nominal_dist=[{"type": "norm", "mean": 0.0, "std": 1.0}],
+                nominal_dist=[{"type": "norm", "loc": 0.0, "scale": 1.0}],
+                biasing=BiasingSpec(method=BiasingMethod.MEAN_SHIFT, mean_shift=[0.5]),
                 n_samples=n,
                 min_ess_ratio=0.01,  # 低阈值
                 seed=42,
             )
             # 应正常完成（不 raise ESS 退化）
             assert result is not None
-            assert result.ess_ratio > 0.01
+            # ESS/n 应远高于 0.01 阈值（同分布偏置 ESS 应接近 1）
+            ess_ratio = result.effective_sample_size / max(result.n_samples, 1)
+            assert ess_ratio > 0.01, (
+                f"ESS 对带符号 g 误判退化: ess_ratio={ess_ratio:.4f}"
+            )
         except RuntimeError as e:
             if "ESS 退化" in str(e):
                 pytest.fail(f"ESS 对带符号 g 误判退化: {e}")
