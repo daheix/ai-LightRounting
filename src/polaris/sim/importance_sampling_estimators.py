@@ -291,6 +291,61 @@ def importance_sampling_yield(
     )
 
 
+def _validate_is_mean_params(d: int, n_samples: int, min_ess_ratio: float) -> None:
+    """校验 importance_sampling_mean 输入参数（R628 Extract Method）。"""
+    if d == 0:
+        raise ValueError("nominal_dist 不能为空")
+    if n_samples <= 0:
+        raise ValueError(f"n_samples 必须 > 0，得到 {n_samples}")
+    if not (0.0 < min_ess_ratio < 1.0):
+        raise ValueError(f"min_ess_ratio 必须在 (0, 1)，得到 {min_ess_ratio}")
+
+
+def _evaluate_g_values(
+    func: Callable[[np.ndarray], float], samples: np.ndarray, n_samples: int
+) -> np.ndarray:
+    """评估性能函数 g(x) 并收集结果（R628 Extract Method）。
+
+    Raises:
+        RuntimeError: func 评估失败（禁止 fall-back）。
+    """
+    g_values = np.empty(n_samples, dtype=float)
+    for i in range(n_samples):
+        try:
+            g_values[i] = float(func(samples[i]))
+        except Exception as e:
+            raise RuntimeError(
+                f"func 评估失败 (样本 {i}): {type(e).__name__}: {e}。"
+                f"禁止 fall-back（规则 14.1）。"
+            ) from e
+    return g_values
+
+
+def _check_is_mean_reliability(
+    ess_ratio: float, re: float, min_ess_ratio: float
+) -> None:
+    """检查 IS 估计可靠性（ESS 退化 + 相对误差，R628 Extract Method）。
+
+    Raises:
+        RuntimeError: ESS 退化或相对误差过大。
+    """
+    if ess_ratio < min_ess_ratio:
+        raise RuntimeError(
+            f"ESS 退化: ESS/n = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
+            f"权重过度集中，IS 估计不可靠。禁止 fall-back（R03）。"
+        )
+    if re > 0.5:
+        raise RuntimeError(
+            f"相对误差 RE = {re:.4f} > 0.5，IS 估计不可靠。禁止 fall-back（R03）。"
+        )
+    if ess_ratio < 0.3 or re > 0.1:
+        logger.warning(
+            "ESS/n = %.4f, RE = %.4f 在边缘区间，建议改进偏置分布。",
+            ess_ratio,
+            re,
+        )
+
+
 def importance_sampling_mean(
     func: Callable[[np.ndarray], float],
     nominal_dist: list[dict],
@@ -323,12 +378,7 @@ def importance_sampling_mean(
     学术依据: Glynn & Iglehart 1989, DOI: 10.1287/mnsc.35.11.1367
     """
     d = len(nominal_dist)
-    if d == 0:
-        raise ValueError("nominal_dist 不能为空")
-    if n_samples <= 0:
-        raise ValueError(f"n_samples 必须 > 0，得到 {n_samples}")
-    if not (0.0 < min_ess_ratio < 1.0):
-        raise ValueError(f"min_ess_ratio 必须在 (0, 1)，得到 {min_ess_ratio}")
+    _validate_is_mean_params(d, n_samples, min_ess_ratio)
 
     rng = np.random.default_rng(seed)
 
@@ -346,15 +396,7 @@ def importance_sampling_mean(
     weights = np.exp(log_w)
 
     # 评估 g(x)
-    g_values = np.empty(n_samples, dtype=float)
-    for i in range(n_samples):
-        try:
-            g_values[i] = float(func(samples[i]))
-        except Exception as e:
-            raise RuntimeError(
-                f"func 评估失败 (样本 {i}): {type(e).__name__}: {e}。"
-                f"禁止 fall-back（规则 14.1）。"
-            ) from e
+    g_values = _evaluate_g_values(func, samples, n_samples)
 
     weighted = g_values * weights
     mu_hat = float(np.mean(weighted))
@@ -383,21 +425,7 @@ def importance_sampling_mean(
     ess = (sum_w * sum_w) / sum_w2 if sum_w2 > 0 else 0.0
     ess_ratio = ess / n_samples if n_samples > 0 else 0.0
 
-    if ess_ratio < min_ess_ratio:
-        raise RuntimeError(
-            f"ESS 退化: ESS/n = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
-            f"权重过度集中，IS 估计不可靠。禁止 fall-back（R03）。"
-        )
-    if re > 0.5:
-        raise RuntimeError(
-            f"相对误差 RE = {re:.4f} > 0.5，IS 估计不可靠。禁止 fall-back（R03）。"
-        )
-    if ess_ratio < 0.3 or re > 0.1:
-        logger.warning(
-            "ESS/n = %.4f, RE = %.4f 在边缘区间，建议改进偏置分布。",
-            ess_ratio,
-            re,
-        )
+    _check_is_mean_reliability(ess_ratio, re, min_ess_ratio)
 
     # 加速比: 需要从 f 直接采样计算 Var_f(g) 才能对比，本函数不计算（无 f 采样）
     # 设为 NaN 表示"未计算"，调用方可通过两次调用（朴素 MC vs IS）自行对比

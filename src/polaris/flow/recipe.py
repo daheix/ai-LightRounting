@@ -133,6 +133,53 @@ class Recipe:
                 lines.append(f"{k}: {v}")
         return "\n".join(lines)
 
+    @staticmethod
+    def _parse_yaml_top_level(line: str, d: dict) -> tuple[str | None, bool]:
+        """解析 YAML 顶层 key: value 行（R628 Extract Method）。
+
+        Returns:
+            (new_current_key, handled)。handled=False 表示非顶层行。
+        """
+        m = re.match(r"^(\w+):\s*(.*)$", line)
+        if not m or line.startswith(" "):
+            return None, False
+        key, val = m.group(1), m.group(2)
+        if val == "":
+            d[key] = {}
+        elif val == "null":
+            d[key] = None
+        else:
+            d[key] = _coerce_scalar(val)
+        return key, True
+
+    @staticmethod
+    def _parse_yaml_list_item(line: str, d: dict, current_key: str | None) -> bool:
+        """解析 YAML 列表项行（R628 Extract Method）。
+
+        Returns:
+            True 若该行为列表项。
+        """
+        if not line.startswith("  - "):
+            return False
+        val = line[4:].strip()
+        item = _coerce_scalar(val)
+        if current_key and isinstance(d.get(current_key), list):
+            d[current_key].append(item)
+        elif current_key and d.get(current_key) == {}:
+            d[current_key] = [item]
+        return True
+
+    @staticmethod
+    def _parse_yaml_sub_key(line: str, d: dict, current_key: str | None) -> None:
+        """解析 YAML 子 key 行（R628 Extract Method）。"""
+        if not line.startswith("  "):
+            return
+        m2 = re.match(r"^\s+(\w+):\s*(.*)$", line)
+        if m2 and current_key:
+            kk, vv = m2.group(1), m2.group(2)
+            if isinstance(d.get(current_key), dict):
+                d[current_key][kk] = _coerce_scalar(vv)
+
     @classmethod
     def from_yaml(cls, yaml_str: str) -> Recipe:
         """YAML 反序列化（简单解析器，不依赖 PyYAML）
@@ -145,32 +192,13 @@ class Recipe:
             line = line.rstrip()
             if not line:
                 continue
-            # 顶层 key: value
-            m = re.match(r"^(\w+):\s*(.*)$", line)
-            if m and not line.startswith(" "):
-                key, val = m.group(1), m.group(2)
-                current_key = key
-                if val == "":
-                    d[key] = {}
-                elif val == "null":
-                    d[key] = None
-                else:
-                    d[key] = _coerce_scalar(val)
-            elif line.startswith("  - "):
-                # 列表项
-                val = line[4:].strip()
-                item = _coerce_scalar(val)
-                if current_key and isinstance(d.get(current_key), list):
-                    d[current_key].append(item)
-                elif current_key and d.get(current_key) == {}:
-                    d[current_key] = [item]
-            elif line.startswith("  "):
-                # 子 key
-                m2 = re.match(r"^\s+(\w+):\s*(.*)$", line)
-                if m2 and current_key:
-                    kk, vv = m2.group(1), m2.group(2)
-                    if isinstance(d.get(current_key), dict):
-                        d[current_key][kk] = _coerce_scalar(vv)
+            new_key, handled = cls._parse_yaml_top_level(line, d)
+            if handled:
+                current_key = new_key
+                continue
+            if cls._parse_yaml_list_item(line, d, current_key):
+                continue
+            cls._parse_yaml_sub_key(line, d, current_key)
         return cls.from_dict(d)
 
 
