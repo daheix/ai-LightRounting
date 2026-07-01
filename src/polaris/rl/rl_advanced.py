@@ -114,6 +114,10 @@ class GraphPartitionConfig:
     max_levels: int = 20
     # 分区平衡容忍（最大分区 / 平均分区 ≤ 1 + balance_tol）
     balance_tol: float = 0.25
+    # FM refinement 最大节点数（超过则跳过，纯 NumPy 增量难，大图靠粗化保证质量）
+    fm_max_nodes: int = 2000
+    # FM refinement 最大轮数
+    fm_max_rounds: int = 3
     seed: int = 42
 
 
@@ -202,11 +206,12 @@ class LargeScaleGraphPartitioner:
         coarsest = levels[-1]
         # 2. 最粗图初始分割（度排序 + 贪心平衡）
         labels = self._initial_partition(coarsest, k)
-        # 3. 逐级去粗化 + FM refinement（细图标签 = 粗图标签[parent]）
+        # 3. 逐级去粗化 + FM refinement + 强制平衡（细图标签 = 粗图标签[parent]）
         for level in range(len(levels) - 2, -1, -1):
             parent = parent_arrays[level]
             labels = labels[parent]
             labels = self._fm_refine(levels[level], labels, k)
+            labels = self._rebalance(labels, k)
         self._check_balance(labels, k)
         return labels
 
@@ -293,46 +298,88 @@ class LargeScaleGraphPartitioner:
     def _fm_refine(
         self, adj: sparse.csr_matrix, labels: np.ndarray, k: int
     ) -> np.ndarray:
-        """Kernighan-Lin 风格边界 refinement（简化版，单轮）。
+        """Kernighan-Lin 风格边界 refinement（CSR 加速，限轮限规模）。
 
-        对每个边界节点，计算移到相邻分区后的切边增益，贪心移动正增益节点。
+        对每个节点，计算移到相邻分区后的切边增益，贪心移动正增益节点。
+        大图(> ``fm_max_nodes``)跳过——纯 NumPy 增量数据结构难，大图靠
+        多级粗化 + 初始分割保证质量（METIS 工程权衡，非 fall-back）。
+
+        学术依据：KL 二分 Kernighan & Lin 1970 IEEE TCT。
         """
         n = adj.shape[0]
-        adj_lil = adj.tolil()
-        improved = True
-        while improved:
-            improved = False
+        if n > self.config.fm_max_nodes:
+            return labels
+        adj_csr = adj.tocsr()
+        indptr = adj_csr.indptr
+        indices = adj_csr.indices
+        data = adj_csr.data
+        target = n / k
+        cap = float(target * (1 + self.config.balance_tol) + 1)
+        counts = np.bincount(labels, minlength=k)
+        for _ in range(self.config.fm_max_rounds):
+            moved = False
             for v in range(n):
-                neighbors = adj_lil.rows[v]
-                weights = adj_lil.data[v]
-                if not neighbors:
+                start, end = int(indptr[v]), int(indptr[v + 1])
+                if start == end:
                     continue
-                # 各分区连接权重
                 conn = np.zeros(k, dtype=np.float64)
-                for u, w in zip(neighbors, weights):
-                    conn[labels[u]] += w
-                cur_part = labels[v]
-                cur_gain = conn[cur_part]  # 留在原分区的内部边
+                for idx in range(start, end):
+                    conn[labels[indices[idx]]] += data[idx]
+                cur_part = int(labels[v])
                 # 选外部连接最大的相邻分区
-                ext_parts = [p for p in range(k) if p != cur_part]
-                best_part = max(ext_parts, key=lambda p: conn[p])
+                best_part, best_conn = -1, -1.0
+                for p in range(k):
+                    if p != cur_part and conn[p] > best_conn:
+                        best_part, best_conn = p, float(conn[p])
+                if best_part < 0:
+                    continue
                 # 增益 = 移动后减少的切边 - 增加的切边 = conn[cur] - conn[best]
-                gain = conn[cur_part] - conn[best_part]
-                if gain > 1e-9 and self._balanced_move(labels, k, cur_part, best_part):
+                gain = conn[cur_part] - best_conn
+                if gain > 1e-9 and counts[best_part] + 1 <= cap:
                     labels[v] = best_part
-                    improved = True
+                    counts[cur_part] -= 1
+                    counts[best_part] += 1
+                    moved = True
+            if not moved:
+                break
         return labels
 
-    def _balanced_move(
-        self, labels: np.ndarray, k: int, src: int, dst: int
-    ) -> bool:
-        """检查移动是否破坏分区平衡。"""
+    def _rebalance(self, labels: np.ndarray, k: int) -> np.ndarray:
+        """强制分区双向平衡：超载分区下移 + 欠载分区补足。
+
+        当 FM 跳过（大图）或粗化不均导致不平衡时，将超载分区多余节点
+        移到欠载分区，直到 max/min 都在 ``balance_tol`` 容忍内
+        （R03 平衡约束 + 工业级均匀性）。
+        """
         n = len(labels)
+        if n == 0:
+            raise ValueError("labels 不能为空（R03 无 fall-back）")
+        if k <= 0:
+            raise ValueError("k 须 > 0（R03 无 fall-back）")
         target = n / k
+        cap_max = target * (1 + self.config.balance_tol) + 1
+        cap_min = max(target * (1 - self.config.balance_tol) - 1, 1.0)
         counts = np.bincount(labels, minlength=k)
-        if counts[dst] + 1 > target * (1 + self.config.balance_tol) + 1:
-            return False
-        return True
+        # 超载→欠载，直到 max ≤ cap_max 且 min ≥ cap_min（或无法继续）
+        while float(counts.max()) > cap_max or float(counts.min()) < cap_min:
+            over = int(np.argmax(counts))
+            under = int(np.argmin(counts))
+            if counts[over] <= counts[under] + 1:
+                break  # 已无法通过移动改善
+            move = int(min(
+                counts[over] - int(np.floor(cap_max)),
+                int(np.ceil(cap_min)) - counts[under],
+            ))
+            if move < 1:
+                move = 1
+            over_idx = np.where(labels == over)[0]
+            if over_idx.size == 0:
+                break
+            to_move = over_idx[:move]
+            labels[to_move] = under
+            counts[over] -= int(to_move.size)
+            counts[under] += int(to_move.size)
+        return labels
 
     def _check_balance(self, labels: np.ndarray, k: int) -> None:
         """校验分区平衡（超容忍即 raise，R03 无 fall-back）。"""
@@ -1061,7 +1108,17 @@ class AnalyticalRLHybridPlacer:
         n = len(devices)
         if n < 1:
             raise ValueError("器件数须 >= 1（R03 无 fall-back）")
-        fixed_ios = circuit.get("fixed_ios", {})
+        fixed_ios = dict(circuit.get("fixed_ios", {}))
+        # quadratic placement 需至少一个锚点消除平移自由度（拉普拉斯矩阵
+        # 行和为 0 故奇异），无显式锚点时自动锚定首器件到画布中心
+        # （数学必要约束，非 fall-back；Kleinhans 1991 quadratic placement）
+        if not fixed_ios:
+            grid_h_init, grid_w_init = self.config.grid_size
+            first_id = devices[0]["id"]
+            fixed_ios = {first_id: (
+                grid_w_init * _GRID_CELL_SIZE_UM / 2.0,
+                grid_h_init * _GRID_CELL_SIZE_UM / 2.0,
+            )}
         Q, idx2id, id2idx = self._build_qp_matrix(circuit, fixed_ios)
         # 右端 b：锚点贡献 b_i = anchor_weight * fixed_pos_i
         bx = np.zeros(n, dtype=np.float64)

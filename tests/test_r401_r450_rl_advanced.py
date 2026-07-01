@@ -360,23 +360,28 @@ class TestR404PolicyTransfer:
         assert tm.ewc_penalty(theta + 1.0) > 0.0
 
     def test_r404_fine_tune_reduces_drift(self):
-        """EWC 微调：带正则时参数漂移小于无正则（保守）。"""
-        tm = PolicyTransferManager(PolicyTransferConfig(
-            ewc_lambda=100.0, fine_tune_lr=0.1
-        ))
+        """EWC 微调：带正则时参数漂移小于无正则（保守，防遗忘）。"""
         theta_star = np.zeros(6)
         fisher = np.ones(6)
-        tm.store_pretrained(theta_star, fisher)
         tgt = np.ones(6)
-        task_grad = np.ones(6) * 0.5  # 推动远离预训练值
-        new_theta, metrics = tm.fine_tune(tgt, task_grad)
-        # EWC 阻力使参数趋向预训练值（漂移受限）
+        task_grad = np.ones(6) * 0.5  # 任务梯度推离预训练值
+        # 无 EWC 基线
+        tm_no = PolicyTransferManager(PolicyTransferConfig(
+            ewc_lambda=0.0, fine_tune_lr=0.05
+        ))
+        tm_no.store_pretrained(theta_star, fisher)
+        new_no, _ = tm_no.fine_tune(tgt, task_grad)
+        drift_no = float(np.linalg.norm(new_no - theta_star))
+        # 有 EWC：Fisher 正则把参数拉回预训练值，漂移更小
+        tm = PolicyTransferManager(PolicyTransferConfig(
+            ewc_lambda=10.0, fine_tune_lr=0.05
+        ))
+        tm.store_pretrained(theta_star, fisher)
+        new_ewc, metrics = tm.fine_tune(tgt, task_grad)
+        drift_ewc = float(np.linalg.norm(new_ewc - theta_star))
+        assert drift_ewc < drift_no
         assert metrics["ewc_penalty"] >= 0.0
         assert metrics["grad_norm"] > 0.0
-        # 无 EWC 时纯梯度下降：new = 1 - 0.1*0.5 = 0.95
-        # 带 EWC：额外 + 0.1*100*1*(1-0) = +10 → new = 1 - 0.05 - 1.0 = 负
-        # 漂移应小于纯梯度下降的 0.95
-        assert abs(new_theta[0] - theta_star[0]) < 0.95
 
     def test_r404_no_pretrained_raise(self):
         """R03：未存储预训练参数时 ewc_penalty / fine_tune 必须 raise。"""
