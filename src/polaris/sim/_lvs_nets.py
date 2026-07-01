@@ -301,29 +301,10 @@ def extract_nets_from_pins(
     for ref in pin_by_ref:
         uf.find(ref)
 
-    # 规则 1: 同层几何形状相交/邻接的引脚 → 连通
-    for i, p1 in enumerate(pins):
-        for p2 in pins[i + 1:]:
-            if p1.layer != p2.layer:
-                continue
-            if _bboxes_overlap(p1.bbox, p2.bbox, tolerance=bbox_tolerance_um):
-                uf.union(p1.ref, p2.ref)
-
-    # 规则 2: 显式连接对 → 连通
-    if connection_pairs:
-        for ref1, ref2 in connection_pairs:
-            if ref1 in pin_by_ref and ref2 in pin_by_ref:
-                uf.union(ref1, ref2)
-
-    # 规则 3: 同网络标签的引脚 → 连通（implicit connect）
+    _connect_overlapping_pins(uf, pins, bbox_tolerance_um)
+    _connect_explicit_pairs(uf, pin_by_ref, connection_pairs)
     if same_label_connects:
-        label_groups: dict[str, list[str]] = {}
-        for p in pins:
-            if p.net_label is not None:
-                label_groups.setdefault(p.net_label, []).append(p.ref)
-        for refs in label_groups.values():
-            for i in range(1, len(refs)):
-                uf.union(refs[0], refs[i])
+        _connect_same_label_pins(uf, pins)
 
     # 构建网络
     groups = uf.groups()
@@ -337,6 +318,44 @@ def extract_nets_from_pins(
             label=label,
         ))
     return nets
+
+
+def _connect_overlapping_pins(
+    uf: "_UnionFind",
+    pins: list[Pin],
+    bbox_tolerance_um: float,
+) -> None:
+    """规则 1: 同层几何形状相交/邻接的引脚 → 连通（双层循环 + 包围盒预筛）。"""
+    for i, p1 in enumerate(pins):
+        for p2 in pins[i + 1:]:
+            if p1.layer != p2.layer:
+                continue
+            if _bboxes_overlap(p1.bbox, p2.bbox, tolerance=bbox_tolerance_um):
+                uf.union(p1.ref, p2.ref)
+
+
+def _connect_explicit_pairs(
+    uf: "_UnionFind",
+    pin_by_ref: dict[str, Pin],
+    connection_pairs: list[tuple[str, str]] | None,
+) -> None:
+    """规则 2: 显式连接对 → 连通。"""
+    if not connection_pairs:
+        return
+    for ref1, ref2 in connection_pairs:
+        if ref1 in pin_by_ref and ref2 in pin_by_ref:
+            uf.union(ref1, ref2)
+
+
+def _connect_same_label_pins(uf: "_UnionFind", pins: list[Pin]) -> None:
+    """规则 3: 同网络标签的引脚 → 连通（implicit connect）。"""
+    label_groups: dict[str, list[str]] = {}
+    for p in pins:
+        if p.net_label is not None:
+            label_groups.setdefault(p.net_label, []).append(p.ref)
+    for refs in label_groups.values():
+        for i in range(1, len(refs)):
+            uf.union(refs[0], refs[i])
 
 
 def detect_short_circuits(
