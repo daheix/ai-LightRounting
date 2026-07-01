@@ -307,7 +307,30 @@ def gdsfactory_component_to_pcell(
             f"gdsfactory Component {name!r} 无端口，无法转换为 PCell。"
             f"请确保组件已定义端口（component.add_port()）。"
         )
+    seen_names = _convert_gdsfactory_ports(pcell, ports, cfg)
 
+    # 步骤 2: 转换 metadata → info
+    metadata = getattr(component, "metadata", {}) or {}
+    _convert_gdsfactory_metadata(pcell, metadata)
+
+    # 步骤 3: 提取 bbox（可选信息）
+    _convert_gdsfactory_bbox(pcell, component)
+
+    logger.info(
+        "gdsfactory→PCell 转换完成: %s, %d 端口",
+        name,
+        len(seen_names),
+    )
+
+    return pcell
+
+
+def _convert_gdsfactory_ports(
+    pcell: PCellMultiView,
+    ports: list,
+    cfg: "PCellBridgeConfig",
+) -> set[str]:
+    """将 gdsfactory 端口列表转换为 PCell 端口（CC ≤ 6）。"""
     seen_names: set[str] = set()
     for port in ports:
         port_name = getattr(port, "name", None) or f"o{len(seen_names) + 1}"
@@ -318,12 +341,7 @@ def gdsfactory_component_to_pcell(
             )
         seen_names.add(port_name)
 
-        center = getattr(port, "center", (0.0, 0.0))
-        if hasattr(center, "x"):
-            x, y = float(center.x), float(center.y)
-        else:
-            x, y = float(center[0]), float(center[1])
-
+        x, y = _extract_port_center(port)
         orientation = float(getattr(port, "orientation", 0.0) or 0.0)
         direction = orientation_to_direction(orientation)
         width = float(getattr(port, "width", cfg.port_width_default))
@@ -334,43 +352,59 @@ def gdsfactory_component_to_pcell(
             direction=direction,
             width=width,
         )
+    return seen_names
 
-    # 步骤 2: 转换 metadata → info
-    metadata = getattr(component, "metadata", {}) or {}
+
+def _extract_port_center(port) -> tuple[float, float]:
+    """从 gdsfactory port 对象提取 (x, y) 坐标（兼容 Port/NamedTuple 两种格式）。"""
+    center = getattr(port, "center", (0.0, 0.0))
+    if hasattr(center, "x"):
+        return float(center.x), float(center.y)
+    return float(center[0]), float(center[1])
+
+
+def _convert_gdsfactory_metadata(
+    pcell: PCellMultiView,
+    metadata: dict,
+) -> None:
+    """转换 gdsfactory metadata → PCell.info，并提取 polaris_params（CC ≤ 4）。"""
     for key, value in metadata.items():
         # 跳过已处理的关键字段
         if key in ("netlist", "polaris_params"):
             continue
         pcell.info[key] = value
 
-    # 步骤 3: 提取 polaris_params（如果原 PCell 转换而来）
+    # 提取 polaris_params（如果原 PCell 转换而来）
     if "polaris_params" in metadata:
         pcell.params.update(metadata["polaris_params"])
 
-    # 步骤 4: 提取 bbox（可选信息，仅当 component.bbox() 可调用且返回有效 Box 时）
+
+def _convert_gdsfactory_bbox(pcell: PCellMultiView, component) -> None:
+    """提取 component.bbox() 到 pcell.params['bbox']（可选，失败静默跳过）。"""
     bbox_fn = getattr(component, "bbox", None)
-    if callable(bbox_fn):
-        bbox = bbox_fn()
-        # klayout Box 有 left/bottom/right/top 属性
-        if hasattr(bbox, "left"):
-            pcell.params["bbox"] = (
-                float(bbox.left), float(bbox.bottom),
-                float(bbox.right), float(bbox.top),
-            )
-        elif hasattr(bbox, "__iter__"):
-            # 某些版本的 bbox 返回 list/tuple
-            bbox_list = list(bbox)
-            if len(bbox_list) >= 4:
-                pcell.params["bbox"] = tuple(float(v) for v in bbox_list[:4])
-        # bbox 为 None 或无 left/__iter__ 属性时跳过（不强求）
+    if not callable(bbox_fn):
+        return
+    bbox = bbox_fn()
+    extracted = _extract_bbox_tuple(bbox)
+    if extracted is not None:
+        pcell.params["bbox"] = extracted
 
-    logger.info(
-        "gdsfactory→PCell 转换完成: %s, %d 端口",
-        name,
-        len(seen_names),
-    )
 
-    return pcell
+def _extract_bbox_tuple(bbox) -> tuple[float, float, float, float] | None:
+    """从 klayout Box / list/tuple 提取 (xmin, ymin, xmax, ymax)。"""
+    # klayout Box 有 left/bottom/right/top 属性
+    if hasattr(bbox, "left"):
+        return (
+            float(bbox.left), float(bbox.bottom),
+            float(bbox.right), float(bbox.top),
+        )
+    # 某些版本的 bbox 返回 list/tuple
+    if hasattr(bbox, "__iter__"):
+        bbox_list = list(bbox)
+        if len(bbox_list) >= 4:
+            return tuple(float(v) for v in bbox_list[:4])
+    # bbox 为 None 或无 left/__iter__ 属性时跳过（不强求）
+    return None
 
 
 # =============================================================================
