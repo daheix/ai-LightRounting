@@ -180,7 +180,45 @@ def analyze_cell_hierarchy(
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not path.is_file():
         raise ValueError(f"路径不是文件: {gds_path}")
+    ly, dbu, all_cell_indices, top_cell_indices, specified_top_index = (
+        _read_and_validate_hierarchy(db, path, gds_path, top_cell_name)
+    )
+    child_cells_of, parent_cells_of, direct_count_of, direct_count_per_parent = (
+        _build_parent_child_relations(ly, all_cell_indices)
+    )
+    depth_of = _compute_hierarchy_depths(all_cell_indices, top_cell_indices, parent_cells_of)
+    recursive_count_of = _compute_recursive_counts(
+        all_cell_indices, child_cells_of, direct_count_per_parent,
+        top_cell_indices, specified_top_index,
+    )
+    circular_chains_idx = _detect_cycles_dfs(all_cell_indices, child_cells_of)
+    has_circular = len(circular_chains_idx) > 0
+    cells = _build_cell_info_list(
+        ly, all_cell_indices, parent_cells_of, child_cells_of,
+        depth_of, direct_count_of, recursive_count_of, top_cell_indices, dbu,
+    )
+    cells.sort(key=lambda c: (c.hierarchy_depth, c.cell_name))
+    top_cell_names_list = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
+    max_depth = max(depth_of.values()) if depth_of else 0
+    circular_chains_names = [
+        [ly.cell(ci).name for ci in chain_idx] for chain_idx in circular_chains_idx
+    ]
+    return HierarchyReport(
+        file_path=str(gds_path), top_cell_names=top_cell_names_list, dbu=dbu,
+        cells=cells, total_cell_count=len(cells), max_hierarchy_depth=max_depth,
+        has_circular_reference=has_circular, circular_chains=circular_chains_names,
+    )
 
+
+def _read_and_validate_hierarchy(db, path, gds_path, top_cell_name) -> tuple:
+    """读取 GDSII 并收集 cell 索引与顶层 cell（R322 内部辅助）。
+
+    Returns:
+        (ly, dbu, all_cell_indices, top_cell_indices, specified_top_index)。
+
+    Raises:
+        RuntimeError: 读取失败。ValueError: 无 cell / top_cell_name 不存在。
+    """
     ly = db.Layout()
     try:
         ly.read(str(path))
@@ -189,22 +227,11 @@ def analyze_cell_hierarchy(
             f"klayout 读取文件失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
-
-    # 收集所有 cell 索引
-    # ly.each_cell() 返回 Cell 对象迭代器（实测确认）
-    # ly.each_cell_top_down() 返回 int cell_index 迭代器（拓扑顺序，父先于子）
     all_cell_indices: list[int] = [int(ci) for ci in ly.each_cell_top_down()]
     if not all_cell_indices:
-        raise ValueError(
-            f"GDSII 文件 {gds_path} 无任何 cell，文件可能为空或损坏"
-        )
-
-    # 顶层 cell 索引集合（ly.each_top_cell() 返回 int 迭代器）
+        raise ValueError(f"GDSII 文件 {gds_path} 无任何 cell，文件可能为空或损坏")
     top_cell_indices: set[int] = set(int(ci) for ci in ly.each_top_cell())
-
-    # 校验 top_cell_name
     specified_top_index: int | None = None
     if top_cell_name is not None:
         top_cell_obj = ly.cell(top_cell_name)
@@ -215,61 +242,67 @@ def analyze_cell_hierarchy(
                 f"可用顶层 cells: {available}"
             )
         specified_top_index = int(top_cell_obj.cell_index())
+    return ly, dbu, all_cell_indices, top_cell_indices, specified_top_index
 
-    # 构建直接父子关系
-    # child_cells_of[cell_index] = set of child cell indices（去重）
-    # parent_cells_of[cell_index] = set of parent cell indices（去重）
-    # direct_count_of[cell_index] = 该 cell 被直接引用的总次数（每个 instance 计 1）
-    # direct_count_per_parent[(parent_ci, child_ci)] = parent 中 child 的直接实例数
-    child_cells_of: dict[int, set[int]] = {
-        ci: set() for ci in all_cell_indices
-    }
-    parent_cells_of: dict[int, set[int]] = {
-        ci: set() for ci in all_cell_indices
-    }
+
+def _build_parent_child_relations(ly, all_cell_indices: list[int]) -> tuple:
+    """构建直接父子关系与实例计数（R322 内部辅助）。
+
+    Returns:
+        (child_cells_of, parent_cells_of, direct_count_of, direct_count_per_parent)。
+    """
+    child_cells_of: dict[int, set[int]] = {ci: set() for ci in all_cell_indices}
+    parent_cells_of: dict[int, set[int]] = {ci: set() for ci in all_cell_indices}
     direct_count_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
     direct_count_per_parent: dict[tuple[int, int], int] = {}
-
     for ci in all_cell_indices:
         cell = ly.cell(ci)
         for child_ci in cell.each_child_cell():
             child_ci = int(child_ci)
             child_cells_of[ci].add(child_ci)
             parent_cells_of[child_ci].add(ci)
-        # 统计直接实例化次数（每个 instance 计 1，不展开 AREF）
         for inst in cell.each_inst():
             child_ci = int(inst.cell_index)
             direct_count_of[child_ci] += 1
             key = (ci, child_ci)
-            direct_count_per_parent[key] = (
-                direct_count_per_parent.get(key, 0) + 1
-            )
+            direct_count_per_parent[key] = direct_count_per_parent.get(key, 0) + 1
+    return child_cells_of, parent_cells_of, direct_count_of, direct_count_per_parent
 
-    # 层级深度: 用拓扑顺序（all_cell_indices 已是 top_down 顺序）
-    # depth[top] = 0; depth[cell] = max(depth[parent]) + 1
+
+def _compute_hierarchy_depths(
+    all_cell_indices: list[int],
+    top_cell_indices: set[int],
+    parent_cells_of: dict[int, set[int]],
+) -> dict[int, int]:
+    """用拓扑顺序计算每个 cell 的层级深度（R322 内部辅助）。
+
+    depth[top] = 0; depth[cell] = max(depth[parent]) + 1。
+    """
     depth_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
     for ci in all_cell_indices:
-        # 该 cell 的深度 = max(父 cell 深度) + 1；顶层 cell 父为空，深度 0
         if ci in top_cell_indices:
             depth_of[ci] = 0
         else:
             parent_depths = [depth_of[p] for p in parent_cells_of[ci] if p in depth_of]
             depth_of[ci] = (max(parent_depths) + 1) if parent_depths else 0
+    return depth_of
 
-    # 递归实例化次数（拓扑逆序 DP）
-    # 若指定 top_cell_name: 以该 cell 为根，递归实例化=1，子按 DP 累加
-    # 否则: 所有顶层 cell 各自为根，递归实例化=1
+
+def _compute_recursive_counts(
+    all_cell_indices: list[int],
+    child_cells_of: dict[int, set[int]],
+    direct_count_per_parent: dict[tuple[int, int], int],
+    top_cell_indices: set[int],
+    specified_top_index: int | None,
+) -> dict[int, int]:
+    """递归实例化次数（拓扑逆序 DP）（R322 内部辅助）。
+
+    若指定 top_cell_name: 以该 cell 为根；否则所有顶层 cell 各自为根。
+    """
     recursive_count_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
-    roots: list[int]
-    if specified_top_index is not None:
-        roots = [specified_top_index]
-    else:
-        roots = list(top_cell_indices)
-
+    roots = [specified_top_index] if specified_top_index is not None else list(top_cell_indices)
     for root in roots:
-        recursive_count_of[root] += 1  # 根作为顶层出现一次
-        # 拓扑顺序传播（all_cell_indices 已是父先于子）
-        # 对每个父 cell，将其递归次数按 per-parent 直接实例数传播给子 cell
+        recursive_count_of[root] += 1
         for ci in all_cell_indices:
             if recursive_count_of[ci] == 0:
                 continue
@@ -278,78 +311,54 @@ def analyze_cell_hierarchy(
                     continue  # 自环由循环引用检测处理
                 count_in_parent = direct_count_per_parent.get((ci, child), 0)
                 if count_in_parent > 0:
-                    recursive_count_of[child] += (
-                        recursive_count_of[ci] * count_in_parent
-                    )
+                    recursive_count_of[child] += recursive_count_of[ci] * count_in_parent
+    return recursive_count_of
 
-    # 循环引用检测（DFS 三色标记）
-    circular_chains_idx = _detect_cycles_dfs(all_cell_indices, child_cells_of)
-    has_circular = len(circular_chains_idx) > 0
 
-    # 构建 CellInfo 列表
-    cells: list[CellInfo] = []
+def _build_cell_info_list(
+    ly, all_cell_indices, parent_cells_of, child_cells_of,
+    depth_of, direct_count_of, recursive_count_of, top_cell_indices, dbu,
+) -> list:
+    """构建 CellInfo 列表（R322 内部辅助，R03 禁止 fall-back）。
+
+    Raises:
+        RuntimeError: cell bbox 计算失败。
+    """
+    cells: list = []
     for ci in all_cell_indices:
         cell = ly.cell(ci)
         name = str(cell.name)
-        # cell 自身包围盒（dbu → μm）
-        # R03 禁止 fall-back：bbox 计算失败是业务错误（KLayout API 异常或
-        # cell 损坏），必须 raise，禁止用 (0,0,0,0) 兜底掩盖问题。
         try:
             bbox_dbu = cell.bbox()
             bbox_um = (
-                float(bbox_dbu.left) * dbu,
-                float(bbox_dbu.bottom) * dbu,
-                float(bbox_dbu.right) * dbu,
-                float(bbox_dbu.top) * dbu,
+                float(bbox_dbu.left) * dbu, float(bbox_dbu.bottom) * dbu,
+                float(bbox_dbu.right) * dbu, float(bbox_dbu.top) * dbu,
             )
         except Exception as exc:
             raise RuntimeError(
                 f"cell '{name}' (index={ci}) bbox 计算失败: {exc!r}。"
                 f"KLayout API 异常，禁止 fall-back 用 0 兜底（R03）。"
             ) from exc
+        cells.append(_make_cell_info(
+            ly, ci, name, parent_cells_of, child_cells_of, depth_of,
+            direct_count_of, recursive_count_of, top_cell_indices, bbox_um,
+        ))
+    return cells
 
-        cells.append(
-            CellInfo(
-                cell_name=name,
-                cell_index=ci,
-                parent_cell_names=sorted(
-                    ly.cell(p).name for p in parent_cells_of[ci]
-                ),
-                child_cell_names=sorted(
-                    ly.cell(c).name for c in child_cells_of[ci]
-                ),
-                hierarchy_depth=depth_of[ci],
-                direct_instance_count=direct_count_of[ci],
-                recursive_instance_count=recursive_count_of[ci],
-                is_top_cell=(ci in top_cell_indices),
-                bbox_um=bbox_um,
-            )
-        )
 
-    # 排序: hierarchy_depth 升序，深度相同按名字
-    cells.sort(key=lambda c: (c.hierarchy_depth, c.cell_name))
-
-    top_cell_names_list = sorted(
-        ly.cell(ci).name for ci in ly.each_top_cell()
-    )
-    max_depth = max(depth_of.values()) if depth_of else 0
-
-    # 循环引用链转 cell 名
-    circular_chains_names: list[list[str]] = []
-    for chain_idx in circular_chains_idx:
-        circular_chains_names.append(
-            [ly.cell(ci).name for ci in chain_idx]
-        )
-
-    return HierarchyReport(
-        file_path=str(gds_path),
-        top_cell_names=top_cell_names_list,
-        dbu=dbu,
-        cells=cells,
-        total_cell_count=len(cells),
-        max_hierarchy_depth=max_depth,
-        has_circular_reference=has_circular,
-        circular_chains=circular_chains_names,
+def _make_cell_info(
+    ly, ci, name, parent_cells_of, child_cells_of, depth_of,
+    direct_count_of, recursive_count_of, top_cell_indices, bbox_um,
+):
+    """构造单个 CellInfo（R322 内部辅助）。"""
+    return CellInfo(
+        cell_name=name, cell_index=ci,
+        parent_cell_names=sorted(ly.cell(p).name for p in parent_cells_of[ci]),
+        child_cell_names=sorted(ly.cell(c).name for c in child_cells_of[ci]),
+        hierarchy_depth=depth_of[ci],
+        direct_instance_count=direct_count_of[ci],
+        recursive_instance_count=recursive_count_of[ci],
+        is_top_cell=(ci in top_cell_indices), bbox_um=bbox_um,
     )
 
 
