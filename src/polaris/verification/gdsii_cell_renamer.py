@@ -218,9 +218,42 @@ def rename_cells(
       https://www.klayout.org/doc-qt5/code/class_Layout.html
     """
     db = _import_klayout_db()
+    in_path, out_path = _validate_rename_params(input_path, output_path, rename_map)
+    ly, dbu, original_cell_names = _read_rename_layout(db, in_path, input_path)
+    existing_names = set(original_cell_names)
+    cycle_check_map = _validate_rename_map_entries(
+        rename_map, existing_names, original_cell_names
+    )
+    _check_rename_cycle(cycle_check_map)
+    _check_new_name_conflicts(cycle_check_map, existing_names)
+    renames_applied = _execute_cell_renames(ly, cycle_check_map)
+    final_cell_names = sorted(c.name for c in ly.each_cell())
+    _write_renamed_gdsii(ly, out_path, output_path)
+    logger.info(
+        "GDSII 器件重命名: %s → %s (renames=%d, cells_before=%d, cells_after=%d)",
+        in_path, out_path, len(renames_applied),
+        len(original_cell_names), len(final_cell_names),
+    )
+    return RenameReport(
+        input_path=str(input_path),
+        output_path=str(output_path),
+        renames_requested=dict(rename_map),
+        renames_applied=renames_applied,
+        total_renamed=len(renames_applied),
+        original_cell_names=original_cell_names,
+        final_cell_names=final_cell_names,
+        dbu=dbu,
+    )
+
+
+def _validate_rename_params(input_path, output_path, rename_map) -> tuple:
+    """校验 rename_cells 入参（R339 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (in_path, out_path) Path 对象。
+    """
     in_path = Path(input_path)
     out_path = Path(output_path)
-
     if not in_path.exists():
         raise FileNotFoundError(f"输入 GDSII 文件不存在: {input_path}")
     if not in_path.is_file():
@@ -229,8 +262,17 @@ def rename_cells(
         raise ValueError(
             "rename_map 不能为空。禁止 fall-back（R03）。"
         )
+    return in_path, out_path
 
-    # 读取 GDSII
+
+def _read_rename_layout(db, in_path, input_path) -> tuple:
+    """读取 GDSII 文件并返回 layout/dbu/cell 名（R339 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, original_cell_names)。
+
+    来源: KLayout Layout.read https://www.klayout.org/doc-qt5/code/class_Layout.html
+    """
     ly = db.Layout()
     try:
         ly.read(str(in_path))
@@ -239,14 +281,19 @@ def rename_cells(
             f"klayout 读取文件失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
     original_cell_names = sorted(c.name for c in ly.each_cell())
+    return ly, dbu, original_cell_names
 
-    # 收集所有现有 cell 名
-    existing_names: set[str] = set(original_cell_names)
 
-    # 验证 rename_map
+def _validate_rename_map_entries(
+    rename_map, existing_names, original_cell_names,
+) -> dict:
+    """校验 rename_map 键值并构建 cycle_check_map（R339 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        cycle_check_map（仅含 old != new 且 old 存在的条目）。
+    """
     for old_name, new_name in rename_map.items():
         if not isinstance(old_name, str) or not old_name:
             raise ValueError(
@@ -259,22 +306,25 @@ def rename_cells(
                 f"禁止 fall-back（R03）。"
             )
         if old_name == new_name:
-            # 旧名等于新名，无意义但允许（跳过）
             continue
-        # 检查 old_name 是否存在
         if old_name not in existing_names:
             raise ValueError(
                 f"rename_map 中旧 cell 名 '{old_name}' 不存在。"
-                f"可用 cell: {original_cell_names[:10]}{'...' if len(original_cell_names) > 10 else ''}。"
+                f"可用 cell: {original_cell_names[:10]}"
+                f"{'...' if len(original_cell_names) > 10 else ''}。"
                 f"禁止 fall-back（R03）。"
             )
-
-    # 检测循环重命名（A→B, B→A）
-    # 只考虑 old_name != new_name 且 new_name 也是 rename_map 的 key 的情况
-    cycle_check_map: dict[str, str] = {
+    return {
         old: new for old, new in rename_map.items()
         if old != new and old in existing_names
     }
+
+
+def _check_rename_cycle(cycle_check_map) -> None:
+    """检测循环重命名（R339 内部辅助，R03 禁止 fall-back）。
+
+    来源: DFS 循环检测 Cormen et al., "Introduction to Algorithms", MIT Press 2009
+    """
     cycle = _detect_cycle(cycle_check_map)
     if cycle is not None:
         raise ValueError(
@@ -283,11 +333,14 @@ def rename_cells(
             f"禁止 fall-back（R03）。"
         )
 
-    # 检查 new_name 冲突：
-    # new_name 不能与"不被重命名的现有 cell"冲突
-    # 但 new_name 可以与"将被重命名的现有 cell"冲突（链式重命名）
-    # 例如: {A→B, B→C} 中 A→B 的 B 是现有 cell，但 B 会被重命名为 C，所以 OK
-    # 但 {A→B} 中 B 是现有 cell 且不被重命名，则冲突
+
+def _check_new_name_conflicts(cycle_check_map, existing_names) -> None:
+    """检查 new_name 冲突（R339 内部辅助，R03 禁止 fall-back）。
+
+    new_name 不能与"不被重命名的现有 cell"冲突，但可以与"将被重命名的现有 cell"
+    冲突（链式重命名）。例如 {A→B, B→C} 中 A→B 的 B 是现有 cell，但 B 会被重命名
+    为 C，所以 OK；但 {A→B} 中 B 是现有 cell 且不被重命名，则冲突。
+    """
     names_being_renamed = set(cycle_check_map.keys())
     for old_name, new_name in cycle_check_map.items():
         if new_name in existing_names and new_name not in names_being_renamed:
@@ -297,33 +350,17 @@ def rename_cells(
                 f"禁止 fall-back（R03）。"
             )
 
-    # 执行重命名
-    # 注意：链式重命名（A→B, B→C）需要按顺序执行
-    # A→B: 把 A 改名为 B（此时原 B 还在）
-    # 但如果先执行 B→C，再把 A→B，就不会冲突
-    # 所以先执行"new_name 不在 names_being_renamed"的重命名
-    # 再执行其他的
-    # 实际上更简单：按拓扑顺序执行
-    # 但 KLayout rename_cell 允许重命名为已存在的名字吗？
-    # 冒烟测试显示 rename_cell 后旧名查不到，新名可查
-    # 如果新名已存在，可能会冲突
 
-    # 安全策略：先重命名"new_name 不在 names_being_renamed"的
-    # 然后重命名其他的（此时它们的 new_name 已被让出）
-    # 但这需要拓扑排序
+def _execute_cell_renames(ly, cycle_check_map) -> list:
+    """按拓扑顺序执行重命名并返回应用记录（R339 内部辅助）。
 
-    # 实际上更简单的方法：用临时名中转
-    # A→B, B→C: 先 A→A_tmp, B→C, A_tmp→B
-    # 但这很复杂
+    链式重命名（A→B, B→C）需拓扑顺序：先 B→C，再 A→B，避免 A→B 时 B 已存在的冲突。
+    KLayout rename_cell 重命名后旧名查不到，新名可查。
 
-    # 让我用拓扑排序：构建依赖图
-    # A→B 依赖 B→C（如果 B 也要被重命名）
-    # 拓扑顺序：先执行没有依赖的，再执行有依赖的
-    # 对于 A→B, B→C: B→C 没有依赖（C 不被重命名），先执行；然后 A→B
-
-    # 拓扑排序
+    Returns:
+        renames_applied: list[RenameRecord]。
+    """
     ordered_renames = _topological_sort_renames(cycle_check_map)
-
     renames_applied: list[RenameRecord] = []
     for old_name in ordered_renames:
         new_name = cycle_check_map[old_name]
@@ -334,10 +371,14 @@ def rename_cells(
         ci = int(cell.cell_index())
         ly.rename_cell(ci, new_name)
         renames_applied.append(RenameRecord(old_name=old_name, new_name=new_name))
+    return renames_applied
 
-    final_cell_names = sorted(c.name for c in ly.each_cell())
 
-    # 写出
+def _write_renamed_gdsii(ly, out_path, output_path) -> None:
+    """写出重命名后的 GDSII（R339 内部辅助，R03 禁止 fall-back）。
+
+    来源: KLayout Layout.write https://www.klayout.org/doc-qt5/code/class_Layout.html
+    """
     try:
         ly.write(str(out_path))
     except Exception as e:
@@ -345,23 +386,6 @@ def rename_cells(
             f"klayout 写出文件失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
-    logger.info(
-        "GDSII 器件重命名: %s → %s (renames=%d, cells_before=%d, cells_after=%d)",
-        in_path, out_path, len(renames_applied),
-        len(original_cell_names), len(final_cell_names),
-    )
-
-    return RenameReport(
-        input_path=str(input_path),
-        output_path=str(output_path),
-        renames_requested=dict(rename_map),
-        renames_applied=renames_applied,
-        total_renamed=len(renames_applied),
-        original_cell_names=original_cell_names,
-        final_cell_names=final_cell_names,
-        dbu=dbu,
-    )
 
 
 def _topological_sort_renames(rename_map: dict[str, str]) -> list[str]:
