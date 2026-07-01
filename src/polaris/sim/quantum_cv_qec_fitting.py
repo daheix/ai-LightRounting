@@ -8,9 +8,22 @@ S 参数拟合 / 损耗提取 / 耦合效率提取。
 - scipy.optimize.minimize
   https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html
 - Beer-Lambert 定律：η = exp(-α·L)（与经典衰减一致）
+  https://doi.org/10.1016/B978-0-12-397024-5.00007-X
+- Gottesman, Kitaev, Preskill 2001, "Encoding a qubit in an oscillator",
+  Phys. Rev. A 64:012310, https://doi.org/10.1103/PhysRevA.64.012310
+- Sivak et al. 2023, "Advances in Bosonic Quantum Error Correction with
+  GKP Codes", https://arxiv.org/abs/2308.02913
+- Conrad, Eisert, Flammia 2024, "Chasing shadows with GKP codes",
+  https://arxiv.org/abs/2411.00235
+- numpy.polyfit 文档: https://numpy.org/doc/stable/reference/generated/numpy.polyfit.html
 
 *创新* R555：S 参数拟合用 Nelder-Mead 简单x + 损耗物理约束
 |S_ij|² ≤ 1，避免非物理解。
+
+*创新* 底层逻辑：Nelder-Mead 无需梯度，适合噪声 S 参数拟合；
+物理约束 |S|² ≤ 1 来自能量守恒（无源互易网络酉性），
+支持理论为散射矩阵的酉性条件 S†S = I（Kurokawa 1965），
+案例：从测量 S21 提取波导损耗 α 与耦合效率 κ。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

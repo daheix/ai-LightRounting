@@ -10,8 +10,14 @@
 来源:
 - SAX 模型库: https://flaport.github.io/sax/models/
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-- Chrostowski, "Silicon Photonics Design", Cambridge 2015
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015,
+  ISBN 978-1-107-08345-6, https://www.cambridge.org/9781107083456
 - Yariv, "Optical Electronics in Modern Communications", Oxford 1997
+- Soref, Bennett, "Electrooptical effects in silicon", IEEE J. Quantum
+  Electronics 1987, https://doi.org/10.1109/JQE.1987.1073206
+- Bogaerts et al., "Silicon microring resonators", Laser & Photonics Reviews
+  2012, https://doi.org/10.1002/lpor.201100017
+- gdsfactory components 文档: https://gdsfactory.github.io/gdsfactory/components.html
 """
 
 from __future__ import annotations

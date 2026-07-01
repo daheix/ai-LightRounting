@@ -7,6 +7,20 @@ Lumerical INTERCONNECT / Luceda Circuit Analyzer）的核心差距：**真正的
 IS 通过偏置分布 (biasing distribution) 把采样质量压向失效区域，并用似然比
 (likelihood ratio) 修正权重，实现 10²–10⁴ 倍方差缩减。
 
+## 关键文献索引（URL）
+
+- Glynn & Iglehart 1989 似然比估计器: https://doi.org/10.1287/mnsc.35.11.1367
+- Glasserman 2003 Monte Carlo Methods in Financial Engineering: https://doi.org/10.1007/978-0-387-21617-1
+- Heidelberger 1995 稀有事件仿真综述: https://doi.org/10.1145/270261.270264
+- Bucklew 2004 Rare Event Simulation: https://doi.org/10.1007/b97468
+- Siegmund 1976 指数扭转鞍点法: https://doi.org/10.1214/aos/1176343542
+- Rubinstein 1997 交叉熵方法: https://doi.org/10.1016/S0377-2217(96)00385-2
+- Kroese, Taimre & Botev 2011 Handbook of Monte Carlo Methods: https://doi.org/10.1002/9781118014967
+- Asmussen & Glynn 2007 Stochastic Simulation: https://doi.org/10.1007/978-0-387-69033-9
+- Bogaerts et al. 2018 光子学良率: https://fib.intec.ugent.be/download/pub_4125.pdf
+- SciPy stats 文档: https://docs.scipy.org/doc/scipy/reference/stats.html
+- 交叉熵方法综述(中文): https://journals.nwpu.edu.cn/xbgydxxb/FileUp/HTML/20170327.htm
+
 ## 核心理论
 
 设标称（工艺）分布为 ``f(x)``，失效区域为 ``A``，目标良率 ``Y = P(X ∈ A)``。

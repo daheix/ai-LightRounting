@@ -12,9 +12,17 @@
 
 来源:
 - JAX vmap 文档: https://docs.jax.dev/en/latest/_autosummary/jax.vmap.html
-- 蒙特卡洛方法: Metropolis & Ulam 1949
-- Sobol 全局灵敏度: Sobol 2001; Saltelli et al. 2010
+- 蒙特卡洛方法: Metropolis & Ulam 1949,
+  https://doi.org/10.1080/01621459.1949.10483310
+- Sobol 全局灵敏度: Sobol 2001, https://www.sciencedirect.com/science/article/pii/S0378475400002706
+  Saltelli et al. 2010, https://doi.org/10.1016/j.envsoft.2009.08.013
 - SciPy sobol_indices 实现: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.sobol_indices.html
+- Glasserman 2003 Monte Carlo Methods in Financial Engineering:
+  https://doi.org/10.1007/978-0-387-21617-1
+- Fishman 1996 Monte Carlo: Concepts, Algorithms, and Applications:
+  https://doi.org/10.1007/978-1-4757-2553-7
+- Robert & Casella 2004 Monte Carlo Statistical Methods:
+  https://doi.org/10.1007/978-1-4757-4145-2
 
 创新点（标注"创新"）:
 - vmap 并行蒙特卡洛: 1000+ 变体并行仿真

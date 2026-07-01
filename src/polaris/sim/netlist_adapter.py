@@ -9,6 +9,15 @@
    来源: https://simphonyphotonics.readthedocs.io/
 3. PoLaRIS 内部格式: connections 使用 [(inst.port, inst.port), ...] 列表
 
+来源:
+- SAX 文档: https://flaport.github.io/sax/
+- Simphony 文档: https://simphonyphotonics.readthedocs.io/
+- gdsfactory netlist: https://gdsfactory.github.io/gdsfactory/api.html
+- Matres et al. 2024 GDSFactory paper:
+  https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- KLayout netlist format: https://www.klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
+- Python re 文档: https://docs.python.org/3/library/re.html
+
 创新点（标注"创新"）:
 - 网表格式自动适配器：通过正则模式匹配端口引用格式，
   自动检测输入网表格式并统一转换为内部格式。

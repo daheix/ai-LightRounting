@@ -8,9 +8,15 @@
 
 - 图同构判定: McKay & Piperno, "Practical Graph Isomorphism, II",
   J. Symbolic Computation 2014, DOI: 10.1016/j.jsc.2013.09.003
+  https://www.sciencedirect.com/science/article/pii/S0747717113001930
 - VF2 子图同构: Cordella et al., IEEE TPAMI 2004, DOI: 10.1109/TPAMI.2004.75
+  https://ieeexplore.ieee.org/document/1266305
 - KLayout LVS Compare: https://www.klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
 - SiEPIC EBeam PDK LVS: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Chrostowski & Hochberg, "Silicon Photonics Design: From Devices to Systems",
+  Cambridge University Press, 2015, ISBN 978-1-107-08345-6,
+  https://www.cambridge.org/9781107083456
+- NetworkX isomorphism 文档: https://networkx.org/documentation/stable/reference/algorithms/isomorphism.html
 
 ## 合规性: 规则 14.1（禁 fall-back）/ 7.1（< 800 行）/ 18（学术诚信）
 """

@@ -8,6 +8,13 @@
   IEEE ISCAS 1974, https://ieeexplore.ieee.org/document/1084079
 - Pillage, "Electronic Circuit & System Simulation Methods",
   McGraw-Hill, 1995, §4-5
+- Nagel, "SPICE2: A Computer Program to Simulate Semiconductor Circuits",
+  UC Berkeley ERL-M520, 1975, https://www.eecs.berkeley.edu/Pubs/TechRpts/1975/ERL-520.pdf
+- Galetzka, Loukrezis, De Gersem, "Data-driven model-free modified nodal
+  analysis circuit solver", Int. J. Numer. Model. 2024,
+  https://doi.org/10.1002/jnm.3205
+- Symbolic MNA with Python 教程:
+  https://tiburonboy.github.io/Symbolic-Modified-Nodal-Analysis-using-Python/Modified_Nodal_Analysis.html
 
 MNA 核心算法:
 1. 构建节点-元件关联矩阵
