@@ -313,19 +313,66 @@ def substitute_cell_instances(
       https://www.klayout.org/doc-qt5/code/class_Cell.html
     """
     db = _import_klayout_db()
+    in_path, out_path = _validate_substitute_params(input_path, output_path, substitutions)
+    ly, dbu, top_cell_names_list, ci_substitution_map = _build_ci_substitution_map(
+        db, in_path, input_path, substitutions
+    )
+    cells_to_process = _resolve_cells_to_process(
+        ly, top_cell_name, top_cell_names_list, input_path
+    )
+    substitutions_applied, total_replaced, cells_affected = _execute_cell_substitutions(
+        ly, db, cells_to_process, ci_substitution_map
+    )
+    _write_substituted_gdsii(ly, out_path)
+    logger.info(
+        "GDSII 器件替换: %s → %s (substitutions=%d, instances=%d, cells=%d)",
+        in_path, out_path, len(substitutions),
+        total_replaced, len(cells_affected),
+    )
+    return SubstituteReport(
+        input_path=str(input_path), output_path=str(output_path),
+        substitutions_requested=dict(substitutions),
+        substitutions_applied=substitutions_applied,
+        total_instances_replaced=total_replaced,
+        cells_affected=sorted(cells_affected),
+        dbu=dbu, top_cell_names=top_cell_names_list,
+    )
+
+
+def _validate_substitute_params(
+    input_path, output_path, substitutions
+) -> tuple[Path, Path]:
+    """校验 substitute_cell_instances 入参（R338 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (in_path, out_path)。
+
+    Raises:
+        FileNotFoundError: 输入文件不存在。
+        ValueError: 输入非文件 / substitutions 为空。
+    """
     in_path = Path(input_path)
     out_path = Path(output_path)
-
     if not in_path.exists():
         raise FileNotFoundError(f"输入 GDSII 文件不存在: {input_path}")
     if not in_path.is_file():
         raise ValueError(f"输入路径不是文件: {input_path}")
     if not substitutions:
-        raise ValueError(
-            "substitutions 不能为空。禁止 fall-back（R03）。"
-        )
+        raise ValueError("substitutions 不能为空。禁止 fall-back（R03）。")
+    return in_path, out_path
 
-    # 读取 GDSII
+
+def _build_ci_substitution_map(
+    db, in_path, input_path, substitutions
+) -> tuple:
+    """读取 GDSII 并构建 cell_index 替换映射（R338 内部辅助）。
+
+    Returns:
+        (ly, dbu, top_cell_names_list, ci_substitution_map)。
+
+    Raises:
+        RuntimeError: 读取失败。ValueError: cell 名不存在 / 循环引用。
+    """
     ly = db.Layout()
     try:
         ly.read(str(in_path))
@@ -334,14 +381,10 @@ def substitute_cell_instances(
             f"klayout 读取文件失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
-    top_cell_names_list = sorted(
-        ly.cell(ci).name for ci in ly.each_top_cell()
-    )
-
+    top_cell_names_list = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
     # 验证 substitutions 中的 cell 名都存在
-    cell_index_map: dict[str, int] = {}  # name → cell_index
+    cell_index_map: dict[str, int] = {}
     for old_name, new_name in substitutions.items():
         if old_name not in cell_index_map:
             old_cell = ly.cell(old_name)
@@ -359,23 +402,27 @@ def substitute_cell_instances(
                     f"禁止 fall-back（R03）。"
                 )
             cell_index_map[new_name] = int(new_cell.cell_index())
-
-    # 构建 cell_index 替换映射
+    # 构建 cell_index 替换映射 + 循环引用检测
     ci_substitution_map: dict[int, int] = {}
     for old_name, new_name in substitutions.items():
         old_ci = cell_index_map[old_name]
         new_ci = cell_index_map[new_name]
-        # 检测循环引用：替换后 new_ci 不能引用自己
         if _would_create_cycle(ly, old_ci, new_ci):
             raise ValueError(
                 f"替换 '{old_name}' → '{new_name}' 会创建循环引用："
                 f"'{new_name}' 的子树中已包含 '{old_name}'，"
-                f"替换后 '{new_name}' 会引用自己。"
-                f"禁止 fall-back（R03）。"
+                f"替换后 '{new_name}' 会引用自己。禁止 fall-back（R03）。"
             )
         ci_substitution_map[old_ci] = new_ci
+    return ly, dbu, top_cell_names_list, ci_substitution_map
 
-    # 确定要处理的 cell 列表
+
+def _resolve_cells_to_process(ly, top_cell_name, top_cell_names_list, input_path) -> list:
+    """确定要处理的 cell 列表（R338 内部辅助）。
+
+    Raises:
+        ValueError: top_cell_name 不存在 / 无 cell。
+    """
     if top_cell_name is not None:
         target_cell = ly.cell(top_cell_name)
         if target_cell is None:
@@ -383,52 +430,44 @@ def substitute_cell_instances(
                 f"top_cell_name '{top_cell_name}' 不存在。"
                 f"可用顶层 cells: {top_cell_names_list}"
             )
-        cells_to_process = [target_cell]
-    else:
-        cells_to_process = list(ly.each_cell())
-
+        return [target_cell]
+    cells_to_process = list(ly.each_cell())
     if not cells_to_process:
         raise ValueError(
             f"GDSII 文件 {input_path} 无任何 cell，文件可能为空或损坏"
         )
+    return cells_to_process
 
-    # 执行替换
-    substitutions_applied: list[SubstitutionRecord] = []
-    total_instances_replaced = 0
-    cells_affected: list[str] = []
 
-    # 按 (parent_cell, old_name, new_name, is_array) 分组记录
-    record_map: dict[tuple[str, str, str, bool], int] = {}
+def _execute_cell_substitutions(
+    ly, db, cells_to_process, ci_substitution_map
+) -> tuple[list, int, list[str]]:
+    """执行实例替换（两遍策略：收集→重建）（R338 内部辅助）。
 
-    # 第一遍：收集所有 cell 的实例信息（避免在 clear_insts 后遍历
-    # 其他 cell 触发 KLayout 内部拓扑排序错误）
-    # cell_infos: list of (cell_name, instances_info, has_replacement)
-    cell_infos: list[tuple[str, list[dict], bool]] = []
+    第一遍收集所有需要替换的 cell 的实例信息（避免 clear_insts 后遍历触发
+    KLayout 内部拓扑排序错误），第二遍对需要替换的 cell 执行 clear+重建。
+
+    Returns:
+        (substitutions_applied, total_instances_replaced, cells_affected)。
+    """
+    # 第一遍：收集需替换的 cell 实例信息
+    cell_infos: list[tuple[str, list[dict]]] = []
     for cell in cells_to_process:
-        instances_info: list[dict] = []
-        for inst in cell.each_inst():
-            instances_info.append(_collect_instance_info(inst))
-
+        instances_info = [_collect_instance_info(inst) for inst in cell.each_inst()]
         if not instances_info:
             continue
-
-        has_replacement = any(
-            info["cell_index"] in ci_substitution_map
-            for info in instances_info
-        )
-        if has_replacement:
-            cell_infos.append((cell.name, instances_info, True))
-        # 不需要替换的 cell 不记录，保持原样
-
-    # 第二遍：对需要替换的 cell 执行 clear + 重建
-    for cell_name, instances_info, _ in cell_infos:
+        if any(info["cell_index"] in ci_substitution_map for info in instances_info):
+            cell_infos.append((cell.name, instances_info))
+    # 第二遍：clear + 重建
+    total_instances_replaced = 0
+    cells_affected: list[str] = []
+    record_map: dict[tuple[str, str, str, bool], int] = {}
+    for cell_name, instances_info in cell_infos:
         cell = ly.cell(cell_name)
         if cell is None:
             continue
         cells_affected.append(cell_name)
-        # 清空所有实例
         cell.clear_insts()
-        # 重新插入，应用替换
         for info in instances_info:
             old_ci = info["cell_index"]
             if old_ci in ci_substitution_map:
@@ -440,25 +479,27 @@ def substitute_cell_instances(
                 key = (cell_name, old_name, new_name, info["is_array"])
                 record_map[key] = record_map.get(key, 0) + 1
             else:
-                # 不需要替换，原样重建
                 _rebuild_instance(db, cell, info, old_ci)
-
     # 构建 SubstitutionRecord 列表
-    for (parent_name, old_name, new_name, is_array), count in record_map.items():
-        substitutions_applied.append(SubstitutionRecord(
-            parent_cell_name=parent_name,
-            old_cell_name=old_name,
-            new_cell_name=new_name,
-            instance_count=count,
-            is_array=is_array,
-        ))
-
-    # 排序（按 parent_cell_name, old_cell_name, new_cell_name）
+    substitutions_applied = [
+        SubstitutionRecord(
+            parent_cell_name=parent, old_cell_name=old, new_cell_name=new,
+            instance_count=count, is_array=is_array,
+        )
+        for (parent, old, new, is_array), count in record_map.items()
+    ]
     substitutions_applied.sort(
         key=lambda r: (r.parent_cell_name, r.old_cell_name, r.new_cell_name)
     )
+    return substitutions_applied, total_instances_replaced, cells_affected
 
-    # 写出
+
+def _write_substituted_gdsii(ly, out_path) -> None:
+    """写出替换后的 GDSII（R338 内部辅助）。
+
+    Raises:
+        RuntimeError: 写出失败。
+    """
     try:
         ly.write(str(out_path))
     except Exception as e:
@@ -466,23 +507,6 @@ def substitute_cell_instances(
             f"klayout 写出文件失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
-    logger.info(
-        "GDSII 器件替换: %s → %s (substitutions=%d, instances=%d, cells=%d)",
-        in_path, out_path, len(substitutions),
-        total_instances_replaced, len(cells_affected),
-    )
-
-    return SubstituteReport(
-        input_path=str(input_path),
-        output_path=str(output_path),
-        substitutions_requested=dict(substitutions),
-        substitutions_applied=substitutions_applied,
-        total_instances_replaced=total_instances_replaced,
-        cells_affected=sorted(cells_affected),
-        dbu=dbu,
-        top_cell_names=top_cell_names_list,
-    )
 
 
 # =============================================================================
