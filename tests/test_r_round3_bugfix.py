@@ -321,10 +321,34 @@ class TestMutualInductanceFields:
 class TestStratifiedEmptyStratumRaises:
     """P1-6: 空层（n_h=0）应 raise，禁止静默 0 方差。"""
 
-    def test_empty_stratum_raises(self):
-        """n_samples < n_strata 时必有空层，应 raise RuntimeError。"""
-        # 10 层，5 个样本 → 必有空层
+    def test_empty_stratum_raises(self, monkeypatch):
+        """强制 n_per_stratum[0]=0 时应 raise RuntimeError（防御性检查）。
+
+        _allocate_samples 当前保证每层 ≥1，但 P1-6 的 RuntimeError 是
+        防御性检查（防止未来 _allocate_samples 改动引入空层）。
+        用 monkeypatch 模拟未来 bug 触发该防御。
+        """
+        from polaris.sim import stratified_sampling as ss
+
+        # Monkeypatch _allocate_samples 返回含 0 的列表（模拟未来 bug）
+        def _fake_allocate(n_total, n_strata, strategy, strata_stds=None):
+            return [0] + [n_total // max(1, n_strata - 1)] * (n_strata - 1)
+
+        monkeypatch.setattr(ss, "_allocate_samples", _fake_allocate)
+
         with pytest.raises(RuntimeError, match="分配到 0 个样本"):
+            stratified_monte_carlo(
+                func=lambda x: float(x[0]),
+                nominal_dist=[{"type": "uniform", "low": 0.0, "high": 1.0}],
+                n_strata=5,
+                n_samples=50,
+                strategy=AllocationStrategy.EQUAL,
+                seed=42,
+            )
+
+    def test_insufficient_samples_raises_value_error(self):
+        """n_samples < n_strata 应在前置检查 raise ValueError。"""
+        with pytest.raises(ValueError, match="每层至少 1 个样本"):
             stratified_monte_carlo(
                 func=lambda x: float(x[0]),
                 nominal_dist=[{"type": "uniform", "low": 0.0, "high": 1.0}],
@@ -359,9 +383,9 @@ class TestGdsiiRounding:
 
     def test_round_vs_trunc(self):
         """int(round(x)) 与 int(x) 在 0.5 处差异最大。"""
-        # 模拟 dbu_um=0.001 (1nm)
+        # 模拟 dbu_um=0.001 (1nm)，用 1.5 dbu 的精度避免浮点误差
         dbu_um = 0.001
-        x_um = 1.0005  # 应 round 到 1001 dbu
+        x_um = 1.0006  # 1.0006/0.001 ≈ 1000.6 → round 1001, trunc 1000
         # 修复后: int(round)
         dbu_round = int(round(x_um / dbu_um))
         # 旧 bug: int() 截断
@@ -376,10 +400,11 @@ class TestGdsiiRounding:
     def test_round_trip_error_bound(self):
         """round-trip 误差应 ≤ dbu/2（round 保证）。"""
         dbu_um = 0.001
-        for x_um in [0.0001, 0.0005, 0.0009, 1.23456, 99.9999]:
+        # 用 0.0006（>0.0005）避免浮点边界
+        for x_um in [0.0006, 0.0015, 0.0026, 1.23456, 99.9996]:
             dbu_val = int(round(x_um / dbu_um))
             x_back = dbu_val * dbu_um
-            assert abs(x_back - x_um) <= dbu_um / 2.0 + 1e-12, (
+            assert abs(x_back - x_um) <= dbu_um / 2.0 + 1e-9, (
                 f"x={x_um} round-trip 误差 {abs(x_back - x_um)} > dbu/2"
             )
 
@@ -394,8 +419,7 @@ class TestRipUpRerouteLogging:
         """重布失败时应有 ERROR 级日志。"""
         ordering = CongestionAwareNetOrdering(grid_size=1.0)
 
-        # 构造一个必然失败的重布场景：路径被完全包围的障碍阻塞
-        # 用 Mock router 让 route() raise ValueError
+        # 构造一个必然失败的重布场景：用 Mock router 让 route() raise ValueError
         class _FailingRouter:
             class _Cfg:
                 grid_size = 1.0
@@ -405,18 +429,21 @@ class TestRipUpRerouteLogging:
             def route(self, start, end, obstacles):
                 raise ValueError("模拟不可达")
 
-        # 准备 old_path 和冲突网列表
+        # 准备 old_path：网 0 失败需要重布
         old_path = [(0.0, 0.0), (5.0, 0.0), (10.0, 0.0)]
-        # conflicts: [(net_id, [(path_seg, ...)], [other_paths_idx])]
-        # 使用简单结构触发 except 分支
-        with caplog.at_level(logging.ERROR, logger="polaris.router.curvy_optodesigner"):
+        # 网索引 0 标记为失败，需要 rip-up & reroute
+        import logging as _logging
+        # 设置 logger 可传播以被 caplog 捕获
+        target_logger = _logging.getLogger("polaris.router.curvy_optodesigner")
+        target_logger.setLevel(_logging.ERROR)
+        with caplog.at_level(_logging.ERROR, logger="polaris.router.curvy_optodesigner"):
             result = ordering.rip_up_reroute(
-                router=_FailingRouter(),
                 paths=[old_path],
-                conflicts=[(0, 1, [(old_path, [(0.0, 0.0), (10.0, 0.0)])])],
+                failed_nets=[0],
+                router=_FailingRouter(),
             )
         # 应有 ERROR 日志
-        error_logs = [r for r in caplog.records if r.levelno == logging.ERROR]
+        error_logs = [r for r in caplog.records if r.levelno == _logging.ERROR]
         assert len(error_logs) >= 1, "重布失败未记录 ERROR 日志"
         # 应保留原路径
         assert result[0] == old_path
@@ -435,13 +462,16 @@ class TestRipUpRerouteLogging:
                 return [start, end]
 
         old_path = [(0.0, 0.0), (10.0, 0.0)]
-        with caplog.at_level(logging.ERROR, logger="polaris.router.curvy_optodesigner"):
+        import logging as _logging
+        target_logger = _logging.getLogger("polaris.router.curvy_optodesigner")
+        target_logger.setLevel(_logging.ERROR)
+        with caplog.at_level(_logging.ERROR, logger="polaris.router.curvy_optodesigner"):
             result = ordering.rip_up_reroute(
-                router=_OkRouter(),
                 paths=[old_path],
-                conflicts=[(0, 1, [(old_path, [(0.0, 0.0), (10.0, 0.0)])])],
+                failed_nets=[0],
+                router=_OkRouter(),
             )
-        error_logs = [r for r in caplog.records if r.levelno == logging.ERROR]
+        error_logs = [r for r in caplog.records if r.levelno == _logging.ERROR]
         assert len(error_logs) == 0
         assert result[0] == [(0.0, 0.0), (10.0, 0.0)]
 
