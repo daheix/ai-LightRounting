@@ -799,48 +799,69 @@ def import_gdsii_from_gdsfactory(
     - gdspy 层次化引用: https://gdspy.readthedocs.io/en/master/gettingstarted.html#references
     """
     from pathlib import Path as _Path
-
     import klayout.db as db
-
     gds_path = _Path(gds_path)
     if not gds_path.exists():
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not gds_path.is_file():
         raise ValueError(f"路径不是文件: {gds_path}")
-
     if layer_map is None:
         layer_map = dict(_DEFAULT_LAYER_MAP)
+    ly, dbu, top_cell, top_cell_name = _read_and_select_top_cell(
+        db, gds_path, top_cell_name
+    )
+    layer_infos, layer_shape_count = _collect_layer_infos(ly, layer_map)
+    cells_info, total_instances, total_polygons, total_paths, total_texts = (
+        _collect_cells_info(ly, dbu, top_cell_name, layer_shape_count)
+    )
+    _finalize_layer_infos(layer_infos, layer_shape_count)
+    return GDSIIImportResult(
+        file_path=str(gds_path), top_cell_name=top_cell_name, dbu_um=dbu,
+        cells=cells_info, layers=layer_infos, total_instances=total_instances,
+        total_polygons=total_polygons, total_paths=total_paths,
+        total_texts=total_texts, n_cells=len(cells_info),
+    )
 
+
+def _read_and_select_top_cell(db, gds_path, top_cell_name) -> tuple:
+    """读取 GDSII 并选择顶层 cell（R301 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, top_cell, top_cell_name)。
+
+    Raises:
+        RuntimeError: klayout 读取失败。ValueError: top_cell_name 不存在 / 无顶层 cell。
+    """
     ly = db.Layout()
     try:
         ly.read(str(gds_path))
     except Exception as e:
         raise RuntimeError(
-            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
+            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
-
-    # 选择顶层 cell
     if top_cell_name is not None:
         top_cell = ly.cell(top_cell_name)
         if top_cell is None:
             available = [ly.cell(ci).name for ci in ly.each_top_cell()]
             raise ValueError(
-                f"top_cell_name '{top_cell_name}' 不存在。"
-                f"可用顶层 cells: {available}"
+                f"top_cell_name '{top_cell_name}' 不存在。可用顶层 cells: {available}"
             )
     else:
         top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
         if not top_cells:
-            raise ValueError(
-                f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空"
-            )
+            raise ValueError(f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空")
         top_cell = top_cells[0]
         top_cell_name = top_cell.name
+    return ly, dbu, top_cell, top_cell_name
 
-    # 收集所有 layers（klayout 0.30.9: layer_indices() 返回 list[int]）
+
+def _collect_layer_infos(ly, layer_map) -> tuple:
+    """收集所有 layers 信息（R301 内部辅助）。
+
+    Returns:
+        (layer_infos, layer_shape_count)。
+    """
     layer_infos: list[GDSIILayerInfo] = []
     layer_shape_count: dict[tuple[int, int], int] = {}
     for li in ly.layer_indices():
@@ -848,113 +869,96 @@ def import_gdsii_from_gdsfactory(
         gds_layer = int(info.layer)
         gds_datatype = int(info.datatype)
         polaris_name = layer_map.get(
-            (gds_layer, gds_datatype),
-            f"LAYER_{gds_layer}_{gds_datatype}",
+            (gds_layer, gds_datatype), f"LAYER_{gds_layer}_{gds_datatype}",
         )
         layer_infos.append(GDSIILayerInfo(
-            gds_layer=gds_layer,
-            gds_datatype=gds_datatype,
-            polaris_name=polaris_name,
-            n_shapes=0,  # 后面统计
+            gds_layer=gds_layer, gds_datatype=gds_datatype,
+            polaris_name=polaris_name, n_shapes=0,
         ))
         layer_shape_count[(gds_layer, gds_datatype)] = 0
+    return layer_infos, layer_shape_count
 
-    # 遍历所有 cells，收集层次结构 + 形状统计
-    # klayout 0.30.9: ly.cells() 返回 int（cell 总数），ly.cell(ci) 接受 int 索引
+
+def _collect_cells_info(ly, dbu, top_cell_name, layer_shape_count) -> tuple:
+    """遍历所有 cells 收集层次结构与形状统计（R301 内部辅助）。
+
+    Args:
+        layer_shape_count: 层→shape 计数字典（会被本函数累加更新）。
+
+    Returns:
+        (cells_info, total_instances, total_polygons, total_paths, total_texts)。
+    """
     cells_info: list[GDSIICellInfo] = []
-    total_instances = 0
-    total_polygons = 0
-    total_paths = 0
-    total_texts = 0
-
+    total_instances = total_polygons = total_paths = total_texts = 0
     for ci in range(ly.cells()):
         cell = ly.cell(ci)
         cell_name = cell.name
         is_top = (cell_name == top_cell_name)
-
-        # 形状统计（按层）
-        # klayout 0.30.9: is_box/is_polygon/is_simple_polygon 都视为多边形
-        # （GDSII 中 Box 实际存储为 4 顶点多边形）
-        n_poly = 0
-        n_path = 0
-        n_text = 0
-        for li in ly.layer_indices():
-            info = ly.get_info(li)
-            gds_layer = int(info.layer)
-            gds_datatype = int(info.datatype)
-            shapes = cell.shapes(li)
-            for shape in shapes.each():
-                if (
-                    shape.is_polygon()
-                    or shape.is_box()
-                    or shape.is_simple_polygon()
-                ):
-                    n_poly += 1
-                elif shape.is_path():
-                    n_path += 1
-                elif shape.is_text():
-                    n_text += 1
-                layer_shape_count[(gds_layer, gds_datatype)] = (
-                    layer_shape_count.get((gds_layer, gds_datatype), 0) + 1
-                )
-
-        # 实例信息（层次化引用）
-        # klayout 0.30.9: inst.cell_index 是属性（int），不是方法
-        # inst.dcplx_trans 返回 DCplxTrans（μm 单位）
-        instances: list[GDSIIInstanceInfo] = []
-        for inst in cell.each_inst():
-            child_idx = inst.cell_index
-            child_cell = ly.cell(child_idx)
-            child_name = child_cell.name
-            inst_info = _klayout_trans_to_info(inst.dcplx_trans, dbu)
-            inst_info.cell_name = child_name
-            instances.append(inst_info)
-
-        # 边界框（cell.bbox() 返回 Box，单位 dbu）
-        bbox = cell.bbox()
-        bbox_um = (
-            float(bbox.left) * dbu,
-            float(bbox.bottom) * dbu,
-            float(bbox.right) * dbu,
-            float(bbox.top) * dbu,
-        )
-
+        n_poly, n_path, n_text, layer_counts = _count_cell_shapes(ly, cell)
+        for key, cnt in layer_counts.items():
+            layer_shape_count[key] = layer_shape_count.get(key, 0) + cnt
+        instances = _collect_cell_instances(ly, cell, dbu)
+        bbox_um = _cell_bbox_um(cell, dbu)
         cells_info.append(GDSIICellInfo(
-            name=cell_name,
-            n_polygons=n_poly,
-            n_paths=n_path,
-            n_texts=n_text,
-            n_instances=len(instances),
-            instances=instances,
-            bbox_um=bbox_um,
-            is_top=is_top,
+            name=cell_name, n_polygons=n_poly, n_paths=n_path, n_texts=n_text,
+            n_instances=len(instances), instances=instances, bbox_um=bbox_um, is_top=is_top,
         ))
-
         total_instances += len(instances)
         total_polygons += n_poly
         total_paths += n_path
         total_texts += n_text
+    return cells_info, total_instances, total_polygons, total_paths, total_texts
 
-    # 更新 layer 形状计数
+
+def _count_cell_shapes(ly, cell) -> tuple:
+    """统计 cell 内形状（R301 内部辅助）。
+
+    Returns:
+        (n_poly, n_path, n_text, layer_counts)。
+    """
+    n_poly = n_path = n_text = 0
+    layer_counts: dict[tuple[int, int], int] = {}
+    for li in ly.layer_indices():
+        info = ly.get_info(li)
+        key = (int(info.layer), int(info.datatype))
+        for shape in cell.shapes(li).each():
+            if shape.is_polygon() or shape.is_box() or shape.is_simple_polygon():
+                n_poly += 1
+            elif shape.is_path():
+                n_path += 1
+            elif shape.is_text():
+                n_text += 1
+            layer_counts[key] = layer_counts.get(key, 0) + 1
+    return n_poly, n_path, n_text, layer_counts
+
+
+def _collect_cell_instances(ly, cell, dbu) -> list:
+    """收集 cell 的实例信息（R301 内部辅助）。"""
+    instances: list[GDSIIInstanceInfo] = []
+    for inst in cell.each_inst():
+        child_idx = inst.cell_index
+        child_name = ly.cell(child_idx).name
+        inst_info = _klayout_trans_to_info(inst.dcplx_trans, dbu)
+        inst_info.cell_name = child_name
+        instances.append(inst_info)
+    return instances
+
+
+def _cell_bbox_um(cell, dbu) -> tuple[float, float, float, float]:
+    """计算 cell bbox（dbu → μm）（R301 内部辅助）。"""
+    bbox = cell.bbox()
+    return (
+        float(bbox.left) * dbu, float(bbox.bottom) * dbu,
+        float(bbox.right) * dbu, float(bbox.top) * dbu,
+    )
+
+
+def _finalize_layer_infos(layer_infos, layer_shape_count) -> None:
+    """更新 layer 形状计数并过滤空层（R301 内部辅助）。"""
     for li_info in layer_infos:
         key = (li_info.gds_layer, li_info.gds_datatype)
         li_info.n_shapes = layer_shape_count.get(key, 0)
-
-    # 过滤空层（n_shapes=0 且无实例引用）
-    layer_infos = [li for li in layer_infos if li.n_shapes > 0]
-
-    return GDSIIImportResult(
-        file_path=str(gds_path),
-        top_cell_name=top_cell_name,
-        dbu_um=dbu,
-        cells=cells_info,
-        layers=layer_infos,
-        total_instances=total_instances,
-        total_polygons=total_polygons,
-        total_paths=total_paths,
-        total_texts=total_texts,
-        n_cells=len(cells_info),
-    )
+    layer_infos[:] = [li for li in layer_infos if li.n_shapes > 0]
 
 
 # ============================================================================
