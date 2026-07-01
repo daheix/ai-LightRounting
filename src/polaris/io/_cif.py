@@ -37,6 +37,8 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass, field
+from typing import Callable
 
 from polaris.io.multi_format import (
     Cell,
@@ -72,83 +74,133 @@ def read_cif(text: str) -> FormatLayout:
     """
     text = _strip_cif_comments(text)
     statements = [s.strip() for s in text.split(";") if s.strip()]
-    cells: list[Cell] = []
-    layers: dict[str, LayerInfo] = {}
-    sym_to_name: dict[int, str] = {}
-    pending_calls: list[tuple[Cell, int, Instance]] = []
-    current: Cell | None = None
-    current_layer = "default"
-    pending_name: str | None = None
-
+    state = _CifState()
     for stmt in statements:
         toks = _cif_tokens(stmt)
         if not toks:
             continue
         cmd = toks[0].upper()
-        current, current_layer, layers, pending_name = _cif_dispatch(
-            cmd, toks, cells, layers, sym_to_name,
-            current, current_layer, pending_name, pending_calls,
-        )
         if cmd == "E":
             break
+        _cif_dispatch(state, cmd, toks)
 
-    for cell, sym, inst in pending_calls:
-        if sym not in sym_to_name:
+    for cell, sym, inst in state.pending_calls:
+        if sym not in state.sym_to_name:
             raise ValueError(
                 f"CIF 符号 {sym} 被引用但未定义（C 命令引用的符号必须有 DS 定义，"
                 f"来源 Caltech TR 2686）"
             )
-        inst.cell_name = sym_to_name[sym]
+        inst.cell_name = state.sym_to_name[sym]
         cell.instances.append(inst)
 
-    top = _cif_pick_top(cells)
+    top = _cif_pick_top(state.cells)
     return FormatLayout(
         name=top.name if top else "cif_layout",
-        cells=cells,
-        layers=layers,
+        cells=state.cells,
+        layers=state.layers,
         top_cell=top.name if top else "",
         unit="centimicron",
     )
 
 
-def _cif_dispatch(
-    cmd: str,
-    toks: list[str],
-    cells: list[Cell],
-    layers: dict[str, LayerInfo],
-    sym_to_name: dict[int, str],
-    current: Cell | None,
-    current_layer: str,
-    pending_name: str | None,
-    pending_calls: list,
-) -> tuple:
-    """分发单条 CIF 语句（保持 read_cif 主体 ≤80 行）。"""
-    if cmd == "DS":
-        sym = int(toks[1])
-        name = pending_name or f"sym{sym}"
-        sym_to_name[sym] = name
-        current = Cell(name=name)
-        cells.append(current)
-        pending_name = None
-    elif cmd == "9":
-        pending_name = toks[1] if len(toks) > 1 else None
-    elif cmd == "DF":
-        current = None
-    elif cmd == "L":
-        current_layer = toks[1] if len(toks) > 1 else "default"
-        layers.setdefault(current_layer, LayerInfo(name=current_layer))
-    elif cmd == "B" and current is not None:
-        current.shapes.append(_cif_parse_box(toks, current_layer))
-    elif cmd == "P" and current is not None:
-        current.shapes.append(_cif_parse_polygon(toks, current_layer))
-    elif cmd == "W" and current is not None:
-        current.shapes.append(_cif_parse_wire(toks, current_layer))
-    elif cmd == "R" and current is not None:
-        current.shapes.append(_cif_parse_roundflash(toks, current_layer))
-    elif cmd == "C" and current is not None:
-        inst = _cif_parse_call(toks)
-        pending_calls.append((current, int(toks[1]), inst))
-    return current, current_layer, layers, pending_name
+@dataclass
+class _CifState:
+    """CIF 解析运行时状态（current cell / layer / 符号表 / 待绑定调用）。"""
+
+    current: Cell | None = None
+    current_layer: str = "default"
+    layers: dict[str, LayerInfo] = field(default_factory=dict)
+    pending_name: str | None = None
+    cells: list[Cell] = field(default_factory=list)
+    sym_to_name: dict[int, str] = field(default_factory=dict)
+    pending_calls: list[tuple[Cell, int, Instance]] = field(default_factory=list)
+
+
+def _cif_dispatch(state: _CifState, cmd: str, toks: list[str]) -> None:
+    """分发单条 CIF 语句到对应 handler（dispatch table，CC ≤ 3）。
+
+    未知命令静默跳过（CIF 允许扩展命令，来源 Caltech TR 2686 §扩展性）。
+    """
+    handler = _CIF_HANDLERS.get(cmd)
+    if handler is not None:
+        handler(state, toks)
+
+
+def _cif_handle_ds(state: _CifState, toks: list[str]) -> None:
+    """DS 命令: 开始符号定义（创建 Cell，登记 sym→name）。"""
+    sym = int(toks[1])
+    name = state.pending_name or f"sym{sym}"
+    state.sym_to_name[sym] = name
+    state.current = Cell(name=name)
+    state.cells.append(state.current)
+    state.pending_name = None
+
+
+def _cif_handle_name(state: _CifState, toks: list[str]) -> None:
+    """9 命令: 设置下一个 DS 的符号名。"""
+    state.pending_name = toks[1] if len(toks) > 1 else None
+
+
+def _cif_handle_df(state: _CifState, toks: list[str]) -> None:
+    """DF 命令: 结束符号定义。"""
+    state.current = None
+
+
+def _cif_handle_layer(state: _CifState, toks: list[str]) -> None:
+    """L 命令: 设置当前层并登记到 layers。"""
+    state.current_layer = toks[1] if len(toks) > 1 else "default"
+    state.layers.setdefault(
+        state.current_layer, LayerInfo(name=state.current_layer)
+    )
+
+
+def _cif_handle_call(state: _CifState, toks: list[str]) -> None:
+    """C 命令: 符号调用（需 current，暂存待绑定）。"""
+    if state.current is None:
+        return
+    inst = _cif_parse_call(toks)
+    state.pending_calls.append((state.current, int(toks[1]), inst))
+
+
+def _cif_handle_box(state: _CifState, toks: list[str]) -> None:
+    """B 命令: box（需 current）。"""
+    if state.current is None:
+        return
+    state.current.shapes.append(_cif_parse_box(toks, state.current_layer))
+
+
+def _cif_handle_polygon(state: _CifState, toks: list[str]) -> None:
+    """P 命令: polygon（需 current）。"""
+    if state.current is None:
+        return
+    state.current.shapes.append(_cif_parse_polygon(toks, state.current_layer))
+
+
+def _cif_handle_wire(state: _CifState, toks: list[str]) -> None:
+    """W 命令: wire（需 current）。"""
+    if state.current is None:
+        return
+    state.current.shapes.append(_cif_parse_wire(toks, state.current_layer))
+
+
+def _cif_handle_roundflash(state: _CifState, toks: list[str]) -> None:
+    """R 命令: roundflash（需 current）。"""
+    if state.current is None:
+        return
+    state.current.shapes.append(_cif_parse_roundflash(toks, state.current_layer))
+
+
+_CIF_HANDLERS: dict[str, Callable[[_CifState, list[str]], None]] = {
+    "DS": _cif_handle_ds,
+    "9": _cif_handle_name,
+    "DF": _cif_handle_df,
+    "L": _cif_handle_layer,
+    "C": _cif_handle_call,
+    "B": _cif_handle_box,
+    "P": _cif_handle_polygon,
+    "W": _cif_handle_wire,
+    "R": _cif_handle_roundflash,
+}
 
 
 def _cif_rotation_angle(vec: list[float]) -> float:
