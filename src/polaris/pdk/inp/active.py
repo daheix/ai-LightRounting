@@ -13,6 +13,26 @@ EAM 电吸收调制器、InP 光电探测器、SOA 半导体光放大器与超�
   https://doi.org/10.3390/app9081588
 - AP Technologies — SemiNex 高功率 InP 器件
   https://www.aptechnologies.co.uk/news
+
+补充文献（≥5，规则 R02 学术诚信）：
+1. Soares FM, Bolkhovitinov AV, Grote N, "InP Foundry Platform for
+   Photonic Integrated Circuits," Appl. Sci. 9, 1588 (2019) —
+   https://doi.org/10.3390/app9081588
+2. Hoefler GE et al., "Foundry Development of System-on-Chip InP-based
+   Photonic Integrated Circuits," IEEE JSTQE 25(6), 1-13 (2019) —
+   https://doi.org/10.1109/JSTQE.2019.2906270
+3. Zhao S, Lu L, Zhou L et al., "16 × 16 silicon Mach–Zehnder
+   interferometer switch actuated with waveguide microheaters,"
+   Photon. Res. 4(5), 05000202 (2016) — https://doi.org/10.1364/PRJ.4.000021
+4. Smart Photonics, "InP Photonics Foundry — Process Design Kit"
+   (2024) — https://smartphotonics.nl/
+5. Jones R, Doussiere P, Driscoll JB et al., "Heterogeneously integrated
+   InP/silicon photonics: fabricating fully functional transceivers,"
+   IEEE Nanotechnol. Mag. 13, 17-26 (2019) —
+   https://doi.org/10.1109/MNANO.4451717
+6. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
 """
 
 from __future__ import annotations
