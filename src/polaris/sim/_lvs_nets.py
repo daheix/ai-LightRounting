@@ -447,61 +447,142 @@ def detect_open_circuits(
     if not reference_nets:
         return []
 
-    # pin_ref → extracted_net_id 映射
+    pin_to_ext_net = _build_pin_to_ext_net_map(extracted_nets)
+    mismatches: list[ShortOpenMismatch] = []
+    for ref_net in reference_nets:
+        ext_net_ids, unconnected = _classify_ref_net_pins(ref_net, pin_to_ext_net)
+        mismatches.extend(_unconnected_pin_mismatches(ref_net, unconnected))
+        if len(ext_net_ids) > 1:
+            mismatches.append(
+                _open_circuit_mismatch(ref_net, ext_net_ids, pin_to_ext_net)
+            )
+    return mismatches
+
+
+def _build_pin_to_ext_net_map(
+    extracted_nets: list[Net],
+) -> dict[str, str]:
+    """建立 pin_ref → extracted_net_id 映射（R626 Extract Method 降低圈复杂度）。
+
+    Args:
+        extracted_nets: 提取网表的网络列表。
+
+    Returns:
+        pin_ref -> extracted_net_id 映射字典。
+
+    来源:
+    - Calibre nmLVS-H "Unconnected Net" 分类
+      https://www.eda-solutions.com/tn061/
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
     pin_to_ext_net: dict[str, str] = {}
     for ext_net in extracted_nets:
         for pin in ext_net.pins:
             pin_to_ext_net[pin.ref] = ext_net.net_id
+    return pin_to_ext_net
 
+
+def _classify_ref_net_pins(
+    ref_net: Net,
+    pin_to_ext_net: dict[str, str],
+) -> tuple[dict[str, list[str]], list[str]]:
+    """分类参考 net 引脚到提取 net（R626 Extract Method）。
+
+    Args:
+        ref_net: 参考 net。
+        pin_to_ext_net: pin_ref -> extracted_net_id 映射。
+
+    Returns:
+        (ext_net_id -> [pin_refs], [未连接 pin_refs])。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+    """
+    ext_net_ids: dict[str, list[str]] = {}
+    unconnected: list[str] = []
+    for pin in ref_net.pins:
+        ext_net_id = pin_to_ext_net.get(pin.ref)
+        if ext_net_id is None:
+            unconnected.append(pin.ref)
+        else:
+            ext_net_ids.setdefault(ext_net_id, []).append(pin.ref)
+    return ext_net_ids, unconnected
+
+
+def _unconnected_pin_mismatches(
+    ref_net: Net,
+    unconnected: list[str],
+) -> list[ShortOpenMismatch]:
+    """生成未连接引脚的不匹配记录（R626 Extract Method）。
+
+    Args:
+        ref_net: 参考 net。
+        unconnected: 未连接引脚 ref 列表。
+
+    Returns:
+        UNCONNECTED_PIN 类型不匹配列表。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+    """
     mismatches: list[ShortOpenMismatch] = []
-    for ref_net in reference_nets:
-        # 收集该参考 net 的引脚在提取网表中属于哪些 net
-        ext_net_ids: dict[str, list[str]] = {}  # ext_net_id -> [pin_refs]
-        unconnected: list[str] = []
-        for pin in ref_net.pins:
-            ext_net_id = pin_to_ext_net.get(pin.ref)
-            if ext_net_id is None:
-                unconnected.append(pin.ref)
-            else:
-                ext_net_ids.setdefault(ext_net_id, []).append(pin.ref)
-
-        # 未连接引脚
-        for pin_ref in unconnected:
-            pin = next((p for p in ref_net.pins if p.ref == pin_ref), None)
-            location = (pin.x, pin.y) if pin else None
-            mismatches.append(ShortOpenMismatch(
-                mtype=ShortOpenMismatchType.UNCONNECTED_PIN,
-                message=(
-                    f"未连接引脚: 参考 net '{ref_net.net_id}' 的引脚 "
-                    f"'{pin_ref}' 在提取网表中未连接"
-                ),
-                ref_net_ids=[ref_net.net_id],
-                pin_refs=[pin_ref],
-                location_um=location,
-                layer=pin.layer if pin else "",
-            ))
-
-        # 分散到多个提取 net → 开路
-        if len(ext_net_ids) > 1:
-            # 开路位置：取分散的引脚中心
-            all_pins = [p for p in ref_net.pins if p.ref in pin_to_ext_net]
-            if all_pins:
-                cx = sum(p.x for p in all_pins) / len(all_pins)
-                cy = sum(p.y for p in all_pins) / len(all_pins)
-            else:
-                cx, cy = 0.0, 0.0
-            mismatches.append(ShortOpenMismatch(
-                mtype=ShortOpenMismatchType.OPEN_CIRCUIT,
-                message=(
-                    f"开路: 参考 net '{ref_net.net_id}' 的引脚分散到 "
-                    f"{len(ext_net_ids)} 个提取 net: {sorted(ext_net_ids.keys())}"
-                ),
-                ref_net_ids=[ref_net.net_id],
-                ext_net_ids=sorted(ext_net_ids.keys()),
-                pin_refs=ref_net.pin_refs,
-                location_um=(cx, cy),
-            ))
+    for pin_ref in unconnected:
+        pin = next((p for p in ref_net.pins if p.ref == pin_ref), None)
+        location = (pin.x, pin.y) if pin else None
+        mismatches.append(ShortOpenMismatch(
+            mtype=ShortOpenMismatchType.UNCONNECTED_PIN,
+            message=(
+                f"未连接引脚: 参考 net '{ref_net.net_id}' 的引脚 "
+                f"'{pin_ref}' 在提取网表中未连接"
+            ),
+            ref_net_ids=[ref_net.net_id],
+            pin_refs=[pin_ref],
+            location_um=location,
+            layer=pin.layer if pin else "",
+        ))
     return mismatches
+
+
+def _open_circuit_mismatch(
+    ref_net: Net,
+    ext_net_ids: dict[str, list[str]],
+    pin_to_ext_net: dict[str, str],
+) -> ShortOpenMismatch:
+    """生成开路不匹配记录（R626 Extract Method）。
+
+    开路位置取分散引脚的中心坐标。
+
+    Args:
+        ref_net: 参考 net。
+        ext_net_ids: ext_net_id -> [pin_refs] 映射。
+        pin_to_ext_net: pin_ref -> extracted_net_id 映射。
+
+    Returns:
+        OPEN_CIRCUIT 类型不匹配记录。
+
+    来源:
+    - Calibre nmLVS-H "Unconnected Net" 分类
+      https://www.eda-solutions.com/tn061/
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+    """
+    all_pins = [p for p in ref_net.pins if p.ref in pin_to_ext_net]
+    if all_pins:
+        cx = sum(p.x for p in all_pins) / len(all_pins)
+        cy = sum(p.y for p in all_pins) / len(all_pins)
+    else:
+        cx, cy = 0.0, 0.0
+    return ShortOpenMismatch(
+        mtype=ShortOpenMismatchType.OPEN_CIRCUIT,
+        message=(
+            f"开路: 参考 net '{ref_net.net_id}' 的引脚分散到 "
+            f"{len(ext_net_ids)} 个提取 net: {sorted(ext_net_ids.keys())}"
+        ),
+        ref_net_ids=[ref_net.net_id],
+        ext_net_ids=sorted(ext_net_ids.keys()),
+        pin_refs=ref_net.pin_refs,
+        location_um=(cx, cy),
+    )
 
 
 def isolate_short_location(

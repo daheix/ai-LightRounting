@@ -938,9 +938,8 @@ class CoSimFlow:
 # 6. 单元测试
 # =============================================================================
 
-def _test() -> None:
-    """冒烟测试。"""
-    # Test 1: DRC
+def _test_drc() -> None:
+    """冒烟测试 1: DRC 引擎（R624 Extract Method，从 _test 拆分）。"""
     drc = DRCEngine()
     layout = {
         "waveguide": {"min_width": 0.42, "min_spacing": 0.48,
@@ -956,7 +955,13 @@ def _test() -> None:
     print(f"DRC: {report['errors']} 错误, {report['warnings']} 警告, "
           f"{report['total_rules']} 条规则")
 
-    # Test 2: LVS
+
+def _test_lvs() -> tuple[LVSNetlist, LVSNetlist]:
+    """冒烟测试 2: LVS 引擎（R624 Extract Method，从 _test 拆分）。
+
+    Returns:
+        (schematic_netlist, layout_netlist) 供后续 CoSimFlow 测试复用。
+    """
     sch = LVSNetlist(
         devices={"D1": "wg_straight", "D2": "mmi_1x2", "D3": "ring_resonator"},
         nets={"N1": ["D1:in", "D2:out1"], "N2": ["D2:in", "D3:out"]},
@@ -969,8 +974,11 @@ def _test() -> None:
     result = lvs.compare(sch, lay)
     assert result["passed"], "拓扑一致的网表应通过 LVS"
     print(f"LVS: 通过={result['passed']}, {result['schematic_devices']} 器件")
+    return sch, lay
 
-    # Test 3: PEX
+
+def _test_pex() -> None:
+    """冒烟测试 3: PEX 引擎（R624 Extract Method，从 _test 拆分）。"""
     pex = PEXEngine(sheet_resistance_ohm_sq=0.05, metal_thickness_um=0.5)
     wire = pex.extract_wire(length_um=1000.0, width_um=1.0)
     assert wire["resistance_ohm"] > 0
@@ -984,7 +992,13 @@ def _test() -> None:
           f"R={total.total_resistance_ohm:.3f}Ω, "
           f"L={total.total_inductance_ph:.2f}pH")
 
-    # Test 4: Statistical (Corner + MC + Yield)
+
+def _test_statistical() -> tuple[StatisticalAnalyzer, dict, object]:
+    """冒烟测试 4: 统计分析 Corner+MC+Yield+Sensitivity（R624 Extract Method）。
+
+    Returns:
+        (analyzer, layout_data, sim_fn) 供后续 CoSimFlow 测试复用。
+    """
     params = [
         StatisticalParam("waveguide_width", 0.45, 0.005, "gaussian", units="μm",
                          sensitivity=1.0),
@@ -1020,7 +1034,19 @@ def _test() -> None:
     print(f"Sensitivity: width={sens['waveguide_width']:.2f} nm/μm, "
           f"thickness={sens['waveguide_thickness']:.2f} nm/μm")
 
-    # Test 5: Layout-Aware MC
+    layout_data = {
+        "waveguide": {"min_width": 0.42, "min_spacing": 0.48,
+                      "width_violations": 5, "spacing_violations": 3,
+                      "density": 0.15},
+        "metal1": {"min_width": 1.2, "min_spacing": 0.9, "spacing_violations": 2},
+        "contact": {"min_enclosure": 0.12},
+        "slab": {"min_width": 12.0},
+    }
+    return stats, layout_data, sim_ring_resonance
+
+
+def _test_layout_aware_mc(stats: StatisticalAnalyzer) -> None:
+    """冒烟测试 5: Layout-Aware MC（R624 Extract Method，从 _test 拆分）。"""
     def sim_layout(p: dict[str, float], pos: tuple[float, float]) -> float:
         return 1550.0 - 2.0 * (p["waveguide_width"] - 0.45)
 
@@ -1035,11 +1061,19 @@ def _test() -> None:
     assert lamc["layout_aware"]
     print(f"Layout-Aware MC: mean={lamc['mean']:.3f}nm, std={lamc['std']:.3f}nm")
 
-    # Test 6: CoSimFlow
+
+def _test_cosim_flow(
+    stats: StatisticalAnalyzer,
+    layout_data: dict,
+    sch: LVSNetlist,
+    lay: LVSNetlist,
+    sim_fn: object,
+) -> None:
+    """冒烟测试 6: CoSimFlow 端到端（R624 Extract Method，从 _test 拆分）。"""
     cosim = CoSimFlow(stats=stats)
     cosim_result = cosim.run_full_flow(
-        layout_data=layout, schematic=sch, layout_netlist=lay,
-        sim_fn=sim_ring_resonance, spec_lower=1549.0, spec_upper=1551.0,
+        layout_data=layout_data, schematic=sch, layout_netlist=lay,
+        sim_fn=sim_fn, spec_lower=1549.0, spec_upper=1551.0,
         n_mc_runs=200,
     )
     assert cosim_result.lvs_passed
@@ -1050,6 +1084,15 @@ def _test() -> None:
           f"DRC={'PASS' if cosim_result.drc_passed else 'FAIL'}, "
           f"LVS={'PASS' if cosim_result.lvs_passed else 'FAIL'}")
 
+
+def _test() -> None:
+    """冒烟测试（R624 拆分为 6 个子测试函数，降低圈复杂度）。"""
+    _test_drc()
+    sch, lay = _test_lvs()
+    _test_pex()
+    stats, layout_data, sim_fn = _test_statistical()
+    _test_layout_aware_mc(stats)
+    _test_cosim_flow(stats, layout_data, sch, lay, sim_fn)
     print("\n所有测试通过 ✅")
 
 
