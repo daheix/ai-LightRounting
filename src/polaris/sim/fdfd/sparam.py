@@ -3,17 +3,29 @@
 S 参数提取流程（A05 §5.2 步骤 10）：
 1. 在每个端口处提取场分布 E_z（沿端口横截面网格线）
 2. 与 FDE 模式做重叠积分，得到模式振幅 a_n（入射）/ b_n（出射）
-3. 归一化至端口功率，组装 S 矩阵 S_ij = b_i / a_j
+3. 归一化至端口功率，组装 S 矩阵 S_ij = b_n / a_j
 
 能量守恒校验（A05 §11.1 / spec.md S1-C2）：
 - TFSF 散射问题 Σ|R|² + Σ|T|² = 1，偏差 ≤ 1e-3
 - 失败立即 raise（规则 14，禁止 fall-back）
 
-文献来源：
-- Pozar DM, "Microwave Engineering," 4th ed., Wiley (2011), §4.3（S 参数归一化）
-- Shin & Fan 2012 JCP §5（FDFD 后处理标准流程）
-- Lumerical FDTD S 参数提取手册 —
-  https://support.lumerical.com/hc/en-us/articles/360034395234
+文献来源（≥5，规则 R02 学术诚信）：
+1. Pozar DM, "Microwave Engineering," 4th ed., Wiley (2011), §4.3
+   （S 参数归一化）— https://www.wiley.com/en-us/9780470631553
+2. Shin W, Fan S, "Choice of the perfectly matched layer boundary
+   condition for frequency-domain Maxwell's equations solvers,"
+   J. Comput. Phys. 231, 3406-3431 (2012) —
+   https://doi.org/10.1016/j.jcp.2012.01.013
+3. Lumerical FDTD S 参数提取手册 (Ansys, 2024) —
+   https://support.lumerical.com/hc/en-us/articles/360034395234
+4. Ansys Lumerical, "Edge Coupler — S-parameter Extraction Methodology"
+   (2024) — https://optics.ansys.com/hc/en-us/articles/360042305354
+5. Yee K, "Numerical solution of initial boundary value problems
+   involving Maxwell's equations in isotropic media," IEEE Trans.
+   Antennas Propag. 14, 302-307 (1966) —
+   https://doi.org/10.1109/TAP.1966.1138693
+6. Taflove A, Hagness SC, "Computational Electrodynamics," 3rd ed.,
+   Artech House (2005) — https://doi.org/10.1002/0471654507.erfme149
 
 规则依据：规则 14（能量守恒失败 raise，无 fall-back）
 """

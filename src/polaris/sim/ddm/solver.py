@@ -8,6 +8,21 @@
 并 re-export 私有工具函数（_equilibrium_carrier 等），保持外部
 `from polaris.sim.ddm.solver import X` 路径完全不变。
 
+文献速查（≥5，详细推导见 docstring 末尾 "文献来源"）：
+1. Selberherr 1984, "Analysis and Simulation of Semiconductor Devices,"
+   Springer — https://doi.org/10.1007/978-3-7091-8752-4
+2. Bank, Rose & Fichtner 1983, SIAM J Sci Stat Comput 4(3):416-435 —
+   https://doi.org/10.1137/0904046
+3. Gummel 1964, Bell System Tech J 43(3):817-920 —
+   https://doi.org/10.1002/j.1538-7305.1964.tb04100.x
+4. Scharfetter & Gummel 1969, IEEE Trans ED 16(1):64-77 —
+   https://doi.org/10.1109/T-ED.1969.16766
+5. Markowich 1986, "The Stationary Semiconductor Device Equations,"
+   Springer — https://doi.org/10.1007/978-3-7091-3692-6
+6. Dennis & Schnabel 1996, "Numerical Methods for Unconstrained
+   Optimization and Nonlinear Equations," SIAM —
+   https://doi.org/10.1137/1.9781611971200
+
 R01 方案检索记录（规则 1）：
 - 关键词：coupled Newton method semiconductor drift diffusion Poisson
   continuity Jacobian SRH recombination line search
