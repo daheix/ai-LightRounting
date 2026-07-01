@@ -192,6 +192,102 @@ def _bbox_to_um(bbox, dbu: float) -> tuple[float, float, float, float]:
 # =============================================================================
 # 缩放主入口
 # =============================================================================
+def _validate_scale_inputs(
+    input_path: str | Path,
+    scale_factor: float,
+    grid_dbu: int,
+) -> Path:
+    """校验 scale_gdsii 输入参数（Extract Method）。
+
+    Args:
+        input_path: 输入 GDSII 文件路径。
+        scale_factor: 缩放比例。
+        grid_dbu: 网格大小（dbu 单位）。
+
+    Returns:
+        输入文件 Path 对象。
+
+    Raises:
+        FileNotFoundError: 输入文件不存在。
+        ValueError: 文件无效 / scale_factor <= 0 / grid_dbu < 1。
+    """
+    in_path = Path(input_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"输入 GDSII 文件不存在: {input_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {input_path}")
+    if scale_factor <= 0:
+        raise ValueError(
+            f"scale_factor 必须 > 0，得到 {scale_factor}。禁止 fall-back（R03）。"
+        )
+    if grid_dbu < 1:
+        raise ValueError(
+            f"grid_dbu 必须 >= 1，得到 {grid_dbu}。禁止 fall-back（R03）。"
+        )
+    return in_path
+
+
+def _read_gdsii_layout(db, in_path: Path, input_path):
+    """读取 GDSII 文件到 Layout 对象（Extract Method，含异常包装）。"""
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    top_cell_indices = [int(ci) for ci in ly.each_top_cell()]
+    if not top_cell_indices:
+        raise ValueError(
+            f"GDSII 文件 {input_path} 无任何 cell，文件可能为空或损坏"
+        )
+    return ly, top_cell_indices
+
+
+def _select_cells_to_scale(
+    ly, top_cell_indices: list[int], top_cell_name: str | None,
+) -> tuple[list, list[str]]:
+    """确定要缩放的 cell 列表与顶层 cell 名列表（Extract Method）。
+
+    Args:
+        ly: KLayout Layout 对象。
+        top_cell_indices: 顶层 cell 索引列表。
+        top_cell_name: 指定顶层 cell 名（None=全部顶层）。
+
+    Returns:
+        (cells_to_scale, top_cell_names_list)。
+
+    Raises:
+        ValueError: top_cell_name 不存在。
+    """
+    top_cell_names_list = sorted(
+        ly.cell(ci).name for ci in top_cell_indices
+    )
+    if top_cell_name is not None:
+        target_cell = ly.cell(top_cell_name)
+        if target_cell is None:
+            raise ValueError(
+                f"top_cell_name '{top_cell_name}' 不存在。"
+                f"可用顶层 cells: {top_cell_names_list}"
+            )
+        cells_to_scale = [target_cell]
+    else:
+        cells_to_scale = [ly.cell(ci) for ci in top_cell_indices]
+    return cells_to_scale, top_cell_names_list
+
+
+def _write_gdsii_layout(ly, out_path: Path):
+    """写出 GDSII 文件（Extract Method，含异常包装）。"""
+    try:
+        ly.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+
+
 def scale_gdsii(
     input_path: str | Path,
     output_path: str | Path,
@@ -229,60 +325,25 @@ def scale_gdsii(
       https://klayout.org/doc-qt5/code/class_Layout.html
     - Python Fraction:
       https://docs.python.org/3/library/fractions.html
+    - Fowler, "Refactoring" 2nd ed., 2018, Extract Method
+      https://martinfowler.com/books/refactoring.html
     """
     db = _import_klayout_db()
-    in_path = Path(input_path)
+    in_path = _validate_scale_inputs(input_path, scale_factor, grid_dbu)
     out_path = Path(output_path)
-
-    if not in_path.exists():
-        raise FileNotFoundError(f"输入 GDSII 文件不存在: {input_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {input_path}")
-    if scale_factor <= 0:
-        raise ValueError(
-            f"scale_factor 必须 > 0，得到 {scale_factor}。禁止 fall-back（R03）。"
-        )
-    if grid_dbu < 1:
-        raise ValueError(
-            f"grid_dbu 必须 >= 1，得到 {grid_dbu}。禁止 fall-back（R03）。"
-        )
 
     # 转换 scale_factor → (mult, div)
     mult, div = _scale_factor_to_fraction(scale_factor, max_denominator)
     actual_scale = mult / div
 
     # 读取 GDSII
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    ly, top_cell_indices = _read_gdsii_layout(db, in_path, input_path)
     dbu = float(ly.dbu)
-    top_cell_indices = [int(ci) for ci in ly.each_top_cell()]
-    if not top_cell_indices:
-        raise ValueError(
-            f"GDSII 文件 {input_path} 无任何 cell，文件可能为空或损坏"
-        )
-
-    top_cell_names_list = sorted(
-        ly.cell(ci).name for ci in top_cell_indices
-    )
 
     # 确定要缩放的 cell
-    if top_cell_name is not None:
-        target_cell = ly.cell(top_cell_name)
-        if target_cell is None:
-            raise ValueError(
-                f"top_cell_name '{top_cell_name}' 不存在。"
-                f"可用顶层 cells: {top_cell_names_list}"
-            )
-        cells_to_scale = [target_cell]
-    else:
-        cells_to_scale = [ly.cell(ci) for ci in top_cell_indices]
+    cells_to_scale, top_cell_names_list = _select_cells_to_scale(
+        ly, top_cell_indices, top_cell_name
+    )
 
     # 记录缩放前 bbox（仅单顶层 cell 时有意义）
     original_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
@@ -299,13 +360,7 @@ def scale_gdsii(
         scaled_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
 
     # 写出
-    try:
-        ly.write(str(out_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
+    _write_gdsii_layout(ly, out_path)
 
     logger.info(
         "GDSII 缩放: %s → %s (scale=%s, mult=%d, div=%d, grid=%d dbu, "
