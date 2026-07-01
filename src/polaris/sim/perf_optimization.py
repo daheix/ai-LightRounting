@@ -8,6 +8,8 @@
 - R456 NumPy 向量化 FDTD 核心（原计划 JAX，环境无 jax 改用 NumPy
   向量化；R04 允许 JAX(CPU) 但不强制，NumPy broadcast 同样达到向量化）
 - R457-R550 S 参数级联缓存、内存池、性能基准套件、多进程并行
+- R457 Redheffer 星积级联 + 缓存 / R460 精度自适应 / R461 稀疏压缩 /
+  R462 向量化 I/O / R463 综合基准（perf_optimization_advanced）
 
 ## 架构说明（facade 模式，批次 10-B 续 超长文件拆分）
 
@@ -19,6 +21,7 @@
 - ``perf_optimization_fdtd`` — FdtdVectorizedResult + NumpyVectorizedFdtdCore
 - ``perf_optimization_cache`` — SparamCascadeCache + MemoryPool
 - ``perf_optimization_benchmark`` — BenchmarkCase/BenchmarkResult/PerfBenchmarkSuite/MultiprocessRunner
+- ``perf_optimization_advanced`` — RedhefferCascade/PrecisionAdaptiveSolver/SparseMatrixCompressor/VectorizedIO
 
 ## R04 战略（不可撤销）
 
@@ -74,6 +77,17 @@
 
 from __future__ import annotations
 
+from polaris.sim.perf_optimization_advanced import (  # noqa: F401
+    PrecisionAdaptiveSolver,
+    PrecisionSolveResult,
+    RedhefferCascade,
+    RedhefferCascadeResult,
+    SparseCompressResult,
+    SparseMatrixCompressor,
+    VectorizedIO,
+    build_advanced_benchmark_suite,
+    redheffer_star_product,
+)
 from polaris.sim.perf_optimization_benchmark import (  # noqa: F401
     BenchmarkCase,
     BenchmarkResult,
@@ -134,4 +148,14 @@ __all__ = [
     "BenchmarkCase",
     "BenchmarkResult",
     "MultiprocessRunner",
+    # R457-R463 进阶（perf_optimization_advanced）
+    "redheffer_star_product",
+    "RedhefferCascade",
+    "RedhefferCascadeResult",
+    "PrecisionAdaptiveSolver",
+    "PrecisionSolveResult",
+    "SparseMatrixCompressor",
+    "SparseCompressResult",
+    "VectorizedIO",
+    "build_advanced_benchmark_suite",
 ]
