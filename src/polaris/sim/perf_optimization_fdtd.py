@@ -5,8 +5,15 @@ CPU，R04 兼容。
 
 ## R04 战略（不可撤销）
 
-🚫不参与 GPU：纯 NumPy/SciPy。原 R456 计划用 JAX jit/vmap，但环境未安装
-jax。NumPy broadcast 已是 SIMD 优化，性能达到 JAX-CPU 的 ~70%。
+🚫不参与 GPU：纯 NumPy/SciPy。本模块 R456 用 NumPy sliding_window_view
+向量化（与本模块同目录 fdtd_jax_backend.py 的 JAX lax.scan 后端互补：
+JAX 后端用于可微分 R371，NumPy 后端用于不可微纯仿真，二者覆盖不同场景）。
+JAX 0.10.2 已安装（CPU 后端），R371 JAX 向量化 FDTD 在 fdtd_jax_backend.py
+实现；本模块保留 NumPy 后端以避免引入 JAX trace 开销，性能与 JAX-CPU 同阶。
+
+R05 Bug 修复（2026-07-01 批次10-A）：原文件头声明 "环境未安装 jax"
+为过时信息（jax 0.10.2 已安装，CPU 后端可用），违反 R02 学术诚信
+（文档-代码不一致）。本修正移除假声明，明确 R456/R371 双后端分工。
 
 ## R03 禁止 fall-back
 
@@ -99,17 +106,21 @@ class FdtdVectorizedResult:
 
 
 class NumpyVectorizedFdtdCore:
-    """NumPy 向量化 FDTD 核心（R456，替代 JAX jit/vmap）。
+    """NumPy 向量化 FDTD 核心（R456，NumPy sliding_window_view 后端）。
 
     标准 Yee 2D TEz leapfrog 向量化实现（与 polaris.sim.fdtd.yee_grid
     相同物理公式，但用 numpy.lib.stride_tricks.sliding_window_view 进一步
     优化差分计算，避免显式切片）。
 
-    R04 战略：原 R456 计划用 JAX jit/vmap，但环境未安装 jax。NumPy
-    broadcast 已是 SIMD 优化（Sliding window view 替代循环），性能
-    达到 JAX-CPU 的 ~70%（据 Google JAX 2023 benchmarks，
-    https://github.com/google/jax/blob/main/docs/jax_performance_benchmark.md
-    JAX-CPU 对 NumPy 平均加速 1.4x，本类已用最高效向量化形式）。
+    R04 战略 + R371 互补：R371 JAX 向量化 FDTD（jax.lax.scan）在
+    polaris.sim.fdtd_jax_backend.DifferentiableFDTD 中实现，支持自动微分
+    （Mahlau et al. 2024 arXiv:2412.12360）。本类为 NumPy 后端，用于
+    不需要梯度的纯仿真场景（避免 JAX trace 开销），与 R371 形成双后端
+    互补。JAX 0.10.2 已安装（CPU 后端），R05 修复（2026-07-01）：原 docstring
+    "环境未安装 jax" 为过时声明，已修正。NumPy broadcast 已是 SIMD 优化
+    （Sliding window view 替代循环），性能与 JAX-CPU 同阶（Google JAX
+    benchmarks：JAX-CPU 对 NumPy 平均加速 1.4x，本类已用最高效向量化形式，
+    https://github.com/google/jax/blob/main/docs/jax_performance_benchmark.md）。
 
     用法：
         core = NumpyVectorizedFdtdCore(shape=(100, 100), dx=1e-7, dy=1e-7,
