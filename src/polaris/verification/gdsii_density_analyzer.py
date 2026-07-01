@@ -305,6 +305,71 @@ def compute_layer_density(
 # =============================================================================
 # 密度网格图
 # =============================================================================
+def _find_target_layer(ly, layer_name: str, layer_map: dict) -> object:
+    """在 GDSII 中查找指定名称的层索引（R629 Extract Method）。
+
+    Raises:
+        ValueError: 层不存在。
+    """
+    for li in ly.layer_indices():
+        info = ly.get_info(li)
+        ln = layer_map.get(
+            (int(info.layer), int(info.datatype)),
+            f"LAYER_{int(info.layer)}_{int(info.datatype)}",
+        )
+        if ln == layer_name:
+            return li
+    # 收集可用层名
+    available = set()
+    for li in ly.layer_indices():
+        info = ly.get_info(li)
+        ln = layer_map.get(
+            (int(info.layer), int(info.datatype)),
+            f"LAYER_{int(info.layer)}_{int(info.datatype)}",
+        )
+        available.add(ln)
+    raise ValueError(
+        f"层 '{layer_name}' 不在 GDSII 文件中。"
+        f"可用层: {available}"
+    )
+
+
+def _compute_density_grid(
+    region, db, x_min: float, y_min: float, cell_size_um: float,
+    dbu: float, rows: int, cols: int,
+) -> np.ndarray:
+    """计算每个网格单元的密度（R629 Extract Method）。"""
+    grid = np.zeros((rows, cols), dtype=float)
+    for r in range(rows):
+        for c in range(cols):
+            cell_x_min = x_min + c * cell_size_um
+            cell_y_min = y_min + r * cell_size_um
+            cell_x_max = cell_x_min + cell_size_um
+            cell_y_max = cell_y_min + cell_size_um
+
+            # 构造网格单元的 Box（dbu 单位）
+            cell_box = db.Box(
+                int(cell_x_min / dbu),
+                int(cell_y_min / dbu),
+                int(cell_x_max / dbu),
+                int(cell_y_max / dbu),
+            )
+            cell_region = db.Region(cell_box)
+
+            # 与该层多边形求交集
+            intersection = region.dup()
+            intersection &= cell_region
+            cell_polygon_area_dbu2 = int(intersection.area())
+            cell_polygon_area_um2 = cell_polygon_area_dbu2 * dbu * dbu
+            cell_area_um2 = cell_size_um * cell_size_um
+
+            if cell_area_um2 > 0:
+                grid[r, c] = cell_polygon_area_um2 / cell_area_um2
+            else:
+                grid[r, c] = 0.0
+    return grid
+
+
 def compute_density_map(
     gds_path: str | Path,
     layer_name: str,
@@ -359,30 +424,7 @@ def compute_density_map(
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
 
-    # 找到指定层
-    target_li = None
-    for li in ly.layer_indices():
-        info = ly.get_info(li)
-        ln = layer_map.get(
-            (int(info.layer), int(info.datatype)),
-            f"LAYER_{int(info.layer)}_{int(info.datatype)}",
-        )
-        if ln == layer_name:
-            target_li = li
-            break
-    if target_li is None:
-        available = set()
-        for li in ly.layer_indices():
-            info = ly.get_info(li)
-            ln = layer_map.get(
-                (int(info.layer), int(info.datatype)),
-                f"LAYER_{int(info.layer)}_{int(info.datatype)}",
-            )
-            available.add(ln)
-        raise ValueError(
-            f"层 '{layer_name}' 不在 GDSII 文件中。"
-            f"可用层: {available}"
-        )
+    target_li = _find_target_layer(ly, layer_name, layer_map)
 
     # 收集该层所有多边形
     region = db.Region(top_cell.begin_shapes_rec(target_li))
@@ -417,35 +459,9 @@ def compute_density_map(
     cols = max(1, int(np.ceil(width / cell_size_um)))
     rows = max(1, int(np.ceil(height / cell_size_um)))
 
-    # 计算每个网格单元的密度
-    grid = np.zeros((rows, cols), dtype=float)
-    for r in range(rows):
-        for c in range(cols):
-            cell_x_min = x_min + c * cell_size_um
-            cell_y_min = y_min + r * cell_size_um
-            cell_x_max = cell_x_min + cell_size_um
-            cell_y_max = cell_y_min + cell_size_um
-
-            # 构造网格单元的 Box（dbu 单位）
-            cell_box = db.Box(
-                int(cell_x_min / dbu),
-                int(cell_y_min / dbu),
-                int(cell_x_max / dbu),
-                int(cell_y_max / dbu),
-            )
-            cell_region = db.Region(cell_box)
-
-            # 与该层多边形求交集
-            intersection = region.dup()
-            intersection &= cell_region
-            cell_polygon_area_dbu2 = int(intersection.area())
-            cell_polygon_area_um2 = cell_polygon_area_dbu2 * dbu * dbu
-            cell_area_um2 = cell_size_um * cell_size_um
-
-            if cell_area_um2 > 0:
-                grid[r, c] = cell_polygon_area_um2 / cell_area_um2
-            else:
-                grid[r, c] = 0.0
+    grid = _compute_density_grid(
+        region, db, x_min, y_min, cell_size_um, dbu, rows, cols
+    )
 
     return DensityMap(
         layer_name=layer_name,

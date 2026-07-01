@@ -233,6 +233,97 @@ def round_trip_gdsii(
     return original_result, str(output_path)
 
 
+def _create_all_cells(ly, cells_spec: list[dict]) -> dict[str, "db.Cell"]:
+    """第一遍: 创建所有 cells（解决引用顺序，R629 Extract Method）。"""
+    import klayout.db as db
+    name_to_cell: dict[str, "db.Cell"] = {}
+    for spec in cells_spec:
+        name = spec.get("name")
+        if not name:
+            raise ValueError(f"cell 规格缺少 'name' 字段: {spec}")
+        if name in name_to_cell:
+            raise ValueError(f"cell 名重复: {name}")
+        name_to_cell[name] = ly.create_cell(name)
+    return name_to_cell
+
+
+def _fill_cell_shapes(
+    ly, cell, spec: dict, name: str, dbu_um: float, db
+) -> None:
+    """填充 cell 的多边形/文本/路径形状（R629 Extract Method）。"""
+    # 多边形
+    for poly in spec.get("polygons", []):
+        layer = int(poly["layer"])
+        datatype = int(poly["datatype"])
+        li = ly.layer(layer, datatype)
+        points = poly["points"]
+        if len(points) < 3:
+            raise ValueError(
+                f"多边形点数 < 3 (cell={name}, layer={layer}/{datatype})"
+            )
+        dbu_points = [db.Point(int(round(p[0] / dbu_um)), int(round(p[1] / dbu_um))) for p in points]
+        cell.shapes(li).insert(db.Polygon(dbu_points))
+
+    # 文本
+    for txt in spec.get("texts", []):
+        layer = int(txt["layer"])
+        datatype = int(txt["datatype"])
+        li = ly.layer(layer, datatype)
+        string = str(txt["string"])
+        x_um = float(txt.get("x", 0.0))
+        y_um = float(txt.get("y", 0.0))
+        # Text 接受 Trans（dbu 单位）
+        # R05 Bug 修复 v5.0-P1-3R1: 统一用 int(round()) 避免截断漂移
+        trans = db.Trans(int(round(x_um / dbu_um)), int(round(y_um / dbu_um)))
+        cell.shapes(li).insert(db.Text(string, trans))
+
+    # 路径
+    for path in spec.get("paths", []):
+        layer = int(path["layer"])
+        datatype = int(path["datatype"])
+        li = ly.layer(layer, datatype)
+        points = path["points"]
+        if len(points) < 2:
+            raise ValueError(
+                f"路径点数 < 2 (cell={name}, layer={layer}/{datatype})"
+            )
+        width_um = float(path.get("width", 0.5))
+        width_dbu = int(round(width_um / dbu_um))
+        dbu_points = [db.Point(int(round(p[0] / dbu_um)), int(round(p[1] / dbu_um))) for p in points]
+        cell.shapes(li).insert(db.Path(dbu_points, width_dbu))
+
+
+def _fill_cell_instances(
+    cell, spec: dict, name: str, name_to_cell: dict, dbu_um: float, db
+) -> None:
+    """填充 cell 的实例引用（R629 Extract Method）。"""
+    # 修复（R05）: 原代码用 db.DCplxTrans(μm) 构造 instance，但 CellInstArray
+    # 在 KLayout 0.30.9 中将 DCplxTrans 的位移当成 dbu 存储，导致 20μm 变成
+    # 0.02μm（20dbu）。改为用 db.ICplxTrans(dbu) 显式构造，μm → dbu 转换
+    # 后再传入，确保 instance 的 placement 正确。
+    # 实测（调试 _debug4_r324.py）: DCplxTrans(1.0,0,False,20.0,0.0) 存储
+    # 后 dcplx_trans 显示 0.02,0 μm（即 20 dbu），而非 20 μm。
+    # 来源: https://www.klayout.de/doc-qt5/code/class_CellInstArray.html
+    for inst in spec.get("instances", []):
+        child_name = inst.get("cell_name")
+        if child_name not in name_to_cell:
+            raise ValueError(
+                f"实例引用的 cell 不存在: {child_name} "
+                f"(在 cell '{name}' 中)"
+            )
+        child_cell = name_to_cell[child_name]
+        x_um = float(inst.get("x", 0.0))
+        y_um = float(inst.get("y", 0.0))
+        rotation = float(inst.get("rotation", 0.0))
+        mirror = bool(inst.get("mirror", False))
+        # 用 ICplxTrans（dbu 单位）显式构造，避免 DCplxTrans → ICplxTrans
+        # 转换时的单位歧义
+        x_dbu = int(round(x_um / dbu_um))
+        y_dbu = int(round(y_um / dbu_um))
+        trans = db.ICplxTrans(1.0, rotation, mirror, x_dbu, y_dbu)
+        cell.insert(db.CellInstArray(child_cell.cell_index(), trans))
+
+
 def create_gdsii_layout_from_cells(
     cells_spec: list[dict],
     dbu_um: float = _GDSFACTORY_DEFAULT_DBU_UM,
@@ -273,87 +364,14 @@ def create_gdsii_layout_from_cells(
     ly.dbu = dbu_um
 
     # 第一遍: 创建所有 cells（解决引用顺序问题）
-    name_to_cell: dict[str, "db.Cell"] = {}
-    for spec in cells_spec:
-        name = spec.get("name")
-        if not name:
-            raise ValueError(f"cell 规格缺少 'name' 字段: {spec}")
-        if name in name_to_cell:
-            raise ValueError(f"cell 名重复: {name}")
-        name_to_cell[name] = ly.create_cell(name)
+    name_to_cell = _create_all_cells(ly, cells_spec)
 
     # 第二遍: 填充形状和实例
     for spec in cells_spec:
         name = spec["name"]
         cell = name_to_cell[name]
-
-        # 多边形
-        for poly in spec.get("polygons", []):
-            layer = int(poly["layer"])
-            datatype = int(poly["datatype"])
-            li = ly.layer(layer, datatype)
-            points = poly["points"]
-            if len(points) < 3:
-                raise ValueError(
-                    f"多边形点数 < 3 (cell={name}, layer={layer}/{datatype})"
-                )
-            dbu_points = [db.Point(int(round(p[0] / dbu_um)), int(round(p[1] / dbu_um))) for p in points]
-            cell.shapes(li).insert(db.Polygon(dbu_points))
-
-        # 文本
-        for txt in spec.get("texts", []):
-            layer = int(txt["layer"])
-            datatype = int(txt["datatype"])
-            li = ly.layer(layer, datatype)
-            string = str(txt["string"])
-            x_um = float(txt.get("x", 0.0))
-            y_um = float(txt.get("y", 0.0))
-            # Text 接受 Trans（dbu 单位）
-            # R05 Bug 修复 v5.0-P1-3R1: 统一用 int(round()) 避免截断漂移
-            trans = db.Trans(int(round(x_um / dbu_um)), int(round(y_um / dbu_um)))
-            cell.shapes(li).insert(db.Text(string, trans))
-
-        # 路径
-        for path in spec.get("paths", []):
-            layer = int(path["layer"])
-            datatype = int(path["datatype"])
-            li = ly.layer(layer, datatype)
-            points = path["points"]
-            if len(points) < 2:
-                raise ValueError(
-                    f"路径点数 < 2 (cell={name}, layer={layer}/{datatype})"
-                )
-            width_um = float(path.get("width", 0.5))
-            width_dbu = int(round(width_um / dbu_um))
-            dbu_points = [db.Point(int(round(p[0] / dbu_um)), int(round(p[1] / dbu_um))) for p in points]
-            cell.shapes(li).insert(db.Path(dbu_points, width_dbu))
-
-        # 实例
-        # 修复（R05）: 原代码用 db.DCplxTrans(μm) 构造 instance，但 CellInstArray
-        # 在 KLayout 0.30.9 中将 DCplxTrans 的位移当成 dbu 存储，导致 20μm 变成
-        # 0.02μm（20dbu）。改为用 db.ICplxTrans(dbu) 显式构造，μm → dbu 转换
-        # 后再传入，确保 instance 的 placement 正确。
-        # 实测（调试 _debug4_r324.py）: DCplxTrans(1.0,0,False,20.0,0.0) 存储
-        # 后 dcplx_trans 显示 0.02,0 μm（即 20 dbu），而非 20 μm。
-        # 来源: https://www.klayout.de/doc-qt5/code/class_CellInstArray.html
-        for inst in spec.get("instances", []):
-            child_name = inst.get("cell_name")
-            if child_name not in name_to_cell:
-                raise ValueError(
-                    f"实例引用的 cell 不存在: {child_name} "
-                    f"(在 cell '{name}' 中)"
-                )
-            child_cell = name_to_cell[child_name]
-            x_um = float(inst.get("x", 0.0))
-            y_um = float(inst.get("y", 0.0))
-            rotation = float(inst.get("rotation", 0.0))
-            mirror = bool(inst.get("mirror", False))
-            # 用 ICplxTrans（dbu 单位）显式构造，避免 DCplxTrans → ICplxTrans
-            # 转换时的单位歧义
-            x_dbu = int(round(x_um / dbu_um))
-            y_dbu = int(round(y_um / dbu_um))
-            trans = db.ICplxTrans(1.0, rotation, mirror, x_dbu, y_dbu)
-            cell.insert(db.CellInstArray(child_cell.cell_index(), trans))
+        _fill_cell_shapes(ly, cell, spec, name, dbu_um, db)
+        _fill_cell_instances(cell, spec, name, name_to_cell, dbu_um, db)
 
     # 验证至少有一个顶层 cell
     top_cells = list(ly.each_top_cell())
