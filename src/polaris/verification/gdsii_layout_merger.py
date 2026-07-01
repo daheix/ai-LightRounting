@@ -197,56 +197,86 @@ def merge_gdsii(
       https://www.klayout.de/doc-qt5/code/class_CellInstArray.html
     """
     db = _import_klayout_db()
+    offsets_um = _validate_merge_params(input_paths, top_cell_name, offsets_um)
+    target = db.Layout()
+    target.dbu = 0.001  # 1nm 标准单位
+    input_files_str, source_top_cells = _read_all_gdsii_sources(
+        db, target, input_paths
+    )
+    wrapper, merged_cells = _instantiate_sources_into_wrapper(
+        db, target, source_top_cells, offsets_um, top_cell_name, input_files_str
+    )
+    out_path = _write_merged_gdsii(target, output_path)
+    instance_count, all_cell_count, bbox_um = _compute_merge_stats(target, wrapper)
+    dbu = float(target.dbu)
+    top_name = str(wrapper.name)
+    logger.info(
+        "GDSII 合并: %d 个文件 → %s (top=%s, instances=%d, cells=%d)",
+        len(input_paths), out_path, top_name, instance_count, all_cell_count,
+    )
+    return MergeReport(
+        output_path=str(out_path), top_cell_name=top_name, dbu=dbu,
+        input_files=input_files_str, merged_cells=merged_cells,
+        total_instance_count=instance_count, all_cell_count=all_cell_count,
+        bounding_box_um=bbox_um,
+    )
 
-    # 参数校验（R03 禁止 fall-back）
+
+def _validate_merge_params(input_paths, top_cell_name, offsets_um) -> list[tuple[float, float]]:
+    """校验 merge_gdsii 入参并检查文件存在性（R333 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        归一化后的 offsets_um 列表（None 时全为 (0,0)）。
+
+    Raises:
+        ValueError: input_paths 空 / top_cell_name 空 / offsets_um 长度不匹配。
+        FileNotFoundError: 任一输入文件不存在。
+    """
     if not input_paths:
-        raise ValueError(
-            "input_paths 不能为空。禁止 fall-back（R03）。"
-        )
+        raise ValueError("input_paths 不能为空。禁止 fall-back（R03）。")
     if not top_cell_name:
-        raise ValueError(
-            "top_cell_name 不能为空字符串。禁止 fall-back（R03）。"
-        )
+        raise ValueError("top_cell_name 不能为空字符串。禁止 fall-back（R03）。")
     if offsets_um is not None:
         if len(offsets_um) != len(input_paths):
             raise ValueError(
                 f"offsets_um 长度 ({len(offsets_um)}) 必须与 "
-                f"input_paths 长度 ({len(input_paths)}) 一致。"
-                f"禁止 fall-back（R03）。"
+                f"input_paths 长度 ({len(input_paths)}) 一致。禁止 fall-back（R03）。"
             )
     else:
         offsets_um = [(0.0, 0.0)] * len(input_paths)
-
-    # 检查所有输入文件存在（R03 失败即 raise）
     for p in input_paths:
         path = Path(p)
         if not path.exists():
             raise FileNotFoundError(f"GDSII 文件不存在: {p}")
         if not path.is_file():
             raise ValueError(f"路径不是文件: {p}")
+    return offsets_um
 
-    # 创建目标 Layout
-    target = db.Layout()
-    target.dbu = 0.001  # 1nm 标准单位
 
-    # 阶段 1：追加模式读取所有 GDSII
-    # Layout.read 是追加模式：多次调用合并多个文件的 cell 到同一 Layout
-    # 来源: https://www.klayout.de/doc-qt5/code/class_Layout.html#method15
+def _read_all_gdsii_sources(db, target, input_paths) -> tuple[list[str], list[str]]:
+    """追加模式读取所有 GDSII 源文件（R333 内部辅助）。
+
+    Layout.read 是追加模式：多次调用合并多个文件的 cell 到同一 Layout。
+    来源: https://www.klayout.de/doc-qt5/code/class_Layout.html#method15
+
+    Returns:
+        (input_files_str, source_top_cells)。
+
+    Raises:
+        RuntimeError: 读取失败。ValueError: 文件未新增顶层 cell。
+    """
     input_files_str: list[str] = []
-    source_top_cells: list[str] = []  # 各源文件读取后的顶层 cell 名
-    for idx, p in enumerate(input_paths):
+    source_top_cells: list[str] = []
+    for p in input_paths:
         path = Path(p)
-        # 记录读取前的顶层 cell 集合
         before_top = {int(ci) for ci in target.each_top_cell()}
         try:
             target.read(str(path))
         except Exception as e:
             raise RuntimeError(
-                f"klayout 读取文件失败: {path} - "
-                f"{type(e).__name__}: {e}。"
+                f"klayout 读取文件失败: {path} - {type(e).__name__}: {e}。"
                 f"禁止 fall-back（R03）。"
             ) from e
-        # 读取后新增的顶层 cell 即为该文件的顶层 cell
         after_top = {int(ci) for ci in target.each_top_cell()}
         new_tops = after_top - before_top
         if not new_tops:
@@ -254,104 +284,82 @@ def merge_gdsii(
                 f"文件 {path} 读取后未新增顶层 cell，"
                 f"文件可能为空或损坏。禁止 fall-back（R03）。"
             )
-        # 取第一个新增顶层 cell 作为该文件的顶层 cell
-        # （多顶层文件的合并行为留待未来扩展，当前只取首个）
         first_new_ci = sorted(new_tops)[0]
         source_top_cells.append(str(target.cell(first_new_ci).name))
         input_files_str.append(str(p))
+    return input_files_str, source_top_cells
 
-    # 阶段 2：创建 wrapper cell（合并后顶层）
-    # 来源: https://www.klayout.de/doc-qt5/code/class_Layout.html#method46
+
+def _instantiate_sources_into_wrapper(
+    db, target, source_top_cells, offsets_um, top_cell_name, input_files_str
+) -> tuple:
+    """创建 wrapper cell 并实例化各源顶层 cell（R333 内部辅助）。
+
+    Returns:
+        (wrapper, merged_cells)。
+
+    Raises:
+        RuntimeError: 源 cell 找不到。
+    """
     wrapper = target.create_cell(top_cell_name)
-
-    # 阶段 3：实例化各源顶层 cell 到 wrapper
-    # 记录源顶层 cell 的 index（在 wrapper 创建前的所有非 wrapper 顶层 cell）
-    # 注意：wrapper 创建后，each_top_cell 包含 wrapper
-    merged_cells: list[MergedCellInfo] = []
     source_ci_list: list[int] = []
-
-    # 通过 source_top_cells 名字查找 cell index
     for src_name in source_top_cells:
         src_cell = target.cell(src_name)
         if src_cell is None:
             raise RuntimeError(
-                f"源 cell '{src_name}' 在合并 layout 中找不到。"
-                f"禁止 fall-back（R03）。"
+                f"源 cell '{src_name}' 在合并 layout 中找不到。禁止 fall-back（R03）。"
             )
         source_ci_list.append(int(src_cell.cell_index()))
-
-    # 实例化（按输入顺序）
-    for idx, (src_ci, (dx_um, dy_um)) in enumerate(
-        zip(source_ci_list, offsets_um)
-    ):
-        # 偏移: μm → dbu 整数
-        # 来源: https://www.klayout.de/doc-qt5/code/class_Trans.html
+    merged_cells: list = []
+    for idx, (src_ci, (dx_um, dy_um)) in enumerate(zip(source_ci_list, offsets_um)):
         dx_dbu = int(round(dx_um / target.dbu))
         dy_dbu = int(round(dy_um / target.dbu))
         trans = db.Trans(db.Point(dx_dbu, dy_dbu))
         inst_array = db.CellInstArray(src_ci, trans)
-        # 来源: https://www.klayout.de/doc-qt5/code/class_Cell.html
         wrapper.insert(inst_array)
+        merged_cells.append(MergedCellInfo(
+            source_file=input_files_str[idx],
+            source_top_cell=source_top_cells[idx],
+            offset_um=(dx_um, dy_um), cell_index=src_ci, instance_count=1,
+        ))
+    return wrapper, merged_cells
 
-        merged_cells.append(
-            MergedCellInfo(
-                source_file=input_files_str[idx],
-                source_top_cell=source_top_cells[idx],
-                offset_um=(dx_um, dy_um),
-                cell_index=src_ci,
-                instance_count=1,
-            )
-        )
 
-    # 阶段 4：写出合并后 GDSII
+def _write_merged_gdsii(target, output_path) -> Path:
+    """写出合并后 GDSII（R333 内部辅助）。
+
+    Raises:
+        RuntimeError: 写出失败。
+    """
     out_path = Path(output_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         target.write(str(out_path))
     except Exception as e:
         raise RuntimeError(
-            f"klayout 写出失败: {out_path} - "
-            f"{type(e).__name__}: {e}。"
+            f"klayout 写出失败: {out_path} - {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
+    return out_path
 
-    # 阶段 5：统计报告数据
-    # 实例计数: 用 each_inst() 迭代（替代不存在的 num_insts）
-    # 来源: https://www.klayout.de/doc-qt5/code/class_Cell.html
+
+def _compute_merge_stats(target, wrapper) -> tuple[int, int, tuple[float, float, float, float]]:
+    """统计合并后报告数据（R333 内部辅助）。
+
+    Returns:
+        (instance_count, all_cell_count, bbox_um)。
+    """
     instance_count = sum(1 for _ in wrapper.each_inst())
     all_cell_count = sum(1 for _ in target.each_cell_top_down())
-
-    # wrapper bbox（dbu → μm）
-    # 来源: https://www.klayout.de/doc-qt5/code/class_Cell.html
     bbox = wrapper.bbox()
     if bbox.empty():
         bbox_um = (0.0, 0.0, 0.0, 0.0)
     else:
         bbox_um = (
-            float(bbox.left) * target.dbu,
-            float(bbox.bottom) * target.dbu,
-            float(bbox.right) * target.dbu,
-            float(bbox.top) * target.dbu,
+            float(bbox.left) * target.dbu, float(bbox.bottom) * target.dbu,
+            float(bbox.right) * target.dbu, float(bbox.top) * target.dbu,
         )
-
-    dbu = float(target.dbu)
-    top_name = str(wrapper.name)
-
-    logger.info(
-        "GDSII 合并: %d 个文件 → %s (top=%s, instances=%d, cells=%d)",
-        len(input_paths), out_path, top_name, instance_count, all_cell_count,
-    )
-
-    return MergeReport(
-        output_path=str(out_path),
-        top_cell_name=top_name,
-        dbu=dbu,
-        input_files=input_files_str,
-        merged_cells=merged_cells,
-        total_instance_count=instance_count,
-        all_cell_count=all_cell_count,
-        bounding_box_um=bbox_um,
-    )
+    return instance_count, all_cell_count, bbox_um
 
 
 # =============================================================================
