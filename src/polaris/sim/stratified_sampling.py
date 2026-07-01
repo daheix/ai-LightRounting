@@ -360,6 +360,265 @@ def _sample_and_evaluate_stratum(
     return outputs
 
 
+def _validate_stratified_params(
+    nominal_dist: list[dict], n_strata: int, n_samples: int
+) -> None:
+    """校验 stratified_monte_carlo 入参（R281 内部辅助，R03 禁止 fall-back）。
+
+    Args:
+        nominal_dist: 标称分布规格列表。
+        n_strata: 层数 H。
+        n_samples: 总样本数 n。
+
+    Raises:
+        ValueError: 参数无效。
+    """
+    if len(nominal_dist) == 0:
+        raise ValueError("nominal_dist 不能为空")
+    if n_strata < 1:
+        raise ValueError(f"n_strata 必须 >= 1，得到 {n_strata}")
+    if n_samples < n_strata:
+        raise ValueError(
+            f"n_samples ({n_samples}) 必须 >= n_strata ({n_strata})，"
+            f"每层至少 1 个样本"
+        )
+
+
+def _neyman_pilot_stage(
+    func: Callable[[np.ndarray], float],
+    dists: list,
+    primary_dist,
+    strata_bounds: list[tuple[float, float]],
+    n_strata: int,
+    n_pilot: int,
+    d: int,
+    rng: np.random.Generator,
+) -> tuple[list[np.ndarray], list[float]]:
+    """NEYMAN 阶段 1 pilot: EQUAL 分配采样并估计 σ̂ₕ（R281 内部辅助）。
+
+    用 EQUAL 分配 n_pilot 样本到各层，采样并评估，估计每层标准差。
+    对 σ̂ₕ=0 或 n_h=1 的层，用非零层的中位数填充（Cochran 1977 §5A.4）。
+
+    Args:
+        func: 仿真函数；dists: 分布对象列表；primary_dist: 主分层分布。
+        strata_bounds: 层边界列表；n_strata: 层数；n_pilot: pilot 样本数。
+        d: 总维度；rng: 随机数生成器。
+
+    Returns:
+        (pilot_outputs_per_stratum, pilot_stds_safe)。
+        pilot_stds_safe 已填充 0 值，可直接用于 Neyman 分配。
+
+    Raises:
+        RuntimeError: pilot EQUAL 分配某层样本数为 0（违反约束）。
+    """
+    n_pilot_per = _allocate_samples(
+        n_total=n_pilot, n_strata=n_strata, strategy=AllocationStrategy.EQUAL
+    )
+    pilot_outputs_per_stratum: list[np.ndarray] = []
+    pilot_stds: list[float] = []
+    for h, (lower, upper) in enumerate(strata_bounds):
+        n_h = n_pilot_per[h]
+        if n_h == 0:
+            raise RuntimeError(
+                f"pilot EQUAL 分配层 {h} 样本数为 0，违反约束。"
+                f"n_pilot={n_pilot}, n_strata={n_strata}。禁止 fall-back。"
+            )
+        outs = _sample_and_evaluate_stratum(
+            func, dists, primary_dist, lower, upper, n_h, d, rng, h
+        )
+        pilot_outputs_per_stratum.append(outs)
+        pilot_stds.append(float(np.std(outs, ddof=1)) if n_h > 1 else 0.0)
+
+    # 处理 σ̂ₕ = 0 或 n_h=1 的情况：用非零层的中位数填充（Cochran 1977 §5A.4）
+    valid_stds = [s for s in pilot_stds if s > 0]
+    if not valid_stds:
+        pilot_stds_safe = [1.0] * n_strata
+    else:
+        median_std = float(np.median(valid_stds))
+        pilot_stds_safe = [s if s > 0 else median_std for s in pilot_stds]
+    return pilot_outputs_per_stratum, pilot_stds_safe
+
+
+def _run_neyman_two_stage(
+    func: Callable[[np.ndarray], float],
+    dists: list,
+    primary_dist,
+    strata_bounds: list[tuple[float, float]],
+    n_strata: int,
+    n_samples: int,
+    d: int,
+    rng: np.random.Generator,
+) -> tuple[list[float], list[float], list[int], list[float], int]:
+    """NEYMAN 两阶段分层采样（R281 内部辅助，Cochran 1977 Ch.5A）。
+
+    阶段 1 (pilot): EQUAL 分配 n_pilot 样本估计 σ̂ₕ；
+    阶段 2 (main): 用 σ̂ₕ 做 Neyman 分配剩余样本；
+    合并两阶段样本计算层内均值/方差。
+
+    Args:
+        func/dists/primary_dist: 仿真函数与分布；strata_bounds: 层边界。
+        n_strata: 层数；n_samples: 总样本数；d: 维度；rng: 随机数生成器。
+
+    Returns:
+        (strata_means, strata_stds, n_per_stratum, all_outputs, n_evaluations)。
+    """
+    n_pilot = max(5 * n_strata, int(np.ceil(0.1 * n_samples)))
+    if n_pilot >= n_samples:
+        # 样本太少无法做 pilot，强制 EQUAL（Cochran 1977 §5A.3，非 fall-back）
+        n_pilot = n_samples
+        n_main = 0
+    else:
+        n_main = n_samples - n_pilot
+
+    pilot_outputs_per_stratum, pilot_stds_safe = _neyman_pilot_stage(
+        func, dists, primary_dist, strata_bounds, n_strata, n_pilot, d, rng
+    )
+
+    # 阶段 2 main: 用 σ̂ₕ 做 Neyman 分配
+    if n_main > 0:
+        n_main_per = _allocate_samples(
+            n_total=n_main, n_strata=n_strata,
+            strategy=AllocationStrategy.NEYMAN, strata_stds=pilot_stds_safe,
+        )
+    else:
+        n_main_per = [0] * n_strata
+
+    # 阶段 2 采样并合并两阶段样本
+    strata_means: list[float] = []
+    strata_stds: list[float] = []
+    n_per_stratum: list[int] = []
+    all_outputs: list[float] = []
+    n_evaluations = 0
+    for h, (lower, upper) in enumerate(strata_bounds):
+        pilot_outs = pilot_outputs_per_stratum[h]
+        n_main_h = n_main_per[h]
+        if n_main_h > 0:
+            main_outs = _sample_and_evaluate_stratum(
+                func, dists, primary_dist, lower, upper, n_main_h, d, rng, h
+            )
+            combined = np.concatenate([pilot_outs, main_outs])
+        else:
+            combined = pilot_outs
+        n_total_h = len(combined)
+        n_per_stratum.append(n_total_h)
+        all_outputs.extend(combined.tolist())
+        n_evaluations += n_total_h
+        strata_means.append(float(np.mean(combined)))
+        strata_stds.append(
+            float(np.std(combined, ddof=1)) if n_total_h > 1 else 0.0
+        )
+    return strata_means, strata_stds, n_per_stratum, all_outputs, n_evaluations
+
+
+def _run_single_stage(
+    func: Callable[[np.ndarray], float],
+    dists: list,
+    primary_dist,
+    strata_bounds: list[tuple[float, float]],
+    n_strata: int,
+    n_samples: int,
+    strategy: AllocationStrategy,
+    d: int,
+    rng: np.random.Generator,
+) -> tuple[list[float], list[float], list[int], list[float], int]:
+    """EQUAL/PROPORTIONAL 单阶段分层采样（R281 内部辅助）。
+
+    Args:
+        func: 仿真函数；dists: 分布对象列表；primary_dist: 主分层分布。
+        strata_bounds: 层边界列表；n_strata: 层数；n_samples: 总样本数。
+        strategy: EQUAL 或 PROPORTIONAL；d: 总维度；rng: 随机数生成器。
+
+    Returns:
+        (strata_means, strata_stds, n_per_stratum, all_outputs, n_evaluations)。
+
+    Raises:
+        RuntimeError: 某层分配到 0 个样本（R03 禁止 fall-back）。
+    """
+    n_per_stratum = _allocate_samples(
+        n_total=n_samples, n_strata=n_strata, strategy=strategy
+    )
+    strata_means: list[float] = []
+    strata_stds: list[float] = []
+    all_outputs: list[float] = []
+    n_evaluations = 0
+    for h, (lower, upper) in enumerate(strata_bounds):
+        n_h = n_per_stratum[h]
+        if n_h == 0:
+            # R03 禁止 fall-back: 空层 nₕ=0 时方差公式该项为无穷大，
+            # 不能用 means=0/stds=0 掩盖（会导致方差严重低估）。
+            raise RuntimeError(
+                f"分层 {h} (bounds=[{lower}, {upper})) 分配到 0 个样本，"
+                f"无法估计该层统计量（R03 禁止 fall-back）。"
+                f"请增大 n_samples (当前总样本={n_samples}, 层数={n_strata}) "
+                f"或改用 NEYMAN 分配策略。"
+            )
+        outputs = _sample_and_evaluate_stratum(
+            func, dists, primary_dist, lower, upper, n_h, d, rng, h
+        )
+        n_evaluations += n_h
+        all_outputs.extend(outputs.tolist())
+        strata_means.append(float(np.mean(outputs)))
+        strata_stds.append(float(np.std(outputs, ddof=1)) if n_h > 1 else 0.0)
+    return strata_means, strata_stds, n_per_stratum, all_outputs, n_evaluations
+
+
+def _compute_stratified_estimate(
+    strata_means: list[float],
+    strata_stds: list[float],
+    n_per_stratum: list[int],
+    strata_weights: list[float],
+    all_outputs: list[float],
+    n_samples: int,
+) -> tuple[float, float, float, float, float, float, float, float]:
+    """合并分层估计与统计量（R281 内部辅助）。
+
+    计算项目：
+    - 估计值 ``μ̂ = Σ Wₕ·μ̂ₕ``
+    - 方差 ``Var = Σ Wₕ²·σₕ²/nₕ``
+    - 标准误差 / 相对误差 / 95% CI
+    - 朴素 MC 方差对比与加速比
+
+    来源: Cochran 1977 Ch.5; Glasserman 2003 Ch.4,
+    DOI: 10.1007/978-0-387-21617-1
+
+    Args:
+        strata_means/strata_stds/n_per_stratum: 各层统计。
+        strata_weights: 层权重（等概率 1/H）。
+        all_outputs: 全部样本输出（用于朴素 MC 方差）。
+        n_samples: 总样本数。
+
+    Returns:
+        (estimate, std_error, relative_error, ci_lower, ci_upper,
+        variance_estimate, var_naive_mc, speedup)。
+    """
+    estimate = sum(
+        w * m for w, m in zip(strata_weights, strata_means, strict=True)
+    )
+    variance_estimate = sum(
+        w * w * (s * s / n_h)
+        for w, s, n_h in zip(
+            strata_weights, strata_stds, n_per_stratum, strict=True
+        )
+    )
+    std_error = float(np.sqrt(variance_estimate)) if variance_estimate > 0 else 0.0
+    relative_error = (
+        std_error / abs(estimate) if abs(estimate) > 0 else float("inf")
+    )
+    ci_lower = estimate - 1.96 * std_error
+    ci_upper = estimate + 1.96 * std_error
+    all_outputs_arr = np.array(all_outputs, dtype=float)
+    var_naive_mc = (
+        float(np.var(all_outputs_arr, ddof=1)) / n_samples if n_samples > 1 else 0.0
+    )
+    speedup = (
+        var_naive_mc / variance_estimate if variance_estimate > 0 else float("inf")
+    )
+    return (
+        estimate, std_error, relative_error, ci_lower, ci_upper,
+        variance_estimate, var_naive_mc, speedup,
+    )
+
+
 def stratified_monte_carlo(
     func: Callable[[np.ndarray], float],
     nominal_dist: list[dict],
@@ -374,39 +633,30 @@ def stratified_monte_carlo(
     用层内均值加权合并总估计。对"层内方差小、层间方差大"的问题显著
     减少方差。
 
-    算法:
-    1. 对每维计算等概率层边界 bₖ = F⁻¹(k/H)
-    2. 按分配策略确定每层样本数 nₕ
-    3. 在每层内逆变换采样: u ~ U(F(bₖ), F(bₖ₊₁)), x = F⁻¹(u)
-    4. 评估 func(x)，计算层内均值 μ̂ₕ 和标准差 σ̂ₕ
-    5. 合并: μ̂ = Σ Wₕ·μ̂ₕ (Wₕ = 1/H)
-    6. 方差: Var = Σ Wₕ²·σₕ²/nₕ
+    算法: 计算等概率层边界 bₖ=F⁻¹(k/H) → 按策略分配每层 nₕ →
+    层内逆变换采样 x=F⁻¹(u) → 评估 func 计算 μ̂ₕ/σ̂ₕ →
+    合并 ``μ̂ = Σ Wₕ·μ̂ₕ`` (Wₕ=1/H) → 方差 ``Var = Σ Wₕ²·σₕ²/nₕ``。
 
-    **NEYMAN 两阶段实现（无 fall-back，R03 合规）**:
-    Neyman 最优分配需要层内标准差 σₕ，但 σₕ 未知。本实现采用两阶段法
-    (Cochran 1977, Ch.5A):
-    - 阶段 1 (pilot): 用 EQUAL 分配 n_pilot = max(5H, ⌈0.1n⌉) 个样本，
-      估计每层 σ̂ₕ
-    - 阶段 2 (main): 用 σ̂ₕ 做 Neyman 分配剩余 n - n_pilot 个样本
-    - 合并两阶段样本，层内均值/方差基于合并后的全部样本
+    **NEYMAN 两阶段实现（无 fall-back，R03 合规，Cochran 1977 Ch.5A）**:
+    σₕ 未知，故阶段 1 (pilot) 用 EQUAL 分配 n_pilot=max(5H,⌈0.1n⌉) 样本
+    估计 σ̂ₕ；阶段 2 (main) 用 σ̂ₕ 做 Neyman 分配剩余样本；合并两阶段样本
+    计算层内均值/方差。
 
-    多维处理: 对多维参数，仅对第一维分层（主导维度），其他维直接采样。
-    这是工程近似，完整多维分层见 Stein 1987 的正交分层。
+    多维处理: 仅对第一维分层（主导维度），其他维直接采样（工程近似，
+    完整多维分层见 Stein 1987 正交分层）。
 
     Args:
         func: 仿真函数 f(params: (d,)) -> scalar。
-        nominal_dist: 标称分布规格列表 [{"type":"norm"|"uniform",...}]。
-        n_strata: 层数 H（每层至少 1 个样本）。
-        n_samples: 总样本数 n。
-        strategy: 分配策略（EQUAL / PROPORTIONAL / NEYMAN）。
-        seed: 随机种子。
+        nominal_dist: 标称分布规格 [{"type":"norm"|"uniform",...}]。
+        n_strata: 层数 H（每层至少 1 个样本）；n_samples: 总样本数 n。
+        strategy: 分配策略（EQUAL / PROPORTIONAL / NEYMAN）；seed: 随机种子。
 
     Returns:
         StratifiedSamplingResult 含估计值 + 各层统计 + 加速比。
 
     Raises:
         ValueError: 参数无效。
-        RuntimeError: func 评估失败。
+        RuntimeError: func 评估失败或某层分配到 0 样本。
 
     学术依据:
     - Cochran 1977, "Sampling Techniques", Wiley, Ch.5 + Ch.5A (两阶段 Neyman)
@@ -416,183 +666,38 @@ def stratified_monte_carlo(
 
     合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R09 优先用三方库。
     """
+    _validate_stratified_params(nominal_dist, n_strata, n_samples)
     d = len(nominal_dist)
-    if d == 0:
-        raise ValueError("nominal_dist 不能为空")
-    if n_strata < 1:
-        raise ValueError(f"n_strata 必须 >= 1，得到 {n_strata}")
-    if n_samples < n_strata:
-        raise ValueError(
-            f"n_samples ({n_samples}) 必须 >= n_strata ({n_strata})，"
-            f"每层至少 1 个样本"
-        )
 
     rng = np.random.default_rng(seed)
     dists = [_build_distribution(spec) for spec in nominal_dist]
-
-    # 1. 对第一维（主导维度）分层
     primary_dist = dists[0]
     strata_bounds = _compute_strata_bounds(primary_dist, n_strata)
-    # 等概率分层: 每层权重 Wₕ = 1/H
-    strata_weights = [1.0 / n_strata] * n_strata
+    strata_weights = [1.0 / n_strata] * n_strata  # 等概率分层 Wₕ = 1/H
 
-    # 2. 分配样本数
+    # 按分配策略执行采样（NEYMAN 走两阶段，其他单阶段）
+    common = (func, dists, primary_dist, strata_bounds, n_strata, n_samples)
     if strategy == AllocationStrategy.NEYMAN:
-        # 两阶段 Neyman: pilot run 估计 σₕ，再用 σₕ 做正式分配（R03 合规）
-        # 阶段 1 pilot: EQUAL 分配 n_pilot 个样本
-        n_pilot = max(5 * n_strata, int(np.ceil(0.1 * n_samples)))
-        if n_pilot >= n_samples:
-            # 样本太少，无法做有意义的 pilot，强制 EQUAL
-            # 这是工程合理决策而非 fall-back（Cochran 1977 §5A.3）
-            n_pilot = n_samples
-            n_main = 0
-        else:
-            n_main = n_samples - n_pilot
-
-        n_pilot_per = _allocate_samples(
-            n_total=n_pilot,
-            n_strata=n_strata,
-            strategy=AllocationStrategy.EQUAL,
-        )
-
-        # 阶段 1 采样并估计 σ̂ₕ
-        pilot_outputs_per_stratum: list[np.ndarray] = []
-        pilot_stds: list[float] = []
-        for h, (lower, upper) in enumerate(strata_bounds):
-            n_h = n_pilot_per[h]
-            if n_h == 0:
-                # 不应发生（EQUAL 保证每层 >= 1），但 defensive
-                raise RuntimeError(
-                    f"pilot EQUAL 分配层 {h} 样本数为 0，违反约束。"
-                    f"n_pilot={n_pilot}, n_strata={n_strata}。禁止 fall-back。"
-                )
-            outs = _sample_and_evaluate_stratum(
-                func, dists, primary_dist, lower, upper, n_h, d, rng, h
-            )
-            pilot_outputs_per_stratum.append(outs)
-            # 层内标准差估计（n_h>=2 时用样本标准差，否则保守用 1.0）
-            # n_h=1 时无信息，使用所有层的中位 σ 作为合理估计（Cochran 1977 §5A.4）
-            pilot_stds.append(float(np.std(outs, ddof=1)) if n_h > 1 else 0.0)
-
-        # 处理 σ̂ₕ = 0 或 n_h=1 的情况：用非零层的中位数填充
-        valid_stds = [s for s in pilot_stds if s > 0]
-        if not valid_stds:
-            # 所有层 σ̂ₕ = 0，函数在每层内常量，Neyman 退化为 EQUAL
-            pilot_stds_safe = [1.0] * n_strata
-        else:
-            median_std = float(np.median(valid_stds))
-            pilot_stds_safe = [s if s > 0 else median_std for s in pilot_stds]
-
-        # 阶段 2 main: 用 σ̂ₕ 做 Neyman 分配
-        if n_main > 0:
-            n_main_per = _allocate_samples(
-                n_total=n_main,
-                n_strata=n_strata,
-                strategy=AllocationStrategy.NEYMAN,
-                strata_stds=pilot_stds_safe,
-            )
-        else:
-            n_main_per = [0] * n_strata
-
-        # 阶段 2 采样并合并
-        strata_means: list[float] = []
-        strata_stds: list[float] = []
-        n_per_stratum: list[int] = []
-        all_outputs: list[float] = []
-        n_evaluations = 0
-
-        for h, (lower, upper) in enumerate(strata_bounds):
-            pilot_outs = pilot_outputs_per_stratum[h]
-            n_main_h = n_main_per[h]
-            if n_main_h > 0:
-                main_outs = _sample_and_evaluate_stratum(
-                    func, dists, primary_dist, lower, upper, n_main_h, d, rng, h
-                )
-                combined = np.concatenate([pilot_outs, main_outs])
-            else:
-                combined = pilot_outs
-            n_total_h = len(combined)
-            n_per_stratum.append(n_total_h)
-            all_outputs.extend(combined.tolist())
-            n_evaluations += n_total_h
-            strata_means.append(float(np.mean(combined)))
-            strata_stds.append(
-                float(np.std(combined, ddof=1)) if n_total_h > 1 else 0.0
-            )
+        result = _run_neyman_two_stage(*common, d, rng)
     else:
-        # EQUAL / PROPORTIONAL: 单阶段
-        n_per_stratum = _allocate_samples(
-            n_total=n_samples,
-            n_strata=n_strata,
-            strategy=strategy,
-        )
+        result = _run_single_stage(*common, strategy, d, rng)
+    strata_means, strata_stds, n_per_stratum, all_outputs, n_evaluations = result
 
-        strata_means = []
-        strata_stds = []
-        all_outputs = []
-        n_evaluations = 0
-
-        for h, (lower, upper) in enumerate(strata_bounds):
-            n_h = n_per_stratum[h]
-            if n_h == 0:
-                # R03 禁止 fall-back: 空层意味着该层无样本信息，
-                # 方差公式 Var = Σ Wₕ²·σₕ²/nₕ 中 nₕ=0 时该项应为无穷大。
-                # 原代码设 means=0/stds=0 并在方差求和中 `if n_h > 0` 过滤，
-                # 导致方差严重低估（虚假的高精度置信区间）。
-                # 修复: raise 强制用户增大 n_samples 或改用 NEYMAN 分配。
-                raise RuntimeError(
-                    f"分层 {h} (bounds=[{lower}, {upper})) 分配到 0 个样本，"
-                    f"无法估计该层统计量（R03 禁止 fall-back）。"
-                    f"请增大 n_samples (当前总样本={n_samples}, 层数={n_strata}) "
-                    f"或改用 NEYMAN 分配策略。"
-                )
-            outputs = _sample_and_evaluate_stratum(
-                func, dists, primary_dist, lower, upper, n_h, d, rng, h
-            )
-            n_evaluations += n_h
-            all_outputs.extend(outputs.tolist())
-            strata_means.append(float(np.mean(outputs)))
-            strata_stds.append(float(np.std(outputs, ddof=1)) if n_h > 1 else 0.0)
-
-    # 3. 合并估计: μ̂ = Σ Wₕ·μ̂ₕ
-    estimate = sum(w * m for w, m in zip(strata_weights, strata_means, strict=True))
-
-    # 4. 方差: Var = Σ Wₕ²·σₕ²/nₕ（所有 nₕ > 0，由上面的检查保证）
-    variance_estimate = sum(
-        w * w * (s * s / n_h)
-        for w, s, n_h in zip(strata_weights, strata_stds, n_per_stratum, strict=True)
+    # 合并估计与统计量
+    (estimate, std_error, relative_error, ci_lower, ci_upper,
+     variance_estimate, var_naive_mc, speedup) = _compute_stratified_estimate(
+        strata_means, strata_stds, n_per_stratum, strata_weights,
+        all_outputs, n_samples,
     )
-    std_error = float(np.sqrt(variance_estimate)) if variance_estimate > 0 else 0.0
-    relative_error = (
-        std_error / abs(estimate) if abs(estimate) > 0 else float("inf")
-    )
-
-    # 95% CI
-    ci_lower = estimate - 1.96 * std_error
-    ci_upper = estimate + 1.96 * std_error
-
-    # 朴素 MC 方差对比: Var_MC = Var(g)/n
-    all_outputs_arr = np.array(all_outputs, dtype=float)
-    var_naive_mc = float(np.var(all_outputs_arr, ddof=1)) / n_samples if n_samples > 1 else 0.0
-    speedup = var_naive_mc / variance_estimate if variance_estimate > 0 else float("inf")
 
     return StratifiedSamplingResult(
-        estimate=estimate,
-        std_error=std_error,
-        relative_error=relative_error,
-        ci_lower=ci_lower,
-        ci_upper=ci_upper,
-        n_strata=n_strata,
-        n_samples=n_evaluations,
-        n_per_stratum=n_per_stratum,
-        strata_weights=strata_weights,
-        strata_means=strata_means,
-        strata_stds=strata_stds,
-        variance_estimate=variance_estimate,
-        variance_naive_mc=var_naive_mc,
-        speedup_vs_mc=speedup,
-        allocation_strategy=strategy.value,
-        n_evaluations=n_evaluations,
+        estimate=estimate, std_error=std_error, relative_error=relative_error,
+        ci_lower=ci_lower, ci_upper=ci_upper, n_strata=n_strata,
+        n_samples=n_evaluations, n_per_stratum=n_per_stratum,
+        strata_weights=strata_weights, strata_means=strata_means,
+        strata_stds=strata_stds, variance_estimate=variance_estimate,
+        variance_naive_mc=var_naive_mc, speedup_vs_mc=speedup,
+        allocation_strategy=strategy.value, n_evaluations=n_evaluations,
     )
 
 
