@@ -66,8 +66,11 @@ _logger = logging.getLogger("e2e_showcase")
 _PROB_TOL = 1e-6
 # 酉性验证容差
 _UNITARY_TOL = 1e-6
-# KLM CNOT 理论成功率（Knill et al., Nature 2001）
-_KLM_CNOT_EXPECTED = 0.25
+# KLM CNOT 理论成功率（Ralph 2002 PRA 65, 062324 简化 4-BS 电路，1/9 ≈ 0.1111）
+# R05 修复: 原 0.25 是 Knill 2001 Nature 完整 NS-gate（8 模式）的理论值，
+# 但本模块 klm_cnot_circuit() 实现的是 Ralph 2002 简化 4-BS（4 模式），
+# 成功率 1/9。与 polaris.sim.quantum_klm.klm_cnot_success_probability() 一致。
+_KLM_CNOT_EXPECTED = 1.0 / 9.0
 
 # R2-D13: 蒙特卡洛玻色采样验证参数
 # 演示用任意参数（非物理常量），用于生成有效 4×4 酉矩阵

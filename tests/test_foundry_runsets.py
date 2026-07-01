@@ -162,10 +162,14 @@ def test_list_foundry_runsets_by_material_empty():
 
 
 def test_siepic_ebeam_runset_unchanged():
-    """测试 SiEPIC EBeam runset 规则数（第85轮 WG_DENSITY，第87轮 VIAC_M1_ENCLOSURE）。"""
+    """测试 SiEPIC EBeam runset 规则数。
+
+    R05 更新: 规则数 10 → 11（新增 VIAC_MIN_SIZE_SPACE 通孔尺寸+间距检查）。
+    历史变更: 第85轮 WG_DENSITY, 第87轮 VIAC_M1_ENCLOSURE, 后续 VIAC_MIN_SIZE_SPACE。
+    """
     from polaris.sim.klayout_drc import SIEPIC_EBEAM_DRC_RUNSET
 
-    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 10
+    assert len(SIEPIC_EBEAM_DRC_RUNSET) == 11
     runset = FOUNDRY_RUNSETS["SiEPIC_EBeam"]
     assert runset.rules is SIEPIC_EBEAM_DRC_RUNSET
 

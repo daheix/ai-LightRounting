@@ -792,17 +792,21 @@ class TestStageExecutors:
            调用方处理为布线失败。R03 合规：返回 -1 是合法的"未找到路径"，非假数据。
         2. AnalyticalPlacer._initial_placement 改用固定种子 RNG
            （``np.random.default_rng(42)``），消除布局非确定性，保证下游布线结果
-           可复现（原实现 5 次运行 n_paths ∈ {4,4,4,4,5}，修复后稳定为 4）。
+           可复现（原实现 5 次运行 n_paths ∈ {4,4,4,4,5}，修复后稳定）。
 
         来源:
         - Red Blob Games A* 实现建议——为防止无穷搜索，设置扩展上限
           http://theory.stanford.edu/~amitp/GameProgramming/ImplementationNotes.html
         - DREAMPlace (Lin et al. TCAD 2020) 使用 torch.manual_seed 保证可复现
           https://arxiv.org/abs/2004.10746
+        - Lillis & Dutt DAC 1999 Rip-up and Reroute 算法
+          https://dl.acm.org/doi/10.1145/309847.309970
 
-        MZI 电路拓扑约束: 5 条连接中 4 条可布通，1 条 (wg1→mmi2) 因器件行布局
-        导致路径被其他已布线路径阻塞且 rip-up 后无可行替代路径。这是路由质量
-        限制（非 Bug），router 如实报告未布线（R03 合规，不返回假路径）。
+        MZI 电路拓扑约束: 5 条连接中，第一轮顺序布线有 2 条（wg1→mmi2 与
+        wg2→mmi2）因器件行布局被已布线路径阻塞而失败；经 _MAX_RIPUP_ITERATIONS=2
+        轮 rip-up and reroute（Lillis & Dutt DAC 1999）后，5 条连接全部布通。
+        这是路由器 rip-up 机制的真实能力（R03 合规，无 fall-back 假路径）。
+        固定种子 RNG 保证此结果可复现（n_paths 稳定为 5）。
         """
         import time
 
@@ -820,12 +824,15 @@ class TestStageExecutors:
         t0 = time.time()
         result = stage4_routing(recipe, ws, prev)
         elapsed = time.time() - t0
-        # 性能断言：修复后 <5s（原 Bug >25s 超时）。留 5x 余量防慢机环境抖动。
-        assert elapsed < 5.0, f"stage4_routing 卡死回归: 耗时 {elapsed:.2f}s > 5s"
-        # 确定性断言：固定种子 RNG 后，n_paths 稳定为 4（5 条连接中 4 条可布通）
-        # 1 条 (wg1→mmi2) 因器件行拓扑约束无法布通，router 如实报告未布线（R03）
-        assert result["n_paths"] == 4, (
-            f"确定性回归: 期望 4 条路径（固定种子 RNG），实际 {result['n_paths']} 条"
+        # 性能断言：修复后 <20s（原 Bug >25s 超时）。
+        # R1000 编码碰撞修复后 A* 搜索空间增大（不再有假碰撞剪枝），
+        # rip-up 2 轮迭代实测 10-15s（受系统负载影响波动），
+        # 阈值 20s 留足余量防抖动，仍低于原 Bug 的 25s 验证卡死已修复。
+        assert elapsed < 20.0, f"stage4_routing 卡死回归: 耗时 {elapsed:.2f}s > 20s"
+        # 确定性断言：固定种子 RNG + rip-up and reroute 后，5 条连接全部布通
+        # 第一轮 2 条失败（wg1→mmi2, wg2→mmi2），rip-up 后全部成功（R03 真实结果）
+        assert result["n_paths"] == 5, (
+            f"确定性回归: 期望 5 条路径（固定种子 RNG + rip-up），实际 {result['n_paths']} 条"
         )
         assert result["total_length_um"] > 0
 

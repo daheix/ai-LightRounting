@@ -389,10 +389,10 @@ class TestStage9QuantumPhotonics:
         assert abs(hom["coincidence_prob"]) < 1e-6
 
     def test_klm_cnot(self, result: dict) -> None:
-        """验证 KLM CNOT 成功率 ≈ 0.25（Knill et al., Nature 2001）。"""
+        """验证 KLM CNOT 成功率 ≈ 1/9（Ralph 2002 PRA 65, 062324 简化 4-BS）。"""
         klm = result["klm"]
         assert klm["cnot_verified"] is True
-        assert abs(klm["cnot_success_prob"] - 0.25) < 1e-6
+        assert abs(klm["cnot_success_prob"] - 1.0 / 9.0) < 1e-6
 
     def test_klm_hadamard(self, result: dict) -> None:
         """验证 Hadamard 门酉性（H @ H† = I）。"""

@@ -85,10 +85,14 @@ class TestFoundryPlatformData:
         assert "LioniX" in sin
 
     def test_hybrid_platforms(self):
-        """Hybrid 材料平台至少 2 个。"""
+        """Hybrid 材料平台至少 1 个（Tyndall InP+SOI 异质集成）。
+
+        R05 修复: Tower_OpenLight 已从 Hybrid 改为 InP（OpenLight 官方确认
+        InP PLC 平台，width=2.0μm，与 foundry_pdk_expanded.py 一致），
+        故 Hybrid 平台现仅 Tyndall。
+        """
         hybrid = list_foundry_platforms_by_material("Hybrid")
-        assert len(hybrid) >= 2
-        assert "Tower_OpenLight" in hybrid
+        assert len(hybrid) >= 1
         assert "Tyndall" in hybrid
 
 
@@ -174,5 +178,7 @@ class TestFoundryPlatformIntegration:
         assert hl.foundry == "HyperLight Corporation"
         assert hl.material_platform == "LNOI"
         assert hl.wafer_size_mm == 100
-        assert hl.waveguide_width_um == 0.8
+        # R05 修复: width=1.5μm（TFLN 条形波导典型宽度，APL Photonics 2022,
+        # doi:10.1063/5.0077232），原 0.8μm 过时
+        assert hl.waveguide_width_um == pytest.approx(1.5)
         assert len(hl.sources) >= 2

@@ -109,10 +109,15 @@ class TestRouterConstraints:
             assert cons["min_bend_radius_um"] > 0.0
             assert cons["min_spacing_um"] > 0.0
 
-    def test_unknown_platform_falls_back_to_soi(self):
-        """M1: 未知平台回退到 SOI。"""
-        cons = get_platform_constraints("UNKNOWN_PLATFORM")
-        assert cons == PLATFORM_CONSTRAINTS["SOI"]
+    def test_unknown_platform_raises_keyerror(self):
+        """M1: 未知平台 raise KeyError（R03 禁止 fall-back）。
+
+        R05 Bug 修复 v5.0-P1-R114: get_platform_constraints 原对未知平台
+        静默返回 SOI 约束（fall-back），违反 R03。已修复为 raise KeyError。
+        本测试同步更新为期望 KeyError。
+        """
+        with pytest.raises(KeyError, match="R03 禁止 fall-back"):
+            get_platform_constraints("UNKNOWN_PLATFORM")
 
 
 # ============================================================

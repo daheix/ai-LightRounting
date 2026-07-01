@@ -132,7 +132,12 @@ def test_command_stack_add_undo_redo():
 
 
 def test_command_stack_move_undo_with_center():
-    """MoveObjectCommand undo 恢复原位置，含 center 属性同步。"""
+    """MoveObjectCommand undo 恢复原位置，含 center 属性同步。
+
+    R05 Bug 修复 R1000: AddObjectCommand.do() 使用 deepcopy 隔离场景对象
+    （避免外部修改导致撤销/重做副作用，Gamma 1994 命令模式）。
+    测试需通过 scene[obj_id] 访问实际对象，而非原始引用 obj。
+    """
     scene: dict = {}
     stack = CommandStack()
     obj = LayoutObject(
@@ -140,12 +145,14 @@ def test_command_stack_move_undo_with_center():
         attrs={"center": (5.0, 5.0), "radius": 3.0})
     stack.execute(AddObjectCommand(obj), scene)
     stack.execute(MoveObjectCommand(1, 10.0, 20.0), scene)
-    assert obj.points[0] == (10.0, 20.0)
-    assert obj.attrs["center"] == (15.0, 25.0)
+    # AddObjectCommand 使用 deepcopy，需通过 scene 访问实际对象
+    scene_obj = scene[1]
+    assert scene_obj.points[0] == (10.0, 20.0)
+    assert scene_obj.attrs["center"] == (15.0, 25.0)
     # undo 恢复
     stack.undo(scene)
-    assert obj.points[0] == (0.0, 0.0)
-    assert obj.attrs["center"] == (5.0, 5.0)
+    assert scene_obj.points[0] == (0.0, 0.0)
+    assert scene_obj.attrs["center"] == (5.0, 5.0)
 
 
 def test_command_stack_redo_clears_on_new_command():

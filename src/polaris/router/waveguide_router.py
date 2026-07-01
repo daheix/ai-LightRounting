@@ -217,28 +217,45 @@ class GridRouter:
     # ------------------------------------------------------------------
     # 整数状态编码（第一波A 步骤2，Red Blob Games 优化）
     # ------------------------------------------------------------------
+    # 方向数：d ∈ {-1, 0, 1, 2, 3} 共 5 个值（-1=无方向，0-3=EWSN）
+    # 编码乘数必须 ≥5，否则相邻位置 + 不同方向会碰撞
+    # 例: (x=0,y=0,d=3) 和 (x=1,y=0,d=-1) 在乘数=4 时都编码为 4
+    _DIR_ENCODER_SIZE = 5
+
     def _encode(self, x: int, y: int, d: int, s: int) -> int:
         """将 4-tuple 状态编码为单个 int，加速 dict 哈希。
 
-        编码: state = ((y * grid_w + x) * 4 + (d+1)) * (min_bend_steps+1) + s
-        d+1 是为了把 -1（无方向）映射到 0，避免负数。
+        编码: state = ((y * grid_w + x) * 5 + (d+1)) * (min_bend_steps+1) + s
+        d+1 ∈ {0,1,2,3,4} 共 5 个值，乘数必须 ≥5 避免相邻位置碰撞。
 
-        R05 Bug 修复 v5.0-P0-3R1: 状态编码别名 bug。
+        R05 Bug 修复 v5.0-P0-3R1: 状态编码别名 bug（straight 模数）。
         原编码用 min_bend_steps 作为模数，但 s ∈ [0, min_bend_steps]（含
         min_bend_steps，因 _get_neighbors/_jump 钳位到 min_bend_steps）。
         当 s=min_bend_steps 时，解码 state % min_bend_steps = 0，状态别名
         回 straight=0，导致 _get_jump_successors 的 `straight < min_bend_steps`
         检查拒绝转弯（长直行后无法转弯，A* 永远找不到路径）。
         修复: 编码空间扩大为 (min_bend_steps+1)，s ∈ [0, min_bend_steps] 唯一编码。
+
+        R05 Bug 修复 v5.0-R1000-ENC: 方向编码碰撞 bug。
+        原编码乘数为 4，但 d+1 ∈ {0,1,2,3,4} 共 5 个值。当 (pos_A, dir_A)
+        满足 pos_A*4 + dir_A = pos_B*4 + dir_B 且 pos_B = pos_A+1, dir_B=0
+        时发生碰撞。例: (x=0,y=0,d=3)→0*4+4=4 与 (x=1,y=0,d=-1)→1*4+0=4
+        编码相同，导致 A* 将障碍物坐标 (5,0) 误认为可达状态 (4,0,dir=3)，
+        路径穿越障碍物。修复: 乘数从 4 改为 5。
+
+        来源: Red Blob Games 整数状态编码
+          http://theory.stanford.edu/~amitp/GameProgramming/ImplementationNotes.html
         """
-        return ((y * self.grid_w + x) * 4 + (d + 1)) * (self.min_bend_steps + 1) + s
+        return (
+            (y * self.grid_w + x) * self._DIR_ENCODER_SIZE + (d + 1)
+        ) * (self.min_bend_steps + 1) + s
 
     def _decode(self, state: int) -> tuple[int, int, int, int]:
         """将 int 状态解码回 (x, y, dir, straight)。"""
         s = state % (self.min_bend_steps + 1)
         rest = state // (self.min_bend_steps + 1)
-        d = rest % 4 - 1
-        rest = rest // 4
+        d = rest % self._DIR_ENCODER_SIZE - 1
+        rest = rest // self._DIR_ENCODER_SIZE
         x = rest % self.grid_w
         y = rest // self.grid_w
         return (x, y, d, s)
