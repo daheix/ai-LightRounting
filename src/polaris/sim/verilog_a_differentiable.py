@@ -27,9 +27,18 @@
 
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
-- 创新 底层逻辑：见上方创新点列表
-  支持理论：2015, §; 2015 §; 2015 §。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* Verilog-A 可微分 底层逻辑：Lumerical Verilog-A 模型为黑盒不可微，
+  PoLaRIS 将调制器 P_opt = η·V²·exp(-α·L)、探测器 I_photo = R·P_opt、负载
+  V_out = I_photo·R_load 三个紧凑模型用 NumPy/JAX 原语重写，使整个光电链路
+  形成 autograd 计算图，梯度可跨光电边界反向传播至光子 S 参数与电学偏置。
+  支持理论：Chrostowski & Hochberg 2015, "Silicon Photonics Design" §8.4
+  光电协同紧凑模型；Ansys Lumerical CML Compiler 文档（Verilog-A 系统建模
+  工业参考，不可微）；JAX autograd 反向模式自动微分理论
+  (https://jax.readthedocs.io/)；PyTorch autograd 设计参考
+  (https://pytorch.org/docs/stable/autograd.html)。
+  案例：应用于 PoLaRIS R35 光电联合逆向设计，调制器效率 η 与负载电阻 R_load
+  可联合优化，与 Lumerical CML 不可微结果对齐验证，见 操作记录.md 对应轮次
+  测试结果。
 
 """
 

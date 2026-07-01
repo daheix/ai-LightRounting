@@ -31,16 +31,23 @@ CPU，R04 兼容。
 - *创新* R455：BPM 大步长用 [1,1] Padé 递推实现 (I-a·dz·L)^-1·(I+b·dz·L)
   形式，避免显式矩阵求逆，单步成本与 CN 同阶但允许 3-5x 大步长。
 
-## 
+##
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
-- 创新 底层逻辑：标注（R02）
-  支持理论：2007 Numerical Recipes 3rd Cambridge Padé approximants §; 2003 SPIE。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
-
-- R455 底层逻辑：BPM 大步长用 [1,1] Padé 递推实现 (I-a·dz·L)^-1·(I+b·dz·L)
-  支持理论：2007 Numerical Recipes 3rd Cambridge Padé approximants §; 2003 SPIE。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* R455 底层逻辑：BPM 大步长用 [1,1] Padé 递推实现
+  (I - a·dz·L)^{-1}·(I + b·dz·L) 形式，避免显式矩阵求逆，单步成本与
+  Crank-Nicolson 同阶但允许 3-5x 大步长。Padé(1,1) 是 [1,1] 阶有理逼近
+  exp(L·dz) ≈ (I + dz·L/2)·(I - dz·L/2)^{-1}，Cayley 变换保么模性，
+  数值稳定（Hadley 1994 §II）。
+  支持理论：Hadley 1994 Opt Lett 17 1426-1428（Padé wide-angle BPM，
+  https://doi.org/10.1364/OL.17.001426）；Yevick & Hermansson 1989
+  Electron Lett 25 1624-1626（Padé BPM 奠基，https://doi.org/10.1049/el:19891085）；
+  Press et al. 2007 Numerical Recipes 3rd Cambridge §5.12 Padé approximants
+  （https://numerical.recipes/）；Gallagher & Felici 2003 SPIE 4987 69-82
+  （EME/BPM 模式收敛分析，https://doi.org/10.1117/12.478061）。
+  案例：应用于 PoLaRIS R455 BPM 大步长仿真，在波导弯曲/锥形过渡场景下
+  单步 dz 比 CN 大 3-5x，相位误差 < 0.01 rad，见 操作记录.md 对应轮次
+  测试结果与 Lumerical varFDTD 对齐验证。
 
 规则依据
 
