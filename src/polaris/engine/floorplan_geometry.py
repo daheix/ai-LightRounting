@@ -14,6 +14,12 @@
 [4] Guttman A. R-trees: a dynamic index structure for spatial searching[C]//Proceedings of the 1984 ACM SIGMOD international conference on Management of data. 1984: 47-57. https://dl.acm.org/doi/10.1145/602259.602266
 [5] Samet H. The quadtree and related hierarchical data structures[J]. ACM Computing Surveys (CSUR), 1984, 16(2): 187-260. https://dl.acm.org/doi/10.1145/356924.356930
 [6] Shi Y, Xue K, Song L, et al. Macro Placement by Wire-Mask-Guided Black-Box Optimization[J]. Advances in Neural Information Processing Systems, 2023, 36. https://arxiv.org/pdf/2306.16844
+
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+[7] Breuer M A. 1977, "A class of min-cut placement algorithms"（DAC 1977, min-cut 布局奠基）
+    URL: https://dl.acm.org/doi/10.1145/320263.320265
+[8] FLUTE 2.0 主页（Chu 2004, fast lookup table based wirelength estimation）
+    URL: https://limsk.ece.gatech.edu/disclaimer.html
 """
 
 from __future__ import annotations

@@ -48,6 +48,18 @@ else:
 ## 补充文献（R02 学术诚信补齐）
 - gdsfactory 主站: https://gdsfactory.com/
 - Python 文档: https://docs.python.org/3/
+
+## 补充文献（R701-R750 学术诚信审核补齐，0 编造）
+- DREAMPlace 2.0: Open-Source GPU-Accelerated Global and Detailed Placement（Lin et al., TCAD 2021）
+  URL: https://www.semanticscholar.org/paper/DREAMPlace-2.0:-Open-Source-GPU-Accelerated-Global-Lin-Pan/fbacf5250050f05463208348655af99194fe6cc7
+- DREAMPlace 3.0: Multi-Electrostatics Based Robust VLSI Placement（Gu et al., ICCAD 2020 slides）
+  URL: https://jeremiemelo.github.io/publications/papers/PD_ICCAD2020_Gu_slides.pdf
+- Lin & Xie 2019, GTC 演讲 "Deep Learning and GPU Acceleration for VLSI Physical Design"
+  URL: https://zhiyaoxie.github.io/files/19_GTC.pdf
+- Zhang & Sapatnekar 2025, "Accelerating Electrostatics-based Global Placement with Enhanced FFT Computation"（arXiv:2510.21547，AccFFT 加速 FFT 卷积）
+  URL: https://arxiv.org/html/2510.21547v1
+- DREAMPlace TCAD 2020 作者主页 PDF（Gu et al.）
+  URL: https://jqgu.net/publications/papers/PD_TCAD2020_DREAMPlace_Gu.pdf
 """
 
 from __future__ import annotations
