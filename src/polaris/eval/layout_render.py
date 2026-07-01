@@ -521,10 +521,12 @@ class DRCReport:
 
     @property
     def total_violations(self) -> int:
+        """返回总违规数（重叠+间距+最小弯曲半径）。"""
         return self.overlap_violations + self.spacing_violations + self.min_bend_radius_violations
 
     @property
     def passed(self) -> bool:
+        """返回 True 当且仅当无任何违规。"""
         return self.total_violations == 0
 
 

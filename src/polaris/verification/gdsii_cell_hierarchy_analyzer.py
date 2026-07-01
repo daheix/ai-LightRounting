@@ -459,6 +459,11 @@ def _detect_cycles_dfs(
     cycles: list[list[int]] = []
 
     def dfs(u: int) -> None:
+        """深度优先搜索检测环路（三色标记法）。
+
+        Args:
+            u: 当前访问的 cell 索引。
+        """
         color[u] = GRAY
         path.append(u)
         for v in child_cells_of.get(u, set()):

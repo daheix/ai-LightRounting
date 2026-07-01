@@ -47,6 +47,12 @@ from numpy.typing import NDArray
 # =============================================================================
 
 class DRCSeverity(str, Enum):
+    """DRC 违规严重级别枚举。
+
+    对齐 KLayout/Synopsys IC Validator 的 severity 分级：
+    ERROR 阻断流片，WARNING 需人工复核，INFO 仅提示。
+    """
+
     ERROR = "error"
     WARNING = "warning"
     INFO = "info"
@@ -65,6 +71,16 @@ class DRCRule:
 
 @dataclass
 class DRCViolation:
+    """DRC 违规记录（单条规则违反）。
+
+    Attributes:
+        rule: 规则名称。
+        layer: 违规所在层。
+        severity: 严重级别（ERROR/WARNING/INFO）。
+        message: 违规描述信息。
+        count: 违规实例计数。
+    """
+
     rule: str
     layer: str
     severity: DRCSeverity
@@ -85,6 +101,11 @@ class DRCEngine:
         self._register_builtin_rules()
 
     def add_rule(self, rule: DRCRule) -> None:
+        """注册一条 DRC 规则到引擎。
+
+        Args:
+            rule: DRC 规则定义实例。
+        """
         self._rules.append(rule)
 
     def run(self, layout_data: dict[str, Any]) -> list[DRCViolation]:
@@ -99,13 +120,20 @@ class DRCEngine:
 
     @property
     def error_count(self) -> int:
+        """返回 ERROR 级别违规数量。"""
         return sum(1 for v in self._violations if v.severity == DRCSeverity.ERROR)
 
     @property
     def warning_count(self) -> int:
+        """返回 WARNING 级别违规数量。"""
         return sum(1 for v in self._violations if v.severity == DRCSeverity.WARNING)
 
     def report(self) -> dict[str, Any]:
+        """生成 DRC 检查报告字典。
+
+        Returns:
+            含 total_rules/total_violations/errors/warnings/violations/passed 的字典。
+        """
         return {
             "total_rules": len(self._rules),
             "total_violations": len(self._violations),
@@ -487,6 +515,12 @@ class StatisticalParam:
 
 
 class CornerType(str, Enum):
+    """工艺角类型枚举（PVT 工艺-电压-温度组合）。
+
+    对齐半导体行业 Corner 分析标准（TT/SS/FF/SF/FS）。
+    来源: Pelgrom et al., IEEE JSSC 1989, 跨批次工艺偏差模型。
+    """
+
     TT = "TT"  # Typical-Typical
     SS = "SS"  # Slow-Slow (width-3σ, thickness-3σ)
     FF = "FF"  # Fast-Fast (width+3σ, thickness+3σ)
@@ -512,10 +546,16 @@ class StatisticalAnalyzer:
         self._rng = np.random.default_rng(42)
 
     def add_param(self, param: StatisticalParam) -> None:
+        """添加一个统计参数到分析器。
+
+        Args:
+            param: 统计参数实例（含名义值/偏差/分布类型）。
+        """
         self._params[param.name] = param
 
     @property
     def param_names(self) -> list[str]:
+        """返回已注册参数名排序列表。"""
         return sorted(self._params.keys())
 
     # ----- Corner Analysis -----
@@ -1009,6 +1049,17 @@ def _test_statistical() -> tuple[StatisticalAnalyzer, dict, object]:
 
     # 仿真函数: 环形谐振器波长偏移 ≈ -k1*Δw - k2*Δt
     def sim_ring_resonance(p: dict[str, float]) -> float:
+        """环形谐振器谐振波长偏移仿真函数。
+
+        公式: Δλ = -k1·Δw - k2·Δt（k1=2.0 nm/μm, k2=5.0 nm/μm）。
+        来源: Bogaerts et al., OFC 2018, 波长偏移线性敏感度模型。
+
+        Args:
+            p: 工艺参数字典（waveguide_width/waveguide_thickness）。
+
+        Returns:
+            谐振波长（nm）。
+        """
         dw = p["waveguide_width"] - 0.45
         dt = p["waveguide_thickness"] - 0.22
         return 1550.0 - 2.0 * dw - 5.0 * dt  # nm
@@ -1048,6 +1099,15 @@ def _test_statistical() -> tuple[StatisticalAnalyzer, dict, object]:
 def _test_layout_aware_mc(stats: StatisticalAnalyzer) -> None:
     """冒烟测试 5: Layout-Aware MC（R624 Extract Method，从 _test 拆分）。"""
     def sim_layout(p: dict[str, float], pos: tuple[float, float]) -> float:
+        """Layout-Aware 仿真函数（含器件位置依赖）。
+
+        Args:
+            p: 工艺参数字典。
+            pos: 器件位置 (x, y)（μm）。
+
+        Returns:
+            仿真输出值（如谐振波长 nm）。
+        """
         return 1550.0 - 2.0 * (p["waveguide_width"] - 0.45)
 
     # R05 Bug #YA-1 修复: 原代码误用 die_size_um=(2000,2000)，但函数签名

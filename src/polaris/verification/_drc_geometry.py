@@ -941,6 +941,14 @@ def _polygon_symmetry_score(
     tol = 1e-6
 
     def is_in_points(p: tuple[float, float]) -> bool:
+        """判断点是否在多边形顶点集合中（容差 1e-6）。
+
+        Args:
+            p: 待查询点 (x, y)。
+
+        Returns:
+            点在顶点集合中返回 True，否则 False。
+        """
         for q in pts_list:
             if abs(p[0] - q[0]) < tol and abs(p[1] - q[1]) < tol:
                 return True

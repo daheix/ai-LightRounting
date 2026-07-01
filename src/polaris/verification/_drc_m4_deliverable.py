@@ -181,11 +181,26 @@ class M4Deliverable:
         self._checklist = items
 
     def mark(self, item: str, passed: bool) -> None:
+        """标记检查项通过/失败状态。
+
+        Args:
+            item: 检查项名称。
+            passed: 是否通过。
+
+        Raises:
+            KeyError: 检查项不存在。
+        """
         if item not in self._checklist:
             raise KeyError(f"检查项 {item} 不存在，可用: {list(self._checklist.keys())}")
         self._checklist[item] = passed
 
     def report(self) -> dict[str, Any]:
+        """生成 M4 交付检查报告字典。
+
+        Returns:
+            含 milestone/target_score/total_items/passed_items/
+            completion_rate/failed_items 的字典。
+        """
         total = len(self._checklist)
         passed = sum(1 for v in self._checklist.values() if v)
         return {

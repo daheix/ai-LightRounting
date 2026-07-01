@@ -808,6 +808,14 @@ class AdvancedCornerAnalyzer:
         n_eval = [0]
 
         def obj(x: NDArray[np.float64]) -> float:
+            """优化目标函数（带符号的仿真输出）。
+
+            Args:
+                x: 参数向量。
+
+            Returns:
+                带符号的仿真值（max 方向取负，min 方向取正）。
+            """
             n_eval[0] += 1
             params_i = {n: float(x[i]) for i, n in enumerate(names)}
             return sign * float(sim_fn(params_i))

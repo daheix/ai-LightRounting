@@ -138,14 +138,17 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
 
     @property
     def rule_count(self) -> int:
+        """返回已注册的 DRC 规则总数。"""
         return len(self._rules)
 
     @property
     def violation_count(self) -> int:
+        """返回违规实例总数。"""
         return len(self._violations)
 
     @property
     def error_count(self) -> int:
+        """返回 ERROR 级别违规数量。"""
         return sum(1 for v in self._violations if v.severity == "error")
 
     @property
@@ -444,6 +447,12 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
         ))
 
     def report(self) -> dict[str, Any]:
+        """生成曲直 DRC 检查报告字典。
+
+        Returns:
+            含 total_rules/curvilinear_rules/total_violations/errors/
+            warnings/violations_by_category/passed 的字典。
+        """
         by_cat: dict[str, int] = {}
         for v in self._violations:
             by_cat[v.category] = by_cat.get(v.category, 0) + 1

@@ -157,6 +157,14 @@ def _detect_cycle(rename_map: dict[str, str]) -> list[str] | None:
     path: list[str] = []
 
     def dfs(node: str) -> list[str] | None:
+        """深度优先搜索检测重命名映射中的循环引用。
+
+        Args:
+            node: 当前访问的 cell 名称。
+
+        Returns:
+            发现循环时返回循环路径列表，无循环返回 None。
+        """
         if node in rec_stack:
             # 找到循环，返回循环路径
             cycle_start = path.index(node)
