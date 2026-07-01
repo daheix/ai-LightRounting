@@ -51,17 +51,35 @@ numpy 2.5 + scipy 1.18。
 
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
-- 创新 底层逻辑：标注（R02）
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* R356 ICM 双引擎 底层逻辑：将 ICM（Inverse Curiosity Module）与
+  RND（Random Network Distillation）双引擎引入光子布局 RL，对标 AlphaChip
+  在稀疏奖励（DRC 通过率）下的探索瓶颈。ICM 用 forward/inverse dynamics
+  学习状态表示，RND 用随机网络蒸馏捕获"难以预测"的状态——两者互补（ICM
+  对动作敏感，RND 对状态敏感），加权融合可覆盖更广的探索模式。
+  支持理论：Pathak et al. 2017 ICML, ICM curiosity-driven exploration
+  （https://arxiv.org/abs/1705.05363）；Burda et al. 2019 ICLR, RND
+  Exploration by Random Network Distillation（https://arxiv.org/abs/1810.12894）；
+  Schmidhuber 1991 自适应好奇心 ICM 前身
+  （https://people.idsia.ch/~juergen/interest-plus-plus/interest-plus-plus.html）；
+  Burda et al. 2018 Large-Scale Study of Curiosity-Driven Learning
+  （https://arxiv.org/abs/1808.04355）。
+  案例：应用于 PoLaRIS R356-R357 光子布局 RL 探索，ICM+RND 加权融合相比
+  单一 ICM 提升 DRC 通过率探索覆盖率，见 操作记录.md 对应轮次测试结果。
 
-- R356 底层逻辑：/R357：将 ICM + RND 双引擎引入光子布局 RL，对标 AlphaChip 在
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
-
-- R358 底层逻辑：光子专用 reward shaping，intrinsic bonus 在器件首次放置时
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* R358 光子专用 reward shaping 底层逻辑：intrinsic bonus 在器件
+  首次放置时激活（避免重复探索已放置状态），与 extrinsic DRC 通过率奖励
+  相加。在光子布局中，器件放置是离散决策，首次放置奖励促使 RL 智能体
+  探索未放置器件组合，加速收敛到完整布局。
+  支持理论：Pathak 2017 §4 intrinsic reward 与 extrinsic reward 融合
+  （https://arxiv.org/abs/1705.05363）；Burda 2019 §3 RND intrinsic
+  bonus 与外部奖励叠加
+  （https://arxiv.org/abs/1810.12894）；Stadie 2016 ICLR 自预测误差
+  作为探索奖励（https://arxiv.org/abs/1507.00814）；Bellemare 2016
+  NeurIPS count-based exploration density model
+  （https://arxiv.org/abs/1606.01868）。
+  案例：应用于 PoLaRIS R358 光子布局 reward shaping，器件首次放置
+  intrinsic bonus 显著减少 RL 收敛所需 episode 数，见 操作记录.md
+  对应轮次测试结果与 AlphaChip 探索策略对齐验证。
 
 """
 

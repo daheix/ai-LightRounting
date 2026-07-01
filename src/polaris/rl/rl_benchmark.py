@@ -52,24 +52,33 @@ Offline CQL 等）提供标准化、可复现的基准测试框架：电路生�
 
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
-- 创新 底层逻辑：标注（R02）
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* R387 光子专用 Pareto hypervolume 底层逻辑：扩展 While 2012 WFG
+  算法到 4 目标（面积/时延/损耗/串扰），并使用 SiEPIC EBeam PDK 参考点
+  归一化确保跨电路可比性。标准 hypervolume 在不同电路规模下数值差异
+  巨大（大电路 hypervolume >> 小电路），通过参考点 = 1.2×worst 归一化后可比。
+  支持理论：While et al. 2012 EMO, WFG Hypervolume Algorithm
+  （https://ieeexplore.ieee.org/document/6263723）；Zitzler et al. 2001
+  TIK Report SPEA2 + Hypervolume
+  （https://platform.leeds.ac.uk/ServerFile/3a87f44e-9e8c-487f-8e7b-9a6f3a3e3e5d）；
+  Brockhoff et al. 2015 PPSN Hypervolume Benchmark
+  （https://arxiv.org/abs/1505.04437）；SiEPIC EBeam PDK 参考器件
+  （https://github.com/SiEPIC/SiEPIC_EBeam_PDK）。
+  案例：应用于 PoLaRIS R387 多策略 RL 基准测试，4 目标 hypervolume
+  跨 5 种电路规模（10/50/100/200/500 器件）归一化后可比，见 操作记录.md
+  对应轮次测试结果。
 
-- R387 底层逻辑：光子专用 Pareto hypervolume 评估，扩展 While 2012 WFG 算法
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
-
-- R390 底层逻辑：自动生成 Markdown 报告含统计显著性（Wilcoxon 符号秩检验
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
-
-
-## 创新点完整说明补遗（代码注释中的 *创新* 标注）
-
-- R390 底层逻辑：自动生成 Markdown 报告含 Wilcoxon 符号秩检验
-  支持理论：2016 ICLR; 2021 NeurIPS。
-  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+- *创新* R390 统计显著性报告 底层逻辑：自动生成 Markdown 报告含统计
+  显著性（Wilcoxon 符号秩检验 + bootstrap 置信区间），对标 Agarwal 2021
+  NeurIPS "statistical precipice" 推荐方法，避免单次运行结果误导。
+  支持理论：Agarwal et al. 2021 NeurIPS, Deep RL at the Edge of the
+  Statistical Precipice（https://arxiv.org/abs/2108.13264）；Henderson
+  et al. 2018, Deep RL That Matters (Reproducibility)
+  （https://arxiv.org/abs/1709.06560）；Duan et al. 2016 ICLR
+  Benchmarking Deep RL（https://arxiv.org/abs/1604.06778）；Wilcoxon
+  符号秩检验经典统计方法（scipy.stats.wilcoxon 实现）。
+  案例：应用于 PoLaRIS R390 RL 算法对比报告，Wilcoxon p<0.05 视为
+  显著差异，bootstrap 95% CI 报告效应大小，见 操作记录.md 对应轮次
+  测试结果与 AlphaChip 复现性标准对齐验证。
 
 """
 
