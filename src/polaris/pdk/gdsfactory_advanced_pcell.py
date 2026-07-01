@@ -10,6 +10,12 @@
 4. SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 5. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
    https://doi.org/10.1017/CBO9781316084168
+
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+6. Luceda IPKISS PCell 教程（PCell 参数化模型设计）
+   https://docs.lucedaphotonics.com/
+7. KLayoutPhotonicPCells（PCell 端口追踪与层级组合）
+   https://sebastian-goeldi.github.io/KLayoutPhotonicPCells-core/
 """
 
 from __future__ import annotations

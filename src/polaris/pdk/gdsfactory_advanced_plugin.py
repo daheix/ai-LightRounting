@@ -9,6 +9,12 @@
 3. gdsfactory API: https://gdsfactory.github.io/gdsfactory/api.html
 4. SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 5. gdsfactory plugins: https://gdsfactory.github.io/gplugins/
+
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+6. Luceda IPKISS PDK 插件机制
+   https://docs.lucedaphotonics.com/
+7. UBC SiEPIC PDK（开源硅光 PDK 插件参考）
+   https://github.com/gdsfactory/ubc
 """
 
 from __future__ import annotations

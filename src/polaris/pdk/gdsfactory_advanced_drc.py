@@ -19,6 +19,12 @@ dataclass 定义可序列化 YAML。文献 9 (ISPD'24) 论证 KLayout DRC 可替
    https://doi.org/10.1145/3626184.3635289
 5. gdsfactory PDK tutorial: https://gdsfactory.github.io/gdsfactory/notebooks/08_pdk.html
 
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+6. KLayout DRC Engine 文档（width/space/notch/area 形态运算）
+   https://www.klayout.de/manual/drc_engine.html
+7. Calibre Standard Verification Rule Format (SVRF)（商业 DRC 规则语言参考）
+   https://docs.sw.siemens.com/en-US/doc/186265592
+
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
 - 创新 底层逻辑：直接调用 klayout.db.Region 的 width_check/space_check/notch_check/

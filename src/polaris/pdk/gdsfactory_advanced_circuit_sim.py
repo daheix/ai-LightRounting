@@ -22,6 +22,12 @@
    https://doi.org/10.1017/CBO9781316084168
 5. NumPy linalg 文档: https://numpy.org/doc/stable/reference/routines.linalg.html
 
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+6. Redheffer, R. 1962, "On the relation of transmission-line theory to scattering and transfer"
+   URL: https://www.sciencedirect.com/science/article/pii/S0022247X62800027
+7. SAX circuit simulator（gdsfactory JAX-based S 参数仿真）
+   URL: https://flaport.github.io/sax/
+
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
 - 创新 底层逻辑：纯 NumPy 实现 Redheffer star product（文献 8），不依赖 sax/JAX，
