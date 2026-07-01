@@ -515,6 +515,151 @@ def _compute_log_weights(
 # ============================================================================
 
 
+def _validate_yield_params(
+    nominal_dist: list[dict], n_samples: int, min_ess_ratio: float
+) -> None:
+    """校验 importance_sampling_yield 入参（R261 内部辅助，R03 禁止 fall-back）。
+
+    Args:
+        nominal_dist: 标称分布规格列表。
+        n_samples: 样本数。
+        min_ess_ratio: 最小 ESS/n 比。
+
+    Raises:
+        ValueError: 参数无效。
+    """
+    if len(nominal_dist) == 0:
+        raise ValueError("nominal_dist 不能为空")
+    if n_samples <= 0:
+        raise ValueError(f"n_samples 必须 > 0，得到 {n_samples}")
+    if not (0.0 < min_ess_ratio < 1.0):
+        raise ValueError(f"min_ess_ratio 必须在 (0, 1)，得到 {min_ess_ratio}")
+
+
+def _evaluate_failure_flags(
+    failure_region: Callable[[np.ndarray], bool],
+    samples: np.ndarray,
+    context: str,
+) -> np.ndarray:
+    """评估每个样本的失效区域指示 g(x) = 𝟙_A(x)（R261 内部辅助）。
+
+    Args:
+        failure_region: 失效区域指示函数 ``A: params -> bool``。
+        samples: 样本数组 (n_samples, d)。
+        context: 错误消息上下文（如 ``"failure_region"``、``"CE 迭代 0 样本"``）。
+
+    Returns:
+        bool 数组 (n_samples,)，True 表示样本在失效区域。
+
+    Raises:
+        RuntimeError: failure_region 评估异常（禁止 fall-back，规则 14.1）。
+    """
+    n_samples = samples.shape[0]
+    flags = np.empty(n_samples, dtype=bool)
+    for i in range(n_samples):
+        try:
+            flags[i] = bool(failure_region(samples[i]))
+        except Exception as e:
+            raise RuntimeError(
+                f"{context} 评估失败 (样本 {i}): {type(e).__name__}: {e}。"
+                f"禁止 fall-back（规则 14.1）。"
+            ) from e
+    return flags
+
+
+def _compute_weighted_yield_stats(
+    weighted: np.ndarray, n_samples: int, n_failures: int
+) -> tuple[float, float, float, float, float, float, float, float]:
+    """计算加权良率估计统计量（R261 内部辅助）。
+
+    计算项目：
+    - 加权良率 ``Ŷ = mean(g·W)``
+    - 标准误差 ``SE = std(g·W)/√n``
+    - 相对误差 ``RE = SE/|Ŷ|``
+    - 95% 置信区间（正态近似）
+    - ESS 诊断: ``ESS = (Σ(g·W))²/Σ(g·W)²``
+    - 加速比: ``Speedup = Y(1-Y)/Var_q(g·W)``
+
+    ESS 基于有效贡献权重 g·W，反映失效样本权重的均匀性。
+    来源: Kroese, Taimre & Botev 2011, Ch.9, DOI: 10.1002/9781118014967
+
+    Args:
+        weighted: 加权后的样本数组 (g·W)。
+        n_samples: 样本数。
+        n_failures: 失效样本数。
+
+    Returns:
+        (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup)。
+    """
+    y_hat = float(np.mean(weighted))
+    if n_samples > 1:
+        var_is = float(np.var(weighted, ddof=1))
+    else:
+        var_is = 0.0
+    se = float(np.sqrt(var_is / n_samples)) if var_is > 0 else 0.0
+    re = se / abs(y_hat) if abs(y_hat) > 0 else float("inf")
+    ci_lower = y_hat - 1.96 * se
+    ci_upper = y_hat + 1.96 * se
+    sum_eff = float(np.sum(weighted))
+    sum_eff2 = float(np.sum(weighted * weighted))
+    ess = (sum_eff * sum_eff) / sum_eff2 if sum_eff2 > 0 else 0.0
+    ess_ratio = ess / n_failures if n_failures > 0 else 0.0
+    var_mc_single = y_hat * (1.0 - y_hat)  # 单样本伯努利方差
+    speedup = var_mc_single / var_is if var_is > 0 else float("inf")
+    return y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup
+
+
+def _check_yield_quality(
+    n_failures: int,
+    ess_ratio: float,
+    re: float,
+    min_ess_ratio: float,
+) -> None:
+    """诊断 IS 良率估计质量，退化即 raise（R261 内部辅助，R03 禁止 fall-back）。
+
+    检查项目：
+    1. 失效样本数 >= 30（CLT 近似成立）
+    2. ESS/n_failures >= min_ess_ratio（权重不集中）
+    3. 相对误差 RE <= 0.5（估计可靠）
+    4. 边缘区间（ESS/n < 0.3 或 RE > 0.1）记 warning
+
+    Args:
+        n_failures: 失效样本数。
+        ess_ratio: ESS/n_failures。
+        re: 相对误差。
+        min_ess_ratio: 最小 ESS/n 阈值。
+
+    Raises:
+        RuntimeError: 任一质量门禁未通过。
+    """
+    if n_failures < 30:
+        raise RuntimeError(
+            f"失效样本数 {n_failures} < 30，统计意义不足。"
+            f"建议: 增大 n_samples、增大 mean_shift 使 q 更偏向失效区、"
+            f"或用 CROSS_ENTROPY 自适应寻找最优偏置。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < min_ess_ratio:
+        raise RuntimeError(
+            f"ESS 退化: ESS/n_failures = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
+            f"失效样本权重过度集中，IS 估计不可靠。"
+            f"建议: 减小 mean_shift、使用 MIXTURE、或用 CROSS_ENTROPY 自适应。"
+            f"禁止 fall-back（R03）。"
+        )
+    if re > 0.5:
+        raise RuntimeError(
+            f"相对误差 RE = {re:.4f} > 0.5，IS 估计不可靠。"
+            f"建议: 增大 n_samples 或改进偏置分布。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < 0.3 or re > 0.1:
+        logger.warning(
+            "ESS/n_failures = %.4f, RE = %.4f 在边缘区间，建议改进偏置分布。",
+            ess_ratio,
+            re,
+        )
+
+
 def importance_sampling_yield(
     failure_region: Callable[[np.ndarray], bool],
     nominal_dist: list[dict],
@@ -529,24 +674,16 @@ def importance_sampling_yield(
     估计失效良率 ``Y = P(X ∈ A)``。当良率接近 1（失效稀有）时，相比朴素 MC
     可实现 10²-10⁴ 倍方差缩减。
 
-    算法:
-    1. 构造标称分布 ``f`` 与偏置分布 ``q``
-    2. 从 ``q`` 采 ``n`` 样本
-    3. 计算每个样本的 ``log W = log f(x) - log q(x)``
-    4. 计算每个样本的 ``g(x) = 𝟙_A(x)``（失效区域指示）
-    5. 加权良率估计: ``Ŷ = mean(g · exp(log W))``
-    6. 标准误差: ``SE = std(g · W) / √n``
-    7. 加速比: ``Speedup = Y(1-Y)/Var_IS``（朴素 MC 方差 / IS 方差）
-    8. ESS 诊断: ``ESS = (ΣW)² / ΣW²``，退化即 raise
+    算法: 构造 f/q → 从 q 采 n 样本 → ``log W = log f - log q`` →
+    评估 ``g(x) = 𝟙_A(x)`` → 加权良率 ``Ŷ = mean(g·exp(log W))`` →
+    ``SE = std(g·W)/√n`` → ``Speedup = Y(1-Y)/Var_IS`` →
+    ``ESS = (ΣW)²/ΣW²`` 退化即 raise。
 
     Args:
-        failure_region: 失效区域指示函数 ``A: params -> bool``。
-            True 表示该样本在失效区域。
-        nominal_dist: 标称（工艺）分布规格列表
-            [{"type":"norm"|"uniform","loc":,"scale":}, ...]。
+        failure_region: 失效区域指示函数 ``A: params -> bool``（True=失效）。
+        nominal_dist: 标称分布规格 [{"type":"norm"|"uniform","loc":,"scale":}, ...]。
         biasing: 偏置分布构造规格（见 :class:`BiasingSpec`）。
-        n_samples: 样本数（典型 10⁴-10⁵）。
-        seed: 随机种子（可复现性）。
+        n_samples: 样本数（典型 10⁴-10⁵）；seed: 随机种子（可复现性）。
         min_ess_ratio: 最小 ESS/n 比，低于此值 raise 告警（防止权重退化）。
 
     Returns:
@@ -555,7 +692,6 @@ def importance_sampling_yield(
     Raises:
         ValueError: 参数无效。
         RuntimeError: 偏置分布支撑不足 / ESS 退化 / 评估失败。
-        RuntimeWarning: ESS/n 在 [0.05, 0.1) 之间（边缘可用）。
 
     学术依据:
     - 似然比估计器: Glynn & Iglehart 1989, DOI: 10.1287/mnsc.35.11.1367
@@ -565,21 +701,13 @@ def importance_sampling_yield(
 
     合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R09 优先用三方库。
     """
-    d = len(nominal_dist)
-    if d == 0:
-        raise ValueError("nominal_dist 不能为空")
-    if n_samples <= 0:
-        raise ValueError(f"n_samples 必须 > 0，得到 {n_samples}")
-    if not (0.0 < min_ess_ratio < 1.0):
-        raise ValueError(f"min_ess_ratio 必须在 (0, 1)，得到 {min_ess_ratio}")
+    _validate_yield_params(nominal_dist, n_samples, min_ess_ratio)
 
     rng = np.random.default_rng(seed)
-
-    # 1. 构造标称分布 f 与偏置分布 q（h 分量）
     f_dists = _build_univariate_distributions(nominal_dist)
     q_dists = _construct_biasing_distribution(nominal_dist, biasing)
 
-    # 2. 从 q 采样
+    # 1. 从 q 采样（MIXTURE 走混合采样分支）
     if biasing.method == BiasingMethod.MIXTURE:
         samples = _sample_mixture(
             f_dists, q_dists, biasing.mixture_alpha, n_samples, rng
@@ -587,104 +715,28 @@ def importance_sampling_yield(
     else:
         samples = _sample_from_distributions(q_dists, n_samples, rng)
 
-    # 3. 计算 log W
+    # 2. 计算似然比与失效指示，加权得到 g·W
     log_w = _compute_log_weights(f_dists, q_dists, samples, biasing)
     weights = np.exp(log_w)
-
-    # 4. 评估失效区域指示函数 g(x) = 𝟙_A(x)
-    failure_flags = np.empty(n_samples, dtype=bool)
-    for i in range(n_samples):
-        try:
-            failure_flags[i] = bool(failure_region(samples[i]))
-        except Exception as e:
-            raise RuntimeError(
-                f"failure_region 评估失败 (样本 {i}): {type(e).__name__}: {e}。"
-                f"禁止 fall-back（规则 14.1）。"
-            ) from e
+    failure_flags = _evaluate_failure_flags(
+        failure_region, samples, "failure_region"
+    )
     n_failures = int(np.sum(failure_flags))
-
-    # 5. 加权良率估计: Ŷ = mean(g · W)
     weighted = failure_flags.astype(float) * weights
-    y_hat = float(np.mean(weighted))
 
-    # 6. 标准误差（无偏样本方差）
-    if n_samples > 1:
-        var_is = float(np.var(weighted, ddof=1))
-    else:
-        var_is = 0.0
-    se = float(np.sqrt(var_is / n_samples)) if var_is > 0 else 0.0
-
-    # 7. 相对误差
-    re = se / abs(y_hat) if abs(y_hat) > 0 else float("inf")
-
-    # 8. 95% 置信区间（正态近似）
-    ci_lower = y_hat - 1.96 * se
-    ci_upper = y_hat + 1.96 * se
-
-    # 9. ESS 诊断: 对良率估计（g=𝟙_A），ESS 基于有效贡献权重 g·W
-    # ESS = (Σ(g·W))²/Σ(g·W)²，反映失效样本权重的均匀性。
-    # ratio = ESS/n_failures：所有失效样本权重相等时 ratio=1，权重集中时 ratio<<1。
-    # 注: 若基于全部 W，则 q 故意偏离 f（如 mean_shift 大）会让非失效样本权重
-    # 跨数量级，ESS 极低，但这对良率估计不构成问题（非失效样本 g=0 不贡献）。
-    # 来源: Kroese, Taimre & Botev 2011, Ch.9, DOI: 10.1002/9781118014967
-    eff_weights = weighted  # g · W
-    sum_eff = float(np.sum(eff_weights))
-    sum_eff2 = float(np.sum(eff_weights * eff_weights))
-    ess = (sum_eff * sum_eff) / sum_eff2 if sum_eff2 > 0 else 0.0
-    ess_ratio = ess / n_failures if n_failures > 0 else 0.0
-
-    # 诊断检查（R03 禁止 fall-back: 退化即 raise，不静默继续）
-    # 1. 失效样本数: 至少 30 个才有统计意义（CLT 近似成立）
-    if n_failures < 30:
-        raise RuntimeError(
-            f"失效样本数 {n_failures} < 30，统计意义不足。"
-            f"建议: 增大 n_samples、增大 mean_shift 使 q 更偏向失效区、"
-            f"或用 CROSS_ENTROPY 自适应寻找最优偏置。"
-            f"禁止 fall-back（R03）。"
-        )
-    # 2. ESS 退化: ESS/n_failures < min_ess_ratio 表示失效样本权重严重集中
-    if ess_ratio < min_ess_ratio:
-        raise RuntimeError(
-            f"ESS 退化: ESS/n_failures = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
-            f"失效样本权重过度集中，IS 估计不可靠。"
-            f"建议: 减小 mean_shift、使用 MIXTURE、或用 CROSS_ENTROPY 自适应。"
-            f"禁止 fall-back（R03）。"
-        )
-    # 3. 相对误差: RE > 0.5（50%）表示估计不可靠
-    if re > 0.5:
-        raise RuntimeError(
-            f"相对误差 RE = {re:.4f} > 0.5，IS 估计不可靠。"
-            f"建议: 增大 n_samples 或改进偏置分布。"
-            f"禁止 fall-back（R03）。"
-        )
-    if ess_ratio < 0.3 or re > 0.1:
-        # 边缘可用但需告警（不阻断，但记日志）
-        logger.warning(
-            "ESS/n_failures = %.4f, RE = %.4f 在边缘区间，建议改进偏置分布。",
-            ess_ratio,
-            re,
-        )
-
-    # 10. 加速比: Speedup = Var(Ŷ_MC) / Var(Ŷ_IS) = [Y(1-Y)/n] / [Var_q(g·W)/n]
-    # = Y(1-Y) / Var_q(g·W)（n 约去）。var_is 是 Var_q(g·W)（单样本方差）。
-    var_mc_single = y_hat * (1.0 - y_hat)  # 单样本伯努利方差
-    speedup = var_mc_single / var_is if var_is > 0 else float("inf")
+    # 3. 计算统计量并执行质量诊断（退化即 raise，R03 禁止 fall-back）
+    (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
+        _compute_weighted_yield_stats(weighted, n_samples, n_failures)
+    )
+    _check_yield_quality(n_failures, ess_ratio, re, min_ess_ratio)
 
     return ImportanceSamplingResult(
-        yield_estimate=y_hat,
-        std_error=se,
-        relative_error=re,
-        ci_lower=ci_lower,
-        ci_upper=ci_upper,
-        effective_sample_size=ess,
-        speedup_vs_mc=speedup,
-        n_samples=n_samples,
-        n_failures=n_failures,
-        n_evaluations=n_samples,
-        biasing_method=biasing.method.value,
-        log_weights=log_w,
-        samples=samples,
-        converged=None,
+        yield_estimate=y_hat, std_error=se, relative_error=re,
+        ci_lower=ci_lower, ci_upper=ci_upper,
+        effective_sample_size=ess, speedup_vs_mc=speedup,
+        n_samples=n_samples, n_failures=n_failures,
+        n_evaluations=n_samples, biasing_method=biasing.method.value,
+        log_weights=log_w, samples=samples, converged=None,
     )
 
 
@@ -859,6 +911,274 @@ def rare_event_yield(
     )
 
 
+def _validate_ce_params(
+    nominal_dist: list[dict],
+    n_samples: int,
+    n_iterations: int,
+    elite_ratio: float,
+    smoothing_alpha: float,
+) -> None:
+    """校验 cross_entropy_importance_sampling 入参（R271 内部辅助，R03 禁止 fall-back）。
+
+    Args:
+        nominal_dist: 标称分布规格列表。
+        n_samples: 每轮迭代样本数。
+        n_iterations: 迭代轮数。
+        elite_ratio: elite 比例 ρ。
+        smoothing_alpha: 平滑系数 α。
+
+    Raises:
+        ValueError: 参数无效或分布类型不支持。
+    """
+    if len(nominal_dist) == 0:
+        raise ValueError("nominal_dist 不能为空")
+    if n_samples <= 0:
+        raise ValueError(f"n_samples 必须 > 0，得到 {n_samples}")
+    if n_iterations < 1:
+        raise ValueError(f"n_iterations 必须 >= 1，得到 {n_iterations}")
+    if not (0.0 < elite_ratio < 1.0):
+        raise ValueError(f"elite_ratio 必须在 (0, 1)，得到 {elite_ratio}")
+    if not (0.0 <= smoothing_alpha <= 1.0):
+        raise ValueError(
+            f"smoothing_alpha 必须在 [0, 1]，得到 {smoothing_alpha}"
+        )
+    # CE 自适应参数更新仅支持 norm 分布（高斯最大似然有解析解）
+    for j, spec in enumerate(nominal_dist):
+        if spec.get("type", "") != "norm":
+            raise ValueError(
+                f"CROSS_ENTROPY 自适应参数更新仅支持 'norm' 分布，"
+                f"维度 {j} 类型为 '{spec.get('type')}'。"
+                f"建议先用 MEAN_SHIFT 或 MIXTURE。"
+            )
+
+
+def _init_ce_distribution(
+    nominal_dist: list[dict], initial_mean_shift: list[float]
+) -> tuple[np.ndarray, np.ndarray]:
+    """初始化 CE 偏置分布 q 的均值/方差（R271 内部辅助）。
+
+    初始 q 为标称分布 + initial_mean_shift 的 MEAN_SHIFT 形式。
+
+    Args:
+        nominal_dist: 标称分布规格列表。
+        initial_mean_shift: 初始偏移方向。
+
+    Returns:
+        (q_means, q_stds) 两个一维 ndarray。
+    """
+    q_means = np.array(
+        [
+            spec.get("loc", 0.0) + s
+            for spec, s in zip(nominal_dist, initial_mean_shift, strict=True)
+        ],
+        dtype=float,
+    )
+    q_stds = np.array(
+        [spec.get("scale", 1.0) for spec in nominal_dist], dtype=float
+    )
+    return q_means, q_stds
+
+
+def _run_ce_iterations(
+    failure_region: Callable[[np.ndarray], bool],
+    rng: np.random.Generator,
+    q_means: np.ndarray,
+    q_stds: np.ndarray,
+    n_samples: int,
+    n_iterations: int,
+    n_elite: int,
+    smoothing_alpha: float,
+    d: int,
+) -> tuple[np.ndarray, np.ndarray, int, bool]:
+    """执行 CE 自适应迭代（R271 内部辅助）。
+
+    每轮迭代：采样 → 评估失效指示 → 选 elite → 高斯最大似然更新 → 平滑。
+    收敛判定：elite 均值变化 < 1e-3。
+
+    Args:
+        failure_region: 失效区域指示函数。
+        rng: 随机数生成器。
+        q_means: 当前 q 均值（会被原地更新）。
+        q_stds: 当前 q 标准差（会被原地更新）。
+        n_samples: 每轮样本数。
+        n_iterations: 迭代轮数。
+        n_elite: elite 样本数上限。
+        smoothing_alpha: 平滑系数 α。
+        d: 维度。
+
+    Returns:
+        (q_means, q_stds, total_evals, converged)。
+    """
+    total_evals = 0
+    converged = False
+    for it in range(n_iterations):
+        samples = rng.normal(loc=q_means, scale=q_stds, size=(n_samples, d))
+        flags = _evaluate_failure_flags(
+            failure_region, samples, f"CE 迭代 {it} failure_region"
+        )
+        total_evals += n_samples
+
+        failure_idx = np.where(flags)[0]
+        if len(failure_idx) == 0:
+            logger.warning(
+                "CE 迭代 %d/%d 无失效样本，q 未更新。建议增大 initial_mean_shift。",
+                it + 1,
+                n_iterations,
+            )
+            continue
+
+        elite_idx = (
+            failure_idx[:n_elite] if len(failure_idx) >= n_elite else failure_idx
+        )
+        elite_samples = samples[elite_idx]
+
+        new_means = np.mean(elite_samples, axis=0)
+        new_stds = np.maximum(np.std(elite_samples, axis=0, ddof=1), 1e-6)
+
+        q_means = smoothing_alpha * new_means + (1.0 - smoothing_alpha) * q_means
+        q_stds = smoothing_alpha * new_stds + (1.0 - smoothing_alpha) * q_stds
+
+        if it > 0:
+            mean_change = np.linalg.norm(new_means - q_means) / (
+                np.linalg.norm(q_means) + 1e-12
+            )
+            if mean_change < 1e-3:
+                converged = True
+                logger.info(
+                    "CE 在迭代 %d 收敛（mean_change=%.6f）。", it + 1, mean_change
+                )
+                break
+    return q_means, q_stds, total_evals, converged
+
+
+def _check_ce_yield_quality(
+    n_failures: int,
+    ess_ratio: float,
+    re: float,
+    min_ess_ratio: float,
+) -> None:
+    """诊断 CE 最终 IS 估计质量，退化即 raise（R271 内部辅助，R03 禁止 fall-back）。
+
+    检查项目：
+    1. 失效样本数 >= 30（CLT 近似成立）
+    2. ESS/n_failures >= min_ess_ratio（权重不集中）
+    3. 相对误差 RE <= 0.5（估计可靠）
+    4. 边缘区间（ESS/n < 0.3 或 RE > 0.1）记 warning
+
+    Args:
+        n_failures: 失效样本数。
+        ess_ratio: ESS/n_failures。
+        re: 相对误差。
+        min_ess_ratio: 最小 ESS/n 阈值。
+
+    Raises:
+        RuntimeError: 任一质量门禁未通过。
+    """
+    if n_failures < 30:
+        raise RuntimeError(
+            f"CE 最终失效样本数 {n_failures} < 30，统计意义不足。"
+            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < min_ess_ratio:
+        raise RuntimeError(
+            f"CE 最终 IS 估计 ESS 退化: ESS/n_failures = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
+            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
+            f"禁止 fall-back（R03）。"
+        )
+    if re > 0.5:
+        raise RuntimeError(
+            f"CE 最终 IS 估计 RE = {re:.4f} > 0.5，不可靠。禁止 fall-back（R03）。"
+        )
+    if ess_ratio < 0.3 or re > 0.1:
+        logger.warning(
+            "CE 最终 ESS/n_failures = %.4f, RE = %.4f 边缘区间。",
+            ess_ratio,
+            re,
+        )
+
+
+def _ce_final_is_estimate(
+    failure_region: Callable[[np.ndarray], bool],
+    rng: np.random.Generator,
+    f_dists: list[norm | uniform],
+    q_means: np.ndarray,
+    q_stds: np.ndarray,
+    n_samples: int,
+    d: int,
+    total_evals: int,
+    min_ess_ratio: float,
+    converged: bool,
+) -> ImportanceSamplingResult:
+    """用最终 q 跑大批量 IS 估计并组装结果（R271 内部辅助）。
+
+    流程: 构造 q 规格 → 采样 → log W → 支撑检查 → 失效评估 → 统计 →
+    质量诊断 → 组装 ImportanceSamplingResult。
+
+    Args:
+        failure_region: 失效区域指示函数。
+        rng: 随机数生成器；f_dists: 标称分布列表。
+        q_means/q_stds: 最终 q 均值/标准差。
+        n_samples: 样本数；d: 维度。
+        total_evals: 已累计评估次数（不含本轮）。
+        min_ess_ratio: 最小 ESS/n 阈值；converged: CE 是否收敛。
+
+    Returns:
+        ImportanceSamplingResult。
+
+    Raises:
+        RuntimeError: q 分布支撑不足或质量门禁未通过。
+    """
+    final_specs = [
+        {"type": "norm", "loc": float(q_means[j]), "scale": float(q_stds[j])}
+        for j in range(d)
+    ]
+    q_dists = _build_univariate_distributions(final_specs)
+    samples = _sample_from_distributions(q_dists, n_samples, rng)
+
+    log_f = _logpdf_distributions(f_dists, samples)
+    log_q = _logpdf_distributions(q_dists, samples)
+    log_w = log_f - log_q
+
+    bad_mask = np.isinf(log_w) & (log_w < 0) & np.isfinite(log_f)
+    if np.any(bad_mask):
+        n_bad = int(np.sum(bad_mask))
+        raise RuntimeError(
+            f"CE 最终 q 分布支撑不足: {n_bad} 个样本 q.pdf=0 但 f.pdf>0。"
+            f"绝对连续条件违反。禁止 fall-back（R03）。"
+        )
+
+    weights = np.exp(log_w)
+    flags = _evaluate_failure_flags(
+        failure_region, samples, "最终 IS 估计 failure_region"
+    )
+    total_evals += n_samples
+    n_failures = int(np.sum(flags))
+    weighted = flags.astype(float) * weights
+
+    (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
+        _compute_weighted_yield_stats(weighted, n_samples, n_failures)
+    )
+    _check_ce_yield_quality(n_failures, ess_ratio, re, min_ess_ratio)
+
+    return ImportanceSamplingResult(
+        yield_estimate=y_hat,
+        std_error=se,
+        relative_error=re,
+        ci_lower=ci_lower,
+        ci_upper=ci_upper,
+        effective_sample_size=ess,
+        speedup_vs_mc=speedup,
+        n_samples=n_samples,
+        n_failures=n_failures,
+        n_evaluations=total_evals,
+        biasing_method=BiasingMethod.CROSS_ENTROPY.value,
+        log_weights=log_w,
+        samples=samples,
+        converged=converged,
+    )
+
+
 def cross_entropy_importance_sampling(
     failure_region: Callable[[np.ndarray], bool],
     nominal_dist: list[dict],
@@ -909,192 +1229,26 @@ def cross_entropy_importance_sampling(
     - 光滑化分数: De Boer et al. 2005, "A Tutorial on the Cross-Entropy
       Method", Annals of Operations Research 134:19-67
     """
+    _validate_ce_params(
+        nominal_dist, n_samples, n_iterations, elite_ratio, smoothing_alpha
+    )
     d = len(nominal_dist)
-    if d == 0:
-        raise ValueError("nominal_dist 不能为空")
-    if n_samples <= 0:
-        raise ValueError(f"n_samples 必须 > 0，得到 {n_samples}")
-    if n_iterations < 1:
-        raise ValueError(f"n_iterations 必须 >= 1，得到 {n_iterations}")
-    if not (0.0 < elite_ratio < 1.0):
-        raise ValueError(f"elite_ratio 必须在 (0, 1)，得到 {elite_ratio}")
-    if not (0.0 <= smoothing_alpha <= 1.0):
-        raise ValueError(
-            f"smoothing_alpha 必须在 [0, 1]，得到 {smoothing_alpha}"
-        )
-    # CE 自适应参数更新仅支持 norm 分布（高斯最大似然有解析解）
-    for j, spec in enumerate(nominal_dist):
-        if spec.get("type", "") != "norm":
-            raise ValueError(
-                f"CROSS_ENTROPY 自适应参数更新仅支持 'norm' 分布，"
-                f"维度 {j} 类型为 '{spec.get('type')}'。"
-                f"建议先用 MEAN_SHIFT 或 MIXTURE。"
-            )
 
     rng = np.random.default_rng(seed)
     f_dists = _build_univariate_distributions(nominal_dist)
-
-    # 初始化 q 的均值/方差（用标称分布 + initial_mean_shift）
-    q_means = np.array(
-        [spec.get("loc", 0.0) + s for spec, s in zip(nominal_dist, initial_mean_shift, strict=True)],
-        dtype=float,
-    )
-    q_stds = np.array(
-        [spec.get("scale", 1.0) for spec in nominal_dist], dtype=float
-    )
-
+    q_means, q_stds = _init_ce_distribution(nominal_dist, initial_mean_shift)
     n_elite = max(1, int(n_samples * elite_ratio))
-    total_evals = 0
-    converged = False
 
-    # CE 迭代
-    for it in range(n_iterations):
-        # 从当前 q（独立正态）采样
-        samples = rng.normal(loc=q_means, scale=q_stds, size=(n_samples, d))
-        # 评估失效指示
-        flags = np.empty(n_samples, dtype=bool)
-        for i in range(n_samples):
-            try:
-                flags[i] = bool(failure_region(samples[i]))
-            except Exception as e:
-                raise RuntimeError(
-                    f"CE 迭代 {it} 样本 {i} failure_region 评估失败: "
-                    f"{type(e).__name__}: {e}。禁止 fall-back（R03）。"
-                ) from e
-        total_evals += n_samples
+    # CE 自适应迭代寻找最优 q
+    q_means, q_stds, total_evals, converged = _run_ce_iterations(
+        failure_region, rng, q_means, q_stds, n_samples, n_iterations,
+        n_elite, smoothing_alpha, d,
+    )
 
-        # 选择 elite: 失效样本优先（最严格 elite = 失效样本）
-        # 若失效样本 < n_elite，用失效样本 + 距离失效区最近的补足（这里简化为仅用失效样本）
-        failure_idx = np.where(flags)[0]
-        if len(failure_idx) == 0:
-            logger.warning(
-                "CE 迭代 %d/%d 无失效样本，q 未更新。建议增大 initial_mean_shift。",
-                it + 1,
-                n_iterations,
-            )
-            continue
-
-        if len(failure_idx) >= n_elite:
-            elite_idx = failure_idx[:n_elite]
-        else:
-            elite_idx = failure_idx
-
-        elite_samples = samples[elite_idx]
-
-        # 最大似然更新（高斯）: μ = mean(elite), σ = std(elite)
-        new_means = np.mean(elite_samples, axis=0)
-        new_stds = np.std(elite_samples, axis=0, ddof=1)
-        # 防止 std 退化为 0
-        new_stds = np.maximum(new_stds, 1e-6)
-
-        # 平滑
-        q_means = smoothing_alpha * new_means + (1.0 - smoothing_alpha) * q_means
-        q_stds = smoothing_alpha * new_stds + (1.0 - smoothing_alpha) * q_stds
-
-        # 收敛判定: elite 集合均值变化 < 1%
-        if it > 0:
-            mean_change = np.linalg.norm(new_means - q_means) / (
-                np.linalg.norm(q_means) + 1e-12
-            )
-            if mean_change < 1e-3:
-                converged = True
-                logger.info(
-                    "CE 在迭代 %d 收敛（mean_change=%.6f）。", it + 1, mean_change
-                )
-                break
-
-    # 用最终 q 跑 IS 估计
-    # 构造 q 分布规格（norm + 自适应参数）
-    final_specs = [
-        {"type": "norm", "loc": float(q_means[j]), "scale": float(q_stds[j])}
-        for j in range(d)
-    ]
-    q_dists = _build_univariate_distributions(final_specs)
-
-    samples = _sample_from_distributions(q_dists, n_samples, rng)
-
-    # 计算 log W = log f - log q（q 是独立正态，直接 logpdf）
-    log_f = _logpdf_distributions(f_dists, samples)
-    log_q = _logpdf_distributions(q_dists, samples)
-    log_w = log_f - log_q
-
-    # 检查 q 撑不足
-    bad_mask = np.isinf(log_w) & (log_w < 0) & np.isfinite(log_f)
-    if np.any(bad_mask):
-        n_bad = int(np.sum(bad_mask))
-        raise RuntimeError(
-            f"CE 最终 q 分布支撑不足: {n_bad} 个样本 q.pdf=0 但 f.pdf>0。"
-            f"绝对连续条件违反。禁止 fall-back（R03）。"
-        )
-
-    weights = np.exp(log_w)
-    flags = np.empty(n_samples, dtype=bool)
-    for i in range(n_samples):
-        try:
-            flags[i] = bool(failure_region(samples[i]))
-        except Exception as e:
-            raise RuntimeError(
-                f"最终 IS 估计样本 {i} failure_region 评估失败: "
-                f"{type(e).__name__}: {e}。禁止 fall-back（R03）。"
-            ) from e
-    total_evals += n_samples
-    n_failures = int(np.sum(flags))
-
-    weighted = flags.astype(float) * weights
-    y_hat = float(np.mean(weighted))
-    var_is = float(np.var(weighted, ddof=1)) if n_samples > 1 else 0.0
-    se = float(np.sqrt(var_is / n_samples)) if var_is > 0 else 0.0
-    re = se / abs(y_hat) if abs(y_hat) > 0 else float("inf")
-    ci_lower = y_hat - 1.96 * se
-    ci_upper = y_hat + 1.96 * se
-
-    # ESS 诊断: 基于有效贡献权重 g·W（与 importance_sampling_yield 一致）
-    sum_eff = float(np.sum(weighted))
-    sum_eff2 = float(np.sum(weighted * weighted))
-    ess = (sum_eff * sum_eff) / sum_eff2 if sum_eff2 > 0 else 0.0
-    ess_ratio = ess / n_failures if n_failures > 0 else 0.0
-
-    if n_failures < 30:
-        raise RuntimeError(
-            f"CE 最终失效样本数 {n_failures} < 30，统计意义不足。"
-            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
-            f"禁止 fall-back（R03）。"
-        )
-    if ess_ratio < min_ess_ratio:
-        raise RuntimeError(
-            f"CE 最终 IS 估计 ESS 退化: ESS/n_failures = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
-            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
-            f"禁止 fall-back（R03）。"
-        )
-    if re > 0.5:
-        raise RuntimeError(
-            f"CE 最终 IS 估计 RE = {re:.4f} > 0.5，不可靠。禁止 fall-back（R03）。"
-        )
-    if ess_ratio < 0.3 or re > 0.1:
-        logger.warning(
-            "CE 最终 ESS/n_failures = %.4f, RE = %.4f 边缘区间。",
-            ess_ratio,
-            re,
-        )
-
-    var_mc_single = y_hat * (1.0 - y_hat)  # 单样本伯努利方差
-    speedup = var_mc_single / var_is if var_is > 0 else float("inf")
-
-    return ImportanceSamplingResult(
-        yield_estimate=y_hat,
-        std_error=se,
-        relative_error=re,
-        ci_lower=ci_lower,
-        ci_upper=ci_upper,
-        effective_sample_size=ess,
-        speedup_vs_mc=speedup,
-        n_samples=n_samples,
-        n_failures=n_failures,
-        n_evaluations=total_evals,
-        biasing_method=BiasingMethod.CROSS_ENTROPY.value,
-        log_weights=log_w,
-        samples=samples,
-        converged=converged,
+    # 用最终 q 跑大批量 IS 估计并执行质量诊断
+    return _ce_final_is_estimate(
+        failure_region, rng, f_dists, q_means, q_stds, n_samples, d,
+        total_evals, min_ess_ratio, converged,
     )
 
 
