@@ -6,6 +6,17 @@ YieldOptimizer / Lumerical INTERCONNECT / Synopsys CustomSim）的核心差距�
 - **基于灵敏度容差分配 (Sensitivity-Based Tolerance Allocation)**: Taguchi 容差设计
 - **标称值优化 (Nominal Shift)**: 基于灵敏度的良率最大化
 
+## 关键文献索引（URL）
+
+- Taguchi 1987 Taguchi Techniques for Quality Engineering, American Supplier Institute
+- Singhal & Pinel 1981 IEEE TCS 28(7):692-701: https://doi.org/10.1109/TCS.1981.1085043
+- Parkinson 1993 Eng. Optim. 21(4):259-278: https://doi.org/10.1080/03052159308940948
+- Madkour et al. 2015 IEEE TCAS-I 62(12):2925-2933: https://doi.org/10.1109/TCSI.2015.2495251
+- NIST Engineering Statistics Handbook §5.5.6: https://www.itl.nist.gov/div898/handbook/pri/section5/pri56.htm
+- Bogaerts et al. 2018 光子学良率: https://fib.intec.ugent.be/download/pub_4125.pdf
+- Spence & Soin 1988 Tolerance Design of Electronic Circuits, Addison-Wesley
+- scipy.stats.norm: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.norm.html
+
 ## 核心理论
 
 ### 1. Worst-Case Distance (WCD)

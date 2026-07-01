@@ -13,7 +13,13 @@
 来源:
 - SAX Circuit 文档: https://gdsfactory.github.io/sax/nbs/internals/02_circuit/
 - Knuth, "The Art of Computer Programming", §2.2.3（拓扑排序）
+  https://www-cs-faculty.stanford.edu/~knuth/taocp.html
 - Python multiprocessing 文档: https://docs.python.org/3/library/multiprocessing.html
+- Matres et al., "GDSFactory: An Open-Source Python Library for Chip Design and Simulation",
+  CLEO 2026, https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- gdsfactory 主站: https://gdsfactory.com/
+- Amdahl, "Validity of the single processor approach to achieving large scale
+  computing capabilities", AFIPS 1967, https://doi.org/10.1145/1465482.1465560
 
 创新点（标注"创新"）:
 - 并行 DAG 调度: sax 的 DAG 调度是串行的，PoLaRIS 扩展为并行调度
