@@ -326,6 +326,110 @@ def compute_worst_case_distance(
     )
 
 
+def _validate_allocation_inputs(
+    sensitivities: np.ndarray,
+    total_budget: float,
+    param_names: list[str] | None,
+    n: int,
+) -> list[str]:
+    """校验容差分配输入参数（R625 Extract Method）。
+
+    Returns:
+        param_names（若 None 则生成默认名）。
+
+    Raises:
+        ValueError: 参数无效。
+    """
+    if total_budget <= 0:
+        raise ValueError(f"total_budget 必须 > 0，得到 {total_budget}")
+    if np.any(sensitivities < 0):
+        # R03 禁止 fall-back：输入契约要求 |S_i| >= 0（见 docstring），
+        # 负灵敏度表明调用方未取绝对值，是数值异常/调用错误，
+        # 禁止静默 pass 掩盖，必须 raise 让上游修正。
+        neg_indices = np.where(sensitivities < 0)[0].tolist()
+        raise ValueError(
+            f"sensitivities 必须为非负（|∂f/∂x_i|），"
+            f"但索引 {neg_indices} 处为负值。"
+            f"请上游调用 np.abs(sensitivities) 后再传入（R03 禁止 fall-back）。"
+        )
+    if np.all(sensitivities == 0):
+        raise ValueError(
+            "所有灵敏度 = 0，无法分配容差（输出对参数无响应）。"
+            "禁止 fall-back（规则 14.1）。"
+        )
+    if param_names is None:
+        param_names = [f"param_{i}" for i in range(n)]
+    if len(param_names) != n:
+        raise ValueError(
+            f"param_names 长度 {len(param_names)} 与参数数 {n} 不匹配"
+        )
+    return param_names
+
+
+def _compute_lagrange_sigmas(
+    sensitivities: np.ndarray, total_budget: float
+) -> np.ndarray:
+    """Lagrange 容差分配计算 σ_i ∝ 1/|S_i|（R625 Extract Method）。
+
+    处理 S_i=0: 用最小非零灵敏度的 1/10 替代（保守上限）。
+
+    Returns:
+        allocated_sigmas (n,)。
+
+    Raises:
+        RuntimeError: Σσ² ≠ B（数值校验失败）。
+    """
+    # Lagrange 解: σ_i² = B · (1/S_i²) / Σ(1/S_j²)
+    # 即 σ_i = sqrt(B) / (|S_i| · sqrt(Σ 1/S_j²))
+    # 处理 S_i = 0: 该参数无响应，给最大容差（用最小非零 S 替代）
+    # Lagrange 退化: 无穷大灵敏度 → 0 容差；0 灵敏度 → 无穷大容差
+    # 工程实用: 用最小非零灵敏度的 1/10 替代 0（保守上限）
+    min_nonzero = float(np.min(sensitivities[sensitivities > 0]))
+    s_for_alloc = np.where(
+        sensitivities == 0, min_nonzero * 0.1, sensitivities
+    )
+    inv_s2 = 1.0 / (s_for_alloc**2)
+    sum_inv_s2 = float(np.sum(inv_s2))
+    allocated_var = total_budget * inv_s2 / sum_inv_s2
+    allocated_sigmas = np.sqrt(allocated_var)
+
+    # 验证: Σ σ_i² = B
+    actual_budget = float(np.sum(allocated_sigmas**2))
+    if not np.isclose(actual_budget, total_budget, rtol=1e-10):
+        raise RuntimeError(
+            f"容差分配失败: Σσ²={actual_budget} ≠ B={total_budget}。"
+            f"禁止 fall-back。"
+        )
+    return allocated_sigmas
+
+
+def _compute_variance_comparison(
+    sensitivities: np.ndarray,
+    allocated_sigmas: np.ndarray,
+    original_sigmas: np.ndarray | None,
+    expected_var_output: float,
+) -> tuple[float, float, float]:
+    """计算原始方差对比（R625 Extract Method）。
+
+    Returns:
+        (original_var, original_budget, variance_reduction)。
+    """
+    if original_sigmas is None:
+        return 0.0, 0.0, 0.0
+    original_sigmas = np.asarray(original_sigmas, dtype=float)
+    if original_sigmas.shape != sensitivities.shape:
+        raise ValueError(
+            f"original_sigmas shape {original_sigmas.shape} 与 sensitivities {sensitivities.shape} 不匹配"
+        )
+    original_var = float(np.sum((sensitivities * original_sigmas) ** 2))
+    original_budget = float(np.sum(original_sigmas**2))
+    if original_var > 0:
+        variance_reduction = 1.0 - expected_var_output / original_var
+    else:
+        variance_reduction = 0.0
+    return original_var, original_budget, variance_reduction
+
+
 def allocate_tolerance_by_sensitivity(
     sensitivities: np.ndarray,
     total_budget: float,
@@ -363,77 +467,20 @@ def allocate_tolerance_by_sensitivity(
     n = len(sensitivities)
     if n == 0:
         raise ValueError("sensitivities 不能为空")
-    if total_budget <= 0:
-        raise ValueError(f"total_budget 必须 > 0，得到 {total_budget}")
-    if np.any(sensitivities < 0):
-        # R03 禁止 fall-back：输入契约要求 |S_i| >= 0（见 docstring），
-        # 负灵敏度表明调用方未取绝对值，是数值异常/调用错误，
-        # 禁止静默 pass 掩盖，必须 raise 让上游修正。
-        neg_indices = np.where(sensitivities < 0)[0].tolist()
-        raise ValueError(
-            f"sensitivities 必须为非负（|∂f/∂x_i|），"
-            f"但索引 {neg_indices} 处为负值。"
-            f"请上游调用 np.abs(sensitivities) 后再传入（R03 禁止 fall-back）。"
-        )
-    if np.all(sensitivities == 0):
-        raise ValueError(
-            "所有灵敏度 = 0，无法分配容差（输出对参数无响应）。"
-            "禁止 fall-back（规则 14.1）。"
-        )
 
-    if param_names is None:
-        param_names = [f"param_{i}" for i in range(n)]
-    if len(param_names) != n:
-        raise ValueError(
-            f"param_names 长度 {len(param_names)} 与参数数 {n} 不匹配"
-        )
-
-    # Lagrange 解: σ_i² = B · (1/S_i²) / Σ(1/S_j²)
-    # 即 σ_i = sqrt(B) / (|S_i| · sqrt(Σ 1/S_j²))
-    # 处理 S_i = 0: 该参数无响应，给最大容差（用最小非零 S 替代）
-    s_safe = np.where(sensitivities == 0, np.inf, sensitivities)
-    inv_s2 = 1.0 / (s_safe**2)
-    # S_i=0 的参数 inv_s2 = 0，会得到 σ = 0，但应给最大容差
-    # 正确处理: S_i=0 的参数应分配最大 σ（不影响输出方差）
-    # Lagrange 退化: 无穷大灵敏度 → 0 容差；0 灵敏度 → 无穷大容差
-    # 工程实用: 用最小非零灵敏度的 1/10 替代 0（保守上限）
-    min_nonzero = float(np.min(sensitivities[sensitivities > 0]))
-    s_for_alloc = np.where(
-        sensitivities == 0, min_nonzero * 0.1, sensitivities
+    param_names = _validate_allocation_inputs(
+        sensitivities, total_budget, param_names, n
     )
-    inv_s2 = 1.0 / (s_for_alloc**2)
-    sum_inv_s2 = float(np.sum(inv_s2))
-    allocated_var = total_budget * inv_s2 / sum_inv_s2
-    allocated_sigmas = np.sqrt(allocated_var)
 
-    # 验证: Σ σ_i² = B
-    actual_budget = float(np.sum(allocated_sigmas**2))
-    if not np.isclose(actual_budget, total_budget, rtol=1e-10):
-        raise RuntimeError(
-            f"容差分配失败: Σσ²={actual_budget} ≠ B={total_budget}。"
-            f"禁止 fall-back。"
-        )
+    allocated_sigmas = _compute_lagrange_sigmas(sensitivities, total_budget)
 
     # 预期输出方差
     expected_var_output = float(np.sum((sensitivities * allocated_sigmas) ** 2))
 
-    # 原始输出方差（对比）
-    if original_sigmas is not None:
-        original_sigmas = np.asarray(original_sigmas, dtype=float)
-        if original_sigmas.shape != sensitivities.shape:
-            raise ValueError(
-                f"original_sigmas shape {original_sigmas.shape} 与 sensitivities {sensitivities.shape} 不匹配"
-            )
-        original_var = float(np.sum((sensitivities * original_sigmas) ** 2))
-        original_budget = float(np.sum(original_sigmas**2))
-        if original_var > 0:
-            variance_reduction = 1.0 - expected_var_output / original_var
-        else:
-            variance_reduction = 0.0
-    else:
-        original_var = 0.0
-        original_budget = 0.0
-        variance_reduction = 0.0
+    original_var, original_budget, variance_reduction = \
+        _compute_variance_comparison(
+            sensitivities, allocated_sigmas, original_sigmas, expected_var_output
+        )
 
     return ToleranceAllocationResult(
         param_names=list(param_names),

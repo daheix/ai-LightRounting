@@ -599,6 +599,31 @@ class HierarchicalDRC:
         """2D 叉积 (q-p) × (r-p)。用于判断三点转向。"""
         return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
 
+    @staticmethod
+    def _segments_straddle(d1: float, d2: float, d3: float, d4: float) -> bool:
+        """叉积 straddling test: AB 与 CD 互相跨立（R625 Extract Method）。"""
+        return ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
+               ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0))
+
+    @classmethod
+    def _endpoint_touches(
+        cls, d1: float, d2: float, d3: float, d4: float,
+        a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray,
+    ) -> bool:
+        """检测端点接触/共线重叠（R625 Extract Method）。
+
+        逐一检查 4 个叉积为 0（共线）的端点是否落在对方线段上。
+        """
+        if abs(d1) < 1e-12 and cls._point_on_segment(a, c, d):
+            return True
+        if abs(d2) < 1e-12 and cls._point_on_segment(b, c, d):
+            return True
+        if abs(d3) < 1e-12 and cls._point_on_segment(c, a, b):
+            return True
+        if abs(d4) < 1e-12 and cls._point_on_segment(d, a, b):
+            return True
+        return False
+
     @classmethod
     def _segments_intersect(
         cls, a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray
@@ -612,20 +637,9 @@ class HierarchicalDRC:
         d3 = cls._cross2d(a, b, c)
         d4 = cls._cross2d(a, b, d)
 
-        if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and \
-           ((d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)):
+        if cls._segments_straddle(d1, d2, d3, d4):
             return True
-
-        if abs(d1) < 1e-12 and cls._point_on_segment(a, c, d):
-            return True
-        if abs(d2) < 1e-12 and cls._point_on_segment(b, c, d):
-            return True
-        if abs(d3) < 1e-12 and cls._point_on_segment(c, a, b):
-            return True
-        if abs(d4) < 1e-12 and cls._point_on_segment(d, a, b):
-            return True
-
-        return False
+        return cls._endpoint_touches(d1, d2, d3, d4, a, b, c, d)
 
     @staticmethod
     def _point_on_segment(

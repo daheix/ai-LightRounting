@@ -414,6 +414,98 @@ def check_top_cell_uniqueness(ly) -> list[HealthCheckIssue]:
 # =============================================================================
 # 端到端校验入口
 # =============================================================================
+_ALL_HEALTH_CHECKS = frozenset({
+    "layer_completeness",
+    "polygon_validity",
+    "cell_references",
+    "unit_consistency",
+    "top_cell_uniqueness",
+})
+
+
+def _resolve_run_checks(checks: list[str] | None) -> set[str]:
+    """校验并解析 checks 参数（R625 Extract Method）。
+
+    Args:
+        checks: 用户指定的检查项列表（None 表示全部）。
+
+    Returns:
+        实际执行的检查项集合。
+
+    Raises:
+        ValueError: checks 含未知项。
+    """
+    if checks is None:
+        return set(_ALL_HEALTH_CHECKS)
+    unknown = set(checks) - _ALL_HEALTH_CHECKS
+    if unknown:
+        raise ValueError(
+            f"未知的检查项: {unknown}。支持的检查: {sorted(_ALL_HEALTH_CHECKS)}"
+        )
+    return set(checks)
+
+
+def _select_top_cell_for_health(ly, top_cell_name: str | None, gds_path):
+    """选择顶层 cell 用于 polygon_validity 检查（R625 Extract Method）。
+
+    Args:
+        ly: klayout.db.Layout 对象。
+        top_cell_name: 指定的顶层 cell 名（None 用第一个 top cell）。
+        gds_path: GDSII 文件路径（用于错误信息）。
+
+    Returns:
+        top_cell 对象。
+
+    Raises:
+        ValueError: top_cell_name 不存在或文件无顶层 cell。
+    """
+    if top_cell_name is not None:
+        top_cell = ly.cell(top_cell_name)
+        if top_cell is None:
+            available = [ly.cell(ci).name for ci in ly.each_top_cell()]
+            raise ValueError(
+                f"top_cell_name '{top_cell_name}' 不存在。"
+                f"可用顶层 cells: {available}"
+            )
+        return top_cell
+    top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
+    if not top_cells:
+        raise ValueError(
+            f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空"
+        )
+    return top_cells[0]
+
+
+def _dispatch_health_checks(
+    ly, top_cell, layer_map, run_checks: set[str]
+) -> tuple[list[HealthCheckIssue], list[str]]:
+    """分发执行 5 类子检查（R625 Dispatch Table）。
+
+    Args:
+        ly: klayout.db.Layout 对象。
+        top_cell: 顶层 cell。
+        layer_map: 层映射。
+        run_checks: 要执行的检查项集合。
+
+    Returns:
+        (issues, checks_run)。
+    """
+    issues: list[HealthCheckIssue] = []
+    checks_run: list[str] = []
+    dispatch = [
+        ("layer_completeness", lambda: check_layer_completeness(ly, layer_map)),
+        ("polygon_validity", lambda: check_polygon_validity(ly, top_cell)),
+        ("cell_references", lambda: check_cell_references(ly)),
+        ("unit_consistency", lambda: check_unit_consistency(ly)),
+        ("top_cell_uniqueness", lambda: check_top_cell_uniqueness(ly)),
+    ]
+    for name, fn in dispatch:
+        if name in run_checks:
+            issues.extend(fn())
+            checks_run.append(name)
+    return issues, checks_run
+
+
 def check_gdsii_health(
     gds_path: str | Path,
     layer_map: dict[tuple[int, int], str] | None = None,
@@ -454,23 +546,7 @@ def check_gdsii_health(
     if not path.is_file():
         raise ValueError(f"路径不是文件: {gds_path}")
 
-    # 校验 checks 参数
-    all_checks = {
-        "layer_completeness",
-        "polygon_validity",
-        "cell_references",
-        "unit_consistency",
-        "top_cell_uniqueness",
-    }
-    if checks is not None:
-        unknown = set(checks) - all_checks
-        if unknown:
-            raise ValueError(
-                f"未知的检查项: {unknown}。支持的检查: {sorted(all_checks)}"
-            )
-        run_checks = set(checks)
-    else:
-        run_checks = all_checks
+    run_checks = _resolve_run_checks(checks)
 
     ly = db.Layout()
     try:
@@ -481,41 +557,11 @@ def check_gdsii_health(
             f"禁止 fall-back（R03）。"
         ) from e
 
-    # 选择顶层 cell（用于 polygon_validity 检查）
-    if top_cell_name is not None:
-        top_cell = ly.cell(top_cell_name)
-        if top_cell is None:
-            available = [ly.cell(ci).name for ci in ly.each_top_cell()]
-            raise ValueError(
-                f"top_cell_name '{top_cell_name}' 不存在。"
-                f"可用顶层 cells: {available}"
-            )
-    else:
-        top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
-        if not top_cells:
-            raise ValueError(
-                f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空"
-            )
-        top_cell = top_cells[0]
+    top_cell = _select_top_cell_for_health(ly, top_cell_name, gds_path)
 
-    issues: list[HealthCheckIssue] = []
-    checks_run: list[str] = []
-
-    if "layer_completeness" in run_checks:
-        issues.extend(check_layer_completeness(ly, layer_map))
-        checks_run.append("layer_completeness")
-    if "polygon_validity" in run_checks:
-        issues.extend(check_polygon_validity(ly, top_cell))
-        checks_run.append("polygon_validity")
-    if "cell_references" in run_checks:
-        issues.extend(check_cell_references(ly))
-        checks_run.append("cell_references")
-    if "unit_consistency" in run_checks:
-        issues.extend(check_unit_consistency(ly))
-        checks_run.append("unit_consistency")
-    if "top_cell_uniqueness" in run_checks:
-        issues.extend(check_top_cell_uniqueness(ly))
-        checks_run.append("top_cell_uniqueness")
+    issues, checks_run = _dispatch_health_checks(
+        ly, top_cell, layer_map, run_checks
+    )
 
     # 按类别/严重级别分组
     by_category = dict(Counter(i.category.value for i in issues))
