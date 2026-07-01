@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polaris-pnr"
-version = "0.1.0"
-description = "PoLaRIS 光弈：光电子AI自动布局布线引擎"
+version = "5.0.0"
+description = "PoLaRIS 光弈：光电子AI自动布局布线引擎（千轮迭代收官版 v5.0）"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
@@ -14,7 +14,7 @@ authors = [
 ]
 keywords = ["photonics", "place-and-route", "layout", "routing", "AI", "EDA"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.9",
