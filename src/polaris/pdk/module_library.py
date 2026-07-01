@@ -12,6 +12,12 @@
 - Coldren & Corzine, Diode Lasers & Photonic ICs, Wiley 2012
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
+
+
+## 补充文献（R02 学术诚信补齐）
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- SAX 文档: https://flaport.github.io/sax/
+- SAX models: https://flaport.github.io/sax/models/
 """
 
 from __future__ import annotations

@@ -21,6 +21,11 @@ P1-4 无分布式训练与 GPU 加速：
 - Stable-Baselines3 VecEnv: https://stable-baselines3.readthedocs.io/
 - CleanRL ppo.py: https://github.com/vwxyzjn/cleanrl
 - PPO 原论文: Schulman et al., 2017, https://arxiv.org/abs/1707.06347
+
+
+## 补充文献（R02 学术诚信补齐）
+- Mirhoseini et al. 2021 Nature AlphaChip: https://www.nature.com/articles/s41586-021-03544-w
+- Espeholt et al. 2018 IMPALA V-trace: https://arxiv.org/abs/1802.01561
 """
 
 from __future__ import annotations

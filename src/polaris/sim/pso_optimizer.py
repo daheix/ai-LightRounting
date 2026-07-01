@@ -11,6 +11,11 @@
   https://ieeexplore.ieee.org/document/488968
 - scipy.optimize.differential_evolution:
   https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.differential_evolution.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
+- scipy.optimize 文档: https://docs.scipy.org/doc/scipy/reference/optimize.html
 """
 
 from __future__ import annotations

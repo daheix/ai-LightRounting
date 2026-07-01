@@ -14,6 +14,11 @@ ODB++ 语法实现遵循下列权威来源（规则 18 学术诚信）：
 ODB++ 原生为目录树结构（steps/layers/features）；本模块采用 ODB++
 Solution Alliance 推荐的 XML 交换表示子集：
 ``<odb><layer name=".."><feature type=".."/></layer></odb>``。
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

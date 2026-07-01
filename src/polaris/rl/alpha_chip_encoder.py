@@ -28,6 +28,12 @@ AlphaChip 原为电子 IC 布局设计，本模块将其扩展到光子 IC 布�
 - 拆分自: ``src/polaris/rl/alpha_chip.py``（原文件 1096 行 → 拆分后 ≤800 行）
 - 路标: R34-R35
 - 架构统一: D05 Task 10
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

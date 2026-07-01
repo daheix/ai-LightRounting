@@ -19,6 +19,12 @@ M3 目标: 对齐中等工具 (KLayout/gdsfactory)，综合得分 ≈ 7.2/10。
 来源（拆分依据）:
 - Fowler, "Refactoring: Improving the Design of Existing Code", 1999
   https://martinfowler.com/books/refactoring.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 文档: https://gdsfactory.github.io/gdsfactory/
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- Glasserman 2003 Monte Carlo Methods: https://doi.org/10.1007/978-0-387-21617-1
 """
 
 from __future__ import annotations

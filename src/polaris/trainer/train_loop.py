@@ -8,6 +8,12 @@ PPO 训练循环：rollout 采集 → GAE 优势估计 → 多 epoch 小批量�
   来源: https://stable-baselines3.readthedocs.io/
 - CleanRL ``ppo.py`` 单文件训练循环
   来源: https://github.com/vwxyzjn/cleanrl
+
+
+## 补充文献（R02 学术诚信补齐）
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
+- scipy.optimize 文档: https://docs.scipy.org/doc/scipy/reference/optimize.html
+- Mirhoseini et al. 2021 Nature AlphaChip: https://www.nature.com/articles/s41586-021-03544-w
 """
 
 from __future__ import annotations

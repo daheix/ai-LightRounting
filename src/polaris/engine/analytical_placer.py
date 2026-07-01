@@ -33,6 +33,11 @@ RL（PPO/GNN）微调 → 最终布局（网格坐标）
 - DREAMPlace 开源: https://github.com/limbo018/DREAMPlace
 - log-sum-exp 平滑: Nesterov "Smooth minimization of non-smooth functions" 2005
 - Adam 优化器: Kingma & Ba "Adam: A Method for Stochastic Optimization" 2014
+
+
+## 补充文献（R02 学术诚信补齐）
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
+- scipy.optimize 文档: https://docs.scipy.org/doc/scipy/reference/optimize.html
 """
 
 from __future__ import annotations

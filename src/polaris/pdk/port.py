@@ -9,6 +9,12 @@
   来源: https://sebastian-goeldi.github.io/KLayoutPhotonicPCells-core/_modules/kppc/photonics.html
 - gdsfactory 端口扩展（layer / port_type / cross_section）
   来源: https://pypi.org/project/gdsfactory/4.4.14/
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 文档: https://gdsfactory.github.io/gdsfactory/
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 """
 
 from __future__ import annotations

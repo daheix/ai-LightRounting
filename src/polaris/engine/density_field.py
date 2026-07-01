@@ -43,6 +43,11 @@ else:
 - DREAMPlace 密度场实现: https://github.com/limbo018/DREAMPlace
 - FFT 卷积: Cooley-Tukey FFT 算法
 - 双线性插值: 标准图像处理技术
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

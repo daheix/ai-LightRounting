@@ -14,6 +14,12 @@ PDK 桥接使 PoLaRIS 能直接使用 gdsfactory 生态：当前已检测并支�
 - 差距分析 P0-3: docs/commercial_gap_analysis.md
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
+
+
+## 补充文献（R02 学术诚信补齐）
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
 """
 
 from __future__ import annotations

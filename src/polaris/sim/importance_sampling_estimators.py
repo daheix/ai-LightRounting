@@ -40,6 +40,12 @@
 来源（拆分依据）:
 - Fowler, "Refactoring: Improving the Design of Existing Code", 1999
   https://martinfowler.com/books/refactoring.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
+- scipy.optimize 文档: https://docs.scipy.org/doc/scipy/reference/optimize.html
+- Glasserman 2003 Monte Carlo Methods: https://doi.org/10.1007/978-0-387-21617-1
 """
 
 from __future__ import annotations

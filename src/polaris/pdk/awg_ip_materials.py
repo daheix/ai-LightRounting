@@ -14,6 +14,12 @@
 - 薄膜铌酸锂: CSEM TFLN PIC PDK, https://horizon-de-lolipop.eu/wp-content/uploads/2025/07/OFC-poster.pdf
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
+
+
+## 补充文献（R02 学术诚信补齐）
+- SAX 文档: https://flaport.github.io/sax/
+- SAX models: https://flaport.github.io/sax/models/
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
 """
 
 from __future__ import annotations

@@ -20,6 +20,12 @@
    使电金属布线器自动绕开光波导，等效于"虚拟屏蔽结构"；
    物理屏蔽结构（如金属桥/介质隔离层）的版图生成留作未来工作
 4. 联合优化：最小化光电总布线长度 + 交叉惩罚
+
+
+## 补充文献（R02 学术诚信补齐）
+- Gottesman-Kitaev-Preskill 2001 Phys Rev A 64:012310: https://doi.org/10.1103/PhysRevA.64.012310
+- Sivak et al. 2023 GKP review: https://arxiv.org/abs/2308.02913
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 """
 
 from __future__ import annotations

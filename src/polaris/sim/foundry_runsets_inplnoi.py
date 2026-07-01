@@ -17,6 +17,12 @@
 - 教科书: Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
 
 ## 合规性: 规则 4.1（直接集成不复刻）/ 7.1（<500 行）/ 18（阈值来自开源仓库）
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 """
 
 from __future__ import annotations

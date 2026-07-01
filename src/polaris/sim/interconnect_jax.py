@@ -12,6 +12,12 @@
 - ITU-T G.977 (Q-factor BER)
 
 合规: 规则 14.1 禁止 fall-back；规则 18 学术诚信；规则 7.1 文件 < 800 行。
+
+
+## 补充文献（R02 学术诚信补齐）
+- SAX models: https://flaport.github.io/sax/models/
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
 """
 
 from __future__ import annotations

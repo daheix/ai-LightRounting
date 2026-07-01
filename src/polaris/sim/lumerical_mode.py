@@ -24,6 +24,12 @@ A·E = λ·E，其中 λ = k₀²n_eff²，用 numpy.linalg.eigh 求解实对称
 ## 🚫不参与 GPU（R04）
 
 纯 NumPy 实现，不引入 CuPy/CUDA/ROCm 等 GPU 后端。
+
+
+## 补充文献（R02 学术诚信补齐）
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
+- Lu & Vuckovic 2013 Nanophotonic computational design: https://doi.org/10.1364/OE.21.013351
 """
 
 from __future__ import annotations

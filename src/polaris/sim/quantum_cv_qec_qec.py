@@ -14,6 +14,11 @@
 生成元 S_i 直接构造投影到码空间的密度矩阵，避免 128×128 完全矩阵。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
+
+
+## 补充文献（R02 学术诚信补齐）
+- Gottesman-Kitaev-Preskill 2001 Phys Rev A 64:012310: https://doi.org/10.1103/PhysRevA.64.012310
+- Sivak et al. 2023 GKP review: https://arxiv.org/abs/2308.02913
 """
 
 from __future__ import annotations

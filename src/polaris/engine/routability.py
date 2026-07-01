@@ -16,6 +16,11 @@
 1. 弯曲感知线长估计（cosWA）：考虑波导弯曲半径约束的线长
 2. 拥塞热力图：预测每个栅格区域的布线拥塞度
 3. 可布线性评分：综合线长+拥塞+间距约束的布线可行性评分
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

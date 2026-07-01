@@ -10,6 +10,11 @@
   https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - OptoSynthesizer arXiv 2026: 端到端 EPDA
   https://arxiv.org/pdf/2604.15493v1
+
+
+## 补充文献（R02 学术诚信补齐）
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- KLayout LVS 文档: https://www.klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
 """
 
 from __future__ import annotations

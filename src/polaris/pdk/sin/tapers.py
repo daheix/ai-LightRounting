@@ -24,6 +24,12 @@
 设计约束（SiN 平台，参考 spec.md）：
 - 最小波导间距 2μm（低折射率差平台需更大间距抑制串扰）
 - 最小弯曲半径 50-100μm（SiN 弯曲损耗敏感，半径远大于 SOI 的 2-6μm）
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 """
 
 from __future__ import annotations

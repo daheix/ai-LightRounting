@@ -15,6 +15,11 @@ SPT（Synopsys Photonics Technology）文件格式互操作。
 - project_rules.md 规则 14.1: 禁止 fall-back / 假数据 / mock
 - project_rules.md 规则 18: 所有参数来自公开文献，标注来源 URL
 - R20 路标: docs/roundmap/R20.md
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

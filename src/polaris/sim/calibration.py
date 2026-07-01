@@ -10,6 +10,9 @@
   https://github.com/PICDA/PICBench
 - SiEPIC PDK: 测量校准数据
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- NIST/SEMI 工艺校准标准: https://www.itl.nist.gov/div898/handbook/mpc/section5/mpc55.htm
+- Bogaerts et al. 2018 layout-aware yield: https://fib.intec.ugent.be/download/pub_4125.pdf
+- scipy.optimize.curve_fit: https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
 """
 
 from __future__ import annotations

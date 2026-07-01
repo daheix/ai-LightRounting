@@ -11,6 +11,12 @@
 - Gamma et al., "Design Patterns", 1994（Observer Pattern）
 - Farin, "Curves and Surfaces for CAGD", 2002（贝塞尔曲线）
 - PhIDO arXiv:2508.14123（AI 辅助 PCell 生成理论）
+
+
+## 补充文献（R02 学术诚信补齐）
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

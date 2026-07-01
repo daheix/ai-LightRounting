@@ -31,6 +31,11 @@ Any-angle flexConnector（任意角度弹性连接器）、层级化设计与 PD
 - ``optodesigner_flexconnector`` — Any-angle flexConnector 贝塞尔连接器
 - ``optodesigner_hierarchy`` — 层级化设计（unlimited hierarchy levels）
 - ``optodesigner_pdaflow`` — PDAflow 互操作（SPT 导出 + 字典转换）
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

@@ -17,6 +17,12 @@
 - Simphony SiEPIC 模型库: https://simphonyphotonics.readthedocs.io/
 - SiPANN 模型库: https://sipann.readthedocs.io/
 - gdsfactory 器件库: https://gdsfactory.github.io/gdsfactory/
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- SiEPIC EBeam PDK GitHub: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
 """
 
 from __future__ import annotations

@@ -31,6 +31,12 @@ LVS 功能。本模块实现光子电路的基础 LVS，补齐 PoLaRIS 的工业
 - project_rules.md 规则 7.1: 文件 < 500 行
 - project_rules.md 规则 11.2: 标注 KLayout LVS API 文档来源
 - project_rules.md 规则 18: 所有 layer 编号来自 SiEPIC 开源仓库实际源码
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

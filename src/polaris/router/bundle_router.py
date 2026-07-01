@@ -14,6 +14,12 @@
   Robot. Auton. Syst. 2001, 34(2-3):179-202
 
 无 fall-back 设计（规则 14.1）：所有错误必须 raise，禁止返回部分结果。
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 文档: https://gdsfactory.github.io/gdsfactory/
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 """
 
 from __future__ import annotations

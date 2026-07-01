@@ -18,6 +18,12 @@
     阶段 2, 3, 4      → 线路设计（电路规格 / 布局 / 布线）
     阶段 5, 6, 8, 9   → 设计验证（S 参数 / DRC-LVS / 光电协同 / 量子验证）
     阶段 7            → 流片准备（GDS 导出）
+
+
+## 补充文献（R02 学术诚信补齐）
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 """
 
 from __future__ import annotations

@@ -43,6 +43,11 @@ P1-1 布局算法先进性深化：
 - AlphaChip: Mirhoseini et al., Nature 2021,
   https://www.nature.com/articles/s41586-021-03544-w
 - R04 战略: .trae/rules/R04-不参与GPU.md
+
+
+## 补充文献（R02 学术诚信补齐）
+- Espeholt et al. 2018 IMPALA V-trace: https://arxiv.org/abs/1802.01561
+- NetworkX 文档: https://networkx.org/documentation/stable/
 """
 
 from __future__ import annotations

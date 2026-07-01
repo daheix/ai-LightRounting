@@ -26,6 +26,12 @@
 2. CircuitSpec 对象须序列化为 dict 再传递
 3. 禁止 fall-back 设计（R03）：错误时 raise 异常，不返回假数据
 4. 依赖输入缺失时 raise ValueError 告警
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 """
 
 from __future__ import annotations

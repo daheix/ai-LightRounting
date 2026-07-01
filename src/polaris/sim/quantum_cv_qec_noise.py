@@ -15,6 +15,12 @@ a^k·η^(n/2) 实现（Kok & Lovett 2010 §3.2），密度矩阵演化保持
 正定性，与 Beer-Lambert 定律 η=exp(-α·L) 一致。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
+
+
+## 补充文献（R02 学术诚信补齐）
+- Gottesman-Kitaev-Preskill 2001 Phys Rev A 64:012310: https://doi.org/10.1103/PhysRevA.64.012310
+- Sivak et al. 2023 GKP review: https://arxiv.org/abs/2308.02913
+- Mirhoseini et al. 2021 Nature AlphaChip: https://www.nature.com/articles/s41586-021-03544-w
 """
 
 from __future__ import annotations

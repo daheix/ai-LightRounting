@@ -11,6 +11,12 @@
 - IBIS AMI v5.0: https://www.ibis.org/ver5.0/ver5_0.txt
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修 / R07 文件 < 800 行。
+
+
+## 补充文献（R02 学术诚信补齐）
+- SAX 文档: https://flaport.github.io/sax/
+- SAX models: https://flaport.github.io/sax/models/
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
 """
 
 from __future__ import annotations

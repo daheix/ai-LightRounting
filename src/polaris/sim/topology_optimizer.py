@@ -28,6 +28,12 @@
 - 光子拓扑优化: Jensen & Sigmund "Topology optimization for nano-photonics" 2011
 - Tidy3D 拓扑优化: https://docs.flexcompute.com/projects/tidy3d/en/latest/
 - Lumerical 拓扑优化: https://www.ansys.com/products/optics/lumerical-topology-optimization
+
+
+## 补充文献（R02 学术诚信补齐）
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
 """
 
 from __future__ import annotations

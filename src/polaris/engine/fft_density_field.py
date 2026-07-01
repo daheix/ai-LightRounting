@@ -29,6 +29,11 @@ P1-1 布局算法先进性深化：
 - Cooley-Tukey FFT: Cooley & Tukey 1965 "An algorithm for the machine
   calculation of complex Fourier series"
 - numpy.fft: https://numpy.org/doc/stable/reference/routines.fft.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

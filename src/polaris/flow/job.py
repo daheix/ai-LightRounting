@@ -17,6 +17,11 @@
                     ↘ FAILED
     QUEUED/RUNNING → CANCELLED
     COMPLETED/FAILED/CANCELLED 为终态，不可再转换。
+
+
+## 补充文献（R02 学术诚信补齐）
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
 """
 
 from __future__ import annotations

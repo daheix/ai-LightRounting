@@ -38,6 +38,12 @@
 来源（拆分依据）:
 - Fowler, "Refactoring: Improving the Design of Existing Code", 1999
   https://martinfowler.com/books/refactoring.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
 """
 
 from __future__ import annotations

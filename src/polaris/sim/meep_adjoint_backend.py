@@ -24,6 +24,12 @@ P2-1 逆向设计深化：
 - Jensen & Fan 2021 "Adjoint optimization of photonics devices"
   https://www.nature.com/articles/s41377-021-00679-4
 - MEEP: https://meep.readthedocs.io/
+
+
+## 补充文献（R02 学术诚信补齐）
+- Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
+- scipy.optimize 文档: https://docs.scipy.org/doc/scipy/reference/optimize.html
+- Lu & Vuckovic 2013 Nanophotonic computational design: https://doi.org/10.1364/OE.21.013351
 """
 
 from __future__ import annotations

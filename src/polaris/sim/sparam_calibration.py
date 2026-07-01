@@ -22,6 +22,12 @@ P0-4 FDTD 仿真深化：
 - Lumerical S 参数提取: https://support.lumerical.com/hc/en-us/articles/360034914833
 - Touchstone 格式: https://ibis.org/connector/touchstone_spec11.pdf
 - Lorentzian 拟合: https://en.wikipedia.org/wiki/Cauchy_distribution
+
+
+## 补充文献（R02 学术诚信补齐）
+- Ansys Lumerical 文档: https://optics.ansys.com/hc/en-us
+- Lumerical CML Compiler: https://optics.ansys.com/hc/en-us/articles/360057929454-S-parameter-passive-workflow
+- Lu & Vuckovic 2013 Nanophotonic computational design: https://doi.org/10.1364/OE.21.013351
 """
 
 from __future__ import annotations

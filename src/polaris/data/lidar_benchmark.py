@@ -19,6 +19,11 @@ LiDAR 真实结构（光子曲线布线 benchmark）:
 
 本模块提供 LiDAR benchmark 真实拓扑（PTC + oNoC 子集），
 重点测试曲线波导布线能力。
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

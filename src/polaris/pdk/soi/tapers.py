@@ -20,6 +20,12 @@
 
 端口约定（与 device.py 一致）：端口坐标相对器件原点，``direction`` 为光波导
 出射方向（朝外，便于外部波导连接）。坐标系为标准数学坐标系（y 轴朝上）。
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 """
 
 from __future__ import annotations

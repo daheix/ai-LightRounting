@@ -19,6 +19,12 @@
 3. 交叉惩罚：波导交叉增加损耗，应尽量避免
 4. 拥塞惩罚：高拥塞区域降低布线成功率
 5. 热串扰惩罚：热敏感器件应远离热源
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

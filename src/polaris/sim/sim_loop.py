@@ -13,6 +13,11 @@
 
 核心流程:
 1. 布局 → 2. 布线 → 3. S参数仿真 → 4. 约束检查 → 5. 反馈调整 → 回到1
+
+
+## 补充文献（R02 学术诚信补齐）
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- KLayout LVS 文档: https://www.klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
 """
 
 from __future__ import annotations

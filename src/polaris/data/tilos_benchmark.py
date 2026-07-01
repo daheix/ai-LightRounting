@@ -16,6 +16,11 @@ Ariane 真实模块结构（6-stage RISC-V pipeline）:
 
 本模块提供合成版 Ariane benchmark（保留真实拓扑，规模可调），
 用于 CI 回归测试与算法验证，无需下载 TILOS 完整数据集。
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

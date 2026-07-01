@@ -22,6 +22,11 @@ API 端点:
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
 - REST 设计规范: https://docs.python.org/3/library/http.server.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- KLayout LVS 文档: https://www.klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
 """
 
 from __future__ import annotations

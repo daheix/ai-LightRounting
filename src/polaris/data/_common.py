@@ -5,6 +5,11 @@
 - GDSFactory: https://gdsfactory.github.io/gdsfactory/
 - PICBench: https://github.com/PICDA/PICBench
 - PhIDO: https://github.com/JPPhotonics/PhIDO-Release
+
+
+## 补充文献（R02 学术诚信补齐）
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- NetworkX 文档: https://networkx.org/documentation/stable/
 """
 
 from __future__ import annotations

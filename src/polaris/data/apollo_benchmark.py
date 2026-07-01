@@ -19,6 +19,12 @@ Apollo oNoC 真实结构（片上光网络）:
 - 中心路由器（星型拓扑）+ N 个处理节点
 - 每节点含调制器 + 探测器 + 波导
 - 用于 AI 加速器片上光互连
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- SiEPIC EBeam PDK GitHub: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 """
 
 from __future__ import annotations

@@ -8,6 +8,11 @@
 - PyTorch torch.cat: https://pytorch.org/docs/stable/generated/torch.cat.html
 - PyTorch torch.scatter_add_: https://pytorch.org/docs/stable/generated/torch.Tensor.scatter_add_.html
 - PyTorch torch.index_select: https://pytorch.org/docs/stable/generated/torch.index_select.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

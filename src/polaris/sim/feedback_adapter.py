@@ -8,6 +8,11 @@
   https://arxiv.org/html/2504.18813v1
 - ICLR'26 专家RL: 领域知识注入
   https://openreview.net/forum?id=yqvNwfxRR6
+
+
+## 补充文献（R02 学术诚信补齐）
+- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- KLayout LVS 文档: https://www.klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
 """
 
 from __future__ import annotations

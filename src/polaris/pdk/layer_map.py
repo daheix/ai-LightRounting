@@ -23,6 +23,12 @@ PDK 兼容，支持 netlist 提取与 DRC 验证。
 - 所有 layer 编号均来自上述开源仓库的实际源码，禁止编造
 - SiEPIC 与 gdsfactory generic_pdk 在 TEXT/FLOORPLAN 编号上有差异，
   本模块采用 SiEPIC 实际流片标准（TEXT=(10,0), FLOORPLAN=(99,0)）
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- gdsfactory 文档: https://gdsfactory.github.io/gdsfactory/
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
 """
 
 from __future__ import annotations

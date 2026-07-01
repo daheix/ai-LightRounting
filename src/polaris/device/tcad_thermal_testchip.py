@@ -22,6 +22,11 @@
 来源（拆分依据）:
 - Fowler, "Refactoring: Improving the Design of Existing Code", 1999
   https://martinfowler.com/books/refactoring.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 主站: https://gdsfactory.com/
+- Python 文档: https://docs.python.org/3/
 """
 
 from __future__ import annotations

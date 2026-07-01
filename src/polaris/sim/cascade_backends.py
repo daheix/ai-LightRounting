@@ -21,6 +21,12 @@ Forward-only 单向传播后端。cascade.py 中的 cascade_auto() 根据条件�
 禁止 fall-back 兜底（规则 14.1）:
 - 所有数值不稳定问题通过正确后端选择解决
 - KLU 求解失败时 raise RuntimeError，不回退至其他后端
+
+
+## 补充文献（R02 学术诚信补齐）
+- gdsfactory 文档: https://gdsfactory.github.io/gdsfactory/
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- SAX 文档: https://flaport.github.io/sax/
 """
 
 from __future__ import annotations

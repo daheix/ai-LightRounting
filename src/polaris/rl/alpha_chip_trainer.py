@@ -27,6 +27,11 @@ D05 架构统一：复用 ``PPOAgent``（PPO clip + GAE），替代旧版自实�
 - 拆分自: ``src/polaris/rl/alpha_chip.py``（原文件 1096 行 → 拆分后 ≤800 行）
 - 路标: R34-R35
 - 架构统一: D05 Task 10
+
+
+## 补充文献（R02 学术诚信补齐）
+- Mirhoseini et al. 2021 Nature AlphaChip: https://www.nature.com/articles/s41586-021-03544-w
+- Espeholt et al. 2018 IMPALA V-trace: https://arxiv.org/abs/1802.01561
 """
 
 from __future__ import annotations

@@ -17,6 +17,12 @@
 - 教科书: Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
 
 ## 合规性: 规则 4.1（直接集成不复刻）/ 7.1（<500 行）/ 18（参数来自开源仓库）
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- gdsfactory 文档: https://gdsfactory.github.io/gdsfactory/
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
 """
 
 from __future__ import annotations

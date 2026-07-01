@@ -13,6 +13,11 @@ S 参数格式与 SAX 一致：
 - SAX 类型系统: https://flaport.github.io/sax/
 - JAX 自动微分: https://docs.jax.dev/
 - Frostig et al., "Decomposing Reverse-Mode AD", LAFI 2021, arXiv:2105.09469
+
+
+## 补充文献（R02 学术诚信补齐）
+- SAX models: https://flaport.github.io/sax/models/
+- NetworkX 文档: https://networkx.org/documentation/stable/
 """
 
 from __future__ import annotations

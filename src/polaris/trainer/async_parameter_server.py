@@ -35,6 +35,11 @@ P1-4 分布式训练深化：
   https://docs.ray.io/en/latest/rllib/package_ref/execution.html
 - IMPALA V-trace: Espeholt et al., 2018,
   https://arxiv.org/abs/1802.01561
+
+
+## 补充文献（R02 学术诚信补齐）
+- Mirhoseini et al. 2021 Nature AlphaChip: https://www.nature.com/articles/s41586-021-03544-w
+- NetworkX 文档: https://networkx.org/documentation/stable/
 """
 
 from __future__ import annotations

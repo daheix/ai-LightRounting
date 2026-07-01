@@ -10,6 +10,12 @@
   来源: https://mlforsystems.org/assets/papers/neurips2025/paper42.pdf
 - LiDAR (ISPD 2025) 光子电路自动布线数据集
   来源: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+
+
+## 补充文献（R02 学术诚信补齐）
+- Matres et al. 2024 GDSFactory paper: https://raw.githubusercontent.com/gdsfactory/gdsfactory-paper-cleo26/gh-pages/gdsfactory.pdf
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

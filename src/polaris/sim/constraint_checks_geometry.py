@@ -9,6 +9,12 @@
 - KLayout DRC runset: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - LiDAR ISPD'25: 弯曲半径约束 + 交叉惩罚
   https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+
+
+## 补充文献（R02 学术诚信补齐）
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, ISBN 978-1-107-08345-6: https://www.cambridge.org/9781107083456
+- gdsfactory PDK 文档: https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
+- Luceda IPKISS: https://www.lucedaphotonics.com/en/products/ipkiss
 """
 
 from __future__ import annotations

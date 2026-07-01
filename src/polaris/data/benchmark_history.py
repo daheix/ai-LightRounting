@@ -44,6 +44,11 @@ TILOS CodeBook（来源: https://github.com/TILOS-AI-CAD-Institute/CodeBook）
 - TILOS CodeBook: https://github.com/TILOS-AI-CAD-Institute/CodeBook
 - Circuit Training 评估历史: https://github.com/google-research/circuit_training
 - MLflow 实验追踪: https://mlflow.org/docs/latest/tracking.html
+
+
+## 补充文献（R02 学术诚信补齐）
+- SAX 文档: https://flaport.github.io/sax/
+- SAX models: https://flaport.github.io/sax/models/
 """
 
 from __future__ import annotations
