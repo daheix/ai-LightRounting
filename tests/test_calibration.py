@@ -107,8 +107,9 @@ def test_calibrate_picbench_format(tmp_path):
     item = result.items[0]
     assert item.circuit_name == "mzi_test"
     assert item.reference_loss_db == 0.5
-    # wg1: 2.0/1e4 * 1000 = 0.2 dB; mzi1: 0.5 dB → 总 0.7 dB
-    assert item.simulated_loss_db == pytest.approx(0.7, rel=1e-4)
+    # wg1: 3.0/1e4 * 1000 = 0.3 dB; mzi1: 0.5 dB → 总 0.8 dB
+    # R05 修复: 波导损耗 2.0→3.0 dB/cm（Soref 1993 + SiEPIC EBeam PDK 上界）
+    assert item.simulated_loss_db == pytest.approx(0.8, rel=1e-4)
 
 
 def test_calibrate_lidar_format(tmp_path):
@@ -162,8 +163,8 @@ def test_calibrate_total_loss_db_fallback(tmp_path):
     result = calibrate(cfg)
     item = result.items[0]
     assert item.reference_loss_db == 1.0
-    # wg1: 2.0/1e4 * 500 = 0.1 dB
-    assert item.simulated_loss_db == pytest.approx(0.1, rel=1e-4)
+    # wg1: 3.0/1e4 * 500 = 0.15 dB（R05: 波导损耗 2.0→3.0 dB/cm）
+    assert item.simulated_loss_db == pytest.approx(0.15, rel=1e-4)
 
 
 def test_calibrate_pass_tolerance(tmp_path):
@@ -174,7 +175,7 @@ def test_calibrate_pass_tolerance(tmp_path):
         "instances": {"wg1": {"component": "waveguide", "settings": {"length": 2500.0}}},
     }
     (tmp_path / "pass.json").write_text(json.dumps(circuit), encoding="utf-8")
-    # wg1: 2.0/1e4 * 2500 = 0.5 dB, error=0
+    # wg1: 3.0/1e4 * 2500 = 0.75 dB, error=0.25 <= 0.5（R05: 波导损耗 2.0→3.0 dB/cm）
     cfg = CalibrationConfig(benchmark_dir=str(tmp_path), loss_tolerance_db=0.5)
     result = calibrate(cfg)
     assert result.items[0].passed is True
@@ -219,9 +220,10 @@ def test_calibrate_multiple_circuits_summary(tmp_path):
     assert result.total_items == 2
     assert result.passed_items == 1
     assert result.all_passed is False
-    # c1 error=0, c2 error=2.5 → max=2.5, mean=1.25
+    # c1 error=0.25 (3.0/1e4*2500=0.75 vs 0.5), c2 error=2.5 → max=2.5, mean=1.375
+    # R05: 波导损耗 2.0→3.0 dB/cm
     assert result.max_error_db == pytest.approx(2.5, rel=1e-4)
-    assert result.mean_error_db == pytest.approx(1.25, rel=1e-4)
+    assert result.mean_error_db == pytest.approx(1.375, rel=1e-4)
 
 
 def test_calibrate_invalid_json_skipped(tmp_path):
@@ -265,7 +267,8 @@ def test_estimate_loss_nested_netlist():
         }
     }
     loss = _estimate_loss(data)
-    assert loss == pytest.approx(0.2, rel=1e-4)
+    # 3.0/1e4 * 1000 = 0.3 dB（R05: 波导损耗 2.0→3.0 dB/cm）
+    assert loss == pytest.approx(0.3, rel=1e-4)
 
 
 def test_estimate_loss_dict_format():
@@ -275,8 +278,8 @@ def test_estimate_loss_dict_format():
             "wg1": {"component": "waveguide", "settings": {"length": 5000.0}},
         }
     }
-    # 2.0/1e4 * 5000 = 1.0 dB
-    assert _estimate_loss(data) == pytest.approx(1.0, rel=1e-4)
+    # 3.0/1e4 * 5000 = 1.5 dB（R05: 波导损耗 2.0→3.0 dB/cm）
+    assert _estimate_loss(data) == pytest.approx(1.5, rel=1e-4)
 
 
 def test_estimate_loss_list_format():
@@ -300,8 +303,8 @@ def test_instance_loss_string_cell():
 def test_instance_loss_with_length():
     """含 length 参数的波导应按长度计算损耗。"""
     inst = {"component": "waveguide", "settings": {"length": 1000.0}}
-    # 2.0/1e4 * 1000 = 0.2
-    assert _instance_loss(inst) == pytest.approx(0.2, rel=1e-4)
+    # 3.0/1e4 * 1000 = 0.3（R05: 波导损耗 2.0→3.0 dB/cm）
+    assert _instance_loss(inst) == pytest.approx(0.3, rel=1e-4)
 
 
 def test_instance_loss_zero_length():
@@ -369,8 +372,8 @@ def test_cell_loss_non_string():
 
 
 def test_waveguide_loss_per_um():
-    """波导损耗系数应为 2.0 dB/cm = 2.0e-4 dB/μm。"""
-    # 10000 μm = 1 cm → 2.0 dB
+    """波导损耗系数应为 3.0 dB/cm = 3.0e-4 dB/μm（R05: Soref 1993 + SiEPIC 上界）。"""
+    # 10000 μm = 1 cm → 3.0 dB（R05: 波导损耗 2.0→3.0 dB/cm）
     inst = {"component": "waveguide", "settings": {"length": 10000.0}}
     loss = _instance_loss(inst)
-    assert loss == pytest.approx(2.0, rel=1e-4)
+    assert loss == pytest.approx(3.0, rel=1e-4)
