@@ -17,6 +17,19 @@
 - KLayout/gdsfactory euler bend 自动半径调整
   URL: https://gdsfactory.github.io/gdsfactory/
 
+## 补充文献（R701-R750 学术诚信审核补齐，0 编造）
+
+- Fujisawa et al. 2017, "Euler bend clothoid curve low-loss waveguide"（Optics Express vol 25 iss 8 pp 9150）
+  URL: https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150&id=362937
+- Tidy3D Euler waveguide bend notebook（clothoid 数学定义 RL=A² 与 90° 弯构造方法）
+  URL: https://docs.flexcompute.com/projects/tidy3d/en/v2.9.2/notebooks/EulerWaveguideBend.html
+- Chamorro-Posada 2024, "Silicon nitride bent asymmetric coupled waveguides with partial Euler bends"（arXiv:2402.02238）
+  URL: https://arxiv.org/html/2402.02238
+- Cherchi et al. 2022, "Ultra-low-loss silicon photonics platform Euler bend"（arXiv:2201.04715，VTT）
+  URL: https://arxiv.org/pdf/2201.04715
+- Wang et al. 2021, "New-generation Silicon photonics beyond singlemode regime, modified Euler curve"（arXiv:2104.04239）
+  URL: https://www.arxiv.org/pdf/2104.04239
+
 ## 合规性
 
 - project_rules.md 规则 14.1: 禁止 fall-back / 假数据 / mock
