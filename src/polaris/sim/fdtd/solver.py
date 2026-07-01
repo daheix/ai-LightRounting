@@ -121,6 +121,22 @@ class FdtdConfig:
                     f"drude_mask 形状 {self.drude_mask.shape} 与网格 {self.grid.shape} 不匹配"
                 )
         nx, ny = self.grid.shape
+        self._validate_source_positions(nx, ny)
+
+    def _validate_source_positions(self, nx: int, ny: int) -> None:
+        """校验偶极子/监视器/探针位置越界（R624 Extract Method 降低圈复杂度）。
+
+        Args:
+            nx/ny: 网格行列数。
+
+        Raises:
+            IndexError: 任一源/监视器/探针位置越界。
+
+        来源:
+        - Taflove & Hagness, "Computational Electrodynamics", Artech 2005, §4
+        - Martin Fowler, "Refactoring", 2nd ed., 2018, Extract Function
+          https://refactoring.com/catalog/extractFunction.html
+        """
         for src in self.dipole_sources:
             ix, iy = src.position
             if not (0 <= ix < nx and 0 <= iy < ny):

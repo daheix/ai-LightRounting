@@ -130,44 +130,78 @@ class DRCEngine:
                     severity=rule.severity, message=msg, count=count,
                 ))
             return
+        self._dispatch_builtin_rule(rule, layer_data)
 
-        # 内置规则模式匹配
-        if "min_width" in rule.name.lower() and rule.limit_um > 0:
-            w = layer_data.get("min_width", 0)
-            if w < rule.limit_um and w > 0:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"最小线宽 {w:.3f}μm < {rule.limit_um}μm",
-                    count=layer_data.get("width_violations", 1),
-                ))
-        elif "min_spacing" in rule.name.lower() and rule.limit_um > 0:
-            s = layer_data.get("min_spacing", float("inf"))
-            if s < rule.limit_um:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"最小间距 {s:.3f}μm < {rule.limit_um}μm",
-                    count=layer_data.get("spacing_violations", 1),
-                ))
-        elif "min_enclosure" in rule.name.lower() and rule.limit_um > 0:
-            e = layer_data.get("min_enclosure", float("inf"))
-            if e < rule.limit_um:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"最小包围 {e:.3f}μm < {rule.limit_um}μm",
-                    count=1,
-                ))
-        elif "density" in rule.name.lower() and rule.limit_um > 0:
-            d = layer_data.get("density", 0.0)
-            if d < rule.limit_um:
-                self._violations.append(DRCViolation(
-                    rule=rule.name, layer=rule.layer,
-                    severity=rule.severity,
-                    message=f"密度 {d:.1%} < {rule.limit_um:.1%}",
-                    count=1,
-                ))
+    def _dispatch_builtin_rule(
+        self, rule: DRCRule, layer_data: dict[str, Any],
+    ) -> None:
+        """内置规则 dispatch（R625 Extract Method + Dispatch Table 降低圈复杂度）。
+
+        根据规则名关键词分发到对应内置检查方法。
+
+        来源:
+        - Martin Fowler, "Refactoring", 2nd ed., 2018,
+          Replace Conditional with Dispatch
+          https://refactoring.com/catalog/replaceConditionalWithPolymorphism.html
+        - KLayout DRC: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+        """
+        if rule.limit_um <= 0:
+            return
+        name = rule.name.lower()
+        dispatch = [
+            ("min_width", self._check_min_width),
+            ("min_spacing", self._check_min_spacing),
+            ("min_enclosure", self._check_min_enclosure),
+            ("density", self._check_density),
+        ]
+        for key, fn in dispatch:
+            if key in name:
+                fn(rule, layer_data)
+                return
+
+    def _check_min_width(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        """最小线宽检查（R625 dispatch 子方法）。"""
+        w = layer_data.get("min_width", 0)
+        if w < rule.limit_um and w > 0:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"最小线宽 {w:.3f}μm < {rule.limit_um}μm",
+                count=layer_data.get("width_violations", 1),
+            ))
+
+    def _check_min_spacing(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        """最小间距检查（R625 dispatch 子方法）。"""
+        s = layer_data.get("min_spacing", float("inf"))
+        if s < rule.limit_um:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"最小间距 {s:.3f}μm < {rule.limit_um}μm",
+                count=layer_data.get("spacing_violations", 1),
+            ))
+
+    def _check_min_enclosure(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        """最小包围检查（R625 dispatch 子方法）。"""
+        e = layer_data.get("min_enclosure", float("inf"))
+        if e < rule.limit_um:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"最小包围 {e:.3f}μm < {rule.limit_um}μm",
+                count=1,
+            ))
+
+    def _check_density(self, rule: DRCRule, layer_data: dict[str, Any]) -> None:
+        """密度检查（R625 dispatch 子方法）。"""
+        d = layer_data.get("density", 0.0)
+        if d < rule.limit_um:
+            self._violations.append(DRCViolation(
+                rule=rule.name, layer=rule.layer,
+                severity=rule.severity,
+                message=f"密度 {d:.1%} < {rule.limit_um:.1%}",
+                count=1,
+            ))
 
     def _register_builtin_rules(self) -> None:
         # SOI 标准 DRC 规则（对齐 imec iPP500 / GlobalFoundries）
