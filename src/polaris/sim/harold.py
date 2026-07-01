@@ -63,22 +63,49 @@ g(N) 在 N→0 时取 0（避免 log(0)→-inf 污染数值积分），物理对
 
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
-- 创新 底层逻辑：见上方创新点列表
-  支持理论：2012 §; 1999 §5 / Bastard 1988 §。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* 1 物理可行性保护 底层逻辑：阈值载流子浓度 N_th 必须严格大于
+  N_tr，否则对数增益 g(N) = g_0·ln(N/N_tr) 取负值导致 I_th 无物理意义。
+  本模块在解析求解 N_th = N_tr · exp((α_i + α_m)/(Γ·g_0)) 后显式校验
+  N_th > N_tr，不通过则 raise（规则 14.1 禁止 fall-back）。该校验不是
+  fall-back，而是物理因果性强制约束——当输入参数（α_i、α_m、Γ、g_0）
+  不合理时，对数增益模型本身失效，必须告警而非返回假数据。
+  支持理论：Coldren, Corzine & Mašanović 2012, "Diode Lasers and Photonic
+  Integrated Circuits" 2nd ed., Wiley §2.6.1（阈值条件 Γ·g(N_th) = α_i+α_m，
+  https://www.wiley.com/en-us/Diode+Lasers+and+Photonic+Integrated+Circuits）；
+  Chow & Koch 1999, "Semiconductor-Laser Fundamentals", Springer §5
+  （对数增益模型 g(N)=g_0·ln(N/N_tr)，
+  https://link.springer.com/book/10.1007/978-3-662-04104-1）；
+  Bastard 1988, "Wave Mechanics Applied to Semiconductor Heterostructures"
+  （量子阱能级 E_n = n²π²ħ²/(2m*L²)，
+  https://onlinelibrary.wiley.com/doi/book/10.1002/3527600182）；
+  Chang & Coldren 2013, "Design and Performance of High-Speed VCSELs"
+  Springer Ch. 7（https://doi.org/10.1007/978-3-642-24986-0_7）；
+  Iga 2019, "Surface Emitting Laser" Springer
+  （https://doi.org/10.1007/978-4-431-55212-8）。
+  案例：应用于 PoLaRIS P0-7 Harold VCSEL 阈值电流计算，当用户配置
+  α_i + α_m < 0 或 Γ·g_0 < 0 时显式 raise ValueError，禁止返回负 I_th，
+  见 操作记录.md 对应轮次测试结果与 Ansys Lumerical LASER 对齐验证。
+
+- *创新* 2 速率方程数值因果性保护 底层逻辑：速率方程 ODE 右端函数
+  使用稳态辅助函数 `_gain_log`，确保 g(N) 在 N→0 时取 0（避免 log(0)→-inf
+  污染数值积分），物理对应"无载流子即无受激辐射"。该处理不影响阈值以上
+  行为，仅保证数值积分的因果性，非 fall-back。Hairer & Wanner 1996 §IV.2
+  指出刚性 ODE 求解器对右端函数奇点敏感，需保证 Lipschitz 连续性。
+  支持理论：Hairer & Wanner 1996, "Solving ODEs II: Stiff & DAE Problems"
+  Springer §IV.2（刚性 ODE 右端函数正则化，
+  https://link.springer.com/book/10.1007/978-3-642-05221-7）；
+  Coldren 2012 §5.2.1（载流子-光子速率方程 dN/dt = η_i·I/(q·V_a) −
+  N/τ_s − v_g·g(N)·S，https://www.wiley.com/en-us/Diode+Lasers+and+Photonic+Integrated+Circuits）；
+  Chow & Koch 1999 §5.4（量子点最大增益 g_max，
+  https://link.springer.com/book/10.1007/978-3-662-04104-1）；
+  Ansys Lumerical LASER 商业工具对标
+  （https://www.ansys.com/products/optics/ansys-lumerical-laser）。
+  案例：应用于 PoLaRIS Harold 速率方程 ODE 求解，`_gain_log` 在 N<1e-10
+  时返回 0，避免 scipy.integrate.solve_ivp 在初始 N≈0 时 NaN 污染，
+  见 操作记录.md 对应轮次测试结果。
 
 规则依据：project_rules.md 规则 14（禁止 fall-back）/ 18（学术诚信）
 / 26（GPU 不参与）/ 7（圈复杂度 ≤15、函数 ≤80 行）。
-
-## 创新点完整说明补遗（代码注释中的 *创新* 标注）
-
-- 创新 底层逻辑：*创新* 2）。
-  支持理论：2012 §; 1999 §5 / Bastard 1988 §; 2012 §; 1999 §5 / Bastard 1988 §。
-  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
-
-- 创新 底层逻辑：物理可行性校验——N_th 必须严格大于 N_tr（规则 14.1）
-  支持理论：2012 §; 1999 §5 / Bastard 1988 §; 2012 §; 1999 §5 / Bastard 1988 §。
-  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
 
 """
 
