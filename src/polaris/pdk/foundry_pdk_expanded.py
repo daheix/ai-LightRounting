@@ -399,11 +399,14 @@ def _test() -> None:
     assert amf.has_active
 
     # 不存在 → raise (R03)
+    # R03 合规：用 flag 模式断言异常被抛出，避免 except: pass 的 fall-back 写法。
+    raised = False
     try:
         reg.get("nonexistent")
-        raise AssertionError("应 raise KeyError")
     except KeyError:
-        pass
+        raised = True
+    if not raised:
+        raise AssertionError("reg.get('nonexistent') 应 raise KeyError")
 
     # M5 交付检查
     m5 = M5Deliverable()
