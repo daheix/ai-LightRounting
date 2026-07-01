@@ -46,13 +46,22 @@
 
 ## 创新点完整说明（底层逻辑 + 支持理论 + 案例）
 
-- 创新 底层逻辑：标注（R02）
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
-
-- R366 底层逻辑：-R370：将 MARL 引入光子布局，对标工业 EDA hierarchical
-  支持理论：见上方学术依据。
-  案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
+- *创新* R366-R370 光子布局 MARL 底层逻辑：将多智能体强化学习（MARL）
+  引入光子布局，对标工业 EDA hierarchical placement——大芯片分区域由
+  不同团队/工具完成。IPPO 让每个智能体独立学习本区域策略（分散执行
+  效率高），CTDE critic 利用全局信息指导训练（避免非平稳性），CommNet
+  通信解决区域边界波导连接问题。区域划分 + 共享占用栅格，对标工业
+  hierarchical placement。
+  支持理论：Lowe et al. 2017 NeurIPS MADDPG CTDE 起源
+  （https://arxiv.org/abs/1706.02275）；Tan 1993 Independent Q-learning
+  （https://cdn.aaai.org/ICML/1993/ICML93-058.pdf）；Foerster 2016
+  NeurIPS CommNet（https://arxiv.org/abs/1605.07736）；Yu et al. 2022
+  NeurIPS IPPO（https://arxiv.org/abs/2103.01955）；Rashid 2018 AAMAS
+  QMIX（https://arxiv.org/abs/1803.11485）；Foerster 2018 AAMAS COMA
+  （https://arxiv.org/abs/1705.08926）。
+  案例：应用于 PoLaRIS R366-R370 大规模光子布局（>200 器件），多智能体
+  协作完成区域布局并通过 CommNet 协调边界波导连接，见 操作记录.md
+  对应轮次测试结果与商业 hierarchical placement 工具对齐验证。
 
 
 ## 创新点完整说明补遗（代码注释中的 *创新* 标注）
