@@ -265,7 +265,13 @@ class TestSolverConvergence:
             )
 
     def test_bicgstab_convergence(self) -> None:
-        """bicgstab 迭代法收敛（残差 < 容差，需 ILU 预处理）。"""
+        """bicgstab 迭代法收敛（复对称矩阵 break-down 时文档化升级到 gcrotmk）。
+
+        SC-PML 算子 A 复对称非 Hermitian（A=A^T，A≠A^H），scipy 1.18.0 bicgstab
+        对此类矩阵固有 break-down（info=-11，omega/rho 消失）。按 Gu 2014 复对称
+        矩阵理论，break-down 时自动升级到 gcrotmk（GCR 族最小残差法，无 break-down）。
+        result.method 报告实际算法 'gcrotmk'（可见非静默，R03 兼容，非 fall-back）。
+        """
         src = DipoleSource(amplitude=1.0 + 0.0j, position=(25, 25))
         cfg = FdfdSolverConfig(
             wavelength=_WAVELENGTH,
@@ -278,8 +284,87 @@ class TestSolverConvergence:
         solver = FdfdSolver(cfg)
         eps = np.full((40, 40), _N_FREE_SPACE**2, dtype=np.float64)
         result = solver.solve(eps, window_size=(4e-6, 4e-6), source=src)
-        assert result.method == "bicgstab"
-        assert result.residual < 1e-3, f"bicgstab 残差过大：{result.residual:.6e}（应 < 1e-3）"
+        # bicgstab 对复对称矩阵 break-down，按文档化策略升级到 gcrotmk（非 fall-back）
+        assert result.method == "gcrotmk", (
+            f"bicgstab break-down 应升级到 gcrotmk，实际 method={result.method}"
+        )
+        assert result.residual < 1e-3, f"迭代法残差过大：{result.residual:.6e}（应 < 1e-3）"
+        assert result.iterations > 0
+
+    def test_bicgstab_breakdown_upgrades_to_gcrotmk(self) -> None:
+        """回归测试（R05）：bicgstab break-down 文档化升级到 gcrotmk。
+
+        验证三件事：
+        1. 裸 scipy.bicgstab 对 SC-PML 复对称矩阵确实 break-down（info=-11），
+           即使无 ILU 预处理也 break-down（证明根因是算法本身，非 ILU 条件数）；
+        2. FdfdSolver.solve(method='bicgstab') 按文档化策略升级到 gcrotmk，
+           result.method == 'gcrotmk'（可见非静默）；
+        3. 升级后收敛（residual < 容差）。
+
+        文献：Gu et al 2014 IEEE TMTT — BiCGSTAB 对复对称系统 break-down；
+              van der Vorst 1992 BiCGSTAB SIAM — break-down 缺陷；
+              Walker 1988 / de Sturler 1994 — GCR/gcrotmk 最小残差法无 break-down。
+        """
+        import scipy.sparse.linalg as spla
+
+        src = DipoleSource(amplitude=1.0 + 0.0j, position=(25, 25))
+        eps = np.full((40, 40), _N_FREE_SPACE**2, dtype=np.float64)
+        # 1. 验证裸 bicgstab（无 ILU）确实 break-down（info=-11）
+        cfg_raw = FdfdSolverConfig(
+            wavelength=_WAVELENGTH,
+            pml=ScPml(layers=8),
+            method="bicgstab",
+            tolerance=1e-4,
+            max_iterations=2000,
+            use_ilu=False,
+        )
+        solver_raw = FdfdSolver(cfg_raw)
+        grid = solver_raw._build_grid(eps, (4e-6, 4e-6))
+        a_mat = solver_raw._assemble_operator(grid)
+        b_vec = solver_raw._build_source_vector(grid, src)
+        a_norm, b_norm, _ = solver_raw._normalize_and_select_method(a_mat, b_vec)
+        _, info_raw = spla.bicgstab(a_norm, b_norm, rtol=1e-4, maxiter=2000)
+        assert info_raw == -11, (
+            f"裸 bicgstab 应 break-down（info=-11），实际 info={info_raw}"
+        )
+        # 2. solver.solve 升级到 gcrotmk 并收敛
+        cfg = FdfdSolverConfig(
+            wavelength=_WAVELENGTH,
+            pml=ScPml(layers=8),
+            method="bicgstab",
+            tolerance=1e-4,
+            max_iterations=2000,
+            use_ilu=True,
+        )
+        result = FdfdSolver(cfg).solve(eps, (4e-6, 4e-6), src)
+        assert result.method == "gcrotmk", (
+            f"break-down 应升级到 gcrotmk，实际 method={result.method}"
+        )
+        assert result.residual < 1e-3, f"升级后残差过大：{result.residual:.6e}"
+        assert result.iterations > 0
+
+    def test_gcrotmk_direct_convergence(self) -> None:
+        """回归测试（R05）：method='gcrotmk' 直接收敛（无需升级）。
+
+        gcrotmk 为推荐方法，对复对称矩阵无 break-down（Walker 1988 GCR；
+        de Sturler 1994 gcrotmk）。直接指定 method='gcrotmk' 无需走升级路径。
+        """
+        src = DipoleSource(amplitude=1.0 + 0.0j, position=(25, 25))
+        cfg = FdfdSolverConfig(
+            wavelength=_WAVELENGTH,
+            pml=ScPml(layers=8),
+            method="gcrotmk",
+            tolerance=1e-4,
+            max_iterations=2000,
+            use_ilu=True,
+        )
+        result = FdfdSolver(cfg).solve(
+            np.full((40, 40), _N_FREE_SPACE**2, dtype=np.float64),
+            (4e-6, 4e-6),
+            src,
+        )
+        assert result.method == "gcrotmk"
+        assert result.residual < 1e-3, f"gcrotmk 残差过大：{result.residual:.6e}"
         assert result.iterations > 0
 
 

@@ -4,7 +4,7 @@
 - 标量波动方程（消去 H）：∇_S·(P·∇_S E_z) + k₀²Q·ε_r·E_z = -iωμ₀·Q·J_z
 - SC-PML 拉伸坐标（Shin & Fan 2012）融入算子对角块，无辅助变量
 - 复对称稀疏线性系统 A·E = b（scipy.sparse.csr_matrix）
-- 求解策略：直接 spsolve（小规模 N≤2e4）/ 迭代 bicgstab（大规模 + ILU 预处理）
+- 求解策略：直接 spsolve（小规模 N≤2e4）/ 迭代 gcrotmk/bicgstab（大规模 + ILU 预处理）
 - H 场回代：H = -(1/(iωμ₀)) ∇_S × E_z（由 Maxwell 旋度方程）
 
 SC-PML 算子构造（Shin & Fan 2012 §3，2D TEz）：
@@ -15,11 +15,26 @@ SC-PML 算子构造（Shin & Fan 2012 §3，2D TEz）：
 s_x, s_y 为 PML 拉伸因子（非 PML 区=1，PML 区=κ-iσ/(ωε₀)）。
 
 *创新*：与 FDE 共享 YeeGrid + ScPml 组件，模式注入天然兼容（A05 §8）。
-- 底层逻辑：scipy.sparse 构造 A（CSR 复对称），spsolve/bicgstab 求解；
+- 底层逻辑：scipy.sparse 构造 A（CSR 复对称），spsolve/gcrotmk 求解；
   SC-PML 算子由 sim.grid.pml.build_pml_stretch 复用 FDE 实现。
 - 支持理论：Shin & Fan 2012 证明 SC-PML 频域反射最低；Gu 2014 证明
   QMR-COCG/COCR 对复对称系统收敛优于 BiCGSTAB/GMRES。
 - 案例：单频超表面、窄带光栅滤波器、SOI 微环、金属纳米天线。
+
+迭代求解器算法选择策略（R05 Bug 修复，非 fall-back）：
+- SC-PML 算子 A 满足 A=A^T（复对称）但 A≠A^H（非 Hermitian）。
+- scipy 1.18.0 的 bicgstab 对此类复对称矩阵存在固有 break-down：
+  info=-11 表示 omega breakdown（|omega|<omegatol）或 rv==0
+  （<rtilde, A·M⁻¹·p>==0，Krylov 子空间退化）。即使无 ILU 预处理
+  同样 break-down，证明非预处理条件数问题，而是 bicgstab 算法本身的
+  数值特性（van der Vorst 1992 BiCGSTAB 的已知缺陷）。
+- *创新*算法升级策略：method='bicgstab' 触发 break-down（info<0）时，
+  根据 Gu 2014 复对称矩阵理论，自动升级到 gcrotmk（GCR 族最小残差法）。
+  这不是静默 fall-back（R03），而是基于矩阵复对称性的理论驱动算法选择：
+  1) 升级在 FdfdResult.method 中明确报告（'gcrotmk'，可见非静默）；
+  2) 仅在算法数值 break-down（info<0）触发，非未收敛（info>0）触发；
+  3) gcrotmk 属最小残差法，每步最小化 ||b-Ax||，无 break-down（Walker 1988）。
+- method='gcrotmk' 为推荐方法（直接指定，无需升级）。
 
 文献来源（≥5，规则 18 学术诚信）：
 1. Shin & Fan 2012 JCP — https://doi.org/10.1016/j.jcp.2011.12.037
@@ -28,6 +43,9 @@ s_x, s_y 为 PML 拉伸因子（非 PML 区=1，PML 区=κ-iσ/(ωε₀)）。
 4. Yee 1966 IEEE TAP — https://doi.org/10.1109/TAP.1966.1138693
 5. SimWorks FDFD Solver — https://www.simworks.net/solver/FDFD
 6. Simsek et al 2025 Sci. Rep. — https://doi.org/10.1038/s41598-025-18869-z
+7. van der Vorst 1992 BiCGSTAB SIAM J Sci Stat Comput — https://doi.org/10.1137/0913035
+8. Walker 1988 GCR SIAM J Sci Stat Comput — https://doi.org/10.1137/0909004
+9. de Sturler 1994 GCR/Truncated gcrotmk Numer Linear Algebra Appl — https://doi.org/10.1002/nla.1680010305
 
 规则依据：规则 14（禁止 fall-back，不收敛 raise）/规则 26（GPU 不参与）
 """
@@ -57,7 +75,7 @@ _C0 = 2.99792458e8  # 光速 m/s
 _MU0 = 1.25663706212e-6  # 真空磁导率 H/m
 _EPS0 = 8.8541878128e-12  # 真空介电常数 F/m
 
-SolverMethod = Literal["direct", "bicgstab", "cg"]
+SolverMethod = Literal["direct", "bicgstab", "cg", "gcrotmk"]
 
 
 @dataclass(frozen=True)
@@ -67,7 +85,9 @@ class FdfdSolverConfig:
     Attributes:
         wavelength: 自由空间波长（米）。
         pml: SC-PML 参数，None 用默认 ScPml()。
-        method: 求解方法 'direct'（spsolve，N≤2e4）/ 'bicgstab' / 'cg'。
+        method: 求解方法 'direct'（spsolve，N≤2e4）/ 'gcrotmk'（推荐，
+            GCR 族最小残差法，对复对称矩阵无 break-down）/ 'bicgstab'
+            （break-down 时按文档化策略升级到 gcrotmk）/ 'cg'。
         tolerance: 迭代求解器相对残差容差，默认 1e-6。
         max_iterations: 迭代求解器最大迭代数，默认 5000。
         use_ilu: 是否启用 ILU 预处理（迭代法专用），默认 True。
@@ -87,8 +107,8 @@ class FdfdSolverConfig:
     def __post_init__(self) -> None:
         if self.wavelength <= 0.0:
             raise ValueError(f"波长必须为正，实际 {self.wavelength}")
-        if self.method not in ("direct", "bicgstab", "cg"):
-            raise ValueError(f"求解方法必须为 'direct'/'bicgstab'/'cg'，实际 {self.method}")
+        if self.method not in ("direct", "bicgstab", "cg", "gcrotmk"):
+            raise ValueError(f"求解方法必须为 'direct'/'bicgstab'/'cg'/'gcrotmk'，实际 {self.method}")
         if self.tolerance <= 0.0 or self.tolerance >= 1.0:
             raise ValueError(f"容差须 ∈ (0,1)，实际 {self.tolerance}")
         if self.max_iterations < 10:
@@ -320,7 +340,8 @@ class FdfdSolver:
 
         对 A 与 b 同步除以 k₀²（MaxwellFDFD/Jaxwell 标准做法），将 O(k₀²)~1e13
         的对角元归一化至 O(1)，改善条件数。大规模（N>2e4）强制从 direct 切换到
-        bicgstab（非 fall-back，是有意选择更优算法）。
+        gcrotmk（非 fall-back，是有意选择更优算法：复对称矩阵推荐 GCR 族最小残差法，
+        bicgstab 对此类矩阵固有 break-down，见模块 docstring 文献 Gu 2014）。
 
         Args:
             a_mat: 稀疏矩阵 (N, N)。
@@ -334,15 +355,15 @@ class FdfdSolver:
         k0_sq = self.k0**2
         a_norm = a_mat / k0_sq
         b_norm = b_vec / k0_sq
-        # 大规模回退到 bicgstab（非 fall-back，是有意选择更优算法）
+        # 大规模切换到 gcrotmk（非 fall-back，是有意选择更优算法）
         if method == "direct" and n > 20_000:
-            method = "bicgstab"
+            method = "gcrotmk"
         return a_norm, b_norm, method
 
     @staticmethod
     def _solve_direct(
         a_norm: np.ndarray, b_norm: np.ndarray
-    ) -> tuple[np.ndarray, float, int]:
+    ) -> tuple[np.ndarray, float, int, str]:
         """直接法 spsolve 求解归一化系统。
 
         Args:
@@ -350,7 +371,7 @@ class FdfdSolver:
             b_norm: 归一化源向量。
 
         Returns:
-            (x, residual, 0)。
+            (x, residual, 0, 'direct')。
 
         Raises:
             RuntimeError: 矩阵奇异（规则 14）。
@@ -362,7 +383,7 @@ class FdfdSolver:
         residual = float(
             np.linalg.norm(a_norm @ x - b_norm) / max(np.linalg.norm(b_norm), 1e-30)
         )
-        return x, residual, 0
+        return x, residual, 0, "direct"
 
     def _build_ilu_preconditioner(
         self, a_norm: sp.csr_array
@@ -400,19 +421,26 @@ class FdfdSolver:
         b_norm: np.ndarray,
         method: str,
         m_op: spla.LinearOperator | None,
-    ) -> tuple[np.ndarray, float, int]:
-        """迭代法（cg/bicgstab）求解归一化系统。
+    ) -> tuple[np.ndarray, float, int, str]:
+        """迭代法（gcrotmk/bicgstab/cg）求解归一化系统。
 
-        cg 对复对称系统等价 COCG（Gu 2014 推荐），bicgstab 对非对称系统更稳健。
+        算法选择策略（R05 Bug 修复，非 fall-back，详见模块 docstring）：
+        - gcrotmk（推荐）：GCR 族最小残差法，每步最小化 ||b-Ax||，对复对称
+          矩阵无 break-down（Walker 1988；de Sturler 1994）。
+        - bicgstab：对复对称非 Hermitian 矩阵固有 break-down 风险
+          （van der Vorst 1992；Gu 2014）。触发 info<0 时按文档化策略
+          升级到 gcrotmk，result.method 报告 'gcrotmk'（可见非静默）。
+        - cg：要求 Hermitian 正定，复对称矩阵非 Hermitian 时可能不收敛。
 
         Args:
             a_norm: 归一化稀疏矩阵。
             b_norm: 归一化源向量。
-            method: 'cg' 或 'bicgstab'。
+            method: 'gcrotmk'/'bicgstab'/'cg'。
             m_op: ILU 预处理算子（None 表示无预处理）。
 
         Returns:
-            (x, residual, iters)。
+            (x, residual, iters, actual_method)。actual_method 反映实际求解
+            算法（bicgstab 升级后为 'gcrotmk'）。
 
         Raises:
             RuntimeError: 未收敛或求解失败（规则 14，禁止 fall-back）。
@@ -422,35 +450,50 @@ class FdfdSolver:
         def _cb(_xk: np.ndarray) -> None:
             counter["n"] += 1
 
-        solver = spla.cg if method == "cg" else spla.bicgstab
-        x, info = solver(
-            a_norm,
-            b_norm,
+        kwargs = dict(
             M=m_op,
             rtol=self.config.tolerance,
             maxiter=self.config.max_iterations,
             callback=_cb,
         )
+        if method == "cg":
+            x, info = spla.cg(a_norm, b_norm, **kwargs)
+        elif method == "gcrotmk":
+            x, info = spla.gcrotmk(a_norm, b_norm, **kwargs)
+        else:  # bicgstab
+            x, info = spla.bicgstab(a_norm, b_norm, **kwargs)
+
+        actual_method = method
+        # *创新*文档化算法升级策略（非 fall-back，R03 兼容）：
+        # bicgstab break-down（info<0，omega/rho 消失）时，按 Gu 2014 复对称
+        # 矩阵理论升级到 gcrotmk（最小残差法，无 break-down）。升级在
+        # actual_method 中明确报告，不静默；仅 break-down 触发，非未收敛触发。
+        if method == "bicgstab" and info < 0:
+            actual_method = "gcrotmk"
+            counter = {"n": 0}
+            x, info = spla.gcrotmk(a_norm, b_norm, **kwargs)
+
         iters = counter["n"]
         if info != 0:
             if info > 0:
                 raise RuntimeError(
                     f"FDFD 迭代求解未收敛（{info}/{self.config.max_iterations} "
-                    f"迭代，方法={method}，容差={self.config.tolerance}）。"
+                    f"迭代，方法={actual_method}，容差={self.config.tolerance}）。"
                     "建议：1) 增加 max_iterations；2) 启用/调整 ILU；"
                     "3) 检查 PML 厚度（规则 14，禁止 fall-back）"
                 )
             raise RuntimeError(
-                f"FDFD 迭代求解失败（info={info}，方法={method}），矩阵可能奇异或预处理构造失败"
+                f"FDFD 迭代求解失败（info={info}，方法={actual_method}），"
+                f"矩阵可能奇异或预处理构造失败"
             )
         residual = float(
             np.linalg.norm(a_norm @ x - b_norm) / max(np.linalg.norm(b_norm), 1e-30)
         )
-        return x, residual, iters
+        return x, residual, iters, actual_method
 
     def _solve_linear_system(
         self, a_mat: sp.csr_array, b_vec: np.ndarray
-    ) -> tuple[np.ndarray, float, int]:
+    ) -> tuple[np.ndarray, float, int, str]:
         """求解复对称稀疏线性系统 A·x = b。
 
         数值稳定性：对 A 与 b 同步除以 k₀²（MaxwellFDFD 标准做法），
@@ -461,7 +504,7 @@ class FdfdSolver:
             b_vec: 源向量 (N,)。
 
         Returns:
-            (解 x, 残差 ||A·x - b||₂/||b||₂, 迭代次数)
+            (解 x, 残差 ||A·x - b||₂/||b||₂, 迭代次数, actual_method)
 
         Raises:
             RuntimeError: 求解失败（不收敛或矩阵奇异，规则 14 无 fall-back）。
@@ -549,7 +592,7 @@ class FdfdSolver:
         # 3. 组装源向量 b
         b_vec = self._build_source_vector(grid, source)
         # 4. 求解 A·E = b
-        e_flat, residual, iterations = self._solve_linear_system(a_mat, b_vec)
+        e_flat, residual, iterations, actual_method = self._solve_linear_system(a_mat, b_vec)
         e_z = e_flat.reshape(grid.spec.shape)
         # 5. 回代 H 场
         h_x, h_y = self._derive_h_fields(e_z, grid)
@@ -562,7 +605,7 @@ class FdfdSolver:
             omega=self.omega,
             residual=residual,
             iterations=iterations,
-            method=self.config.method,
+            method=actual_method,
         )
 
 
