@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -197,7 +198,7 @@ def verify_gradient(
     # 有限差分梯度
     params_np = np.asarray(params, dtype=float)
 
-    def func_np(p):
+    def func_np(p) -> float:
         return float(func(jnp.asarray(p)))
 
     fd_grad = finite_difference_gradient(func_np, params_np, eps)
@@ -278,7 +279,7 @@ def optimize_waveguide_lengths(
 
     params = jnp.concatenate([initial_lengths, jnp.array([neff])])
 
-    def loss_fn(p):
+    def loss_fn(p) -> Any:
         power = waveguide_transmission_loss(p, wl)
         return jnp.abs(power - target_transmission)
 

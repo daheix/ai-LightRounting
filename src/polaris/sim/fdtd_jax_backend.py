@@ -570,7 +570,7 @@ class DifferentiableFDTD:
         封装电场更新（安培定律）+ 源注入 + 磁场更新（法拉第定律）+ 监视器记录。
         来源: Yee 1966 IEEE TAP 差分格式。
         """
-        def scan_fn(carry, step_idx):
+        def scan_fn(carry, step_idx) -> Any:
             """scan 循环体：单步 FDTD 更新。"""
             Ex, Ey, Ez, Hx, Hy, Hz, mon_sig = carry
             # 1. 电场更新（安培定律）
@@ -675,7 +675,7 @@ class DifferentiableFDTD:
         """
         target_freq = C0 / (target_wavelength_um * 1e-6)
 
-        def fom_fn(eps_r):
+        def fom_fn(eps_r) -> Any:
             """FoM 函数: |FFT(monitor)[target_freq]|²。"""
             result = self.run(eps_r, source_pos, source_freq, n_steps, monitor_pos)
             mon_sig = result["monitor_signal"]

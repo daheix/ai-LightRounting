@@ -22,7 +22,7 @@ S 参数格式与 SAX 一致：
 
 from __future__ import annotations
 
-from typing import Protocol, Union
+from typing import Any, Protocol, Union
 
 import numpy as np
 
@@ -83,7 +83,7 @@ def get_backend() -> str:
     return _BACKEND
 
 
-def get_xp():
+def get_xp() -> Any:
     """获取当前后端的 numpy 兼容模块。
 
     Returns:
@@ -103,7 +103,7 @@ def get_xp():
     raise RuntimeError(msg)
 
 
-def asarray(data, dtype=complex):
+def asarray(data, dtype=complex) -> Any:
     """根据当前后端创建数组。
 
     Args:
@@ -117,7 +117,7 @@ def asarray(data, dtype=complex):
     return xp.asarray(data, dtype=dtype)
 
 
-def zeros_like(data, dtype=complex):
+def zeros_like(data, dtype=complex) -> Any:
     """根据当前后端创建零数组。
 
     Args:
@@ -131,7 +131,7 @@ def zeros_like(data, dtype=complex):
     return xp.zeros_like(data, dtype=dtype)
 
 
-def full_like(data, fill_value, dtype=complex):
+def full_like(data, fill_value, dtype=complex) -> Any:
     """根据当前后端创建填充数组。
 
     Args:

@@ -437,8 +437,8 @@ def catalog_smodels(catalog: DeviceCatalog | None = None) -> dict[str, callable]
     models: dict[str, callable] = {}
     for device in catalog:
 
-        def make_model(dev):
-            def model(wl=1.55, **kwargs):
+        def make_model(dev) -> Callable[..., SDict]:
+            def model(wl=1.55, **kwargs) -> SDict:
                 return device_to_smodel(dev, wl)
 
             return model
@@ -529,8 +529,8 @@ def simulate_circuit_from_netlist(
     sim = CircuitSimulator()
     for device in catalog:
 
-        def make_model(dev):
-            def model(wl=1.55, **kwargs):
+        def make_model(dev) -> Callable[..., SDict]:
+            def model(wl=1.55, **kwargs) -> SDict:
                 return device_to_smodel(dev, wl)
 
             return model

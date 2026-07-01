@@ -134,7 +134,7 @@ def _import_klayout_db():
 def polygons_to_klayout_region(
     polygons: list[np.ndarray],
     config: KLayoutDRCConfig | None = None,
-):
+) -> Any:
     """将 PoLaRIS 多边形列表转换为 KLayout Region（R307）。
 
     PoLaRIS 多边形为 (N, 2) 浮点数组（μm），KLayout Region 使用整数坐标

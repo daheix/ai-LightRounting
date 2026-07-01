@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import Any
 from dataclasses import dataclass
 
 import numpy as np
@@ -246,7 +247,7 @@ def simulate_waveguide_chain_jax(
         msg = "JAX 不可用。禁止 fall-back（规则 14.1）。"
         raise RuntimeError(msg)
 
-    def scan_fn(carry, length):
+    def scan_fn(carry, length) -> Any:
         """scan 循环体：累加相位。"""
         beta = 2 * jnp.pi * neff / wl
         phase = beta * length

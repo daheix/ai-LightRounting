@@ -59,6 +59,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -138,7 +139,7 @@ class ExpertDataset:
         actions = np.array([self.transitions[i].action for i in idx])
         return states, actions
 
-    def iterate_batches(self, batch_size: int, rng: np.random.Generator):
+    def iterate_batches(self, batch_size: int, rng: np.random.Generator) -> Iterator[tuple[np.ndarray, np.ndarray]]:
         """batch 迭代生成器（shuffle）。"""
         if batch_size < 1:
             raise ValueError("batch_size 须 >= 1（R03 无 fall-back）")

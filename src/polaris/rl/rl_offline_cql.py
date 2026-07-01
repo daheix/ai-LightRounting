@@ -74,6 +74,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections.abc import Iterator
 from typing import Callable
 
 import numpy as np
@@ -229,7 +230,7 @@ class OfflineDataset:
             "dones": self._dones[idx].copy(),
         }
 
-    def iterate_batches(self, batch_size: int, shuffle: bool = True):
+    def iterate_batches(self, batch_size: int, shuffle: bool = True) -> Iterator[dict[str, np.ndarray]]:
         """迭代所有数据。batch_size 超过容量即 raise。"""
         if self._capacity == 0:
             raise ValueError("数据集为空（R03）")

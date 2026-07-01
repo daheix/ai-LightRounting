@@ -252,7 +252,7 @@ class FloorplanEnv(gym.Env):
             }
         )
 
-    def reset(self, *, seed: int | None = None, options: dict | None = None):
+    def reset(self, *, seed: int | None = None, options: dict | None = None) -> tuple[np.ndarray, dict]:
         super().reset(seed=seed)
         self.state = FloorplanState(
             canvas_w=self.state.canvas_w,
@@ -475,7 +475,7 @@ class FloorplanEnv(gym.Env):
         embedding = self.state_encoder(node_feats, self._edge_index, grid_feat, edge_feats)
         return np.asarray(embedding.data, dtype=np.float32).flatten()
 
-    def step(self, action):
+    def step(self, action) -> tuple[np.ndarray, float, bool, bool, dict]:
         if self._step_idx >= len(self.instance_ids):
             return self._obs(), 0.0, True, False, {}
         action = np.asarray(action).astype(np.int64)
@@ -580,7 +580,7 @@ class FloorplanEnv(gym.Env):
         result = self.expert_shaper.compute(reward_input)
         return float(result.total_expert_reward)
 
-    def render(self):
+    def render(self) -> None:
         pass
 
 

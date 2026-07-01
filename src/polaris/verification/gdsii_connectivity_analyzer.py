@@ -466,13 +466,13 @@ def _init_cross_layer_union_find(report) -> tuple:
             parent[node] = node
             rank[node] = 0
 
-    def find(x):
+    def find(x) -> tuple[str, int]:
         while parent[x] != x:
             parent[x] = parent[parent[x]]
             x = parent[x]
         return x
 
-    def union(x, y):
+    def union(x, y) -> None:
         rx, ry = find(x), find(y)
         if rx == ry:
             return
