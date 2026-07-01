@@ -11,6 +11,16 @@ S 参数仿真结果等。
 - Apollo/LiDAR PIC IR: https://github.com/ScopeX-ASU/LiDAR
 - PhIDO Testbench: https://github.com/JPPhotonics/PhIDO-Release
 
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- SiEPIC EBeam PDK（开源硅光 PDK 标准器件库）
+  URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- gdsfactory 主站（组件库与 PDK 生成框架）
+  URL: https://gdsfactory.com/
+- OpenROAD OpenDB（布局结果数据结构参考）
+  URL: https://github.com/The-OpenROAD-Project/OpenROAD
+- CircuitNet-Train（DAC 2023 训练数据集基准，布局数据生成参考）
+  URL: https://www.circuitnet.ai/
+
 生成数据格式:
 - YAML 网表 (*.pic.yml): instances + placements + connections + routes
 - JSON 布局描述: devices + positions + connections + constraints

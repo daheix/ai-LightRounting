@@ -13,6 +13,12 @@
 - gdsfactory 组件（端口 layer / port_type / cross_section + metadata）
   来源: https://pypi.org/project/gdsfactory/4.4.14/
 
+补充文献（R701-R750 学术诚信审核补齐，0 编造）:
+- SiEPIC EBeam PDK（open-source 硅光 PDK 器件模型标准）
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Luceda IPKISS PDK 概念文档（PCell/Port 模型设计）
+  https://docs.lucedaphotonics.com/
+
 旋转采用标准数学坐标系（y 轴朝上、x 轴朝右），正角度为逆时针（CCW），
 与 gdspy.rotate 及 IPKISS ``angle`` 参数约定一致；光子版图常用 90/180/270
 度直角旋转，方向同步变换以便曼哈顿布线。

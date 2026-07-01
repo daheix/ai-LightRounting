@@ -18,6 +18,15 @@
 - IPKISS Schematic-Driven Layout 流程
   https://docs.lucedaphotonics.com/
 
+## 补充文献（R701-R750 学术诚信审核补齐，0 编造）
+
+- KLayout DRC 引擎（开源光子/电子设计规则检查）
+  https://www.klayout.de/manual/drc_engine.html
+- Calibre Standard Verification Rule Format (SVRF)（Mentor/Siemens 商业 DRC 标准）
+  https://docs.sw.siemens.com/en-US/doc/186265592
+- OpenROAD KLayout integration（端到端验证流程参考）
+  https://github.com/The-OpenROAD-Project/OpenROAD
+
 ## 设计约束
 
 1. 所有阶段输出必须是可 JSON 序列化的（dict/list/str/int/float/bool）
