@@ -197,44 +197,43 @@ def audit_file(file_path: str | Path) -> AuditReport:
     report.module_docstring = ast.get_docstring(tree) is not None
 
     entries: list[AuditEntry] = []
-    for node in ast.walk(tree):
+
+    def _make_entry(
+        node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+        kind: str,
+        qualified_name: str,
+    ) -> AuditEntry:
+        doc = ast.get_docstring(node) or ""
+        return AuditEntry(
+            name=node.name,
+            kind=kind,
+            lineno=node.lineno,
+            has_docstring=bool(doc),
+            has_args=_has_section(doc, "Args"),
+            has_returns=_has_section(doc, "Returns"),
+            has_raises=_has_section(doc, "Raises"),
+            has_example=_has_section(doc, "Example")
+            or _has_section(doc, "Examples"),
+            qualified_name=qualified_name,
+        )
+
+    # 仅扫顶层 def/class + 类的直接方法（不递归进函数体，
+    # 避免误收装饰器/工厂内部的嵌套闭包为公共 API）。
+    for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if not _is_public(node.name):
-                continue
-            kind = "method" if _is_method(node, tree) else "function"
-            doc = ast.get_docstring(node) or ""
-            entries.append(
-                AuditEntry(
-                    name=node.name,
-                    kind=kind,
-                    lineno=node.lineno,
-                    has_docstring=bool(doc),
-                    has_args=_has_section(doc, "Args"),
-                    has_returns=_has_section(doc, "Returns"),
-                    has_raises=_has_section(doc, "Raises"),
-                    has_example=_has_section(doc, "Example")
-                    or _has_section(doc, "Examples"),
-                    qualified_name=node.name,
-                )
-            )
+            if _is_public(node.name):
+                entries.append(_make_entry(node, "function", node.name))
         elif isinstance(node, ast.ClassDef):
             if not _is_public(node.name):
                 continue
-            doc = ast.get_docstring(node) or ""
-            entries.append(
-                AuditEntry(
-                    name=node.name,
-                    kind="class",
-                    lineno=node.lineno,
-                    has_docstring=bool(doc),
-                    has_args=_has_section(doc, "Args"),
-                    has_returns=_has_section(doc, "Returns"),
-                    has_raises=_has_section(doc, "Raises"),
-                    has_example=_has_section(doc, "Example")
-                    or _has_section(doc, "Examples"),
-                    qualified_name=node.name,
-                )
-            )
+            entries.append(_make_entry(node, "class", node.name))
+            for child in node.body:
+                if isinstance(
+                    child, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ) and _is_public(child.name):
+                    entries.append(
+                        _make_entry(child, "method", f"{node.name}.{child.name}")
+                    )
 
     report.entries = entries
     report.total = len(entries)
@@ -254,16 +253,6 @@ def audit_file(file_path: str | Path) -> AuditReport:
     )
     report.full_coverage = full / report.total if report.total else 1.0
     return report
-
-
-def _is_method(func_node: ast.AST, tree: ast.Module) -> bool:
-    """判断 FunctionDef 是否为类方法（直接父节点为 ClassDef）。"""
-    for parent in ast.walk(tree):
-        if isinstance(parent, ast.ClassDef):
-            for child in parent.body:
-                if child is func_node:
-                    return True
-    return False
 
 
 def audit_module_path(module_dir: str | Path) -> dict[str, AuditReport]:

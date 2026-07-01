@@ -175,6 +175,17 @@ class MemmapArray:
         dtype: np.dtype | type = np.float64,
         mode: str = "w+",
     ) -> None:
+        """初始化 memmap 数组（不立即映射，进入 with 块时才打开）。
+
+        Args:
+            path: 映射文件路径。
+            shape: 数组形状。
+            dtype: 数组 dtype。
+            mode: 'r+' 读写 / 'r' 只读 / 'w+' 新建读写。
+
+        Raises:
+            ValueError: path 为空 / shape 为空 / mode 非法。
+        """
         if not path:
             raise ValueError("path 不能为空")
         if not shape:

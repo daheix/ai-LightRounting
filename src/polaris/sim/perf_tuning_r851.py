@@ -213,6 +213,14 @@ class ArrayBufferPool:
     """
 
     def __init__(self, max_entries: int = 32) -> None:
+        """初始化缓冲池。
+
+        Args:
+            max_entries: 池最大条目数（LRU 淘汰），须 >0。
+
+        Raises:
+            ValueError: max_entries ≤ 0。
+        """
         if max_entries <= 0:
             raise ValueError(f"max_entries 须 >0，实际 {max_entries}")
         self._max_entries = max_entries
