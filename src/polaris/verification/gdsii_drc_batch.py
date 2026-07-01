@@ -195,8 +195,37 @@ def run_batch_drc(
     来源:
     - KLayout DRC Reference: https://klayout.org/downloads/master/doc-qt5/about/drc_ref_layer.html
     """
-    in_path = Path(gds_path)
+    in_path = _validate_batch_drc_params(gds_path, rules)
+    results, stats = _execute_all_rules(
+        rules, gds_path, top_cell_name, max_violations
+    )
+    total_violations, passed_rules, failed_rules, error_rules, dbu, top_cell_resolved = stats
+    logger.info(
+        "批量 DRC 检查: %s, rules=%d, passed=%d, failed=%d, errors=%d, "
+        "total_violations=%d",
+        in_path, len(rules), passed_rules, failed_rules, error_rules,
+        total_violations,
+    )
+    return BatchDRCReport(
+        input_path=str(gds_path),
+        dbu=dbu,
+        top_cell_name=top_cell_resolved,
+        total_rules=len(rules),
+        passed_rules=passed_rules,
+        failed_rules=failed_rules,
+        error_rules=error_rules,
+        total_violations=total_violations,
+        results=results,
+    )
 
+
+def _validate_batch_drc_params(gds_path, rules) -> Path:
+    """校验 run_batch_drc 入参并验证所有规则（R345 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        in_path Path 对象。
+    """
+    in_path = Path(gds_path)
     if not in_path.exists():
         raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
     if not in_path.is_file():
@@ -205,123 +234,120 @@ def run_batch_drc(
         raise ValueError(
             "rules 不能为空。禁止 fall-back（R03）。"
         )
-
-    # 验证所有规则
     for i, rule in enumerate(rules):
         _validate_rule(rule, i)
+    return in_path
 
+
+def _execute_all_rules(rules, gds_path, top_cell_name, max_violations) -> tuple:
+    """执行所有 DRC 规则并收集结果（R345 内部辅助）。
+
+    Returns:
+        (results, (total_violations, passed_rules, failed_rules,
+                   error_rules, dbu, top_cell_resolved))。
+    """
     results: list[DRCRuleResult] = []
-    total_violations = 0
-    passed_rules = 0
-    failed_rules = 0
-    error_rules = 0
+    total_violations = passed_rules = failed_rules = error_rules = 0
     dbu = 0.0
-    top_cell_name_resolved = ""
-
+    top_cell_resolved = ""
     for rule in rules:
         try:
-            if rule.check_type in SINGLE_LAYER_CHECKS:
-                # 同层检查
-                if rule.check_type == "width":
-                    report = check_width(
-                        gds_path, rule.layer_a, rule.min_value_um,
-                        top_cell_name, max_violations,
-                    )
-                else:  # space
-                    report = check_space(
-                        gds_path, rule.layer_a, rule.min_value_um,
-                        top_cell_name, max_violations,
-                    )
-                violations = report.total_violations
-                layer_b_resolved: tuple[int, int] = ()
-            else:
-                # 层间检查
-                if not rule.layer_b:
-                    raise ValueError(
-                        f"规则 '{rule.name}' ({rule.check_type}) 需要层间检查，"
-                        f"但 layer_b 为空。"
-                        f"禁止 fall-back（R03）。"
-                    )
-                if rule.check_type == "enclosing":
-                    report = check_enclosing(
-                        gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
-                        top_cell_name, max_violations,
-                    )
-                elif rule.check_type == "enclosed":
-                    report = check_enclosed(
-                        gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
-                        top_cell_name, max_violations,
-                    )
-                elif rule.check_type == "overlap":
-                    report = check_overlap(
-                        gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
-                        top_cell_name, max_violations,
-                    )
-                else:  # separation
-                    report = check_separation(
-                        gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
-                        top_cell_name, max_violations,
-                    )
-                violations = report.total_violations
-                layer_b_resolved = rule.layer_b
-
+            report, layer_b_resolved = _dispatch_rule_check(
+                rule, gds_path, top_cell_name, max_violations
+            )
+            violations = report.total_violations
             # 记录 dbu 和 top_cell_name（从第一个成功的报告获取）
             if dbu == 0.0:
                 dbu = report.dbu
-                top_cell_name_resolved = report.top_cell_name
-
-            passed = (violations == 0)
-            if passed:
+                top_cell_resolved = report.top_cell_name
+            if violations == 0:
                 passed_rules += 1
             else:
                 failed_rules += 1
-
             total_violations += violations
-
             results.append(DRCRuleResult(
-                rule=rule,
-                passed=passed,
-                total_violations=violations,
-                check_type=rule.check_type,
-                layer_a=rule.layer_a,
-                layer_b=layer_b_resolved,
-                min_value_um=rule.min_value_um,
-                error=None,
+                rule=rule, passed=(violations == 0),
+                total_violations=violations, check_type=rule.check_type,
+                layer_a=rule.layer_a, layer_b=layer_b_resolved,
+                min_value_um=rule.min_value_um, error=None,
             ))
         except Exception as e:
             error_rules += 1
             results.append(DRCRuleResult(
-                rule=rule,
-                passed=False,
-                total_violations=0,
-                check_type=rule.check_type,
-                layer_a=rule.layer_a,
-                layer_b=rule.layer_b,
-                min_value_um=rule.min_value_um,
+                rule=rule, passed=False, total_violations=0,
+                check_type=rule.check_type, layer_a=rule.layer_a,
+                layer_b=rule.layer_b, min_value_um=rule.min_value_um,
                 error=f"{type(e).__name__}: {e}",
             ))
             logger.warning(
                 "规则 '%s' 执行失败: %s: %s",
                 rule.name, type(e).__name__, e,
             )
+    return results, (total_violations, passed_rules, failed_rules,
+                     error_rules, dbu, top_cell_resolved)
 
-    logger.info(
-        "批量 DRC 检查: %s, rules=%d, passed=%d, failed=%d, errors=%d, "
-        "total_violations=%d",
-        in_path, len(rules), passed_rules, failed_rules, error_rules,
-        total_violations,
+
+def _dispatch_rule_check(rule, gds_path, top_cell_name, max_violations) -> tuple:
+    """根据 check_type 分派规则到对应检查函数（R345 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (report, layer_b_resolved)。layer_b_resolved 同层检查为 ()。
+    """
+    if rule.check_type in SINGLE_LAYER_CHECKS:
+        report = _run_single_layer_check(rule, gds_path, top_cell_name, max_violations)
+        return report, ()
+    # 层间检查
+    if not rule.layer_b:
+        raise ValueError(
+            f"规则 '{rule.name}' ({rule.check_type}) 需要层间检查，"
+            f"但 layer_b 为空。"
+            f"禁止 fall-back（R03）。"
+        )
+    report = _run_inter_layer_check(rule, gds_path, top_cell_name, max_violations)
+    return report, rule.layer_b
+
+
+def _run_single_layer_check(rule, gds_path, top_cell_name, max_violations):
+    """执行同层检查（width/space，R345 内部辅助）。
+
+    来源: R343 check_width/check_space
+    """
+    if rule.check_type == "width":
+        return check_width(
+            gds_path, rule.layer_a, rule.min_value_um,
+            top_cell_name, max_violations,
+        )
+    # space
+    return check_space(
+        gds_path, rule.layer_a, rule.min_value_um,
+        top_cell_name, max_violations,
     )
 
-    return BatchDRCReport(
-        input_path=str(gds_path),
-        dbu=dbu,
-        top_cell_name=top_cell_name_resolved,
-        total_rules=len(rules),
-        passed_rules=passed_rules,
-        failed_rules=failed_rules,
-        error_rules=error_rules,
-        total_violations=total_violations,
-        results=results,
+
+def _run_inter_layer_check(rule, gds_path, top_cell_name, max_violations):
+    """执行层间检查（enclosing/enclosed/overlap/separation，R345 内部辅助）。
+
+    来源: R344 check_enclosing/check_enclosed/check_overlap/check_separation
+    """
+    if rule.check_type == "enclosing":
+        return check_enclosing(
+            gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
+            top_cell_name, max_violations,
+        )
+    if rule.check_type == "enclosed":
+        return check_enclosed(
+            gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
+            top_cell_name, max_violations,
+        )
+    if rule.check_type == "overlap":
+        return check_overlap(
+            gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
+            top_cell_name, max_violations,
+        )
+    # separation
+    return check_separation(
+        gds_path, rule.layer_a, rule.layer_b, rule.min_value_um,
+        top_cell_name, max_violations,
     )
 
 
@@ -376,7 +402,7 @@ def generate_batch_drc_report(
 # 内部辅助函数
 # =============================================================================
 def _validate_rule(rule: DRCRule, index: int) -> None:
-    """验证 DRC 规则（R345 内部函数）。
+    """验证 DRC 规则（R345 内部函数，Extract Method 拆分）。
 
     Args:
         rule: 要验证的规则。
@@ -384,6 +410,21 @@ def _validate_rule(rule: DRCRule, index: int) -> None:
 
     Raises:
         ValueError: 规则无效。
+
+    来源:
+    - Martin Fowler《Refactoring》Extract Method:
+      https://refactoring.com/catalog/extractFunction.html
+    """
+    ct = _validate_rule_basic(rule, index)
+    _validate_rule_layers(rule, index)
+    _validate_rule_constraints(rule, index, ct)
+
+
+def _validate_rule_basic(rule: DRCRule, index: int) -> str:
+    """验证 rule 类型、name、check_type 并规范化（R345 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        规范化后的 check_type（小写）。
     """
     if not isinstance(rule, DRCRule):
         raise ValueError(
@@ -404,7 +445,14 @@ def _validate_rule(rule: DRCRule, index: int) -> None:
         )
     # 规范化 check_type
     rule.check_type = ct
+    return ct
 
+
+def _validate_rule_layers(rule: DRCRule, index: int) -> None:
+    """验证 layer_a 和 layer_b 结构及取值范围（R345 内部辅助，R03 禁止 fall-back）。
+
+    layer_b 为空元组时跳过（同层检查允许）。非空时验证与 layer_a 同样的约束。
+    """
     if not isinstance(rule.layer_a, (tuple, list)) or len(rule.layer_a) != 2:
         raise ValueError(
             f"rules[{index}] '{rule.name}' layer_a 必须是 (layer, datatype)。"
@@ -422,27 +470,38 @@ def _validate_rule(rule: DRCRule, index: int) -> None:
             f"禁止 fall-back（R03）。"
         )
     rule.layer_a = (la_g, la_d)
-
     # layer_b 验证（同层检查允许空元组）
     if rule.layer_b:
-        if not isinstance(rule.layer_b, (tuple, list)) or len(rule.layer_b) != 2:
-            raise ValueError(
-                f"rules[{index}] '{rule.name}' layer_b 必须是 (layer, datatype)。"
-                f"禁止 fall-back（R03）。"
-            )
-        lb_g, lb_d = int(rule.layer_b[0]), int(rule.layer_b[1])
-        if not (0 <= lb_g <= 999):
-            raise ValueError(
-                f"rules[{index}] '{rule.name}' layer_b.layer 必须 0-999。"
-                f"禁止 fall-back（R03）。"
-            )
-        if not (0 <= lb_d <= 255):
-            raise ValueError(
-                f"rules[{index}] '{rule.name}' layer_b.datatype 必须 0-255。"
-                f"禁止 fall-back（R03）。"
-            )
-        rule.layer_b = (lb_g, lb_d)
+        _validate_rule_layer_b(rule, index)
 
+
+def _validate_rule_layer_b(rule: DRCRule, index: int) -> None:
+    """验证 layer_b 结构及取值范围（R345 内部辅助，R03 禁止 fall-back）。"""
+    if not isinstance(rule.layer_b, (tuple, list)) or len(rule.layer_b) != 2:
+        raise ValueError(
+            f"rules[{index}] '{rule.name}' layer_b 必须是 (layer, datatype)。"
+            f"禁止 fall-back（R03）。"
+        )
+    lb_g, lb_d = int(rule.layer_b[0]), int(rule.layer_b[1])
+    if not (0 <= lb_g <= 999):
+        raise ValueError(
+            f"rules[{index}] '{rule.name}' layer_b.layer 必须 0-999。"
+            f"禁止 fall-back（R03）。"
+        )
+    if not (0 <= lb_d <= 255):
+        raise ValueError(
+            f"rules[{index}] '{rule.name}' layer_b.datatype 必须 0-255。"
+            f"禁止 fall-back（R03）。"
+        )
+    rule.layer_b = (lb_g, lb_d)
+
+
+def _validate_rule_constraints(rule: DRCRule, index: int, ct: str) -> None:
+    """验证同层/层间检查约束 + min_value_um（R345 内部辅助，R03 禁止 fall-back）。
+
+    - 同层检查（width/space）: layer_b 必须为空
+    - 层间检查（enclosing/enclosed/overlap/separation）: layer_b 必须非空且 ≠ layer_a
+    """
     # 同层检查不允许 layer_b
     if ct in SINGLE_LAYER_CHECKS and rule.layer_b:
         raise ValueError(
@@ -450,7 +509,6 @@ def _validate_rule(rule: DRCRule, index: int) -> None:
             f"layer_b 必须为空。"
             f"禁止 fall-back（R03）。"
         )
-
     # 层间检查必须 layer_b
     if ct in INTER_LAYER_CHECKS and not rule.layer_b:
         raise ValueError(
@@ -458,14 +516,12 @@ def _validate_rule(rule: DRCRule, index: int) -> None:
             f"layer_b 不能为空。"
             f"禁止 fall-back（R03）。"
         )
-
     # 层间检查 layer_a != layer_b
     if ct in INTER_LAYER_CHECKS and rule.layer_a == rule.layer_b:
         raise ValueError(
             f"rules[{index}] '{rule.name}' {ct} layer_a 和 layer_b 不能相同。"
             f"禁止 fall-back（R03）。"
         )
-
     if rule.min_value_um <= 0:
         raise ValueError(
             f"rules[{index}] '{rule.name}' min_value_um 必须 > 0。"
