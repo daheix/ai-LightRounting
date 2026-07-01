@@ -124,6 +124,31 @@ def test_load_gdsfactory_pdk_unavailable_raises():
         load_gdsfactory_pdk("generic")
 
 
+def test_list_gdsfactory_pdks_no_fallback():
+    """R03 回归：list_gdsfactory_pdks 不得使用 except:pass 兜底。
+
+    验证可选 PDK 探测使用 importlib.util.find_spec，
+    而非 try/except ImportError: pass 的 fall-back 写法。
+    """
+    import ast
+    from pathlib import Path
+
+    loader_file = Path(__file__).parent.parent / "src/polaris/pdk/gdsfactory_pdk_loader.py"
+    src = loader_file.read_text(encoding="utf-8")
+    assert "find_spec" in src, "可选 PDK 探测应使用 importlib.util.find_spec"
+    # AST 精确检查：禁止 except handler 体为 pass 的 fall-back
+    tree = ast.parse(src)
+    violations = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ExceptHandler):
+            for stmt in node.body:
+                if isinstance(stmt, ast.Pass):
+                    violations.append(node.lineno)
+    assert not violations, (
+        f"gdsfactory_pdk_loader 第 {violations} 行存在 except:pass fall-back（R03）"
+    )
+
+
 @pytest.mark.skipif(not is_available(), reason="gdsfactory 未安装")
 def test_load_gdsfactory_pdk_generic():
     """gdsfactory 可用时应加载 generic PDK 器件。"""

@@ -18,6 +18,7 @@ PDK 桥接使 PoLaRIS 能直接使用 gdsfactory 生态：当前已检测并支�
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -178,16 +179,17 @@ def list_gdsfactory_pdks() -> list[str]:
         )
     pdks: list[str] = ["generic"]  # generic 内置
     # 检测可选 PDK
+    # R03 合规：用 importlib.util.find_spec 做轻量探测，
+    # 避免 except ImportError: pass 的 fall-back 写法。
+    # find_spec 是 Python 官方推荐的模块存在性检测方法
+    # （https://docs.python.org/3/library/importlib.html#importlib.util.find_spec）。
     for pdk_name, module_name in [
         ("ubcpdk", "ubcpdk"),
         ("gf180", "gf180"),
         ("ihp", "ihp"),
     ]:
-        try:
-            __import__(module_name)
+        if importlib.util.find_spec(module_name) is not None:
             pdks.append(pdk_name)
-        except ImportError:
-            pass
     return pdks
 
 
