@@ -376,6 +376,21 @@ def _parse_cell(name: str, raw: dict) -> YamlCellSpec:
     )
 
 
+def _get_dict_section(data: dict, key: str) -> dict:
+    """获取 YAML dict 段（None 视为空 dict，R626 Extract Method）。"""
+    return _require_dict(data.get(key, {}) or {}, key)
+
+
+def _get_list_section(data: dict, key: str) -> list:
+    """获取 YAML list 段（None 视为空 list，R626 Extract Method）。"""
+    return _require_list(data.get(key, []) or [], key)
+
+
+def _get_optional_str(raw: dict, key: str) -> str:
+    """获取可选字符串字段（None 视为空串，R626 Extract Method）。"""
+    return str(raw.get(key, "") or "")
+
+
 def parse_pdk_yaml(yaml_path: str | Path) -> PDKYamlConfig:
     """解析 YAML PDK 配置文件（R309）。
 
@@ -413,35 +428,32 @@ def parse_pdk_yaml(yaml_path: str | Path) -> PDKYamlConfig:
     for field_name in ("name", "version", "platform"):
         if field_name not in pdk_raw:
             raise KeyError(f"pdk 段缺少必填字段 '{field_name}': {yaml_path}")
-    process_node = str(pdk_raw.get("process_node", "") or "")
 
     # layers 段（dict: name -> {gds_layer, gds_datatype, ...}）
-    layers_raw = _require_dict(data.get("layers", {}) or {}, "layers")
+    layers_raw = _get_dict_section(data, "layers")
     layers = [_parse_layer(name, raw) for name, raw in layers_raw.items()]
 
     # layer_stack 段（list of dict）
-    layer_stack_raw = _require_list(data.get("layer_stack", []) or [], "layer_stack")
+    layer_stack_raw = _get_list_section(data, "layer_stack")
     layer_stack = [_parse_layer_level(item) for item in layer_stack_raw]
 
     # cross_sections 段（dict: name -> {width_um, sections: [...]})
-    cross_sections_raw = _require_dict(
-        data.get("cross_sections", {}) or {}, "cross_sections"
-    )
+    cross_sections_raw = _get_dict_section(data, "cross_sections")
     cross_sections = [
         _parse_cross_section(name, raw) for name, raw in cross_sections_raw.items()
     ]
 
     # cells 段（dict: name -> {platform, category, ...}）
-    cells_raw = _require_dict(data.get("cells", {}) or {}, "cells")
+    cells_raw = _get_dict_section(data, "cells")
     cells = [_parse_cell(name, raw) for name, raw in cells_raw.items()]
 
     return PDKYamlConfig(
         name=str(pdk_raw["name"]),
         version=str(pdk_raw["version"]),
         platform=str(pdk_raw["platform"]),
-        process_node=process_node,
-        description=str(pdk_raw.get("description", "") or ""),
-        source_url=str(pdk_raw.get("source_url", "") or ""),
+        process_node=_get_optional_str(pdk_raw, "process_node"),
+        description=_get_optional_str(pdk_raw, "description"),
+        source_url=_get_optional_str(pdk_raw, "source_url"),
         layers=layers,
         layer_stack=layer_stack,
         cross_sections=cross_sections,
@@ -544,6 +556,48 @@ def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
 # =============================================================================
 # 配置校验
 # =============================================================================
+def _validate_required_fields(config: PDKYamlConfig) -> list[str]:
+    """校验必填字段非空（R626 Extract Method）。"""
+    errors: list[str] = []
+    if not config.name:
+        errors.append("pdk.name 为空")
+    if not config.version:
+        errors.append("pdk.version 为空")
+    if not config.platform:
+        errors.append("pdk.platform 为空")
+    if not config.source_url:
+        errors.append("pdk.source_url 为空（R02 学术诚信：所有 PDK 必须溯源）")
+    return errors
+
+
+def _validate_layer_references(
+    config: PDKYamlConfig, layer_names: set[str]
+) -> list[str]:
+    """校验层引用完整性（R626 Extract Method）。"""
+    errors: list[str] = []
+    for level in config.layer_stack:
+        if level.layer not in layer_names and config.layers:
+            errors.append(f"layer_stack 引用未定义的层 '{level.layer}'")
+    for xs in config.cross_sections:
+        for section in xs.sections:
+            if section.layer not in layer_names and config.layers:
+                errors.append(
+                    f"cross_section '{xs.name}' 引用未定义的层 '{section.layer}'"
+                )
+    return errors
+
+
+def _validate_cell_uniqueness(config: PDKYamlConfig) -> list[str]:
+    """校验 cell 名称唯一性（R626 Extract Method）。"""
+    errors: list[str] = []
+    seen: set[str] = set()
+    for cell in config.cells:
+        if cell.name in seen:
+            errors.append(f"cell 名称重复: '{cell.name}'")
+        seen.add(cell.name)
+    return errors
+
+
 def validate_pdk_yaml(config: PDKYamlConfig) -> list[str]:
     """校验 PDK YAML 配置完整性（R309）。
 
@@ -562,36 +616,10 @@ def validate_pdk_yaml(config: PDKYamlConfig) -> list[str]:
     - 截面引用的 layer 在 layers 中已定义
     - cell 名称无重复
     """
-    errors: list[str] = []
-    if not config.name:
-        errors.append("pdk.name 为空")
-    if not config.version:
-        errors.append("pdk.version 为空")
-    if not config.platform:
-        errors.append("pdk.platform 为空")
-    if not config.source_url:
-        errors.append("pdk.source_url 为空（R02 学术诚信：所有 PDK 必须溯源）")
-
+    errors = _validate_required_fields(config)
     layer_names = {layer.name for layer in config.layers}
-    for level in config.layer_stack:
-        if level.layer not in layer_names and config.layers:
-            errors.append(
-                f"layer_stack 引用未定义的层 '{level.layer}'"
-            )
-    for xs in config.cross_sections:
-        for section in xs.sections:
-            if section.layer not in layer_names and config.layers:
-                errors.append(
-                    f"cross_section '{xs.name}' 引用未定义的层 '{section.layer}'"
-                )
-    cell_names: list[str] = []
-    for cell in config.cells:
-        cell_names.append(cell.name)
-    seen: set[str] = set()
-    for name in cell_names:
-        if name in seen:
-            errors.append(f"cell 名称重复: '{name}'")
-        seen.add(name)
+    errors.extend(_validate_layer_references(config, layer_names))
+    errors.extend(_validate_cell_uniqueness(config))
     return errors
 
 

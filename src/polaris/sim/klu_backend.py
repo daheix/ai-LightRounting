@@ -562,6 +562,34 @@ class CircuitSolver:
             vsource_currents=vsrc_i, n_freq=n_freq,
         )
 
+    @staticmethod
+    def _validate_transient_time(t_step: float, t_end: float) -> tuple[int, np.ndarray]:
+        """校验时间参数并计算步数序列（R626 Extract Method）。"""
+        if t_step <= 0 or t_end <= 0:
+            raise ValueError(f"时间参数须 > 0: t_step={t_step}, t_end={t_end}")
+        if t_step > t_end:
+            raise ValueError(f"t_step({t_step}) > t_end({t_end})")
+        n_steps = int(np.ceil(t_end / t_step)) + 1
+        time = np.linspace(0.0, t_end, n_steps)
+        return n_steps, time
+
+    @staticmethod
+    def _init_transient_waveforms(topo, n_steps: int) -> tuple[dict, dict]:
+        """初始化节点电压和电压源电流波形存储（R626 Extract Method）。"""
+        node_v = {i: np.zeros(n_steps) for i in range(1, topo.n_nodes + 1)}
+        vsrc_i = {name: np.zeros(n_steps) for name in topo.vsrc_names}
+        return node_v, vsrc_i
+
+    @staticmethod
+    def _record_transient_step(
+        node_v: dict, vsrc_i: dict, x: np.ndarray, topo, step: int
+    ) -> None:
+        """记录一个时间步的节点电压和电压源电流（R626 Extract Method）。"""
+        for i in range(1, topo.n_nodes + 1):
+            node_v[i][step] = x[i - 1]
+        for j, name in enumerate(topo.vsrc_names):
+            vsrc_i[name][step] = x[topo.n_nodes + j]
+
     def transient(
         self, devices: list[dict[str, Any]], t_step: float, t_end: float,
     ) -> TransientResult:
@@ -582,12 +610,7 @@ class CircuitSolver:
             ValueError: 时间参数非法。
             RuntimeError: 瞬态迭代中矩阵奇异。
         """
-        if t_step <= 0 or t_end <= 0:
-            raise ValueError(f"时间参数须 > 0: t_step={t_step}, t_end={t_end}")
-        if t_step > t_end:
-            raise ValueError(f"t_step({t_step}) > t_end({t_end})")
-        n_steps = int(np.ceil(t_end / t_step)) + 1
-        time = np.linspace(0.0, t_end, n_steps)
+        n_steps, time = self._validate_transient_time(t_step, t_end)
         # 初始工作点（DC，电容开路电感短路）
         dc_devices = [d for d in devices if d["type"].upper() in ("R", "V", "I")]
         dc = self.dc_analysis(dc_devices) if dc_devices else None
@@ -601,13 +624,9 @@ class CircuitSolver:
         solver.factor()
         x = solver.solve(z0)
         refactor_count = 0
-        node_v = {i: np.zeros(n_steps) for i in range(1, topo.n_nodes + 1)}
-        vsrc_i = {name: np.zeros(n_steps) for name in topo.vsrc_names}
+        node_v, vsrc_i = self._init_transient_waveforms(topo, n_steps)
         x_prev = x.copy()
-        for i in range(1, topo.n_nodes + 1):
-            node_v[i][1] = x[i - 1]
-        for j, name in enumerate(topo.vsrc_names):
-            vsrc_i[name][1] = x[topo.n_nodes + j]
+        self._record_transient_step(node_v, vsrc_i, x, topo, 1)
         # 第 0 步 = DC 初始
         if dc is not None:
             for i in range(1, topo.n_nodes + 1):
@@ -619,10 +638,7 @@ class CircuitSolver:
             solver.refactor(a_k)
             refactor_count += 1
             x_prev = solver.solve(z_k)
-            for i in range(1, topo.n_nodes + 1):
-                node_v[i][step] = x_prev[i - 1]
-            for j, name in enumerate(topo.vsrc_names):
-                vsrc_i[name][step] = x_prev[topo.n_nodes + j]
+            self._record_transient_step(node_v, vsrc_i, x_prev, topo, step)
         self._klu = solver
         return TransientResult(
             time=time, node_voltages=node_v,
