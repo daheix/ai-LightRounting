@@ -93,8 +93,14 @@ from polaris.sim.perf_optimization_fde import (  # noqa: F401
     FdeShiftInvertAccelerator,
 )
 from polaris.sim.perf_optimization_fdtd import (  # noqa: F401
+    AmrLevel,
     FdtdVectorizedResult,
+    MultiLevelAmrConfig,
+    MultiLevelAmrFdtdSolver,
+    MultiLevelAmrResult,
     NumpyVectorizedFdtdCore,
+    gradient_error_indicator,
+    select_amr_regions,
 )
 from polaris.sim.perf_optimization_eme import (  # noqa: F401
     EmeAdaptiveModeSelector,
@@ -114,6 +120,13 @@ __all__ = [
     # R456
     "NumpyVectorizedFdtdCore",
     "FdtdVectorizedResult",
+    # R366 多级 AMR
+    "AmrLevel",
+    "MultiLevelAmrConfig",
+    "MultiLevelAmrResult",
+    "MultiLevelAmrFdtdSolver",
+    "gradient_error_indicator",
+    "select_amr_regions",
     # R457-R550
     "SparamCascadeCache",
     "MemoryPool",
