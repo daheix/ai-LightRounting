@@ -28,6 +28,7 @@ AGENTS.md §8 文件≤800行质量门禁。
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -56,7 +57,15 @@ from ._drc_geometry import (
 )
 from ._drc_rules import CurvilinearDRCRule, DRCRuleCategory, DRCViolation18
 
-__all__ = ["_DRCGeometricChecksMixin"]
+__all__ = ["_DRCGeometricChecksMixin", "_GeoCheckContext"]
+
+
+@dataclass
+class _GeoCheckContext:
+    """单层 DRC 几何检查的上下文（net_ids / density_region 等运行时数据）。"""
+
+    net_ids: list[int] | None = None
+    density_region: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
 
 
 class _DRCGeometricChecksMixin:
@@ -105,6 +114,56 @@ class _DRCGeometricChecksMixin:
 
     # ----- 公共入口 -----
 
+    def _build_geo_handlers(self) -> tuple[dict[Any, Any], dict[Any, Any]]:
+        """构建 DRC 几何规则 dispatch table，降低 _apply_single_rule 圈复杂度。
+
+        Returns:
+            (simple_handlers, pair_handlers)
+            - simple_handlers: 单层规则 -> handler(polys, rule, val)
+            - pair_handlers: 双层配对规则 -> handler(polys, pair_polys, rule, val)
+
+        特例（需 net_ids/density_region，不在此表）:
+        - MIN_SPACING_SAME_NET / MIN_SPACING_DENSITY / MIN_DENSITY → _invoke_ctx_geo
+        """
+        simple = {
+            DRCRuleCategory.MIN_WIDTH: self._check_min_width_geo,
+            DRCRuleCategory.MAX_WIDTH: self._check_max_width_geo,
+            DRCRuleCategory.MIN_WIDTH_CURVE: self._check_min_curve_width_geo,
+            DRCRuleCategory.MIN_SPACING: self._check_min_spacing_geo,
+            DRCRuleCategory.MIN_END_TO_END: self._check_end_to_end_geo,
+            DRCRuleCategory.MIN_AREA: self._check_min_area_geo,
+            DRCRuleCategory.MAX_AREA: self._check_max_area_geo,
+            DRCRuleCategory.MAX_ANGLE: self._check_max_angle_geo,
+            DRCRuleCategory.MIN_ANGLE: self._check_min_angle_geo,
+            DRCRuleCategory.ACUTE_ANGLE: self._check_acute_angle_geo,
+            DRCRuleCategory.MIN_BEND_RADIUS: self._check_min_bend_radius_geo,
+            DRCRuleCategory.MAX_CURVATURE: self._check_max_curvature_geo,
+            DRCRuleCategory.TAPER_ANGLE: self._check_taper_angle_geo,
+            DRCRuleCategory.STEP_WIDTH: self._check_step_width_geo,
+            DRCRuleCategory.EDGE_LENGTH: self._check_edge_length_geo,
+            DRCRuleCategory.PERIMETER: self._check_perimeter_geo,
+            DRCRuleCategory.SYMMETRY: self._check_symmetry_geo,
+            DRCRuleCategory.ARRAY_PITCH: self._check_array_pitch_geo,
+            DRCRuleCategory.MAX_WIDTH_SINGLE_MODE: self._check_max_width_single_mode_geo,
+        }
+        pair = {
+            DRCRuleCategory.MIN_ENCLOSURE: self._check_min_enclosure_geo,
+            # MIN_EXTENSION 在 _invoke_pair_geo 中特判（交换参数顺序：inner, outer）
+            DRCRuleCategory.MIN_EXTENSION: self._check_min_extension_geo,
+            DRCRuleCategory.LAYER_ALIGNMENT: self._check_layer_alignment_geo,
+            DRCRuleCategory.LAYER_EXTENSION: self._check_layer_extension_geo,
+        }
+        return simple, pair
+
+    @staticmethod
+    def _is_ctx_geo_category(cat: Any) -> bool:
+        """判断 cat 是否为需要 ctx（net_ids/density_region）的单层规则。"""
+        return cat in (
+            DRCRuleCategory.MIN_SPACING_SAME_NET,
+            DRCRuleCategory.MIN_SPACING_DENSITY,
+            DRCRuleCategory.MIN_DENSITY,
+        )
+
     def _apply_single_rule(
         self,
         rule: CurvilinearDRCRule,
@@ -113,7 +172,7 @@ class _DRCGeometricChecksMixin:
         density_region: tuple[float, float, float, float],
         net_assignments: dict[str, list[int]] | None,
     ) -> None:
-        """应用单条 DRC 规则检查。"""
+        """应用单条 DRC 规则检查（dispatch table 模式，CC ≤ 8）。"""
         layer = rule.layer
         polys = polygons_by_layer.get(layer, [])
         cat = rule.category
@@ -125,72 +184,68 @@ class _DRCGeometricChecksMixin:
         }:
             return
 
-        if cat == DRCRuleCategory.MIN_WIDTH:
-            self._check_min_width_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MAX_WIDTH:
-            self._check_max_width_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_WIDTH_CURVE:
-            self._check_min_curve_width_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_SPACING:
-            self._check_min_spacing_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_SPACING_SAME_NET:
-            net_ids = net_assignments.get(layer) if net_assignments else None
-            self._check_min_spacing_same_net_geo(polys, net_ids, rule, val)
+        if self._is_ctx_geo_category(cat):
+            ctx = _GeoCheckContext(
+                net_ids=net_assignments.get(layer) if net_assignments else None,
+                density_region=density_region,
+            )
+            self._invoke_ctx_geo(cat, polys, rule, val, ctx)
+            return
+
+        simple_h = self._simple_geo_handlers.get(cat)
+        if simple_h is not None:
+            simple_h(polys, rule, val)
+            return
+
+        pair_h = self._pair_geo_handlers.get(cat)
+        if pair_h is None:
+            return
+        pair_polys = self._resolve_pair_polys(rule, polygons_by_layer, enclosure_pairs, layer)
+        if not pair_polys:
+            return
+        self._invoke_pair_geo(pair_h, cat, polys, pair_polys, rule, val)
+
+    def _invoke_ctx_geo(
+        self,
+        cat: Any,
+        polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule,
+        val: float,
+        ctx: "_GeoCheckContext",
+    ) -> None:
+        """调用需要 ctx 的单层几何检查（S2 / density_spacing / min_density）。"""
+        if cat == DRCRuleCategory.MIN_SPACING_SAME_NET:
+            self._check_min_spacing_same_net_geo(polys, ctx.net_ids, rule, val)
         elif cat == DRCRuleCategory.MIN_SPACING_DENSITY:
-            self._check_density_spacing_geo(polys, rule, val, density_region)
-        elif cat == DRCRuleCategory.MIN_END_TO_END:
-            self._check_end_to_end_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_ENCLOSURE:
-            outer_layer = enclosure_pairs.get(layer, "")
-            outer_polys = polygons_by_layer.get(outer_layer, [])
-            if outer_polys:
-                self._check_min_enclosure_geo(polys, outer_polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_EXTENSION:
-            inner_layer = enclosure_pairs.get(layer, "")
-            inner_polys = polygons_by_layer.get(inner_layer, [])
-            if inner_polys:
-                self._check_min_extension_geo(inner_polys, polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_AREA:
-            self._check_min_area_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MAX_AREA:
-            self._check_max_area_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_DENSITY:
-            self._check_min_density_geo(polys, rule, val, density_region)
-        elif cat == DRCRuleCategory.MAX_ANGLE:
-            self._check_max_angle_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_ANGLE:
-            self._check_min_angle_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.ACUTE_ANGLE:
-            self._check_acute_angle_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MIN_BEND_RADIUS:
-            self._check_min_bend_radius_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MAX_CURVATURE:
-            self._check_max_curvature_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.TAPER_ANGLE:
-            self._check_taper_angle_geo(polys, rule, val)
-        # ===== R141-R180 扩展规则分发 (8 类) =====
-        elif cat == DRCRuleCategory.STEP_WIDTH:
-            self._check_step_width_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.LAYER_ALIGNMENT:
-            pair_layer = rule.layer_pair or enclosure_pairs.get(layer, "")
-            pair_polys = polygons_by_layer.get(pair_layer, [])
-            if pair_polys:
-                self._check_layer_alignment_geo(polys, pair_polys, rule, val)
-        elif cat == DRCRuleCategory.LAYER_EXTENSION:
-            pair_layer = rule.layer_pair or enclosure_pairs.get(layer, "")
-            pair_polys = polygons_by_layer.get(pair_layer, [])
-            if pair_polys:
-                self._check_layer_extension_geo(polys, pair_polys, rule, val)
-        elif cat == DRCRuleCategory.EDGE_LENGTH:
-            self._check_edge_length_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.PERIMETER:
-            self._check_perimeter_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.SYMMETRY:
-            self._check_symmetry_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.ARRAY_PITCH:
-            self._check_array_pitch_geo(polys, rule, val)
-        elif cat == DRCRuleCategory.MAX_WIDTH_SINGLE_MODE:
-            self._check_max_width_single_mode_geo(polys, rule, val)
+            self._check_density_spacing_geo(polys, rule, val, ctx.density_region)
+        else:  # MIN_DENSITY
+            self._check_min_density_geo(polys, rule, val, ctx.density_region)
+
+    def _invoke_pair_geo(
+        self,
+        handler: Any,
+        cat: Any,
+        polys: list[NDArray[np.float64]],
+        pair_polys: list[NDArray[np.float64]],
+        rule: CurvilinearDRCRule,
+        val: float,
+    ) -> None:
+        """统一调用双层几何检查 handler（处理 MIN_EXTENSION 参数顺序特例）。"""
+        if cat == DRCRuleCategory.MIN_EXTENSION:
+            self._check_min_extension_geo(pair_polys, polys, rule, val)
+        else:
+            handler(polys, pair_polys, rule, val)
+
+    def _resolve_pair_polys(
+        self,
+        rule: CurvilinearDRCRule,
+        polygons_by_layer: dict[str, list[NDArray[np.float64]]],
+        enclosure_pairs: dict[str, str],
+        layer: str,
+    ) -> list[NDArray[np.float64]]:
+        """解析双层规则的配对层多边形。"""
+        pair_layer = rule.layer_pair or enclosure_pairs.get(layer, "")
+        return polygons_by_layer.get(pair_layer, [])
 
     def run_geometric_checks(
         self,

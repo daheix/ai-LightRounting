@@ -111,6 +111,7 @@ class CurvilinearDRCEngine(_DRCGeometricChecksMixin):
         self._extended_enabled: bool = False
         self._register_18_rules()
         self._rule_handlers: dict[Any, Any] = self._build_rule_handlers()
+        self._simple_geo_handlers, self._pair_geo_handlers = self._build_geo_handlers()
 
     def _build_rule_handlers(self) -> dict[Any, Any]:
         """构建规则类别 → 检查函数的 dispatch table（降低 _check_rule 圈复杂度）。"""
