@@ -121,7 +121,14 @@ class PhotonicEdgeFeatureConfig:
 
     default_wavelength_um: float = 1.55
     default_loss_db_cm: float = 3.0
-    default_crosstalk_db: float = 30.0
+    # R05 Bug 修复 v5.0-P1-R114: crosstalk_db 约定不一致。
+    # 原值 30.0（正值）与 sim/constraint_types.py:132 max_crosstalk_db=-20.0
+    # （负值）约定矛盾。当器件 params["crosstalk_db"] 按项目主流约定存为
+    # 负值（如 -30.0）时，归一化 xtalk/40.0 得到负特征，破坏 GNN 输入分布。
+    # 修复: 统一用负值约定（与 constraint_types.py 一致），归一化取绝对值。
+    # 文献: SiEPIC EBeam PDK 波导间距 3μm 时 -30dB
+    #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    default_crosstalk_db: float = -30.0
     default_bend_radius_um: float = 5.0
     default_neff: float = 2.4
 
@@ -201,8 +208,9 @@ def _fill_one_edge_features(
     loss = _get_device_param(src_dev, "loss_db_cm", cfg.default_loss_db_cm)
     feats[i, 11] = min(loss / 10.0, 1.0)
     # [12] 串扰系数（归一化到 [0, 1]，最大 40 dB）
+    # R05 Bug 修复 v5.0-P1-R114: 取绝对值归一化，兼容负值约定
     xtalk = _get_device_param(src_dev, "crosstalk_db", cfg.default_crosstalk_db)
-    feats[i, 12] = min(xtalk / 40.0, 1.0)
+    feats[i, 12] = min(abs(xtalk) / 40.0, 1.0)
     # [13] 弯曲半径约束（归一化到 [0, 1]，最大 50 μm）
     bend_r = _get_device_param(src_dev, "bend_radius", cfg.default_bend_radius_um)
     feats[i, 13] = min(bend_r / 50.0, 1.0)
@@ -630,12 +638,28 @@ class AlphaChipEdgeGNN(Module):
                 h = gat(h, edge_index, edge_feats)
                 h = self.relu(h)
         # 3. 图级读出：GlobalAttention
-        gate_scores = self.readout_gate(h)  # [N, 1]
-        gate_data = gate_scores.data
-        gate_weights = _segment_softmax(gate_data.ravel(), np.arange(h.shape[0]), h.shape[0])
-        gate_weights = gate_weights.reshape(-1, 1)
-        graph_emb_data = (h.data * gate_weights).sum(axis=0)  # [hidden]
-        graph_emb = Tensor(graph_emb_data, h.requires_grad, (h,))
+        # R05 Bug 修复 v5.0-P0-R114: readout 梯度断裂。
+        # 原代码用 .data/numpy 不可微操作（gate_data/gate_weights/h.data），
+        # 导致 readout_gate/edge_encoder/gat_layers 全部不可训练，
+        # 整个 GNN 主体只有 readout_proj 能更新权重。
+        # 修复: 全部改用 polaris.nn.functional 可微操作
+        # （与 GATLayer.forward 第 359-398 行保持一致）。
+        # 文献: Li et al., "Gated Graph Sequence Neural Networks", ICLR 2016
+        #   https://arxiv.org/abs/1511.05493
+        #   PyTorch scatter_softmax:
+        #   https://pytorch.org/docs/stable/generated/torch.scatter_softmax.html
+        from polaris.nn.functional import segment_softmax
+
+        n_nodes = h.shape[0]
+        gate_scores = self.readout_gate(h)  # [N, 1] Tensor
+        # 对所有节点做 softmax（每个节点独立一组，dst=arange(N)）
+        gate_weights = segment_softmax(
+            gate_scores.flatten(), np.arange(n_nodes), n_nodes
+        )  # [N] Tensor
+        gate_weights = gate_weights.reshape(-1, 1)  # [N, 1] Tensor
+        # 可微加权求和: graph_emb = sum(h * gate_weights, axis=0)
+        weighted = h * gate_weights  # [N, hidden] Tensor（可微乘法）
+        graph_emb = weighted.sum(axis=0)  # [hidden] Tensor（可微 sum）
         # 4. 输出投影
         return self.readout_proj(graph_emb)
 
