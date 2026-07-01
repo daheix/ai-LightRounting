@@ -370,6 +370,78 @@ def evaluate_insertion_loss(
     return waveguide_loss + device_loss
 
 
+def _build_drv_boxes_and_boundary(
+    circuit: CircuitSpec,
+    placements: dict[str, tuple[float, float]],
+) -> tuple[list[tuple[str, float, float, float, float]], int]:
+    """构建 DRV 评估用的包围盒列表并检测边界违规（Extract Method）。
+
+    Args:
+        circuit: 电路规格（含模块尺寸和画布尺寸）。
+        placements: 布局字典。
+
+    Returns:
+        (boxes, boundary_violations)。boxes 为 (name, xmin, ymin, xmax, ymax) 列表。
+
+    Raises:
+        KeyError: placements 中的模块不在 circuit.devices 中（R03）。
+    """
+    size_map = {d.name: (d.width_um, d.height_um) for d in circuit.devices}
+    boundary_violations = 0
+    boxes: list[tuple[str, float, float, float, float]] = []
+    for name, (cx, cy) in placements.items():
+        if name not in size_map:
+            # R03: placements 中的模块不在 circuit.devices 中，禁止静默跳过
+            raise KeyError(
+                f"DRV 评估: placements 中的模块 '{name}' 不在 circuit.devices 中"
+            )
+        w, h = size_map[name]
+        xmin = cx - w / 2
+        ymin = cy - h / 2
+        xmax = cx + w / 2
+        ymax = cy + h / 2
+        boxes.append((name, xmin, ymin, xmax, ymax))
+        # 边界违规：模块超出画布
+        if xmin < 0 or ymin < 0 or xmax > circuit.canvas_w or ymax > circuit.canvas_h:
+            boundary_violations += 1
+    return boxes, boundary_violations
+
+
+def _count_overlap_and_spacing(
+    boxes: list[tuple[str, float, float, float, float]],
+    min_spacing_um: float,
+) -> tuple[int, int]:
+    """统计重叠违规与间距违规数（Extract Method）。
+
+    Args:
+        boxes: (name, xmin, ymin, xmax, ymax) 包围盒列表。
+        min_spacing_um: 最小间距（μm），<=0 时仅检测重叠。
+
+    Returns:
+        (overlap_violations, spacing_violations)。间距违规不含重叠对。
+    """
+    overlap_violations = 0
+    spacing_violations = 0
+    n = len(boxes)
+    for i in range(n):
+        for j in range(i + 1, n):
+            _n1, x1min, y1min, x1max, y1max = boxes[i]
+            _n2, x2min, y2min, x2max, y2max = boxes[j]
+            # 重叠判定：包围盒相交
+            if x1min < x2max and x2min < x1max and y1min < y2max and y2min < y1max:
+                overlap_violations += 1
+                continue
+            # 间距违规判定：间距 < min_spacing_um（仅在非重叠时检查）
+            if min_spacing_um <= 0:
+                continue
+            dx = max(0, max(x1min, x2min) - min(x1max, x2max))
+            dy = max(0, max(y1min, y2min) - min(y1max, y2max))
+            dist = (dx * dx + dy * dy) ** 0.5
+            if dist < min_spacing_um:
+                spacing_violations += 1
+    return overlap_violations, spacing_violations
+
+
 def evaluate_drv(
     circuit: CircuitSpec,
     placements: dict[str, tuple[float, float]],
@@ -390,6 +462,8 @@ def evaluate_drv(
           https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
         - Cadence Innovus DRV 计数（spacing/width/area/short）
         - DREAMPlace Overlap/Boundary 违规检测
+        - Fowler, "Refactoring" 2nd ed., 2018, Extract Method
+          https://martinfowler.com/books/refactoring.html
 
     Args:
         circuit: 电路规格（含模块尺寸和画布尺寸）。
@@ -403,47 +477,13 @@ def evaluate_drv(
         - ``boundary_violations``: 边界违规数
         - ``total``: 总 DRV 数
     """
-    size_map = {d.name: (d.width_um, d.height_um) for d in circuit.devices}
-
-    # 1. 边界违规检测
-    boundary_violations = 0
-    boxes: list[tuple[str, float, float, float, float]] = []
-    for name, (cx, cy) in placements.items():
-        if name not in size_map:
-            # R03: placements 中的模块不在 circuit.devices 中，禁止静默跳过
-            raise KeyError(
-                f"DRV 评估: placements 中的模块 '{name}' 不在 circuit.devices 中"
-            )
-        w, h = size_map[name]
-        xmin = cx - w / 2
-        ymin = cy - h / 2
-        xmax = cx + w / 2
-        ymax = cy + h / 2
-        boxes.append((name, xmin, ymin, xmax, ymax))
-        # 边界违规：模块超出画布
-        if xmin < 0 or ymin < 0 or xmax > circuit.canvas_w or ymax > circuit.canvas_h:
-            boundary_violations += 1
+    # 1. 构建 boxes 并检测边界违规
+    boxes, boundary_violations = _build_drv_boxes_and_boundary(circuit, placements)
 
     # 2. 重叠与间距违规检测
-    overlap_violations = 0
-    spacing_violations = 0
-    n = len(boxes)
-    for i in range(n):
-        for j in range(i + 1, n):
-            _n1, x1min, y1min, x1max, y1max = boxes[i]
-            _n2, x2min, y2min, x2max, y2max = boxes[j]
-            # 重叠判定：包围盒相交
-            if x1min < x2max and x2min < x1max and y1min < y2max and y2min < y1max:
-                overlap_violations += 1
-                continue
-            # 间距违规判定：间距 < min_spacing_um（仅在非重叠时检查）
-            if min_spacing_um <= 0:
-                continue
-            dx = max(0, max(x1min, x2min) - min(x1max, x2max))
-            dy = max(0, max(y1min, y2min) - min(y1max, y2max))
-            dist = (dx * dx + dy * dy) ** 0.5
-            if dist < min_spacing_um:
-                spacing_violations += 1
+    overlap_violations, spacing_violations = _count_overlap_and_spacing(
+        boxes, min_spacing_um
+    )
 
     return {
         "overlap_violations": overlap_violations,
