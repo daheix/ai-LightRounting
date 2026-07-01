@@ -199,7 +199,44 @@ def run_batch_pipeline(
     - EDA 流水线自动化: https://www.cadence.com/en_US/home/tools.html
     - gdsfactory 流水线: https://gdsfactory.github.io/gdsfactory/
     """
-    # 参数校验（R03 禁止 fall-back）
+    # 参数校验（R03 禁止 fall-back，R601 Extract Method）
+    steps = _validate_pipeline_args(input_paths, steps)
+
+    # 检查 klayout 可用性（R03 失败即 raise）
+    _import_klayout_db()
+
+    # 导入验证步骤函数（延迟导入，避免循环依赖）
+    step_fns = _import_step_functions()
+
+    file_results: list[FilePipelineResult] = [
+        _process_single_file(fpath, steps, step_fns) for fpath in input_paths
+    ]
+
+    return _aggregate_report(
+        [str(p) for p in input_paths], steps, file_results,
+    )
+
+
+def _validate_pipeline_args(
+    input_paths: list[Path] | list[str],
+    steps: list[str] | None,
+) -> list[str]:
+    """校验批处理流水线参数（R601，Extract Method 降低圈复杂度）。
+
+    Args:
+        input_paths: 输入 GDSII 文件路径列表。
+        steps: 验证步骤列表（None 用全部 SUPPORTED_STEPS）。
+
+    Returns:
+        校验后的 steps 列表。
+
+    Raises:
+        ValueError: input_paths 空 / steps 空 / steps 含不支持的步骤名。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Ch.6 Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
     if not input_paths:
         raise ValueError(
             "input_paths 不能为空。禁止 fall-back（R03）。"
@@ -210,69 +247,110 @@ def run_batch_pipeline(
         raise ValueError(
             "steps 不能为空。禁止 fall-back（R03）。"
         )
-    # 验证步骤名合法
     invalid = [s for s in steps if s not in SUPPORTED_STEPS]
     if invalid:
         raise ValueError(
             f"不支持的步骤: {invalid}。"
             f"支持: {SUPPORTED_STEPS}。禁止 fall-back（R03）。"
         )
+    return steps
 
-    # 检查 klayout 可用性（R03 失败即 raise）
-    _import_klayout_db()
 
-    # 导入验证步骤函数（延迟导入，避免循环依赖）
+def _import_step_functions() -> dict:
+    """延迟导入验证步骤函数，避免循环依赖（R601 Extract Method）。
+
+    Returns:
+        步骤名 -> 验证函数 的映射字典。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Ch.6 Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
     from polaris.verification.gdsii_statistics import generate_gdsii_statistics
     from polaris.verification.gdsii_port_extractor import extract_ports
     from polaris.verification.gdsii_text_label_extractor import (
         extract_text_labels,
     )
     from polaris.verification.gdsii_tapeout_precheck import tapeout_precheck
+    return {
+        "statistics": generate_gdsii_statistics,
+        "ports": extract_ports,
+        "texts": extract_text_labels,
+        "precheck": tapeout_precheck,
+    }
 
-    file_results: list[FilePipelineResult] = []
-    input_files_str: list[str] = [str(p) for p in input_paths]
 
-    for fpath in input_paths:
-        path = Path(fpath)
-        file_result = FilePipelineResult(file_path=str(fpath))
+def _process_single_file(
+    fpath: Path | str,
+    steps: list[str],
+    step_fns: dict,
+) -> FilePipelineResult:
+    """处理单个 GDSII 文件的流水线（R601，Extract Method）。
 
-        if not path.exists():
-            file_result.file_exists = False
-            # 文件不存在: 所有步骤标记为 FAIL
-            for step_name in steps:
-                file_result.steps.append(
-                    StepResult(
-                        step_name=step_name,
-                        success=False,
-                        error_message=f"文件不存在: {fpath}",
-                    )
-                )
-            file_result.fail_count = len(steps)
-            file_results.append(file_result)
-            logger.warning("文件不存在，跳过: %s", fpath)
-            continue
+    文件不存在则所有步骤标记 FAIL；存在则逐步执行并统计成败。
 
-        file_result.file_exists = True
+    Args:
+        fpath: GDSII 文件路径。
+        steps: 验证步骤列表。
+        step_fns: 步骤名 -> 验证函数 映射。
 
+    Returns:
+        该文件的 FilePipelineResult。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Ch.6 Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
+    path = Path(fpath)
+    file_result = FilePipelineResult(file_path=str(fpath))
+
+    if not path.exists():
+        file_result.file_exists = False
         for step_name in steps:
-            step_result = _execute_step(
-                step_name, path,
-                generate_gdsii_statistics,
-                extract_ports,
-                extract_text_labels,
-                tapeout_precheck,
+            file_result.steps.append(
+                StepResult(
+                    step_name=step_name,
+                    success=False,
+                    error_message=f"文件不存在: {fpath}",
+                )
             )
-            file_result.steps.append(step_result)
+        file_result.fail_count = len(steps)
+        logger.warning("文件不存在，跳过: %s", fpath)
+        return file_result
 
-        file_result.success_count = sum(
-            1 for s in file_result.steps if s.success
+    file_result.file_exists = True
+    for step_name in steps:
+        step_result = _execute_step(
+            step_name, path,
+            step_fns["statistics"], step_fns["ports"],
+            step_fns["texts"], step_fns["precheck"],
         )
-        file_result.fail_count = sum(
-            1 for s in file_result.steps if not s.success
-        )
-        file_results.append(file_result)
+        file_result.steps.append(step_result)
 
-    # 汇总
+    file_result.success_count = sum(1 for s in file_result.steps if s.success)
+    file_result.fail_count = sum(1 for s in file_result.steps if not s.success)
+    return file_result
+
+
+def _aggregate_report(
+    input_files_str: list[str],
+    steps: list[str],
+    file_results: list[FilePipelineResult],
+) -> PipelineReport:
+    """汇总所有文件结果为 PipelineReport（R601，Extract Method）。
+
+    Args:
+        input_files_str: 输入文件路径字符串列表。
+        steps: 请求的步骤列表。
+        file_results: 各文件结果列表。
+
+    Returns:
+        PipelineReport 综合报告。
+
+    来源:
+    - Martin Fowler, "Refactoring", 2nd ed., 2018, Ch.6 Extract Function
+      https://refactoring.com/catalog/extractFunction.html
+    """
     total_files = len(file_results)
     total_success_files = sum(
         1 for fr in file_results if fr.fail_count == 0 and fr.file_exists
