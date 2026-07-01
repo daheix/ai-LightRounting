@@ -136,7 +136,7 @@ def _construct_biasing_distribution(
     nominal_specs: list[dict],
     biasing: BiasingSpec,
 ) -> list[norm | uniform]:
-    """根据偏置规格构造偏置分布列表（R261-R270）。
+    """根据偏置规格构造偏置分布列表（R261-R270，dispatch + Extract Method）。
 
     对每个一元标称分布，按 ``biasing.method`` 构造对应的偏置分布:
     - MEAN_SHIFT: loc += mean_shift[j]
@@ -155,114 +155,144 @@ def _construct_biasing_distribution(
     Raises:
         ValueError: 偏置参数缺失或无效。
     """
-    d = len(nominal_specs)
     method = biasing.method
-
     if method == BiasingMethod.MEAN_SHIFT:
-        if biasing.mean_shift is None or len(biasing.mean_shift) != d:
-            raise ValueError(
-                f"MEAN_SHIFT 需要 mean_shift 长度 = {d}，"
-                f"得到 {biasing.mean_shift}"
-            )
-        biasing_specs: list[dict] = []
-        for j, spec in enumerate(nominal_specs):
-            shift = float(biasing.mean_shift[j])
-            new_spec = dict(spec)
-            new_spec["loc"] = spec.get("loc", 0.0) + shift
-            biasing_specs.append(new_spec)
-        return _build_univariate_distributions(biasing_specs)
-
+        return _construct_mean_shift(nominal_specs, biasing)
     if method == BiasingMethod.VARIANCE_SCALING:
-        if biasing.variance_scale is None or len(biasing.variance_scale) != d:
-            raise ValueError(
-                f"VARIANCE_SCALING 需要 variance_scale 长度 = {d}，"
-                f"得到 {biasing.variance_scale}"
-            )
-        biasing_specs = []
-        for j, spec in enumerate(nominal_specs):
-            scale = float(biasing.variance_scale[j])
-            if scale <= 0:
-                raise ValueError(
-                    f"variance_scale[{j}] 必须 > 0，得到 {scale}"
-                )
-            new_spec = dict(spec)
-            new_spec["scale"] = spec.get("scale", 1.0) * scale
-            biasing_specs.append(new_spec)
-        return _build_univariate_distributions(biasing_specs)
-
+        return _construct_variance_scaling(nominal_specs, biasing)
     if method == BiasingMethod.EXPONENTIAL_TWIST:
-        if biasing.twist_theta is None or len(biasing.twist_theta) != d:
-            raise ValueError(
-                f"EXPONENTIAL_TWIST 需要 twist_theta 长度 = {d}，"
-                f"得到 {biasing.twist_theta}"
-            )
-        biasing_specs = []
-        for j, spec in enumerate(nominal_specs):
-            theta = float(biasing.twist_theta[j])
-            dist_type = spec.get("type", "")
-            if dist_type == "norm":
-                # 指数扭转对正态: q_θ = N(μ + σ²θ, σ)
-                # 来源: Siegmund 1976, Glasserman 2003 Ch.4.4
-                mu = spec.get("loc", 0.0)
-                sigma = spec.get("scale", 1.0)
-                new_spec = {"type": "norm", "loc": mu + sigma * sigma * theta, "scale": sigma}
-            elif dist_type == "uniform":
-                # 指数扭转对均匀分布无解析均值平移；退化为均值平移（loc += θ）
-                # 这是工程近似，对均匀分布的指数扭转严格形式需数值求解
-                new_spec = dict(spec)
-                new_spec["loc"] = spec.get("loc", 0.0) + theta
-            else:
-                raise ValueError(
-                    f"EXPONENTIAL_TWIST 不支持分布类型 '{dist_type}'"
-                )
-            biasing_specs.append(new_spec)
-        return _build_univariate_distributions(biasing_specs)
-
+        return _construct_exponential_twist(nominal_specs, biasing)
     if method == BiasingMethod.MIXTURE:
-        # MIXTURE 的 h 分量是 MEAN_SHIFT 构造的偏置分布
-        # 实际采样与 logpdf 在 _sample_mixture / _logpdf_mixture 中处理
-        if biasing.mean_shift is None or len(biasing.mean_shift) != d:
-            raise ValueError(
-                f"MIXTURE 需要 mean_shift 长度 = {d}，"
-                f"得到 {biasing.mean_shift}"
-            )
-        if not (0.0 < biasing.mixture_alpha < 1.0):
-            raise ValueError(
-                f"mixture_alpha 必须在 (0, 1)，得到 {biasing.mixture_alpha}"
-            )
-        # 返回 h 分量（调用方需自行混合）
-        h_specs = []
-        for j, spec in enumerate(nominal_specs):
-            shift = float(biasing.mean_shift[j])
-            new_spec = dict(spec)
-            new_spec["loc"] = spec.get("loc", 0.0) + shift
-            h_specs.append(new_spec)
-        return _build_univariate_distributions(h_specs)
-
+        _validate_mixture_params(biasing, len(nominal_specs))
+        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
     if method == BiasingMethod.CROSS_ENTROPY:
-        # CE 初始分布用 MEAN_SHIFT 构造的 h（迭代中更新）
-        if biasing.mean_shift is None or len(biasing.mean_shift) != d:
-            raise ValueError(
-                f"CROSS_ENTROPY 需要 mean_shift 作为初始 h 长度 = {d}，"
-                f"得到 {biasing.mean_shift}"
-            )
-        if not (0.0 < biasing.elite_ratio < 1.0):
-            raise ValueError(
-                f"elite_ratio 必须在 (0, 1)，得到 {biasing.elite_ratio}"
-            )
-        if biasing.n_iterations < 1:
-            raise ValueError(
-                f"n_iterations 必须 >= 1，得到 {biasing.n_iterations}"
-            )
-        h_specs = []
-        for j, spec in enumerate(nominal_specs):
-            shift = float(biasing.mean_shift[j])
-            new_spec = dict(spec)
-            new_spec["loc"] = spec.get("loc", 0.0) + shift
-            h_specs.append(new_spec)
-        return _build_univariate_distributions(h_specs)
-
+        _validate_cross_entropy_params(biasing, len(nominal_specs))
+        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
     raise ValueError(f"不支持的偏置方法: {method}")
+
+
+def _build_shifted_specs_as_dists(
+    nominal_specs: list[dict],
+    mean_shift: list[float] | None,
+) -> list[norm | uniform]:
+    """构造 loc += mean_shift[j] 的偏置分布列表（MEAN_SHIFT / MIXTURE / CROSS_ENTROPY 共用）。"""
+    h_specs: list[dict] = []
+    for j, spec in enumerate(nominal_specs):
+        shift = float(mean_shift[j])
+        new_spec = dict(spec)
+        new_spec["loc"] = spec.get("loc", 0.0) + shift
+        h_specs.append(new_spec)
+    return _build_univariate_distributions(h_specs)
+
+
+def _construct_mean_shift(
+    nominal_specs: list[dict],
+    biasing: BiasingSpec,
+) -> list[norm | uniform]:
+    """构造 MEAN_SHIFT 偏置分布。"""
+    d = len(nominal_specs)
+    if biasing.mean_shift is None or len(biasing.mean_shift) != d:
+        raise ValueError(
+            f"MEAN_SHIFT 需要 mean_shift 长度 = {d}，"
+            f"得到 {biasing.mean_shift}"
+        )
+    return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
+
+
+def _construct_variance_scaling(
+    nominal_specs: list[dict],
+    biasing: BiasingSpec,
+) -> list[norm | uniform]:
+    """构造 VARIANCE_SCALING 偏置分布。"""
+    d = len(nominal_specs)
+    if biasing.variance_scale is None or len(biasing.variance_scale) != d:
+        raise ValueError(
+            f"VARIANCE_SCALING 需要 variance_scale 长度 = {d}，"
+            f"得到 {biasing.variance_scale}"
+        )
+    biasing_specs: list[dict] = []
+    for j, spec in enumerate(nominal_specs):
+        scale = float(biasing.variance_scale[j])
+        if scale <= 0:
+            raise ValueError(
+                f"variance_scale[{j}] 必须 > 0，得到 {scale}"
+            )
+        new_spec = dict(spec)
+        new_spec["scale"] = spec.get("scale", 1.0) * scale
+        biasing_specs.append(new_spec)
+    return _build_univariate_distributions(biasing_specs)
+
+
+def _construct_exponential_twist(
+    nominal_specs: list[dict],
+    biasing: BiasingSpec,
+) -> list[norm | uniform]:
+    """构造 EXPONENTIAL_TWIST 偏置分布。
+
+    - norm: q_θ = N(μ + σ²θ, σ)（Siegmund 1976, Glasserman 2003 Ch.4.4）
+    - uniform: 退化为 loc += θ（工程近似，严格形式需数值求解）
+    """
+    d = len(nominal_specs)
+    if biasing.twist_theta is None or len(biasing.twist_theta) != d:
+        raise ValueError(
+            f"EXPONENTIAL_TWIST 需要 twist_theta 长度 = {d}，"
+            f"得到 {biasing.twist_theta}"
+        )
+    biasing_specs: list[dict] = []
+    for j, spec in enumerate(nominal_specs):
+        theta = float(biasing.twist_theta[j])
+        biasing_specs.append(_twist_single_spec(spec, theta))
+    return _build_univariate_distributions(biasing_specs)
+
+
+def _twist_single_spec(spec: dict, theta: float) -> dict:
+    """对单个标称分布规格应用指数扭转 θ（norm/uniform 两种支持类型）。"""
+    dist_type = spec.get("type", "")
+    if dist_type == "norm":
+        # 指数扭转对正态: q_θ = N(μ + σ²θ, σ)
+        # 来源: Siegmund 1976, Glasserman 2003 Ch.4.4
+        mu = spec.get("loc", 0.0)
+        sigma = spec.get("scale", 1.0)
+        return {"type": "norm", "loc": mu + sigma * sigma * theta, "scale": sigma}
+    if dist_type == "uniform":
+        # 指数扭转对均匀分布无解析均值平移；退化为均值平移（loc += θ）
+        # 这是工程近似，对均匀分布的指数扭转严格形式需数值求解
+        new_spec = dict(spec)
+        new_spec["loc"] = spec.get("loc", 0.0) + theta
+        return new_spec
+    raise ValueError(
+        f"EXPONENTIAL_TWIST 不支持分布类型 '{dist_type}'"
+    )
+
+
+def _validate_mixture_params(biasing: BiasingSpec, d: int) -> None:
+    """校验 MIXTURE 偏置参数（mean_shift 长度 + mixture_alpha 范围）。"""
+    if biasing.mean_shift is None or len(biasing.mean_shift) != d:
+        raise ValueError(
+            f"MIXTURE 需要 mean_shift 长度 = {d}，"
+            f"得到 {biasing.mean_shift}"
+        )
+    if not (0.0 < biasing.mixture_alpha < 1.0):
+        raise ValueError(
+            f"mixture_alpha 必须在 (0, 1)，得到 {biasing.mixture_alpha}"
+        )
+
+
+def _validate_cross_entropy_params(biasing: BiasingSpec, d: int) -> None:
+    """校验 CROSS_ENTROPY 偏置参数（mean_shift / elite_ratio / n_iterations）。"""
+    if biasing.mean_shift is None or len(biasing.mean_shift) != d:
+        raise ValueError(
+            f"CROSS_ENTROPY 需要 mean_shift 作为初始 h 长度 = {d}，"
+            f"得到 {biasing.mean_shift}"
+        )
+    if not (0.0 < biasing.elite_ratio < 1.0):
+        raise ValueError(
+            f"elite_ratio 必须在 (0, 1)，得到 {biasing.elite_ratio}"
+        )
+    if biasing.n_iterations < 1:
+        raise ValueError(
+            f"n_iterations 必须 >= 1，得到 {biasing.n_iterations}"
+        )
 
 
 def _sample_mixture(
