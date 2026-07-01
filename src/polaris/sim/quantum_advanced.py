@@ -248,13 +248,36 @@ class HOMInterferometer:
         input_state: tuple[int, ...],
         distinguishability: float = 1.0,
     ) -> HOMResult:
-        """计算 HOM 干涉输出分布。
+        """计算 HOM 干涉输出分布（dispatch + Extract Method，CC ≤ 5）。
 
         全同（ξ=1）: P(s)=|Per(U_sub)|²/Π s_i!（Ryser 快速路径）。
         部分可分（0≤ξ<1）: Tichy 2015 双置换和
         P(s)=(1/Π s_i!) Σ_{σ,σ'} Π_i S_{σ(i),σ'(i)} Π_j U_{r_j,σ(j)} U*_{r_j,σ'(j)}
         ξ=1→S=ones（退化为 |Per|²），ξ=0→S=I（经典多项式分布）。
         """
+        n = self._validate_interfere_input(input_state, distinguishability)
+        photons_in = [
+            i for i, k in enumerate(input_state) for _ in range(k)
+        ]
+        probs = self._compute_hom_probabilities(
+            input_state, distinguishability, n, photons_in,
+        )
+        p_coinc, bunching = self._compute_bunching_metrics(
+            input_state, n, probs,
+        )
+        return HOMResult(
+            probabilities=probs,
+            coincidence_probability=p_coinc,
+            bunching_parameter=float(bunching),
+            is_bunched=(bunching > 0.5),
+        )
+
+    def _validate_interfere_input(
+        self,
+        input_state: tuple[int, ...],
+        distinguishability: float,
+    ) -> int:
+        """校验 interfere 输入参数，返回总光子数 n（CC ≤ 6）。"""
         if len(input_state) != self.n_modes:
             raise ValueError(
                 f"输入态维度须 = {self.n_modes}，得到 {len(input_state)}"
@@ -270,41 +293,92 @@ class HOMInterferometer:
             raise ValueError(
                 f"部分可分（ξ<1）时光子数须 ≤ 6（双置换和 O((n!)²)），得到 {n}"
             )
-        photons_in = [
-            i for i, k in enumerate(input_state) for _ in range(k)
-        ]
-        probs: dict[tuple[int, ...], float] = {}
+        return n
+
+    def _compute_hom_probabilities(
+        self,
+        input_state: tuple[int, ...],
+        distinguishability: float,
+        n: int,
+        photons_in: list[int],
+    ) -> dict[tuple[int, ...], float]:
+        """计算 HOM 输出概率分布（全同 / 部分可分两条路径）。"""
         if distinguishability == 1.0:
-            for out_s in _generate_output_states(n, self.n_modes):
-                rows = [i for i, s in enumerate(out_s) for _ in range(s)]
-                u_sub = self.unitary[np.ix_(rows, photons_in)]
-                per = permanent_ryser(u_sub)
-                norm = 1.0
-                for s in out_s:
-                    norm *= math.factorial(s)
-                probs[out_s] = float(abs(per) ** 2) / norm
-        else:
-            S_full = self._distinguishability_matrix(n, distinguishability)
-            perms = list(permutations(range(n)))
-            idx = np.arange(n)
-            for out_s in _generate_output_states(n, self.n_modes):
-                rows = [i for i, s in enumerate(out_s) for _ in range(s)]
-                u_sub = self.unitary[np.ix_(rows, photons_in)]
-                p_val = 0.0 + 0.0j
-                for sigma in perms:
-                    u_sig = u_sub[idx, sigma]
-                    for sp in perms:
-                        d_prod = complex(np.prod(S_full[sigma, sp]))
-                        u_prod = complex(np.prod(u_sig * u_sub[idx, sp].conj()))
-                        p_val += d_prod * u_prod
-                norm = 1.0
-                for s in out_s:
-                    norm *= math.factorial(s)
-                probs[out_s] = float(p_val.real) / norm
+            return self._hom_prob_identical(n, photons_in)
+        return self._hom_prob_partial(n, photons_in, distinguishability)
+
+    def _hom_prob_identical(
+        self,
+        n: int,
+        photons_in: list[int],
+    ) -> dict[tuple[int, ...], float]:
+        """全同光子（ξ=1）: P(s)=|Per(U_sub)|²/Π s_i!（Ryser 快速路径）。"""
+        probs: dict[tuple[int, ...], float] = {}
+        for out_s in _generate_output_states(n, self.n_modes):
+            rows = [i for i, s in enumerate(out_s) for _ in range(s)]
+            u_sub = self.unitary[np.ix_(rows, photons_in)]
+            per = permanent_ryser(u_sub)
+            norm = 1.0
+            for s in out_s:
+                norm *= math.factorial(s)
+            probs[out_s] = float(abs(per) ** 2) / norm
+        return self._normalize_probs(probs)
+
+    def _hom_prob_partial(
+        self,
+        n: int,
+        photons_in: list[int],
+        distinguishability: float,
+    ) -> dict[tuple[int, ...], float]:
+        """部分可分（0≤ξ<1）: Tichy 2015 双置换和（O((n!)²) 复杂度）。"""
+        S_full = self._distinguishability_matrix(n, distinguishability)
+        perms = list(permutations(range(n)))
+        idx = np.arange(n)
+        probs: dict[tuple[int, ...], float] = {}
+        for out_s in _generate_output_states(n, self.n_modes):
+            rows = [i for i, s in enumerate(out_s) for _ in range(s)]
+            u_sub = self.unitary[np.ix_(rows, photons_in)]
+            p_val = self._partial_perm_sum(u_sub, S_full, perms, idx)
+            norm = 1.0
+            for s in out_s:
+                norm *= math.factorial(s)
+            probs[out_s] = float(p_val.real) / norm
+        return self._normalize_probs(probs)
+
+    @staticmethod
+    def _partial_perm_sum(
+        u_sub: NDArray[np.complex128],
+        S_full: NDArray[np.complex128],
+        perms: list[tuple[int, ...]],
+        idx: NDArray[np.int64],
+    ) -> complex:
+        """计算 Σ_{σ,σ'} Π_i S_{σ(i),σ'(i)} Π_j U_{r_j,σ(j)} U*_{r_j,σ'(j)}。"""
+        p_val = 0.0 + 0.0j
+        for sigma in perms:
+            u_sig = u_sub[idx, sigma]
+            for sp in perms:
+                d_prod = complex(np.prod(S_full[sigma, sp]))
+                u_prod = complex(np.prod(u_sig * u_sub[idx, sp].conj()))
+                p_val += d_prod * u_prod
+        return p_val
+
+    @staticmethod
+    def _normalize_probs(
+        probs: dict[tuple[int, ...], float],
+    ) -> dict[tuple[int, ...], float]:
+        """归一化概率分布（总和为零时 raise ValueError，禁止 fall-back）。"""
         total = sum(probs.values())
         if total <= 0.0:
             raise ValueError("HOM 输出概率总和为零，数值退化")
-        probs = {k: v / total for k, v in probs.items()}
+        return {k: v / total for k, v in probs.items()}
+
+    def _compute_bunching_metrics(
+        self,
+        input_state: tuple[int, ...],
+        n: int,
+        probs: dict[tuple[int, ...], float],
+    ) -> tuple[float, float]:
+        """计算 coincidence 概率与 bunching 参数。"""
         if n <= self.n_modes:
             coincidence_state = tuple(
                 1 if i < n else 0 for i in range(self.n_modes)
@@ -316,12 +390,7 @@ class HOMInterferometer:
         bunching = (
             1.0 - p_coinc / p_classical if p_classical > 0 else 0.0
         )
-        return HOMResult(
-            probabilities=probs,
-            coincidence_probability=p_coinc,
-            bunching_parameter=float(bunching),
-            is_bunched=(bunching > 0.5),
-        )
+        return p_coinc, bunching
 
     def _classical_coincidence(self, input_state: tuple[int, ...]) -> float:
         """经典完全可分光子 coincidence 概率 = n!/M^n（多项式分布）。"""
