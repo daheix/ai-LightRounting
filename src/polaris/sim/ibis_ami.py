@@ -118,7 +118,12 @@ class IBISParser:
 
     @staticmethod
     def _parse_iv_data(rows: list[list[str]]) -> NDArray[np.float64]:
-        """解析 IV 数据行。"""
+        """解析 IV 数据行（V, I）。
+
+        R03 合规：rows 为空时返回空数组（合法 — 无数据段）；
+        rows 非空但全部无法解析为 (V, I) 对时 raise ValueError（禁止
+        返回空数组掩盖数据损坏）。
+        """
         data = []
         for row in rows:
             try:
@@ -127,7 +132,14 @@ class IBISParser:
                 data.append([v, i])
             except (ValueError, IndexError):
                 continue
-        return np.array(data, dtype=np.float64) if data else np.zeros((0, 2))
+        if not data:
+            if rows:
+                raise ValueError(
+                    f"IV 数据段有 {len(rows)} 行但全部无法解析为 (V, I) 对，"
+                    f"请检查 IBIS 文件格式（首行 tokens: {rows[0]!r}）"
+                )
+            return np.zeros((0, 2))
+        return np.array(data, dtype=np.float64)
 
     def _finalize_current_model(
         self,
