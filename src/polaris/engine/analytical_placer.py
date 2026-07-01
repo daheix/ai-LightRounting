@@ -464,8 +464,20 @@ class AnalyticalPlacer:
         Returns:
             拥塞梯度 ``(n, 2)``。
         """
-        if self.n == 0 or self.canvas_w <= 0 or self.canvas_h <= 0:
+        if self.n == 0:
+            # 空电路合法，返回零梯度
             return np.zeros_like(pos)
+        # R05 Bug 修复 v5.0-P2-R114: canvas<=0 fall-back。
+        # 原代码对 canvas_w<=0 or canvas_h<=0 静默返回零梯度，
+        # 导致拥塞感知布局失效而无告警。画布尺寸非正是配置错误，
+        # 应 raise 让调用方修复。与同文件 HPWL 梯度 NaN 检查一致。
+        # 文献: DREAMPlace TCAD 2020, https://arxiv.org/abs/2004.10746
+        if self.canvas_w <= 0 or self.canvas_h <= 0:
+            raise ValueError(
+                f"画布尺寸非法: canvas_w={self.canvas_w}, "
+                f"canvas_h={self.canvas_h}（R03 禁止 fall-back，"
+                f"画布尺寸必须为正）"
+            )
 
         grid_size = self.config.congestion_grid_size
         cell_w = self.canvas_w / grid_size

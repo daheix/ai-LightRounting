@@ -137,7 +137,15 @@ def build_pml_stretch(
             depth = (pml.layers - idx) * dx
         else:
             idx = n - 1 - np.arange(pml.layers)
-            depth = (idx - (n - 1 - pml.layers) + 1) * dx
+            # R05 Bug 修复 v5.0-P2-R114: 右侧 PML depth 多 +1·dx。
+            # 原代码 (idx - (n-1-L) + 1)*dx 比正确值多 1·dx，
+            # 导致 d_norm 在外边界达到 (L+1)/L > 1，
+            # sigma = sigma_max·d_norm^m > sigma_max，
+            # 违反 Taflove σ_max 上限前提。
+            # 修复: 去掉 +1，与左侧对称（depth(k) = (L-k)·dx）。
+            # 对照: fdtd/cpml.py:199 depth_right = (np.arange(layers)+1)*dx
+            # 文献: Taflove & Hagness 2005, Computational Electrodynamics §5
+            depth = (idx - (n - 1 - pml.layers)) * dx
         # σ 多项式渐变 σ(d) = σ_max · (d/L_pml)^m
         d_norm = depth / (pml.layers * dx)
         sigma = sigma_max * d_norm**pml.order

@@ -279,9 +279,17 @@ class CongestionAwareNetOrdering:
             x1 = int(math.ceil(max(xs) / gs))
             y0 = int(math.floor(min(ys) / gs))
             y1 = int(math.ceil(max(ys) / gs))
-            w = max(x1 - x0, 1)
-            h = max(y1 - y0, 1)
-            density = 1.0 / (w * h)
+            # R05 Bug 修复 v5.0-P2-R114: RUDY off-by-one + 量纲错误。
+            # DREAMPlace RUDY 定义: 每个 net 的路由需求 = 1 均匀分布在 bbox 内
+            # 所有网格点。原代码 density=1/(w*h)，w=x1-x0（网格坐标差，非点数），
+            # 但循环 range(x0, x1+1) 遍历 (x1-x0+1) 个点，
+            # 导致总 RUDY = (x1-x0+1)*(y1-y0+1)/((x1-x0)*(y1-y0)) > 1。
+            # 修复: 用网格点数归一化，使总 RUDY = 1。
+            # 文献: DREAMPlace RUDY, arXiv:2004.10746 §III.B
+            #   https://arxiv.org/abs/2004.10746
+            n_cells_x = x1 - x0 + 1
+            n_cells_y = y1 - y0 + 1
+            density = 1.0 / (n_cells_x * n_cells_y)
             for gx in range(x0, x1 + 1):
                 for gy in range(y0, y1 + 1):
                     rudy[(gx, gy)] = rudy.get((gx, gy), 0.0) + density
@@ -540,7 +548,18 @@ class OptoDesignerAutorouter:
         # 垂直方向单位向量
         norm = math.hypot(dx, dy)
         if norm < 1e-12:
-            return [start, end]
+            # R05 Bug 修复 v5.0-P2-R114: start==end fall-back。
+            # 原代码返回 [start, end]（长度=0），但调用方要求
+            # target_length > 0（已被上方 target_length <= direct+1e-6
+            # 检查过滤，direct=0 时 target_length>1e-6 会走到这里）。
+            # 返回零长路径违反函数契约，且无法构造 S 弯延长段。
+            # 修复: raise 明确异常（R03 禁止 fall-back）。
+            # 文献: Synopsys OptoDesigner Length-Defined Connector
+            #   https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner.html
+            raise ValueError(
+                f"start==end={start} 且 target_length={target_length}>0，"
+                f"无法为重合起终点构造指定长度的 S 弯（R03 禁止 fall-back）"
+            )
         perp_x = -dy / norm
         perp_y = dx / norm
         # S 弯振幅 = excess / 4（两个半波，总长 = 4 * 振幅）

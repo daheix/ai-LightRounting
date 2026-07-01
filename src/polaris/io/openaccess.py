@@ -188,7 +188,13 @@ def _oa_dispatch_line(
         current.shapes, current.instances = _oa_parse_geometry(
             cmd, toks, current.shapes, current.instances
         )
-    return current, i + 1, layers
+        return current, i + 1, layers
+    # R05 Bug 修复 v5.0-P2-R114: 未知命令静默跳过。
+    # 原代码 return current, i+1, layers 静默跳过未知命令，
+    # 掩盖格式错误/拼写错误，导致数据丢失而无告警。
+    # 修复: raise 明确异常（R03 禁止 fall-back）。
+    # 文献: Si2 OpenAccess 22.60 API Reference, https://si2.org/openaccess/
+    raise ValueError(f"OpenAccess 未知命令 '{cmd}': {line}")
 
 
 def _oa_register_layer(
@@ -271,12 +277,27 @@ def _oa_circle_shape(toks: list[str]) -> Shape:
 
 
 def _oa_text_shape(toks: list[str]) -> Shape:
-    """TEXT layer "text" x y → text。"""
+    """TEXT layer "text" x y → text。
+
+    R05 Bug 修复 v5.0-P2-R114: 含空格文本被截断。
+    原代码 toks = line.split()，文本含空格时（如 TEXT WG "hello world" 10 20）
+    被拆成 ['TEXT','WG','"hello','world"','10','20']，
+    toks[2].strip('"') 只取到 "hello，丢失 "world"。
+    修复: 中间部分（toks[2:-2]）合并为文本，支持含空格。
+    """
     if len(toks) < 5:
         raise ValueError(f"OpenAccess TEXT 参数不足: {toks}")
+    # toks 已由 line.split() 分词，但含空格文本被拆开。
+    # 用最后一个和倒数第二个作为坐标，中间部分（toks[2:-2]）合并为文本。
+    text_parts = toks[2:-2]
+    if not text_parts:
+        raise ValueError(f"OpenAccess TEXT 文本缺失: {toks}")
+    # 合并文本部分，去掉可能的引号
+    raw_text = " ".join(text_parts)
+    text = raw_text.strip('"')
     return Shape("text", toks[1],
                  [Point(float(toks[-2]), float(toks[-1]))],
-                 text=toks[2].strip('"'))
+                 text=text)
 
 
 def _oa_inst(toks: list[str]) -> Instance:
@@ -295,20 +316,32 @@ def _oa_inst(toks: list[str]) -> Instance:
     mag = 1.0
     i = 3
     while i < len(toks):
-        if toks[i] == "ORIGIN" and i + 2 < len(toks):
+        # R05 Bug 修复 v5.0-P2-R114: INST transform 参数不足静默跳过。
+        # 原代码条件 i+2<len(toks) 为 False 时走 else: i+=1 静默跳过，
+        # transform 字段用默认值（0.0），破坏 read→write→read 往返一致性。
+        # 修复: 对已知关键字参数不足时 raise，对未知 token raise。
+        # 文献: Si2 OpenAccess 22.60 API Reference §oaTransform
+        #   https://si2.org/openaccess/
+        if toks[i] == "ORIGIN":
+            if i + 2 >= len(toks):
+                raise ValueError(f"INST ORIGIN 参数不足（需 x y）: {toks}")
             ox, oy = float(toks[i + 1]), float(toks[i + 2])
             i += 3
-        elif toks[i] == "ANGLE" and i + 1 < len(toks):
+        elif toks[i] == "ANGLE":
+            if i + 1 >= len(toks):
+                raise ValueError(f"INST ANGLE 参数不足（需 deg）: {toks}")
             angle = float(toks[i + 1])
             i += 2
         elif toks[i] == "MIRROR":
             mirror = True
             i += 1
-        elif toks[i] == "MAG" and i + 1 < len(toks):
+        elif toks[i] == "MAG":
+            if i + 1 >= len(toks):
+                raise ValueError(f"INST MAG 参数不足（需 scale）: {toks}")
             mag = float(toks[i + 1])
             i += 2
         else:
-            i += 1
+            raise ValueError(f"INST 未知 token '{toks[i]}': {toks}")
     return Instance(
         name=name, cell_name=cell, origin=Point(ox, oy),
         angle=angle, mirror=mirror, mag=mag,

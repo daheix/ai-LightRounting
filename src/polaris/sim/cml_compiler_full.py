@@ -740,10 +740,22 @@ def make_straight_waveguide(
     # 原代码在 transmission 中又乘 1e-4，导致损耗被额外缩小 1e4 倍
     # （3 dB/cm × 100μm 应衰减 0.03 dB，bug 后仅 3e-6 dB）。
     # 参考: fdtd_simulator.py:191 np.exp(-alpha_np_per_um * length_um / 2)。
-    alpha_loss = loss_db_cm / DB_TO_NP / 1e4  # dB/cm → Np/μm
+    alpha_loss = loss_db_cm / DB_TO_NP / 1e4  # dB/cm → Np/μm（功率衰减常数）
     # 相位延迟（注意：ng 用于群速度/色散场景，单频解析模型用 neff 即可）
     phase = 2 * np.pi * neff * length_um / wavelength_um
-    transmission = np.exp(-alpha_loss * length_um - 1j * phase)
+    # R05 Bug 修复 v5.0-P1-R114: 传输系数缺少 /2，功率损耗高估 2 倍。
+    # DB_TO_NP=4.343 是功率衰减常数转换因子（= 8.686/2，1 Np = 8.686 dB 功率），
+    # 故 alpha_loss 是功率衰减常数（= 2×场衰减常数 α_field）。
+    # 场传输系数 E_out/E_in = exp(-α_field·L) = exp(-alpha_loss·L/2)。
+    # 原代码缺少 /2，导致 3dB/cm×100μm 衰减 0.06dB（应 0.03dB，高估 2 倍）。
+    # 项目内对照:
+    # - fdtd_simulator.py:191 np.exp(-alpha_np_per_um * length_um / 2)（有 /2）
+    # - models.py:180 10.0 ** (-loss_db_cm * length / 1e4 / 20.0)（/20 对应场振幅）
+    # - models_extended.py:424 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
+    # - 本文件 make_mmi_2x2:697 alpha = excess_loss_db / DB_TO_NP / 2（有 /2）
+    # 文献: Saleh & Teich, "Fundamentals of Photonics", Eq.(7.2-12)
+    #   （场振幅衰减 = exp(-α·L/2)）
+    transmission = np.exp(-alpha_loss * length_um / 2 - 1j * phase)
 
     s_matrix = np.array(
         [[[0, transmission], [transmission, 0]]],
@@ -788,20 +800,29 @@ def make_ring_resonator(
     from numpy import pi
 
     length = 2 * pi * radius_um  # 环周长 (μm)
-    alpha_loss = loss_db_cm / DB_TO_NP / 1e4  # Np/μm
-    alpha_L = alpha_loss * length
-
-    # R05 Bug 修复 v5.0-P0-2R1: 环形谐振器交叉耦合系数 bug。
-    # 标准 add-drop ring: t = sqrt(1-κ)（自耦合），r = sqrt(κ)（交叉耦合），
-    # 满足幺正性 t² + r² = 1（能量守恒，Yariv 2002 Eq.4.5）。
-    # 原代码 r = sqrt(1-kappa) 导致 t² + r² = 2(1-κ) ≠ 1，违反能量守恒。
-    # 参考: models_extended.py:429 Yariv 公式 t_i² + κ_i² = 1。
-    t = np.sqrt(1 - kappa)
-    r = np.sqrt(kappa)
+    # R05 Bug 修复 v5.0-P1-R114: 环形谐振器双重 bug（量纲错误 + 公式缺分母）。
+    # 原 alpha_loss 是功率衰减常数（DB_TO_NP=4.343 = 8.686/2），
+    # exp(-2·alpha_L) 应是单圈功率增益 exp(-2·α_field·L)，
+    # 但代码给出 exp(-4·α_field·L)（损耗高估 2 倍）。
+    # 同时 through/drop 公式缺少分母 (1 - loop_gain)，
+    # 谐振腔是反馈系统，场经无穷次环行求和必然产生分母。
+    # 能量守恒数值验证（无损 alpha_L=0, kappa=0.5, β_L=2π resonance）:
+    #   原代码: through=0.5-0.5=0, drop=0 → |through|²+|drop|²=0（能量消失）
+    #   修复后: through=(0.5-1)/(1-0.5)=−1, drop=0.5/(1-0.5)=1 → |through|²+|drop|²=2
+    #   注: 无损临界耦合时 through=-1, drop=1 是正确的（输入能量从 drop 全出）。
+    # 项目内对照: models_extended.py:424,430,451-452 Yariv 公式（含分母）。
+    # 文献: Yariv 1997 "Critical-coupling in microring" §10.5;
+    #   B. E. Little 1997 "Microring resonator filters"。
+    # 单圈场振幅增益（与 models_extended.py:424 一致）
+    a = 10.0 ** (-loss_db_cm * length / 1e4 / 20.0)  # 场振幅增益 exp(-α_field·L)
+    t = np.sqrt(1 - kappa)      # 自耦合（场）
+    kappa_c = np.sqrt(kappa)    # 交叉耦合（场）
     # 通过环的相位
-    beta_L = 2 * pi * neff * length / wavelength_um
-    through = t ** 2 - r ** 2 * np.exp(-2 * alpha_L - 1j * 2 * beta_L)
-    drop = 1j * r * t * (1 - np.exp(-alpha_L - 1j * beta_L)) * np.sqrt(1 - t ** 2)
+    phi = 2 * pi * neff * length / wavelength_um
+    # Yariv add-drop ring 公式（含分母，严格能量守恒）
+    loop = t ** 2 * a ** 2 * np.exp(-1j * 2 * phi)
+    through = (t ** 2 - a ** 2 * np.exp(-1j * 2 * phi)) / (1 - loop)
+    drop = (kappa_c ** 2 * a * np.exp(-1j * phi)) / (1 - loop)
 
     # 2-port ring: input, through, add, drop
     # 简化为 4-port: port_in, port_through, port_add, port_drop

@@ -42,17 +42,26 @@ class TestStraightWaveguideLoss:
     """验证直波导损耗计算正确（无 1e4 倍低估）。"""
 
     def test_loss_matches_fdtd_formula(self):
-        """3 dB/cm × 100μm 应衰减 ~0.03 dB（|S21|² ≈ 0.9931）。"""
+        """3 dB/cm × 100μm 应衰减 ~0.03 dB（|S21|² ≈ 0.9931）。
+
+        R05 Bug 修复 v5.0-P1-R114: 传输系数缺少 /2，功率损耗高估 2 倍。
+        原期望值 0.9931（旧 bug，高估2倍），修复后正确值 0.9966。
+        DB_TO_NP=4.343 是功率衰减常数转换因子，
+        alpha_loss 是功率衰减常数（2×场衰减常数 α_field），
+        场传输系数 = exp(-α_field·L) = exp(-alpha_loss·L/2)。
+        """
         loss_db_cm = 3.0
         length_um = 100.0
         comp = make_straight_waveguide(
             length_um=length_um, loss_db_cm=loss_db_cm, wavelength_um=1.55
         )
         s21 = comp.s_matrix[0, 0, 1]  # port 0 → port 1
-        # 预期: alpha_np_um = 3 / 4.343 / 1e4 ≈ 6.908e-5 Np/μm
-        # transmission = exp(-6.908e-5 * 100) = exp(-6.908e-3) ≈ 0.9931
+        # 预期: alpha_loss = 3 / 4.343 / 1e4 ≈ 6.908e-5 Np/μm（功率衰减常数）
+        # 场传输系数 = exp(-alpha_loss * L / 2) = exp(-6.908e-5 * 100 / 2)
+        #            = exp(-3.454e-3) ≈ 0.9966
+        # 与 fdtd_simulator.py:191 np.exp(-alpha_np_per_um * length_um / 2) 一致
         expected_alpha_np_um = loss_db_cm / 4.343 / 1e4
-        expected = np.exp(-expected_alpha_np_um * length_um)
+        expected = np.exp(-expected_alpha_np_um * length_um / 2)
         assert np.isclose(abs(s21), expected, rtol=1e-6), (
             f"|S21|={abs(s21):.6f}, expected={expected:.6f}"
         )

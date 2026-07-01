@@ -766,11 +766,18 @@ def importance_sampling_mean(
     ci_lower = mu_hat - 1.96 * se
     ci_upper = mu_hat + 1.96 * se
 
-    # ESS 诊断: 对 mean 估计（g 非零），ESS 基于加权贡献 g·W
-    # 来源: Kroese, Taimre & Botev 2011, Ch.9, DOI: 10.1002/9781118014967
-    sum_eff = float(np.sum(weighted))
-    sum_eff2 = float(np.sum(weighted * weighted))
-    ess = (sum_eff * sum_eff) / sum_eff2 if sum_eff2 > 0 else 0.0
+    # ESS 诊断: 标准 ESS 基于权重 W（衡量权重均匀性，不依赖 g 符号）。
+    # R05 Bug 修复 v5.0-P2-R114: 原代码 ESS 基于 g·W，对带符号 g 误判退化。
+    # 当 g 是带符号性能函数（如相位偏差、波长漂移可正可负）时，
+    # Σ(g·W) 可能因正负抵消而 ≈0，导致 ESS≈0 误判退化，
+    # 使本来可靠的估计被错误拒绝。
+    # 修复: 改用标准 ESS 定义（基于 W，不依赖 g 符号）。
+    # 注: importance_sampling_yield 的 ESS 基于 g·W=𝟙_A·W（g≥0）无此问题，保留。
+    # 文献: Kroese, Taimre & Botev 2011, "Handbook of Monte Carlo Methods",
+    #   Ch.9, DOI: 10.1002/9781118014967
+    sum_w = float(np.sum(weights))
+    sum_w2 = float(np.sum(weights * weights))
+    ess = (sum_w * sum_w) / sum_w2 if sum_w2 > 0 else 0.0
     ess_ratio = ess / n_samples if n_samples > 0 else 0.0
 
     if ess_ratio < min_ess_ratio:

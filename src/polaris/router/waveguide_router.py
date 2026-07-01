@@ -533,8 +533,22 @@ PLATFORM_CONSTRAINTS = {
 
 
 def get_platform_constraints(platform: str) -> dict:
-    """获取平台波导约束（弯曲半径/间距，来自 spec.md 真实参数）。"""
-    return PLATFORM_CONSTRAINTS.get(platform, PLATFORM_CONSTRAINTS["SOI"])
+    """获取平台波导约束（弯曲半径/间距，来自 spec.md 真实参数）。
+
+    R05 Bug 修复 v5.0-P1-R114: 未知平台 fall-back。
+    原代码对未知平台静默返回 SOI 约束，与同文件第 663-669 行
+    _PLATFORM_LOSS_DB_CM 对未知平台 raise 的策略矛盾。
+    调用方传错平台名（如 "SOI1"/"silicon"）时，会用错误的 SOI 弯曲半径
+    （5μm）而非目标平台约束布线，违反 R02 学术诚信（错误物理参数）。
+    修复: 与 _PLATFORM_LOSS_DB_CM 处理对齐，raise 明确异常。
+    """
+    if platform not in PLATFORM_CONSTRAINTS:
+        raise KeyError(
+            f"未定义平台 '{platform}' 的波导约束 (弯曲半径/间距)。"
+            f"已知平台: {sorted(PLATFORM_CONSTRAINTS.keys())}。"
+            f"R03 禁止 fall-back: 禁止静默返回 SOI 约束掩盖配置错误。"
+        )
+    return PLATFORM_CONSTRAINTS[platform]
 
 
 @dataclass
