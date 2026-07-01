@@ -47,6 +47,35 @@ class TestFDTDBackendAvailability:
         assert isinstance(backends, list)
         assert len(backends) >= 1  # 至少有 ANALYTICAL
 
+    def test_no_fallback_in_availability_checks(self):
+        """R03 回归测试：可用性检测函数不得使用 except:return False 兜底。
+
+        验证 is_meep_available / is_tidy3d_available 使用 importlib.util.find_spec
+        而非 try/except ImportError 后 return False 的 fall-back 写法。
+        """
+        import ast
+        import inspect
+        import polaris.sim.fdtd_simulator as mod
+
+        src = inspect.getsource(mod)
+        # 探测函数应使用 find_spec
+        assert "find_spec" in src, "可用性检测应使用 importlib.util.find_spec"
+        # AST 精确检查：禁止 except handler 体为 return False 的 fall-back
+        tree = ast.parse(src)
+        violations = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ExceptHandler):
+                for stmt in node.body:
+                    if (
+                        isinstance(stmt, ast.Return)
+                        and isinstance(stmt.value, ast.Constant)
+                        and stmt.value.value is False
+                    ):
+                        violations.append(node.lineno)
+        assert not violations, (
+            f"fdtd_simulator 第 {violations} 行存在 except:return False fall-back（R03）"
+        )
+
 
 class TestFDTDConfig:
     """FDTD 配置测试。"""

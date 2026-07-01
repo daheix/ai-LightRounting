@@ -21,6 +21,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import logging
 import sys
 from dataclasses import dataclass, field
@@ -200,28 +201,23 @@ def is_meep_available() -> bool:
     """检查 MEEP 是否可用。
 
     Returns:
-        True 若 meep 已安装且可 import。
+        True 若 meep 已安装（importlib.find_spec 能定位到模块）。
     """
-    try:
-        import meep  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    # R03 合规：用 importlib.util.find_spec 做轻量探测，
+    # 避免 except ImportError: return False 的 fall-back 写法。
+    # find_spec 是 Python 官方推荐的模块存在性检测方法
+    # （https://docs.python.org/3/library/importlib.html#importlib.util.find_spec）。
+    # 真正使用后端时才实际 import，若 import 失败由调用方 fail-fast raise。
+    return importlib.util.find_spec("meep") is not None
 
 
 def is_tidy3d_available() -> bool:
     """检查 Tidy3D 是否可用。
 
     Returns:
-        True 若 tidy3d 已安装且可 import。
+        True 若 tidy3d 已安装（importlib.find_spec 能定位到模块）。
     """
-    try:
-        import tidy3d  # noqa: F401
-
-        return True
-    except ImportError:
-        return False
+    return importlib.util.find_spec("tidy3d") is not None
 
 
 def get_available_backends() -> list[FDTDBackend]:
