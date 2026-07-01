@@ -184,107 +184,20 @@ def boolean_operation(
     - KLayout DRC Boolean: https://klayout.org/downloads/master/doc-qt5/about/drc_ref_layer.html
     """
     db = _import_klayout_db()
-    in_path = Path(gds_path)
-    out_path = Path(output_path)
-
-    if not in_path.exists():
-        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {gds_path}")
-
-    op = operation.lower()
-    if op not in VALID_OPERATIONS:
-        raise ValueError(
-            f"不支持的 operation: {operation}。"
-            f"支持: {VALID_OPERATIONS}。禁止 fall-back（R03）。"
-        )
-
-    la_layer, la_dt = _validate_layer(layer_a, "layer_a")
-    lb_layer, lb_dt = _validate_layer(layer_b, "layer_b")
-    lr_layer, lr_dt = _validate_layer(layer_result, "layer_result")
-
-    # and/or/xor 自身无意义，not 会清零
-    if (la_layer, la_dt) == (lb_layer, lb_dt):
-        raise ValueError(
-            f"layer_a 和 layer_b 不能相同: {(la_layer, la_dt)}。"
-            f"禁止 fall-back（R03）。"
-        )
-    # 结果层不能等于操作数层（避免覆盖）
-    if (lr_layer, lr_dt) == (la_layer, la_dt):
-        raise ValueError(
-            f"layer_result 不能等于 layer_a: {(lr_layer, lr_dt)}。"
-            f"禁止 fall-back（R03）。"
-        )
-    if (lr_layer, lr_dt) == (lb_layer, lb_dt):
-        raise ValueError(
-            f"layer_result 不能等于 layer_b: {(lr_layer, lr_dt)}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    # 读取 GDSII
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
-    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
-    # 获取/验证层
-    li_a = _find_or_raise_layer(ly, la_layer, la_dt, gds_path, "layer_a")
-    li_b = _find_or_raise_layer(ly, lb_layer, lb_dt, gds_path, "layer_b")
-    li_r = ly.layer(lr_layer, lr_dt)
-
-    # 提取 Region（递归遍历所有子 cell）
-    # db.Region(top_cell.begin_shapes_rec(layer_index))
-    # 来源: https://klayout.org/klayout-pypi/overview/geometry/regions/
-    r_a = db.Region(top_cell.begin_shapes_rec(li_a))
-    r_b = db.Region(top_cell.begin_shapes_rec(li_b))
-
-    area_a_um2 = float(r_a.area()) * dbu * dbu
-    area_b_um2 = float(r_b.area()) * dbu * dbu
-    count_a = int(r_a.count())
-    count_b = int(r_b.count())
-
-    # 执行布尔运算
-    if op == "and":
-        r_result = r_a & r_b
-    elif op == "or":
-        # OR: + 合并，merged 去重叠
-        r_result = (r_a + r_b).merged()
-    elif op == "not":
-        r_result = r_a - r_b
-    else:  # xor
-        r_result = r_a ^ r_b
-
-    area_result_um2 = float(r_result.area()) * dbu * dbu
-    count_result = int(r_result.count())
-
-    # 结果 bbox
-    bbox_result: tuple[tuple[float, float], tuple[float, float]] | None = None
-    if count_result > 0:
-        bbox = r_result.bbox()
-        bbox_result = (
-            (float(bbox.left) * dbu, float(bbox.bottom) * dbu),
-            (float(bbox.right) * dbu, float(bbox.top) * dbu),
-        )
-
-    # 将结果插入 layer_result
+    in_path, out_path, op, layers = _validate_boolean_params(
+        gds_path, output_path, operation, layer_a, layer_b, layer_result
+    )
+    la_layer, la_dt, lb_layer, lb_dt, lr_layer, lr_dt = layers
+    ly, dbu, top_cell, li_a, li_b, li_r = _setup_boolean_layout(
+        db, in_path, gds_path, top_cell_name,
+        la_layer, la_dt, lb_layer, lb_dt, lr_layer, lr_dt,
+    )
+    r_result, op_stats, bbox_result = _compute_boolean_result(
+        db, top_cell, op, li_a, li_b, dbu
+    )
+    area_a_um2, area_b_um2, count_a, count_b, area_result_um2, count_result = op_stats
     top_cell.shapes(li_r).insert(r_result)
-
-    # 写出
-    try:
-        ly.write(str(out_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    _write_boolean_gdsii(ly, out_path, output_path)
     logger.info(
         "GDSII 布尔运算 %s: %s → %s (%d,%d)&(%d,%d)→(%d,%d), "
         "area_a=%.4f μm², area_b=%.4f μm², area_result=%.4f μm², "
@@ -293,7 +206,6 @@ def boolean_operation(
         la_layer, la_dt, lb_layer, lb_dt, lr_layer, lr_dt,
         area_a_um2, area_b_um2, area_result_um2, count_result,
     )
-
     return BooleanReport(
         input_path=str(gds_path),
         output_path=str(output_path),
@@ -311,6 +223,141 @@ def boolean_operation(
         bbox_result=bbox_result,
         top_cell_name=str(top_cell.name),
     )
+
+
+def _validate_boolean_params(
+    gds_path, output_path, operation, layer_a, layer_b, layer_result,
+) -> tuple:
+    """校验 boolean_operation 入参（R340 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (in_path, out_path, op, (la_layer, la_dt, lb_layer, lb_dt, lr_layer, lr_dt))。
+    """
+    in_path = Path(gds_path)
+    out_path = Path(output_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {gds_path}")
+    op = operation.lower()
+    if op not in VALID_OPERATIONS:
+        raise ValueError(
+            f"不支持的 operation: {operation}。"
+            f"支持: {VALID_OPERATIONS}。禁止 fall-back（R03）。"
+        )
+    la_layer, la_dt = _validate_layer(layer_a, "layer_a")
+    lb_layer, lb_dt = _validate_layer(layer_b, "layer_b")
+    lr_layer, lr_dt = _validate_layer(layer_result, "layer_result")
+    # and/or/xor 自身无意义，not 会清零
+    if (la_layer, la_dt) == (lb_layer, lb_dt):
+        raise ValueError(
+            f"layer_a 和 layer_b 不能相同: {(la_layer, la_dt)}。"
+            f"禁止 fall-back（R03）。"
+        )
+    # 结果层不能等于操作数层（避免覆盖）
+    if (lr_layer, lr_dt) == (la_layer, la_dt):
+        raise ValueError(
+            f"layer_result 不能等于 layer_a: {(lr_layer, lr_dt)}。"
+            f"禁止 fall-back（R03）。"
+        )
+    if (lr_layer, lr_dt) == (lb_layer, lb_dt):
+        raise ValueError(
+            f"layer_result 不能等于 layer_b: {(lr_layer, lr_dt)}。"
+            f"禁止 fall-back（R03）。"
+        )
+    return in_path, out_path, op, (la_layer, la_dt, lb_layer, lb_dt, lr_layer, lr_dt)
+
+
+def _setup_boolean_layout(
+    db, in_path, gds_path, top_cell_name,
+    la_layer, la_dt, lb_layer, lb_dt, lr_layer, lr_dt,
+) -> tuple:
+    """读取 GDSII + 定位顶层 cell + 查找/创建层（R340 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, top_cell, li_a, li_b, li_r)。
+
+    来源: KLayout Region https://klayout.org/klayout-pypi/overview/geometry/regions/
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    li_a = _find_or_raise_layer(ly, la_layer, la_dt, gds_path, "layer_a")
+    li_b = _find_or_raise_layer(ly, lb_layer, lb_dt, gds_path, "layer_b")
+    li_r = ly.layer(lr_layer, lr_dt)
+    return ly, dbu, top_cell, li_a, li_b, li_r
+
+
+def _compute_boolean_result(db, top_cell, op, li_a, li_b, dbu) -> tuple:
+    """提取 Region、执行布尔运算、计算统计（R340 内部辅助）。
+
+    Returns:
+        (r_result, (area_a_um2, area_b_um2, count_a, count_b,
+                    area_result_um2, count_result), bbox_result)。
+
+    来源: KLayout DRC Boolean
+        https://klayout.org/downloads/master/doc-qt5/about/drc_ref_layer.html
+    """
+    # db.Region(top_cell.begin_shapes_rec(layer_index)) 递归遍历所有子 cell
+    r_a = db.Region(top_cell.begin_shapes_rec(li_a))
+    r_b = db.Region(top_cell.begin_shapes_rec(li_b))
+    area_a_um2 = float(r_a.area()) * dbu * dbu
+    area_b_um2 = float(r_b.area()) * dbu * dbu
+    count_a = int(r_a.count())
+    count_b = int(r_b.count())
+    r_result = _apply_boolean_operator(db, op, r_a, r_b)
+    area_result_um2 = float(r_result.area()) * dbu * dbu
+    count_result = int(r_result.count())
+    bbox_result = _compute_result_bbox(r_result, dbu, count_result)
+    op_stats = (area_a_um2, area_b_um2, count_a, count_b,
+                area_result_um2, count_result)
+    return r_result, op_stats, bbox_result
+
+
+def _apply_boolean_operator(db, op: str, r_a, r_b):
+    """根据 op 执行对应布尔运算（R340 内部辅助）。
+
+    来源: Boolean operations on polygons
+        https://en.wikipedia.org/wiki/Boolean_operations_on_polygons
+    """
+    if op == "and":
+        return r_a & r_b
+    if op == "or":
+        # OR: + 合并，merged 去重叠
+        return (r_a + r_b).merged()
+    if op == "not":
+        return r_a - r_b
+    # xor
+    return r_a ^ r_b
+
+
+def _compute_result_bbox(r_result, dbu: float, count_result: int):
+    """计算结果 Region 的 bbox（R340 内部辅助）。"""
+    if count_result <= 0:
+        return None
+    bbox = r_result.bbox()
+    return (
+        (float(bbox.left) * dbu, float(bbox.bottom) * dbu),
+        (float(bbox.right) * dbu, float(bbox.top) * dbu),
+    )
+
+
+def _write_boolean_gdsii(ly, out_path, output_path) -> None:
+    """写出布尔运算结果 GDSII（R340 内部辅助，R03 禁止 fall-back）。"""
+    try:
+        ly.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
 
 
 # =============================================================================
