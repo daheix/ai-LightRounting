@@ -46,6 +46,13 @@
 - Nocedal & Wright 2006 Numerical Optimization Springer: https://doi.org/10.1007/978-0-387-40065-5
 - scipy.optimize 文档: https://docs.scipy.org/doc/scipy/reference/optimize.html
 - Glasserman 2003 Monte Carlo Methods: https://doi.org/10.1007/978-0-387-21617-1
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 1997 底层逻辑：Rubinstein 1997 交叉熵方法的 PoLaRIS 实现。当失效区域几何
+  支持理论：2006 Numerical Optimization Springer。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

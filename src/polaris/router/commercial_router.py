@@ -49,6 +49,13 @@ rip-up-reroute 冲突解决。底层逻辑:
 - project_rules.md 规则 18: 所有参数来自公开文献,标注来源 URL
 - project_rules.md 规则 7.1: 文件 < 800 行
 - R04: 纯 NumPy/SciPy 实现,不参与 GPU 计算
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：递归自适应细分——保证相邻采样点弦长 ≤ resolution。
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

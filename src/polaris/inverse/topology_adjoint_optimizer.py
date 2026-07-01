@@ -50,6 +50,13 @@ TopologyAdjointOptimizer 以消除命名冲突（R05 设计 Bug 修复）。
   支持理论：2017 (Nature; 1968 (Fourier Optics): "Introduction to Fourier Optics; 2000 SIAM。
   案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
 
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 2018 底层逻辑：JAX autograd 与伴随方法数学等价（Hughes 2018），
+  支持理论：2017 (Nature; 1968 (Fourier Optics): "Introduction to Fourier Optics; 2000 SIAM。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

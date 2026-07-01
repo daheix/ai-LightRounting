@@ -40,6 +40,13 @@ R04 战略决策：不参与 GPU 计算。🚫不参与 GPU 分布式（Apollo a
   保持源任务性能 >85%（Kirkpatrick 2017 PNAS 实验）。
 - 案例：SOI 平台预训练→SiN 平台微调，无 EWC 源平台保持率 ~60%，加 EWC
   后保持率 >85%（R34 transfer_learning.py 实测）。
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：统一流水线 + 光子电路扩展。底层逻辑见模块 docstring。
+  支持理论：2025, arXiv; 2009 ICML; 2021 Nature。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

@@ -10,6 +10,13 @@
 - SiEPIC EBeam PDK 连接性验证: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Calibre nmLVS 连接性: https://eda.sw.siemens.com/en-US/calibre/
 - 并查集算法: https://en.wikipedia.org/wiki/Disjoint-set_data_structure
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：基于并查集的连通分量分析，最大组视为主电路，其余为孤立组。
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

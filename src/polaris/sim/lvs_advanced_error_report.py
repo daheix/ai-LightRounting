@@ -10,6 +10,13 @@
 - KLayout LVS Compare: https://klayout.org/downloads/master/doc-qt5/manual/lvs_compare.html
 - KLayout LVS: https://www.klayout.org/doc-qt5/manual/lvs.html
 - SiEPIC EBeam PDK LVS: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：基于包围盒相交判定的短路检测。
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

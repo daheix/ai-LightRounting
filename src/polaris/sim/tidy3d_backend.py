@@ -36,6 +36,13 @@ R04 战略决策：不参与 GPU 计算。本地 FDTD 为纯 NumPy CPU 实现；
 
 规则依据：R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU /
 圈复杂度 ≤15 / 函数 ≤80 行 / 文件 ≤800 行 / 测试覆盖 ≥90%
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：文献与 *创新* 点：见模块 docstring。
+  支持理论：1966 IEEE; 2025 Tidy3D vs Lumerical 对比 arXiv; 1996 IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

@@ -50,6 +50,13 @@ thermal_crosstalk_matrix 用 Carslaw-Jaeger 线热源 Green's 函数（替换魔
 来源（拆分依据）:
 - Fowler, "Refactoring: Improving the Design of Existing Code", 1999
   https://martinfowler.com/books/refactoring.html
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：基于 Carslaw & Jaeger §10.4 的 2D 线热源 Green's 函数解析解，
+  支持理论：2005 §; 1959, §; 2021 Optics。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

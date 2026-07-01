@@ -96,6 +96,17 @@ AlphaChip / DREAMPlace 能力，覆盖五个方向：
   支持理论：1970, IEEE。
   案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
 
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：hierarchical placement——将画布按 K 分区切分，每个图分区独立
+  支持理论：1970, IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
+- 2010 底层逻辑：光子时序——τ = n_g·L/c（Reed 2010），slack = target - τ，
+  支持理论：1970, IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

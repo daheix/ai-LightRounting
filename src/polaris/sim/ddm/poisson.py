@@ -42,6 +42,17 @@ R01 方案检索记录（规则 1）：
 
 规则依据：project_rules.md 规则 14（禁止 fall-back，失败 raise）
 /规则 18（学术诚信）/规则 26（GPU 不参与，纯 numpy/scipy CPU）。
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：复用：牛顿法求解非线性 Poisson-Boltzmann 时，Laplacian A 在
+  支持理论：1984 §; 1983 SIAM; 1969 IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
+- 创新 底层逻辑：统一处理所有 4 个方向，向量化 COO 追加：相比 LIL 行替换，
+  支持理论：1984 §; 1983 SIAM; 1969 IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

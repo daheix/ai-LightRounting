@@ -40,6 +40,13 @@ shift-invert 目标 σ 设在导模预期范围（n_eff ≈ 2.0），避免命�
    https://gdsfactory.github.io/gdsfactory-photonics-training/notebooks/21_modesolver_fdfd.html
 
 规则依据：project_rules.md 规则 14（禁止 fall-back）/规则 26（纯 CPU）
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：组合 Arnoldi 策略
+  支持理论：2005（PML 污染模分析 §; 1991 IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

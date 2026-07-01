@@ -15,6 +15,21 @@
   https://optics.ansys.com/hc/en-us/articles/360042800213
 - Yeh, "Optical Waves in Layered Media", Wiley 2005
   https://www.wiley.com/en-us/Optical+Waves+in+Layered+Media-p-9780471731924
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：分类策略（*创新*：基于包围盒长宽比 + 顶点数 + 面积比的几何分类器）：
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
+- 创新 底层逻辑：通过比较两端宽度判断直波导 vs 锥形波导。
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
+- 360 底层逻辑：排序后求相邻角度最大间隙，360 - max_gap 即跨度。
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

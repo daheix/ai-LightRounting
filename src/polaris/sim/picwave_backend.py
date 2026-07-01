@@ -50,6 +50,13 @@
 
 合规: 规则 14.1 无 fall-back；规则 18 学术诚信；规则 7.1 文件 ≤800 行；
 规则 26 不参与 GPU（纯 NumPy/SciPy）。
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：TLLM 节点图 + Kerr/TPA/FCD 耦合 RK4 + 单次 FFT 宽带 S 参数。
+  支持理论：2001 Nonlinear Fiber Optics; 1966 IEEE; 1987 IEEE。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

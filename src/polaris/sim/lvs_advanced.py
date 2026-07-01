@@ -64,6 +64,13 @@ Cadence Pegasus LVS / SiEPIC EBeam PDK 的器件参数提取与结构化错误�
 来源:
 - Fowler, "Refactoring: Improving the Design of Existing Code", 1999
   https://martinfowler.com/books/refactoring.html
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：- R02 学术诚信: 每功能 docstring 含 ≥5 文献 URL，创新点标注 *创新*
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

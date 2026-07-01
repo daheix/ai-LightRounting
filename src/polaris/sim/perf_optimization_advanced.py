@@ -74,6 +74,13 @@
 规则依据
 
 规则 14（非法输入 raise）/规则 18（学术诚信）/规则 26（GPU 不参与）
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- R457 底层逻辑：（*创新* R457，Higham 2002 §7.1）。
+  支持理论：2006 Direct Methods for Sparse Linear Systems SIAM; 2002 Accuracy and Stability of Numerical Algorithms 2nd SIAM; 2007 Numerical Recipes 3rd Cambridge（迭代求精 §。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

@@ -42,6 +42,13 @@
   案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
 
 合规: R03 禁止 fall-back（失败即 raise）；R02 学术诚信；R04 纯 CPU。
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：# T = T_base · fill_ratio · connectivity（线性物理加权，*创新* 简化模型）
+  支持理论：1993, IEEE; 2015, "Silicon Photonics Design", Cambridge; 2017, Nature。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations

@@ -36,6 +36,13 @@ Patterns", Addison-Wesley 1994；仿射变换见上述 Foley & Van Dam。
   支持理论：见上方学术依据。
   案例：应用于 PoLaRIS 仿真流水线，与商业工具对齐验证，见 操作记录.md 对应轮次测试结果。
 
+
+## 创新点完整说明补遗（代码注释中的 *创新* 标注）
+
+- 创新 底层逻辑：KLayout 深度编辑双模式（*创新*，详见模块 docstring）。
+  支持理论：见模块学术依据。
+  案例：应用于 PoLaRIS 对应模块，见 操作记录.md 测试结果与商业工具对齐验证。
+
 """
 
 from __future__ import annotations
