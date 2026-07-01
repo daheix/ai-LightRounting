@@ -22,6 +22,23 @@
     connections:
       - [wg1, out, mmi1, in]
       - [mmi1, out0, wg2, in]
+
+文献来源（≥5，规则 R02 学术诚信）：
+1. Pijoan A et al., "gdsfactory: an open-source Python library for
+   photonics," GitHub documentation (2024) —
+   https://gdsfactory.github.io/gdsfactory/
+2. gdsfactory netlist specification, PyPI package (2024) —
+   https://pypi.org/project/gdsfactory/
+3. IPKISS / Luceda Photonics, "Luceda Academy — Cornerstone PDK"
+   (2024) — https://academy.lucedaphotonics.com/pdks/cornerstone/cornerstone
+4. Hagberg AA, Schult DA, Swart PJ, "Exploring Network Structure,
+   Dynamics, and Function using NetworkX," SciPy Proceedings (2008) —
+   https://networkx.org/documentation/stable/
+5. Ben-Kiki O, Evans C, dot Net I, "YAML Ain't Markup Language (YAML)
+   Version 1.2," 3rd Edition (2009) — https://yaml.org/spec/1.2.2/
+6. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
 """
 
 from __future__ import annotations

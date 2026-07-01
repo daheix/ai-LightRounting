@@ -16,6 +16,26 @@
 - LNOI 综述: Zhang et al., "Lithium niobate on insulator", Light Sci Appl 2024
 - 教科书: Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
 
+## 文献来源（≥5，规则 R02 学术诚信）
+
+1. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
+2. SiEPIC EBeam PDK (MIT, UBC, 2023) — 开源器件库与工艺参数。
+   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+3. Reed GT, Mashanovich G, Gardes FY, Thomson DJ, "Silicon optical
+   modulators," Nature Photonics 4, 518-526 (2010) —
+   https://doi.org/10.1038/nphoton.2010.179
+4. Zhang Z, Wang J, Cheng P, "Lithium niobate on insulator (LNOI) for
+   next-generation integrated photonics," Light Sci. Appl. (2024) —
+   https://doi.org/10.1038/s41377-023-01355-6
+5. GlobalFoundries, "GlobalFoundries Introduces Monolithic Photonics
+   Platform (GF Fotonix)" (2022) —
+   https://www.globalfoundries.com/en/press-release/globalfoundries-introduces-monolithic-photonics-platform
+6. Hoefler GE et al., "Foundry Development of System-on-Chip InP-based
+   Photonic Integrated Circuits," IEEE JSTQE 25(6), 1-13 (2019) —
+   https://doi.org/10.1109/JSTQE.2019.2906270
+
 ## 合规性: 规则 4.1（直接集成不复刻）/ 7.1（<500 行）/ 18（参数来自开源仓库）
 """
 
