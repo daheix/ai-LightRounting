@@ -128,20 +128,28 @@ class TransientHeatConfig:
     save_every: int = 1
 
     def __post_init__(self) -> None:
-        if self.rho_arr.shape != self.heat_config.k_arr.shape:
+        self._validate_field_shapes()
+        self._validate_time_params()
+        self._validate_t_initial()
+
+    def _validate_field_shapes(self) -> None:
+        """校验 rho_arr/cp_arr 形状与正值约束（R627 Extract Method）。"""
+        k_shape = self.heat_config.k_arr.shape
+        if self.rho_arr.shape != k_shape:
             raise ValueError(
-                f"rho_arr {self.rho_arr.shape} 与 k_arr "
-                f"{self.heat_config.k_arr.shape} 形状不匹配"
+                f"rho_arr {self.rho_arr.shape} 与 k_arr {k_shape} 形状不匹配"
             )
-        if self.cp_arr.shape != self.heat_config.k_arr.shape:
+        if self.cp_arr.shape != k_shape:
             raise ValueError(
-                f"cp_arr {self.cp_arr.shape} 与 k_arr "
-                f"{self.heat_config.k_arr.shape} 形状不匹配"
+                f"cp_arr {self.cp_arr.shape} 与 k_arr {k_shape} 形状不匹配"
             )
         if not np.all(np.isfinite(self.rho_arr)) or np.any(self.rho_arr <= 0.0):
             raise ValueError("rho_arr 须全为有限正值（密度物理约束）")
         if not np.all(np.isfinite(self.cp_arr)) or np.any(self.cp_arr <= 0.0):
             raise ValueError("cp_arr 须全为有限正值（热容物理约束）")
+
+    def _validate_time_params(self) -> None:
+        """校验时间参数 t_final/dt/save_every（R627 Extract Method）。"""
         if self.t_final <= 0.0:
             raise ValueError(f"t_final 须 > 0，实际 {self.t_final}")
         if self.dt <= 0.0:
@@ -152,7 +160,10 @@ class TransientHeatConfig:
             )
         if self.save_every < 1:
             raise ValueError(f"save_every 须 ≥ 1，实际 {self.save_every}")
-        # 初始温度场校验与广播
+
+    def _validate_t_initial(self) -> None:
+        """校验并广播初始温度场（R627 Extract Method）。"""
+        k_shape = self.heat_config.k_arr.shape
         if np.isscalar(self.t_initial):
             t0 = float(self.t_initial)
             if not np.isfinite(t0):
@@ -160,14 +171,13 @@ class TransientHeatConfig:
             object.__setattr__(
                 self,
                 "t_initial",
-                np.full(self.heat_config.k_arr.shape, t0, dtype=float),
+                np.full(k_shape, t0, dtype=float),
             )
         else:
             t0_arr = np.asarray(self.t_initial, dtype=float)
-            if t0_arr.shape != self.heat_config.k_arr.shape:
+            if t0_arr.shape != k_shape:
                 raise ValueError(
-                    f"t_initial {t0_arr.shape} 与 k_arr "
-                    f"{self.heat_config.k_arr.shape} 形状不匹配"
+                    f"t_initial {t0_arr.shape} 与 k_arr {k_shape} 形状不匹配"
                 )
             if not np.all(np.isfinite(t0_arr)):
                 raise ValueError("t_initial 含非有限值")

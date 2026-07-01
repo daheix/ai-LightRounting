@@ -355,6 +355,58 @@ def _vertical_overlap(
 # ============================================================
 
 
+def _collect_shape_infos(region, dbu: float) -> list[tuple]:
+    """收集 WG 层所有形状的尺寸信息（R627 Extract Method）。
+
+    Returns:
+        [(index, bbox, width, length, aspect), ...]
+    """
+    shapes_info: list[tuple[int, tuple[float, float, float, float], float, float, float]] = []
+    for i, shape in enumerate(region.each()):
+        bbox = _bbox_um(shape, dbu)
+        w = bbox[2] - bbox[0]
+        h = bbox[3] - bbox[1]
+        width = min(w, h)
+        length = max(w, h)
+        aspect = length / max(width, 1e-12)
+        shapes_info.append((i, bbox, width, length, aspect))
+    return shapes_info
+
+
+def _is_mmi_candidate(width: float, length: float, aspect: float) -> bool:
+    """判断形状是否为 MMI 多模区候选（R627 Extract Method）。"""
+    if width < 1.5 or aspect > 10 or aspect < 0.5:
+        return False
+    if length < 2.0:
+        return False
+    return True
+
+
+def _count_mmi_ports(
+    i: int, bbox: tuple, shapes_info: list[tuple], used_narrow: set[int]
+) -> tuple[int, int]:
+    """统计 MMI 候选区的输入/输出端口数（R627 Extract Method）。
+
+    Returns:
+        (input_ports, output_ports)。
+    """
+    input_ports = 0
+    output_ports = 0
+    for j, nbbox, nw, _nl, _na in shapes_info:
+        if j == i or j in used_narrow:
+            continue
+        if nw >= 1.5:
+            continue
+        side = _which_side(bbox, nbbox, tolerance=1.0)
+        if side == "left":
+            input_ports += 1
+            used_narrow.add(j)
+        elif side == "right":
+            output_ports += 1
+            used_narrow.add(j)
+    return input_ports, output_ports
+
+
 def extract_mmis(gds_path: str | Path) -> list[MMIParams]:
     """从 GDS 提取 MMI 参数（R183）。
 
@@ -394,38 +446,15 @@ def extract_mmis(gds_path: str | Path) -> list[MMIParams]:
     if region.is_empty():
         raise RuntimeError("WG 层为空，无法提取 MMI（R03 禁止 fall-back）")
 
-    shapes_info: list[tuple[int, tuple[float, float, float, float], float, float, float]] = []
-    for i, shape in enumerate(region.each()):
-        bbox = _bbox_um(shape, dbu)
-        w = bbox[2] - bbox[0]
-        h = bbox[3] - bbox[1]
-        width = min(w, h)
-        length = max(w, h)
-        aspect = length / max(width, 1e-12)
-        shapes_info.append((i, bbox, width, length, aspect))
+    shapes_info = _collect_shape_infos(region, dbu)
 
     results: list[MMIParams] = []
     used_narrow: set[int] = set()
     for entry in shapes_info:
         i, bbox, width, length, aspect = entry
-        if width < 1.5 or aspect > 10 or aspect < 0.5:
+        if not _is_mmi_candidate(width, length, aspect):
             continue
-        if length < 2.0:
-            continue
-        input_ports = 0
-        output_ports = 0
-        for j, nbbox, nw, _nl, _na in shapes_info:
-            if j == i or j in used_narrow:
-                continue
-            if nw >= 1.5:
-                continue
-            side = _which_side(bbox, nbbox, tolerance=1.0)
-            if side == "left":
-                input_ports += 1
-                used_narrow.add(j)
-            elif side == "right":
-                output_ports += 1
-                used_narrow.add(j)
+        input_ports, output_ports = _count_mmi_ports(i, bbox, shapes_info, used_narrow)
         if input_ports == 0 and output_ports == 0:
             continue
         results.append(
