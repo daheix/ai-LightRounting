@@ -9,6 +9,20 @@ PoLaRIS 使用 ``<device>`` 简短命名。本模块提供双向映射，使 PoL
 - ubcpdk (MIT): https://github.com/gdsfactory/ubc
 - 真实版图验证: data/benchmarks/siepic_examples/RingResonator.gds
 
+补充文献（≥5，规则 R02 学术诚信）：
+1. SiEPIC EBeam PDK, "Open-source Silicon Photonics PDK (MIT/UBC)"
+   — https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+2. ubcpdk, "University of British Columbia Photonics PDK for gdsfactory"
+   — https://github.com/gdsfactory/ubc
+3. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
+4. gdsfactory, "Python library for photonics layout and GDSII generation"
+   — https://gdsfactory.github.io/gdsfactory/
+5. Luceda Photonics, "IPKISS / Cornerstone PDK documentation" —
+   https://academy.lucedaphotonics.com/pdks/cornerstone/cornerstone
+6. KLayout, "Open-source GDSII viewer and editor" — https://www.klayout.de/
+
 真实 SiEPIC 器件名（从 RingResonator.gds 提取）:
 - ebeam_y_1550: Y 分支（1x2 功分器）
 - ebeam_gc_te1550: TE 1550nm 光栅耦合器

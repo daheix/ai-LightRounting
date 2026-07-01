@@ -9,6 +9,22 @@
 - Farin, "Curves and Surfaces for CAGD", 5th ed., 2002（贝塞尔曲线
   Bernstein 多项式）
 
+补充文献（≥5，规则 R02 学术诚信）：
+1. Synopsys, "Photonic Solutions — PIC Design Suite Datasheet" —
+   https://www.synopsys.com/content/dam/synopsys/photonic-solutions/pdf/photonic-solutions-pic-design-suite-ds.pdf
+2. Synopsys, "OptoDesigner — Mode-Division Multiplexing for Silicon
+   Photonic Network-on-Chip" —
+   https://www.synopsys.com/photonic-solutions/product-applications/coherent-fiber-optic/mode-division-multiplexing-silicon-photonic-network.html
+3. Synopsys, "QPSK Transceiver PIC Design with OptoDesigner" —
+   https://www.synopsys.com/photonic-solutions/product-applications/photonic-integrated-circuits/qpsk-transceiver-pic.html
+4. Synopsys, "PIC Design Suite — OptoDesigner" —
+   https://www.synopsys.com/photonic-solutions/pic-design-suite.html#optodesigner
+5. Synopsys, "Photonic Solutions e-News December 2023 — flexConnector"
+   — https://www.synopsys.com/photonic-solutions/e-news/2023-december.html
+6. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
+
 ## 合规性
 
 - project_rules.md 规则 14.1: 禁止 fall-back / 假数据 / mock

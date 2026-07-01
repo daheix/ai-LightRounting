@@ -8,6 +8,21 @@
   来源: https://academy.lucedaphotonics.com/pdks/cornerstone/cornerstone
 - gdsfactory 组件 metadata 中保留 foundry 与文献信息
   来源: https://pypi.org/project/gdsfactory/4.4.14/
+
+补充文献（≥5，规则 R02 学术诚信）：
+1. Luceda Photonics, "IPKISS / Cornerstone PDK documentation" —
+   https://academy.lucedaphotonics.com/pdks/cornerstone/cornerstone
+2. gdsfactory, "Python library for photonics layout (PyPI)" —
+   https://pypi.org/project/gdsfactory/4.4.14/
+3. SiEPIC EBeam PDK, "Open-source Silicon Photonics PDK (MIT/UBC)" —
+   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+4. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Devices
+   to Systems," Cambridge University Press (2015) —
+   https://www.cambridge.org/9781107085459
+5. gdsfactory docs, "Component metadata and source tracking" —
+   https://gdsfactory.github.io/gdsfactory/
+6. Smart Photonics, "InP Photonics Foundry — Process Design Kit"
+   (2024) — https://smartphotonics.nl/
 """
 
 from __future__ import annotations
