@@ -112,9 +112,8 @@ __all__ = [
 # 单元测试（冒烟测试，保留入口）
 # =============================================================================
 
-def _test() -> None:
-    """冒烟测试。"""
-    # Test 1: TCAD-Aware
+def _test_tcad_aware() -> None:
+    """Test 1: TCAD-Aware 器件模型冒烟测试（Extract Method）。"""
     tcad = TCADAwareModel()
     # 等离子体色散
     dn, da = tcad.plasma_dispersion_index_change(
@@ -135,7 +134,9 @@ def _test() -> None:
     print(f"TCAD: Vπ={mod['V_pi_V']:.2f}V ({mod['V_pi_L_V_cm']:.3f}V·cm), "
           f"PD R={pd['responsivity_A_W']:.3f}A/W, BW={pd['bandwidth_ghz_est']:.1f}GHz")
 
-    # Test 2: Thermal Solver
+
+def _test_thermal_solver() -> None:
+    """Test 2: Thermal Solver 热仿真冒烟测试（Extract Method）。"""
     layers = [
         ThermalLayer("substrate", 500.0, 148.0),  # Si 衬底
         ThermalLayer("buried_oxide", 2.0, 1.4),  # BOX
@@ -144,7 +145,7 @@ def _test() -> None:
         ThermalLayer("heater", 0.1, 1.0, True, 0.5),  # TiN 加热器 (mW/μm)
     ]
     ts = ThermalSolver2D(layers, width_um=20.0, nx=40)
-    T = ts.solve_steady_state(max_iter=2000)
+    ts.solve_steady_state(max_iter=2000)
     T_max = ts.max_temperature_k()
     T_wg = ts.avg_temp_at_layer("waveguide")
     assert T_max > 300
@@ -157,7 +158,9 @@ def _test() -> None:
     print(f"Thermal: T_max={T_max:.1f}K (Δ={T_max-300:.1f}K), "
           f"T_wg={T_wg:.1f}K, 热串扰矩阵形状={crosstalk.shape}")
 
-    # Test 3: Package Design
+
+def _test_package_design() -> None:
+    """Test 3: Package Design 封装设计冒烟测试（Extract Method）。"""
     pkg = PackageDesigner()
     spec = PackageSpec(
         package_type=PackageType.PHOTONIC_PACKAGE,
@@ -174,7 +177,9 @@ def _test() -> None:
           f"耦合损耗={loss['total_insertion_loss_db']:.1f}dB, "
           f"引脚={io['total_pins']}")
 
-    # Test 4: Test Chip
+
+def _test_test_chip() -> None:
+    """Test 4: Test Chip 测试芯片冒烟测试（Extract Method）。"""
     tc = TestChipDesigner()
     assert tc.total_structures >= 10
     area = tc.total_area_um2()
@@ -185,7 +190,9 @@ def _test() -> None:
     print(f"TestChip: {tc.total_structures} 个结构, 总面积={area:.0f}μm², "
           f"利用率={fp['utilization']:.1%}, 5 大类测试")
 
-    # Test 5: M3 交付检查
+
+def _test_m3_deliverable() -> None:
+    """Test 5: M3 交付检查冒烟测试（Extract Method）。"""
     m3 = M3Deliverable()
     rpt = m3.report()
     assert rpt["total_items"] >= 30
@@ -194,6 +201,18 @@ def _test() -> None:
           f"完成率={rpt['completion_rate']:.1%}, "
           f"目标得分={rpt['target_score']}")
 
+
+def _test() -> None:
+    """冒烟测试（Extract Method，依次调用 5 个子测试）。
+
+    来源: Fowler, "Refactoring" 2nd ed., 2018, Extract Method
+    https://martinfowler.com/books/refactoring.html
+    """
+    _test_tcad_aware()
+    _test_thermal_solver()
+    _test_package_design()
+    _test_test_chip()
+    _test_m3_deliverable()
     print("\n所有测试通过 ✅")
 
 
