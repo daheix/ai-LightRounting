@@ -198,12 +198,47 @@ def extract_ports(
       https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     db = _import_klayout_db()
+    path, port_layers, text_layers, match_distance_um = (
+        _validate_port_params(
+            gds_path, port_layers, text_layers, match_distance_um
+        )
+    )
+    ly, dbu, top_cell, top_cell_name_str = _read_port_layout(
+        db, path, gds_path, top_cell_name,
+    )
+    ports = _collect_ports(
+        ly, top_cell, port_layers, dbu, top_cell_name_str,
+    )
+    texts = _collect_texts(ly, top_cell, text_layers, dbu)
+    _match_port_names(ports, texts, match_distance_um)
+    logger.info(
+        "GDSII 端口提取: %s (%d 端口, %d 文本标签)",
+        path, len(ports), len(texts),
+    )
+    return PortReport(
+        file_path=str(gds_path),
+        top_cell_name=top_cell_name_str,
+        dbu=dbu,
+        ports=ports,
+        port_layers=port_layers,
+        text_layers=text_layers,
+        match_distance_um=match_distance_um,
+    )
+
+
+def _validate_port_params(
+    gds_path, port_layers, text_layers, match_distance_um,
+) -> tuple:
+    """校验 extract_ports 入参并填充默认值（R332 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (path, port_layers, text_layers, match_distance_um)。
+    """
     path = Path(gds_path)
     if not path.exists():
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not path.is_file():
         raise ValueError(f"路径不是文件: {gds_path}")
-
     if port_layers is None:
         port_layers = list(DEFAULT_PORT_LAYERS)
     if text_layers is None:
@@ -219,7 +254,15 @@ def extract_ports(
             f"match_distance_um ({match_distance_um}) 必须 > 0。"
             f"禁止 fall-back（R03）。"
         )
+    return path, port_layers, text_layers, match_distance_um
 
+
+def _read_port_layout(db, path, gds_path, top_cell_name) -> tuple:
+    """读取 GDSII 并定位顶层 cell（R332 内部辅助，R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu, top_cell, top_cell_name_str)。
+    """
     ly = db.Layout()
     try:
         ly.read(str(path))
@@ -228,16 +271,13 @@ def extract_ports(
             f"klayout 读取文件失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
-
     # 获取顶层 cell
     top_cell_indices = list(ly.each_top_cell())
     if not top_cell_indices:
         raise ValueError(
             f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空或损坏"
         )
-
     if top_cell_name is not None:
         top_cell_obj = ly.cell(top_cell_name)
         if top_cell_obj is None:
@@ -249,12 +289,15 @@ def extract_ports(
         top_cell = top_cell_obj
     else:
         top_cell = ly.cell(top_cell_indices[0])
+    return ly, dbu, top_cell, str(top_cell.name)
 
-    top_cell_name_str = str(top_cell.name)
 
-    # 收集端口几何（递归遍历顶层 cell）
-    # RecursiveShapeIterator: at_end() / next() / shape() / cell()
-    # 来源: https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
+def _collect_ports(ly, top_cell, port_layers, dbu, top_cell_name_str) -> list:
+    """收集端口几何（递归遍历顶层 cell，R332 内部辅助）。
+
+    来源: KLayout RecursiveShapeIterator
+        https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
+    """
     ports: list[PortInfo] = []
     for (layer_num, datatype) in port_layers:
         li = _find_layer(ly, layer_num, datatype)
@@ -267,9 +310,16 @@ def extract_ports(
             if port is not None:
                 ports.append(port)
             it.next()
+    return ports
 
-    # 收集文本标签
-    texts: list[tuple[str, float, float]] = []  # (text, x_um, y_um)
+
+def _collect_texts(ly, top_cell, text_layers, dbu) -> list:
+    """收集文本标签（R332 内部辅助）。
+
+    Returns:
+        [(text_str, x_um, y_um), ...]。
+    """
+    texts: list[tuple[str, float, float]] = []
     for (layer_num, datatype) in text_layers:
         li = _find_layer(ly, layer_num, datatype)
         if li is None:
@@ -284,8 +334,15 @@ def extract_ports(
                 y_um = float(pos.y) * dbu
                 texts.append((text_str, x_um, y_um))
             it.next()
+    return texts
 
-    # 文本匹配：对每个端口找最近的文本
+
+def _match_port_names(ports, texts, match_distance_um) -> None:
+    """文本匹配：对每个端口找最近的文本（R332 内部辅助，原地修改 ports）。
+
+    匹配规则：距离 ≤ match_distance_um 的最近文本作为端口名。
+    来源: 最近邻匹配（欧氏距离）。
+    """
     for port in ports:
         best_name = ""
         best_dist = float("inf")
@@ -298,21 +355,6 @@ def extract_ports(
         if best_name and best_dist <= match_distance_um:
             port.name = best_name
             port.text_matched = True
-
-    logger.info(
-        "GDSII 端口提取: %s (%d 端口, %d 文本标签)",
-        path, len(ports), len(texts),
-    )
-
-    return PortReport(
-        file_path=str(gds_path),
-        top_cell_name=top_cell_name_str,
-        dbu=dbu,
-        ports=ports,
-        port_layers=port_layers,
-        text_layers=text_layers,
-        match_distance_um=match_distance_um,
-    )
 
 
 # =============================================================================
