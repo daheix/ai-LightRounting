@@ -177,6 +177,75 @@ class _DefaultSimulator:
         return {"total_loss_db": total_loss, "n_crossings": n_crossings}
 
 
+def _cross_2d(
+    o: tuple[float, float],
+    a: tuple[float, float],
+    b: tuple[float, float],
+) -> float:
+    """二维叉积 (a-o) × (b-o)，用于 CCW 方向判断（Extract Method）。
+
+    Args:
+        o: 参考点。
+        a: 线段起点。
+        b: 线段终点。
+
+    Returns:
+        叉积标量；>0 左转、<0 右转、=0 共线。
+    """
+    return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+
+def _segments_properly_intersect(
+    p1: tuple[float, float],
+    p2: tuple[float, float],
+    p3: tuple[float, float],
+    p4: tuple[float, float],
+) -> bool:
+    """检测线段 p1p2 与 p3p4 是否真相交（不含共享端点，Extract Method）。
+
+    使用方向叉积（CCW）严格相交判断：两线段当且仅当
+    d1/d2 异号且 d3/d4 异号时相交。
+
+    Args:
+        p1, p2: 第一条线段端点。
+        p3, p4: 第二条线段端点。
+
+    Returns:
+        相交返回 True，否则 False。
+    """
+    d1 = _cross_2d(p3, p4, p1)
+    d2 = _cross_2d(p3, p4, p2)
+    d3 = _cross_2d(p1, p2, p3)
+    d4 = _cross_2d(p1, p2, p4)
+    if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and (
+        (d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)
+    ):
+        return True
+    return False
+
+
+def _build_path_segments(
+    paths: dict,
+) -> list[tuple[str, tuple[float, float], tuple[float, float]]]:
+    """将路径字典展开为带 net_id 的线段列表（Extract Method）。
+
+    Args:
+        paths: {net_id: [(x,y), ...]} 路径字典。
+
+    Returns:
+        [(net_id, p1, p2), ...] 线段列表。
+    """
+    segs: list[tuple[str, tuple[float, float], tuple[float, float]]] = []
+    for net_id, pts in paths.items():
+        if len(pts) < 2:
+            continue
+        for i in range(len(pts) - 1):
+            p1 = (float(pts[i][0]), float(pts[i][1]))
+            p2 = (float(pts[i + 1][0]), float(pts[i + 1][1]))
+            segs.append((net_id, p1, p2))
+    return segs
+
+
 def _count_path_crossings(paths: dict) -> int:
     """基于路径几何计算交叉数（违规 8 修复）。
 
@@ -186,31 +255,7 @@ def _count_path_crossings(paths: dict) -> int:
 
     来源: 计算几何经典线段相交算法（Bentley-Ottmann 简化版）。
     """
-    # 按路径分组存储线段，避免同一路径内的线段自相交误报
-    path_segs: list[tuple[str, tuple[float, float], tuple[float, float]]] = []
-    for net_id, pts in paths.items():
-        if len(pts) < 2:
-            continue
-        for i in range(len(pts) - 1):
-            p1 = (float(pts[i][0]), float(pts[i][1]))
-            p2 = (float(pts[i + 1][0]), float(pts[i + 1][1]))
-            path_segs.append((net_id, p1, p2))
-
-    def _cross(o, a, b):
-        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-
-    def _segments_intersect(p1, p2, p3, p4):
-        """检测线段 p1p2 与 p3p4 是否真相交（不含共享端点）。"""
-        d1 = _cross(p3, p4, p1)
-        d2 = _cross(p3, p4, p2)
-        d3 = _cross(p1, p2, p3)
-        d4 = _cross(p1, p2, p4)
-        if ((d1 > 0 and d2 < 0) or (d1 < 0 and d2 > 0)) and (
-            (d3 > 0 and d4 < 0) or (d3 < 0 and d4 > 0)
-        ):
-            return True
-        return False
-
+    path_segs = _build_path_segments(paths)
     crossings = 0
     n = len(path_segs)
     for i in range(n):
@@ -220,7 +265,7 @@ def _count_path_crossings(paths: dict) -> int:
                 continue
             _, p1, p2 = path_segs[i]
             _, p3, p4 = path_segs[j]
-            if _segments_intersect(p1, p2, p3, p4):
+            if _segments_properly_intersect(p1, p2, p3, p4):
                 crossings += 1
     return crossings
 

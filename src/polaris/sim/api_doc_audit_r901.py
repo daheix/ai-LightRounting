@@ -165,6 +165,93 @@ class AuditReport:
     syntax_error: str = ""
 
 
+def _make_audit_entry(
+    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+    kind: str,
+    qualified_name: str,
+) -> AuditEntry:
+    """从 AST 节点构造审计条目（Extract Method，降低 audit_file 圈复杂度）。
+
+    Args:
+        node: 函数/类定义节点。
+        kind: 条目类型（function/class/method）。
+        qualified_name: 限定名（含类名前缀）。
+
+    Returns:
+        AuditEntry 实例。
+    """
+    doc = ast.get_docstring(node) or ""
+    return AuditEntry(
+        name=node.name,
+        kind=kind,
+        lineno=node.lineno,
+        has_docstring=bool(doc),
+        has_args=_has_section(doc, "Args"),
+        has_returns=_has_section(doc, "Returns"),
+        has_raises=_has_section(doc, "Raises"),
+        has_example=_has_section(doc, "Example")
+        or _has_section(doc, "Examples"),
+        qualified_name=qualified_name,
+    )
+
+
+def _collect_audit_entries(tree: ast.Module) -> list[AuditEntry]:
+    """收集模块顶层 def/class 及类直接方法的审计条目（Extract Method）。
+
+    仅扫顶层 def/class + 类的直接方法（不递归进函数体，
+    避免误收装饰器/工厂内部的嵌套闭包为公共 API）。
+
+    Args:
+        tree: 已解析的模块 AST。
+
+    Returns:
+        AuditEntry 列表。
+    """
+    entries: list[AuditEntry] = []
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if _is_public(node.name):
+                entries.append(_make_audit_entry(node, "function", node.name))
+        elif isinstance(node, ast.ClassDef):
+            if not _is_public(node.name):
+                continue
+            entries.append(_make_audit_entry(node, "class", node.name))
+            for child in node.body:
+                if isinstance(
+                    child, (ast.FunctionDef, ast.AsyncFunctionDef)
+                ) and _is_public(child.name):
+                    entries.append(
+                        _make_audit_entry(child, "method", f"{node.name}.{child.name}")
+                    )
+    return entries
+
+
+def _compute_coverage_stats(report: AuditReport, entries: list[AuditEntry]) -> None:
+    """计算 docstring 覆盖率统计并原地填充 report（Extract Method）。
+
+    Args:
+        report: 审计报告（原地修改）。
+        entries: 审计条目列表。
+    """
+    report.entries = entries
+    report.total = len(entries)
+    report.documented = sum(1 for e in entries if e.has_docstring)
+    report.with_args = sum(1 for e in entries if e.has_args)
+    report.with_returns = sum(1 for e in entries if e.has_returns)
+    report.with_raises = sum(1 for e in entries if e.has_raises)
+    report.with_example = sum(1 for e in entries if e.has_example)
+    report.docstring_coverage = (
+        report.documented / report.total if report.total else 1.0
+    )
+    # full_coverage: 有 docstring 且有 Args 且有 Returns 且有 Example
+    full = sum(
+        1
+        for e in entries
+        if e.has_docstring and e.has_args and e.has_returns and e.has_example
+    )
+    report.full_coverage = full / report.total if report.total else 1.0
+
+
 def audit_file(file_path: str | Path) -> AuditReport:
     """审计单个 Python 文件的公共 API docstring 覆盖率（R901-R914）。
 
@@ -195,63 +282,8 @@ def audit_file(file_path: str | Path) -> AuditReport:
 
     # 模块级 docstring
     report.module_docstring = ast.get_docstring(tree) is not None
-
-    entries: list[AuditEntry] = []
-
-    def _make_entry(
-        node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
-        kind: str,
-        qualified_name: str,
-    ) -> AuditEntry:
-        doc = ast.get_docstring(node) or ""
-        return AuditEntry(
-            name=node.name,
-            kind=kind,
-            lineno=node.lineno,
-            has_docstring=bool(doc),
-            has_args=_has_section(doc, "Args"),
-            has_returns=_has_section(doc, "Returns"),
-            has_raises=_has_section(doc, "Raises"),
-            has_example=_has_section(doc, "Example")
-            or _has_section(doc, "Examples"),
-            qualified_name=qualified_name,
-        )
-
-    # 仅扫顶层 def/class + 类的直接方法（不递归进函数体，
-    # 避免误收装饰器/工厂内部的嵌套闭包为公共 API）。
-    for node in tree.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if _is_public(node.name):
-                entries.append(_make_entry(node, "function", node.name))
-        elif isinstance(node, ast.ClassDef):
-            if not _is_public(node.name):
-                continue
-            entries.append(_make_entry(node, "class", node.name))
-            for child in node.body:
-                if isinstance(
-                    child, (ast.FunctionDef, ast.AsyncFunctionDef)
-                ) and _is_public(child.name):
-                    entries.append(
-                        _make_entry(child, "method", f"{node.name}.{child.name}")
-                    )
-
-    report.entries = entries
-    report.total = len(entries)
-    report.documented = sum(1 for e in entries if e.has_docstring)
-    report.with_args = sum(1 for e in entries if e.has_args)
-    report.with_returns = sum(1 for e in entries if e.has_returns)
-    report.with_raises = sum(1 for e in entries if e.has_raises)
-    report.with_example = sum(1 for e in entries if e.has_example)
-    report.docstring_coverage = (
-        report.documented / report.total if report.total else 1.0
-    )
-    # full_coverage: 有 docstring 且有 Args 且有 Returns 且有 Example
-    full = sum(
-        1
-        for e in entries
-        if e.has_docstring and e.has_args and e.has_returns and e.has_example
-    )
-    report.full_coverage = full / report.total if report.total else 1.0
+    entries = _collect_audit_entries(tree)
+    _compute_coverage_stats(report, entries)
     return report
 
 
