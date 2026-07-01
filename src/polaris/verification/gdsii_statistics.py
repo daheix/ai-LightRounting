@@ -185,162 +185,139 @@ def generate_gdsii_statistics(
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not path.is_file():
         raise ValueError(f"路径不是文件: {gds_path}")
-
     file_size = int(path.stat().st_size)
+    ly, dbu, all_cell_indices, top_cell_indices, top_cell_names_list, specified_top_index = (
+        _read_and_validate_stats(db, path, gds_path, top_cell_name)
+    )
+    max_depth = _compute_stats_hierarchy_depth(ly, all_cell_indices, top_cell_indices)
+    layer_stats, total_polygons, total_boxes, total_area_um2, total_vertex_count = (
+        _collect_layer_stats(ly, all_cell_indices, dbu)
+    )
+    top_cell_bbox_um = _compute_top_cell_bbox(
+        ly, dbu, specified_top_index, top_cell_indices
+    )
+    logger.info(
+        "GDSII 统计: %s (%d bytes, %d cells, %d layers, %d polygons)",
+        path, file_size, len(all_cell_indices), len(layer_stats), total_polygons,
+    )
+    return StatisticsReport(
+        file_path=str(gds_path), file_size_bytes=file_size, dbu=dbu,
+        total_cells=len(all_cell_indices), top_cell_names=top_cell_names_list,
+        max_hierarchy_depth=max_depth, layer_stats=layer_stats,
+        total_polygons=total_polygons, total_boxes=total_boxes,
+        total_area_um2=total_area_um2, total_vertex_count=total_vertex_count,
+        top_cell_bbox_um=top_cell_bbox_um,
+    )
 
+
+def _read_and_validate_stats(db, path, gds_path, top_cell_name) -> tuple:
+    """读取 GDSII 并收集 cell 索引（R331 内部辅助）。
+
+    Returns:
+        (ly, dbu, all_cell_indices, top_cell_indices, top_cell_names_list, specified_top_index)。
+
+    Raises:
+        RuntimeError: 读取失败。ValueError: 无 cell / top_cell_name 不存在。
+    """
     ly = db.Layout()
     try:
         ly.read(str(path))
     except Exception as e:
         raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。禁止 fall-back（R03）。"
         ) from e
-
     dbu = float(ly.dbu)
-
-    # 收集所有 cell（用 each_cell_top_down 拓扑顺序便于计算深度）
     all_cell_indices: list[int] = [int(ci) for ci in ly.each_cell_top_down()]
     if not all_cell_indices:
-        raise ValueError(
-            f"GDSII 文件 {gds_path} 无任何 cell，文件可能为空或损坏"
-        )
-
+        raise ValueError(f"GDSII 文件 {gds_path} 无任何 cell，文件可能为空或损坏")
     top_cell_indices: set[int] = set(int(ci) for ci in ly.each_top_cell())
-    top_cell_names_list = sorted(
-        ly.cell(ci).name for ci in ly.each_top_cell()
-    )
-
-    # 校验 top_cell_name
+    top_cell_names_list = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
     specified_top_index: int | None = None
     if top_cell_name is not None:
         top_cell_obj = ly.cell(top_cell_name)
         if top_cell_obj is None:
             available = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
             raise ValueError(
-                f"top_cell_name '{top_cell_name}' 不存在。"
-                f"可用顶层 cells: {available}"
+                f"top_cell_name '{top_cell_name}' 不存在。可用顶层 cells: {available}"
             )
         specified_top_index = int(top_cell_obj.cell_index())
+    return ly, dbu, all_cell_indices, top_cell_indices, top_cell_names_list, specified_top_index
 
-    # 计算层级深度（复用 R322 的拓扑深度算法）
-    # 构建父子关系
-    child_cells_of: dict[int, set[int]] = {
-        ci: set() for ci in all_cell_indices
-    }
-    parent_cells_of: dict[int, set[int]] = {
-        ci: set() for ci in all_cell_indices
-    }
+
+def _compute_stats_hierarchy_depth(ly, all_cell_indices, top_cell_indices) -> int:
+    """计算层级深度（R331 内部辅助，复用 R322 拓扑深度算法）。
+
+    Returns:
+        max_depth。
+    """
+    parent_cells_of: dict[int, set[int]] = {ci: set() for ci in all_cell_indices}
     for ci in all_cell_indices:
         cell = ly.cell(ci)
         for child_ci in cell.each_child_cell():
-            child_ci = int(child_ci)
-            child_cells_of[ci].add(child_ci)
-            parent_cells_of[child_ci].add(ci)
-
+            parent_cells_of[int(child_ci)].add(ci)
     depth_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
     for ci in all_cell_indices:
-        if ci in top_cell_indices:
-            depth_of[ci] = 0
-        else:
-            parent_depths = [
-                depth_of[p] for p in parent_cells_of[ci] if p in depth_of
-            ]
+        if ci not in top_cell_indices:
+            parent_depths = [depth_of[p] for p in parent_cells_of[ci] if p in depth_of]
             depth_of[ci] = (max(parent_depths) + 1) if parent_depths else 0
-    max_depth = max(depth_of.values()) if depth_of else 0
+    return max(depth_of.values()) if depth_of else 0
 
-    # 层统计：遍历所有 cell 的所有层
-    # layer_stat_map[(layer, datatype)] = LayerStat
+
+def _collect_layer_stats(ly, all_cell_indices, dbu) -> tuple:
+    """遍历所有 cell 的所有层收集统计（R331 内部辅助）。
+
+    Returns:
+        (layer_stats, total_polygons, total_boxes, total_area_um2, total_vertex_count)。
+    """
     layer_stat_map: dict[tuple[int, int], LayerStat] = {}
-    total_polygons = 0
-    total_boxes = 0
-    total_area_um2 = 0.0
-    total_vertex_count = 0
-
     for li in ly.layer_indices():
         info = ly.get_info(li)
         key = (int(info.layer), int(info.datatype))
-        layer_stat_map[key] = LayerStat(
-            layer=key[0], datatype=key[1]
-        )
-
+        layer_stat_map[key] = LayerStat(layer=key[0], datatype=key[1])
+    total_polygons = total_boxes = total_vertex_count = 0
+    total_area_um2 = 0.0
     for ci in all_cell_indices:
         cell = ly.cell(ci)
         for li in ly.layer_indices():
             info = ly.get_info(li)
             key = (int(info.layer), int(info.datatype))
             stat = layer_stat_map[key]
-            shapes = cell.shapes(li)
-            for shape in shapes.each():
+            for shape in cell.shapes(li).each():
                 stat.shape_count += 1
                 if shape.is_polygon():
                     total_polygons += 1
                     poly = shape.polygon
-                    # 面积（dbu² → μm²）
-                    area_dbu2 = float(poly.area())
-                    area_um2 = area_dbu2 * dbu * dbu
+                    area_um2 = float(poly.area()) * dbu * dbu
                     stat.area_um2 += area_um2
                     total_area_um2 += area_um2
-                    # 顶点数（Polygon 用 num_points，含 holes；简单 polygon 即外环顶点数）
                     n_pts = int(poly.num_points())
                     stat.vertex_count += n_pts
                     total_vertex_count += n_pts
                 elif shape.is_box():
                     total_boxes += 1
                     stat.vertex_count += 4
-                    box = shape.bbox()
-                    area_dbu2 = float(box.area())
-                    area_um2 = area_dbu2 * dbu * dbu
+                    area_um2 = float(shape.bbox().area()) * dbu * dbu
                     stat.area_um2 += area_um2
                     total_area_um2 += area_um2
                     total_vertex_count += 4
+    layer_stats = sorted(layer_stat_map.values(), key=lambda s: (s.layer, s.datatype))
+    return layer_stats, total_polygons, total_boxes, total_area_um2, total_vertex_count
 
-    layer_stats = sorted(
-        layer_stat_map.values(),
-        key=lambda s: (s.layer, s.datatype),
-    )
 
-    # 顶层 cell bbox
-    top_cell_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+def _compute_top_cell_bbox(ly, dbu, specified_top_index, top_cell_indices) -> tuple[float, float, float, float]:
+    """计算顶层 cell 的 bbox（R331 内部辅助）。
+
+    指定 top_cell_name 时取该 cell bbox；单顶层时取其 bbox；多顶层为 (0,0,0,0)。
+    """
     if specified_top_index is not None:
         bbox = ly.cell(specified_top_index).bbox()
-        top_cell_bbox_um = (
-            float(bbox.left) * dbu,
-            float(bbox.bottom) * dbu,
-            float(bbox.right) * dbu,
-            float(bbox.top) * dbu,
-        )
     elif len(top_cell_indices) == 1:
-        # 单顶层 cell，取其 bbox
-        ci = next(iter(top_cell_indices))
-        bbox = ly.cell(ci).bbox()
-        top_cell_bbox_um = (
-            float(bbox.left) * dbu,
-            float(bbox.bottom) * dbu,
-            float(bbox.right) * dbu,
-            float(bbox.top) * dbu,
-        )
-    # 多顶层 cell 时 top_cell_bbox_um 保持 (0,0,0,0)
-
-    logger.info(
-        "GDSII 统计: %s (%d bytes, %d cells, %d layers, %d polygons)",
-        path, file_size, len(all_cell_indices), len(layer_stats),
-        total_polygons,
-    )
-
-    return StatisticsReport(
-        file_path=str(gds_path),
-        file_size_bytes=file_size,
-        dbu=dbu,
-        total_cells=len(all_cell_indices),
-        top_cell_names=top_cell_names_list,
-        max_hierarchy_depth=max_depth,
-        layer_stats=layer_stats,
-        total_polygons=total_polygons,
-        total_boxes=total_boxes,
-        total_area_um2=total_area_um2,
-        total_vertex_count=total_vertex_count,
-        top_cell_bbox_um=top_cell_bbox_um,
+        bbox = ly.cell(next(iter(top_cell_indices))).bbox()
+    else:
+        return (0.0, 0.0, 0.0, 0.0)
+    return (
+        float(bbox.left) * dbu, float(bbox.bottom) * dbu,
+        float(bbox.right) * dbu, float(bbox.top) * dbu,
     )
 
 
