@@ -83,6 +83,79 @@ class CircuitSpec:
 _VALID_TOPOLOGIES = ("mesh", "linear", "tree", "crossbar", "random")
 
 
+# =============================================================================
+# Dispatch Table: 拓扑名 → net 生成函数（替换 if-elif 链，Fowler 2018）
+# 来源: Fowler, "Refactoring" 2nd ed., 2018, Replace Conditional with
+#   Polymorphism / Dispatch Table
+#   https://martinfowler.com/books/refactoring.html
+# =============================================================================
+
+def _gen_mesh_nets(n: int) -> list[dict]:
+    """mesh 拓扑：全连接 N×N 网（Dispatch Table 子项）。"""
+    return [
+        {"id": f"net_{i}_{j}", "src": f"d{i}", "dst": f"d{j}"}
+        for i in range(n) for j in range(i + 1, n)
+    ]
+
+
+def _gen_linear_nets(n: int) -> list[dict]:
+    """linear 拓扑：链式 N→N-1→...→1（Dispatch Table 子项）。"""
+    return [
+        {"id": f"net_{i}", "src": f"d{i}", "dst": f"d{i + 1}"}
+        for i in range(n - 1)
+    ]
+
+
+def _gen_tree_nets(n: int) -> list[dict]:
+    """tree 拓扑：二叉树，节点 i 的父节点为 (i-1)//2（Dispatch Table 子项）。"""
+    return [
+        {"id": f"net_{i}", "src": f"d{(i - 1) // 2}", "dst": f"d{i}"}
+        for i in range(1, n)
+    ]
+
+
+def _gen_crossbar_nets(n: int) -> list[dict]:
+    """crossbar 拓扑：N×N 交叉开关（Dispatch Table 子项）。"""
+    side = int(np.ceil(np.sqrt(n)))
+    nets = []
+    for i in range(min(side, n)):
+        for j in range(min(side, n)):
+            if i * side + j < n - 1:
+                nets.append({
+                    "id": f"net_{i}_{j}",
+                    "src": f"d{i * side + j}",
+                    "dst": f"d{i * side + j + 1}",
+                })
+    return nets
+
+
+def _gen_random_nets(n: int, rng) -> list[dict]:
+    """random 拓扑：Erdős–Rényi G(n, p=0.2)（Dispatch Table 子项）。
+
+    学术依据: Erdős–Rényi 1960 Publ. Math. Inst. Hung. Acad. Sci.
+    https://www.renyi.hu/~p_erdos/1960-10.pdf
+    """
+    p = 0.2
+    nets = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            if rng.random() < p:
+                nets.append({
+                    "id": f"net_{i}_{j}",
+                    "src": f"d{i}",
+                    "dst": f"d{j}",
+                })
+    return nets
+
+
+_NET_DISPATCH: dict = {
+    "mesh": _gen_mesh_nets,
+    "linear": _gen_linear_nets,
+    "tree": _gen_tree_nets,
+    "crossbar": _gen_crossbar_nets,
+}
+
+
 class BenchmarkCircuitGenerator:
     """R386 标准电路生成器。
 
@@ -126,6 +199,24 @@ class BenchmarkCircuitGenerator:
             "nets": nets,
         }
 
+    def _gen_nets(self, spec: CircuitSpec) -> list[dict]:
+        """生成 net 列表（按拓扑类型，Dispatch Table 模式）。
+
+        来源:
+        - Fowler, "Refactoring" 2nd ed., 2018, Dispatch Table
+          https://martinfowler.com/books/refactoring.html
+        - Erdős–Rényi 1960 (random 拓扑)
+          https://www.renyi.hu/~p_erdos/1960-10.pdf
+        """
+        n = spec.n_devices
+        rng = np.random.default_rng(spec.seed + 1)
+        if spec.topology == "random":
+            return _gen_random_nets(n, rng)
+        gen = _NET_DISPATCH.get(spec.topology)
+        if gen is None:
+            raise ValueError(f"未知拓扑 {spec.topology}（R03）")
+        return gen(n)
+
     def _gen_devices(self, spec: CircuitSpec) -> list[dict]:
         """生成 N 个器件。"""
         rng = np.random.default_rng(spec.seed)
@@ -152,54 +243,6 @@ class BenchmarkCircuitGenerator:
             "crossbar": 4,
             "random": 3,
         }[topology]
-
-    def _gen_nets(self, spec: CircuitSpec) -> list[dict]:
-        """生成 net 列表（按拓扑类型）。"""
-        n = spec.n_devices
-        rng = np.random.default_rng(spec.seed + 1)
-        if spec.topology == "mesh":
-            return [
-                {"id": f"net_{i}_{j}", "src": f"d{i}", "dst": f"d{j}"}
-                for i in range(n) for j in range(i + 1, n)
-            ]
-        if spec.topology == "linear":
-            return [
-                {"id": f"net_{i}", "src": f"d{i}", "dst": f"d{i + 1}"}
-                for i in range(n - 1)
-            ]
-        if spec.topology == "tree":
-            # 二叉树：节点 i 的父节点为 (i-1)//2
-            return [
-                {"id": f"net_{i}", "src": f"d{(i - 1) // 2}", "dst": f"d{i}"}
-                for i in range(1, n)
-            ]
-        if spec.topology == "crossbar":
-            # N×N 交叉开关：每行/列各连一个
-            side = int(np.ceil(np.sqrt(n)))
-            nets = []
-            for i in range(min(side, n)):
-                for j in range(min(side, n)):
-                    if i * side + j < n - 1:
-                        nets.append({
-                            "id": f"net_{i}_{j}",
-                            "src": f"d{i * side + j}",
-                            "dst": f"d{i * side + j + 1}",
-                        })
-            return nets
-        if spec.topology == "random":
-            # Erdős–Rényi G(n, p=0.2)
-            p = 0.2
-            nets = []
-            for i in range(n):
-                for j in range(i + 1, n):
-                    if rng.random() < p:
-                        nets.append({
-                            "id": f"net_{i}_{j}",
-                            "src": f"d{i}",
-                            "dst": f"d{j}",
-                        })
-            return nets
-        raise ValueError(f"未知拓扑 {spec.topology}（R03）")
 
     def generate_suite(
         self, scales: tuple[int, ...] = (10, 50, 100),
