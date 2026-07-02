@@ -1,0 +1,15 @@
+[project]
+name = "polaris-sim"
+version = "5.0.0"
+description = "PoLaRIS 光子仿真子模块（频域 S 参数 + MZI 扫描 + Clements 酉矩阵 + PAM4 眼图）"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
