@@ -1,6 +1,6 @@
 """polaris-yield 子模块 smoke test。
 
-测试覆盖（≥3 个 pytest，实际 9 个，覆盖全部迁移 API）:
+测试覆盖（≥3 个 pytest，实际 10 个，覆盖全部迁移 API）:
 - test_monte_carlo_simulate: 蒙特卡洛仿真均值收敛
 - test_yield_analysis: 蒙特卡洛良率分析
 - test_qmc_monte_carlo: Sobol QMC 仿真均值收敛
