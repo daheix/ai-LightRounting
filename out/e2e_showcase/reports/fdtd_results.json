@@ -2,34 +2,34 @@
   "source": "Yee 1966 IEEE TAP; Taflove 2005",
   "backend": "JAX DifferentiableFDTD",
   "waveguide": {
-    "transmission_db": 13.345711536530466,
-    "analytical_transmission_db": -0.0003,
-    "fdtd_duration_s": 0.9446985721588135,
-    "n_steps": 600,
+    "transmission_db": -21.753813394870235,
+    "analytical_transmission_db": -0.0006,
+    "fdtd_duration_s": 2.142967939376831,
+    "n_steps": 2000,
     "grid_size": [
-      24,
-      12,
-      8
+      96,
+      48,
+      16
     ],
-    "dx_um": 0.2,
+    "dx_um": 0.05,
     "pml_enabled": true,
-    "pml_n_layers": 2
+    "pml_n_layers": 4
   },
   "mmi": {
-    "mmi_split_ratio": 0.5565168441629089,
-    "mmi_insertion_loss_db": -72.73936921015473,
-    "fdtd_duration_s": 1.0187523365020752,
-    "n_steps": 600,
+    "mmi_split_ratio": 0.32094637433432366,
+    "mmi_insertion_loss_db": -40.53729558419478,
+    "fdtd_duration_s": 5.876478433609009,
+    "n_steps": 2000,
     "grid_size": [
-      29,
-      20,
-      8
+      116,
+      80,
+      16
     ],
-    "dx_um": 0.2,
+    "dx_um": 0.05,
     "pml_enabled": true,
-    "pml_n_layers": 2
+    "pml_n_layers": 4
   },
-  "fdtd_vs_analytical_error_db": 5.651684416290892,
-  "fdtd_duration_s": 1.9634509086608887,
+  "fdtd_vs_analytical_error_db": 17.905362566567636,
+  "fdtd_duration_s": 8.01944637298584,
   "extinction_ratio_physical_db": 27.958800173440746
 }

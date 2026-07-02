@@ -1,6 +1,6 @@
 # PoLaRIS 端到端 Demo Showcase 汇总报告
 
-生成时间: 2026-06-28 03:55:39 UTC
+生成时间: 2026-07-02 06:13:50 UTC
 
 ## 阶段执行状态
 
@@ -16,6 +16,19 @@
 | 8 | 光电协同 | done | 0.04 | — |
 | 9 | 量子光子验证 | done | 1.25 | — |
 | 10 | Adjoint 逆向设计 | done | 25.12 | — |
+| 5 | 仿真验证 | done | 11.56 | — |
+| 10 | Adjoint 逆向设计 | done | 123.76 | — |
+| 1 | PDK 器件目录展示 | done | 0.00 | — |
+| 2 | 电路规格定义 | done | 0.00 | — |
+| 3 | AI 布局 | done | 0.03 | — |
+| 4 | 智能布线 | done | 18.64 | — |
+| 5 | 仿真验证 | done | 14.06 | — |
+| 6 | DRC/LVS 验证 | done | 0.01 | — |
+| 7 | GDS 导出 | done | 27.84 | — |
+| 8 | 光电协同 | done | 0.04 | — |
+| 9 | 量子光子验证 | done | 0.78 | — |
+| 10 | Adjoint 逆向设计 | done | 125.20 | — |
+| 10 | Adjoint 逆向设计 | done | 123.51 | — |
 
 ## 关键指标汇总
 
@@ -48,6 +61,47 @@
 | 10 | optimal_width_nm | 390.86 | nm |
 | 10 | improvement_db | 0.01 | dB |
 | 10 | converged | true | - |
+| 5 | resonant_wavelength_nm | 1549.0 | nm |
+| 5 | extinction_ratio_db | 30.0 | dB |
+| 5 | pam4_ber | 4.29e-04 | - |
+| 5 | pam4_snr_db | 21.97 | dB |
+| 10 | method | JAX jax.grad 自动微分（*创新*，替代 lumopt 手动伴随方程） | - |
+| 10 | initial_width_nm | 400.0 | nm |
+| 10 | optimal_width_nm | 1000.0 | nm |
+| 10 | improvement_db | -25.21 | dB |
+| 10 | converged | false | - |
+| 1 | total_device_count | 36 | 个 |
+| 1 | platform_count | 4 | 个 |
+| 2 | circuit_count | 3 | 个 |
+| 2 | total_n_devices | 15 | 个 |
+| 3 | placement_mode | ppo_gnn_init | - |
+| 3 | total_hpwl | 4974.66 | μm |
+| 4 | total_loss_db | 11.87 | dB |
+| 4 | total_crossings | 3 | 个 |
+| 4 | total_bends | 107 | 个 |
+| 5 | resonant_wavelength_nm | 1549.0 | nm |
+| 5 | extinction_ratio_db | 30.0 | dB |
+| 5 | pam4_ber | 4.29e-04 | - |
+| 5 | pam4_snr_db | 21.97 | dB |
+| 6 | drc_pass_rate | 0.91 | - |
+| 6 | lvs_consistent | true | - |
+| 7 | gds_files | 3 | 个 |
+| 8 | verilog_a_models | 5 | 个 |
+| 8 | pam4_ber | 0.02 | - |
+| 8 | pam4_snr_db | 17.88 | dB |
+| 9 | boson_sampling_prob_sum | 1.0 | - |
+| 9 | hom_verified | true | - |
+| 9 | klm_cnot_success_prob | 0.11 | - |
+| 10 | method | JAX jax.grad 自动微分（*创新*，替代 lumopt 手动伴随方程） | - |
+| 10 | initial_width_nm | 400.0 | nm |
+| 10 | optimal_width_nm | 1000.0 | nm |
+| 10 | improvement_db | -25.21 | dB |
+| 10 | converged | false | - |
+| 10 | method | JAX jax.grad 自动微分（*创新*，替代 lumopt 手动伴随方程） | - |
+| 10 | initial_width_nm | 400.0 | nm |
+| 10 | optimal_width_nm | 152.3 | nm |
+| 10 | improvement_db | 5.58 | dB |
+| 10 | converged | false | - |
 
 ## 9 阶段执行时间线（ASCII 可视化）
 
@@ -55,23 +109,36 @@
 阶段 1 [PDK 器件目录展示    ]  (0.00s)
 阶段 2 [电路规格定义        ]  (0.00s)
 阶段 3 [AI 布局             ]  (0.06s)
-阶段 4 [智能布线            ] ███████████ (19.42s)
-阶段 5 [仿真验证            ] ██ (4.19s)
+阶段 4 [智能布线            ] ████ (19.42s)
+阶段 5 [仿真验证            ] █ (4.19s)
 阶段 6 [DRC/LVS 验证        ]  (0.01s)
-阶段 7 [GDS 导出            ] ██████████████████████████████ (50.45s)
+阶段 7 [GDS 导出            ] ████████████ (50.45s)
 阶段 8 [光电协同            ]  (0.04s)
 阶段 9 [量子光子验证        ]  (1.25s)
-阶段 10 [Adjoint 逆向设计    ] ██████████████ (25.12s)
+阶段 10 [Adjoint 逆向设计    ] ██████ (25.12s)
+阶段 5 [仿真验证            ] ██ (11.56s)
+阶段 10 [Adjoint 逆向设计    ] █████████████████████████████ (123.76s)
+阶段 1 [PDK 器件目录展示    ]  (0.00s)
+阶段 2 [电路规格定义        ]  (0.00s)
+阶段 3 [AI 布局             ]  (0.03s)
+阶段 4 [智能布线            ] ████ (18.64s)
+阶段 5 [仿真验证            ] ███ (14.06s)
+阶段 6 [DRC/LVS 验证        ]  (0.01s)
+阶段 7 [GDS 导出            ] ██████ (27.84s)
+阶段 8 [光电协同            ]  (0.04s)
+阶段 9 [量子光子验证        ]  (0.78s)
+阶段 10 [Adjoint 逆向设计    ] ██████████████████████████████ (125.20s)
+阶段 10 [Adjoint 逆向设计    ] █████████████████████████████ (123.51s)
 ```
 
 ## 产物文件清单
 
 | 文件 | 大小 | 路径 |
 |------|------|------|
-| showcase.jsonl | 216.3 KB | logs/showcase.jsonl |
-| Clements_4x4.gds | 6.5 KB | gds/Clements_4x4.gds |
-| MZI.gds | 2.4 KB | gds/MZI.gds |
-| Quantum_BosonSampling.gds | 4.3 KB | gds/Quantum_BosonSampling.gds |
+| showcase.jsonl | 481.4 KB | logs/showcase.jsonl |
+| Clements_4x4.gds | 15.4 KB | gds/Clements_4x4.gds |
+| MZI.gds | 3.2 KB | gds/MZI.gds |
+| Quantum_BosonSampling.gds | 8.6 KB | gds/Quantum_BosonSampling.gds |
 | mzi_layout.gds | 746 B | gds/mzi_layout.gds |
 | detector.va | 532 B | verilog_a/detector.va |
 | mmi_1x2.va | 341 B | verilog_a/mmi_1x2.va |
@@ -84,23 +151,24 @@
 | boson_sampling_sampler.json | 441 B | reports/boson_sampling_sampler.json |
 | boson_sampling_unitary.json | 1.5 KB | reports/boson_sampling_unitary.json |
 | clements_unitary.json | 1.6 KB | reports/clements_unitary.json |
-| drc_lvs_report.json | 718 B | reports/drc_lvs_report.json |
-| fdtd_results.json | 815 B | reports/fdtd_results.json |
+| drc_lvs_report.json | 734 B | reports/drc_lvs_report.json |
+| fdtd_results.json | 821 B | reports/fdtd_results.json |
 | hom_dip_simulation.json | 4.6 KB | reports/hom_dip_simulation.json |
 | hom_interference.json | 433 B | reports/hom_interference.json |
-| klm_cnot_circuit.json | 835 B | reports/klm_cnot_circuit.json |
-| klm_verification.json | 454 B | reports/klm_verification.json |
+| klm_cnot_circuit.json | 849 B | reports/klm_cnot_circuit.json |
+| klm_verification.json | 482 B | reports/klm_verification.json |
 | monte_carlo_boson_sampling.json | 471 B | reports/monte_carlo_boson_sampling.json |
 | mzi_s_param.csv | 6.4 KB | reports/mzi_s_param.csv |
 | pam4_eye.json | 288.3 KB | reports/pam4_eye.json |
 | pam4_eye_optoelectronic.json | 288.4 KB | reports/pam4_eye_optoelectronic.json |
+| report.md | 8.0 KB | reports/report.md |
 
 ## 汇总
 
-- 总阶段数: 10
-- 成功: 10
+- 总阶段数: 23
+- 成功: 23
 - 失败: 0
-- 总耗时: 100.53s
+- 总耗时: 545.98s
 
 ## 学术诚信声明
 
