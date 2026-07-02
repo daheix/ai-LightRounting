@@ -180,32 +180,20 @@ def fom_fn(
     *修复 R05 BUG*: FoM 归一化为真正的传输率
         FoM = max(|monitor_signal(t)|) / max(|source_signal(t)|)
     其中 source_signal 为源点位置 Ex 的时域序列（与 monitor 同尺度，均 ~1e16），
-    比值即源→监视器传输率，值域 [0, 1]，物理意义明确。
+    比值即源→监视器传输率，值域 [0, 1]，物理意义明确（lumopt/MEEP 标准定义）。
 
     旧 BUG 根因（已修复）:
-    - 旧 FoM = max(|monitor|) 是原始场强值（~1e16 量级），未归一化
-    - 导致梯度数值 ~1e15，远超裁剪阈值 [-1,1]，裁剪恒触发为 ±1
-    - 梯度方向信息丢失，width 在边界 [0.5, 5] 震荡，FoM 暴涨暴跌不收敛
-    - improvement_db = 10*log10(final/initial) ≈ -4.08 dB（变差）
-    修复后:
-    - FoM 归一化为 0-1 传输率（monitor/source 同尺度），梯度 O(0.01-0.1) 不触发裁剪
-    - 梯度方向有意义，heavy-ball 动量优化器可正常收敛
-    - improvement_db 应为非负或小幅波动（优化后变好/持平）
-
-    归一化方式选择（R01 方案检索）:
-    - 方案A（采用）: source_signal = 源点 Ex 时域序列。monitor 与 source 同为网格
-      内 E 场，同尺度（~1e16），比值是真正的传输率 T∈[0,1]（lumopt/MEEP 标准）。
-    - 方案B（弃用）: source_waveform = 注入波形（高斯*正弦，峰值~1）。但注入波形
-      经 FDTD cb 系数放大后场强达 1e16，monitor/waveform 比值仍 ~1e16，无法归一化。
-      实测 monitor_peak=8.12e16, waveform_peak=0.991，比值仍 8.2e16（BUG 未消除）。
-    来源: lumopt FoM 归一化 https://github.com/chriskeraly/lumopt；
-          MEEP https://meep.readthedocs.io/ 传输率 T=|E_mon|²/|E_src|² 定义。
+    - 旧 FoM = max(|monitor|) 是原始场强值（~1e16），未归一化
+    - 梯度 ~1e15 远超裁剪阈值 [-1,1]，裁剪恒触发为 ±1，方向信息丢失
+    - width 在边界 [0.5, 5] 震荡，FoM 暴涨暴跌不收敛，improvement_db≈-4.08 dB
+    修复后: FoM 归一化为 0-1 传输率，梯度 O(0.01-0.1) 不触发裁剪，方向有意义。
+    注: 曾试方案B（除以注入波形峰值~1），但注入波形经 FDTD cb 放大后场强达 1e16，
+    monitor/waveform 比值仍 ~1e16（实测 8.2e16），无法归一化，故采用方案A（源点 E 场）。
 
     来源:
-    - Mahau 2024 arXiv:2412.12360 "Differentiable FDTD for inverse design"
-      https://arxiv.org/abs/2412.12360
-    - lumopt FoM 定义（归一化透射率）: https://github.com/chriskeraly/lumopt
-    - MEEP 传输率定义: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/
+    - Mahau 2024 arXiv:2412.12360 https://arxiv.org/abs/2412.12360
+    - lumopt FoM 归一化透射率 https://github.com/chriskeraly/lumopt
+    - MEEP 传输率定义 https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/
     - Taflove 2005 §13.2 时域信号峰值正比于场强
     - Hughes 2018 ACS Photonics（autograd = adjoint）
       https://arxiv.org/abs/1811.01255
@@ -237,15 +225,12 @@ def fom_fn(
         n_steps=n_steps,
         monitor_pos=monitor_pos,
     )
-    mon_sig = result["monitor_signal"]
-    src_sig = result["source_signal"]
     # *修复 R05* FoM 归一化: monitor_peak / source_peak
     # source_signal = 源点 Ex 时域序列（注入后），与 monitor 同为网格 E 场，
     # 同尺度（~1e16），比值即传输率 T∈[0,1]（lumopt/MEEP 标准定义）。
-    peak_monitor = jnp.max(jnp.abs(mon_sig))
-    peak_source = jnp.max(jnp.abs(src_sig))
-    fom = peak_monitor / peak_source
-    return fom
+    peak_monitor = jnp.max(jnp.abs(result["monitor_signal"]))
+    peak_source = jnp.max(jnp.abs(result["source_signal"]))
+    return peak_monitor / peak_source
 
 
 def run_adjoint_optimization(
