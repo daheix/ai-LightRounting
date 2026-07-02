@@ -1,0 +1,708 @@
+{
+  "case_name": "100Gbps MZI 调制器 + Clements 4x4 光矩阵",
+  "benchmark": "Intel 100G CWDM4 QSFP28 Optical Module",
+  "stage_summaries": [
+    {
+      "stage_id": 1,
+      "name": "PDK 器件目录展示",
+      "status": "OK",
+      "duration": 0.0,
+      "key_outputs": {
+        "platforms": [
+          {
+            "platform": "SOI",
+            "foundry": "SiEPIC EBeam PDK",
+            "foundry_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+            "process_node": "220nm SOI",
+            "device_count": 15,
+            "device_names": [
+              "strip_waveguide",
+              "mmi_1x2",
+              "mmi_2x2",
+              "ring_resonator",
+              "y_branch",
+              "grating_coupler",
+              "directional_coupler",
+              "phase_shifter",
+              "modulator",
+              "detector",
+              "terminator",
+              "crossing",
+              "taper",
+              "half_ring",
+              "add_drop_ring"
+            ],
+            "representative_devices": [
+              {
+                "name": "strip_waveguide",
+                "type": "passive",
+                "params": {
+                  "width_nm": 500,
+                  "height_nm": 220,
+                  "loss_db_cm": 3.0
+                },
+                "source": "SiEPIC EBeam PDK",
+                "source_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+                "note": "500nm×220nm 条形波导，SOI 标准尺寸"
+              },
+              {
+                "name": "mmi_1x2",
+                "type": "passive",
+                "params": {
+                  "insertion_loss_db": 0.4,
+                  "bandwidth_nm": 100
+                },
+                "source": "SiEPIC EBeam PDK",
+                "source_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+                "note": "1x2 多模干涉耦合器，插损 0.4dB"
+              },
+              {
+                "name": "grating_coupler",
+                "type": "passive",
+                "params": {
+                  "insertion_loss_db": 1.9,
+                  "wavelength_nm": 1550,
+                  "bandwidth_nm": 80
+                },
+                "source": "SiEPIC EBeam PDK",
+                "source_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+                "note": "光栅耦合器，插损 1.9dB @ 1550nm"
+              },
+              {
+                "name": "ring_resonator",
+                "type": "passive",
+                "params": {
+                  "radius_um": 10.0,
+                  "q_factor": 10000,
+                  "fsr_nm": 8.0
+                },
+                "source": "SiEPIC EBeam PDK",
+                "source_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+                "note": "微环谐振器，半径 10μm，Q~1e4"
+              }
+            ]
+          },
+          {
+            "platform": "SiN",
+            "foundry": "Ligentec",
+            "foundry_url": "https://www.ligentec.com/",
+            "process_node": "SiN ANR",
+            "device_count": 7,
+            "device_names": [
+              "strip_waveguide",
+              "mmi_1x2",
+              "ring_resonator",
+              "directional_coupler",
+              "y_branch",
+              "grating_coupler",
+              "phase_shifter"
+            ],
+            "representative_devices": [
+              {
+                "name": "strip_waveguide",
+                "type": "passive",
+                "params": {
+                  "width_nm": 1000,
+                  "height_nm": 800,
+                  "loss_db_cm": 0.5
+                },
+                "source": "Ligentec",
+                "source_url": "https://www.ligentec.com/",
+                "note": "1000nm×800nm SiN 条形波导，低损耗"
+              },
+              {
+                "name": "ring_resonator",
+                "type": "passive",
+                "params": {
+                  "q_factor": 100000,
+                  "radius_um": 100.0
+                },
+                "source": "Ligentec",
+                "source_url": "https://www.ligentec.com/",
+                "note": "SiN 微环谐振器，Q>1e5"
+              },
+              {
+                "name": "mmi_1x2",
+                "type": "passive",
+                "params": {
+                  "insertion_loss_db": 0.8,
+                  "bandwidth_nm": 80
+                },
+                "source": "Ligentec",
+                "source_url": "https://www.ligentec.com/",
+                "note": "SiN 1x2 MMI，插损 0.8dB"
+              }
+            ]
+          },
+          {
+            "platform": "InP",
+            "foundry": "Pattern Project",
+            "foundry_url": "https://www.patternproject.com/",
+            "process_node": "InP generic",
+            "device_count": 7,
+            "device_names": [
+              "modulator",
+              "detector",
+              "amplifier",
+              "laser",
+              "mmi_1x2",
+              "waveguide",
+              "phase_shifter"
+            ],
+            "representative_devices": [
+              {
+                "name": "modulator",
+                "type": "active",
+                "params": {
+                  "vpi_l_v_mm": 3.0,
+                  "bandwidth_ghz": 40
+                },
+                "source": "Pattern Project",
+                "source_url": "https://www.patternproject.com/",
+                "note": "InP MZM 调制器，VπL=3V·mm"
+              },
+              {
+                "name": "detector",
+                "type": "active",
+                "params": {
+                  "responsivity_a_w": 0.9,
+                  "bandwidth_ghz": 50
+                },
+                "source": "Pattern Project",
+                "source_url": "https://www.patternproject.com/",
+                "note": "InP 光电探测器，响应度 0.9 A/W"
+              },
+              {
+                "name": "laser",
+                "type": "active",
+                "params": {
+                  "output_power_mw": 3.0,
+                  "wavelength_nm": 1550
+                },
+                "source": "Pattern Project",
+                "source_url": "https://www.patternproject.com/",
+                "note": "InP DFB 激光器，输出功率>3mW"
+              }
+            ]
+          },
+          {
+            "platform": "LNOI",
+            "foundry": "HyperLight",
+            "foundry_url": "https://hyperlightphotonics.com/",
+            "process_node": "LNOI X-cut",
+            "device_count": 7,
+            "device_names": [
+              "strip_waveguide",
+              "mmi_1x2",
+              "phase_shifter",
+              "modulator",
+              "y_branch",
+              "grating_coupler",
+              "directional_coupler"
+            ],
+            "representative_devices": [
+              {
+                "name": "strip_waveguide",
+                "type": "passive",
+                "params": {
+                  "width_nm": 800,
+                  "height_nm": 400,
+                  "loss_db_cm": 0.4
+                },
+                "source": "HyperLight",
+                "source_url": "https://hyperlightphotonics.com/",
+                "note": "800nm×400nm LNOI 条形波导，损耗<0.4dB/cm"
+              },
+              {
+                "name": "modulator",
+                "type": "active",
+                "params": {
+                  "vpi_l_v_cm": 2.2,
+                  "bandwidth_ghz": 100
+                },
+                "source": "HyperLight",
+                "source_url": "https://hyperlightphotonics.com/",
+                "note": "LNOI 电光调制器，VπL=2.2V·cm"
+              },
+              {
+                "name": "phase_shifter",
+                "type": "active",
+                "params": {
+                  "vpi_v": 2.5,
+                  "loss_db": 0.1
+                },
+                "source": "HyperLight",
+                "source_url": "https://hyperlightphotonics.com/",
+                "note": "LNOI 相移器，Vπ=2.5V"
+              }
+            ]
+          }
+        ],
+        "total_device_count": 36
+      }
+    },
+    {
+      "stage_id": 2,
+      "name": "电路规格定义",
+      "status": "OK",
+      "duration": 0.0,
+      "key_outputs": {
+        "circuits": [
+          {
+            "name": "MZI 干涉仪",
+            "n_devices": 5,
+            "n_connections": 5,
+            "canvas": {
+              "w": 500.0,
+              "h": 300.0
+            }
+          },
+          {
+            "name": "Clements 4x4 光矩阵",
+            "n_devices": 10,
+            "n_connections": 12,
+            "canvas": {
+              "w": 800.0,
+              "h": 600.0
+            }
+          },
+          {
+            "name": "量子玻色采样电路",
+            "n_devices": 0,
+            "n_connections": 0,
+            "canvas": {
+              "w": 0.0,
+              "h": 0.0
+            },
+            "note": "4 模酉矩阵描述，不构造 CircuitSpec（量子电路无传统器件）",
+            "unitary_file": "out/real_case/reports/boson_sampling_unitary.json"
+          }
+        ],
+        "unitary_matrix_shape": [
+          4,
+          4
+        ]
+      }
+    },
+    {
+      "stage_id": 3,
+      "name": "AI 布局",
+      "status": "OK",
+      "duration": 0.03,
+      "key_outputs": {
+        "circuits": [
+          {
+            "name": "MZI",
+            "n_devices": 5,
+            "placements": {
+              "gc1": {
+                "x": 250.1552443478666,
+                "y": 213.87234857816387,
+                "w": 10,
+                "h": 10
+              },
+              "mmi1": {
+                "x": 182.33003891422476,
+                "y": 123.23403291618443,
+                "w": 20,
+                "h": 10
+              },
+              "wg1": {
+                "x": 322.7150994597618,
+                "y": 148.11085061422628,
+                "w": 100,
+                "h": 0.5
+              },
+              "wg2": {
+                "x": 157.4459650422874,
+                "y": 153.06196871205108,
+                "w": 120,
+                "h": 0.5
+              },
+              "mmi2": {
+                "x": 360.1434286066857,
+                "y": 89.46512042016396,
+                "w": 20,
+                "h": 10
+              }
+            },
+            "hpwl": 672.18,
+            "ascii_layout": "MZI 布局预览 (500x300 μm):\n........................................\n........................................\n........................................\n........................................\n.............................M..........\n........................................\n...............M........................\n.................W...........W..........\n........................................\n........................................\n....................G...................\n........................................\n........................................\n........................................\n........................................\nG=grating_coupler  M=mmi  W=waveguide  P=phase_shifter  D=detector"
+          },
+          {
+            "name": "Clements4x4",
+            "n_devices": 10,
+            "placements": {
+              "bs1": {
+                "x": 738.1068401926508,
+                "y": 356.9134807218337,
+                "w": 20,
+                "h": 10
+              },
+              "bs2": {
+                "x": 559.7538811979659,
+                "y": 194.6081982989744,
+                "w": 20,
+                "h": 10
+              },
+              "bs3": {
+                "x": 85.02235269939663,
+                "y": 349.1409640558505,
+                "w": 20,
+                "h": 10
+              },
+              "bs4": {
+                "x": 267.57218807366564,
+                "y": 435.83339772494804,
+                "w": 20,
+                "h": 10
+              },
+              "bs5": {
+                "x": 487.177133025358,
+                "y": 140.88851439282553,
+                "w": 20,
+                "h": 10
+              },
+              "bs6": {
+                "x": 446.1890356264226,
+                "y": 423.4017265710115,
+                "w": 20,
+                "h": 10
+              },
+              "ps1": {
+                "x": 343.397880367897,
+                "y": 388.72662535266403,
+                "w": 10,
+                "h": 5
+              },
+              "ps2": {
+                "x": 531.5338875286373,
+                "y": 260.82042385143853,
+                "w": 10,
+                "h": 5
+              },
+              "ps3": {
+                "x": 606.8886916329494,
+                "y": 520.4163437429199,
+                "w": 10,
+                "h": 5
+              },
+              "ps4": {
+                "x": 396.01478916979823,
+                "y": 465.17807070094887,
+                "w": 10,
+                "h": 5
+              }
+            },
+            "hpwl": 3433.85,
+            "ascii_layout": "Clements4x4 布局预览 (800x600 μm):\n........................................\n........................................\n........................................\n........................M...............\n............................M...........\n........................................\n..........................P.............\n........................................\n....M...................................\n.................P...................M..\n......................M.................\n.............M......P...................\n........................................\n..............................P.........\n........................................\nG=grating_coupler  M=mmi  W=waveguide  P=phase_shifter  D=detector"
+          },
+          {
+            "name": "QuantumBosonSampling",
+            "n_devices": 4,
+            "placements": {
+              "src1": {
+                "x": 165.0096560413216,
+                "y": 39.329395703954084,
+                "w": 10,
+                "h": 10
+              },
+              "src2": {
+                "x": 74.03366955285088,
+                "y": 191.99618871301882,
+                "w": 10,
+                "h": 10
+              },
+              "bs1": {
+                "x": 358.77705107290865,
+                "y": 234.47833606353632,
+                "w": 20,
+                "h": 10
+              },
+              "det1": {
+                "x": 67.35809371462865,
+                "y": 229.32996383851722,
+                "w": 10,
+                "h": 10
+              }
+            },
+            "hpwl": 1027.71,
+            "ascii_layout": "QuantumBosonSampling 布局预览 (400x300 μm):\n........................................\n........................................\n.................G......................\n........................................\n........................................\n........................................\n........................................\n........................................\n........................................\n.......G................................\n........................................\n.......D............................M...\n........................................\n........................................\n........................................\nG=grating_coupler  M=mmi  W=waveguide  P=phase_shifter  D=detector"
+          }
+        ],
+        "checkpoint_loaded": false,
+        "placement_mode": "ppo_gnn_init",
+        "ai_layout_executed": true,
+        "baseline_type": "ppo_gnn_init",
+        "gnn_enabled": true,
+        "gnn_out_dim": 16,
+        "warning": "HPWL 来自 Orthogonal 初始化 PPO + 随机初始化 Edge-GNN 前向推理（非预训练），不能与 AlphaChip 预训练模型对标，但确为 Edge-GNN + PPO 策略前向推理结果"
+      }
+    },
+    {
+      "stage_id": 4,
+      "name": "智能布线",
+      "status": "OK",
+      "duration": 18.67,
+      "key_outputs": {
+        "circuits": [
+          {
+            "name": "MZI",
+            "n_paths": 5,
+            "total_loss_db": 2.77,
+            "n_crossings": 0,
+            "n_bends": 25,
+            "ascii_routing": "MZI 布线预览 (500x300 μm):\n........O...............................\n.......**********O*.....................\n.......|.........******************.....\n.......|..........................|.....\n.......|..........................*.....\n.......|............****************....\n.......|............*...................\n.......|..........***...................\n.......O*************...................\n........................................\n........................................\n........................................\n........................................\n........................................\n........................................\n-=水平  |=垂直  *=弯曲  O=起止  .=空"
+          },
+          {
+            "name": "Clements4x4",
+            "n_paths": 10,
+            "total_loss_db": 4.4,
+            "n_crossings": 1,
+            "n_bends": 67,
+            "ascii_routing": "Clements4x4 布线预览 (800x600 μm):\n.....*********......................***.\n.....********O------*...............***.\n.....*..............*...............**..\n....***********************O--------**..\n....|*..............**..............**..\n....O*****************..............**..\n....|...............******************..\n.***********************************O*..\n.*|.....................................\n.*|.....................................\n.*****************......................\n.**.....................................\n.**.....................................\n.**.....................................\n........................................\n-=水平  |=垂直  *=弯曲  O=起止  .=空"
+          },
+          {
+            "name": "QuantumBosonSampling",
+            "n_paths": 3,
+            "total_loss_db": 4.7,
+            "n_crossings": 2,
+            "n_bends": 15,
+            "ascii_routing": "QuantumBosonSampling 布线预览 (400x300 μm):\n............O*..........................\n.............|.**********O..............\n.............|.*........................\n.............|.*........................\n.............|.*........................\n.............|.*........................\n.............|.*........................\n............**.*........................\n............*.**---------------------O..\n............*.**........................\n............*.**........................\n............*.**........................\n............*-O*........................\n........................................\n........................................\n-=水平  |=垂直  *=弯曲  O=起止  .=空"
+          }
+        ],
+        "router_type": "curvy"
+      }
+    },
+    {
+      "stage_id": 5,
+      "name": "仿真验证",
+      "status": "OK",
+      "duration": 11.44,
+      "key_outputs": {
+        "mzi_s_param": {
+          "resonant_wavelength_nm": 1549.0,
+          "extinction_ratio_db": 30.0,
+          "extinction_ratio_physical_db": 27.958800173440746,
+          "n_points": 101,
+          "wl_start_nm": 1500,
+          "wl_stop_nm": 1600,
+          "T_max": 0.08376174780235501,
+          "T_min": 8.376174780235502e-05,
+          "mmi_split_ratio": 0.48,
+          "csv_path": "out/real_case/reports/mzi_s_param.csv"
+        },
+        "clements_unitary": {
+          "n_modes": 4,
+          "unitarity_error": 4.440892098500626e-16,
+          "is_unitary": true,
+          "json_path": "out/real_case/reports/clements_unitary.json"
+        },
+        "pam4": {
+          "ber": 0.0004290603331968401,
+          "snr_db": 21.96698044526152,
+          "n_symbols": 1000,
+          "bit_rate_gbps": 100.0,
+          "json_path": "out/real_case/reports/pam4_eye.json"
+        },
+        "fdtd": {
+          "fdtd_vs_analytical_error_db": 17.905362566567636,
+          "fdtd_duration_s": 6.813719749450684,
+          "extinction_ratio_physical_db": 27.958800173440746,
+          "json_path": "out/real_case/reports/fdtd_results.json"
+        }
+      }
+    },
+    {
+      "stage_id": 6,
+      "name": "DRC/LVS 验证",
+      "status": "OK",
+      "duration": 0.02,
+      "key_outputs": {
+        "drc": {
+          "n_rules": 11,
+          "n_violations": 1,
+          "n_passed": 10,
+          "pass_rate": 0.9090909090909091
+        },
+        "lvs": {
+          "is_consistent": true,
+          "n_mismatches": 0,
+          "n_devices": 5,
+          "n_connections": 5
+        }
+      }
+    },
+    {
+      "stage_id": 7,
+      "name": "GDS 导出",
+      "status": "OK",
+      "duration": 27.65,
+      "key_outputs": {
+        "circuits": [
+          {
+            "name": "MZI",
+            "gds_path": "out/real_case/gds/MZI.gds",
+            "file_size_bytes": 3306,
+            "n_structures": 1,
+            "n_layers": 3,
+            "loadable": true
+          },
+          {
+            "name": "Clements_4x4",
+            "gds_path": "out/real_case/gds/Clements_4x4.gds",
+            "file_size_bytes": 15750,
+            "n_structures": 1,
+            "n_layers": 3,
+            "loadable": true
+          },
+          {
+            "name": "Quantum_BosonSampling",
+            "gds_path": "out/real_case/gds/Quantum_BosonSampling.gds",
+            "file_size_bytes": 8818,
+            "n_structures": 1,
+            "n_layers": 3,
+            "loadable": true
+          }
+        ]
+      }
+    },
+    {
+      "stage_id": 8,
+      "name": "光电协同",
+      "status": "OK",
+      "duration": 0.03,
+      "key_outputs": {
+        "spice_netlist": {
+          "file_path": "out/real_case/spice/cosim.cir",
+          "lines": 21,
+          "netlist": "* PoLaRIS 光电协同仿真网表\n* 同步时间步: 1.000000e-12 s\n* 总时间: 1.000000e-09 s\n\n.include waveguide_soi.va\n.include mmi_1x2_soI.va\n.include ring_resonator_soi.va\n.include mzm_modulator_soi.va\n.include photodetector_soi.va\n\nV_in in 0 PULSE(0 0.33 0 1e-12 1e-12 2e-12 8e-12)\n\nX1 in out waveguide_soi\nX2 in out1 out2 mmi_1x2_soI\nX3 in through ring_resonator_soi\nX4 in out rf_in mzm_modulator_soi\nX5 in rf_out photodetector_soi\n\n\n.tran 1.000000e-12 1.000000e-09\n.end"
+        },
+        "spice_cosimulation": {
+          "n_points": 1002,
+          "waveform_path": "out/real_case/spice/spice_waveform.json",
+          "solver_used": "mna_solver"
+        },
+        "spice_executed": true,
+        "spice_solver": "mna_solver",
+        "pam4": {
+          "ber": 0.01861081220777694,
+          "snr_db": 17.875946686311714,
+          "eye_path": "out/real_case/reports/pam4_eye_optoelectronic.json",
+          "n_symbols": 2000,
+          "bit_rate": 100000000000.0,
+          "total_noise_std": 0.08000032630931507,
+          "shot_noise_a": 2.076496750753759e-06,
+          "thermal_noise_a": 4.07087214242845e-06,
+          "optical_loss_db": 5.7,
+          "link_budget_margin_db": 14.3
+        },
+        "optical_loss_db": 5.7,
+        "detector_shot_noise_a": 2.076496750753759e-06,
+        "detector_thermal_noise_a": 4.07087214242845e-06,
+        "link_budget_margin_db": 14.3,
+        "pam4_ber": 0.01861081220777694,
+        "pam4_snr_db": 17.875946686311714
+      }
+    },
+    {
+      "stage_id": 9,
+      "name": "量子光子验证",
+      "status": "OK",
+      "duration": 0.76,
+      "key_outputs": {
+        "boson_sampling": {
+          "n_outputs": 35,
+          "prob_sum": 1.0000000000000004,
+          "prob_sum_ok": true
+        },
+        "hom": {
+          "theta": 0.7853981633974483,
+          "coincidence_prob": 2.4651903288156613e-32,
+          "hom_verified": true
+        },
+        "klm": {
+          "cnot_success_prob": 0.1111111111111111,
+          "cnot_verified": true,
+          "hadamard_unitary_error": 2.220446049250313e-16,
+          "hadamard_verified": true
+        },
+        "monte_carlo": {
+          "n_samples": 200,
+          "sigma": 0.01,
+          "prob_sum_mean": 1.0,
+          "prob_sum_std": 6.1679858746148e-16,
+          "prob_sum_min": 0.9999999999999984,
+          "prob_sum_max": 1.0000000000000016,
+          "prob_sum_ok": true
+        },
+        "hom_dip": {
+          "sigma": 1.0,
+          "p_at_zero": 0.0,
+          "p_at_classical_limit": 0.499998136673414,
+          "dip_depth": 1.0,
+          "dip_verified": true,
+          "classical_verified": true,
+          "depth_verified": true
+        },
+        "sampler": {
+          "n_samples": 10000,
+          "n_output_modes": 35,
+          "chi2_statistic": 20.952228118550217,
+          "p_value": 0.9610757669450065,
+          "dof": 34,
+          "sampler_verified": true
+        },
+        "klm_circuit": {
+          "n_shots": 10000,
+          "prob_sum_ok": true,
+          "post_select_prob": 0.19753086419753094,
+          "sampled_success_rate": 0.1999,
+          "theoretical_success_prob": 0.1111111111111111,
+          "simplified_success_prob": 0.19753086419753094,
+          "quantum_interference_verified": true,
+          "max_deviation_from_classical": 0.6388888888888887,
+          "success_verified": true
+        }
+      }
+    },
+    {
+      "stage_id": 10,
+      "name": "Adjoint 逆向设计",
+      "status": "OK",
+      "duration": 125.98,
+      "key_outputs": {
+        "method": "JAX jax.grad 自动微分（*创新*，替代 lumopt 手动伴随方程）",
+        "initial_width_pixels": 2.0,
+        "optimal_width_pixels": 0.7615001797676086,
+        "initial_width_nm": 400.0,
+        "optimal_width_nm": 152.30003595352173,
+        "initial_fom": 7.985995089836125e+16,
+        "final_fom": 2.8892420451119334e+17,
+        "improvement_db": 5.584548873832556,
+        "iterations": 50,
+        "converged": false,
+        "grid_size": [
+          24,
+          12,
+          8
+        ],
+        "grid_dx_nm": 200.0,
+        "n_fdtd_steps": 600,
+        "target_wavelength_um": 1.55,
+        "learning_rate": 0.5,
+        "sources": [
+          "Yee 1966 IEEE TAP https://doi.org/10.1109/TAP.1966.1138693",
+          "Mahau 2024 arXiv:2412.12360",
+          "lumopt https://github.com/chriskeraly/lumopt",
+          "Jensen & Sigmund 2011 https://doi.org/10.1002/lpor.201000014"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "n_success": 10,
+    "n_failed": 0,
+    "total_duration": 184.573899269104
+  }
+}
