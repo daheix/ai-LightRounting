@@ -40,7 +40,7 @@ import numpy as np
 
 if TYPE_CHECKING:
     # 类型注解仅用于静态检查，运行时不解析（PEP 563 `from __future__ import annotations`）
-    from polaris.sim.types import ModelFunc, SDict
+    from polaris_circuit.types import ModelFunc, SDict
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ def _get_model_map() -> dict[str, Any]:
     """
     global _MODEL_MAP
     if _MODEL_MAP is None:
-        from polaris.sim.models import (
+        from polaris_sparam.models import (
             directional_coupler_s,
             mmi_1x2_s,
             mmi_2x2_s,

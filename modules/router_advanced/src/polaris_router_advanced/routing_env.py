@@ -25,8 +25,7 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from polaris.engine.floorplan_env import Placement
-from polaris.engine.netlist import Netlist
+from .global_router import Netlist, Placement
 from .global_router import (
     CanvasSize,
     GlobalRouter,

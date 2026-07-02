@@ -61,7 +61,10 @@ def stage1_pdk(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict
     Returns:
         含 device_catalog/platform/n_devices 的字典。
     """
-    from polaris.pdk.catalog import DeviceCatalog, _device_to_dict
+    raise ImportError(
+        "stage_input 需要 polaris_pdk 子模块提供 DeviceCatalog/_device_to_dict"
+        "（v5.0 polaris_pdk 仅提供 list/get 查询，未迁移 DeviceCatalog，R03）"
+    )
 
     platform = recipe.platform
     logger.info("阶段 1: 加载 PDK 器件目录（平台=%s）", platform)
@@ -112,7 +115,7 @@ def stage2_circuit(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
         circuit = _circuit_from_dict(recipe.custom_circuit)
     elif recipe.preset_id is not None:
         # 预设电路：复用 web/server.py 的 _build_circuit
-        from polaris.web.server import _build_circuit
+        from polaris_gui.web_server import _build_circuit
 
         circuit = _build_circuit(recipe.preset_id)
     else:

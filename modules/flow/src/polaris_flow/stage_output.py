@@ -67,7 +67,7 @@ def stage7_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict
     Returns:
         含 gds_path/gds_size_bytes 的字典。
     """
-    from polaris.eval.layout_render import export_gds
+    from polaris_gdsio.exporter import export_gds
     from polaris_flow._converters import convert_to_paths, convert_to_placements
 
     circuit_dict = _require_input(prev_outputs, "circuit", 7)

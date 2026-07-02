@@ -232,8 +232,8 @@ def _run_diagonal_router(circuit, placements) -> dict[str, list]:
     Returns:
         布线路径字典 {conn_key: [(x, y), ...]}。
     """
-    from polaris.router.diagonal_router import DiagonalGridRouter
-    from polaris.router.waveguide_router import RouterConstraints, auto_grid_size
+    from polaris_router_advanced.diagonal_router import DiagonalGridRouter
+    from polaris_router_advanced.waveguide_router import RouterConstraints, auto_grid_size
 
     grid_size = auto_grid_size(
         canvas_w=circuit.canvas_w,
@@ -277,7 +277,7 @@ def _collect_routes_metrics(
     Returns:
         (序列化后的路径字典, 总长度 μm)。
     """
-    from polaris.router.path_geometry import path_length
+    from polaris_router_advanced.path_geometry import path_length
 
     total_length_um = 0.0
     routes_serializable: dict[str, list[list[float]]] = {}

@@ -145,8 +145,10 @@ def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
     Returns:
         含 drc_report/lvs_passed 的字典。
     """
-    from polaris.sim.constraint_checker import ConstraintChecker, ConstraintConfig
-    from polaris.sim.constraint_types import CheckContext
+    raise ImportError(
+        "stage_verification 需要 polaris_verify_advanced 子模块提供 "
+        "ConstraintChecker/ConstraintConfig/CheckContext（v5.0 未迁移，R03 禁止 fall-back）"
+    )
 
     placements = _require_input(prev_outputs, "placements", 6)
     routes = _require_input(prev_outputs, "routes", 6)

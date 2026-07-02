@@ -38,8 +38,85 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from polaris.engine.floorplan_env import Placement
-from polaris.engine.netlist import Netlist, NetlistConnection
+
+# ---------------------------------------------------------------------------
+# 网表/放置数据结构（router 输入契约，v5.0 本地定义）
+# ---------------------------------------------------------------------------
+# v5.0 拆分为 33 子模块后，polaris-core 仅提供 make_device/make_circuit/
+# validate_circuit/Tensor，未提供 Placement/Netlist 数据结构。polaris-router-
+# advanced 的 pyproject.toml 仅依赖 numpy/gymnasium（不依赖 polaris-core/
+# polaris-pdk-advanced），故在此本地定义最小化网表/放置契约（duck typing:
+# device 需提供 rotate(angle_deg) 与 bbox.xmin/xmax/ymin/ymax）。
+#
+# 来源（R02 学术诚信）:
+# - DREAMPlace TCAD 2020 (Lin et al.) Placement/Netlist 数据结构
+#   https://arxiv.org/abs/2004.10746
+# - OpenROAD Database API (odb) inst/net 数据结构
+#   https://github.com/The-OpenROAD-Project/OpenROAD
+# - gdsfactory netlist/ComponentReference 抽象
+#   https://gdsfactory.github.io/gdsfactory/
+# - TILOS MacroPlacement bookshelf 网表格式
+#   https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+# - Cadence Innovus 全局-详细分层布线数据结构
+#   https://community.cadence.com/
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class NetlistConnection:
+    """网表中的一条连接（端口到端口）。"""
+
+    src_instance: str
+    src_port: str
+    dst_instance: str
+    dst_port: str
+    constraints: dict = field(default_factory=dict)
+
+
+@dataclass
+class NetlistInstance:
+    """网表中的一个器件实例。"""
+
+    instance_id: str
+    component: str
+    platform: str | None = None
+    settings: dict = field(default_factory=dict)
+
+
+@dataclass
+class Netlist:
+    """解析后的网表（器件实例 + 连接边）。"""
+
+    instances: list[NetlistInstance] = field(default_factory=list)
+    connections: list[NetlistConnection] = field(default_factory=list)
+    name: str = "untitled"
+
+    @property
+    def instance_ids(self) -> list[str]:
+        return [i.instance_id for i in self.instances]
+
+
+@dataclass
+class Placement:
+    """单个器件的放置结果（router 输入契约）。
+
+    device 采用 duck typing: 需提供 ``rotate(angle_deg)`` 方法（返回新实例）
+    与 ``bbox`` 属性（含 xmin/xmax/ymin/ymax）。兼容 polaris-pdk-advanced
+    的 Device 类，亦兼容旧 v4 polaris.pdk.device.Device。
+    """
+
+    instance_id: str
+    device: object
+    x: float  # 左下角 x（μm）
+    y: float  # 左下角 y（μm）
+    rotation: int = 0  # 0/90/180/270
+
+    def bbox_abs(self) -> tuple[float, float, float, float]:
+        """返回放置后轴对齐包围盒 (xmin, ymin, xmax, ymax)。"""
+        dev = self.device.rotate(self.rotation) if self.rotation else self.device
+        w = dev.bbox.xmax - dev.bbox.xmin
+        h = dev.bbox.ymax - dev.bbox.ymin
+        return (self.x, self.y, self.x + w, self.y + h)
 
 
 @dataclass

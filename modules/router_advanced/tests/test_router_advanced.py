@@ -210,7 +210,7 @@ def test_global_router_empty_circuit():
     run_global_routing 用 GCell 划分 + 拥塞代价 + 网序排序。
     验证: 空电路返回 []，GlobalRouterConfig 可实例化。
     """
-    from polaris.engine.netlist import Netlist
+    from polaris_router_advanced.global_router import Netlist
 
     config = GlobalRouterConfig()
     net = Netlist(instances=[], connections=[], name="empty")

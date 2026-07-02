@@ -100,7 +100,7 @@ class _DefaultSimulator:
     def _init_real_simulator(self) -> None:
         """初始化真实 S 参数仿真器。"""
         try:
-            from polaris.sim.simulator import CircuitSimulator
+            from polaris_circuit.simulator import CircuitSimulator
 
             self._sim = CircuitSimulator()
             logger.info("真实 S 参数仿真器初始化成功")

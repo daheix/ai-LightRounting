@@ -70,7 +70,7 @@ class _CurvyRouter:
         来源: LiDAR ISPD'25 §3.3 Sequential Routing
           https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
         """
-        from polaris.router.waveguide_router import (
+        from polaris_router_advanced.waveguide_router import (
             get_platform_constraints,
         )
 
@@ -338,7 +338,7 @@ class _CurvyRouter:
     @staticmethod
     def _make_router(grid_w: int, grid_h: int, grid_size: float, cons: dict):
         """创建 GridRouter 实例。"""
-        from polaris.router.waveguide_router import GridRouter, RouterConstraints
+        from polaris_router_advanced.waveguide_router import GridRouter, RouterConstraints
 
         return GridRouter(
             grid_w, grid_h, grid_size,
