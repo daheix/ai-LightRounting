@@ -45,7 +45,11 @@ from __future__ import annotations
 
 from polaris_bpm.solver import (
     C0,
+    CAP_FRACTION,
+    CAP_STRENGTH,
+    LOSS_DB_PER_CM_SI,
     build_cn_matrices,
+    build_loss_profile,
     gaussian_source,
     solve_bpm,
 )
@@ -56,6 +60,10 @@ __all__ = [
     "solve_bpm",
     "build_cn_matrices",
     "gaussian_source",
+    "build_loss_profile",
     "C0",
+    "LOSS_DB_PER_CM_SI",
+    "CAP_STRENGTH",
+    "CAP_FRACTION",
     "__version__",
 ]
