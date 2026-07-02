@@ -1,0 +1,17 @@
+[project]
+name = "polaris-inverse"
+version = "5.0.0"
+description = "PoLaRIS Adjoint 逆向设计子模块（JAX 可微 FDTD + jax.grad 自动微分优化波导宽度）"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "jax>=0.4",
+    "jaxlib>=0.4",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]

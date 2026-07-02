@@ -1,0 +1,139 @@
+"""polaris-inverse 子模块测试。
+
+测试覆盖（R13 强制自测）:
+- test_optimize_waveguide_width: 50 次迭代，验证 fom_history 长度=51、无 NaN、
+  improvement_db 为有限值
+- test_optimize_convergence: 验证返回 dict 含全部必需字段
+
+来源（R02 学术诚信）:
+- pytest 文档: https://docs.pytest.org/
+- Yee 1966 IEEE TAP: https://doi.org/10.1109/TAP.1966.1138693
+- Mahau 2024 arXiv:2412.12360: https://arxiv.org/abs/2412.12360
+- Jensen & Sigmund 2011: https://doi.org/10.1002/lpor.201000014
+- Polyak 1964 heavy-ball method
+- lumopt: https://github.com/chriskeraly/lumopt
+"""
+
+from __future__ import annotations
+
+import math
+import sys
+from pathlib import Path
+
+import pytest
+
+# 让测试既能从已安装包导入，也能从源码树导入（CI/开发模式）
+_SRC = str(Path(__file__).resolve().parents[1] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
+import polaris_inverse  # noqa: E402
+from polaris_inverse import optimize_waveguide_width  # noqa: E402
+
+
+# 全量 50 次迭代较慢（JAX 首次 JIT 编译 + 50 步 AD），
+# 标记为 slow，CI 默认运行；本地可用 -m "not slow" 跳过。
+@pytest.mark.slow
+def test_optimize_waveguide_width():
+    """50 次迭代波导宽度优化：验证 fom_history 长度=51、无 NaN、improvement_db 有限。
+
+    验证项:
+    - fom_history 长度 = n_iterations + 1 = 51
+    - fom_history 无 NaN
+    - improvement_db 为有限值（非 NaN/Inf）
+    - initial_fom / final_fom 为有限正数
+    """
+    result = optimize_waveguide_width(n_iterations=50, learning_rate=0.5)
+
+    # fom_history 长度 = n_iterations + 1（含初始 FoM + 50 步每步记录 + 最终 FoM
+    # 实际与 stage10 实现对齐：初始 + 50 步循环中每步记录 + 最终 = 52，但本子模块
+    # 规范要求 = n_iterations + 1 = 51，已在 adjoint.py 中调整为 51）
+    assert len(result["fom_history"]) == 51, (
+        f"fom_history 长度应为 51（n_iterations+1），实际 {len(result['fom_history'])}"
+    )
+
+    # 无 NaN
+    has_nan = any(math.isnan(x) for x in result["fom_history"])
+    assert not has_nan, "fom_history 含 NaN（违反 R03 禁止 fall-back）"
+
+    # improvement_db 为有限值
+    assert math.isfinite(result["improvement_db"]), (
+        f"improvement_db 应为有限值，实际 {result['improvement_db']}"
+    )
+
+    # FoM 为有限正数
+    assert math.isfinite(result["initial_fom"]) and result["initial_fom"] > 0, (
+        f"initial_fom 应为有限正数，实际 {result['initial_fom']}"
+    )
+    assert math.isfinite(result["final_fom"]) and result["final_fom"] > 0, (
+        f"final_fom 应为有限正数，实际 {result['final_fom']}"
+    )
+
+
+def test_optimize_convergence():
+    """验证返回 dict 含全部必需字段（10 次迭代省时）。
+
+    必需字段:
+    - initial_width_nm / optimal_width_nm (float)
+    - initial_fom / final_fom (float)
+    - improvement_db (float)
+    - fom_history (list)
+    - converged (bool)
+    - iterations (int)
+    """
+    # 用 10 次迭代省时（JAX JIT 编译后单步很快）
+    result = optimize_waveguide_width(n_iterations=10, learning_rate=0.5)
+
+    required_keys = [
+        "initial_width_nm",
+        "optimal_width_nm",
+        "initial_fom",
+        "final_fom",
+        "improvement_db",
+        "fom_history",
+        "converged",
+        "iterations",
+    ]
+    for key in required_keys:
+        assert key in result, f"返回 dict 缺少必需字段: {key}"
+
+    # 类型与语义校验
+    assert isinstance(result["initial_width_nm"], float)
+    assert isinstance(result["optimal_width_nm"], float)
+    assert isinstance(result["initial_fom"], float)
+    assert isinstance(result["final_fom"], float)
+    assert isinstance(result["improvement_db"], float)
+    assert isinstance(result["fom_history"], list)
+    assert isinstance(result["converged"], bool)
+    assert isinstance(result["iterations"], int)
+
+    # iterations 应等于输入 n_iterations
+    assert result["iterations"] == 10, (
+        f"iterations 应=10，实际 {result['iterations']}"
+    )
+
+    # fom_history 长度 = n_iterations + 1
+    assert len(result["fom_history"]) == 11, (
+        f"fom_history 长度应为 11（n_iterations+1），实际 {len(result['fom_history'])}"
+    )
+
+    # 无 NaN（10 次迭代也应无 NaN）
+    has_nan = any(math.isnan(x) for x in result["fom_history"])
+    assert not has_nan, "fom_history 含 NaN"
+
+
+def test_optimize_invalid_iterations():
+    """非法 n_iterations（<=0）应 raise（R03 禁止 fall-back）。"""
+    with pytest.raises((ValueError, RuntimeError)):
+        optimize_waveguide_width(n_iterations=0, learning_rate=0.5)
+
+
+def test_optimize_invalid_learning_rate():
+    """非法 learning_rate（<=0）应 raise（R03 禁止 fall-back）。"""
+    with pytest.raises((ValueError, RuntimeError)):
+        optimize_waveguide_width(n_iterations=10, learning_rate=0.0)
+
+
+def test_inverse_version():
+    """验证子模块版本号为 5.0.0（与 8 子模块统一版本对齐）。"""
+    assert polaris_inverse.__version__ == "5.0.0"
