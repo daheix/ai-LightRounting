@@ -1,0 +1,22 @@
+[project]
+name = "polaris-orchestrator"
+version = "5.0.0"
+description = "PoLaRIS 编排层（组合 8 个子模块为完整 EDA 流程：PDK/验证/布局/布线/仿真/DRC-LVS/GDS/逆向/量子）"
+requires-python = ">=3.10"
+dependencies = [
+    "polaris-core",
+    "polaris-pdk",
+    "polaris-place",
+    "polaris-route",
+    "polaris-sim",
+    "polaris-verify",
+    "polaris-inverse",
+    "polaris-quantum",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
