@@ -45,8 +45,12 @@ from __future__ import annotations
 
 from polaris_fde.solver import (
     C0,
+    CONFINEMENT_THRESHOLD,
+    V_CUTOFF_SINGLE_MODE,
     build_index_profile,
     build_laplacian_operator,
+    compute_v_parameter,
+    confinement_factor,
     solve_modes,
 )
 
@@ -56,6 +60,10 @@ __all__ = [
     "solve_modes",
     "build_index_profile",
     "build_laplacian_operator",
+    "compute_v_parameter",
+    "confinement_factor",
     "C0",
+    "CONFINEMENT_THRESHOLD",
+    "V_CUTOFF_SINGLE_MODE",
     "__version__",
 ]

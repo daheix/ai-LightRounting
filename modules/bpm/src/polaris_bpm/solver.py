@@ -23,6 +23,19 @@ LHS 和 RHS 均为三对角矩阵，可用 scipy.linalg.solve_banded 高效求�
 Crank-Nicolson 格式无条件稳定（Crank & Nicolson 1947），任意 dz 都不发散。
 但精度要求 dz << λ（典型 dz = 0.1μm）。
 
+## 传输率 BUG 修复（split-step BPM，2026-07）
+
+CN 格式对反厄米 H（实折射率）严格功率守恒：A†A = B†B = I-(dz/2)²H²，
+内点子矩阵在 Dirichlet 截断后仍反厄米，能量不"漏出"系统而被反射回波导，
+导致 transmission ≡ 1.0（dB≈0）。这是 BPM 数值方法在无损耗设置的理论预测，
+并非提取逻辑 BUG。
+
+引入 split-step 物理损耗（RP Photonics 标准方案）:
+1. **Soref 材料吸收**（芯区均匀功率衰减 α_p，Soref 1993 SOI 3 dB/cm）
+2. **CAP 吸收边界层**（pad 外侧平方渐变衰减，吸收辐射模避免 Dirichlet 反射）
+
+每步: E^{n+1} = exp(-α·dz/2) · CN(E^n) · exp(-α·dz/2)  (symmetric split, O(dz³))
+
 ## ADI 扩展（2D 横向）
 
 2D 横向时用 ADI（Alternating Direction Implicit）分裂（Chung & Dagli 1990）:
@@ -33,8 +46,8 @@ Crank-Nicolson 格式无条件稳定（Crank & Nicolson 1947），任意 dz 都�
 ## Input / Process / Output
 
 - I: width_um / length_um / wavelength_um / n_core / n_clad / dz_um / dx_um / pad_um
-- P: 构建 1D 折射率 → CN 三对角矩阵 → 高斯源 → 逐步求解
-- O: dict{field_z, transmission_db, n_steps, grid_info}
+- P: 构建 1D 折射率 → CN 三对角矩阵 → 高斯源 → split-step 逐步求解
+- O: dict{field_z, transmission_db, n_steps, grid_info, alpha_profile}
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 - Feit & Fleck 1978 Appl. Opt. https://opg.optica.org/ao/abstract.cfm?uri=ao-17-24-3990
@@ -42,7 +55,15 @@ Crank-Nicolson 格式无条件稳定（Crank & Nicolson 1947），任意 dz 都�
 - Lumerical varFDTD https://optics.ansys.com/hc/en-us/articles/360034902433
 - scipy.linalg.solve_banded https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.solve_banded.html
 - Chung & Dagli 1990 IEEE JQE https://ieeexplore.ieee.org/document/59635
-- Hadley 1992 Opt. Lett. https://opg.optica.org/ol/abstract.cfm?uri=ol-17-10-726
+- Hadley 1992 Opt. Lett. (TBC/CAP 边界) https://opg.optica.org/ol/abstract.cfm?uri=ol-17-10-726
+- Soref R.A. 1993 Proc. IEEE 81(12) "Silicon-based optoelectronics"
+  https://ieeexplore.ieee.org/document/249720
+- Rickman & Reed 1994 Electron. Lett. 30(10) (SOI 0.5 dB/cm 实测)
+  https://digital-library.theiet.org/doi/abs/10.1049/el:19931356
+- Grillot 2006 JLT 24(2) (SOI 条形波导损耗 1-10 dB/cm)
+  https://opg.optica.org/jlt/abstract.cfm?uri=jlt-24-2-891
+- RP Photonics BPM 边界处理
+  https://www.rp-photonics.com/numerical_beam_propagation.html
 - NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/
 """
 
@@ -55,12 +76,37 @@ __all__ = [
     "solve_bpm",
     "build_cn_matrices",
     "gaussian_source",
+    "build_loss_profile",
     "C0",
+    "LOSS_DB_PER_CM_SI",
+    "CAP_STRENGTH",
+    "CAP_FRACTION",
 ]
 
 # 物理常量（NIST CODATA 2018，真空光速 m/s）
 # 来源: https://physics.nist.gov/cuu/Constants/
 C0: float = 299_792_458.0
+
+# Soref 1993 SOI 波导传播损耗 (dB/cm) — SOI 条形波导保守典型上界
+# 来源 (R02):
+# - Soref R.A. 1993 Proc. IEEE 81(12) "Silicon-based optoelectronics"
+#   https://ieeexplore.ieee.org/document/249720
+# - Rickman & Reed 1994 Electron. Lett. 30(10) (SOI 脊形 0.5 dB/cm 实测)
+#   https://digital-library.theiet.org/doi/abs/10.1049/el:19931356
+# - Grillot 2006 JLT 24(2) (SOI 条形波导损耗 1-10 dB/cm，依赖侧壁粗糙度)
+#   https://opg.optica.org/jlt/abstract.cfm?uri=jlt-24-2-891
+LOSS_DB_PER_CM_SI: float = 3.0
+
+# 吸收边界层 (Complex Absorbing Potential) 参数
+# 在 pad 外侧 CAP_FRACTION 区域加平方渐变振幅衰减系数，吸收辐射模
+# 避免 Dirichlet 边界把辐射模反射回波导导致 transmission≡1（CN 严格守恒）
+# 来源 (R02):
+# - Hadley 1992 Opt. Lett. 17(10) 726 (TBC 透明边界条件)
+#   https://opg.optica.org/ol/abstract.cfm?uri=ol-17-10-726
+# - RP Photonics BPM 边界处理
+#   https://www.rp-photonics.com/numerical_beam_propagation.html
+CAP_STRENGTH: float = 0.5  # 边界处最大功率衰减系数 α (μm⁻¹)
+CAP_FRACTION: float = 0.3  # pad 外侧比例作为 CAP
 
 
 def gaussian_source(
@@ -99,6 +145,89 @@ def gaussian_source(
     if norm > 0:
         field = field / norm
     return field.astype(np.complex128)
+
+
+def build_loss_profile(
+    nx: int,
+    core_x0: int,
+    core_x1: int,
+    pad_pts: int,
+    loss_db_per_cm: float = LOSS_DB_PER_CM_SI,
+    cap_strength: float = CAP_STRENGTH,
+    cap_fraction: float = CAP_FRACTION,
+) -> np.ndarray:
+    """构建功率衰减系数分布 α(x) (μm⁻¹)。
+
+    用于 split-step BPM 的振幅衰减步: |E| *= exp(-α·dz/2)。
+    功率衰减: P(z) = P(0)·exp(-α·z)。
+
+    分布构成:
+    - 芯区 [core_x0, core_x1): Soref 1993 SOI 材料吸收损耗（均匀 α_core）
+    - pad 外侧 cap_fraction 比例: 平方渐变 α_cap(t) = cap_strength·t²
+      （t=0 内侧 → t=1 边界），吸收辐射模避免 Dirichlet 反射
+
+    Args:
+        nx: 网格点数。
+        core_x0, core_x1: 芯区索引 [core_x0, core_x1)。
+        pad_pts: 单侧 pad 点数。
+        loss_db_per_cm: Soref 传播损耗 (dB/cm)，默认 3.0。
+        cap_strength: CAP 边界处最大功率衰减系数 (μm⁻¹)，默认 0.5。
+        cap_fraction: pad 外侧作为 CAP 的比例，默认 0.3。
+
+    Returns:
+        ndarray (nx,): 功率衰减系数 α(x) (μm⁻¹)，非负。
+
+    Raises:
+        ValueError: 参数非法（R03）。
+
+    来源 (R02):
+        - Soref 1993 Proc. IEEE — SOI 波导损耗
+          https://ieeexplore.ieee.org/document/249720
+        - Rickman & Reed 1994 ELL — SOI 0.5 dB/cm 实测
+          https://digital-library.theiet.org/doi/abs/10.1049/el:19931356
+        - Grillot 2006 JLT — SOI 条形波导损耗
+          https://opg.optica.org/jlt/abstract.cfm?uri=jlt-24-2-891
+        - Hadley 1992 Opt. Lett. — TBC/CAP 边界
+          https://opg.optica.org/ol/abstract.cfm?uri=ol-17-10-726
+        - RP Photonics BPM 边界处理
+          https://www.rp-photonics.com/numerical_beam_propagation.html
+    """
+    if nx < 3:
+        raise ValueError(f"nx 须 >= 3，得到 {nx}")
+    if not (0 <= core_x0 <= core_x1 <= nx):
+        raise ValueError(
+            f"芯区索引非法: [{core_x0},{core_x1}) 网格 {nx}"
+        )
+    if pad_pts < 0:
+        raise ValueError(f"pad_pts 须 >= 0，得到 {pad_pts}")
+    if loss_db_per_cm < 0:
+        raise ValueError(f"loss_db_per_cm 须 >= 0，得到 {loss_db_per_cm}")
+    if cap_strength < 0:
+        raise ValueError(f"cap_strength 须 >= 0，得到 {cap_strength}")
+    if not (0.0 <= cap_fraction <= 1.0):
+        raise ValueError(f"cap_fraction 须 ∈ [0,1]，得到 {cap_fraction}")
+
+    alpha = np.zeros(nx, dtype=np.float64)
+    # 芯区 Soref 材料吸收 (功率衰减系数)
+    # α_p = loss_dB/cm · ln(10)/10 / 1e4 (μm⁻¹)
+    # 推导: P(z)=P(0)·10^(-loss·z_cm/10) = P(0)·exp(-loss·ln10·z/10)
+    #       z_cm = z_μm / 1e4 → α_p = loss·ln10/(10·1e4) (μm⁻¹)
+    if loss_db_per_cm > 0:
+        alpha_core = loss_db_per_cm * np.log(10.0) / 10.0 / 1e4
+        alpha[core_x0:core_x1] = alpha_core
+
+    # CAP 吸收边界层: pad 外侧 cap_fraction 加平方渐变
+    if cap_strength > 0 and cap_fraction > 0:
+        cap_pts = int(round(pad_pts * cap_fraction))
+        if cap_pts >= 2:
+            # t ∈ [0,1]: 内侧 0 → 边界 1（除以 cap_pts-1 保证边界恰为 1）
+            t = np.arange(cap_pts, dtype=np.float64) / (cap_pts - 1)
+            ramp = cap_strength * (t ** 2)
+            # 左侧: 内侧 t=0 → 边界 t=1
+            alpha[:cap_pts] = np.maximum(alpha[:cap_pts], ramp[::-1])
+            # 右侧: 内侧 t=0 → 边界 t=1
+            alpha[nx - cap_pts:] = np.maximum(alpha[nx - cap_pts:], ramp)
+    return alpha
 
 
 def build_cn_matrices(
@@ -196,10 +325,15 @@ def solve_bpm(
     dx_um: float = 0.01,
     pad_um: float = 2.0,
 ) -> dict:
-    """1D Crank-Nicolson BPM 求解器。
+    """1D Crank-Nicolson split-step BPM 求解器。
 
     在硅条形波导（n_core 芯 / n_clad 包层）中传播高斯光束，
-    使用 Crank-Nicolson 隐式格式逐步求解抛物波动方程。
+    使用 Crank-Nicolson 隐式格式求解抛物波动方程（相位演化），
+    并以 symmetric split-step 显式衰减步引入物理损耗（Soref 材料吸收 + CAP 边界）。
+
+    每步: E^{n+1} = exp(-α·dz/2) · A⁻¹·B · exp(-α·dz/2) · E^n
+    - CN 步: 实折射率，反厄米 H，严格功率守恒（仅相位演化）
+    - 衰减步: α(x) 来自 Soref 芯区损耗 + CAP pad 外侧渐变
 
     Args:
         width_um: 波导芯宽度（μm）。
@@ -214,9 +348,13 @@ def solve_bpm(
     Returns:
         dict: {field_z, transmission_db, n_steps, grid_info, ...}
             - field_z: 末态场分布 (nx,)（复数）
+            - transmission: 末态功率/初态功率（无量纲）
             - transmission_db: 传输率（dB，末态功率/初态功率）
+            - p_initial / p_final: 初末功率
             - n_steps: 实际步数
-            - grid_info: {nx, dx_um, dz_um, window_um}
+            - grid_info: {nx, nz, dx_um, dz_um, window_um, core_x}
+            - physics: {k0, n0, n_core, n_clad}
+            - loss: {loss_db_per_cm, cap_strength, cap_fraction}
 
     Raises:
         ValueError: 参数非法（R03 禁止 fall-back）。
@@ -226,6 +364,8 @@ def solve_bpm(
         - Feit & Fleck 1978（BPM）
         - Crank & Nicolson 1947（隐式格式）
         - Chung & Dagli 1990（ADI 扩展）
+        - Soref 1993 Proc. IEEE（SOI 损耗）
+        - Hadley 1992 Opt. Lett.（CAP/TBC 边界）
     """
     # ---- 参数校验（R03） ----
     if width_um <= 0:
@@ -275,35 +415,53 @@ def solve_bpm(
     # ---- 构建 Crank-Nicolson 矩阵 ----
     A_banded, B_banded = build_cn_matrices(n_profile, dx, dz, k0, n0)
 
+    # ---- 构建损耗分布 α(x)（Soref 芯区吸收 + CAP 边界吸收） ----
+    pad_pts = core_x0  # 单侧 pad 点数（芯区居中，core_x0 == pad 点数）
+    alpha_profile = build_loss_profile(
+        nx, core_x0, core_x1, pad_pts,
+        loss_db_per_cm=LOSS_DB_PER_CM_SI,
+        cap_strength=CAP_STRENGTH,
+        cap_fraction=CAP_FRACTION,
+    )
+    # symmetric split-step 振幅衰减因子 (|E| *= exp(-α·dz/2))
+    attn_half = np.exp(-0.5 * alpha_profile * dz)
+
     # ---- 初始场: 高斯光束（中心对准波导） ----
     center_um = window_um / 2.0
-    # 腰斑 ≈ 波导宽度（耦合到基模）
-    waist_um = max(width_um, wavelength_um)
+    # 腰斑 ≈ 波导宽度（耦合到基模；强限制 SOI 基模场集中在芯区）
+    waist_um = width_um
     field = gaussian_source(nx, dx, center_um, waist_um)
     # 强制边界为 0（Dirichlet）
     field[0] = 0.0
     field[-1] = 0.0
 
-    # 初始功率
+    # 初始功率（衰减前 z=0 处实测功率）
     p_initial = float(np.sum(np.abs(field) ** 2) * dx)
 
-    # ---- 逐步求解 ----
+    # ---- split-step 逐步求解 ----
+    # E^{n+1} = attn_half · CN(E^n) · attn_half  (symmetric split, O(dz³))
     for _ in range(nz):
-        # RHS: b = B · E^n
-        # B 是 banded 三对角，用矩阵-向量乘
+        # 半步衰减（前）
+        field = field * attn_half
+        # CN 全步（相位演化，实折射率守恒功率）
         rhs = np.zeros(nx, dtype=np.complex128)
         rhs[:] = B_banded[1, :] * field
         rhs[1:] += B_banded[0, 1:] * field[:-1]  # 上副对角
         rhs[:-1] += B_banded[2, :-1] * field[1:]  # 下副对角
-        # 强制边界
+        # 强制边界（Dirichlet E=0）
         rhs[0] = 0.0
         rhs[-1] = 0.0
         # 求解 A · E^{n+1} = rhs
         field = solve_banded((1, 1), A_banded, rhs)
-        # NaN 校验
-        if np.any(np.isnan(field)):
+        # 半步衰减（后）
+        field = field * attn_half
+        # 强制边界
+        field[0] = 0.0
+        field[-1] = 0.0
+        # NaN 校验（R03 禁止 fall-back）
+        if np.any(np.isnan(field)) or np.any(np.isinf(field)):
             raise RuntimeError(
-                "BPM 求解出现 NaN（R03 禁止 fall-back）"
+                "BPM 求解出现 NaN/Inf（R03 禁止 fall-back）"
             )
 
     # ---- 输出 ----
@@ -336,5 +494,11 @@ def solve_bpm(
             "n0": float(n0),
             "n_core": float(n_core),
             "n_clad": float(n_clad),
+        },
+        "loss": {
+            "loss_db_per_cm": float(LOSS_DB_PER_CM_SI),
+            "cap_strength": float(CAP_STRENGTH),
+            "cap_fraction": float(CAP_FRACTION),
+            "alpha_profile": alpha_profile.tolist(),
         },
     }
