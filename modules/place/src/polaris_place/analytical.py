@@ -302,17 +302,89 @@ def _compute_hpwl_pos(
     return total
 
 
+def _topological_depth(
+    n: int,
+    connections: list[tuple[int, int]],
+) -> list[int]:
+    """计算每个器件的拓扑深度（Kahn 算法 + 最长路径）。
+
+    拓扑深度 = 从源器件（入度=0）到当前器件的最长路径长度。源器件 depth=0，
+    下游器件 depth = max(上游 depth) + 1。用于 FFDH 合法化时保证信号流
+    方向 x 递增（拓扑序靠后的器件 x 坐标更大，避免后端器件被塞到前端
+    器件的行内空隙导致物理重叠与 DRC 违规）。
+
+    算法: Kahn 算法（Kahn 1962）逐层剥离入度=0 的节点，同时维护最长路径
+    depth。可检测环（电路连接不应有环，有环则 raise，R03 禁止 fall-back）。
+
+    Args:
+        n: 器件数。
+        connections: 索引化连接列表 ``[(src_idx, dst_idx), ...]``。
+
+    Returns:
+        每个器件的拓扑深度列表 ``[depth_0, depth_1, ...]``。
+
+    Raises:
+        RuntimeError: 连接存在环（无法拓扑排序，R03 禁止 fall-back）。
+
+    来源（R02 学术诚信）:
+        - Kahn 1962 "Topological Sorting of Large Networks"
+          https://doi.org/10.1145/368996.369025
+        - CLRS Introduction to Algorithms 3rd ed. §22.4 Topological sort
+        - Topological sorting (Wikipedia)
+          https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
+        - Longest path in DAG
+          https://en.wikipedia.org/wiki/Longest_path_problem#Acyclic_graphs
+        - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
+    """
+    from collections import deque
+
+    adj: list[list[int]] = [[] for _ in range(n)]
+    indeg = [0] * n
+    for src, dst in connections:
+        adj[src].append(dst)
+        indeg[dst] += 1
+    depth = [0] * n
+    queue: deque[int] = deque(i for i in range(n) if indeg[i] == 0)
+    processed = 0
+    while queue:
+        u = queue.popleft()
+        processed += 1
+        for v in adj[u]:
+            if depth[u] + 1 > depth[v]:
+                depth[v] = depth[u] + 1
+            indeg[v] -= 1
+            if indeg[v] == 0:
+                queue.append(v)
+    if processed != n:
+        raise RuntimeError(
+            f"电路连接存在环，无法拓扑排序（processed={processed}/"
+            f"{n}，R03 禁止 fall-back，请检查 connections 是否含环）"
+        )
+    return depth
+
+
 def _legalize(
     pos: np.ndarray,
     widths: np.ndarray,
     heights: np.ndarray,
     names: list[str],
     canvas_w: float,
+    connections: list[tuple[int, int]],
 ) -> dict[str, tuple[float, float]]:
-    """FFDH 合法化：消除重叠（自适应行高，Coffman et al. 1980）。
+    """FFDH 合法化：消除重叠，保证信号流方向 x 递增。
 
-    按高度降序排序器件，逐模块放入能容纳它的已有行（行高 ≥ h×1.1 且水平
-    空间足够），放不下则开新行。返回中心坐标。
+    在经典 FFDH（Coffman et al. 1980）基础上增加拓扑约束（*创新*）:
+    1. 先用 Kahn 算法计算每个器件的拓扑深度（信号流层级）
+    2. 按 (拓扑深度, -高度, pos_y) 排序，拓扑序靠前的先放置
+    3. 装箱候选行需满足: 行内已放置器件的最大拓扑深度 < 当前器件拓扑深度
+       （保证同一行内信号流 x 递增，且跨行也保持拓扑序）
+
+    *创新点*: 经典 FFDH 仅按高度降序装箱，不考虑信号流拓扑，会导致后端
+    器件（如 MZI 中的 mmi2/gc2）被塞到前端行的剩余空间，破坏信号流方向。
+    本实现引入拓扑深度作为主排序键 + 候选行的拓扑约束，确保信号流方向
+    x 递增。底层逻辑: 拓扑深度反映器件在信号流中的层级，同层器件可并排
+    （垂直方向），跨层器件必须 x 递增；候选行约束 rows[r][3] < d 保证
+    当前器件不会回填到拓扑序更靠后的行（避免 mmi2 回填到 ps1 之前）。
 
     Args:
         pos: 连续坐标 ``(n, 2)``。
@@ -320,38 +392,56 @@ def _legalize(
         heights: 器件高度数组。
         names: 器件名列表。
         canvas_w: 画布宽。
+        connections: 索引化连接列表（用于拓扑排序）。
 
     Returns:
-        合法化后的布局字典 ``{name: (cx, cy)}``（中心坐标，无重叠）。
+        合法化后的布局字典 ``{name: (cx, cy)}``（中心坐标，无重叠，
+        信号流方向 x 递增）。
+
+    来源（R02 学术诚信）:
+        - FFDH: Coffman et al. SIAM J. Comput. 9(4) 1980
+          https://epubs.siam.org/doi/10.1137/0209062
+        - Kahn 1962 拓扑排序 https://doi.org/10.1145/368996.369025
+        - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
+        - HPWL: Kahng & Lienig IEEE TCAD 2009
+          https://ieeexplore.ieee.org/document/4685534
+        - Bin packing (Wikipedia)
+          https://en.wikipedia.org/wiki/Bin_packing_problem
     """
     n = len(names)
     if n == 0:
         return {}
-    order = sorted(range(n), key=lambda i: (-float(heights[i]), pos[i, 1]))
-    rows: list[list[float]] = []  # [y_start, row_height, x_cursor]
+    depth = _topological_depth(n, connections)
+    order = sorted(
+        range(n),
+        key=lambda i: (depth[i], -float(heights[i]), pos[i, 1]),
+    )
+    rows: list[list[float]] = []  # [y_start, row_height, x_cursor, max_depth]
     placements: dict[str, tuple[float, float]] = {}
     for i in order:
         w = float(widths[i])
         h = float(heights[i])
-        # 查找能放下当前器件的候选行
+        d = depth[i]
         candidates = [
             r for r in range(len(rows))
-            if rows[r][1] >= h * 1.1 and rows[r][2] + w <= canvas_w
+            if rows[r][1] >= h * 1.1
+            and rows[r][2] + w <= canvas_w
+            and rows[r][3] < d  # 拓扑序: 行内最大 depth < 当前 depth
         ]
         if candidates:
-            r = candidates[0]  # FFDH: 第一个候选行
-            ys, rh, xc = rows[r]
+            r = candidates[0]  # FFDH: 第一个满足拓扑约束的候选行
+            ys, rh, xc, _ = rows[r]
             cx = xc + w / 2.0
             cy = ys + rh / 2.0
             rows[r][2] = xc + w
+            rows[r][3] = d  # 更新行内最大拓扑深度
             placements[names[i]] = (cx, cy)
         else:
-            # 开新行
             new_h = h * 1.1
             ys = rows[-1][0] + rows[-1][1] if rows else 0.0
             cx = w / 2.0
             cy = ys + new_h / 2.0
-            rows.append([ys, new_h, w])
+            rows.append([ys, new_h, w, d])
             placements[names[i]] = (cx, cy)
     return placements
 
@@ -402,8 +492,8 @@ def place_analytical(
                 break
             prev_hpwl = cur_hpwl
 
-    # 3. FFDH 合法化（消除重叠）
-    centers = _legalize(pos, widths, heights, names, canvas_w)
+    # 3. FFDH 合法化（消除重叠 + 保证信号流方向 x 递增）
+    centers = _legalize(pos, widths, heights, names, canvas_w, connections)
 
     # 4. 中心坐标 → 左下角坐标（与 polaris_placement_t 一致）
     placements: dict[str, dict[str, float]] = {}

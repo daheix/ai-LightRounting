@@ -120,6 +120,75 @@ def test_place_analytical_mzi():
     assert result["hpwl"] > 0.0, f"HPWL 应 > 0，实际 {result['hpwl']}"
 
 
+def test_place_analytical_signal_flow():
+    """回归测试: 信号流方向 x 坐标必须递增（R05 防 BUG 复发）。
+
+    BUG 现象: FFDH 合法化仅按高度降序装箱，不考虑信号流拓扑，导致后端
+    器件（mmi2/gc2）被塞到前端器件的行内空隙，x 坐标反而小于中段器件
+    （ps1），产生物理重叠与 DRC 违规。
+
+    修复: FFDH 装箱前先用 Kahn 算法计算拓扑深度，按 (拓扑深度, -高度)
+    排序，候选行需满足拓扑约束（行内最大 depth < 当前 depth）。
+
+    本测试用验证脚本同款 MZI 电路（gc1→mmi1→ps1→mmi2→gc2），
+    断言信号流方向 x 严格递增。
+
+    来源（R02 学术诚信）:
+        - Kahn 1962 拓扑排序 https://doi.org/10.1145/368996.369025
+        - FFDH: Coffman et al. 1980 https://epubs.siam.org/doi/10.1137/0209062
+        - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
+        - HPWL: Kahng & Lienig IEEE TCAD 2009
+          https://ieeexplore.ieee.org/document/4685534
+        - SiEPIC PDK MZI 示例 https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    gc1 = make_device(
+        "gc1", "grating_coupler", 20, 20,
+        ports=[("in", 0, 10, "west"), ("out", 20, 10, "east")],
+    )
+    mmi1 = make_device(
+        "mmi1", "mmi_1x2", 30, 20,
+        ports=[("in", 0, 10, "west"), ("out1", 30, 5, "east"),
+               ("out2", 30, 15, "east")],
+    )
+    ps1 = make_device(
+        "ps1", "phase_shifter", 100, 10,
+        ports=[("in", 0, 5, "west"), ("out", 100, 5, "east")],
+    )
+    mmi2 = make_device(
+        "mmi2", "mmi_2x2", 30, 20,
+        ports=[("in1", 0, 5, "west"), ("in2", 0, 15, "west"),
+               ("out1", 30, 10, "east"), ("out2", 30, 10, "east")],
+    )
+    gc2 = make_device(
+        "gc2", "grating_coupler", 20, 20,
+        ports=[("in", 0, 10, "west"), ("out", 20, 10, "east")],
+    )
+    circuit = make_circuit(
+        "MZI", [gc1, mmi1, ps1, mmi2, gc2],
+        [
+            ("gc1", "out", "mmi1", "in"),
+            ("mmi1", "out1", "ps1", "in"),
+            ("ps1", "out", "mmi2", "in1"),
+            ("mmi1", "out2", "mmi2", "in2"),
+            ("mmi2", "out1", "gc2", "in"),
+        ],
+        canvas_w=500, canvas_h=300,
+    )
+    result = place_circuit(circuit, mode="analytical")
+    xs = {name: p["x"] for name, p in result["placements"].items()}
+
+    # 信号流 gc1->mmi1->ps1->mmi2->gc2 应 x 严格递增
+    assert xs["gc1"] < xs["mmi1"] < xs["ps1"], (
+        f"gc1={xs['gc1']} mmi1={xs['mmi1']} ps1={xs['ps1']} 顺序错误"
+    )
+    assert xs["ps1"] < xs["mmi2"], (
+        f"ps1={xs['ps1']} mmi2={xs['mmi2']} 顺序错误"
+    )
+    assert xs["mmi2"] < xs["gc2"], (
+        f"mmi2={xs['mmi2']} gc2={xs['gc2']} 顺序错误"
+    )
+
+
 def test_compute_hpwl():
     """验证 HPWL 计算: 手工构造两个器件一条连接，HPWL = 曼哈顿距离。"""
     gc = make_device("gc1", "grating_coupler", 20, 20,
