@@ -7,7 +7,8 @@
     2. 电路验证       polaris_core.validate_circuit
     3. AI 布局        polaris_place.place_circuit  mode="analytical"
     4. 智能布线       polaris_route.route_circuit
-    5. 仿真验证       polaris_sim.simulate_mzi_sparam + compute_clements_unitary + simulate_pam4
+    5. 仿真验证       polaris_sparam.simulate_mzi_sparam + compute_clements_unitary
+                     + polaris_pam4.simulate_pam4
     6. DRC / LVS      polaris_drc.run_drc + polaris_lvs.run_lvs
     7. GDS 导出       polaris_gdsio.export_gds
     8. 逆向设计       polaris_inverse.optimize_waveguide_width  n_iterations=10
@@ -55,7 +56,8 @@ import polaris_pdk
 import polaris_place
 import polaris_quantum
 import polaris_route
-import polaris_sim
+import polaris_sparam
+import polaris_pam4
 import polaris_drc
 import polaris_lvs
 
@@ -100,10 +102,13 @@ def _stage_route(circuit: dict, ctx: dict) -> Any:
 
 
 def _stage_simulate(_circuit: dict, _ctx: dict) -> Any:
-    """Stage 5: 仿真验证 - MZI S 参数扫描 + Clements 酉矩阵 + PAM4 眼图。"""
-    mzi = polaris_sim.simulate_mzi_sparam()
-    clements = polaris_sim.compute_clements_unitary(n_modes=4)
-    pam4 = polaris_sim.simulate_pam4()
+    """Stage 5: 仿真验证 - MZI S 参数扫描 + Clements 酉矩阵 + PAM4 眼图。
+
+    使用 polaris_sparam（频域 S 参数）和 polaris_pam4（PAM4 信号）。
+    """
+    mzi = polaris_sparam.simulate_mzi_sparam()
+    clements = polaris_sparam.compute_clements_unitary(n_modes=4)
+    pam4 = polaris_pam4.simulate_pam4()
     return {
         "mzi_sparam": mzi,
         "clements_unitary": clements,

@@ -91,11 +91,11 @@ from polaris_pdk import list_platforms
 from polaris_place import place_circuit
 from polaris_quantum import hom_interference, klm_cnot
 from polaris_route import route_circuit
-from polaris_sim import (
+from polaris_sparam import (
     compute_clements_unitary,
     simulate_mzi_sparam,
-    simulate_pam4,
 )
+from polaris_pam4 import simulate_pam4
 from polaris_drc import run_drc
 from polaris_lvs import run_lvs
 
@@ -328,8 +328,8 @@ def approach_b_direct_modules() -> None:
               f"bends={p['n_bends']}  crossings={p['n_crossings']}  "
               f"pts={len(p['points'])}")
 
-    # ---- 5. polaris_sim: 仿真验证（MZI S参数 + Clements 酉矩阵 + PAM4）----
-    print("\n[5/8] polaris_sim: 仿真验证")
+    # ---- 5. polaris_sparam + polaris_pam4: 仿真验证（MZI S参数 + Clements 酉矩阵 + PAM4）----
+    print("\n[5/8] polaris_sparam + polaris_pam4: 仿真验证")
     mzi = simulate_mzi_sparam()
     print(f"  MZI S参数扫描 ({mzi['n_points']} 点 1500-1600nm):")
     print(f"    谐振陷波波长 = {mzi['resonant_wavelength_nm']:.2f} nm")
