@@ -56,6 +56,8 @@ __all__ = [
     "mmi_1x2_s",
     "mmi_2x2_s",
     "grating_coupler_s",
+    "ring_resonator_s",
+    "directional_coupler_s",
     "port_key",
 ]
 
@@ -268,4 +270,168 @@ def grating_coupler_s(
         port_key("fiber", "waveguide"): s.tolist(),
         port_key("fiber", "fiber"): zero.tolist(),
         port_key("waveguide", "waveguide"): zero.tolist(),
+    }
+
+
+def ring_resonator_s(
+    wavelength_um: list,
+    radius_um: float = 10.0,
+    neff: float = 2.4,
+    loss_db_cm: float = 0.1,
+    coupling: float = 0.01,
+) -> dict:
+    """全通型单总线环谐振器 S 参数模型（Lorentzian 谐振）。
+
+    传输函数::
+
+        T = (t - a·e^{iφ}) / (1 - t·a·e^{iφ})
+
+    其中:
+    - t = √(1 - coupling): 直通振幅（自耦合系数）
+    - a = 10^(-loss_db_cm·L/1e4/20): 环内单圈振幅衰减
+      （L = 2π·R 环周长，1e4 将 1/cm 转 1/μm，/20 振幅衰减非功率）
+    - φ = β·L = 2π·neff·L/λ: 环周相位
+
+    端口: in, through（全通型单总线，互易）。
+
+    Args:
+        wavelength_um: 波长列表（μm），如 [1.54, 1.55, 1.56]。
+        radius_um: 环半径（μm，默认 10.0）。
+        neff: 有效折射率（默认 2.4，SiEPIC EBeam PDK strip 1550nm）。
+        loss_db_cm: 环内传播损耗（dB/cm，默认 0.1，SiEPIC EBeam PDK strip
+            低损波导典型值，用于显示谐振陷波）。
+        coupling: 总线-环功率耦合比（0~1，默认 0.01 弱耦合窄带陷波，
+            SiPANN ring_resonator 默认）。
+
+    Returns:
+        dict，key 为端口对 str（``port_key``），value 为对应每个波长的
+        复数 S 参数 list[complex]。
+
+    Raises:
+        ValueError: 波长非正 / 半径非正 / neff 非正 / 损耗负 / 耦合比越界
+            （R03 禁止 fall-back）。
+
+    来源（R02 学术诚信）:
+        - Yariv, "Optical Electronics in Modern Communications", 1997 §10.5
+          https://doi.org/10.1093/oso/9780195106266.001.0001
+        - SiPANN ring_resonator
+          https://sipann.readthedocs.io/en/latest/models.html
+        - Bogaerts et al., "Silicon microring resonators", JLT 2012
+          https://doi.org/10.1109/JLT.2012.2200478
+        - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015 §4.5
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+        - SiEPIC EBeam PDK strip waveguide neff=2.4
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    if radius_um <= 0:
+        raise ValueError(f"radius_um 必须 > 0，得到 {radius_um}")
+    if neff <= 0:
+        raise ValueError(f"neff 必须 > 0，得到 {neff}")
+    if loss_db_cm < 0:
+        raise ValueError(f"loss_db_cm 必须 >= 0，得到 {loss_db_cm}")
+    if not 0.0 <= coupling <= 1.0:
+        raise ValueError(f"coupling 必须在 [0, 1]，得到 {coupling}")
+
+    wl = _to_array(wavelength_um)
+    circumference = 2.0 * np.pi * radius_um
+    # 环内单圈相位 φ = β·L = 2π·neff·L/λ
+    phi = 2.0 * np.pi * neff * circumference / wl
+    # 环内单圈振幅衰减 a（dB/cm → 振幅衰减）
+    a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
+    # 直通振幅 t = √(1 - coupling)
+    t = np.sqrt(1.0 - coupling)
+    # 全通型传输函数
+    T = (t - a * np.exp(1j * phi)) / (1.0 - t * a * np.exp(1j * phi))
+    zero = np.zeros_like(T, dtype=complex)
+    return {
+        port_key("through", "in"): T.tolist(),
+        port_key("in", "through"): T.tolist(),
+        port_key("in", "in"): zero.tolist(),
+        port_key("through", "through"): zero.tolist(),
+    }
+
+
+def directional_coupler_s(
+    wavelength_um: list,
+    coupling: float = 0.5,
+    length_um: float = 10.0,
+    gap_um: float = 0.2,
+    neff: float = 2.4,
+) -> dict:
+    """定向耦合器 S 参数模型（耦合模理论 CMT）。
+
+    耦合模理论公式::
+        - 功率耦合比: P_cross / P_in = sin²(κL)
+        - 直通功率:   P_through / P_in = cos²(κL)
+        - 完全耦合长度 (100% 交叉): L_c = π / (2κ)
+
+    由目标功率耦合比 ``coupling`` 反算 κL:: κL = arcsin(√coupling)
+    - 交叉振幅 = sin(κL) · e^{jπ/2}（耦合模理论标准 π/2 相位差）
+    - 直通振幅 = cos(κL)
+
+    端口: in1, in2, out1, out2（交叉耦合 out2←in1, out1←in2）。
+
+    Args:
+        wavelength_um: 波长列表（μm）。
+        coupling: 目标功率耦合比（0~1，0=全直通，1=全交叉，0.5=3dB）。
+        length_um: 耦合区长度（μm，默认 10.0）。当前模型由 ``coupling``
+            直接决定 κL，``length_um`` 为占位参数（保留用于未来扩展
+            κ(gap, length) 解析模型）。
+        gap_um: 波导间距（μm，默认 0.2）。当前模型占位（保留用于未来
+            κ₀·exp(-gap/gap₀) 指数衰减模型）。
+        neff: 有效折射率（默认 2.4，SiEPIC EBeam PDK strip 1550nm）。
+
+    Returns:
+        dict，key 为端口对 str（``port_key``），value 为 list[complex]。
+
+    Raises:
+        ValueError: 波长非正 / 耦合比越界 / 长度非正 / 间距非正 / neff 非正
+            （R03 禁止 fall-back）。
+
+    来源（R02 学术诚信）:
+        - Yariv & Yeh, "Optical Waves in Crystals", Wiley 1984, Ch.13
+          （耦合模理论）https://www.wiley.com/en-us/Optical+Waves+in+Crystals
+        - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015 §4.5
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+        - Soldano & Pennings, J. Lightwave Technol. 13(4), 1995
+          https://ieeexplore.ieee.org/document/374358
+        - SiPANN directional_coupler
+          https://sipann.readthedocs.io/en/latest/models.html
+        - Snyder & Love, "Optical Waveguide Theory", Chapman & Hall 1983
+        - Lumerical Directional Couplers
+          https://optics.ansys.com/hc/en-us/articles/360042077053
+    """
+    if not 0.0 <= coupling <= 1.0:
+        raise ValueError(f"coupling 必须在 [0, 1]，得到 {coupling}")
+    if length_um <= 0:
+        raise ValueError(f"length_um 必须 > 0，得到 {length_um}")
+    if gap_um <= 0:
+        raise ValueError(f"gap_um 必须 > 0，得到 {gap_um}")
+    if neff <= 0:
+        raise ValueError(f"neff 必须 > 0，得到 {neff}")
+
+    wl = _to_array(wavelength_um)
+    # κL = arcsin(√coupling) → 振幅耦合系数 sin(κL)，直通 cos(κL)
+    kappa_L = np.arcsin(np.sqrt(coupling))
+    tau_amp = np.cos(kappa_L)            # 直通振幅（0 相位）
+    kappa_amp = np.sin(kappa_L) * 1j     # 交叉振幅（π/2 相位差，CMT 标准）
+    tau_arr = np.full_like(wl, tau_amp, dtype=complex)
+    kappa_arr = np.full_like(wl, kappa_amp, dtype=complex)
+    zero = np.zeros_like(wl, dtype=complex)
+    return {
+        # 直通: out1←in1, out2←in2
+        port_key("out1", "in1"): tau_arr.tolist(),
+        port_key("out2", "in2"): tau_arr.tolist(),
+        port_key("in1", "out1"): tau_arr.tolist(),
+        port_key("in2", "out2"): tau_arr.tolist(),
+        # 交叉耦合: out2←in1, out1←in2
+        port_key("out2", "in1"): kappa_arr.tolist(),
+        port_key("out1", "in2"): kappa_arr.tolist(),
+        port_key("in1", "out2"): kappa_arr.tolist(),
+        port_key("in2", "out1"): kappa_arr.tolist(),
+        # 对角反射项为零
+        port_key("in1", "in1"): zero.tolist(),
+        port_key("in2", "in2"): zero.tolist(),
+        port_key("out1", "out1"): zero.tolist(),
+        port_key("out2", "out2"): zero.tolist(),
     }

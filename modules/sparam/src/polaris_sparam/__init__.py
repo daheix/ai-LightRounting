@@ -58,10 +58,12 @@ from __future__ import annotations
 
 from polaris_sparam.clements import compute_clements_unitary
 from polaris_sparam.models import (
+    directional_coupler_s,
     grating_coupler_s,
     mmi_1x2_s,
     mmi_2x2_s,
     port_key,
+    ring_resonator_s,
     waveguide_s,
 )
 from polaris_sparam.mzi import simulate_mzi_sparam
@@ -73,6 +75,8 @@ __all__ = [
     "mmi_1x2_s",
     "mmi_2x2_s",
     "grating_coupler_s",
+    "ring_resonator_s",
+    "directional_coupler_s",
     "simulate_mzi_sparam",
     "compute_clements_unitary",
     "port_key",

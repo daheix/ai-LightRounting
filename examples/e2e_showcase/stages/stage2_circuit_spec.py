@@ -19,13 +19,12 @@ from __future__ import annotations
 
 import json
 import logging
-import math
 from pathlib import Path
 
 import numpy as np
 
-from polaris.data.specs import CircuitSpec, DeviceSpec
-from polaris.sim.quantum_photonics import clements_unitary
+from polaris_core import CircuitSpec, DeviceSpec
+from polaris_sparam import compute_clements_unitary
 
 _logger = logging.getLogger("e2e_showcase")
 
@@ -276,33 +275,16 @@ def _build_clements_circuit() -> CircuitSpec:
 # =============================================================================
 
 
-# 4 模 Clements 分解的 6 个分束器角度（θ）与相位（φ）
+# PoLaRIS v5.0: polaris_sparam.compute_clements_unitary 内部使用固定随机种子 42
+# 生成 6 个分束器 (theta, phi) 参数（可复现），不接受外部 thetas/phis。
 # 来源: Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460
-# 这些是演示用的固定参数，生成可复现的 4x4 酉矩阵
-_BOSON_SAMPLING_THETAS = np.array([
-    math.pi / 8,  # bs1 角度
-    math.pi / 6,  # bs2 角度
-    math.pi / 4,  # bs3 角度
-    math.pi / 3,  # bs4 角度
-    math.pi / 8,  # bs5 角度
-    math.pi / 6,  # bs6 角度
-])
-
-_BOSON_SAMPLING_PHIS = np.array([
-    0.0,          # bs1 相位
-    math.pi / 4,  # bs2 相位
-    math.pi / 2,  # bs3 相位
-    3 * math.pi / 4,  # bs4 相位
-    math.pi,      # bs5 相位
-    5 * math.pi / 4,  # bs6 相位
-])
 
 
 def _build_boson_sampling_unitary() -> np.ndarray:
     """构建量子玻色采样 4x4 酉矩阵。
 
-    使用 Clements 分解生成 4 模酉矩阵，6 个分束器角度与相位为固定值
-    （可复现），用于玻色采样演示。
+    使用 polaris_sparam.compute_clements_unitary（Clements 分解，种子 42）
+    生成 4 模酉矩阵，用于玻色采样演示。
 
     来源:
         - Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460
@@ -311,12 +293,9 @@ def _build_boson_sampling_unitary() -> np.ndarray:
     Returns:
         4x4 复数酉矩阵。
     """
-    U = clements_unitary(
-        n_modes=4,
-        thetas=_BOSON_SAMPLING_THETAS,
-        phis=_BOSON_SAMPLING_PHIS,
-    )
-    # 验证酉性（规则 14.1: 无 fall-back，酉性失败必须 raise）
+    result = compute_clements_unitary(n_modes=4)
+    U = np.array(result["unitary"], dtype=complex)
+    # 验证酉性（R03 禁止 fall-back，酉性失败必须 raise）
     identity = np.eye(4, dtype=complex)
     if not np.allclose(U @ U.conj().T, identity, atol=1e-6):
         raise ValueError(
@@ -343,13 +322,13 @@ def _save_unitary_to_json(U: np.ndarray, output_dir: Path) -> Path:
     data = {
         "circuit_name": "量子玻色采样电路",
         "n_modes": 4,
-        "thetas": _BOSON_SAMPLING_THETAS.tolist(),
-        "phis": _BOSON_SAMPLING_PHIS.tolist(),
+        "generator": "polaris_sparam.compute_clements_unitary (seed=42)",
+        "unitarity_error": float(np.max(np.abs(U @ U.conj().T - np.eye(4, dtype=complex)))),
         "unitary_real": U.real.tolist(),
         "unitary_imag": U.imag.tolist(),
         "source": "Clements et al., Optica 2016",
         "source_url": "https://doi.org/10.1364/OPTICA.3.001460",
-        "note": "4 模酉矩阵，由 Clements 分解生成，用于玻色采样演示",
+        "note": "4 模酉矩阵，由 Clements 分解（种子 42）生成，用于玻色采样演示",
     }
     with json_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)

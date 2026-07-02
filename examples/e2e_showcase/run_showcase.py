@@ -44,6 +44,19 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+# PoLaRIS v5.0: 注入 18 个子模块源码路径（modules/<name>/src）
+# 旧 v4 单包 src/polaris/ 已拆分为 18 个独立子模块，每个子模块位于
+# modules/<name>/src/polaris_<name>/ 下，需将其父目录 src 加入 sys.path。
+_PROJECT_ROOT = _SCRIPT_DIR.parent.parent  # /workspace
+_SUBMODULES_V5 = [
+    "core", "sparam", "place", "route", "pdk", "drc", "lvs", "gdsio", "fdtd",
+    "inverse", "boson", "klm", "pam4", "fde", "eme", "bpm", "fdfd", "orchestrator",
+]
+for _sub in _SUBMODULES_V5:
+    _src_dir = _PROJECT_ROOT / "modules" / _sub / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+
 from logging_config import StageLogger, setup_logging  # noqa: E402
 from report_generator import generate_report  # noqa: E402
 from stages import (  # noqa: E402
