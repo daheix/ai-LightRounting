@@ -64,10 +64,14 @@ _WL_STOP_NM = 1600
 _WL_N_POINTS = 101
 
 # FDTD 仿真参数（来源: Yee 1966 IEEE TAP; Taflove 2005 §4.1）
-_FDTD_GRID_DX_UM = 0.2  # 网格步长 200nm（来源: Taflove 2005 §4.1 建议 λ/10）
+# R03 合规修复（2026-07-02）：原 200nm 网格在 λ=1550nm 下仅 7.75 点/波长，
+# 低于 Taflove 2005 §4.1 建议的 λ/10，且 24×12×8 极小网格导致 PML 边界反射
+# 叠加产生数值伪迹（波导 21dB 增益、MMI -88dB 插损，物理不可能）。
+# 改为 50nm 网格（λ/31，满足 Nyquist + Taflove 建议），网格尺寸相应增大。
+_FDTD_GRID_DX_UM = 0.05  # 网格步长 50nm（λ/31，满足 Taflove 2005 §4.1 λ/10 建议）
 _FDTD_DT_SAFETY = 0.3  # dt = 0.3×CFL（保守稳定，确保波传播到监视器）
-# R2: 从 1000 减至 600（与 stage10 对齐，避免 PML 反射累积导致远场增强）
-_FDTD_N_STEPS = 600  # 时间步数（确保高斯脉冲传播到监视器并完整通过）
+# R03 合规修复：从 600 增至 2000（50nm 网格需要更多时间步让脉冲完整通过）
+_FDTD_N_STEPS = 2000  # 时间步数（50nm 网格需更多步确保脉冲通过监视器）
 
 
 def _simulate_mzi_sparam(reports_dir: Path) -> dict:
@@ -379,11 +383,11 @@ def _run_fdtd_waveguide() -> dict:
         raise RuntimeError(f"JAX FDTD 模块不可用: {e}") from e
 
     eps_r_si = 12.08  # 硅介电常数（Soref 1993）
-    # R2: nz 从 2 增至 8，支持 2 层 PML + 非PML区域 z=[2:6]
-    # R2: nx 从 20 增至 24，源距 PML 4 像素（x=6, PML=[0:2]）
-    nx, ny, nz = 24, 12, 8
-    pml_n_layers = 2  # R2: PML 层数（每侧）
-    dx = _FDTD_GRID_DX_UM * 1e-6  # 200nm
+    # R03 合规修复：网格从 24×12×8 增至 96×48×16（50nm 步长，λ/31）
+    # 物理尺寸 4.8μm × 2.4μm × 0.8μm，PML 4 层每侧，源/监视器距 PML ≥8 像素
+    nx, ny, nz = 96, 48, 16
+    pml_n_layers = 4  # PML 层数增至 4（Gedney 1996 建议≥4）
+    dx = _FDTD_GRID_DX_UM * 1e-6  # 50nm
 
     grid = YeeGrid3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dx, dz=dx)
     eps_r = jnp.full((nx, ny, nz), eps_r_si)
@@ -391,8 +395,6 @@ def _run_fdtd_waveguide() -> dict:
 
     cfl_dt = grid.cfl_timestep(eps_r_si)
     dt = _FDTD_DT_SAFETY * float(cfl_dt)
-    # R2: 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
-    # eps_r_bg=eps_r_si（硅背景），避免 PML 区域 cb 被放大
     pml = GedneyPML(grid, n_layers=pml_n_layers, eps_r_bg=eps_r_si)
     fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=eps_r_si)
 
@@ -400,11 +402,11 @@ def _run_fdtd_waveguide() -> dict:
     source_freq = c0 / 1.55e-6
 
     t_start = time.time()
-    # R2: 双监视器法，源/监视器距 PML 4 像素（避免源能量被 PML 吸收）
-    # 源 x=PML+4=6, z=PML+1=3；近监视器 x=11, 远监视器 x=16，距离 5 网格 = 1μm
-    source_pos = (pml_n_layers + 4, 6, pml_n_layers + 1)
-    monitor_near_pos = (pml_n_layers + 9, 6, pml_n_layers + 1)
-    monitor_far_pos = (pml_n_layers + 14, 6, pml_n_layers + 1)
+    # 源/监视器距 PML 8 像素（50nm×8=400nm，避免源能量被 PML 吸收）
+    # 物理尺寸: 源 x=12, 近监视器 x=32, 远监视器 x=72（距离 40 网格 = 2μm）
+    source_pos = (pml_n_layers + 8, 24, pml_n_layers + 4)
+    monitor_near_pos = (pml_n_layers + 28, 24, pml_n_layers + 4)
+    monitor_far_pos = (pml_n_layers + 68, 24, pml_n_layers + 4)
     result_near = fdtd.run(
         epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
@@ -417,25 +419,36 @@ def _run_fdtd_waveguide() -> dict:
     )
     fdtd_duration_s = time.time() - t_start
 
-    # 用时域峰值法计算传输率（Taflove 2005 §13.2，与 stage10 一致）
-    # R2 说明: PML 启用后小网格（24x12x8）存在边界反射，双监视器比值法
-    # 受反射波叠加影响。采用时域峰值法（与 stage10 Adjoint 逆向设计一致），
-    # 重点关注 PML 启用成功和波传播有效性，传输率绝对精度受限于 showcase 小网格。
+    # 频域 FFT 提取传输率（Taflove 2005 §13.2 标准方法）
+    # R03 合规修复：原时域峰值法受 PML 反射叠加影响产生伪迹（21dB 增益），
+    # 改用频域 FFT 在源频率处提取幅度，物理正确。
     mon_near = np.asarray(result_near["monitor_signal"])
     mon_far = np.asarray(result_far["monitor_signal"])
-    peak_near = float(np.max(np.abs(mon_near)))
-    peak_far = float(np.max(np.abs(mon_far)))
+    # FFT 在源频率处提取复幅度
+    fft_near = np.fft.fft(mon_near)
+    fft_far = np.fft.fft(mon_far)
+    # 源频率对应的 FFT bin（n_steps 个采样，源频率 = c/λ）
+    dt_total = dt * _FDTD_N_STEPS
+    freq_resolution = 1.0 / dt_total
+    source_bin = int(round(source_freq / freq_resolution))
+    source_bin = max(1, min(source_bin, _FDTD_N_STEPS // 2))
+    amp_near = float(np.abs(fft_near[source_bin]))
+    amp_far = float(np.abs(fft_far[source_bin]))
 
-    # 传输率 = (远场峰值 / 近场峰值)²，消除源归一化问题
-    if peak_near > 1e-30 and peak_far > 0:
-        T_fdtd = (peak_far / peak_near) ** 2
+    # 传输率 = (远场幅度 / 近场幅度)²，频域提取消除时域反射叠加
+    if amp_near > 1e-30:
+        T_fdtd = (amp_far / amp_near) ** 2
         transmission_db = 10.0 * np.log10(max(T_fdtd, 1e-30))
     else:
-        transmission_db = -999.0
+        # R03 合规：仿真失败 raise，不用 -999 哨兵掩盖
+        raise RuntimeError(
+            f"FDTD 波导仿真失败: 近场幅度 {amp_near:.2e} 过小，"
+            f"源可能未注入或 PML 吸收异常（R03: 禁止 fall-back）"
+        )
 
-    # 解析模型传输率（同距离 1μm，仅材料损耗）
-    dist_cm = 5 * dx * 100  # 1μm = 0.0001 cm
-    analytical_transmission_db = -_MZI_WG_LOSS_DB_CM * dist_cm  # ≈ -0.0003 dB
+    # 解析模型传输率（同距离 2μm，仅材料损耗）
+    dist_cm = 40 * dx * 100  # 2μm = 0.0002 cm
+    analytical_transmission_db = -_MZI_WG_LOSS_DB_CM * dist_cm  # ≈ -0.0006 dB
 
     _logger.info(
         "波导 FDTD (PML=%d层): T_fdtd=%.4f dB, T_analytical=%.4f dB, 耗时=%.2fs",
@@ -493,33 +506,31 @@ def _run_fdtd_mmi() -> dict:
     eps_r_si = 12.08  # 硅
     eps_r_sio2 = 2.085  # 二氧化硅
 
-    # R2: nz 从 2 增至 8（支持 PML）；nx 从 25 增至 29（源距 PML 4 像素）
-    nx, ny, nz = 29, 20, 8
-    pml_n_layers = 2  # R2: PML 层数（每侧）
-    dx = _FDTD_GRID_DX_UM * 1e-6  # 200nm
+    # R03 合规修复：网格从 29×20×8 增至 116×80×16（50nm 步长，λ/31）
+    # 物理尺寸 5.8μm × 4.0μm × 0.8μm，PML 4 层每侧
+    nx, ny, nz = 116, 80, 16
+    pml_n_layers = 4  # PML 层数增至 4（Gedney 1996 建议≥4）
+    dx = _FDTD_GRID_DX_UM * 1e-6  # 50nm
 
     grid = YeeGrid3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dx, dz=dx)
-    # MMI 结构: 输入波导 → 宽 MMI 区 → 两输出波导
-    # R2: x 坐标整体 +3（pml_n_layers+1），保持物理尺寸不变
-    x_in_start = pml_n_layers + 1  # 3
-    x_in_end = x_in_start + 8  # 11
-    x_mmi_start = x_in_end  # 11
-    x_mmi_end = x_mmi_start + 9  # 20
-    x_out_start = x_mmi_end  # 20
-    x_out_end = x_out_start + 7  # 27
+    # MMI 结构: 输入波导 → 宽 MMI 区 → 两输出波导（物理尺寸保持）
+    x_in_start = pml_n_layers + 4  # 输入波导起点
+    x_in_end = x_in_start + 32  # 输入波导 1.6μm
+    x_mmi_start = x_in_end
+    x_mmi_end = x_mmi_start + 36  # MMI 区 1.8μm
+    x_out_start = x_mmi_end
+    x_out_end = x_out_start + 28  # 输出波导 1.4μm
     eps_r = jnp.full((nx, ny, nz), eps_r_sio2)  # SiO2 背景
-    eps_r = eps_r.at[x_in_start:x_in_end, 9:11, :].set(eps_r_si)  # 输入波导
-    eps_r = eps_r.at[x_mmi_start:x_mmi_end, 5:15, :].set(eps_r_si)  # MMI 区（宽区域）
-    eps_r = eps_r.at[x_out_start:x_out_end, 7:9, :].set(eps_r_si)  # 输出波导 1
-    eps_r = eps_r.at[x_out_start:x_out_end, 11:13, :].set(eps_r_si)  # 输出波导 2
+    eps_r = eps_r.at[x_in_start:x_in_end, 36:44, :].set(eps_r_si)  # 输入波导 400nm
+    eps_r = eps_r.at[x_mmi_start:x_mmi_end, 20:60, :].set(eps_r_si)  # MMI 区 2μm
+    eps_r = eps_r.at[x_out_start:x_out_end, 28:36, :].set(eps_r_si)  # 输出波导 1
+    eps_r = eps_r.at[x_out_start:x_out_end, 44:52, :].set(eps_r_si)  # 输出波导 2
     grid.epsilon_r = eps_r
 
     # CFL 时间步长（使用最小 eps_r 确保全局稳定）
     eps_min = float(jnp.min(eps_r))
     cfl_dt = grid.cfl_timestep(eps_min)
     dt = _FDTD_DT_SAFETY * float(cfl_dt)
-    # R2: 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
-    # eps_r_bg=eps_r_sio2（SiO2 包层背景），PML 区域是 SiO2，避免 cb 放大
     pml = GedneyPML(grid, n_layers=pml_n_layers, eps_r_bg=eps_r_sio2)
     fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=eps_r_sio2)
 
@@ -527,12 +538,11 @@ def _run_fdtd_mmi() -> dict:
     source_freq = c0 / 1.55e-6
 
     t_start = time.time()
-    # R2: 三次运行，源/监视器距 PML 4 像素
-    # 源 x=PML+4=6, z=PML+1=3；参考 x=8, 输出1/2 x=23
-    source_pos = (pml_n_layers + 4, 10, pml_n_layers + 1)
-    monitor_ref_pos = (pml_n_layers + 6, 10, pml_n_layers + 1)  # 输入波导参考点
-    monitor_out1_pos = (pml_n_layers + 21, 8, pml_n_layers + 1)  # 输出 1
-    monitor_out2_pos = (pml_n_layers + 21, 12, pml_n_layers + 1)  # 输出 2
+    # 源/监视器距 PML 8 像素（50nm×8=400nm）
+    source_pos = (pml_n_layers + 8, 40, pml_n_layers + 4)
+    monitor_ref_pos = (pml_n_layers + 16, 40, pml_n_layers + 4)  # 输入波导参考点
+    monitor_out1_pos = (pml_n_layers + 84, 32, pml_n_layers + 4)  # 输出 1
+    monitor_out2_pos = (pml_n_layers + 84, 48, pml_n_layers + 4)  # 输出 2
     result_ref = fdtd.run(
         epsilon_r=eps_r, source_pos=source_pos,
         source_freq=source_freq, n_steps=_FDTD_N_STEPS,
@@ -550,24 +560,44 @@ def _run_fdtd_mmi() -> dict:
     )
     fdtd_duration_s = time.time() - t_start
 
-    # 用时域峰值法提取功率（Taflove 2005 §13.2，与 stage10 一致）
-    # R2 说明: PML 启用后小网格存在边界反射，采用时域峰值法提取功率
+    # 频域 FFT 提取功率（Taflove 2005 §13.2 标准方法）
+    # R03 合规修复：原时域峰值法受 PML 反射叠加影响产生伪迹（-88dB 插损），
+    # 改用频域 FFT 在源频率处提取幅度，物理正确。
     mon_ref = np.asarray(result_ref["monitor_signal"])
     mon_sig1 = np.asarray(result1["monitor_signal"])
     mon_sig2 = np.asarray(result2["monitor_signal"])
-    p_ref = float(np.max(np.abs(mon_ref))) ** 2
-    p_out1 = float(np.max(np.abs(mon_sig1))) ** 2
-    p_out2 = float(np.max(np.abs(mon_sig2))) ** 2
+    fft_ref = np.fft.fft(mon_ref)
+    fft_out1 = np.fft.fft(mon_sig1)
+    fft_out2 = np.fft.fft(mon_sig2)
+    dt_total = dt * _FDTD_N_STEPS
+    freq_resolution = 1.0 / dt_total
+    source_bin = int(round(source_freq / freq_resolution))
+    source_bin = max(1, min(source_bin, _FDTD_N_STEPS // 2))
+    amp_ref = float(np.abs(fft_ref[source_bin]))
+    amp_out1 = float(np.abs(fft_out1[source_bin]))
+    amp_out2 = float(np.abs(fft_out2[source_bin]))
+    p_ref = amp_ref ** 2
+    p_out1 = amp_out1 ** 2
+    p_out2 = amp_out2 ** 2
 
     # 分束比（输出 1 占总输出功率的比例）
     p_total_out = p_out1 + p_out2
-    mmi_split_ratio = p_out1 / p_total_out if p_total_out > 0 else 0.5
+    if p_total_out > 0:
+        mmi_split_ratio = p_out1 / p_total_out
+    else:
+        raise RuntimeError(
+            f"FDTD MMI 仿真失败: 总输出功率 {p_total_out:.2e} ≤ 0，"
+            f"两输出端口均无信号（R03: 禁止 fall-back）"
+        )
 
     # 插入损耗（用输入参考点归一化，消除源幅度不确定性）
     if p_ref > 0 and p_total_out > 0:
         mmi_insertion_loss_db = 10.0 * np.log10(p_total_out / p_ref)
     else:
-        mmi_insertion_loss_db = -999.0
+        raise RuntimeError(
+            f"FDTD MMI 仿真失败: 参考功率 {p_ref:.2e} ≤ 0，"
+            f"源可能未注入或 PML 吸收异常（R03: 禁止 fall-back）"
+        )
 
     _logger.info(
         "MMI FDTD (PML=%d层): 分束比=%.4f (理想: 0.5), 插损=%.2fdB (解析: -0.4), 耗时=%.2fs",
