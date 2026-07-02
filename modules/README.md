@@ -1,6 +1,27 @@
 # PoLaRIS 子模块架构总览
 
-PoLaRIS v5.1 拆分为 **17 个独立子模块 + 1 个编排层**，每个子模块独立目录/独立 pyproject/独立测试/独立 C ABI 头文件，可独立管理升级。
+PoLaRIS v5.0 细粒度拆分为 **18 个子模块**（17 个独立功能子模块 + 1 个编排层），
+每个子模块独立目录/独立 pyproject/独立测试/独立 C ABI 头文件，可独立管理升级。
+
+## 拆分原则（IPO 三段式文档化）
+
+每个子模块遵循 **Input → Process → Output** 单一职责设计：
+
+- **Input**：明确函数入参（类型/默认值/物理含义）
+- **Process**：明确算法/公式/文献溯源（R02 学术诚信）
+- **Output**：明确返回 dict 字段（JSON-serializable，业务可直接消费）
+
+每个子模块 `src/polaris_<name>/__init__.py` 顶部 docstring 含 IPO 段落，
+对应 `c_api/<name>.h` 顶部注释同样标注 IPO。失败即 raise（R03 禁止 fall-back）。
+
+## 拆分来源（v4 8 模块 → v5.0 18 子模块）
+
+| v4 旧模块 | v5.0 拆分后 |
+|----------|------------|
+| polaris-sim | sparam / pam4 / fdtd / fde / eme / bpm / fdfd（7 个仿真子模块，每种独立） |
+| polaris-verify | drc / lvs（DRC 与 LVS 各自独立） |
+| polaris-quantum | boson / klm（玻色采样与 KLM 量子门各自独立） |
+| polaris-pdk (含 gdsii) | pdk（纯目录）+ gdsio（GDSII 导入导出独立） |
 
 ## 子模块划分
 
@@ -113,6 +134,10 @@ printf("%s\n", result.json);
 
 ## 验证结果
 
-- 17 子模块 + orchestrator 全部独立 import 通过
-- orchestrator 一键调用 9 stage 全部成功（n_success=9, n_failed=0）
-- 业务示例 Python 版可运行 + C 版头文件包含通过（gcc -fsyntax-only 0 错误 0 警告）
+- 18 子模块（17 独立 + orchestrator）全部独立 import 通过
+- orchestrator 一键调用 9 stage 全部成功（n_success=9, n_failed=0, total_duration≈28s）
+- 业务示例 Python 版方式 A + 方式 B 全流程跑通（13 子模块被调用）
+- 业务示例 C 版头文件包含通过（gcc -fsyntax-only 0 错误 0 警告）
+- 各子模块独立 pytest 全部通过（drc 8 / lvs 8 / sparam 7 / fdtd 4 / fde 4 /
+  eme 5 / bpm 4 / fdfd 4 / pam4 6 / boson 5 / klm 4 / gdsio 5 / pdk 5 /
+  orchestrator 4）
