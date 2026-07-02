@@ -198,6 +198,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="跳过汇总报告生成",
     )
+    parser.add_argument(
+        "--real-case",
+        action="store_true",
+        help="运行真实 PIC 设计 Case（100Gbps MZI + Clements 4x4，对标 Intel CWDM4），"
+        "复用已修复的 10 阶段 stage 代码，生成真实完整结果展示报告",
+    )
     return parser.parse_args()
 
 
@@ -208,6 +214,42 @@ def main() -> None:
 
     create_output_dirs(output_dir)
     setup_logging(output_dir)
+
+    if args.real_case:
+        # 真实 PIC 设计 Case 模式：复用 10 阶段 stage 代码，生成真实结果分析报告
+        from real_case.run_real_case import run as run_real_case
+        from real_case.analyze_results import get_analysis, get_statistics
+
+        real_output_dir = output_dir.parent / "real_case"
+        result = run_real_case(real_output_dir)
+
+        # 真实性分析
+        stage_results = [
+            {"stage_id": s["stage_id"], "name": s["name"],
+             "status": s["status"], "key_outputs": s["result"]}
+            for s in result["stages"]
+        ]
+        analysis = get_analysis(stage_results)
+        stats = get_statistics(analysis)
+
+        print("\n" + "=" * 60)
+        print("PoLaRIS 真实 PIC 设计 Case 端到端结果")
+        print("=" * 60)
+        print(f"  案例: {result['case_name']}")
+        print(f"  对标: {result['benchmark']}")
+        for s in result["stages"]:
+            marker = "[OK]" if s["status"] == "OK" else "[FAIL]"
+            print(f"  阶段 {s['stage_id']}: {s['name']:<20s} {marker} ({s['duration']:.2f}s)")
+        print(f"  总计: {result['summary']['n_success']} 成功, "
+              f"{result['summary']['n_failed']} 失败, "
+              f"耗时 {result['summary']['total_duration']:.2f}s")
+        print("=" * 60)
+        print(f"  真实性统计: REAL_USABLE={stats['real_usable']}, "
+              f"LIMITED_BY_COMPUTE={stats['limited_by_compute']}, "
+              f"LIMITED_BY_DATA={stats['limited_by_data']}")
+        print("=" * 60)
+        print(f"\n真实完整结果展示报告: {real_output_dir / 'REAL_CASE_REPORT.md'}")
+        return
 
     results = run_all_stages(output_dir, stage_filter=args.stage)
     print_summary(results)
