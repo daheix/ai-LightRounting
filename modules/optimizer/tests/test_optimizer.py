@@ -39,13 +39,16 @@ if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 from polaris_optimizer import (  # noqa: E402
+    AnalyticalWaveguideCoupler,
     FeedbackAdapter,
     LBFGSConfig,
     LBFGSOptimizer,
+    LevelSet,
     NSGA2Config,
     NSGA2Optimizer,
     Objective,
     ObjectiveType,
+    ParameterizedGeometry,
     PSOConfig,
     ParticleSwarmOptimizer,
     RobustConfig,
@@ -59,15 +62,15 @@ from polaris_optimizer import (  # noqa: E402
     TopologyOptimizer,
     Violation,
     ViolationType,
+    dominates,
 )
-from polaris_optimizer.nsga import Individual  # noqa: E402
 
 
 def test_lbfgs_quadratic_convergence():
     """L-BFGS 在二次函数 f(x) = -||x - x*||² 上最大化收敛。
 
     极大化二次函数 → 最优解 x* = [1, 1, 1]。
-    L-BFGS 在二次函数上理论应一步收敛（Nocedal & Wright 2006 §7.1）。
+    L-BFGS 在二次函数上理论应快速收敛（Nocedal & Wright 2006 §7.1）。
     """
     x_star = np.array([1.0, 1.0, 1.0])
 
@@ -94,7 +97,7 @@ def test_lbfgs_quadratic_convergence():
 
 
 def test_pso_sphere_improvement():
-    """PSO 在球函数 f(x) = -||x||² 上 FoM 显著改善。
+    """PSO 在球函数 f(x) = -||x||² 上显著改善。
 
     极大化 → 最优解 x* = 0，FoM* = 0。
     PSO 收敛较慢但应显著改善（Kennedy & Eberhart 1995）。
@@ -103,17 +106,21 @@ def test_pso_sphere_improvement():
         return -float(np.sum(x**2))
 
     config = PSOConfig(
-        n_particles=20,
+        num_particles=20,
         max_iterations=50,
-        bounds=(-2.0, 2.0),
-        random_seed=42,
+        seed=42,
     )
     optimizer = ParticleSwarmOptimizer(config)
+    bounds = (
+        np.array([-2.0, -2.0, -2.0]),
+        np.array([2.0, 2.0, 2.0]),
+    )
     result = optimizer.optimize(
         initial_pos=np.zeros(3),
         fom_fn=fom_fn,
+        bounds=bounds,
     )
-    # 初始 FoM = 0（起点在原点），随机扰动后改善
+    # 最优 FoM 应改善（接近 0）
     assert result.optimal_fom >= -1.0, (
         f"PSO 最优 FoM {result.optimal_fom} 过差"
     )
@@ -127,21 +134,25 @@ def test_topology_level_set_runs():
 
     使用最简配置（小网格 + 少迭代）验证流程完整（Osher & Sethian 1988）。
     """
+    grid_size = 20
     config = TopologyConfig(
-        grid_shape=(20, 20),
+        grid_size=grid_size,
         max_iterations=5,
-        dt=0.1,
+        learning_rate=0.1,
     )
-    optimizer = TopologyOptimizer(config)
-    result = optimizer.optimize(
-        velocity_fn=lambda phi: np.ones_like(phi),
-        initial_level_set="circle",
+    level_set = LevelSet(grid_size=grid_size, initial_shape="circle")
+    optimizer = TopologyOptimizer(
+        level_set=level_set,
+        fom_evaluator=lambda binary: float(binary.sum()),
+        gradient_evaluator=lambda binary: np.ones_like(binary),
+        config=config,
     )
-    assert result.optimal_design.shape == (20, 20), (
-        f"设计形状错误: {result.optimal_design.shape}"
+    result = optimizer.optimize()
+    assert result.binary_design.shape == (grid_size, grid_size), (
+        f"设计形状错误: {result.binary_design.shape}"
     )
     # 二值化设计应为 0/1
-    unique = set(np.unique(result.optimal_design).tolist())
+    unique = set(np.unique(result.binary_design).tolist())
     assert unique.issubset({0.0, 1.0}), f"设计应二值化，实际 unique={unique}"
     assert result.iterations > 0
     assert len(result.fom_history) > 0
@@ -171,30 +182,29 @@ def test_nsga2_zdt1_pareto():
     ]
     config = NSGA2Config(
         population_size=30,
-        n_generations=10,
-        bounds=(0.0, 1.0),
-        random_seed=42,
+        max_generations=10,
+        bounds=[(0.0, 1.0)] * n_params,
+        seed=42,
     )
-    optimizer = NSGA2Optimizer(config)
-    result = optimizer.optimize(
-        n_params=n_params,
+    optimizer = NSGA2Optimizer(
         objectives=objectives,
         fom_fn=fom_fn,
+        config=config,
     )
+    result = optimizer.optimize(n_params=n_params)
     # 验证产生帕累托前沿
     assert len(result.pareto_front) > 0, "帕累托前沿为空"
-    # 验证前沿中解为非支配
+    # 验证前沿中解为非支配（使用模块自带 dominates 函数）
     for i, ind_i in enumerate(result.pareto_front):
         for j, ind_j in enumerate(result.pareto_front):
             if i != j:
-                # ind_i 不应被 ind_j 支配
-                dominated = all(
-                    a <= b for a, b in zip(ind_i.objectives, ind_j.objectives, strict=True)
-                ) and any(
-                    a < b for a, b in zip(ind_i.objectives, ind_j.objectives, strict=True)
+                # ind_j 不应支配 ind_i
+                dominated_by_j = dominates(
+                    ind_j.objectives, ind_i.objectives, objectives
                 )
-                assert not dominated, (
-                    f"前沿解 {i} 被解 {j} 支配: {ind_i.objectives} vs {ind_j.objectives}"
+                assert not dominated_by_j, (
+                    f"前沿解 {i} 被解 {j} 支配: "
+                    f"{ind_i.objectives} vs {ind_j.objectives}"
                 )
 
 
@@ -207,21 +217,22 @@ def test_robust_mean_mode_runs():
         return -float(np.sum((x - 1.0) ** 2))
 
     tolerance = ToleranceModel(
-        vtype=ToleranceType.GAUSSIAN,
-        sigma=0.05,
-        random_seed=42,
+        tol_type=ToleranceType.GAUSSIAN,
+        relative_std=0.05,
+        seed=42,
     )
     config = RobustConfig(
-        n_iterations=5,
-        n_samples=3,
+        tolerance=tolerance,
         mode=RobustMode.MEAN,
-        random_seed=42,
+        num_samples=3,
+        max_iterations=5,
+        seed=42,
+        learning_rate=0.01,
     )
     optimizer = RobustOptimizer(config)
     result = optimizer.optimize(
         initial_params=np.array([0.0, 0.0]),
         fom_fn=fom_fn,
-        tolerance_model=tolerance,
     )
     assert result.iterations > 0
     assert len(result.fom_history) > 0
@@ -233,22 +244,23 @@ def test_robust_mean_mode_runs():
 def test_shape_adjoint_analytical_runs():
     """形状伴随优化（解析后端 + AnalyticalWaveguideCoupler）能跑通。
 
-    验证 Adam 优化耦合器长度以最大化 FoM = sin²(κ·L)（Yariv 1973 耦合模理论）。
+    验证 Adam 优化耦合器长度以最大化 FoM = sin²(κ_eff·L)
+    （Yariv 1973 耦合模理论）。
     """
+    geometry = ParameterizedGeometry(
+        initial_params=np.array([10.0, 1.0]),  # [length, gap]
+        bounds=[(1.0, 50.0), (0.1, 5.0)],
+    )
+    simulator = AnalyticalWaveguideCoupler()
     config = ShapeAdjointConfig(
         max_iterations=10,
         learning_rate=0.1,
         convergence_threshold=1e-8,
     )
-    optimizer = ShapeAdjointOptimizer(config)
-    result = optimizer.optimize(
-        initial_params=np.array([10.0]),  # 初始长度 10μm
-        fom_fn=lambda p: float(np.sin(0.1 * p[0]) ** 2),
-        grad_fn=lambda p: np.array([0.2 * np.sin(0.1 * p[0]) * np.cos(0.1 * p[0])]),
-        backend="analytical",
-    )
+    optimizer = ShapeAdjointOptimizer(geometry, simulator, config)
+    result = optimizer.optimize()
     assert result.iterations > 0
-    # FoM 应改善（sin² 在 [0,1]）
+    # FoM 应为正（sin² 在 [0,1]）
     assert result.optimal_fom > 0.0, f"optimal_fom={result.optimal_fom}"
     assert result.optimal_fom <= 1.0 + 1e-6
 
@@ -299,7 +311,8 @@ def test_density_adjoint_mmi_runs():
     来源: Piggott 2017 https://www.nature.com/articles/nphoton.2017.102
     """
     pytest.importorskip(
-        "jax", reason="density_adjoint 测试需要 JAX: pip install polaris-optimizer[density]"
+        "jax",
+        reason="density_adjoint 测试需要 JAX: pip install polaris-optimizer[density]",
     )
     from polaris_optimizer.density_adjoint import example_mmi_1x2
 

@@ -304,7 +304,12 @@ class TopologyAdjointOptimizer:
         self._t = 0
 
     def _build_conic_kernel(self, radius_px: float) -> Any:
-        """构建锥形滤波核（来源: Wang 2005）。"""
+        """构建锥形滤波核（来源: Wang 2005）。
+
+        同时预计算 ifftshifted kernel 的 FFT（用于可微卷积）。
+        注: JAX 0.9+ 移除了 ``jnp.ifftshift``，故用 ``np.fft.ifftshift``
+        对静态 kernel 做 shift（kernel 为常量，无需可微）。
+        """
         if radius_px <= 0:
             raise ValueError(f"filter_radius_px 须 > 0，实际 {radius_px}")
         h, w = self.design_shape
@@ -317,7 +322,12 @@ class TopologyAdjointOptimizer:
         total = self._jnp.sum(kernel)
         if float(total) == 0.0:
             raise ValueError("锥形滤波核全零，filter_radius_px 过小")
-        return kernel / total
+        kernel = kernel / total
+        # 预计算 ifftshifted kernel 的 FFT（避免每轮重算 + 绕过 jnp.ifftshift 缺失）
+        kernel_np = np.asarray(kernel)
+        shifted = np.fft.ifftshift(kernel_np)
+        self._filter_kernel_fft = self._jnp.fft.fft2(self._jnp.asarray(shifted))
+        return kernel
 
     def density_projection(
         self, rho: np.ndarray, beta: float, eta: float = 0.5
@@ -372,12 +382,12 @@ class TopologyAdjointOptimizer:
         """可微密度处理链: ρ_raw → sigmoid → 滤波 → tanh 投影。
 
         使用标准 tanh-sigmoid 投影公式（Sigmund 组），保证边界 ρ=0→0, ρ=1→1。
+        滤波核 FFT 在 ``_build_conic_kernel`` 中预计算（含 ifftshift）。
         """
         rho = self._jax.nn.sigmoid(rho_raw)
-        kernel = self._filter_kernel
         rho_f = self._jnp.real(
             self._jnp.fft.ifft2(
-                self._jnp.fft.fft2(rho) * self._jnp.fft.fft2(self._jnp.ifftshift(kernel))
+                self._jnp.fft.fft2(rho) * self._filter_kernel_fft
             )
         )
         eta = self.config.eta
