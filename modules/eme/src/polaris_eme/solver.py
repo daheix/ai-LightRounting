@@ -56,6 +56,7 @@ def solve_slab_modes(
     n_modes: int = 4,
     dx_um: float = 0.01,
     pad_um: float = 1.0,
+    window_um: float | None = None,
 ) -> dict:
     """1D slab 波导本征模求解器。
 
@@ -68,7 +69,9 @@ def solve_slab_modes(
         n_clad: 包层折射率。
         n_modes: 求解模式数。
         dx_um: 网格步长（μm）。
-        pad_um: 包层 padding（μm，每侧）。
+        pad_um: 包层 padding（μm，每侧）。当 window_um 给定时被忽略。
+        window_um: 可选，显式指定仿真窗口宽度（μm）。
+            用于 EME 多段级联时保证各段网格一致。
 
     Returns:
         dict: {modes: [{neff, beta, field_1d}], n_modes, grid_info}
@@ -91,17 +94,25 @@ def solve_slab_modes(
         raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
     if dx_um >= width_um:
         raise ValueError(f"dx_um ({dx_um}) 须 < width_um ({width_um})")
-    if pad_um <= 0:
-        raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
 
-    window_um = width_um + 2.0 * pad_um
-    nx = int(round(window_um / dx_um))
+    if window_um is None:
+        if pad_um <= 0:
+            raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
+        win_um = width_um + 2.0 * pad_um
+    else:
+        if window_um <= width_um:
+            raise ValueError(
+                f"window_um ({window_um}) 须 > width_um ({width_um})"
+            )
+        win_um = float(window_um)
+
+    nx = int(round(win_um / dx_um))
     if nx < 5:
         raise ValueError(f"网格过小 nx={nx}，请减小 dx_um 或增大 pad_um")
-    dx = window_um / nx
+    dx = win_um / nx
 
-    # 芯区索引
-    core_x0 = int(round(pad_um / dx))
+    # 芯区索引（居中放置）
+    core_x0 = int(round((win_um - width_um) / 2.0 / dx))
     core_x1 = core_x0 + int(round(width_um / dx))
     if core_x0 < 1 or core_x1 > nx - 1:
         raise ValueError(
@@ -179,7 +190,7 @@ def solve_slab_modes(
         "grid_info": {
             "nx": nx,
             "dx_um": float(dx),
-            "window_um": float(window_um),
+            "window_um": float(win_um),
             "core_x": [core_x0, core_x1],
         },
     }
@@ -270,19 +281,25 @@ def redheffer_star(
         raise ValueError(
             f"S 矩阵须 2×2，得到 {S1.shape} 和 {S2.shape}"
         )
-    # Redheffer 星积公式（2×2 标量块）
-    # 来源: Bienstman 2001 PhD Eq. 2.18
+    # Redheffer 星积公式（Bienstman 2001 PhD Eq. 2.18，2×2 标量块）
+    # S 矩阵布局: [[S11=左反射, S12=右→左透射],
+    #             [S21=左→右透射, S22=右反射]]
+    # 级联 S = S1 ⊗ S2:
+    #   denom = 1 - S1[1,1] * S2[0,0]  (右反射×左反射的多次反射级数)
+    #   S11 = S1[0,0] + S1[0,1] * S2[0,0] * S1[1,0] / denom
+    #   S12 = S1[0,1] * S2[0,1] / denom
+    #   S21 = S2[1,0] * S1[1,0] / denom
+    #   S22 = S2[1,1] + S2[1,0] * S1[1,1] * S2[0,1] / denom
     I = 1.0 + 0.0j
-    denom = I - S1[0, 1] * S2[1, 0]
+    denom = I - S1[1, 1] * S2[0, 0]
     if abs(denom) < 1e-30:
         raise RuntimeError(
-            f"Redheffer 分母为零（S1[0,1]·S2[1,0]={S1[0,1]*S2[1,0]}），"
+            f"Redheffer 分母为零（S1[1,1]·S2[0,0]={S1[1,1]*S2[0,0]}），"
             f"级联奇异（R03 禁止 fall-back）"
         )
-    # Redheffer 星积公式（Bienstman 2001 PhD Eq. 2.18，2×2 标量块）
     s11 = S1[0, 0] + S1[0, 1] * S2[0, 0] * S1[1, 0] / denom
     s12 = S1[0, 1] * S2[0, 1] / denom
-    s21 = S2[1, 0] * S1[1, 1] / denom
+    s21 = S2[1, 0] * S1[1, 0] / denom
     s22 = S2[1, 1] + S2[1, 0] * S1[1, 1] * S2[0, 1] / denom
     return np.array([[s11, s12], [s21, s22]], dtype=complex)
 
@@ -351,6 +368,10 @@ def solve_eme(
         })
 
     # 1. 每段求解 slab 本征模（仅取基模做单模级联）
+    # 计算公共窗口宽度（取最大宽度 + 2*pad），保证各段网格一致
+    max_width_um = max(sec["width_um"] for sec in parsed)
+    common_window_um = max_width_um + 2.0 * pad_um
+
     section_data: list[dict[str, Any]] = []
     for idx, sec in enumerate(parsed):
         modes_result = solve_slab_modes(
@@ -360,7 +381,7 @@ def solve_eme(
             n_clad=sec["n_clad"],
             n_modes=n_modes_per_section,
             dx_um=dx_um,
-            pad_um=pad_um,
+            window_um=common_window_um,  # 强制统一窗口
         )
         if modes_result["n_modes"] < 1:
             raise RuntimeError(

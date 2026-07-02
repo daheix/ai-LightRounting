@@ -1,0 +1,16 @@
+[project]
+name = "polaris-fdfd"
+version = "5.0.0"
+description = "PoLaRIS 频域有限差分（FDFD）仿真子模块（稀疏矩阵求解 + scipy.sparse.linalg.spsolve）"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
