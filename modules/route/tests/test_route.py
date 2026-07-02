@@ -316,3 +316,86 @@ def test_route_path_topology():
         f"不同 y 应为 step（4 点），实际 {len(path2['points'])} 点"
     assert path2["n_bends"] == 2, \
         f"不同 y step 应 2 弯曲，实际 {path2['n_bends']}"
+
+
+def test_route_device_insertion_loss():
+    """回归测试: 路径损耗含 dev2 插入损耗, total 含所有器件去重(R05)。
+
+    构造 gc1(insertion_loss=1.9) → mmi1(insertion_loss=0.4) 单连接电路:
+    - gc1 布局 (0,0), 端口 out 绝对坐标 (20, 10)
+    - mmi1 布局 (100,0), 端口 in 绝对坐标 (100, 2.5)
+    - 路径 (20,10)→(100,2.5), step 拓扑 2 弯曲, 长度 87.5μm
+    - 波导损耗 = 传播(3.0*87.5/1e4=0.02625) + 弯曲(2*0.05=0.1) = 0.12625
+    - 路径级 loss_db = 波导损耗 + dev2(mmi1)插入损耗(0.4) = 0.52625
+    - total = 波导损耗 + 所有器件去重(gc1=1.9 + mmi1=0.4) = 2.42625
+
+    验证 total > 2.3 (仅器件插入损耗), 且 total 含起始器件 gc1(1.9)。
+
+    来源（R02 学术诚信）:
+    - SiEPIC EBeam PDK GC 1.9dB / MMI1x2 0.4dB
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Chrostowski & Hochberg 2015 §3.3 光子链路功率预算
+      https://www.cambridge.org/core/books/silicon-photonics-design/
+    """
+    gc = make_device(
+        "gc1", "grating_coupler", 20, 20,
+        ports=[("out", 20, 10, "east")],
+        params={"insertion_loss_db": 1.9},
+    )
+    mmi = make_device(
+        "mmi1", "mmi_1x2", 20, 5,
+        ports=[("in", 0, 2.5, "west")],
+        params={"insertion_loss_db": 0.4},
+    )
+    circuit = make_circuit(
+        "InsertionLoss", [gc, mmi],
+        [("gc1", "out", "mmi1", "in")],
+        canvas_w=500, canvas_h=300,
+    )
+    placements = {
+        "gc1": {"x": 0.0, "y": 0.0, "w": 20.0, "h": 20.0},
+        "mmi1": {"x": 100.0, "y": 0.0, "w": 20.0, "h": 5.0},
+    }
+    result = route_circuit(circuit, placements)
+
+    assert len(result["paths"]) == 1
+    path = result["paths"][0]
+    # 波导损耗: 传播(3.0*87.5/1e4=0.02625) + 弯曲(2*0.05=0.1) = 0.12625
+    expected_waveguide = 3.0 * 87.5 / 1e4 + 2 * 0.05
+    # 路径级 loss_db = 波导损耗 + dev2(mmi1)插入损耗(0.4)
+    expected_path = expected_waveguide + 0.4
+    assert abs(path["loss_db"] - expected_path) < 1e-9, \
+        f"路径 loss_db 期望 {expected_path}，实际 {path['loss_db']}"
+
+    # total = 波导损耗 + 所有器件去重(gc1=1.9 + mmi1=0.4)
+    expected_total = expected_waveguide + 1.9 + 0.4
+    assert abs(result["total_loss_db"] - expected_total) < 1e-9, \
+        f"total_loss_db 期望 {expected_total}，实际 {result['total_loss_db']}"
+
+    # total 必须包含起始器件 gc1(1.9), 故 > 2.3(仅器件插入损耗)
+    assert result["total_loss_db"] > 2.3, \
+        f"total_loss_db 应含所有器件插入损耗(>2.3)，实际 {result['total_loss_db']}"
+
+
+def test_route_negative_insertion_loss():
+    """负 insertion_loss_db 应 raise RuntimeError（R03 禁止 fall-back）。"""
+    gc = make_device(
+        "gc1", "grating_coupler", 20, 20,
+        ports=[("out", 20, 10, "east")],
+        params={"insertion_loss_db": -0.5},
+    )
+    mmi = make_device(
+        "mmi1", "mmi_1x2", 20, 5,
+        ports=[("in", 0, 2.5, "west")],
+    )
+    circuit = make_circuit(
+        "NegLoss", [gc, mmi],
+        [("gc1", "out", "mmi1", "in")],
+        canvas_w=500, canvas_h=300,
+    )
+    placements = {
+        "gc1": {"x": 0.0, "y": 0.0, "w": 20.0, "h": 20.0},
+        "mmi1": {"x": 100.0, "y": 0.0, "w": 20.0, "h": 5.0},
+    }
+    with pytest.raises(RuntimeError, match="insertion_loss_db 不能为负"):
+        route_circuit(circuit, placements)
