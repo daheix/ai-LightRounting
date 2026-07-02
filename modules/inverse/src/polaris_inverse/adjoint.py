@@ -167,11 +167,12 @@ def fom_fn(
     monitor_pos: tuple,
     target_freq: float,
 ) -> jnp.ndarray:
-    """FoM 函数: 归一化传输率（监视器/源 时域峰值比），关于 width_param 可微。
+    """FoM 函数: 归一化传输率（监视器/源点 E 场时域峰值比），关于 width_param 可微。
 
     *修复 R05 BUG*: FoM 归一化为真正的传输率
-        FoM = max(|monitor_signal(t)|) / max(|source_waveform(t)|)
-    值域 [0, 1]，物理意义为源到监视器的传输率。
+        FoM = max(|monitor_signal(t)|) / max(|source_signal(t)|)
+    其中 source_signal 为源点位置 Ex 的时域序列（与 monitor 同尺度，均 ~1e16），
+    比值即源→监视器传输率，值域 [0, 1]，物理意义明确。
 
     旧 BUG 根因（已修复）:
     - 旧 FoM = max(|monitor|) 是原始场强值（~1e16 量级），未归一化
@@ -179,19 +180,24 @@ def fom_fn(
     - 梯度方向信息丢失，width 在边界 [0.5, 5] 震荡，FoM 暴涨暴跌不收敛
     - improvement_db = 10*log10(final/initial) ≈ -4.08 dB（变差）
     修复后:
-    - FoM 归一化为 0-1 传输率，梯度 O(0.01-0.1) 不触发裁剪
+    - FoM 归一化为 0-1 传输率（monitor/source 同尺度），梯度 O(0.01-0.1) 不触发裁剪
     - 梯度方向有意义，heavy-ball 动量优化器可正常收敛
     - improvement_db 应为非负或小幅波动（优化后变好/持平）
 
-    源波形与 width_param 无关（仅依赖 fdtd.dt/source_freq），故除法不改变
-    梯度方向，仅缩放梯度幅度，使裁剪阈值 [-1,1] 不再恒触发（数学等价于
-    用 1/peak_source 缩放学习率，但归一化后 FoM 物理意义明确，便于
-    improvement_db 解释与跨实例比较）。
+    归一化方式选择（R01 方案检索）:
+    - 方案A（采用）: source_signal = 源点 Ex 时域序列。monitor 与 source 同为网格
+      内 E 场，同尺度（~1e16），比值是真正的传输率 T∈[0,1]（lumopt/MEEP 标准）。
+    - 方案B（弃用）: source_waveform = 注入波形（高斯*正弦，峰值~1）。但注入波形
+      经 FDTD cb 系数放大后场强达 1e16，monitor/waveform 比值仍 ~1e16，无法归一化。
+      实测 monitor_peak=8.12e16, waveform_peak=0.991，比值仍 8.2e16（BUG 未消除）。
+    来源: lumopt FoM 归一化 https://github.com/chriskeraly/lumopt；
+          MEEP https://meep.readthedocs.io/ 传输率 T=|E_mon|²/|E_src|² 定义。
 
     来源:
     - Mahau 2024 arXiv:2412.12360 "Differentiable FDTD for inverse design"
       https://arxiv.org/abs/2412.12360
     - lumopt FoM 定义（归一化透射率）: https://github.com/chriskeraly/lumopt
+    - MEEP 传输率定义: https://meep.readthedocs.io/en/latest/Python_Tutorials/Basics/
     - Taflove 2005 §13.2 时域信号峰值正比于场强
     - Hughes 2018 ACS Photonics（autograd = adjoint）
       https://arxiv.org/abs/1811.01255
@@ -200,7 +206,7 @@ def fom_fn(
 
     Args:
         width_param: 波导半宽度（像素，连续可微）。
-        fdtd: DifferentiableFDTD 实例（提供 _build_source_waveform 用于归一化）。
+        fdtd: DifferentiableFDTD 实例（run 返回 source_signal 用于归一化）。
         grid: YeeGrid3D 网格。
         source_pos: 源位置 (x, y, z)。
         source_freq: 源频率 (Hz)。
@@ -210,7 +216,7 @@ def fom_fn(
 
     Returns:
         FoM 标量（关于 width_param 可微，归一化传输率，值域 [0,1]）。
-        若 peak_source 为 0（source_freq 非法），返回 inf/nan，
+        若 source_signal 峰值为 0（无源注入），返回 inf/nan，
         由 run_adjoint_optimization 的 NaN 检查 raise（R03 禁止 fall-back）。
     """
     eps_r = epsilon_r_from_width(
@@ -224,15 +230,12 @@ def fom_fn(
         monitor_pos=monitor_pos,
     )
     mon_sig = result["monitor_signal"]
-    # *修复 R05* FoM 归一化: 用源波形峰值归一化监视器信号峰值
-    # 源波形 = 高斯包络 * 正弦载波（见 DifferentiableFDTD._build_source_waveform），
-    # 与 width_param 无关，故 jax.grad 不流经此除法（仅缩放梯度幅度）。
-    # peak_source 为高斯包络峰值(=1)与正弦载波在该时刻值的乘积，非零（合法输入下）。
-    source_waveform = fdtd._build_source_waveform(n_steps, source_freq)
+    src_sig = result["source_signal"]
+    # *修复 R05* FoM 归一化: monitor_peak / source_peak
+    # source_signal = 源点 Ex 时域序列（注入后），与 monitor 同为网格 E 场，
+    # 同尺度（~1e16），比值即传输率 T∈[0,1]（lumopt/MEEP 标准定义）。
     peak_monitor = jnp.max(jnp.abs(mon_sig))
-    peak_source = jnp.max(jnp.abs(source_waveform))
-    # 归一化传输率 FoM = monitor_peak / source_peak，值域 [0,1]
-    # 来源: lumopt FoM 归一化惯例；Taflove 2005 §13.2 信号峰值正比于场强
+    peak_source = jnp.max(jnp.abs(src_sig))
     fom = peak_monitor / peak_source
     return fom
 
