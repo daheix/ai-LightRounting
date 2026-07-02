@@ -1,0 +1,13 @@
+[project]
+name = "polaris-quantum"
+version = "5.0.0"
+description = "PoLaRIS 量子光子仿真验证子模块（玻色采样 + KLM CNOT + HOM 干涉 + Clements 酉矩阵）"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
