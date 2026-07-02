@@ -58,26 +58,38 @@ def test_module_import() -> None:
 
 def test_core_job_flow_api() -> None:
     """smoke test 2: 作业流程核心 API 实例化与基本功能。"""
-    # Job 实例化
-    job = polaris_flow.Job(name="test-job")
-    assert job.name == "test-job"
-    assert job.status == polaris_flow.JobStatus.PENDING
+    # Recipe 实例化（全部字段有默认值）
+    recipe = polaris_flow.Recipe()
+    assert recipe.preset_id == "mzi"
+    assert recipe.platform == "SOI"
 
-    # Recipe 实例化
-    recipe = polaris_flow.Recipe(name="test-recipe")
-    assert recipe.name == "test-recipe"
-
-    # Stage 标准 stage 查询
-    assert len(polaris_flow.STANDARD_STAGES) >= 1
-    first_stage_id = polaris_flow.STANDARD_STAGES[0]
-    stage = polaris_flow.get_stage(first_stage_id)
-    assert stage is not None
-
-    # Workspace 实例化（临时目录）
+    # Workspace 实例化（需要 output_dir + job_id）
     import tempfile
     with tempfile.TemporaryDirectory() as tmpdir:
-        ws = polaris_flow.Workspace(name="test-ws", root=tmpdir)
-        assert ws.name == "test-ws"
+        ws = polaris_flow.Workspace(output_dir=tmpdir, job_id="test-job-001")
+        assert ws.output_dir == tmpdir
+        assert ws.job_id == "test-job-001"
+
+        # Job 实例化（需要 job_id + recipe + workspace）
+        job = polaris_flow.Job(
+            job_id="test-job-001",
+            recipe=recipe,
+            workspace=ws,
+        )
+        assert job.job_id == "test-job-001"
+        assert job.status == polaris_flow.JobStatus.QUEUED
+        # 状态转换 QUEUED → RUNNING
+        job.mark_running()
+        assert job.status == polaris_flow.JobStatus.RUNNING
+
+    # Stage 标准 stage 查询（STANDARD_STAGES 有 10 个 stage）
+    assert len(polaris_flow.STANDARD_STAGES) == 10
+    first_stage = polaris_flow.STANDARD_STAGES[0]
+    assert first_stage.stage_id == 1
+    # get_stage(stage_id) 返回 Stage
+    stage = polaris_flow.get_stage(1)
+    assert stage is not None
+    assert stage.stage_id == 1
 
 
 def test_distributed_scheduler() -> None:

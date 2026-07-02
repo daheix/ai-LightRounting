@@ -31,14 +31,17 @@ import os
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from polaris_core.specs import CircuitSpec, DeviceSpec
-from polaris.data.variant_generator import VariantConfig
-from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
-from polaris.sim.calibration import CalibrationConfig, CalibrationResult, calibrate
-from polaris.trainer.dataset import DatasetConfig
-from polaris.trainer.ppo import PPOAgent
-from polaris.trainer.train_loop import TrainConfig, train_floorplan, train_routing
+
+if TYPE_CHECKING:
+    # 类型注解仅用于静态检查，运行时不解析（PEP 563 `from __future__ import annotations`）
+    from polaris.data.variant_generator import VariantConfig
+    from polaris.pipeline.integrated import PipelineConfig
+    from polaris.sim.calibration import CalibrationResult
+    from polaris.trainer.ppo import PPOAgent
+    from polaris.trainer.train_loop import TrainConfig
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +131,7 @@ class TrainingPipeline:
 
     def __init__(self, config: TrainingConfig | None = None) -> None:
         self.config = config or TrainingConfig()
+        from polaris.pipeline.integrated import IntegratedPipeline
         self.pipeline = IntegratedPipeline(self.config.pipeline_config)
 
     def train(self) -> TrainingResult:
@@ -202,6 +206,7 @@ class TrainingPipeline:
         """
         logger.info("开始布局 PPO 训练: %d episodes", cfg.num_episodes)
         train_cfg = self._build_train_config(cfg)
+        from polaris.trainer.train_loop import train_floorplan
         agent, logs = train_floorplan(train_cfg, verbose=True)
         logger.info(
             "布局训练完成: best_reward=%.3f, 最终 policy_loss=%.4f",
@@ -224,6 +229,7 @@ class TrainingPipeline:
         """
         logger.info("开始布线 PPO 训练: %d episodes", cfg.num_episodes)
         train_cfg = self._build_train_config(cfg)
+        from polaris.trainer.train_loop import train_routing
         agent, logs = train_routing(train_cfg, verbose=True)
         logger.info(
             "布线训练完成: best_reward=%.3f, avg_loss_db=%.3f",
@@ -243,6 +249,8 @@ class TrainingPipeline:
             TrainConfig 实例。
         """
         from polaris.trainer.ppo import PPOConfig
+        from polaris.trainer.train_loop import TrainConfig
+        from polaris.trainer.dataset import DatasetConfig
 
         ppo_cfg = PPOConfig(lr=cfg.lr)
         return TrainConfig(
@@ -305,6 +313,7 @@ class TrainingPipeline:
         Returns:
             CalibrationResult。
         """
+        from polaris.sim.calibration import CalibrationConfig, calibrate
         cal_cfg = CalibrationConfig(benchmark_dir=cfg.benchmark_dir)
         result = calibrate(cal_cfg)
         logger.info(
