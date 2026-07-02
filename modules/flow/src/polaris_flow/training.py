@@ -37,11 +37,12 @@ from polaris_core.specs import CircuitSpec, DeviceSpec
 
 if TYPE_CHECKING:
     # 类型注解仅用于静态检查，运行时不解析（PEP 563 `from __future__ import annotations`）
-    from polaris.data.variant_generator import VariantConfig
-    from polaris.pipeline.integrated import PipelineConfig
-    from polaris.sim.calibration import CalibrationResult
-    from polaris.trainer.ppo import PPOAgent
-    from polaris.trainer.train_loop import TrainConfig
+    from polaris_nn.data.variant_generator import VariantConfig
+    from polaris_trainer.ppo import PPOAgent
+    from polaris_trainer.train_loop import TrainConfig
+    # PipelineConfig / CalibrationResult 在 v5.0 尚未迁移到任何子模块，
+    # 运行时使用处（IntegratedPipeline / calibrate）已 raise ImportError（R03）。
+    # 此处注解保留为前向字符串引用，不导入不存在的模块。
 
 logger = logging.getLogger(__name__)
 
@@ -131,8 +132,11 @@ class TrainingPipeline:
 
     def __init__(self, config: TrainingConfig | None = None) -> None:
         self.config = config or TrainingConfig()
-        from polaris.pipeline.integrated import IntegratedPipeline
-        self.pipeline = IntegratedPipeline(self.config.pipeline_config)
+        raise ImportError(
+            "TrainingPipeline 需要 polaris_orchestrator 子模块提供 IntegratedPipeline"
+            "（v5.0 polaris_orchestrator 未迁移 IntegratedPipeline/PipelineConfig，"
+            "R03 禁止 fall-back）。请迁移 TrainingPipeline 改用 polaris_flow 调度。"
+        )
 
     def train(self) -> TrainingResult:
         """执行训练流水线。
@@ -205,15 +209,12 @@ class TrainingPipeline:
             (训练后的 agent, 训练日志列表)。
         """
         logger.info("开始布局 PPO 训练: %d episodes", cfg.num_episodes)
-        train_cfg = self._build_train_config(cfg)
-        from polaris.trainer.train_loop import train_floorplan
-        agent, logs = train_floorplan(train_cfg, verbose=True)
-        logger.info(
-            "布局训练完成: best_reward=%.3f, 最终 policy_loss=%.4f",
-            max((lg.get("ep_reward", 0.0) for lg in logs), default=0.0),
-            logs[-1].get("policy_loss", 0.0) if logs else 0.0,
+        raise ImportError(
+            "_train_floorplan_agent 需要 polaris_trainer 子模块提供 train_floorplan"
+            "（v5.0 polaris_trainer 仅迁移 train_ppo/train_with_env_factory，"
+            "未迁移 train_floorplan，R03 禁止 fall-back）。"
+            "请改用 polaris_trainer.train_loop.train_ppo 并适配 env_factory。"
         )
-        return agent, logs
 
     def _train_routing_agent(self, cfg: TrainingConfig) -> tuple[PPOAgent, list[dict]]:
         """执行布线 PPO 训练。
@@ -228,15 +229,12 @@ class TrainingPipeline:
             (训练后的 agent, 训练日志列表)。
         """
         logger.info("开始布线 PPO 训练: %d episodes", cfg.num_episodes)
-        train_cfg = self._build_train_config(cfg)
-        from polaris.trainer.train_loop import train_routing
-        agent, logs = train_routing(train_cfg, verbose=True)
-        logger.info(
-            "布线训练完成: best_reward=%.3f, avg_loss_db=%.3f",
-            max((lg.get("ep_reward", 0.0) for lg in logs), default=0.0),
-            (sum(lg.get("total_loss_db", 0.0) for lg in logs) / len(logs) if logs else 0.0),
+        raise ImportError(
+            "_train_routing_agent 需要 polaris_trainer 子模块提供 train_routing"
+            "（v5.0 polaris_trainer 仅迁移 train_ppo/train_with_env_factory，"
+            "未迁移 train_routing，R03 禁止 fall-back）。"
+            "请改用 polaris_trainer.train_loop.train_with_env_factory 并适配 RoutingEnv。"
         )
-        return agent, logs
 
     @staticmethod
     def _build_train_config(cfg: TrainingConfig) -> TrainConfig:
@@ -247,26 +245,14 @@ class TrainingPipeline:
 
         Returns:
             TrainConfig 实例。
-        """
-        from polaris.trainer.ppo import PPOConfig
-        from polaris.trainer.train_loop import TrainConfig
-        from polaris.trainer.dataset import DatasetConfig
 
-        ppo_cfg = PPOConfig(lr=cfg.lr)
-        return TrainConfig(
-            ppo=ppo_cfg,
-            dataset=DatasetConfig(),
-            num_episodes=cfg.num_episodes,
-            rollout_steps=cfg.rollout_steps,
-            canvas_w=cfg.canvas_w,
-            canvas_h=cfg.canvas_h,
-            grid_size=cfg.grid_size,
-            hidden_dim=cfg.hidden_dim,
-            checkpoint_dir=cfg.save_dir,
-            checkpoint_every=max(1, cfg.num_episodes // 5),
-            log_every=max(1, cfg.num_episodes // 10),
-            seed=cfg.seed,
-            sim_feedback=cfg.sim_feedback,
+        Raises:
+            ImportError: polaris_trainer 未迁移 DatasetConfig（R03 禁止 fall-back）。
+        """
+        raise ImportError(
+            "_build_train_config 需要 polaris_trainer 子模块提供 DatasetConfig"
+            "（v5.0 polaris_trainer 未迁移 dataset 模块/DatasetConfig，"
+            "R03 禁止 fall-back）。请迁移数据集配置或改用 TrainConfig 默认数据集。"
         )
 
     @staticmethod
@@ -312,18 +298,15 @@ class TrainingPipeline:
 
         Returns:
             CalibrationResult。
+
+        Raises:
+            ImportError: 仿真校准子模块未迁移（R03 禁止 fall-back）。
         """
-        from polaris.sim.calibration import CalibrationConfig, calibrate
-        cal_cfg = CalibrationConfig(benchmark_dir=cfg.benchmark_dir)
-        result = calibrate(cal_cfg)
-        logger.info(
-            "校准完成: %d/%d 通过, max_error=%.3f dB, mean_error=%.3f dB",
-            result.passed_items,
-            result.total_items,
-            result.max_error_db,
-            result.mean_error_db,
+        raise ImportError(
+            "_run_calibration 需要 v5.0 仿真校准子模块提供 "
+            "CalibrationConfig/calibrate（polaris.sim.calibration 尚未迁移到"
+            "任何子模块，R03 禁止 fall-back）。请迁移校准逻辑或移除校验步骤。"
         )
-        return result
 
     @staticmethod
     def _save_checkpoint(

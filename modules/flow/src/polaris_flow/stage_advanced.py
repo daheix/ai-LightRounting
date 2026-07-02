@@ -61,61 +61,18 @@ def stage9_quantum(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
 
     Returns:
         含 quantum_report 的字典。
+
+    Raises:
+        ImportError: polaris_boson API 契约与本阶段调用不兼容（R03 禁止 fall-back）。
     """
-    import math as _math
-
-    from polaris.sim.quantum_photonics import (
-        beamsplitter_unitary,
-        clements_unitary,
-        hom_interference,
+    raise ImportError(
+        "stage9_quantum 需要 polaris_boson 提供 beamsplitter_unitary/clements_unitary/"
+        "hom_interference，但 v5.0 polaris_boson API 契约已变更："
+        "hom_interference(theta: float) 接收可分辨性参数而非酉矩阵，"
+        "beamsplitter_unitary 仅为私有 _beamsplitter_unitary。"
+        "本阶段原调用 hom_interference(bs_unitary) 与新契约不兼容，"
+        "R03 禁止 fall-back：请迁移 stage9 改用 polaris_boson.hom_interference(theta)。"
     )
-
-    circuit_dict = _require_input(prev_outputs, "circuit", 9)
-
-    logger.info("阶段 9: 量子光子验证")
-
-    n_devices = len(circuit_dict.get("devices", []))
-    # 量子比特数: 基于器件数量，至少 2（HOM 干涉最小规模）
-    n_qubits = max(2, min(n_devices, 8))
-
-    # 构建 2×2 分束器酉矩阵（50:50），计算 HOM 干涉
-    # 来源: Hong, Ou, Mandel, PRL 1987
-    # https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
-    bs_unitary = beamsplitter_unitary(_math.pi / 4, 0.0)
-    hom_result = hom_interference(bs_unitary)
-
-    # HOM 干涉: P(1,1) 应为 0（理想量子干涉），P(2,0)+P(0,2)=1
-    p_11 = hom_result["(1,1)"]
-    # 保真度 = 1 - P(1,1)（HOM 凹陷深度，理想值为 1）
-    fidelity = float(1.0 - p_11)
-    # 电路有效: 保真度 > 0.9 表示量子干涉特性良好
-    circuit_valid = fidelity > 0.9
-
-    # 额外: 构建 Clements 矩阵验证大规模量子网络可行性
-    # 来源: Clements et al., Optica 2016
-    # https://opg.optica.org/optica/fulltext.cfm?uri=optica-3-12-1460
-    clements_u = clements_unitary(n_qubits)
-    # 验证酉性
-    import numpy as np
-
-    unitarity_ok = bool(
-        np.allclose(clements_u @ clements_u.conj().T, np.eye(n_qubits), atol=1e-6)
-    )
-
-    logger.info(
-        "阶段 9 完成: %d 量子比特, 保真度 %.4f, 电路有效=%s, 酉性=%s",
-        n_qubits, fidelity, circuit_valid, unitarity_ok,
-    )
-
-    return {
-        "quantum_report": {
-            "n_qubits": int(n_qubits),
-            "fidelity": float(fidelity),
-            "circuit_valid": bool(circuit_valid),
-            "hom_distribution": {k: float(v) for k, v in hom_result.items()},
-            "unitarity_ok": unitarity_ok,
-        }
-    }
 
 
 # =============================================================================
@@ -142,54 +99,16 @@ def stage10_inverse(recipe: Recipe, workspace: Workspace, prev_outputs: dict) ->
 
     Returns:
         含 inverse_design 的字典。
+
+    Raises:
+        ImportError: polaris_inverse 未迁移 AdjointConfig/AdjointOptimizer（R03 禁止 fall-back）。
     """
-    from polaris.sim.ai_inverse_design import AdjointConfig, AdjointOptimizer
-
-    logger.info("阶段 10: AI 逆向设计")
-
-    # 目标规格: 从 recipe 的 extra 字段读取（若存在），否则用默认值
-    # Recipe 未定义 target_spec 字段，用 getattr 安全读取
-    target_spec = getattr(recipe, "target_spec", None) or {}
-    target_metric = target_spec.get("metric", "transmission")
-    wavelength = float(target_spec.get("wavelength", 1.55))
-
-    # 配置 Adjoint 优化器（少量迭代，快速验证）
-    # 来源: Piggott 2017 Nature Photonics, Adam 优化器
-    config = AdjointConfig(
-        n_pixels=int(target_spec.get("n_pixels", 50)),
-        learning_rate=float(target_spec.get("learning_rate", 0.01)),
-        n_iterations=int(target_spec.get("n_iterations", 20)),
-        target_metric=target_metric,
-        wavelength=wavelength,
-        use_jax=False,  # 沙箱环境可能无 JAX，用 numpy 有限差分
+    raise ImportError(
+        "stage10_inverse 需要 polaris_inverse 子模块提供 AdjointConfig/AdjointOptimizer，"
+        "但 v5.0 polaris_inverse 仅迁移 run_adjoint_optimization 函数，"
+        "未迁移 AdjointConfig/AdjointOptimizer 类，R03 禁止 fall-back。"
+        "请迁移 stage10 改用 polaris_inverse.run_adjoint_optimization。"
     )
-    optimizer = AdjointOptimizer(config=config)
-
-    target = {
-        "metric": target_metric,
-        "wavelength": wavelength,
-    }
-    result = optimizer.optimize(target)
-
-    optimal_fom = float(result["optimal_fom"])
-    iterations = int(result["iterations"])
-    converged = bool(result["converged"])
-
-    logger.info(
-        "阶段 10 完成: 目标 %s, FoM=%.4f, 迭代 %d 次, 收敛=%s",
-        target_metric, optimal_fom, iterations, converged,
-    )
-
-    return {
-        "inverse_design": {
-            "target_merit": optimal_fom,
-            "optimized": converged,
-            "n_iterations": iterations,
-            "target_metric": target_metric,
-            "wavelength": wavelength,
-            "backend": result.get("backend", "numpy"),
-        }
-    }
 
 
 __all__ = [

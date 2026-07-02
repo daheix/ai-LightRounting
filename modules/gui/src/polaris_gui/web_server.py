@@ -201,9 +201,11 @@ def _build_circuit(preset_id: str):
     if preset_id in _PRESET_BUILDERS:
         return _PRESET_BUILDERS[preset_id]()
     if preset_id == "clements_4x4":
-        from polaris.pipeline.integrated import _default_demo_circuit
-
-        return _default_demo_circuit()
+        raise ImportError(
+            "_build_circuit('clements_4x4') 需要 polaris_orchestrator 子模块提供 "
+            "_default_demo_circuit（v5.0 polaris_orchestrator 未迁移该函数，"
+            "R03 禁止 fall-back）。请在 polaris_gui 内联构建 Clements 电路。"
+        )
     raise ValueError(f"未知预设: {preset_id}")
 
 
@@ -247,34 +249,16 @@ def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
 
     来源: LiDAR ISPD'25 curvy-aware routing
       https://dl.acm.org/doi/10.1145/3698364.3705355
-    """
-    from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
 
-    # "default" 映射到 "curvy"（euler 弯曲布线，满足弯曲半径约束）
-    if router_type == "default":
-        router_type = "curvy"
-    circuit = _build_circuit(preset_id)
-    config = PipelineConfig(router_type=router_type, max_sim_iterations=1)
-    pipeline = IntegratedPipeline(config=config)
-    result = pipeline.run(circuit)
-    return {
-        "preset": preset_id,
-        "circuit_name": result.circuit_name,
-        "n_devices": result.n_devices,
-        "n_connections": result.n_connections,
-        "n_paths": len(result.paths),
-        "placements": _extract_placements(result),
-        "paths": _extract_paths(result),
-        "canvas_w": circuit.canvas_w,
-        "canvas_h": circuit.canvas_h,
-        "total_loss_db": result.total_loss_db,
-        "n_crossings": result.n_crossings,
-        "drc_passed": result.drc_passed,
-        "sim_iterations": result.sim_iterations,
-        "report_path": result.report_path,
-        "gds_path": result.gds_path,
-        "success": result.success,
-    }
+    Raises:
+        ImportError: polaris_orchestrator 未迁移 IntegratedPipeline（R03 禁止 fall-back）。
+    """
+    raise ImportError(
+        "_run_pipeline 需要 polaris_orchestrator 子模块提供 "
+        "IntegratedPipeline/PipelineConfig（v5.0 polaris_orchestrator 未迁移"
+        "一体化流水线类，R03 禁止 fall-back）。"
+        "请改用 polaris_flow 调度器执行布局布线流水线。"
+    )
 
 
 # Showcase 输出子目录列表

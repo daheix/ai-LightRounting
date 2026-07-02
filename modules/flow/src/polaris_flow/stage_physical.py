@@ -59,31 +59,14 @@ def _run_analytical_placer(circuit) -> dict[str, dict[str, float]]:
         {name: {x, y, w, h}} 布局字典（左下角坐标）。
 
     Raises:
-        ValueError: 布局结果为空时告警退出（禁止 fall-back）。
+        ImportError: polaris_place 未迁移 AnalyticalPlacer 类（R03 禁止 fall-back）。
     """
-    from polaris.engine.analytical_placer import AnalyticalPlacer
-
-    placer = AnalyticalPlacer(circuit)
-    # place() 返回 {name: (cx, cy)} 中心坐标，需转换为左下角坐标
-    center_positions = placer.place()
-    if not center_positions:
-        raise ValueError(
-            f"布局失败：电路 '{circuit.name}' 无器件可布局。"
-            f"请检查 circuit.devices 是否为空。"
-        )
-    # 构建器件名 → 尺寸映射
-    dev_sizes = {d.name: (d.width_um, d.height_um) for d in circuit.devices}
-    placements: dict[str, dict[str, float]] = {}
-    for name, (cx, cy) in center_positions.items():
-        w, h = dev_sizes.get(name, (10.0, 10.0))
-        # 中心坐标 → 左下角坐标
-        placements[name] = {
-            "x": float(cx - w / 2),
-            "y": float(cy - h / 2),
-            "w": float(w),
-            "h": float(h),
-        }
-    return placements
+    raise ImportError(
+        "stage_physical 需要 polaris_place 子模块提供 AnalyticalPlacer 类"
+        "（v5.0 polaris_place 仅迁移 place_analytical 函数与 AnalyticalConfig，"
+        "未迁移 AnalyticalPlacer 类，R03 禁止 fall-back）。"
+        "请改用 polaris_place.place_analytical 并迁移本函数调用契约。"
+    )
 
 
 def _run_default_placer(
@@ -100,50 +83,13 @@ def _run_default_placer(
         {name: {x, y, w, h}} 布局字典。
 
     Raises:
-        ValueError: algo 非法或布局结果为空时告警退出（禁止 fall-back）。
+        ImportError: polaris_orchestrator 未迁移 _DefaultPlacer（R03 禁止 fall-back）。
     """
-    from polaris.pipeline.integrated import _DefaultPlacer
-
-    if algo in ("rl", "ppo_gnn"):
-        # RL 模式需要 checkpoint，recipe 未提供时 raise
-        checkpoint = getattr(recipe, "placement_checkpoint", None)
-        if checkpoint is None:
-            raise ValueError(
-                f"placement_algo='{algo}' 需要提供 checkpoint 路径。"
-                f"Recipe 未定义 placement_checkpoint 字段。"
-                f"若需使用随机贪心布局，请设置 placement_algo='random'。"
-            )
-        placer = _DefaultPlacer(checkpoint_path=checkpoint, mode="rl")
-    elif algo == "random":
-        placer = _DefaultPlacer(mode="random")
-    elif algo == "auto":
-        checkpoint = getattr(recipe, "placement_checkpoint", None)
-        if checkpoint is not None:
-            placer = _DefaultPlacer(checkpoint_path=checkpoint, mode="auto")
-        else:
-            placer = _DefaultPlacer(mode="random")
-    else:
-        raise ValueError(
-            f"未知 placement_algo='{algo}'。"
-            f"支持: 'analytical'/'rl'/'ppo_gnn'/'random'/'auto'。"
-        )
-
-    raw_placements = placer.place(circuit)
-    if not raw_placements:
-        raise ValueError(
-            f"布局失败：电路 '{circuit.name}' 无器件可布局。"
-            f"请检查 circuit.devices 是否为空。"
-        )
-    # _DefaultPlacer 已返回 {name: {x, y, w, h}} 格式
-    return {
-        name: {
-            "x": float(pl["x"]),
-            "y": float(pl["y"]),
-            "w": float(pl["w"]),
-            "h": float(pl["h"]),
-        }
-        for name, pl in raw_placements.items()
-    }
+    raise ImportError(
+        "stage_physical 需要 polaris_orchestrator 子模块提供 _DefaultPlacer"
+        "（v5.0 polaris_orchestrator 仅迁移 flow 调度，未迁移 _DefaultPlacer，"
+        "R03 禁止 fall-back）。请迁移 RL/随机贪心布局逻辑到 polaris_place。"
+    )
 
 
 def stage3_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
@@ -209,10 +155,11 @@ def _run_curvy_or_default_router(
         router = _CurvyRouter(curve_type="euler")
         return router.route(circuit, placements)
     elif algo == "default":
-        from polaris.pipeline.integrated import _DefaultRouter
-
-        router = _DefaultRouter()
-        return router.route(circuit, placements)
+        raise ImportError(
+            "stage_physical 需要 polaris_orchestrator 子模块提供 _DefaultRouter"
+            "（v5.0 polaris_orchestrator 未迁移 _DefaultRouter，R03 禁止 fall-back）。"
+            "请改用 router_algo='curvy' 或 'diagonal'。"
+        )
     raise ValueError(
         f"未知 router_algo='{algo}'。"
         f"支持: 'curvy'/'default'/'diagonal'。"
