@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # ─── SiEPIC 真实器件名 → PoLaRIS 器件名映射（内联，避免依赖完整 polaris 包） ───
 # 来源: SiEPIC EBeam PDK (MIT, UBC) https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 #       ubcpdk https://github.com/gdsfactory/ubc
-# polaris-nn 子模块自包含，不再 import polaris.pdk.siepic_mapping。
+# polaris-nn 子模块自包含，不再依赖旧 v4 包的 siepic_mapping（已内联到 _SIEPIC_TO_POLARIS）。
 _SIEPIC_TO_POLARIS: dict[str, str] = {
     "ebeam_y_1550": "y_branch",
     "ebeam_y_te1550": "y_branch",
