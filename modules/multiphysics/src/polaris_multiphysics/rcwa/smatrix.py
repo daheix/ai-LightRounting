@@ -3,10 +3,9 @@
 纯 NumPy/SciPy CPU 实现的矩阵级 Redheffer 星积（2N×2N 分块 S 矩阵二元运算），
 替代传输矩阵法（TMM）的矩阵乘法，避免消逝波 $e^{ik_z d}$ 在长结构中指数发散。
 
-与电路级 SAX FG 后端（``polaris.sim.cascade.__init__``）形成"器件级 Redheffer +
-电路级 SAX"双层 S 矩阵体系。``polaris.sim.cascade_backends.redheffer_star`` 为
-字典级（命名端口）实现，本模块为矩阵级（S11/S12/S21/S22 分块）实现，供
-A01-RCWA 与 A02-EME 共享。
+本模块为矩阵级（S11/S12/S21/S22 分块）Redheffer 星积实现，供
+polaris-multiphysics 的 RCWA 求解器共享（避免消逝波在长结构中指数发散）。
+电路级（命名端口）S 矩阵级联由 polaris-sparam 子模块负责，与本器件级实现分层。
 
 数学定义（Redheffer 1959，连接 A.right ↔ B.left，前向传播子 = (I - A_{22}·B_{11})⁻¹）：
 

@@ -102,10 +102,12 @@ from polaris_yield.importance_sampling import (
     BiasingMethod,
     BiasingSpec,
     ImportanceSamplingResult,
-    cross_entropy_importance_sampling,
     importance_sampling_mean,
     importance_sampling_yield,
     rare_event_yield,
+)
+from polaris_yield.importance_sampling_ce import (
+    cross_entropy_importance_sampling,
 )
 from polaris_yield.monte_carlo import (
     MonteCarloResult,

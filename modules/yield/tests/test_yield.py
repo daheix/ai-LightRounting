@@ -44,8 +44,6 @@ if _SRC not in sys.path:
 
 from polaris_yield import (  # noqa: E402
     AllocationStrategy,
-    BiasingMethod,
-    BiasingSpec,
     QMCSamplerType,
     allocate_tolerance_by_sensitivity,
     batch_simulate,
