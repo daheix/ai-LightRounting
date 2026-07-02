@@ -1,18 +1,58 @@
 {
   "drc": {
-    "n_rules": 11,
-    "n_violations": 1,
-    "n_passed": 10,
-    "pass_rate": 0.9090909090909091,
+    "n_rules": 12,
+    "n_violations": 5,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
     "violations": [
       {
-        "rule_name": "layer_density",
+        "rule_name": "MIN_SPACING",
         "severity": 1.0,
-        "message": "WG_DENSITY: 层密度 16.5% 超出范围 [30%, 70%]",
-        "device_name": "WG",
+        "message": "MIN_SPACING: 器件 gc1 与 mmi1 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "gc1",
         "location": [
-          100.0,
-          15.25
+          15.0,
+          5.5
+        ]
+      },
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 gc1 与 wg2 间距 0.5250μm < 阈值 1.0000μm",
+        "device_name": "gc1",
+        "location": [
+          60.0,
+          6.0125
+        ]
+      },
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 mmi1 与 wg1 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "mmi1",
+        "location": [
+          70.0,
+          5.5
+        ]
+      },
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 mmi1 与 wg2 间距 0.5250μm < 阈值 1.0000μm",
+        "device_name": "mmi1",
+        "location": [
+          60.0,
+          6.0125
+        ]
+      },
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 wg1 与 mmi2 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "wg1",
+        "location": [
+          90.0,
+          5.5
         ]
       }
     ]
@@ -24,7 +64,9 @@
     "n_devices": 5,
     "n_connections": 5
   },
-  "gds_path": "out/e2e_showcase/gds/mzi_layout.gds",
-  "drc_source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-  "lvs_source": "KLayout LVS, https://www.klayout.org/doc-qt5/manual/lvs.html"
+  "circuit_name": "MZI",
+  "placement_hpwl": 266.55,
+  "placement_mode": "analytical",
+  "drc_source": "polaris-drc (SiEPIC EBeam PDK), https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+  "lvs_source": "polaris-lvs (KLayout LVS), https://www.klayout.org/doc-qt5/manual/lvs.html"
 }
