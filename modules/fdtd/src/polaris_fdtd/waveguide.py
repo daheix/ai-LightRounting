@@ -1,0 +1,164 @@
+"""波导 FDTD 仿真封装（simulate_waveguide_fdtd）。
+
+提供面向用户的波导 FDTD 仿真 API，封装 YeeGrid3D + GedneyPML + DifferentiableFDTD
+三件套，构建硅波导（Si 芯 / SiO2 包层）结构并提取传输率。
+
+## Input（输入）
+- dx_um: 网格步长（μm，默认 0.05 = 50nm）
+- n_steps: 时间步数（默认 2000）
+- wavelength_um: 波长（μm，默认 1.55）
+- nx/ny/nz: 网格数（默认 32×16×12）
+
+## Process（处理）
+1. 构建硅波导介电常数分布: Si 芯（eps_r=12.08）+ SiO2 包层（eps_r=2.085）
+2. YeeGrid3D 3D 网格 + GedneyPML 4 层吸收边界
+3. DifferentiableFDTD 高斯脉冲源 + jax.lax.scan 时间步进
+4. 双监视器比值法: T = max(|monitor|²) / max(|source|²)
+   来源: Taflove 2005 §5.3（双监视器传输率提取）
+
+## Output（输出）
+dict::
+
+    {
+        "transmission_db": float,    # 传输率（dB）
+        "T_fdtd": float,             # 传输率（线性 0-1）
+        "fdtd_duration_s": float,    # 仿真耗时（秒）
+        "n_steps": int,              # 时间步数
+        "dx_um": float,              # 网格步长（μm）
+        "pml_enabled": bool,         # 是否启用 PML
+    }
+
+## 设计原则
+- R04 不参与 GPU: 强制 JAX CPU 后端
+- R03 禁止 fall-back: 仿真结果为 NaN 时 raise
+- R02 学术诚信: 物理参数来自 Soref 1993 / NIST CODATA 2018
+
+## 来源（R02 学术诚信，≥5 个文献 URL）
+- Yee 1966 IEEE TAP https://doi.org/10.1109/TAP.1966.1138693
+- Gedney 1996 IEEE TAP https://doi.org/10.1109/8.546249
+- Taflove & Hagness 2005 "Computational Electrodynamics" §5.3
+- Soref 1993 IEEE JQE https://ieeexplore.ieee.org/document/1148303
+- NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/
+- Lumerical FDTD 求解器 https://optics.ansys.com/hc/en-us/articles/360034914833
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015
+"""
+
+from __future__ import annotations
+
+import os
+import time
+
+# R04: 强制 JAX CPU 后端（必须在 import jax 前设置）
+os.environ.setdefault("JAX_PLATFORMS", "cpu")
+
+import numpy as np  # noqa: E402
+
+from polaris_fdtd.solver import (  # noqa: E402
+    C0,
+    DifferentiableFDTD,
+    GedneyPML,
+    SOI_EPS_R_SI,
+    SOI_EPS_R_SIO2,
+    YeeGrid3D,
+)
+
+__all__ = ["simulate_waveguide_fdtd"]
+
+
+def _build_waveguide_eps(
+    nx: int, ny: int, nz: int,
+    wg_y_range: tuple, wg_z_range: tuple,
+    eps_core: float, eps_clad: float,
+) -> np.ndarray:
+    """构建硅波导介电常数分布 (nx, ny, nz)。"""
+    eps = np.full((nx, ny, nz), eps_clad, dtype=np.float32)
+    y0, y1 = wg_y_range
+    z0, z1 = wg_z_range
+    eps[:, y0:y1, z0:z1] = eps_core
+    return eps
+
+
+def simulate_waveguide_fdtd(
+    dx_um: float = 0.05,
+    n_steps: int = 2000,
+    wavelength_um: float = 1.55,
+    nx: int = 32,
+    ny: int = 16,
+    nz: int = 12,
+    pml_layers: int = 4,
+) -> dict:
+    """波导 FDTD 仿真（Si 芯 / SiO2 包层）。
+
+    构建硅波导结构并运行 3D FDTD 时间步进，提取传输率。
+
+    Args:
+        dx_um: 网格步长（μm）。
+        n_steps: 时间步数。
+        wavelength_um: 波长（μm）。
+        nx/ny/nz: 网格数。
+        pml_layers: PML 层数（每侧）。
+
+    Returns:
+        dict: transmission_db / T_fdtd / fdtd_duration_s / n_steps / dx_um / pml_enabled
+
+    Raises:
+        ValueError: 参数非法（R03 禁止 fall-back）。
+        RuntimeError: 仿真结果含 NaN（R03 禁止 fall-back）。
+    """
+    if dx_um <= 0:
+        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
+    if n_steps <= 0:
+        raise ValueError(f"n_steps 须 > 0，得到 {n_steps}")
+    if wavelength_um <= 0:
+        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
+    if pml_layers * 2 >= min(nx, ny, nz):
+        raise ValueError(
+            f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
+        )
+
+    dx_m = dx_um * 1e-6
+    # 波导芯: y=6-10（4 格）, z=4-6（2 格），沿 x 传播
+    eps_r = _build_waveguide_eps(
+        nx, ny, nz, (6, 10), (4, 6), SOI_EPS_R_SI, SOI_EPS_R_SIO2,
+    )
+
+    grid = YeeGrid3D(nx, ny, nz, dx_m, dx_m, dx_m, epsilon_r=eps_r)
+    pml = GedneyPML(grid, n_layers=pml_layers, eps_r_bg=SOI_EPS_R_SIO2)
+    fdtd = DifferentiableFDTD(grid, pml=pml, eps_r_bg=SOI_EPS_R_SIO2)
+
+    # 源频率: f = c/λ（1550nm → 193.4 THz）
+    source_freq = C0 / (wavelength_um * 1e-6)
+    source_pos = (4, 8, 5)   # 波导入射端中心
+    monitor_pos = (nx - 5, 8, 5)  # 波导出射端中心
+
+    t0 = time.time()
+    result = fdtd.run(eps_r, source_pos, source_freq, n_steps, monitor_pos)
+    duration = float(time.time() - t0)
+
+    mon_sig = np.asarray(result["monitor_signal"])
+    src_wave = np.asarray(fdtd._build_source_waveform(n_steps, source_freq))
+
+    # R03: NaN 校验
+    if np.any(np.isnan(mon_sig)):
+        raise RuntimeError(
+            f"FDTD 监视器信号含 NaN（R03 禁止 fall-back）"
+        )
+
+    # 传输率: 双监视器比值法（Taflove 2005 §5.3）
+    p_monitor = float(np.max(np.abs(mon_sig) ** 2))
+    p_source = float(np.max(np.abs(src_wave) ** 2))
+    if p_source <= 0:
+        raise RuntimeError(
+            f"源功率 {p_source} <= 0，传输率无法计算（R03 禁止 fall-back）"
+        )
+    t_fdtd = p_monitor / p_source
+    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
+
+    return {
+        "transmission_db": transmission_db,
+        "T_fdtd": float(t_fdtd),
+        "fdtd_duration_s": duration,
+        "n_steps": int(n_steps),
+        "dx_um": float(dx_um),
+        "pml_enabled": True,
+    }
