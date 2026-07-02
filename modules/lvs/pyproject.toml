@@ -1,7 +1,7 @@
 [project]
-name = "polaris-verify"
+name = "polaris-lvs"
 version = "5.0.0"
-description = "PoLaRIS DRC/LVS 验证子模块（设计规则检查 + 版图与原理图一致性比对）"
+description = "PoLaRIS LVS 网表一致性比对子模块（版图与原理图拓扑比对）"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
 

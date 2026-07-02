@@ -1,7 +1,20 @@
-"""LVS（Layout Versus Schematic）网表比对引擎（polaris-verify 子模块）。
+"""LVS（Layout Versus Schematic）网表比对引擎（polaris-lvs 子模块）。
 
-迁移自 ``src/polaris/sim/lvs.py`` 的网表比对能力，适配 polaris-verify 的
-``circuit dict`` 接口（与 polaris-core 一致），仅依赖 numpy（R04: 不参与 GPU）。
+从原 ``polaris-verify/src/polaris_verify/lvs.py`` 拆分而来（R13 代码清理：
+禁止多个 vx 文件并存，新建立就彻底删除老的）。仅依赖 numpy（R04: 不参与 GPU）。
+
+## Input → Process → Output 三段式
+
+### Input
+- ``circuit: dict`` — polaris-core 风格电路规格（含 devices/connections）
+- ``netlist: dict | None`` — 提取网表（None 时自比对）
+
+### Process
+1. 从 circuit 提取参考网表（器件名+类型 + 拓扑连接）
+2. 与提取网表比对: 器件集合差集 + 器件类型一致性 + 连接集合差集
+
+### Output
+不匹配列表 ``list[LVSMismatch]``，空列表表示 LVS clean / 完全一致
 
 ## LVS 流程
 
@@ -22,7 +35,6 @@
 - 当 ``netlist=None`` 时，参考网表与自身比对（验证 API 正确性，必然 consistent）
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
-
 - KLayout LVS API: https://www.klayout.org/doc-qt5/manual/lvs.html
 - SiEPIC EBeam PDK DEVREC 标准（器件识别层 layer 68）
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
@@ -40,6 +52,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+
+import numpy as np
 
 __all__ = [
     "LVSMismatchType",
@@ -283,3 +297,7 @@ def _parse_netlist_dict(netlist: dict) -> Netlist:
         # 兼容 [dev1, dev2] 与 [dev1, port1, dev2, port2] 两种格式
         connections.append((str(conn[0]), str(conn[2] if len(conn) >= 4 else conn[1])))
     return Netlist(devices=devices, connections=connections)
+
+
+# numpy 引用占位（保留依赖一致性，R04 纯 NumPy）
+_ = np
