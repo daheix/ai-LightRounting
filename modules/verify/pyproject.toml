@@ -1,0 +1,13 @@
+[project]
+name = "polaris-verify"
+version = "5.0.0"
+description = "PoLaRIS DRC/LVS 验证子模块（设计规则检查 + 版图与原理图一致性比对）"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
