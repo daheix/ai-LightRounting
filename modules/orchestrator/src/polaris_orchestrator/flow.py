@@ -1,6 +1,6 @@
 """PoLaRIS EDA 流程编排主体（polaris-orchestrator）。
 
-实现 ``run_eda_flow``，组合 8 个独立子模块为完整 EDA 流程，9 个 stage 顺序
+实现 ``run_eda_flow``，组合 18 个独立子模块为完整 EDA 流程，9 个 stage 顺序
 执行（polaris_pdk 在 stage 1 与 stage 7 各用一次）::
 
     1. PDK 目录       polaris_pdk.list_platforms
@@ -8,11 +8,14 @@
     3. AI 布局        polaris_place.place_circuit  mode="analytical"
     4. 智能布线       polaris_route.route_circuit
     5. 仿真验证       polaris_sparam.simulate_mzi_sparam + compute_clements_unitary
-                     + polaris_pam4.simulate_pam4
+                     + polaris_pam4.simulate_pam4 + polaris_fdtd.simulate_waveguide_fdtd
     6. DRC / LVS      polaris_drc.run_drc + polaris_lvs.run_lvs
     7. GDS 导出       polaris_gdsio.export_gds
     8. 逆向设计       polaris_inverse.optimize_waveguide_width  n_iterations=10
-    9. 量子验证       polaris_quantum.klm_cnot + hom_interference
+    9. 量子验证       polaris_klm.klm_cnot + polaris_boson.hom_interference
+
+注: polaris-fde / polaris-eme / polaris-bpm / polaris-fdfd 为独立仿真子模块，
+提供单职责 API 但不进入主流程 stage（按需调用，避免主流程耗时膨胀）。
 
 ## 编排策略 vs R03 fall-back 禁令（*创新*）
 
@@ -54,11 +57,13 @@ import polaris_gdsio
 import polaris_inverse
 import polaris_pdk
 import polaris_place
-import polaris_quantum
+import polaris_boson
 import polaris_route
 import polaris_sparam
 import polaris_pam4
+import polaris_fdtd
 import polaris_drc
+import polaris_klm
 import polaris_lvs
 
 # 编排层版本（与子模块对齐到 5.0.0）
@@ -102,17 +107,26 @@ def _stage_route(circuit: dict, ctx: dict) -> Any:
 
 
 def _stage_simulate(_circuit: dict, _ctx: dict) -> Any:
-    """Stage 5: 仿真验证 - MZI S 参数扫描 + Clements 酉矩阵 + PAM4 眼图。
+    """Stage 5: 仿真验证 - MZI S 参数扫描 + Clements 酉矩阵 + PAM4 眼图 + FDTD 全波仿真。
 
-    使用 polaris_sparam（频域 S 参数）和 polaris_pam4（PAM4 信号）。
+    使用 polaris_sparam（频域 S 参数 + MZI + Clements）、polaris_pam4（PAM4 信号）、
+    polaris_fdtd（时域 FDTD 全波仿真，与解析模型交叉验证）。
     """
     mzi = polaris_sparam.simulate_mzi_sparam()
     clements = polaris_sparam.compute_clements_unitary(n_modes=4)
     pam4 = polaris_pam4.simulate_pam4()
+    # FDTD 全波仿真（与 sparam 解析模型交叉验证；n_steps=200 限速）
+    try:
+        fdtd = polaris_fdtd.simulate_waveguide_fdtd(dx_um=0.1, n_steps=200)
+    except Exception as exc:
+        # FDTD 失败不阻塞 stage 5（编排策略：解析模型已提供主要结论，
+        # FDTD 仅作交叉验证；失败原因记录，供诊断）
+        fdtd = {"error": f"FDTD 失败（不阻塞 stage 5）: {type(exc).__name__}: {exc}"}
     return {
         "mzi_sparam": mzi,
         "clements_unitary": clements,
         "pam4": pam4,
+        "fdtd_waveguide": fdtd,
     }
 
 
@@ -144,9 +158,13 @@ def _stage_inverse(_circuit: dict, _ctx: dict) -> Any:
 
 
 def _stage_quantum(_circuit: dict, _ctx: dict) -> Any:
-    """Stage 9: 量子验证 - KLM CNOT 量子门 + HOM 双光子干涉。"""
-    klm = polaris_quantum.klm_cnot()
-    hom = polaris_quantum.hom_interference(theta=0.0)
+    """Stage 9: 量子验证 - KLM CNOT 量子门 + HOM 双光子干涉。
+
+    polaris_klm 提供 KLM CNOT（Ralph 2002，成功率 1/9），
+    polaris_boson 提供 HOM 双光子干涉（Hong-Ou-Mandel 1987）。
+    """
+    klm = polaris_klm.klm_cnot()
+    hom = polaris_boson.hom_interference(theta=0.0)
     return {
         "klm_cnot": klm,
         "hom_interference": hom,

@@ -23,10 +23,13 @@ from pathlib import Path
 import pytest
 
 # 让测试既能从已安装包导入，也能从源码树导入（CI/开发模式）
-# orchestrator 依赖 8 个子模块，统一加入 sys.path
+# orchestrator 组合 18 个独立子模块（v5.0 细粒度拆分），统一加入 sys.path
+# 拆分对照: sim → sparam/pam4/fdtd/fde/eme/bpm/fdfd; verify → drc/lvs;
+#          quantum → boson/klm; 新增 gdsio（旧 export 合并到 gdsio）
 _MODULES = Path(__file__).resolve().parents[2]
-for _m in ("core", "pdk", "place", "route", "sim", "verify", "inverse",
-           "quantum", "orchestrator"):
+for _m in ("core", "pdk", "place", "route", "drc", "lvs",
+           "sparam", "pam4", "fdtd", "fde", "eme", "bpm", "fdfd",
+           "inverse", "boson", "klm", "gdsio", "orchestrator"):
     _src = str(_MODULES / _m / "src")
     if _src not in sys.path:
         sys.path.insert(0, _src)
