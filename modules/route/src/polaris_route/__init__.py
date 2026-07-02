@@ -1,0 +1,426 @@
+"""PoLaRIS 智能布线子模块（polaris-route）。
+
+提供稳定的 Python API（route_circuit/compute_path_loss），对已布局电路执行
+曲线波导布线，输出波导路径、总插入损耗、交叉数与弯曲数。
+
+## 设计原则
+
+- 对外 API 返回 JSON-serializable dict（与 polaris-core / polaris-place 一致）
+- 纯 NumPy 实现（R04: 不参与 GPU）
+- 禁止 fall-back（R03）: 布线失败 raise RuntimeError，不返回哨兵值
+- 输出坐标约定: 路径点为画布绝对坐标 (μm)，与
+  ``modules/_c_abi/polaris_types.h`` 中 ``polaris_path_t.xs/ys`` 一致
+
+## 损耗模型（R02 学术诚信，参数可溯源）
+
+- 传播损耗 3.0 dB/cm: Soref et al. 1993 IEEE Proc. 41(9) SOI 波导上界
+- 单弯损耗 0.05 dB: SiEPIC EBeam PDK 通用路径保守上界
+- 单次交叉损耗 0.3 dB: SiEPIC EBeam PDK crossing_te1550 上界
+
+## 来源（R02 学术诚信，≥5 个文献 URL）
+
+- LiDAR: Automated Curvy Waveguide Detailed Routing（ISPD'25）
+  https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+- LiDAR 2.0: Hierarchical Curvy Waveguide Detailed Routing（TCAD 2025）
+  https://scopex-asu.github.io/files/publications/PD_TCAD2025_LiDARv2.pdf
+- SiEPIC EBeam PDK（bend_euler radius=5μm，0.05 dB/bend，0.3 dB/crossing）
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 3 dB/cm 传播损耗基准）
+  https://ieeexplore.ieee.org/document/1148303
+- Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- Klauss et al., "Euler spiral waveguide bends", Opt Express 2018
+  https://doi.org/10.1364/OE.26.029637
+- Fujisawa et al. 2017, "Euler bend clothoid curve low-loss waveguide"
+  (Optics Express 25(8) 9150) https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
+- A* 搜索算法（Hart, Nilsson & Raphael 1968）
+  https://en.wikipedia.org/wiki/A*_search_algorithm
+- numpy ndarray C API
+  https://numpy.org/doc/stable/reference/c-api/types-and-structures.html
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from polaris_route.curvy import (
+    BEND_LOSS_DB,
+    CROSSING_LOSS_DB,
+    PROPAGATION_LOSS_DB_CM,
+    CurveType,
+    CurvyRouteConfig,
+    CurvyRouter,
+    compute_path_loss as _compute_path_loss,
+    count_bends,
+    count_crossings,
+    generate_arc_bend,
+    generate_euler_bend,
+    path_length,
+    s_bend_bezier,
+)
+
+__version__ = "5.0.0"
+
+# 布线模式 → CurvyRouter 实例化标记
+_SUPPORTED_MODES = ("curvy",)
+
+
+def _validate_circuit(circuit: dict) -> None:
+    """校验 circuit dict 结构完整性（R03: 失败 raise）。
+
+    Args:
+        circuit: 待校验 circuit dict。
+
+    Raises:
+        RuntimeError: circuit 非 dict / 缺必要字段 / 画布尺寸非正。
+    """
+    if not isinstance(circuit, dict):
+        raise RuntimeError(
+            f"circuit 必须是 dict，得到 {type(circuit).__name__}"
+        )
+    for key in ("name", "devices", "connections", "canvas_w", "canvas_h"):
+        if key not in circuit:
+            raise RuntimeError(f"circuit 缺少必要字段: {key}")
+    if circuit["canvas_w"] <= 0 or circuit["canvas_h"] <= 0:
+        raise RuntimeError(
+            f"画布尺寸必须为正: canvas_w={circuit['canvas_w']}, "
+            f"canvas_h={circuit['canvas_h']}（R03 禁止 fall-back）"
+        )
+    if not isinstance(circuit["devices"], list):
+        raise RuntimeError("circuit.devices 必须是 list")
+    if not isinstance(circuit["connections"], list):
+        raise RuntimeError("circuit.connections 必须是 list")
+
+
+def _validate_placements(placements: dict) -> None:
+    """校验 placements dict 结构完整性（R03: 失败 raise）。
+
+    Args:
+        placements: 待校验 placements dict。
+
+    Raises:
+        RuntimeError: placements 非 dict / 器件缺 x,y 字段。
+    """
+    if not isinstance(placements, dict):
+        raise RuntimeError(
+            f"placements 必须是 dict，得到 {type(placements).__name__}"
+        )
+    for name, pl in placements.items():
+        if not isinstance(pl, dict):
+            raise RuntimeError(
+                f"placements['{name}'] 必须是 dict，得到 {type(pl).__name__}"
+            )
+        for key in ("x", "y"):
+            if key not in pl:
+                raise RuntimeError(
+                    f"placements['{name}'] 缺少字段: {key}"
+                    f"（R03 禁止 fall-back）"
+                )
+
+
+def _build_device_map(circuit: dict) -> dict[str, dict]:
+    """构建器件名 → 器件 dict 的映射。
+
+    Args:
+        circuit: circuit dict。
+
+    Returns:
+        {device_name: device_dict}。
+
+    Raises:
+        RuntimeError: 器件名重复或缺失。
+    """
+    device_map: dict[str, dict] = {}
+    for dev in circuit["devices"]:
+        if "name" not in dev:
+            raise RuntimeError(
+                f"器件缺 name 字段: {dev}（R03 禁止 fall-back）"
+            )
+        name = dev["name"]
+        if name in device_map:
+            raise RuntimeError(
+                f"器件名重复: {name}（R03 禁止 fall-back）"
+            )
+        device_map[name] = dev
+    return device_map
+
+
+def _find_port(
+    device: dict, port_name: str,
+) -> tuple[float, float, str]:
+    """在器件规格中查找指定端口。
+
+    Args:
+        device: 器件 dict（含 ports 列表）。
+        port_name: 端口名。
+
+    Returns:
+        (dx, dy, direction) 端口相对偏移与方向。
+
+    Raises:
+        RuntimeError: 端口未找到（R03 禁止 fall-back）。
+    """
+    ports = device.get("ports", [])
+    for port in ports:
+        if len(port) < 3:
+            raise RuntimeError(
+                f"端口格式非法（至少含 name, dx, dy）: {port}"
+                f"（R03 禁止 fall-back）"
+            )
+        if str(port[0]) == port_name:
+            direction = str(port[3]) if len(port) >= 4 else "unknown"
+            return (float(port[1]), float(port[2]), direction)
+    raise RuntimeError(
+        f"器件 {device.get('name', '?')} 未找到端口: {port_name}"
+        f"（R03 禁止 fall-back，可用端口: "
+        f"{[p[0] for p in ports]}）"
+    )
+
+
+def _port_absolute_position(
+    placement: dict, port_dx: float, port_dy: float,
+) -> tuple[float, float]:
+    """计算端口的画布绝对坐标。
+
+    端口绝对坐标 = 器件左下角坐标 + 端口相对偏移
+    （与 modules/_c_abi/polaris_types.h polaris_placement_t 一致）
+
+    Args:
+        placement: 器件布局 {x, y, w, h}，x/y 为左下角。
+        port_dx: 端口相对器件原点的 x 偏移 (μm)。
+        port_dy: 端口相对器件原点的 y 偏移 (μm)。
+
+    Returns:
+        (abs_x, abs_y) 画布绝对坐标 (μm)。
+    """
+    return (float(placement["x"]) + port_dx, float(placement["y"]) + port_dy)
+
+
+def _count_path_crossings(
+    paths: list[list[tuple[float, float]]],
+) -> list[int]:
+    """统计每条路径与其他路径的交叉数。
+
+    对每对路径 (i, j) i<j 调用 count_crossings，交叉数同时累加到两条路径。
+
+    Args:
+        paths: 所有路径点列表的列表。
+
+    Returns:
+        每条路径的交叉数列表（长度 = len(paths)）。
+    """
+    n = len(paths)
+    counts = [0] * n
+    for i in range(n):
+        for j in range(i + 1, n):
+            c = count_crossings(paths[i], paths[j])
+            counts[i] += c
+            counts[j] += c
+    return counts
+
+
+def route_circuit(
+    circuit: dict,
+    placements: dict,
+    mode: str = "curvy",
+) -> dict:
+    """对已布局电路执行智能布线，返回布线结果 dict。
+
+    对电路的每条连接 (dev1.port1 → dev2.port2):
+    1. 从 placements 查找 dev1/dev2 的左下角坐标
+    2. 从 circuit.devices 查找端口相对偏移，计算端口绝对坐标
+    3. 用 CurvyRouter 生成 S-bend 曲线波导路径
+    4. 统计弯曲数、交叉数，计算路径损耗（传播 + 弯曲 + 交叉）
+
+    Args:
+        circuit: polaris-core 风格 circuit dict（含 name/devices/connections/
+            canvas_w/canvas_h）。每个 device 含 ports 列表
+            [(name, dx, dy, direction), ...]。
+        placements: polaris-place 输出的布局结果 {name: {x, y, w, h}}，
+            x/y 为器件左下角坐标 (μm)。
+        mode: 布线模式，目前支持 ``"curvy"``（曲线波导布线）。
+
+    Returns:
+        布线结果 dict::
+
+            {
+                "paths": [
+                    {
+                        "dev1": str, "port1": str,
+                        "dev2": str, "port2": str,
+                        "points": list[[x, y], ...],  # 画布绝对坐标 (μm)
+                        "loss_db": float,             # 该路径总损耗 (dB)
+                        "n_bends": int,               # 弯曲数
+                        "n_crossings": int,           # 该路径与其他路径的交叉数
+                    },
+                    ...
+                ],
+                "total_loss_db": float,  # 所有路径损耗之和 (dB)
+                "n_crossings": int,      # 总交叉对数（去重）
+                "n_bends": int,          # 所有路径弯曲数之和
+                "router_type": str,      # 布线器类型（"curvy"）
+            }
+
+    Raises:
+        RuntimeError: mode 非法 / circuit 结构非法 / placements 结构非法 /
+            端口未找到 / 连接引用的器件不在 placements 中
+            （R03 禁止 fall-back）。
+    """
+    _validate_circuit(circuit)
+    _validate_placements(placements)
+
+    if mode not in _SUPPORTED_MODES:
+        raise RuntimeError(
+            f"不支持的布线模式: {mode}（可选: {_SUPPORTED_MODES}）"
+        )
+
+    device_map = _build_device_map(circuit)
+    router = CurvyRouter()
+
+    # 第一遍: 生成所有路径点
+    raw_paths: list[dict] = []
+    path_points: list[list[tuple[float, float]]] = []
+    for conn in circuit["connections"]:
+        if not isinstance(conn, (list, tuple)) or len(conn) != 4:
+            raise RuntimeError(
+                f"connection 必须是长度 4 的 list/tuple "
+                f"[dev1, port1, dev2, port2]，得到: {conn}"
+                f"（R03 禁止 fall-back）"
+            )
+        dev1_name, port1_name, dev2_name, port2_name = conn
+
+        # 查找器件
+        if dev1_name not in device_map:
+            raise RuntimeError(
+                f"连接 {conn} 引用了不存在的器件: {dev1_name}"
+                f"（R03 禁止 fall-back）"
+            )
+        if dev2_name not in device_map:
+            raise RuntimeError(
+                f"连接 {conn} 引用了不存在的器件: {dev2_name}"
+                f"（R03 禁止 fall-back）"
+            )
+        if dev1_name not in placements:
+            raise RuntimeError(
+                f"连接 {conn} 的器件 {dev1_name} 不在 placements 中"
+                f"（R03 禁止 fall-back）"
+            )
+        if dev2_name not in placements:
+            raise RuntimeError(
+                f"连接 {conn} 的器件 {dev2_name} 不在 placements 中"
+                f"（R03 禁止 fall-back）"
+            )
+
+        # 查找端口
+        dev1 = device_map[dev1_name]
+        dev2 = device_map[dev2_name]
+        port1_dx, port1_dy, _dir1 = _find_port(dev1, port1_name)
+        port2_dx, port2_dy, _dir2 = _find_port(dev2, port2_name)
+
+        # 计算端口绝对坐标
+        start = _port_absolute_position(placements[dev1_name], port1_dx, port1_dy)
+        end = _port_absolute_position(placements[dev2_name], port2_dx, port2_dy)
+
+        # 生成曲线波导路径
+        points = router.route(start, end)
+        path_points.append(points)
+        raw_paths.append({
+            "dev1": dev1_name,
+            "port1": port1_name,
+            "dev2": dev2_name,
+            "port2": port2_name,
+            "points": points,
+        })
+
+    # 第二遍: 统计交叉数（每条路径与其他路径的交叉数）
+    crossing_counts = _count_path_crossings(path_points)
+
+    # 第三遍: 计算每条路径的损耗与弯曲数
+    paths_out: list[dict] = []
+    total_loss_db = 0.0
+    total_bends = 0
+    total_crossing_pairs = 0
+    for idx, raw in enumerate(raw_paths):
+        points = raw["points"]
+        n_bends = count_bends(points)
+        # 路径损耗 = 传播 + 弯曲 + 交叉（交叉损耗 0.3 dB/crossing）
+        propagation_bend = _compute_path_loss(points, PROPAGATION_LOSS_DB_CM)
+        crossing_loss = crossing_counts[idx] * CROSSING_LOSS_DB
+        loss_db = propagation_bend + crossing_loss
+
+        paths_out.append({
+            "dev1": raw["dev1"],
+            "port1": raw["port1"],
+            "dev2": raw["dev2"],
+            "port2": raw["port2"],
+            "points": [[float(p[0]), float(p[1])] for p in points],
+            "loss_db": float(loss_db),
+            "n_bends": int(n_bends),
+            "n_crossings": int(crossing_counts[idx]),
+        })
+        total_loss_db += loss_db
+        total_bends += n_bends
+        # 交叉对去重: 每对路径的交叉在 crossing_counts 中被两条路径各计一次
+        total_crossing_pairs += crossing_counts[idx]
+    total_crossing_pairs //= 2
+
+    return {
+        "paths": paths_out,
+        "total_loss_db": float(total_loss_db),
+        "n_crossings": int(total_crossing_pairs),
+        "n_bends": int(total_bends),
+        "router_type": "curvy",
+    }
+
+
+def compute_path_loss(
+    points: list,
+    loss_db_cm: float = PROPAGATION_LOSS_DB_CM,
+) -> float:
+    """计算波导路径损耗（传播损耗 + 弯曲损耗）。
+
+    损耗模型::
+
+        loss_db = propagation + n_bends * 0.05
+
+    - 传播损耗 = ``loss_db_cm`` × 路径长度(μm) / 1e4（cm = 1e4 μm）
+    - 弯曲损耗 = 弯曲数 × 0.05 dB（SiEPIC EBeam PDK 通用路径上界）
+
+    默认 ``loss_db_cm=3.0`` dB/cm 为 SOI 波导传播损耗上界
+    （Soref 1993 + SiEPIC PDK）。
+
+    来源（R02 学术诚信）:
+    - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 3 dB/cm）
+      https://ieeexplore.ieee.org/document/1148303
+    - SiEPIC EBeam PDK（0.05 dB/bend 上界）
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
+      https://www.cambridge.org/core/books/silicon-photonics-design/
+
+    Args:
+        points: 路径点序列 [[x, y], ...] 或 [(x, y), ...]，坐标单位 μm。
+        loss_db_cm: 传播损耗系数 (dB/cm)，默认 3.0。
+
+    Returns:
+        路径总损耗 (dB)。
+
+    Raises:
+        RuntimeError: loss_db_cm 为负（R03 禁止 fall-back）。
+    """
+    return _compute_path_loss(points, loss_db_cm)
+
+
+__all__ = [
+    "route_circuit",
+    "compute_path_loss",
+    "CurvyRouter",
+    "CurvyRouteConfig",
+    "CurveType",
+    "count_bends",
+    "count_crossings",
+    "path_length",
+    "s_bend_bezier",
+    "generate_euler_bend",
+    "generate_arc_bend",
+    "__version__",
+]

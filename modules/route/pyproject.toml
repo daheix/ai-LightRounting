@@ -1,0 +1,13 @@
+[project]
+name = "polaris-route"
+version = "5.0.0"
+description = "PoLaRIS 智能布线子模块（曲线波导 S-bend 布线 + 损耗/交叉/弯曲统计）"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
