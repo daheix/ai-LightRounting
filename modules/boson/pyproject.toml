@@ -1,0 +1,13 @@
+[project]
+name = "polaris-boson"
+version = "5.1.0"
+description = "PoLaRIS 玻色采样子模块（Boson Sampling + permanent + HOM 干涉 + Clements 酉矩阵）"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
