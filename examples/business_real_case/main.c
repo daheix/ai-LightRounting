@@ -2,7 +2,7 @@
  * @file main.c
  * @brief PoLaRIS 业务侧 C 调用示例：100Gbps MZI 调制器设计
  *
- * 展示如何通过 C ABI 调用 8 个子模块 + orchestrator 完成完整 EDA 流程，
+ * 展示如何通过 C ABI 调用 13 个子模块 + orchestrator 完成完整 EDA 流程，
  * 对标 Intel 100G CWDM4 QSFP28 Optical Module。
  *
  * ## MZI 调制器电路（5 器件 5 连接）
@@ -184,7 +184,7 @@ static int approach_a_orchestrator(const polaris_circuit_t* circuit) {
 }
 
 /* -----------------------------------------------------------------------
- * 方式 B: 直接调用 8 个子模块 C ABI（精细控制）
+ * 方式 B: 直接调用 12 个子模块 C ABI（精细控制）+ orchestrator 含 fdtd 共 13 个
  * ----------------------------------------------------------------------- */
 static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     polaris_error_t err;
@@ -197,7 +197,7 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     memset(&placement, 0, sizeof(placement));
     memset(&routing, 0, sizeof(routing));
 
-    printf("\n=== 方式 B: 直接调用 8 个子模块 C ABI ===\n");
+    printf("\n=== 方式 B: 直接调用 12 个子模块 C ABI (+orchestrator fdtd 共 13) ===\n");
 
     /* ---- 1. polaris_core: 电路验证 ---- */
     printf("\n[1/8] polaris_core: 电路验证\n");
@@ -375,7 +375,7 @@ int main(void) {
         ret = 1;
     }
 
-    /* 方式 B: 直接调用 8 个子模块 C ABI */
+    /* 方式 B: 直接调用 12 个子模块 C ABI + orchestrator 含 fdtd 共 13 */
     if (approach_b_direct_modules(&circuit) != 0) {
         ret = 1;
     }
@@ -383,6 +383,6 @@ int main(void) {
     /* 释放电路资源 */
     polaris_circuit_free(&circuit);
 
-    printf("\n=== 完成（8 个子模块 + orchestrator 全部被调用）===\n");
+    printf("\n=== 完成（13 个子模块 + orchestrator 全部被调用）===\n");
     return ret;
 }
