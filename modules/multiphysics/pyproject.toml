@@ -1,0 +1,16 @@
+[project]
+name = "polaris-multiphysics"
+version = "5.0.0"
+description = "PoLaRIS 多物理场仿真子模块（DDM/HEAT/VarFDTD/RCWA/FETD/电光热光耦合/TCAD 热仿真）"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]

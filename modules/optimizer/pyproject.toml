@@ -1,0 +1,29 @@
+[project]
+name = "polaris-optimizer"
+version = "5.0.0"
+description = "PoLaRIS 优化器子模块（12 种优化器：拓扑/水平集/L-BFGS/PSO/CMA-ES/NSGA-2/3/鲁棒/多目标/密度伴随）"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+
+[project.optional-dependencies]
+# 密度法拓扑伴随优化器需要 JAX（CPU 后端，符合 R04 不参与 GPU）
+density = ["jax>=0.4", "gdstk>=0.9"]
+dev = ["pytest>=7", "ruff", "mypy"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
