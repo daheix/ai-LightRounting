@@ -1,0 +1,13 @@
+[project]
+name = "polaris-gui"
+version = "5.0.0"
+description = "PoLaRIS GUI/Web/教育平台（L-Edit 风格版图编辑器 + 交互式 Macro IDE + HTTP Web Server + 知识图谱/TF-IDF/PageRank/IRT 教育评估）"
+requires-python = ">=3.10"
+dependencies = ["polaris-core", "polaris-flow", "numpy>=1.24"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
