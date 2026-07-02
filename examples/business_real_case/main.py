@@ -2,7 +2,7 @@
 
 展示两种调用方式：
 A. orchestrator 一键调用（推荐，适合自动化流程）— 9 个 stage 全自动
-B. 直接调用8个子模块API（适合精细控制）— 逐步打印每步真实结果
+B. 直接调用 13 个子模块 API（适合精细控制）— 逐步打印每步真实结果
 
 ## 对标产品
 
@@ -68,21 +68,14 @@ import sys
 import time
 from pathlib import Path
 
-# 添加子模块 + orchestrator 到 sys.path（sim→sparam+pam4, verify→drc+lvs, quantum→klm+boson）
+# 添加 18 子模块 + orchestrator 到 sys.path（v5.0 细粒度拆分）
+# 方式 A 通过 orchestrator 间接调用 fdtd（stage 5 交叉验证），故 fdtd 必须在 sys.path
 ROOT = Path(__file__).resolve().parents[2]
 for m in (
-    "core",
-    "pdk",
-    "gdsio",
-    "place",
-    "route",
-    "sparam",
-    "pam4",
-    "drc",
-    "lvs",
-    "inverse",
-    "klm",
-    "boson",
+    "core", "pdk", "place", "route",
+    "drc", "lvs", "gdsio",
+    "sparam", "pam4", "fdtd", "fde", "eme", "bpm", "fdfd",
+    "inverse", "boson", "klm",
     "orchestrator",
 ):
     sys.path.insert(0, str(ROOT / f"modules/{m}/src"))
@@ -274,16 +267,18 @@ def approach_a_orchestrator() -> None:
 
 
 # =============================================================================
-# 方式 B: 直接调用 8 个子模块 API（精细控制）
+# 方式 B: 直接调用 13 个子模块 API（精细控制）
 # =============================================================================
 def approach_b_direct_modules() -> None:
-    """方式 B：直接调用 8 个子模块 API（精细控制）。
+    """方式 B：直接调用 13 个子模块 API（精细控制）。
 
     逐步打印每步真实结果，适合需要中间结果自定义处理或调试的场景。
-    8 个子模块全部被调用：core/pdk/place/route/sparam+pam4/drc+lvs/inverse/klm+boson。
+    13 个子模块被调用（v5.0 细粒度拆分，原 8 模块已拆为 18 子模块）:
+    core / pdk / place / route / sparam / pam4 / drc / lvs / gdsio /
+    inverse / klm / boson + orchestrator 内含 fdtd = 共 13 个。
     """
     print("\n" + "=" * 60)
-    print("方式 B: 直接调用 8 个子模块 API（精细控制）")
+    print("方式 B: 直接调用 13 个子模块 API（精细控制）")
     print("=" * 60)
 
     circuit = build_100g_mzi()
@@ -366,8 +361,8 @@ def approach_b_direct_modules() -> None:
           f"mismatches={lvs['n_mismatches']}  "
           f"(n_devices={lvs['n_devices']}, n_connections={lvs['n_connections']})")
 
-    # ---- 7. polaris_pdk: GDSII 导出 ----
-    print("\n[7/8] polaris_pdk: GDSII 导出")
+    # ---- 7. polaris_gdsio: GDSII 导出 ----
+    print("\n[7/8] polaris_gdsio: GDSII 导出")
     gds_path = os.path.join(OUTPUT_DIR, "MZI_100G.gds")
     gds = export_gds(circuit, gds_path)
     print(f"  GDSII: {gds['path']}")
@@ -391,8 +386,8 @@ def approach_b_direct_modules() -> None:
           f"iterations = {inverse['iterations']}")
     print(f"    fom_history (前 5): {[f'{f:.2e}' for f in inverse['fom_history'][:5]]}")
 
-    # ---- 量子验证（额外，展示 polaris_quantum 也被调用）----
-    print("\n[+] polaris_quantum: 量子光子验证")
+    # ---- 量子验证（额外，展示 polaris_klm + polaris_boson 也被调用）----
+    print("\n[+] polaris_klm + polaris_boson: 量子光子验证")
     klm = klm_cnot()
     print(f"  KLM CNOT 量子门: success_prob = {klm['success_prob']:.6f} "
           f"(=1/9={1/9:.6f})  verified = {klm['verified']}")
@@ -413,11 +408,11 @@ def main() -> None:
     # 方式 A: orchestrator 一键调用
     approach_a_orchestrator()
 
-    # 方式 B: 直接调用 8 个子模块 API
+    # 方式 B: 直接调用 13 个子模块 API
     approach_b_direct_modules()
 
     print("\n" + "=" * 60)
-    print("全部完成：8 个子模块全部被调用，9 个 stage 全流程打通")
+    print("全部完成：13 个子模块全部被调用，9 个 stage 全流程打通")
     print(f"GDSII 产物: {os.path.join(OUTPUT_DIR, 'MZI_100G.gds')}")
     print("=" * 60)
 
