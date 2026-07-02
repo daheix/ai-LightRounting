@@ -134,6 +134,56 @@ def test_optimize_invalid_learning_rate():
         optimize_waveguide_width(n_iterations=10, learning_rate=0.0)
 
 
+def test_fom_normalization_regression():
+    """*R05 回归测试*: FoM 必须归一化为 0-1 传输率，禁止裸场强值。
+
+    复现旧 BUG: 旧版 fom_fn 返回 max(|monitor|) 是原始场强值（~1e16），
+    导致梯度 ~1e15 恒触发 [-1,1] 裁剪为 ±1，width 震荡、FoM 暴涨暴跌不收敛，
+    improvement_db ≈ -4.08 dB（变差）。
+
+    修复后断言:
+    - initial_fom / final_fom 在 (0, 1) 范围（归一化传输率）
+    - fom_history 全部元素在 (0, 1] 范围（无 1e16 量级裸场强）
+    - improvement_db >= -1 dB（不再大幅变差）
+    - fom_history 无量级跳变（相邻步比值 < 1e3，旧 BUG 暴涨 1e2~1e4 倍）
+    """
+    result = optimize_waveguide_width(n_iterations=10, learning_rate=0.5)
+
+    # 1. FoM 在 (0, 1) 范围（归一化传输率，物理有意义）
+    assert 0 < result["initial_fom"] < 1, (
+        f"initial_fom={result['initial_fom']} 应在 (0,1) 范围"
+        f"（归一化传输率，旧 BUG 为 ~1e16 裸场强）"
+    )
+    assert 0 < result["final_fom"] < 1, (
+        f"final_fom={result['final_fom']} 应在 (0,1) 范围"
+        f"（归一化传输率，旧 BUG 为 ~1e16 裸场强）"
+    )
+
+    # 2. fom_history 全部元素在 (0, 1] 范围（无 1e16 量级裸场强残留）
+    fom_hist = result["fom_history"]
+    for i, v in enumerate(fom_hist):
+        assert 0 < v <= 1.0001, (  # 1.0001 容许浮点误差
+            f"fom_history[{i}]={v} 超出 (0,1] 范围"
+            f"（旧 BUG 出现 8e16/3e18/2e20 等裸场强值）"
+        )
+
+    # 3. improvement_db 不应大幅为负（旧 BUG = -4.08 dB）
+    assert result["improvement_db"] >= -1.0, (
+        f"improvement_db={result['improvement_db']} < -1 dB"
+        f"（旧 BUG = -4.08 dB，FoM 大幅变差，归一化后不应出现）"
+    )
+
+    # 4. fom_history 无量级跳变（旧 BUG: 8e16→3e18→2e20 暴涨 1e2~1e4 倍）
+    #    归一化后相邻步比值应 < 1e3（传输率变化平缓）
+    for i in range(1, len(fom_hist)):
+        prev, curr = fom_hist[i - 1], fom_hist[i]
+        ratio = max(curr / prev, prev / curr) if min(prev, curr) > 0 else float("inf")
+        assert ratio < 1e3, (
+            f"fom_history[{i-1}]={prev} → fom_history[{i}]={curr}"
+            f" 比值 {ratio:.2e} >= 1e3（旧 BUG 暴涨暴跌特征，归一化后不应出现）"
+        )
+
+
 def test_inverse_version():
     """验证子模块版本号为 5.0.0（与 8 子模块统一版本对齐）。"""
     assert polaris_inverse.__version__ == "5.0.0"

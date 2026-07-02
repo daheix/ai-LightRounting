@@ -7,12 +7,14 @@
 - dx_um: 网格步长（μm，默认 0.05 = 50nm）
 - n_steps: 时间步数（默认 2000）
 - wavelength_um: 波长（μm，默认 1.55）
-- nx/ny/nz: 网格数（默认 32×16×12）
+- nx/ny/nz: 网格数（默认 32×24×20）
 
 ## Process（处理）
 1. 构建硅波导介电常数分布: Si 芯（eps_r=12.08）+ SiO2 包层（eps_r=2.085）
+   波导芯居中: y=[ny//2-2, ny//2+2], z=[nz//2-1, nz//2+1]，沿 x 传播
 2. YeeGrid3D 3D 网格 + GedneyPML 4 层吸收边界
 3. DifferentiableFDTD 高斯脉冲源 + jax.lax.scan 时间步进
+   源/监视器位置自动基于 pml_layers 计算，距 PML 至少 2-3 格（R05 修复零传输 BUG）
 4. 双监视器比值法: T = max(|monitor|²) / max(|source|²)
    来源: Taflove 2005 §5.3（双监视器传输率提取）
 
@@ -32,11 +34,12 @@ dict::
 - R04 不参与 GPU: 强制 JAX CPU 后端
 - R03 禁止 fall-back: 仿真结果为 NaN 时 raise
 - R02 学术诚信: 物理参数来自 Soref 1993 / NIST CODATA 2018
+- R05 Bug 必须修复: 波导芯距 PML 至少 4 格，源/监视器距 PML 至少 2 格
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 - Yee 1966 IEEE TAP https://doi.org/10.1109/TAP.1966.1138693
 - Gedney 1996 IEEE TAP https://doi.org/10.1109/8.546249
-- Taflove & Hagness 2005 "Computational Electrodynamics" §5.3
+- Taflove & Hagness 2005 "Computational Electrodynamics" §5.3 §7.6.2
 - Soref 1993 IEEE JQE https://ieeexplore.ieee.org/document/1148303
 - NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/
 - Lumerical FDTD 求解器 https://optics.ansys.com/hc/en-us/articles/360034914833
@@ -83,13 +86,20 @@ def simulate_waveguide_fdtd(
     n_steps: int = 2000,
     wavelength_um: float = 1.55,
     nx: int = 32,
-    ny: int = 16,
-    nz: int = 12,
+    ny: int = 24,
+    nz: int = 20,
     pml_layers: int = 4,
 ) -> dict:
     """波导 FDTD 仿真（Si 芯 / SiO2 包层）。
 
     构建硅波导结构并运行 3D FDTD 时间步进，提取传输率。
+
+    R05 修复（零传输 BUG）:
+    - 旧默认 ny=16/nz=12 + 波导芯 z=4-6 致波导芯紧贴 PML，源 x=4 落在 PML 末层
+      → 模式未建立即被吸收 → T_fdtd≈0（-195 dB）。
+    - 新默认 ny=24/nz=20，波导芯居中 [ny//2-2, ny//2+2]×[nz//2-1, nz//2+1]，
+      源/监视器自动置于 pml_layers+2 / nx-pml_layers-3，距 PML 至少 2-3 格。
+      来源: Taflove 2005 §7.6.2（PML 与结构最小间距 ≥ 2 网格）。
 
     Args:
         dx_um: 网格步长（μm）。
@@ -116,10 +126,24 @@ def simulate_waveguide_fdtd(
             f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
         )
 
+    # R05: 波导芯居中，距 PML 至少 4 格（Taflove 2005 §7.6.2）
+    wg_y0, wg_y1 = ny // 2 - 2, ny // 2 + 2  # 4 格宽
+    wg_z0, wg_z1 = nz // 2 - 1, nz // 2 + 1  # 2 格厚
+    if wg_y0 - pml_layers < 2 or (ny - pml_layers) - wg_y1 < 2:
+        raise ValueError(
+            f"波导芯 y=[{wg_y0},{wg_y1}] 距 PML(y=[0,{pml_layers}]/"
+            f"[{ny-pml_layers},{ny}]) 不足 2 格（R05）"
+        )
+    if wg_z0 - pml_layers < 2 or (nz - pml_layers) - wg_z1 < 2:
+        raise ValueError(
+            f"波导芯 z=[{wg_z0},{wg_z1}] 距 PML(z=[0,{pml_layers}]/"
+            f"[{nz-pml_layers},{nz}]) 不足 2 格（R05）"
+        )
+
     dx_m = dx_um * 1e-6
-    # 波导芯: y=6-10（4 格）, z=4-6（2 格），沿 x 传播
     eps_r = _build_waveguide_eps(
-        nx, ny, nz, (6, 10), (4, 6), SOI_EPS_R_SI, SOI_EPS_R_SIO2,
+        nx, ny, nz, (wg_y0, wg_y1), (wg_z0, wg_z1),
+        SOI_EPS_R_SI, SOI_EPS_R_SIO2,
     )
 
     grid = YeeGrid3D(nx, ny, nz, dx_m, dx_m, dx_m, epsilon_r=eps_r)
@@ -128,8 +152,13 @@ def simulate_waveguide_fdtd(
 
     # 源频率: f = c/λ（1550nm → 193.4 THz）
     source_freq = C0 / (wavelength_um * 1e-6)
-    source_pos = (4, 8, 5)   # 波导入射端中心
-    monitor_pos = (nx - 5, 8, 5)  # 波导出射端中心
+    # R05: 源/监视器距 PML 至少 2 格，置于波导芯中心
+    source_pos = (pml_layers + 2, ny // 2, nz // 2)
+    monitor_pos = (nx - pml_layers - 3, ny // 2, nz // 2)
+    if monitor_pos[0] <= source_pos[0]:
+        raise ValueError(
+            f"监视器 x={monitor_pos[0]} 须 > 源 x={source_pos[0]}（R05）"
+        )
 
     t0 = time.time()
     result = fdtd.run(eps_r, source_pos, source_freq, n_steps, monitor_pos)

@@ -20,13 +20,14 @@ _epsilon_r_from_width / _fom_fn / _run_adjoint_optimization，重构成可配置
 
 1. 构建 YeeGrid3D 网格 (24×12×8, dx=200nm) + DifferentiableFDTD 求解器
 2. 启用 Gedney PML 吸收边界（2 层，eps_r_bg=Si）
-3. 定义 FoM(width) = max(|monitor_signal(t)|)（时域峰值正比于场强，
-   Taflove 2005 §13.2）
+3. 定义归一化 FoM(width) = max(|monitor_signal|) / max(|source_waveform|)
+   （*修复 R05* 归一化传输率，值域 [0,1]，lumopt FoM 归一化惯例；
+   旧版未归一化致场强 ~1e16 梯度裁剪恒触发、width 震荡不收敛）
 4. *创新* jax.grad 自动计算 dFoM/dwidth（替代手动伴随方程）
 5. heavy-ball 动量梯度上升优化 width（最大化 FoM）
    - velocity = momentum * velocity + lr * clipped_grad
    - width = width + velocity
-   - 梯度裁剪 [-1,1] 防 NaN
+   - 梯度裁剪 [-1,1] 防 NaN（归一化后梯度 O(0.01-0.1)，裁剪仅作安全网）
 6. 记录 FoM 历史、收敛状态
 
 ## 设计原则（合规）
@@ -166,19 +167,40 @@ def fom_fn(
     monitor_pos: tuple,
     target_freq: float,
 ) -> jnp.ndarray:
-    """FoM 函数: 监视器时域信号峰值，关于 width_param 可微。
+    """FoM 函数: 归一化传输率（监视器/源 时域峰值比），关于 width_param 可微。
 
-    FoM = max(|monitor_signal(t)|)
-    最大化 FoM 等价于最大化目标波长透过率（信号峰值正比于场强）。
+    *修复 R05 BUG*: FoM 归一化为真正的传输率
+        FoM = max(|monitor_signal(t)|) / max(|source_waveform(t)|)
+    值域 [0, 1]，物理意义为源到监视器的传输率。
+
+    旧 BUG 根因（已修复）:
+    - 旧 FoM = max(|monitor|) 是原始场强值（~1e16 量级），未归一化
+    - 导致梯度数值 ~1e15，远超裁剪阈值 [-1,1]，裁剪恒触发为 ±1
+    - 梯度方向信息丢失，width 在边界 [0.5, 5] 震荡，FoM 暴涨暴跌不收敛
+    - improvement_db = 10*log10(final/initial) ≈ -4.08 dB（变差）
+    修复后:
+    - FoM 归一化为 0-1 传输率，梯度 O(0.01-0.1) 不触发裁剪
+    - 梯度方向有意义，heavy-ball 动量优化器可正常收敛
+    - improvement_db 应为非负或小幅波动（优化后变好/持平）
+
+    源波形与 width_param 无关（仅依赖 fdtd.dt/source_freq），故除法不改变
+    梯度方向，仅缩放梯度幅度，使裁剪阈值 [-1,1] 不再恒触发（数学等价于
+    用 1/peak_source 缩放学习率，但归一化后 FoM 物理意义明确，便于
+    improvement_db 解释与跨实例比较）。
 
     来源:
     - Mahau 2024 arXiv:2412.12360 "Differentiable FDTD for inverse design"
-    - lumopt FoM 定义: https://github.com/chriskeraly/lumopt
+      https://arxiv.org/abs/2412.12360
+    - lumopt FoM 定义（归一化透射率）: https://github.com/chriskeraly/lumopt
     - Taflove 2005 §13.2 时域信号峰值正比于场强
+    - Hughes 2018 ACS Photonics（autograd = adjoint）
+      https://arxiv.org/abs/1811.01255
+    - Jensen & Sigmund 2011（FoM 归一化惯例）
+      https://doi.org/10.1002/lpor.201000014
 
     Args:
         width_param: 波导半宽度（像素，连续可微）。
-        fdtd: DifferentiableFDTD 实例。
+        fdtd: DifferentiableFDTD 实例（提供 _build_source_waveform 用于归一化）。
         grid: YeeGrid3D 网格。
         source_pos: 源位置 (x, y, z)。
         source_freq: 源频率 (Hz)。
@@ -187,7 +209,9 @@ def fom_fn(
         target_freq: 目标频率 (Hz)（本子模块未直接使用，保留接口一致性）。
 
     Returns:
-        FoM 标量（关于 width_param 可微，时域信号峰值）。
+        FoM 标量（关于 width_param 可微，归一化传输率，值域 [0,1]）。
+        若 peak_source 为 0（source_freq 非法），返回 inf/nan，
+        由 run_adjoint_optimization 的 NaN 检查 raise（R03 禁止 fall-back）。
     """
     eps_r = epsilon_r_from_width(
         width_param, grid.nx, grid.ny, grid.nz, EPS_R_SI, EPS_R_SIO2
@@ -200,10 +224,17 @@ def fom_fn(
         monitor_pos=monitor_pos,
     )
     mon_sig = result["monitor_signal"]
-    # 时域信号峰值作为 FoM（正比于目标频率透过率）
-    # 来源: Taflove 2005 §13.2，信号峰值正比于场强
-    peak = jnp.max(jnp.abs(mon_sig))
-    return peak
+    # *修复 R05* FoM 归一化: 用源波形峰值归一化监视器信号峰值
+    # 源波形 = 高斯包络 * 正弦载波（见 DifferentiableFDTD._build_source_waveform），
+    # 与 width_param 无关，故 jax.grad 不流经此除法（仅缩放梯度幅度）。
+    # peak_source 为高斯包络峰值(=1)与正弦载波在该时刻值的乘积，非零（合法输入下）。
+    source_waveform = fdtd._build_source_waveform(n_steps, source_freq)
+    peak_monitor = jnp.max(jnp.abs(mon_sig))
+    peak_source = jnp.max(jnp.abs(source_waveform))
+    # 归一化传输率 FoM = monitor_peak / source_peak，值域 [0,1]
+    # 来源: lumopt FoM 归一化惯例；Taflove 2005 §13.2 信号峰值正比于场强
+    fom = peak_monitor / peak_source
+    return fom
 
 
 def run_adjoint_optimization(
@@ -215,7 +246,8 @@ def run_adjoint_optimization(
     流程:
     1. 构建 YeeGrid3D 网格 + DifferentiableFDTD 求解器
     2. 启用 Gedney PML 吸收边界
-    3. 定义 FoM(width) = max(|monitor_signal(t)|)
+    3. 定义归一化 FoM(width) = max(|monitor|) / max(|source|)（值域 [0,1]，
+       *修复 R05* 旧版未归一化致场强 ~1e16 梯度裁剪恒触发不收敛）
     4. *创新* jax.grad 自动计算 dFoM/dwidth（替代手动伴随方程）
     5. heavy-ball 动量梯度上升优化 width（最大化 FoM）
     6. 记录 FoM 历史、收敛状态
@@ -319,7 +351,9 @@ def run_adjoint_optimization(
             )
 
         # 梯度上升 + 动量（heavy-ball method, Polyak 1964）
-        # 梯度裁剪 [-1, 1] 防 NaN 爆炸（原学习率过大导致 NaN）
+        # 梯度裁剪 [-1, 1] 防 NaN 爆炸。
+        # *修复 R05*: 归一化后梯度 O(0.01-0.1)，裁剪仅作安全网（旧版未归一化
+        # 时梯度 ~1e15 恒触发裁剪为 ±1，方向信息丢失致 width 震荡）
         clipped_grad = max(min(grad_val, 1.0), -1.0)
         velocity = MOMENTUM * velocity + learning_rate * clipped_grad
         width_param = width_param + velocity

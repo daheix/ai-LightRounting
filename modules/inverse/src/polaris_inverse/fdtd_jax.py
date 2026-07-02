@@ -462,12 +462,14 @@ class DifferentiableFDTD:
     ):
         """创建 jax.lax.scan 循环体闭包（单步 FDTD 更新）。
 
-        封装电场更新（安培定律）+ 源注入 + 磁场更新（法拉第定律）+ 监视器记录。
+        封装电场更新（安培定律）+ 源注入 + 磁场更新（法拉第定律）+ 监视器/源点
+        信号记录。同时记录源点 E 场时间序列，用于 FoM 归一化（传输率 = 监视器
+        峰值 / 源点峰值，*修复 R05* FoM 未归一化 BUG）。
         来源: Yee 1966 IEEE TAP 差分格式。
         """
         def scan_fn(carry, step_idx) -> Any:
             """scan 循环体：单步 FDTD 更新。"""
-            Ex, Ey, Ez, Hx, Hy, Hz, mon_sig = carry
+            Ex, Ey, Ez, Hx, Hy, Hz, mon_sig, src_sig = carry
             # 1. 电场更新（安培定律 ∂E/∂t = (1/ε)∇×H，Yee 1966 差分格式）
             dHz_dy = _central_diff(Hz, axis=1, h=self.grid.dy)
             dHy_dz = _central_diff(Hy, axis=2, h=self.grid.dz)
@@ -492,11 +494,15 @@ class DifferentiableFDTD:
             Hx = da * Hx - db * (dEz_dy - dEy_dz)
             Hy = da * Hy - db * (dEx_dz - dEz_dx)
             Hz = da * Hz - db * (dEy_dx - dEx_dy)
-            # 4. 记录监视器信号
+            # 4. 记录监视器信号（目标位置 E 场时间序列）
             mx, my, mz = monitor_pos
             mon_val = Ex[mx, my, mz]
             mon_sig = mon_sig.at[step_idx].set(mon_val)
-            return (Ex, Ey, Ez, Hx, Hy, Hz, mon_sig), None
+            # 5. 记录源点信号（源位置 E 场时间序列，用于 FoM 归一化）
+            # *修复 R05*: 传输率 = monitor_peak / source_peak，两者同尺度，
+            # 比值在 0-1 范围（lumopt FoM 归一化惯例）
+            src_sig = src_sig.at[step_idx].set(Ex[ix, iy, iz])
+            return (Ex, Ey, Ez, Hx, Hy, Hz, mon_sig, src_sig), None
 
         return scan_fn
 
@@ -522,7 +528,8 @@ class DifferentiableFDTD:
             monitor_pos: 监视器位置 (ix, iy, iz)。
 
         Returns:
-            {Ex, Ey, Ez, Hx, Hy, Hz, monitor_signal} 结果字典。
+            {Ex, Ey, Ez, Hx, Hy, Hz, monitor_signal, source_signal} 结果字典。
+            source_signal 为源点 E 场时间序列，用于 FoM 归一化（*修复 R05*）。
         """
         shape = (self.grid.nx, self.grid.ny, self.grid.nz)
         ca, cb, da, db = self._compute_run_coefficients(epsilon_r, shape)
@@ -533,9 +540,10 @@ class DifferentiableFDTD:
         carry0 = (
             jnp.zeros(shape), jnp.zeros(shape), jnp.zeros(shape),
             jnp.zeros(shape), jnp.zeros(shape), jnp.zeros(shape),
-            jnp.zeros(n_steps),
+            jnp.zeros(n_steps),  # monitor_signal
+            jnp.zeros(n_steps),  # source_signal (源点 E 场时间序列)
         )
-        (Ex_f, Ey_f, Ez_f, Hx_f, Hy_f, Hz_f, mon_f), _ = jax.lax.scan(
+        (Ex_f, Ey_f, Ez_f, Hx_f, Hy_f, Hz_f, mon_f, src_f), _ = jax.lax.scan(
             scan_fn, carry0, jnp.arange(n_steps)
         )
         return {
@@ -546,6 +554,7 @@ class DifferentiableFDTD:
             "Hy": Hy_f,
             "Hz": Hz_f,
             "monitor_signal": mon_f,
+            "source_signal": src_f,
         }
 
 
