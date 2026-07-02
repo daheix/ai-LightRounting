@@ -1,0 +1,35 @@
+{
+  "source": "Yee 1966 IEEE TAP; Taflove 2005",
+  "backend": "JAX DifferentiableFDTD",
+  "waveguide": {
+    "transmission_db": 21.13822426232765,
+    "analytical_transmission_db": -0.0003,
+    "fdtd_duration_s": 1.120258092880249,
+    "n_steps": 600,
+    "grid_size": [
+      24,
+      12,
+      8
+    ],
+    "dx_um": 0.2,
+    "pml_enabled": true,
+    "pml_n_layers": 2
+  },
+  "mmi": {
+    "mmi_split_ratio": 0.5276586787820532,
+    "mmi_insertion_loss_db": -88.85677649743614,
+    "fdtd_duration_s": 1.0990090370178223,
+    "n_steps": 600,
+    "grid_size": [
+      29,
+      20,
+      8
+    ],
+    "dx_um": 0.2,
+    "pml_enabled": true,
+    "pml_n_layers": 2
+  },
+  "fdtd_vs_analytical_error_db": 2.765867878205319,
+  "fdtd_duration_s": 2.2192671298980713,
+  "extinction_ratio_physical_db": 27.958800173440746
+}

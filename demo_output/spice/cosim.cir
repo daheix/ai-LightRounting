@@ -1,0 +1,21 @@
+* PoLaRIS 光电协同仿真网表
+* 同步时间步: 1.000000e-12 s
+* 总时间: 1.000000e-09 s
+
+.include waveguide_soi.va
+.include mmi_1x2_soI.va
+.include ring_resonator_soi.va
+.include mzm_modulator_soi.va
+.include photodetector_soi.va
+
+V_in in 0 PULSE(0 0.33 0 1e-12 1e-12 2e-12 8e-12)
+
+X1 in out waveguide_soi
+X2 in out1 out2 mmi_1x2_soI
+X3 in through ring_resonator_soi
+X4 in out rf_in mzm_modulator_soi
+X5 in rf_out photodetector_soi
+
+
+.tran 1.000000e-12 1.000000e-09
+.end

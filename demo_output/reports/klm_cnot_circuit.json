@@ -1,0 +1,33 @@
+{
+  "n_modes": 4,
+  "input_state": [
+    1,
+    1,
+    1,
+    1
+  ],
+  "n_shots": 10000,
+  "total_prob": 1.0000000000000004,
+  "prob_sum_ok": true,
+  "post_select_prob": 0.19753086419753094,
+  "sampled_success_rate": 0.1999,
+  "theoretical_success_prob": 0.1111111111111111,
+  "simplified_success_prob": 0.19753086419753094,
+  "signal_dist": {
+    "(0,2)": 0.055555555555555636,
+    "(1,1)": 0.8888888888888887,
+    "(2,0)": 0.05555555555555561
+  },
+  "quantum_interference": {
+    "max_deviation_from_classical": 0.6388888888888887,
+    "is_quantum": true,
+    "classical_uniform_prob": 0.25
+  },
+  "success_verified": true,
+  "quantum_verified": true,
+  "success_tolerance": 0.1,
+  "sources": {
+    "klm_scheme": "https://www.nature.com/articles/35051009",
+    "ralph_2002": "https://journals.aps.org/pra/abstract/10.1103/PhysRevA.65.062324"
+  }
+}
