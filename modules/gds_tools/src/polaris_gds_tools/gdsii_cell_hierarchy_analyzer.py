@@ -1,0 +1,571 @@
+"""GDSII 单元层级分析器（R322，Cell Hierarchy Analyzer）。
+
+分析 GDSII 文件中所有 cell 的层级引用关系，检测循环引用，计算层级深度与实例化次数。
+
+## 核心概念
+
+- **顶层 cell (top cell)**: 没有被任何 cell 引用的 cell（根节点）
+- **子 cell (child cell)**: 被某 cell 通过 instance 引用的 cell
+- **父 cell (parent/caller cell)**: 引用其他 cell 的 cell
+- **层级深度 (hierarchy depth)**: 从顶层 cell 到该 cell 的最长路径（边数）
+- **直接实例化次数 (direct instance count)**: 该 cell 被父 cell 直接引用的总次数
+- **递归实例化次数 (recursive instance count)**: 从顶层 cell 出发，该 cell 被实例化的总次数
+- **循环引用 (circular reference)**: cell 引用链形成环，GDSII 标准禁止
+
+## 算法
+
+1. **层级深度**: 用 KLayout `Layout.each_cell_top_down()` 拓扑顺序遍历，
+   对每个 cell，depth = max(父 cell depths) + 1，顶层 cell depth = 0
+2. **直接实例化次数**: 遍历所有 cell 的所有 instance，统计每个子 cell 被引用的次数
+   （每个 instance 按 1 计，不展开 AREF array，简化语义）
+3. **递归实例化次数**: 拓扑逆序 DP
+   - 顶层 cell 的递归实例化 = 1（作为根）
+   - 子 cell 的递归实例化 = Σ(父 cell 递归实例化 × 该 cell 在父 cell 中的直接实例数)
+4. **循环引用检测**: DFS 三色标记法（WHITE/GRAY/BLACK）
+   - GRAY 节点再次被访问 → 找到环
+   - 时间复杂度 O(V+E)
+
+## KLayout 0.30.9 API 关键事实（实测确认）
+
+- `Layout.each_cell()` 返回 **Cell 对象迭代器**（非 cell_index）
+- `Layout.each_top_cell()` 返回 **int cell_index 迭代器**
+- `Layout.each_cell_top_down()` 返回 **int cell_index 迭代器**（拓扑顺序，父先于子）
+- `Cell.cell_index()` 是**方法**（不是属性），返回 int
+- `Cell.hierarchy_levels()` 返回**子树深度**（该 cell 下方层级数），非从顶层深度
+- `Cell.each_child_cell()` 返回 **int cell_index 迭代器**
+- `Cell.each_parent_cell()` 返回 **int cell_index 迭代器**
+- `Cell.each_inst()` 返回 **Instance 对象迭代器**
+- `Instance.cell_index` 是**属性**，返回 int
+- `Instance` 对象**无** size_x/size_y 属性（array 展开需用其他 API）
+
+## 学术依据
+
+- KLayout Cell API（each_child_cell / each_parent_cell / hierarchy_levels）:
+  https://www.klayout.org/doc-qt4/code/class_Cell.html
+- KLayout Database API（cell hierarchy 概念）:
+  https://klayout.org/downloads/master/doc-qt4/programming/database_api.html
+- KLayout Custom Layout Queries（cell tree vs instance tree）:
+  https://klayout.org/downloads/master/doc-qt5/about/custom_queries.html
+- GDSII 流格式标准（cell reference / SREF / AREF）:
+  https://en.wikipedia.org/wiki/GDS_File
+- 三色标记 DFS 检测环（Cormen CLRS Introduction to Algorithms, Ch.22）:
+  https://en.wikipedia.org/wiki/Cycle_(graph_theory)#Cycle_detection
+- 拓扑排序（Kahn 算法）:
+  https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
+- Calibre CELLDEPTH 检查（cell 嵌套深度 DRC）:
+  https://www.mentor.com/products/ic_nanometer_design/calibre-drc
+- gdsfactory Component.get_dependencies（cell 依赖关系）:
+  https://gdsfactory.github.io/gdsfactory/
+
+合规: R01 / R02 / R03 / R04 / R05 / R11。
+"""
+
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+__all__ = [
+    "CellInfo",
+    "HierarchyReport",
+    "analyze_cell_hierarchy",
+    "detect_circular_references",
+    "generate_hierarchy_report",
+]
+
+
+# =============================================================================
+# 内部 KLayout 导入
+# =============================================================================
+def _import_klayout_db():
+    """导入 klayout.db，未安装 raise ImportError（R03）。"""
+    try:
+        import klayout.db as db
+    except ImportError as e:
+        raise ImportError(
+            "klayout 未安装，无法执行 GDSII cell 层级分析。"
+            "安装方式: pip install klayout。"
+            f"原始错误: {e}"
+        ) from e
+    return db
+
+
+# =============================================================================
+# 数据类
+# =============================================================================
+@dataclass
+class CellInfo:
+    """单个 cell 的层级信息（R322）。
+
+    Attributes:
+        cell_name: cell 名。
+        cell_index: KLayout 内部 cell 索引。
+        parent_cell_names: 直接父 cell 名列表（去重，排序）。
+        child_cell_names: 直接子 cell 名列表（去重，排序）。
+        hierarchy_depth: 层级深度（顶层=0，每深入一层 +1）。
+        direct_instance_count: 被父 cell 直接引用的总次数（每个 instance 计 1）。
+        recursive_instance_count: 从顶层 cell 出发的递归实例化总次数。
+        is_top_cell: 是否为顶层 cell。
+        bbox_um: cell 自身包围盒 (xmin, ymin, xmax, ymax)（μm，dbu→μm 转换）。
+    """
+
+    cell_name: str
+    cell_index: int
+    parent_cell_names: list[str] = field(default_factory=list)
+    child_cell_names: list[str] = field(default_factory=list)
+    hierarchy_depth: int = 0
+    direct_instance_count: int = 0
+    recursive_instance_count: int = 0
+    is_top_cell: bool = False
+    bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+
+
+@dataclass
+class HierarchyReport:
+    """GDSII cell 层级分析报告（R322）。
+
+    Attributes:
+        file_path: GDSII 文件路径。
+        top_cell_names: 顶层 cell 名列表（排序）。
+        dbu: 数据库单位（μm，KLayout Layout.dbu 返回 μm）。
+        cells: 所有 cell 的 CellInfo 列表（按 hierarchy_depth 升序，深度相同按名字）。
+        total_cell_count: cell 总数。
+        max_hierarchy_depth: 最大层级深度。
+        has_circular_reference: 是否存在循环引用。
+        circular_chains: 循环引用链列表（每条链为 cell 名列表，首尾相同表示闭合环）。
+    """
+
+    file_path: str
+    top_cell_names: list[str] = field(default_factory=list)
+    dbu: float = 0.0
+    cells: list[CellInfo] = field(default_factory=list)
+    total_cell_count: int = 0
+    max_hierarchy_depth: int = 0
+    has_circular_reference: bool = False
+    circular_chains: list[list[str]] = field(default_factory=list)
+
+
+# =============================================================================
+# 文件分析
+# =============================================================================
+def analyze_cell_hierarchy(
+    gds_path: str | Path,
+    top_cell_name: str | None = None,
+) -> HierarchyReport:
+    """分析 GDSII 文件的 cell 层级结构（R322）。
+
+    Args:
+        gds_path: GDSII 文件路径。
+        top_cell_name: 指定顶层 cell 名（None 自动检测全部顶层 cell）。
+            指定后仅影响递归实例化次数的计算根（depth/拓扑仍按全图计算）。
+
+    Returns:
+        HierarchyReport 层级分析报告。
+
+    Raises:
+        FileNotFoundError: 文件不存在。
+        ValueError: 文件无效 / top_cell_name 不存在 / 文件无 cell。
+        ImportError: klayout 未安装。
+
+    来源:
+    - KLayout Cell API: https://www.klayout.org/doc-qt4/code/class_Cell.html
+    - 拓扑排序: https://en.wikipedia.org/wiki/Topological_sorting
+    """
+    db = _import_klayout_db()
+    path = Path(gds_path)
+    if not path.exists():
+        raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
+    if not path.is_file():
+        raise ValueError(f"路径不是文件: {gds_path}")
+    ly, dbu, all_cell_indices, top_cell_indices, specified_top_index = (
+        _read_and_validate_hierarchy(db, path, gds_path, top_cell_name)
+    )
+    child_cells_of, parent_cells_of, direct_count_of, direct_count_per_parent = (
+        _build_parent_child_relations(ly, all_cell_indices)
+    )
+    depth_of = _compute_hierarchy_depths(all_cell_indices, top_cell_indices, parent_cells_of)
+    recursive_count_of = _compute_recursive_counts(
+        all_cell_indices, child_cells_of, direct_count_per_parent,
+        top_cell_indices, specified_top_index,
+    )
+    circular_chains_idx = _detect_cycles_dfs(all_cell_indices, child_cells_of)
+    has_circular = len(circular_chains_idx) > 0
+    cells = _build_cell_info_list(
+        ly, all_cell_indices, parent_cells_of, child_cells_of,
+        depth_of, direct_count_of, recursive_count_of, top_cell_indices, dbu,
+    )
+    cells.sort(key=lambda c: (c.hierarchy_depth, c.cell_name))
+    top_cell_names_list = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
+    max_depth = max(depth_of.values()) if depth_of else 0
+    circular_chains_names = [
+        [ly.cell(ci).name for ci in chain_idx] for chain_idx in circular_chains_idx
+    ]
+    return HierarchyReport(
+        file_path=str(gds_path), top_cell_names=top_cell_names_list, dbu=dbu,
+        cells=cells, total_cell_count=len(cells), max_hierarchy_depth=max_depth,
+        has_circular_reference=has_circular, circular_chains=circular_chains_names,
+    )
+
+
+def _read_and_validate_hierarchy(db, path, gds_path, top_cell_name) -> tuple:
+    """读取 GDSII 并收集 cell 索引与顶层 cell（R322 内部辅助）。
+
+    Returns:
+        (ly, dbu, all_cell_indices, top_cell_indices, specified_top_index)。
+
+    Raises:
+        RuntimeError: 读取失败。ValueError: 无 cell / top_cell_name 不存在。
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    all_cell_indices: list[int] = [int(ci) for ci in ly.each_cell_top_down()]
+    if not all_cell_indices:
+        raise ValueError(f"GDSII 文件 {gds_path} 无任何 cell，文件可能为空或损坏")
+    top_cell_indices: set[int] = set(int(ci) for ci in ly.each_top_cell())
+    specified_top_index: int | None = None
+    if top_cell_name is not None:
+        top_cell_obj = ly.cell(top_cell_name)
+        if top_cell_obj is None:
+            available = sorted(ly.cell(ci).name for ci in ly.each_top_cell())
+            raise ValueError(
+                f"top_cell_name '{top_cell_name}' 不存在。"
+                f"可用顶层 cells: {available}"
+            )
+        specified_top_index = int(top_cell_obj.cell_index())
+    return ly, dbu, all_cell_indices, top_cell_indices, specified_top_index
+
+
+def _build_parent_child_relations(ly, all_cell_indices: list[int]) -> tuple:
+    """构建直接父子关系与实例计数（R322 内部辅助）。
+
+    Returns:
+        (child_cells_of, parent_cells_of, direct_count_of, direct_count_per_parent)。
+    """
+    child_cells_of: dict[int, set[int]] = {ci: set() for ci in all_cell_indices}
+    parent_cells_of: dict[int, set[int]] = {ci: set() for ci in all_cell_indices}
+    direct_count_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
+    direct_count_per_parent: dict[tuple[int, int], int] = {}
+    for ci in all_cell_indices:
+        cell = ly.cell(ci)
+        for child_ci in cell.each_child_cell():
+            child_ci = int(child_ci)
+            child_cells_of[ci].add(child_ci)
+            parent_cells_of[child_ci].add(ci)
+        for inst in cell.each_inst():
+            child_ci = int(inst.cell_index)
+            direct_count_of[child_ci] += 1
+            key = (ci, child_ci)
+            direct_count_per_parent[key] = direct_count_per_parent.get(key, 0) + 1
+    return child_cells_of, parent_cells_of, direct_count_of, direct_count_per_parent
+
+
+def _compute_hierarchy_depths(
+    all_cell_indices: list[int],
+    top_cell_indices: set[int],
+    parent_cells_of: dict[int, set[int]],
+) -> dict[int, int]:
+    """用拓扑顺序计算每个 cell 的层级深度（R322 内部辅助）。
+
+    depth[top] = 0; depth[cell] = max(depth[parent]) + 1。
+    """
+    depth_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
+    for ci in all_cell_indices:
+        if ci in top_cell_indices:
+            depth_of[ci] = 0
+        else:
+            parent_depths = [depth_of[p] for p in parent_cells_of[ci] if p in depth_of]
+            depth_of[ci] = (max(parent_depths) + 1) if parent_depths else 0
+    return depth_of
+
+
+def _compute_recursive_counts(
+    all_cell_indices: list[int],
+    child_cells_of: dict[int, set[int]],
+    direct_count_per_parent: dict[tuple[int, int], int],
+    top_cell_indices: set[int],
+    specified_top_index: int | None,
+) -> dict[int, int]:
+    """递归实例化次数（拓扑逆序 DP）（R322 内部辅助）。
+
+    若指定 top_cell_name: 以该 cell 为根；否则所有顶层 cell 各自为根。
+    """
+    recursive_count_of: dict[int, int] = {ci: 0 for ci in all_cell_indices}
+    roots = [specified_top_index] if specified_top_index is not None else list(top_cell_indices)
+    for root in roots:
+        recursive_count_of[root] += 1
+        for ci in all_cell_indices:
+            if recursive_count_of[ci] == 0:
+                continue
+            for child in child_cells_of[ci]:
+                if child == ci:
+                    continue  # 自环由循环引用检测处理
+                count_in_parent = direct_count_per_parent.get((ci, child), 0)
+                if count_in_parent > 0:
+                    recursive_count_of[child] += recursive_count_of[ci] * count_in_parent
+    return recursive_count_of
+
+
+def _build_cell_info_list(
+    ly, all_cell_indices, parent_cells_of, child_cells_of,
+    depth_of, direct_count_of, recursive_count_of, top_cell_indices, dbu,
+) -> list:
+    """构建 CellInfo 列表（R322 内部辅助，R03 禁止 fall-back）。
+
+    Raises:
+        RuntimeError: cell bbox 计算失败。
+    """
+    cells: list = []
+    for ci in all_cell_indices:
+        cell = ly.cell(ci)
+        name = str(cell.name)
+        try:
+            bbox_dbu = cell.bbox()
+            bbox_um = (
+                float(bbox_dbu.left) * dbu, float(bbox_dbu.bottom) * dbu,
+                float(bbox_dbu.right) * dbu, float(bbox_dbu.top) * dbu,
+            )
+        except Exception as exc:
+            raise RuntimeError(
+                f"cell '{name}' (index={ci}) bbox 计算失败: {exc!r}。"
+                f"KLayout API 异常，禁止 fall-back 用 0 兜底（R03）。"
+            ) from exc
+        cells.append(_make_cell_info(
+            ly, ci, name, parent_cells_of, child_cells_of, depth_of,
+            direct_count_of, recursive_count_of, top_cell_indices, bbox_um,
+        ))
+    return cells
+
+
+def _make_cell_info(
+    ly, ci, name, parent_cells_of, child_cells_of, depth_of,
+    direct_count_of, recursive_count_of, top_cell_indices, bbox_um,
+):
+    """构造单个 CellInfo（R322 内部辅助）。"""
+    return CellInfo(
+        cell_name=name, cell_index=ci,
+        parent_cell_names=sorted(ly.cell(p).name for p in parent_cells_of[ci]),
+        child_cell_names=sorted(ly.cell(c).name for c in child_cells_of[ci]),
+        hierarchy_depth=depth_of[ci],
+        direct_instance_count=direct_count_of[ci],
+        recursive_instance_count=recursive_count_of[ci],
+        is_top_cell=(ci in top_cell_indices), bbox_um=bbox_um,
+    )
+
+
+def detect_circular_references(
+    gds_path: str | Path,
+    top_cell_name: str | None = None,
+) -> list[list[str]]:
+    """检测 GDSII 文件中的循环引用（R322）。
+
+    GDSII 标准禁止 cell 引用形成环（直接或间接自引用）。
+    实际文件可能违反此规则，本函数用 DFS 三色标记法检测所有环。
+
+    Args:
+        gds_path: GDSII 文件路径。
+        top_cell_name: 指定顶层 cell 名（None 自动检测）。
+
+    Returns:
+        循环引用链列表，每条链为构成环的 cell 名列表（首尾相同表示闭合环）。
+        空列表表示无循环引用。
+
+    Raises:
+        FileNotFoundError: 文件不存在。
+        ValueError: 文件无效。
+        ImportError: klayout 未安装。
+
+    来源:
+    - 三色标记 DFS 环检测: Cormen CLRS Ch.22
+      https://en.wikipedia.org/wiki/Cycle_(graph_theory)#Cycle_detection
+    """
+    report = analyze_cell_hierarchy(gds_path, top_cell_name=top_cell_name)
+    return report.circular_chains
+
+
+def generate_hierarchy_report(
+    gds_path: str | Path,
+    top_cell_name: str | None = None,
+    output_format: str = "text",
+) -> str:
+    """生成 GDSII cell 层级分析报告（R322）。
+
+    Args:
+        gds_path: GDSII 文件路径。
+        top_cell_name: 指定顶层 cell 名。
+        output_format: 输出格式（'text' / 'markdown'）。
+
+    Returns:
+        报告字符串。
+
+    Raises:
+        FileNotFoundError: 文件不存在。
+        ValueError: 不支持的格式 / 文件无效。
+        ImportError: klayout 未安装。
+
+    来源:
+    - CommonMark: https://spec.commonmark.org/
+    """
+    report = analyze_cell_hierarchy(gds_path, top_cell_name=top_cell_name)
+    fmt = output_format.lower()
+    if fmt == "text":
+        return _render_text_report(report)
+    if fmt == "markdown":
+        return _render_markdown_report(report)
+    raise ValueError(
+        f"不支持的 output_format: {output_format}。"
+        f"支持: text / markdown。"
+    )
+
+
+# =============================================================================
+# 内部辅助函数
+# =============================================================================
+def _detect_cycles_dfs(
+    all_indices: list[int],
+    child_cells_of: dict[int, set[int]],
+) -> list[list[int]]:
+    """DFS 三色标记法检测所有环（R322 内部函数）。
+
+    颜色:
+    - WHITE (0): 未访问
+    - GRAY (1): 正在访问（在当前 DFS 路径上）
+    - BLACK (2): 已完成（所有后代已访问）
+
+    遇到 GRAY 节点 → 找到环，回溯 path 栈得到环。
+
+    时间复杂度: O(V+E)
+    来源: Cormen CLRS Introduction to Algorithms, Ch.22
+
+    Args:
+        all_indices: 所有 cell 索引。
+        child_cells_of: cell → 子 cell 索引集合。
+
+    Returns:
+        环列表，每条环为 cell 索引列表（首尾相同表示闭合环）。
+    """
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[int, int] = {ci: WHITE for ci in all_indices}
+    path: list[int] = []
+    cycles: list[list[int]] = []
+
+    def dfs(u: int) -> None:
+        """深度优先搜索检测环路（三色标记法）。
+
+        Args:
+            u: 当前访问的 cell 索引。
+        """
+        color[u] = GRAY
+        path.append(u)
+        for v in child_cells_of.get(u, set()):
+            if color.get(v, WHITE) == WHITE:
+                dfs(v)
+            elif color[v] == GRAY:
+                # 找到环: 从 path 中 v 的位置到当前 u
+                try:
+                    start = path.index(v)
+                    cycle = path[start:] + [v]
+                    cycles.append(cycle)
+                except ValueError as exc:
+                    # R03 禁止 fall-back：v 标记为 GRAY 却不在 path 中，
+                    # 说明 DFS 三色标记状态不一致（数据结构损坏），
+                    # 禁止静默跳过，必须 raise 报告。
+                    raise RuntimeError(
+                        f"环检测 DFS 状态不一致: 节点 {v} 标记为 GRAY "
+                        f"但不在 path {path} 中（R03 禁止 fall-back）。"
+                    ) from exc
+        path.pop()
+        color[u] = BLACK
+
+    for ci in all_indices:
+        if color[ci] == WHITE:
+            dfs(ci)
+
+    return cycles
+
+
+def _render_text_report(report: HierarchyReport) -> str:
+    """渲染纯文本报告（R322 内部函数）。"""
+    lines: list[str] = []
+    lines.append("=" * 60)
+    lines.append("GDSII Cell 层级分析报告")
+    lines.append("=" * 60)
+    lines.append(f"文件: {report.file_path}")
+    lines.append(f"dbu: {report.dbu} μm")
+    top_str = ", ".join(report.top_cell_names) if report.top_cell_names else "(无)"
+    lines.append(f"顶层 cells: {top_str}")
+    lines.append(f"cell 总数: {report.total_cell_count}")
+    lines.append(f"最大层级深度: {report.max_hierarchy_depth}")
+    circ_status = "存在循环引用" if report.has_circular_reference else "无循环引用"
+    lines.append(f"循环引用: {circ_status}")
+    if report.has_circular_reference:
+        for i, chain in enumerate(report.circular_chains, 1):
+            lines.append(f"  环 {i}: {' -> '.join(chain)}")
+    lines.append("")
+    lines.append("-" * 60)
+    lines.append("各 cell 层级信息:")
+    lines.append("-" * 60)
+    lines.append(
+        f"{'cell 名':<20} {'深度':>4} {'顶层':>4} {'直接实例':>8} "
+        f"{'递归实例':>8} {'父 cells':<20} {'子 cells':<20}"
+    )
+    for c in report.cells:
+        top_flag = "是" if c.is_top_cell else "否"
+        parents = ",".join(c.parent_cell_names) if c.parent_cell_names else "-"
+        children = ",".join(c.child_cell_names) if c.child_cell_names else "-"
+        lines.append(
+            f"{c.cell_name:<20} {c.hierarchy_depth:>4} {top_flag:>4} "
+            f"{c.direct_instance_count:>8} {c.recursive_instance_count:>8} "
+            f"{parents:<20} {children:<20}"
+        )
+    lines.append("=" * 60)
+    return "\n".join(lines)
+
+
+def _render_markdown_report(report: HierarchyReport) -> str:
+    """渲染 Markdown 报告（R322 内部函数）。"""
+    lines: list[str] = []
+    lines.append("# GDSII Cell 层级分析报告")
+    lines.append("")
+    lines.append(f"**文件**: `{report.file_path}`")
+    lines.append(f"**dbu**: {report.dbu} μm")
+    if report.top_cell_names:
+        top_str = ", ".join(f"`{n}`" for n in report.top_cell_names)
+    else:
+        top_str = "(无)"
+    lines.append(f"**顶层 cells**: {top_str}")
+    lines.append(f"**cell 总数**: {report.total_cell_count}")
+    lines.append(f"**最大层级深度**: {report.max_hierarchy_depth}")
+    circ_status = "存在循环引用" if report.has_circular_reference else "无循环引用"
+    lines.append(f"**循环引用**: {circ_status}")
+    if report.has_circular_reference:
+        lines.append("")
+        lines.append("## 循环引用链")
+        for i, chain in enumerate(report.circular_chains, 1):
+            lines.append(f"{i}. `{' -> '.join(chain)}`")
+    lines.append("")
+    lines.append("## 各 cell 层级信息")
+    lines.append("")
+    lines.append(
+        "| cell 名 | 深度 | 顶层 | 直接实例 | 递归实例 | 父 cells | 子 cells |"
+    )
+    lines.append("|---------|------|------|----------|----------|----------|----------|")
+    for c in report.cells:
+        top_flag = "是" if c.is_top_cell else "否"
+        parents = ",".join(c.parent_cell_names) if c.parent_cell_names else "-"
+        children = ",".join(c.child_cell_names) if c.child_cell_names else "-"
+        lines.append(
+            f"| {c.cell_name} | {c.hierarchy_depth} | {top_flag} | "
+            f"{c.direct_instance_count} | {c.recursive_instance_count} | "
+            f"{parents} | {children} |"
+        )
+    return "\n".join(lines)

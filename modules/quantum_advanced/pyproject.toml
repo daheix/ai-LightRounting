@@ -1,0 +1,13 @@
+[project]
+name = "polaris-quantum-advanced"
+version = "5.1.0"
+description = "PoLaRIS 高级量子计算子模块（CV-QEC / GBS / 含损玻色采样 / BB84-E91 QKD / 量子电路仿真器 / 分布式PPO）"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24", "scipy>=1.10"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]
