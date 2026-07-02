@@ -13,10 +13,18 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from polaris_circuit import (
+# 让测试既能从已安装包导入，也能从源码树导入（CI/开发模式）
+_SRC = str(Path(__file__).resolve().parents[1] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+
+from polaris_circuit import (  # noqa: E402
     BerEvaluator,
     C0,
     CircuitSimulator,
