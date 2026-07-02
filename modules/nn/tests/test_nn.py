@@ -45,6 +45,7 @@ from polaris_nn import (
     ScaledDotProductAttention,
     Sequential,
     evaluate_benchmark,
+    generate_dataset,
     generate_layout,
     grid_placement,
     load_apollo_ptc_benchmark,
