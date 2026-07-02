@@ -1,11 +1,16 @@
 """阶段 7: GDS 导出。
 
-将布局布线结果导出为 GDSII 文件，并验证文件完整性（文件大小、结构数、
-层次数、可重新加载）。
+将电路导出为 GDSII 文件，并验证文件完整性（文件大小、结构数、层次数、
+可重新加载）。
 
-对应路标: R06（GDSII 导出）/ R22（OASIS 导出）
+PoLaRIS v5.0 迁移说明:
+    旧 v4 使用 IntegratedPipeline（生成布局+布线 → 转 Placement/Path 对象 →
+    export_gds）。v5.0 已将 GDSII 导出封装为 polaris-gdsio 子模块的稳定 API
+    ``export_gds(circuit_dict, output_path) -> dict``，直接接收 polaris-core
+    风格 circuit dict，无需先布局布线、无需 Placement/Path 对象转换。
+    本 stage 改用 circuit_to_dict + export_gds 两步调用。
 
-GDSII 格式来源（学术诚信，规则 18）:
+GDSII 格式来源（R02 学术诚信）:
 - GDSII 规范: https://en.wikipedia.org/wiki/GDSII
 - KLayout GDSII 文档: https://www.klayout.org/doc-qt5/manual/gds2.html
 - SiEPIC EBeam PDK 真实 foundry layer 编号:
@@ -13,6 +18,10 @@ GDSII 格式来源（学术诚信，规则 18）:
 - Clements 矩阵拓扑: Clements et al., "Optimal design for universal
   multiport interferometers", Optica 2016,
   https://doi.org/10.1364/OPTICA.3.001460
+- gdsfactory write_gds 默认参数（dbu=0.001μm=1nm）:
+  https://gdsfactory.github.io/gdsfactory/api.html#gdsfactory.write_gds
+- KLayout Layout Database API:
+  https://www.klayout.org/downloads/master/doc-qt4/programming/database_api.html
 """
 
 from __future__ import annotations
@@ -20,38 +29,40 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from polaris.data.specs import CircuitSpec, DeviceSpec
-from polaris.eval.layout_render import export_gds
-from polaris.pipeline._converters import convert_to_paths, convert_to_placements
-from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
+from polaris_core import CircuitSpec, DeviceSpec, circuit_to_dict
+from polaris_gdsio import export_gds
 
 _logger = logging.getLogger("e2e_showcase")
 
 
 # =============================================================================
-# 电路规格定义（与 stage3 一致）
+# 电路规格定义（与 stage3/stage4/stage6 一致）
 # =============================================================================
 def _mzi_circuit() -> CircuitSpec:
-    """MZI 干涉仪电路（与 stage3 一致）。
+    """MZI 干涉仪电路（与 stage3/stage4/stage6 一致）。
 
     5 器件: 1 光栅耦合器 + 2 MMI + 2 波导臂，构成马赫-曾德干涉仪。
+
+    Returns:
+        MZI 电路规格。
     """
     return CircuitSpec(
         name="MZI",
         canvas_w=500,
         canvas_h=300,
         devices=[
-            DeviceSpec("gc1", "grating_coupler", 10, 10),
-            DeviceSpec("mmi1", "mmi_1x2", 20, 10),
-            DeviceSpec(
-                "wg1", "strip_waveguide", 100, 0.5,
-                params={"length": 100.0},
-            ),
-            DeviceSpec(
-                "wg2", "strip_waveguide", 120, 0.5,
-                params={"length": 120.0},
-            ),
-            DeviceSpec("mmi2", "mmi_2x2", 20, 10),
+            DeviceSpec("gc1", "grating_coupler", 10, 10,
+                       ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")]),
+            DeviceSpec("mmi1", "mmi_1x2", 20, 10,
+                       ports=[("in", 0, 5, "west"), ("out0", 20, 2.5, "east"),
+                              ("out1", 20, 7.5, "east")]),
+            DeviceSpec("wg1", "strip_waveguide", 100, 0.5,
+                       ports=[("in", 0, 0.25, "west"), ("out", 100, 0.25, "east")]),
+            DeviceSpec("wg2", "strip_waveguide", 120, 0.5,
+                       ports=[("in", 0, 0.25, "west"), ("out", 120, 0.25, "east")]),
+            DeviceSpec("mmi2", "mmi_2x2", 20, 10,
+                       ports=[("in0", 0, 2.5, "west"), ("in1", 0, 7.5, "west"),
+                              ("out0", 20, 2.5, "east"), ("out1", 20, 7.5, "east")]),
         ],
         connections=[
             ("gc1", "out", "mmi1", "in"),
@@ -64,7 +75,7 @@ def _mzi_circuit() -> CircuitSpec:
 
 
 def _clements_4x4_circuit() -> CircuitSpec:
-    """Clements 4x4 光矩阵电路（与 stage3 一致）。
+    """Clements 4x4 光矩阵电路（与 stage3/stage4 一致）。
 
     4x4 通用多端口干涉仪，含 6 个 MZI 分束器 + 4 个相移器 + 8 个光栅耦合器。
     Clements 矩阵需要 N(N-1)/2 = 6 个 2x2 单元（N=4）。
@@ -75,16 +86,29 @@ def _clements_4x4_circuit() -> CircuitSpec:
     devices: list[DeviceSpec] = []
     # 4 个输入光栅耦合器
     for i in range(4):
-        devices.append(DeviceSpec(f"gci{i}", "grating_coupler", 10, 10))
+        devices.append(DeviceSpec(
+            f"gci{i}", "grating_coupler", 10, 10,
+            ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")],
+        ))
     # 6 个 MZI 分束器（Clements 矩形网格）
     for i in range(6):
-        devices.append(DeviceSpec(f"mzi{i}", "mmi_2x2", 20, 10))
+        devices.append(DeviceSpec(
+            f"mzi{i}", "mmi_2x2", 20, 10,
+            ports=[("in0", 0, 2.5, "west"), ("in1", 0, 7.5, "west"),
+                   ("out0", 20, 2.5, "east"), ("out1", 20, 7.5, "east")],
+        ))
     # 4 个相移器（输出相位调谐）
     for i in range(4):
-        devices.append(DeviceSpec(f"ps{i}", "strip_waveguide", 50, 0.5, params={"length": 50.0}))
+        devices.append(DeviceSpec(
+            f"ps{i}", "phase_shifter", 50, 0.5,
+            ports=[("in", 0, 0.25, "west"), ("out", 50, 0.25, "east")],
+        ))
     # 4 个输出光栅耦合器
     for i in range(4):
-        devices.append(DeviceSpec(f"gco{i}", "grating_coupler", 10, 10))
+        devices.append(DeviceSpec(
+            f"gco{i}", "grating_coupler", 10, 10,
+            ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")],
+        ))
 
     # 连接: 输入 → MZI 网格 → 相移器 → 输出
     # Clements 矩形网格（简化链式连接，保证布线可达）
@@ -124,7 +148,7 @@ def _clements_4x4_circuit() -> CircuitSpec:
 
 
 def _quantum_placeholder_circuit() -> CircuitSpec:
-    """量子玻色采样占位电路（与 stage3 一致）。
+    """量子玻色采样占位电路（与 stage3/stage4 一致）。
 
     玻色采样电路: 4 模酉矩阵网络，含分束器阵列与相移器，
     用于演示量子光子计算的版图生成能力。
@@ -136,13 +160,23 @@ def _quantum_placeholder_circuit() -> CircuitSpec:
     devices: list[DeviceSpec] = []
     # 4 个输入源（单光子源占位）
     for i in range(4):
-        devices.append(DeviceSpec(f"src{i}", "grating_coupler", 10, 10))
+        devices.append(DeviceSpec(
+            f"src{i}", "grating_coupler", 10, 10,
+            ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")],
+        ))
     # 4 个分束器（构成酉变换网络）
     for i in range(4):
-        devices.append(DeviceSpec(f"bs{i}", "mmi_2x2", 20, 10))
+        devices.append(DeviceSpec(
+            f"bs{i}", "mmi_2x2", 20, 10,
+            ports=[("in0", 0, 2.5, "west"), ("in1", 0, 7.5, "west"),
+                   ("out0", 20, 2.5, "east"), ("out1", 20, 7.5, "east")],
+        ))
     # 4 个探测器（单光子探测器占位）
     for i in range(4):
-        devices.append(DeviceSpec(f"det{i}", "grating_coupler", 10, 10))
+        devices.append(DeviceSpec(
+            f"det{i}", "detector", 10, 10,
+            ports=[("in", 0, 5, "west")],
+        ))
 
     # 连接: 源 → 分束器网络 → 探测器
     connections = [
@@ -169,55 +203,14 @@ def _quantum_placeholder_circuit() -> CircuitSpec:
 
 
 # =============================================================================
-# GDS 验证
-# =============================================================================
-def _verify_gds(gds_path: Path) -> tuple[int, int, bool]:
-    """验证 GDS 文件可重新加载，返回 (结构数, 层次数, 可加载)。
-
-    用 klayout.db 重新读取 GDS 文件，统计 top cell 数（GDSII 结构数）
-    与使用的 layer 数。读取失败时 raise（规则 14.1: 无 fall-back）。
-
-    GDSII 术语: "structure" = cell（单元格），GDSII 文件由若干 structure 组成。
-    来源: GDSII 规范 https://en.wikipedia.org/wiki/GDSII
-
-    Args:
-        gds_path: GDS 文件路径。
-
-    Returns:
-        (n_structures, n_layers, loadable) 元组。loadable=True 表示成功重新加载。
-
-    Raises:
-        RuntimeError: GDS 读取失败或无 top cell。
-    """
-    import klayout.db as db
-
-    try:
-        ly = db.Layout()
-        ly.read(str(gds_path))
-        top_cells = list(ly.top_cells())
-        if not top_cells:
-            raise RuntimeError(f"GDS 无 top cell: {gds_path}")
-        # GDSII 结构数 = top cell 数（每个 top cell 是一个独立结构）
-        n_structures = len(top_cells)
-        # 层数 = 使用的 layer info 数（WG/DEVREC/PIN 等）
-        n_layers = len(list(ly.layer_infos()))
-        return n_structures, n_layers, True
-    except RuntimeError:
-        # 重新抛出 RuntimeError（无 fall-back）
-        raise
-    except Exception as e:
-        # 其他异常包装为 RuntimeError（无 fall-back，禁止返回假数据）
-        raise RuntimeError(f"GDS 验证失败: {gds_path}: {e}") from e
-
-
-# =============================================================================
 # 主流程
 # =============================================================================
 def run(output_dir: Path) -> dict:
     """执行阶段 7: GDS 导出。
 
-    对 3 个电路（MZI、Clements 4x4、量子占位）执行 IntegratedPipeline
-    生成布局+布线，导出为 GDSII 文件，并验证文件完整性。
+    对 3 个电路（MZI、Clements 4x4、量子占位）转为 circuit dict 后直接
+    调用 polaris-gdsio ``export_gds`` 导出为 GDSII 文件，并验证文件完整性
+    （export_gds 内部已含读回验证 loadable 字段）。
 
     Args:
         output_dir: 输出目录。
@@ -227,14 +220,14 @@ def run(output_dir: Path) -> dict:
         - name: 电路名称
         - gds_path: GDS 文件路径
         - file_size_bytes: 文件大小（字节）
-        - n_structures: GDS 结构数（top cell 数）
-        - n_layers: GDS 层次数
+        - n_structures: GDS 结构数（cell 数，含顶层）
+        - n_layers: GDS 层数
         - loadable: 是否可重新加载
 
     Raises:
-        RuntimeError: GDS 导出或验证失败（规则 14.1: 无 fall-back）。
+        RuntimeError: GDS 导出或验证失败（R03 禁止 fall-back）。
     """
-    _logger.info("阶段 7 开始: GDS 导出")
+    _logger.info("阶段 7 开始: GDS 导出（polaris-gdsio）")
     output_dir = Path(output_dir)
     gds_dir = output_dir / "gds"
     gds_dir.mkdir(parents=True, exist_ok=True)
@@ -255,61 +248,30 @@ def run(output_dir: Path) -> dict:
             len(circuit.connections),
         )
 
-        # 步骤 1: 运行 IntegratedPipeline 生成布局+布线
-        cfg = PipelineConfig(
-            canvas_w=circuit.canvas_w,
-            canvas_h=circuit.canvas_h,
-            max_sim_iterations=1,
-            output_dir=str(output_dir / "pipeline" / circuit.name),
-        )
-        pipeline = IntegratedPipeline(cfg)
-        pipe_result = pipeline.run(circuit)
-        _logger.info(
-            "布局布线完成: %s (器件=%d, 路径=%d, 损耗=%.2f dB)",
-            circuit.name,
-            len(pipe_result.placements),
-            len(pipe_result.paths),
-            pipe_result.total_loss_db,
-        )
+        # 步骤 1: 转为 circuit dict
+        circuit_dict = circuit_to_dict(circuit)
 
-        # 步骤 2: 转换为 Placement/WaveguidePath 对象
-        placements = convert_to_placements(circuit, pipe_result.placements)
-        paths = convert_to_paths(pipe_result.paths)
-        _logger.info(
-            "对象转换: %s (Placement=%d, WaveguidePath=%d)",
-            circuit.name,
-            len(placements),
-            len(paths),
-        )
-
-        # 步骤 3: 导出 GDSII 文件
+        # 步骤 2: 导出 GDSII 文件（polaris-gdsio 内部含读回验证）
         gds_path = gds_dir / f"{circuit.name}.gds"
-        export_gds(placements, paths, str(gds_path))
-        file_size = gds_path.stat().st_size
-        _logger.info(
-            "GDS 导出: %s (%d bytes)",
-            gds_path.name,
-            file_size,
-        )
+        export_result = export_gds(circuit_dict, str(gds_path))
 
-        # 步骤 4: 验证 GDS 可重新加载
-        n_structures, n_layers, loadable = _verify_gds(gds_path)
         _logger.info(
-            "GDS 验证: %s (结构=%d, 层次=%d, 可加载=%s)",
-            circuit.name,
-            n_structures,
-            n_layers,
-            loadable,
+            "GDS 导出: %s (%d bytes, 结构=%d, 层次=%d, 可加载=%s)",
+            Path(export_result["path"]).name,
+            export_result["file_size_bytes"],
+            export_result["n_structures"],
+            export_result["n_layers"],
+            export_result["loadable"],
         )
 
         results.append(
             {
                 "name": circuit.name,
-                "gds_path": str(gds_path),
-                "file_size_bytes": file_size,
-                "n_structures": n_structures,
-                "n_layers": n_layers,
-                "loadable": loadable,
+                "gds_path": export_result["path"],
+                "file_size_bytes": export_result["file_size_bytes"],
+                "n_structures": export_result["n_structures"],
+                "n_layers": export_result["n_layers"],
+                "loadable": export_result["loadable"],
             }
         )
 

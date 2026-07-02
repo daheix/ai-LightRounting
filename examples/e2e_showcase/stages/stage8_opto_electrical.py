@@ -696,3 +696,1280 @@ def run(output_dir: Path) -> dict:
         "pam4_ber": pam4["ber"],
         "pam4_snr_db": pam4["snr_db"],
     }
+"""阶段 8: 光电"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5."""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polar"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polar"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shaf"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CE"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 201"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hoch"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oif"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗（来自 stage4 MZI 电路典型值）
+# 来源: stage4_routing.py 中 MZI 电路 total_loss_db 典"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗（来自 stage4 MZI 电路典型值）
+# 来源: stage4_routing.py 中 MZI 电路 total_loss_db 典型值
+_OPTICAL_LOSS_DB = 5.7
+
+# 探测器参数（Si 探测器典型值）
+#"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗（来自 stage4 MZI 电路典型值）
+# 来源: stage4_routing.py 中 MZI 电路 total_loss_db 典型值
+_OPTICAL_LOSS_DB = 5.7
+
+# 探测器参数（Si 探测器典型值）
+# 来源: Chrostowski 2015 §9.2, Saleh & Teich 2019 §17.5
+_DETECTOR_RESP"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗（来自 stage4 MZI 电路典型值）
+# 来源: stage4_routing.py 中 MZI 电路 total_loss_db 典型值
+_OPTICAL_LOSS_DB = 5.7
+
+# 探测器参数（Si 探测器典型值）
+# 来源: Chrostowski 2015 §9.2, Saleh & Teich 2019 §17.5
+_DETECTOR_RESPONSIVITY = 1.0  # A/W
+_DETECTOR_DARK_CURRENT_A = 10e-9  # 10 n"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗（来自 stage4 MZI 电路典型值）
+# 来源: stage4_routing.py 中 MZI 电路 total_loss_db 典型值
+_OPTICAL_LOSS_DB = 5.7
+
+# 探测器参数（Si 探测器典型值）
+# 来源: Chrostowski 2015 §9.2, Saleh & Teich 2019 §17.5
+_DETECTOR_RESPONSIVITY = 1.0  # A/W
+_DETECTOR_DARK_CURRENT_A = 10e-9  # 10 nA
+_LOAD_RESISTANCE_OHM = 50.0  # Ω（射频标准 50Ω）
+_TEMPERATURE_K = 300"""阶段 8: 光电协同 PAM4 链路分析。
+
+光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
+
+PoLaRIS v5.0 迁移说明:
+    旧 v4 含 Verilog-A 紧凑模型生成 + Ngspice 联合仿真网表 + MNA 求解器
+    （polaris.sim.mna_spice / polaris.sim.verilog_a）。v5.0 未提供独立的
+    SPICE 联合仿真子模块（无 polaris_spice），故本 stage 简化为调用
+    polaris-pam4 子模块的稳定 API 进行光电协同 PAM4 链路分析，
+    保留探测器噪声建模（散粒噪声 + 热噪声）作为光电协同的关键物理环节。
+    Verilog-A 模型生成与 Ngspice 联合仿真待未来 polaris-spice 子模块建立后
+    再恢复。
+
+公式来源（R02 学术诚信）:
+- PAM4 BER: Shafik et al., IEEE CommSurveys 2016
+  https://ieeexplore.ieee.org/document/7410082
+- PAM4 信号: OIF CEI-112G 标准 https://www.oiforum.com/
+- 探测器散粒噪声: i_shot = √(2·q·R·P·B)
+  来源: Saleh & Teich, "Photonics", 2019, §17.5
+- 探测器热噪声: i_thermal = √(4·k·T·B/R_L)
+  来源: Saleh & Teich, "Photonics", 2019, §17.4
+- Ansys Lumerical INTERCONNECT 眼图分析
+  https://optics.ansys.com/hc/en-us/articles/49697869166611
+- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- NIST CODATA 2018 物理常量
+  https://physics.nist.gov/cuu/Constants/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+from pathlib import Path
+
+import numpy as np
+
+from polaris_pam4 import (
+    compute_ber,
+    compute_eye_diagram,
+    compute_snr_db,
+    generate_pam4_signal,
+)
+
+_logger = logging.getLogger("e2e_showcase")
+
+# =============================================================================
+# 光电协同链路参数（与 stage5 纯光路 PAM4 不同）
+# =============================================================================
+# stage8: 光电协同 PAM4（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）
+# stage5: 纯光路 PAM4（仅光调制器噪声, n_symbols=1000, samples=16,
+#         noise=0.05, seed=42）
+
+# PAM4 信号参数（与 stage5 不同）
+# 来源: OIF CEI-112G 标准 https://www.oiforum.com/
+_PAM4_N_SYMBOLS = 2000  # stage5=1000, stage8=2000（更多符号）
+_PAM4_BIT_RATE = 100e9  # 100 Gbps（与 stage5 相同）
+_PAM4_SAMPLES_PER_SYMBOL = 32  # stage5=16, stage8=32（更高采样率）
+_PAM4_BASE_NOISE_STD = 0.08  # stage5=0.05, stage8=0.08（含 TIA 噪声）
+_PAM4_SEED = 88  # stage5=42, stage8=88（不同种子）
+
+# 光路损耗（来自 stage4 MZI 电路典型值）
+# 来源: stage4_routing.py 中 MZI 电路 total_loss_db 典型值
+_OPTICAL_LOSS_DB = 5.7
+
+# 探测器参数（Si 探测器典型值）
+# 来源: Chrostowski 2015 §9.2, Saleh & Teich 2019 §17.5
+_DETECTOR_RESPONSIVITY = 1.0  # A/W
+_DETECTOR_DARK_CURRENT_A = 10e-9  # 10 nA
+_LOAD_RESISTANCE_OHM = 50.0  # Ω（射频标准 50Ω）
+_TEMPERATURE_K = 300.0  # K（室温 27°C）
+
+# 物理常量
+# 来源

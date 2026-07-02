@@ -33,15 +33,19 @@ from pathlib import Path
 
 import numpy as np
 
-from polaris.sim import (
-    clements_unitary,
+from polaris_fdtd import DifferentiableFDTD, GedneyPML, YeeGrid3D
+from polaris_pam4 import (
     compute_ber,
     compute_eye_diagram,
     compute_snr_db,
     generate_pam4_signal,
+)
+from polaris_sparam import (
+    compute_clements_unitary,
     grating_coupler_s,
     mmi_1x2_s,
     mmi_2x2_s,
+    port_key,
     waveguide_s,
 )
 
@@ -105,30 +109,30 @@ def _simulate_mzi_sparam(reports_dir: Path) -> dict:
     # 臂长差
     delta_L = _MZI_WG2_LENGTH_UM - _MZI_WG1_LENGTH_UM  # ΔL = 20μm
 
-    # 获取各器件 S 参数（调用 polaris.sim 模型）
+    # 获取各器件 S 参数（调用 polaris-sparam 子模块模型）
     # 来源: waveguide_s/mmi_1x2_s/mmi_2x2_s/grating_coupler_s 来自 SiEPIC EBeam PDK
-    wg1_s = waveguide_s(wl_um, length=_MZI_WG1_LENGTH_UM, neff=_MZI_NEFF,
+    wg1_s = waveguide_s(wl_um, length_um=_MZI_WG1_LENGTH_UM, neff=_MZI_NEFF,
                         loss_db_cm=_MZI_WG_LOSS_DB_CM)
-    wg2_s = waveguide_s(wl_um, length=_MZI_WG2_LENGTH_UM, neff=_MZI_NEFF,
+    wg2_s = waveguide_s(wl_um, length_um=_MZI_WG2_LENGTH_UM, neff=_MZI_NEFF,
                         loss_db_cm=_MZI_WG_LOSS_DB_CM)
     mmi1_s = mmi_1x2_s(wl_um, insertion_loss_db=0.4)  # SiEPIC mmi1x2 1550nm
     mmi2_s = mmi_2x2_s(wl_um, insertion_loss_db=0.5)  # SiEPIC mmi2x2 1550nm
     gc_s = grating_coupler_s(wl_um, peak_wl=1.55, bandwidth_3db=0.04,
                              insertion_loss_db=1.9)
 
-    # 从 S 参数提取振幅传输系数
-    gc_amp = np.abs(gc_s[("waveguide", "fiber")])  # 光栅耦合器振幅传输
+    # 从 S 参数提取振幅传输系数（v5.0 dict key 为 port_key 字符串）
+    gc_amp = np.abs(gc_s[port_key("waveguide", "fiber")])  # 光栅耦合器振幅传输
     gc_T = gc_amp ** 2  # 功率传输率
 
-    mmi1_amp = np.abs(mmi1_s[("out1", "in")])  # MMI 1x2 每端口振幅
+    mmi1_amp = np.abs(mmi1_s[port_key("out1", "in")])  # MMI 1x2 每端口振幅
     mmi1_T = mmi1_amp ** 2  # 每端口功率传输率
 
-    mmi2_amp = np.abs(mmi2_s[("out1", "in1")])  # MMI 2x2 bar 端振幅
+    mmi2_amp = np.abs(mmi2_s[port_key("out1", "in1")])  # MMI 2x2 bar 端振幅
     mmi2_T = mmi2_amp ** 2  # bar 端功率传输率
 
     # 波导振幅传输（含损耗）
-    wg1_amp = np.abs(wg1_s[("out", "in")])
-    wg2_amp = np.abs(wg2_s[("out", "in")])
+    wg1_amp = np.abs(wg1_s[port_key("out", "in")])
+    wg2_amp = np.abs(wg2_s[port_key("out", "in")])
     wg_loss_avg = (wg1_amp + wg2_amp) / 2.0  # 两臂平均振幅损耗
 
     # MZI Bar 端传输率（含 MMI 分束比不均匀性）
@@ -227,8 +231,10 @@ def _simulate_clements(reports_dir: Path) -> dict:
     n_modes = 4
     _logger.info("Clements %dx%d 酉矩阵计算", n_modes, n_modes)
 
-    # 生成 4x4 酉矩阵（随机参数，固定种子保证可复现）
-    U = clements_unitary(n_modes=n_modes)
+    # 生成 4x4 酉矩阵（polaris-sparam compute_clements_unitary，种子 42 可复现）
+    # v5.0: 返回 dict，unitary 为 list[list[complex]]
+    clements_result = compute_clements_unitary(n_modes=n_modes)
+    U = np.array(clements_result["unitary"], dtype=complex)
 
     # 传输矩阵 T = |U|²（功率传输）
     T = np.abs(U) ** 2
@@ -377,10 +383,10 @@ def _run_fdtd_waveguide() -> dict:
     """
     try:
         import jax.numpy as jnp
-
-        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, GedneyPML, YeeGrid3D
     except ImportError as e:
-        raise RuntimeError(f"JAX FDTD 模块不可用: {e}") from e
+        raise RuntimeError(f"JAX 不可用: {e}") from e
+    # v5.0: DifferentiableFDTD/GedneyPML/YeeGrid3D 已迁移至 polaris-fdtd 子模块
+    # （顶部已 import）
 
     eps_r_si = 12.08  # 硅介电常数（Soref 1993）
     # R03 合规修复：网格从 24×12×8 增至 96×48×16（50nm 步长，λ/31）
@@ -497,10 +503,10 @@ def _run_fdtd_mmi() -> dict:
     """
     try:
         import jax.numpy as jnp
-
-        from polaris.sim.fdtd_jax_backend import DifferentiableFDTD, GedneyPML, YeeGrid3D
     except ImportError as e:
-        raise RuntimeError(f"JAX FDTD 模块不可用: {e}") from e
+        raise RuntimeError(f"JAX 不可用: {e}") from e
+    # v5.0: DifferentiableFDTD/GedneyPML/YeeGrid3D 已迁移至 polaris-fdtd 子模块
+    # （顶部已 import）
 
     # 材料参数（来源: Soref 1993）
     eps_r_si = 12.08  # 硅
