@@ -16,10 +16,13 @@ CFLAGS = -Wall -Wextra -O2 -std=c11 \
     -I../../modules/gdsio/c_api \
     -I../../modules/place/c_api \
     -I../../modules/route/c_api \
-    -I../../modules/sim/c_api \
-    -I../../modules/verify/c_api \
+    -I../../modules/sparam/c_api \
+    -I../../modules/pam4/c_api \
+    -I../../modules/drc/c_api \
+    -I../../modules/lvs/c_api \
     -I../../modules/inverse/c_api \
-    -I../../modules/quantum/c_api \
+    -I../../modules/klm/c_api \
+    -I../../modules/boson/c_api \
     -I../../modules/orchestrator/c_api
 
 # 链接子模块 C 实现（当前 PoLaRIS 主路径为 Python，C ABI 头文件先行声明接口）
