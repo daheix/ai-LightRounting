@@ -209,7 +209,9 @@ class MNASolver:
             z = z_init.copy()
             for d in self.circuit.diodes:
                 n1, n2 = d["n1"], d["n2"]
-                v_d = (x[n1 - 1] - x[n2 - 1]) if n1 > 0 and n2 > 0 else 0.0
+                v_n1 = x[n1 - 1] if n1 > 0 else 0.0
+                v_n2 = x[n2 - 1] if n2 > 0 else 0.0
+                v_d = v_n1 - v_n2
                 exp_v = np.exp(np.clip(v_d / d["vt"], -50, 50))
                 g_eq = d["is"] / d["vt"] * exp_v
                 i_eq = d["is"] * (exp_v - 1.0) - g_eq * v_d
@@ -312,10 +314,16 @@ class MNASolver:
 
     @staticmethod
     def _stamp_capacitor(A: np.ndarray, z: np.ndarray, c: dict, dt: float, x_prev: np.ndarray) -> None:
-        """电容后向欧拉 stamping：G_C=C/dt, I_prev=G_C·V_prev。"""
+        """电容后向欧拉 stamping：G_C=C/dt, I_prev=G_C·V_prev。
+
+        R05 修复: 当 n1 或 n2 为 0（GND）时，v_prev 之前误算为 0，
+        现正确取节点电压（GND 节点电压 = 0）。
+        """
         g_c = c["c"] / dt
         n1, n2 = c["n1"], c["n2"]
-        v_prev = (x_prev[n1 - 1] - x_prev[n2 - 1]) if n1 > 0 and n2 > 0 else 0.0
+        v_n1 = x_prev[n1 - 1] if n1 > 0 else 0.0
+        v_n2 = x_prev[n2 - 1] if n2 > 0 else 0.0
+        v_prev = v_n1 - v_n2
         i_prev = g_c * v_prev
         if n1 > 0:
             A[n1 - 1, n1 - 1] += g_c
