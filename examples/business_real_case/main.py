@@ -68,7 +68,7 @@ import sys
 import time
 from pathlib import Path
 
-# 添加 8 个子模块 + orchestrator 到 sys.path
+# 添加子模块 + orchestrator 到 sys.path（sim→sparam+pam4, verify→drc+lvs, quantum→klm+boson）
 ROOT = Path(__file__).resolve().parents[2]
 for m in (
     "core",
@@ -76,10 +76,13 @@ for m in (
     "gdsio",
     "place",
     "route",
-    "sim",
-    "verify",
+    "sparam",
+    "pam4",
+    "drc",
+    "lvs",
     "inverse",
-    "quantum",
+    "klm",
+    "boson",
     "orchestrator",
 ):
     sys.path.insert(0, str(ROOT / f"modules/{m}/src"))
@@ -89,7 +92,8 @@ from polaris_gdsio import export_gds
 from polaris_inverse import optimize_waveguide_width
 from polaris_pdk import list_platforms
 from polaris_place import place_circuit
-from polaris_quantum import hom_interference, klm_cnot
+from polaris_klm import klm_cnot
+from polaris_boson import hom_interference
 from polaris_route import route_circuit
 from polaris_sparam import (
     compute_clements_unitary,
@@ -276,7 +280,7 @@ def approach_b_direct_modules() -> None:
     """方式 B：直接调用 8 个子模块 API（精细控制）。
 
     逐步打印每步真实结果，适合需要中间结果自定义处理或调试的场景。
-    8 个子模块全部被调用：core/pdk/place/route/sim/verify/inverse/quantum。
+    8 个子模块全部被调用：core/pdk/place/route/sparam+pam4/drc+lvs/inverse/klm+boson。
     """
     print("\n" + "=" * 60)
     print("方式 B: 直接调用 8 个子模块 API（精细控制）")

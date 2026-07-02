@@ -35,7 +35,8 @@
 ### 方式 B：直接调用 8 个子模块 API（精细控制）
 
 逐步调用 `polaris_core` / `polaris_pdk` / `polaris_place` / `polaris_route` /
-`polaris_sim` / `polaris_drc` / `polaris_lvs` / `polaris_inverse` / `polaris_quantum`，
+`polaris_sparam` / `polaris_pam4` / `polaris_drc` / `polaris_lvs` / `polaris_inverse` /
+`polaris_klm` / `polaris_boson`，
 逐步打印中间结果，适合需要自定义处理或调试的场景。
 
 ## 运行

@@ -55,16 +55,19 @@
 #include "polaris_types.h"
 #include "polaris_error.h"
 
-/* 包含 8 个子模块 C ABI 头文件 + orchestrator 编排层 */
+/* 包含子模块 C ABI 头文件 + orchestrator 编排层 */
 #include "core.h"
 #include "pdk.h"
 #include "gdsio.h"
 #include "place.h"
 #include "route.h"
-#include "sim.h"
-#include "verify.h"
+#include "sparam.h"
+#include "pam4.h"
+#include "drc.h"
+#include "lvs.h"
 #include "inverse.h"
-#include "quantum.h"
+#include "klm.h"
+#include "boson.h"
 #include "orchestrator.h"
 
 /* -----------------------------------------------------------------------
@@ -240,11 +243,11 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
            routing.total_loss_db, routing.n_paths,
            routing.router_type ? routing.router_type : "(null)");
 
-    /* ---- 5. polaris_sim: MZI S参数 + Clements 酉矩阵 + PAM4 ---- */
-    printf("\n[5/8] polaris_sim: MZI S参数扫描 (1500-1600nm, 101 点)\n");
-    err = polaris_sim_mzi_sparam(1500.0, 1600.0, 101, &result);
+    /* ---- 5. polaris_sparam + polaris_pam4: MZI S参数 + Clements 酉矩阵 + PAM4 ---- */
+    printf("\n[5/8] polaris_sparam + polaris_pam4: MZI S参数扫描 (1500-1600nm, 101 点)\n");
+    err = polaris_sparam_mzi(1500.0, 1600.0, 101, &result);
     if (err != POLARIS_OK) {
-        printf("  [FAIL] mzi_sparam: %s\n", polaris_error_message(err));
+        printf("  [FAIL] sparam_mzi: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
     }
     printf("  [OK] MZI S参数: %.200s\n", result.json ? result.json : "(null)");
@@ -252,9 +255,9 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     memset(&result, 0, sizeof(result));
 
     printf("\n  Clements 4×4 酉矩阵:\n");
-    err = polaris_sim_clements_unitary(4, &result);
+    err = polaris_sparam_clements(4, &result);
     if (err != POLARIS_OK) {
-        printf("  [FAIL] clements_unitary: %s\n", polaris_error_message(err));
+        printf("  [FAIL] sparam_clements: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
     }
     printf("  [OK] Clements: %.200s\n", result.json ? result.json : "(null)");
@@ -262,7 +265,7 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     memset(&result, 0, sizeof(result));
 
     printf("\n  PAM4 眼图 (1000 符号 @ 100Gbps):\n");
-    err = polaris_sim_pam4(1000, 100.0, &result);
+    err = polaris_pam4_simulate(1000, 100.0, 16, 0.05, &result);
     if (err != POLARIS_OK) {
         printf("  [FAIL] pam4: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
@@ -271,11 +274,11 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     polaris_result_free(&result);
     memset(&result, 0, sizeof(result));
 
-    /* ---- 6. polaris_verify: DRC / LVS ---- */
-    printf("\n[6/8] polaris_verify: DRC 设计规则检查\n");
-    err = polaris_verify_drc(circuit, &placement, &result);
+    /* ---- 6. polaris_drc + polaris_lvs: DRC / LVS ---- */
+    printf("\n[6/8] polaris_drc: DRC 设计规则检查\n");
+    err = polaris_drc_run(circuit, &placement, &result);
     if (err != POLARIS_OK) {
-        printf("  [FAIL] verify_drc: %s\n", polaris_error_message(err));
+        printf("  [FAIL] drc_run: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
     }
     printf("  [OK] DRC: %.200s\n", result.json ? result.json : "(null)");
@@ -283,9 +286,9 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     memset(&result, 0, sizeof(result));
 
     printf("\n  LVS 网表比对:\n");
-    err = polaris_verify_lvs(circuit, &result);
+    err = polaris_lvs_run(circuit, &result);
     if (err != POLARIS_OK) {
-        printf("  [FAIL] verify_lvs: %s\n", polaris_error_message(err));
+        printf("  [FAIL] lvs_run: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
     }
     printf("  [OK] LVS: %.200s\n", result.json ? result.json : "(null)");
@@ -314,9 +317,9 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     polaris_result_free(&result);
     memset(&result, 0, sizeof(result));
 
-    /* ---- + polaris_quantum: KLM CNOT + HOM 干涉 ---- */
-    printf("\n[+] polaris_quantum: KLM CNOT 量子门\n");
-    err = polaris_quantum_klm_cnot(&result);
+    /* ---- + polaris_klm + polaris_boson: KLM CNOT + HOM 干涉 ---- */
+    printf("\n[+] polaris_klm: KLM CNOT 量子门\n");
+    err = polaris_klm_cnot(&result);
     if (err != POLARIS_OK) {
         printf("  [FAIL] klm_cnot: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
@@ -326,7 +329,7 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     memset(&result, 0, sizeof(result));
 
     printf("\n  HOM 双光子干涉 (θ=0):\n");
-    err = polaris_quantum_hom(0.0, &result);
+    err = polaris_boson_hom(0.0, &result);
     if (err != POLARIS_OK) {
         printf("  [FAIL] hom: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;
