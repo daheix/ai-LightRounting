@@ -161,7 +161,12 @@ def simulate_waveguide_fdtd(
         )
 
     t0 = time.time()
-    result = fdtd.run(eps_r, source_pos, source_freq, n_steps, monitor_pos)
+    # R05: 注入/监视 Ey（准 TE 横向分量），避免注入 Ex（纵向）形成驻波
+    # 来源: Taflove 2005 §5.3（模式激发需用横向分量）
+    result = fdtd.run(
+        eps_r, source_pos, source_freq, n_steps, monitor_pos,
+        source_component="Ey", monitor_component="Ey",
+    )
     duration = float(time.time() - t0)
 
     mon_sig = np.asarray(result["monitor_signal"])

@@ -6,15 +6,15 @@
 - dx_um: 网格步长（μm，默认 0.05 = 50nm）
 - n_steps: 时间步数（默认 2000）
 - wavelength_um: 波长（μm，默认 1.55）
-- nx/ny/nz: 网格数（默认 32×16×12）
+- nx/ny/nz: 网格数（默认 32×24×20）
 
 ## Process（处理）
-1. 构建 MMI 介电常数分布:
-   - 输入波导（x < nx/3）: 单模 Si 芯
-   - MMI 多模区（nx/3 ≤ x ≤ 2·nx/3）: 宽 Si 芯
-   - 两个输出波导（x > 2·nx/3）: 对称双 Si 芯
-2. YeeGrid3D + GedneyPML + DifferentiableFDTD
-3. 两次 FDTD 运行（不同监视器位置），提取双输出功率
+1. 构建 MMI 介电常数分布（R05 修复: 波导芯居中，距 PML 至少 3 格）:
+   - 输入波导（x < nx/3）: 单模 Si 芯 y=[ny//2-1,ny//2+1], z=[nz//2-1,nz//2+1]
+   - MMI 多模区（nx/3 ≤ x ≤ 2·nx/3）: 宽 Si 芯 y=[ny//3, 2·ny//3]
+   - 两个输出波导（x > 2·nx/3）: 对称双 Si 芯 y=[ny//3±1] / [2·ny//3±1]
+2. YeeGrid3D + GedneyPML + DifferentiableFDTD（R05: Yee 前向/后向差分）
+3. 两次 FDTD 运行（不同监视器位置），注入/监视 Ey（准 TE 横向分量）
 4. 分束比: split_ratio = P_out1 / (P_out1 + P_out2)
    来源: Soldano & Pennings 1995（MMI 自映像原理）
 
@@ -35,11 +35,12 @@ dict::
 - R04 不参与 GPU: 强制 JAX CPU 后端
 - R03 禁止 fall-back: 仿真结果为 NaN 时 raise
 - R02 学术诚信: 物理参数来自 Soref 1993 / Soldano 1995
+- R05 Bug 必须修复: 波导芯距 PML 至少 3 格，注入 Ey 横向分量
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 - Yee 1966 IEEE TAP https://doi.org/10.1109/TAP.1966.1138693
 - Soldano & Pennings, JLT 13(4), 1995 https://ieeexplore.ieee.org/document/374358
-- Taflove & Hagness 2005 "Computational Electrodynamics"
+- Taflove & Hagness 2005 "Computational Electrodynamics" §3.6.1 §5.3
 - Soref 1993 IEEE JQE https://ieeexplore.ieee.org/document/1148303
 - NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/
 - Lumerical FDTD MMI 仿真
@@ -75,22 +76,26 @@ def _build_mmi_eps(
 ) -> np.ndarray:
     """构建 1×2 MMI 介电常数分布 (nx, ny, nz)。
 
+    R05 修复: 波导芯居中，z 方向统一 [nz//2-1, nz//2+1]（2 格厚），
+    y 方向位置基于 ny//3 和 2*ny//3，确保距 PML 至少 3 格。
+
     - 输入波导: x ∈ [0, nx//3), y ∈ [ny//2-1, ny//2+1)
-    - MMI 多模区: x ∈ [nx//3, 2*nx//3), y ∈ [ny//4, 3*ny//4)
-    - 输出 1: x ∈ [2*nx//3, nx), y ∈ [ny//4-1, ny//4+1)
-    - 输出 2: x ∈ [2*nx//3, nx), y ∈ [3*ny//4-1, 3*ny//4+1)
+    - MMI 多模区: x ∈ [nx//3, 2*nx//3), y ∈ [ny//3, 2*ny//3)
+    - 输出 1: x ∈ [2*nx//3, nx), y ∈ [ny//3-1, ny//3+1)
+    - 输出 2: x ∈ [2*nx//3, nx), y ∈ [2*ny//3-1, 2*ny//3+1)
+    - 所有波导芯: z ∈ [nz//2-1, nz//2+1)
     """
     eps = np.full((nx, ny, nz), eps_clad, dtype=np.float32)
-    z0, z1 = nz // 3, 2 * nz // 3  # 波导厚度（z 方向）
+    z0, z1 = nz // 2 - 1, nz // 2 + 1  # 波导厚度（z 方向，2 格）
     nx3 = nx // 3
-    # 输入波导
+    # 输入波导（居中）
     eps[:nx3, ny // 2 - 1: ny // 2 + 1, z0:z1] = eps_core
-    # MMI 多模区
-    eps[nx3: 2 * nx3, ny // 4: 3 * ny // 4, z0:z1] = eps_core
-    # 输出 1
-    eps[2 * nx3:, ny // 4 - 1: ny // 4 + 1, z0:z1] = eps_core
-    # 输出 2
-    eps[2 * nx3:, 3 * ny // 4 - 1: 3 * ny // 4 + 1, z0:z1] = eps_core
+    # MMI 多模区（宽）
+    eps[nx3: 2 * nx3, ny // 3: 2 * ny // 3, z0:z1] = eps_core
+    # 输出 1（上）
+    eps[2 * nx3:, ny // 3 - 1: ny // 3 + 1, z0:z1] = eps_core
+    # 输出 2（下）
+    eps[2 * nx3:, 2 * ny // 3 - 1: 2 * ny // 3 + 1, z0:z1] = eps_core
     return eps
 
 
@@ -99,13 +104,20 @@ def simulate_mmi_fdtd(
     n_steps: int = 2000,
     wavelength_um: float = 1.55,
     nx: int = 32,
-    ny: int = 16,
-    nz: int = 12,
+    ny: int = 24,
+    nz: int = 20,
     pml_layers: int = 4,
 ) -> dict:
     """MMI 1×2 FDTD 仿真（Si 芯 / SiO2 包层）。
 
     构建 1×2 MMI 结构并运行 FDTD，提取双输出分束比。
+
+    R05 修复（零传输 BUG）:
+    - 旧默认 ny=16/nz=12 + 波导芯 z=4-8 紧贴 PML，源 x=4 落在 PML 末层，
+      且中心差分导致信号无法传播 → T_fdtd≈0。
+    - 新默认 ny=24/nz=20，波导芯居中，源/监视器距 PML 至少 3 格，
+      注入/监视 Ey（准 TE 横向分量），用 Yee 前向/后向差分。
+      来源: Taflove 2005 §5.3 §7.6.2。
 
     Args:
         dx_um: 网格步长（μm）。
@@ -125,9 +137,20 @@ def simulate_mmi_fdtd(
         raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
     if n_steps <= 0:
         raise ValueError(f"n_steps 须 > 0，得到 {n_steps}")
+    if wavelength_um <= 0:
+        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
     if pml_layers * 2 >= min(nx, ny, nz):
         raise ValueError(
             f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
+        )
+    # R05: 校验波导芯距 PML 至少 2 格
+    if ny // 3 - 1 - pml_layers < 2:
+        raise ValueError(
+            f"输出 1 波导 y={ny//3-1} 距 PML(y={pml_layers}) 不足 2 格（R05）"
+        )
+    if nz // 2 - 1 - pml_layers < 2:
+        raise ValueError(
+            f"波导芯 z={nz//2-1} 距 PML(z={pml_layers}) 不足 2 格（R05）"
         )
 
     dx_m = dx_um * 1e-6
@@ -138,16 +161,22 @@ def simulate_mmi_fdtd(
     fdtd = DifferentiableFDTD(grid, pml=pml, eps_r_bg=SOI_EPS_R_SIO2)
 
     source_freq = C0 / (wavelength_um * 1e-6)
-    source_pos = (4, ny // 2, nz // 2)
-    # 双输出监视器
-    mon1_pos = (nx - 5, ny // 4, nz // 2)
-    mon2_pos = (nx - 5, 3 * ny // 4, nz // 2)
+    # R05: 源/监视器距 PML 至少 2 格，置于波导芯中心
+    source_pos = (pml_layers + 2, ny // 2, nz // 2)
+    # 双输出监视器（在输出波导芯中心）
+    mon1_pos = (nx - pml_layers - 3, ny // 3, nz // 2)
+    mon2_pos = (nx - pml_layers - 3, 2 * ny // 3, nz // 2)
 
     t0 = time.time()
-    # 运行 1: 监视器 1
-    res1 = fdtd.run(eps_r, source_pos, source_freq, n_steps, mon1_pos)
-    # 运行 2: 监视器 2（JAX 已编译，第二次快速）
-    res2 = fdtd.run(eps_r, source_pos, source_freq, n_steps, mon2_pos)
+    # R05: 注入/监视 Ey（准 TE 横向分量）
+    res1 = fdtd.run(
+        eps_r, source_pos, source_freq, n_steps, mon1_pos,
+        source_component="Ey", monitor_component="Ey",
+    )
+    res2 = fdtd.run(
+        eps_r, source_pos, source_freq, n_steps, mon2_pos,
+        source_component="Ey", monitor_component="Ey",
+    )
     duration = float(time.time() - t0)
 
     mon1 = np.asarray(res1["monitor_signal"])

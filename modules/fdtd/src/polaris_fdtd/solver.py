@@ -101,36 +101,63 @@ CFL_SAFETY = 0.95
 
 
 # =============================================================================
-# 辅助函数：JAX 可微中心差分（来源: Taflove 2005 §3.6.1）
+# 辅助函数：Yee 交错网格差分（来源: Yee 1966 IEEE TAP §III; Taflove 2005 §3.6.1）
 # =============================================================================
-def _central_diff(arr: jnp.ndarray, axis: int, h: float) -> jnp.ndarray:
-    """JAX 可微中心差分（内部中心差分，边界前/后向差分）。
+def _yee_diff_forward(arr: jnp.ndarray, axis: int, h: float) -> jnp.ndarray:
+    """Yee 前向差分 (f[i] - f[i-1]) / h，用于 E 场更新。
 
-    内部: df/dx[i] = (f[i+1] - f[i-1]) / (2h)
-    边界 0: (f[1] - f[0]) / h（前向）；边界 -1: (f[-1] - f[-2]) / h（后向）。
+    Yee 1966 交错网格: E 场在整点，用相邻 H 场（半点）的前向差分。
+    边界 i=0 处导数置 0（由 PML 吸收边界处理，不环绕）。
+
+    R05 修复（零传输 BUG）:
+    - 旧版 _central_diff 用 (f[i+1]-f[i-1])/(2h) + jnp.roll，既非 Yee 交错
+      差分又引入周期性边界，导致信号无法正常传播（自由空间也衰减 12 个数量级）。
+    - 改为标准 Yee 前向差分 (f[i]-f[i-1])/h，信号正常传播。
+      来源: Yee 1966 IEEE TAP §III; Taflove 2005 §3.6.1
+      https://doi.org/10.1109/TAP.1966.1138693
 
     Args:
         arr: 输入数组。
-        axis: 差分轴。
+        axis: 差分轴（0/1/2）。
         h: 网格步长。
 
     Returns:
-        中心差分结果（与 arr 同形状）。
+        前向差分结果（与 arr 同形状，边界 0）。
     """
-    # 中心差分用 jnp.roll 实现（jnp.roll 是 JAX 可微的）
-    right = jnp.roll(arr, -1, axis=axis)
-    left = jnp.roll(arr, 1, axis=axis)
-    diff = (right - left) / (2.0 * h)
-    # 边界修正：轴首前向差分，轴尾后向差分
-    fwd = (jnp.take(arr, 1, axis=axis) - jnp.take(arr, 0, axis=axis)) / h
-    bwd = (jnp.take(arr, -1, axis=axis) - jnp.take(arr, -2, axis=axis)) / h
-    # .at[].set() 是 JAX 函数式更新，可微
-    slc0 = [slice(None)] * arr.ndim
-    slc0[axis] = 0
-    slc1 = [slice(None)] * arr.ndim
-    slc1[axis] = -1
-    diff = diff.at[tuple(slc0)].set(fwd)
-    diff = diff.at[tuple(slc1)].set(bwd)
+    diff = jnp.zeros_like(arr)
+    if axis == 0:
+        diff = diff.at[1:].set((arr[1:] - arr[:-1]) / h)
+    elif axis == 1:
+        diff = diff.at[:, 1:].set((arr[:, 1:] - arr[:, :-1]) / h)
+    elif axis == 2:
+        diff = diff.at[:, :, 1:].set((arr[:, :, 1:] - arr[:, :, :-1]) / h)
+    return diff
+
+
+def _yee_diff_backward(arr: jnp.ndarray, axis: int, h: float) -> jnp.ndarray:
+    """Yee 后向差分 (f[i+1] - f[i]) / h，用于 H 场更新。
+
+    Yee 1966 交错网格: H 场在半点，用相邻 E 场（整点）的后向差分。
+    边界 i=-1 处导数置 0（由 PML 吸收边界处理，不环绕）。
+
+    来源: Yee 1966 IEEE TAP §III; Taflove 2005 §3.6.1
+    https://doi.org/10.1109/TAP.1966.1138693
+
+    Args:
+        arr: 输入数组。
+        axis: 差分轴（0/1/2）。
+        h: 网格步长。
+
+    Returns:
+        后向差分结果（与 arr 同形状，边界 0）。
+    """
+    diff = jnp.zeros_like(arr)
+    if axis == 0:
+        diff = diff.at[:-1].set((arr[1:] - arr[:-1]) / h)
+    elif axis == 1:
+        diff = diff.at[:, :-1].set((arr[:, 1:] - arr[:, :-1]) / h)
+    elif axis == 2:
+        diff = diff.at[:, :, :-1].set((arr[:, :, 1:] - arr[:, :, :-1]) / h)
     return diff
 
 
@@ -142,7 +169,8 @@ class YeeGrid3D:
     """3D Yee 交错网格（E/H 场空间交错）。
 
     场分量位置（Yee 1966）: Ex (i+1/2,j,k), Ey (i,j+1/2,k), Ez (i,j,k+1/2)。
-    统一用 (nx, ny, nz) 形状，Yee 交错通过 _central_diff 隐式表达。
+    统一用 (nx, ny, nz) 形状，Yee 交错通过 _yee_diff_forward / _yee_diff_backward 隐式表达
+    （R05 修复: E 场前向差分，H 场后向差分，替代旧版中心差分）。
 
     来源: Yee, IEEE Trans. Antennas Propag. AP-14(3), 302-307 (1966)
     https://ieeexplore.ieee.org/document/1138693
@@ -480,42 +508,57 @@ class DifferentiableFDTD:
         source_waveform,
         source_pos: tuple,
         monitor_pos: tuple,
+        source_component: str = "Ex",
+        monitor_component: str = "Ex",
     ):
         """创建 jax.lax.scan 循环体闭包（单步 FDTD 更新）。
 
         封装电场更新（安培定律）+ 源注入 + 磁场更新（法拉第定律）+ 监视器记录。
-        来源: Yee 1966 IEEE TAP 差分格式。
+        R05 修复: 用 Yee 标准前向/后向差分替代中心差分。
+        - E 场更新用前向差分 (f[i]-f[i-1])/h（_yee_diff_forward）
+        - H 场更新用后向差分 (f[i+1]-f[i])/h（_yee_diff_backward）
+        来源: Yee 1966 IEEE TAP §III 差分格式; Taflove 2005 §3.6.1。
         """
         def scan_fn(carry, step_idx) -> Any:
             """scan 循环体：单步 FDTD 更新。"""
             Ex, Ey, Ez, Hx, Hy, Hz, mon_sig = carry
-            # 1. 电场更新（安培定律 ∂E/∂t = (1/ε)∇×H，Yee 1966 差分格式）
-            dHz_dy = _central_diff(Hz, axis=1, h=self.grid.dy)
-            dHy_dz = _central_diff(Hy, axis=2, h=self.grid.dz)
-            dHx_dz = _central_diff(Hx, axis=2, h=self.grid.dz)
-            dHz_dx = _central_diff(Hz, axis=0, h=self.grid.dx)
-            dHy_dx = _central_diff(Hy, axis=0, h=self.grid.dx)
-            dHx_dy = _central_diff(Hx, axis=1, h=self.grid.dy)
+            # 1. 电场更新（安培定律 ∂E/∂t = (1/ε)∇×H，Yee 前向差分）
+            dHz_dy = _yee_diff_forward(Hz, 1, self.grid.dy)
+            dHy_dz = _yee_diff_forward(Hy, 2, self.grid.dz)
+            dHx_dz = _yee_diff_forward(Hx, 2, self.grid.dz)
+            dHz_dx = _yee_diff_forward(Hz, 0, self.grid.dx)
+            dHy_dx = _yee_diff_forward(Hy, 0, self.grid.dx)
+            dHx_dy = _yee_diff_forward(Hx, 1, self.grid.dy)
             Ex = ca * Ex + cb * (dHz_dy - dHy_dz)
             Ey = ca * Ey + cb * (dHx_dz - dHz_dx)
             Ez = ca * Ez + cb * (dHy_dx - dHx_dy)
             # 2. 注入源（软源：加到现有场上）
             src_val = source_waveform[step_idx]
             ix, iy, iz = source_pos
-            Ex = Ex.at[ix, iy, iz].add(src_val)
-            # 3. 磁场更新（法拉第定律 ∂H/∂t = -(1/μ)∇×E，Yee 1966 差分格式）
-            dEz_dy = _central_diff(Ez, axis=1, h=self.grid.dy)
-            dEy_dz = _central_diff(Ey, axis=2, h=self.grid.dz)
-            dEx_dz = _central_diff(Ex, axis=2, h=self.grid.dz)
-            dEz_dx = _central_diff(Ez, axis=0, h=self.grid.dx)
-            dEy_dx = _central_diff(Ey, axis=0, h=self.grid.dx)
-            dEx_dy = _central_diff(Ex, axis=1, h=self.grid.dy)
+            if source_component == "Ex":
+                Ex = Ex.at[ix, iy, iz].add(src_val)
+            elif source_component == "Ey":
+                Ey = Ey.at[ix, iy, iz].add(src_val)
+            elif source_component == "Ez":
+                Ez = Ez.at[ix, iy, iz].add(src_val)
+            # 3. 磁场更新（法拉第定律 ∂H/∂t = -(1/μ)∇×E，Yee 后向差分）
+            dEz_dy = _yee_diff_backward(Ez, 1, self.grid.dy)
+            dEy_dz = _yee_diff_backward(Ey, 2, self.grid.dz)
+            dEx_dz = _yee_diff_backward(Ex, 2, self.grid.dz)
+            dEz_dx = _yee_diff_backward(Ez, 0, self.grid.dx)
+            dEy_dx = _yee_diff_backward(Ey, 0, self.grid.dx)
+            dEx_dy = _yee_diff_backward(Ex, 1, self.grid.dy)
             Hx = da * Hx - db * (dEz_dy - dEy_dz)
             Hy = da * Hy - db * (dEx_dz - dEz_dx)
             Hz = da * Hz - db * (dEy_dx - dEx_dy)
             # 4. 记录监视器信号
             mx, my, mz = monitor_pos
-            mon_val = Ex[mx, my, mz]
+            if monitor_component == "Ex":
+                mon_val = Ex[mx, my, mz]
+            elif monitor_component == "Ey":
+                mon_val = Ey[mx, my, mz]
+            elif monitor_component == "Ez":
+                mon_val = Ez[mx, my, mz]
             mon_sig = mon_sig.at[step_idx].set(mon_val)
             return (Ex, Ey, Ez, Hx, Hy, Hz, mon_sig), None
 
@@ -528,6 +571,8 @@ class DifferentiableFDTD:
         source_freq: float,
         n_steps: int,
         monitor_pos: tuple,
+        source_component: str = "Ex",
+        monitor_component: str = "Ex",
     ) -> dict:
         """运行 3D FDTD 时间步进（JAX 可微分）。
 
@@ -535,12 +580,18 @@ class DifferentiableFDTD:
         用 jax.lax.scan 时间步进（比 Python for 循环快 100x）。
         高斯脉冲源 + 正弦载波。
 
+        R05 修复: source_component/monitor_component 可选，支持注入/监视 Ex/Ey/Ez。
+        波导沿 x 传播时建议注入 Ey（准 TE 横向分量），避免注入 Ex（纵向分量）
+        形成驻波导致零传输。来源: Taflove 2005 §5.3（模式激发）。
+
         Args:
             epsilon_r: 介电常数分布 (nx, ny, nz)。
             source_pos: 源位置 (ix, iy, iz)。
             source_freq: 源频率 (Hz)。
             n_steps: 时间步数。
             monitor_pos: 监视器位置 (ix, iy, iz)。
+            source_component: 源注入分量 ("Ex"/"Ey"/"Ez"，默认 "Ex" 向后兼容)。
+            monitor_component: 监视器分量 ("Ex"/"Ey"/"Ez"，默认 "Ex" 向后兼容)。
 
         Returns:
             {Ex, Ey, Ez, Hx, Hy, Hz, monitor_signal} 结果字典。
@@ -549,7 +600,8 @@ class DifferentiableFDTD:
         ca, cb, da, db = self._compute_run_coefficients(epsilon_r, shape)
         source_waveform = self._build_source_waveform(n_steps, source_freq)
         scan_fn = self._make_fdtd_scan_fn(
-            ca, cb, da, db, source_waveform, source_pos, monitor_pos
+            ca, cb, da, db, source_waveform, source_pos, monitor_pos,
+            source_component, monitor_component,
         )
         carry0 = (
             jnp.zeros(shape), jnp.zeros(shape), jnp.zeros(shape),

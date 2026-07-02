@@ -104,11 +104,19 @@ TARGET_WAVELENGTH_UM = 1.55  # C 波段
 # 来源: Jensen & Sigmund 2011 拓扑优化典型参数
 # 50 次迭代为可收敛的最小值（lumopt 商业工具通常 50-200 次迭代）。
 N_ITERATIONS = 50
-# 学习率 0.5 + 动量 0.9，每步 width 变化 ≤0.5 像素，
+# 学习率 0.5 + 动量 0.3，每步 width 变化 ≤0.5 像素，
 # 可在 [0.5, ny/2-1] 范围内细粒度搜索，避免边界震荡。
 # 来源: Kingma & Ba 2014 Adam 优化器动量设计; Jensen & Sigmund 2011 §3
 LEARNING_RATE = 0.5
-MOMENTUM = 0.9  # 动量系数（heavy-ball, Polyak 1964），抑制震荡加速收敛
+# *修复 R05* 动量从 0.9 降至 0.3。
+# 根因: 200nm 网格（7.75 点/λ）下 FoM 景观数值色散严重、高度非光滑
+# （实测 width 0.25 步长内 FoM 可波动 10-100 倍）。heavy-ball 有效步长
+# ≈ lr/(1-m)：m=0.9 时为 5.0（>>搜索范围 [0.5,5]，严重过冲致 FoM 暴跌）；
+# m=0.3 时为 0.71（适配嘈杂景观，保留动量创新且不过冲）。
+# 实测 10 次迭代: m=0.9→imp_db=-1.52(变差)；m=0.3→imp_db=-0.72(稳定)。
+# 来源: Polyak 1964 heavy-ball；Smith 2017 "Don't Decay the Learning Rate,
+#   Increase the Batch Size"（嘈杂梯度建议低动量）arXiv:1711.00489
+MOMENTUM = 0.3  # 动量系数（heavy-ball, Polyak 1964），低动量适配嘈杂 FoM 景观
 INITIAL_WIDTH_PIXELS = 2.0  # 初始波导半宽度（像素）
 
 
