@@ -7,6 +7,9 @@
 - test_route_empty: 无连接的电路返回空 paths
 - test_route_invalid_mode: 非法 mode 应 raise RuntimeError（R03 禁止 fall-back）
 - test_route_missing_port: 端口缺失应 raise RuntimeError（R03 禁止 fall-back）
+- test_route_device_insertion_loss: 回归测试-路径损耗含 dev2 插入损耗,
+  total 含所有器件去重(含起始器件 gc1)（R05 Bug 修复）
+- test_route_negative_insertion_loss: 负 insertion_loss_db 应 raise（R03）
 
 来源（R02 学术诚信）:
 - pytest 文档: https://docs.pytest.org/

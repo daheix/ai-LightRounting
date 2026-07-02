@@ -16,6 +16,11 @@
 - 传播损耗 3.0 dB/cm: Soref et al. 1993 IEEE Proc. 41(9) SOI 波导上界
 - 单弯损耗 0.05 dB: SiEPIC EBeam PDK 通用路径保守上界
 - 单次交叉损耗 0.3 dB: SiEPIC EBeam PDK crossing_te1550 上界
+- 器件插入损耗: 从 ``device.params.insertion_loss_db`` 提取
+  （polaris-pdk/polaris-sparam 按器件类型提供，如 GC 1.9dB、MMI1x2 0.4dB）
+- 路径级 ``loss_db`` = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
+- 电路级 ``total_loss_db`` = sum(所有波导损耗) + sum(所有器件插入损耗去重)
+  （含起始器件如 gc1，反映全电路光功率预算，Chrostowski & Hochberg 2015 §3.3）
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 
@@ -177,6 +182,58 @@ def _find_port(
     )
 
 
+def _get_device_insertion_loss(device: dict) -> float:
+    """从器件 params 中提取插入损耗 (dB)（R02 学术诚信，参数可溯源）。
+
+    器件插入损耗来源: ``device["params"]["insertion_loss_db"]``，
+    由 polaris-pdk / polaris-sparam 按器件类型与工艺节点提供
+    （SiEPIC EBeam PDK 1550nm 典型值: GC 1.9dB, MMI1x2 0.4dB, MMI2x2 0.5dB）。
+
+    若器件未指定 ``insertion_loss_db``（如纯波导 phase_shifter 只给 neff），
+    则插入损耗为 0.0（器件本身无插入损耗，仅波导有传播损耗）。
+
+    来源（R02 学术诚信）:
+    - SiEPIC EBeam PDK grating_coupler 1.9 dB
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    - polaris-sparam mmi_1x2_s/mmi_2x2_s/grating_coupler_s 默认值
+      (modules/sparam/src/polaris_sparam/models.py)
+    - Chrostowski & Hochberg 2015 §3.3 光子链路功率预算
+      https://www.cambridge.org/core/books/silicon-photonics-design/
+
+    Args:
+        device: 器件 dict（含 params 字段）。
+
+    Returns:
+        插入损耗 (dB)，未指定则为 0.0。
+
+    Raises:
+        RuntimeError: params 非 dict / insertion_loss_db 非数值 / 为负
+            （R03 禁止 fall-back）。
+    """
+    params = device.get("params", {})
+    if not isinstance(params, dict):
+        raise RuntimeError(
+            f"器件 {device.get('name', '?')} 的 params 必须是 dict，"
+            f"得到 {type(params).__name__}（R03 禁止 fall-back）"
+        )
+    if "insertion_loss_db" not in params:
+        return 0.0
+    raw = params["insertion_loss_db"]
+    try:
+        loss = float(raw)
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError(
+            f"器件 {device.get('name', '?')} 的 insertion_loss_db 非数值: {raw}"
+            f"（R03 禁止 fall-back）"
+        ) from exc
+    if loss < 0:
+        raise RuntimeError(
+            f"器件 {device.get('name', '?')} 的 insertion_loss_db 不能为负: {loss}"
+            f"（R03 禁止 fall-back）"
+        )
+    return loss
+
+
 def _port_absolute_position(
     placement: dict, port_dx: float, port_dy: float,
 ) -> tuple[float, float]:
@@ -230,12 +287,21 @@ def route_circuit(
     1. 从 placements 查找 dev1/dev2 的左下角坐标
     2. 从 circuit.devices 查找端口相对偏移，计算端口绝对坐标
     3. 用 CurvyRouter 生成 S-bend 曲线波导路径
-    4. 统计弯曲数、交叉数，计算路径损耗（传播 + 弯曲 + 交叉）
+    4. 统计弯曲数、交叉数，计算路径损耗（波导损耗 + 器件插入损耗）
+
+    损耗模型（R02 学术诚信，参数可溯源）:
+    - 路径级 ``loss_db`` = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
+      （从 ``dev2.params.insertion_loss_db`` 提取，光经波导进入 dev2 的损耗）
+    - 电路级 ``total_loss_db`` = sum(所有波导损耗) + sum(所有器件插入损耗去重)
+      （device_map 按器件名去重，含起始器件如 gc1，反映全电路光功率预算）
+    - 传播损耗 3.0 dB/cm（Soref 1993 SOI 上界），单弯 0.05 dB，
+      单次交叉 0.3 dB（SiEPIC EBeam PDK）
 
     Args:
         circuit: polaris-core 风格 circuit dict（含 name/devices/connections/
             canvas_w/canvas_h）。每个 device 含 ports 列表
-            [(name, dx, dy, direction), ...]。
+            [(name, dx, dy, direction), ...]，params dict 可含
+            ``insertion_loss_db``（器件插入损耗 dB，无则视为 0）。
         placements: polaris-place 输出的布局结果 {name: {x, y, w, h}}，
             x/y 为器件左下角坐标 (μm)。
         mode: 布线模式，目前支持 ``"curvy"``（曲线波导布线）。
@@ -249,13 +315,13 @@ def route_circuit(
                         "dev1": str, "port1": str,
                         "dev2": str, "port2": str,
                         "points": list[[x, y], ...],  # 画布绝对坐标 (μm)
-                        "loss_db": float,             # 该路径总损耗 (dB)
+                        "loss_db": float,             # 波导损耗+dev2插入损耗 (dB)
                         "n_bends": int,               # 弯曲数
                         "n_crossings": int,           # 该路径与其他路径的交叉数
                     },
                     ...
                 ],
-                "total_loss_db": float,  # 所有路径损耗之和 (dB)
+                "total_loss_db": float,  # 所有波导损耗+所有器件插入损耗(去重) (dB)
                 "n_crossings": int,      # 总交叉对数（去重）
                 "n_bends": int,          # 所有路径弯曲数之和
                 "router_type": str,      # 布线器类型（"curvy"）
@@ -336,17 +402,28 @@ def route_circuit(
     crossing_counts = _count_path_crossings(path_points)
 
     # 第三遍: 计算每条路径的损耗与弯曲数
+    # 损耗模型（R02 学术诚信，参数可溯源）:
+    # - 路径级 loss_db = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
+    #   光经波导进入 dev2 时的损耗归到该路径（dev2.params.insertion_loss_db）
+    # - 电路级 total_loss_db = sum(所有波导损耗) + sum(所有器件插入损耗去重)
+    #   device_map 已按器件名去重，故每个器件(含起始器件如 gc1)只算一次，
+    #   反映全电路光功率预算（Chrostowski & Hochberg 2015 §3.3 链路预算）
     paths_out: list[dict] = []
-    total_loss_db = 0.0
+    total_waveguide_loss = 0.0
     total_bends = 0
     total_crossing_pairs = 0
     for idx, raw in enumerate(raw_paths):
         points = raw["points"]
         n_bends = count_bends(points)
-        # 路径损耗 = 传播 + 弯曲 + 交叉（交叉损耗 0.3 dB/crossing）
+        # 波导损耗 = 传播 + 弯曲 + 交叉（交叉损耗 0.3 dB/crossing）
         propagation_bend = _compute_path_loss(points, PROPAGATION_LOSS_DB_CM)
         crossing_loss = crossing_counts[idx] * CROSSING_LOSS_DB
-        loss_db = propagation_bend + crossing_loss
+        waveguide_loss = propagation_bend + crossing_loss
+        # 终点器件插入损耗（光进入 dev2 时的损耗，从 params.insertion_loss_db 提取）
+        dev2 = device_map[raw["dev2"]]
+        dev2_insertion_loss = _get_device_insertion_loss(dev2)
+        # 路径级损耗 = 波导损耗 + 终点器件插入损耗
+        loss_db = waveguide_loss + dev2_insertion_loss
 
         paths_out.append({
             "dev1": raw["dev1"],
@@ -358,11 +435,18 @@ def route_circuit(
             "n_bends": int(n_bends),
             "n_crossings": int(crossing_counts[idx]),
         })
-        total_loss_db += loss_db
+        total_waveguide_loss += waveguide_loss
         total_bends += n_bends
         # 交叉对去重: 每对路径的交叉在 crossing_counts 中被两条路径各计一次
         total_crossing_pairs += crossing_counts[idx]
     total_crossing_pairs //= 2
+
+    # 电路级器件插入损耗（device_map 已按器件名去重，含起始器件如 gc1）
+    total_device_insertion_loss = sum(
+        _get_device_insertion_loss(dev) for dev in device_map.values()
+    )
+    # 电路级总损耗 = 所有波导损耗 + 所有器件插入损耗(去重)
+    total_loss_db = total_waveguide_loss + total_device_insertion_loss
 
     return {
         "paths": paths_out,
