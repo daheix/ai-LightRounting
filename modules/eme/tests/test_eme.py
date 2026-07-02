@@ -72,6 +72,8 @@ def test_eme_taper():
     """锥形（宽→窄）: 传输率有限且 < 1（有界面反射）。
 
     两段宽度不同的波导相连，模式失配 → |T| < 1, |R| > 0。
+    单模 EME: 反射由 β 导纳失配 r=(β_a-β_b)/(β_a+β_b) 决定；
+    场失配功率耦合到高阶模（被忽略），故 |T|²+|R|² ≤ 1（不严格守恒）。
     """
     result = solve_eme(
         sections=[
@@ -90,13 +92,16 @@ def test_eme_taper():
     assert 0.0 < t_abs < 1.0, (
         f"锥形 |T| 应在 (0, 1)，得到 {t_abs}"
     )
-    # 反射 > 0（有模式失配）
+    # 反射 > 0（有 β 导纳失配）
     r_abs = abs(result["reflection"])
     assert r_abs > 0, f"锥形反射应 > 0，得到 {r_abs}"
-    # 功率守恒: |T|^2 + |R|^2 ≈ 1（无损耗）
+    # 单模近似: |T|²+|R|² ≤ 1（场失配功率耦合到高阶模，不归反射）
     power = t_abs ** 2 + r_abs ** 2
-    assert math.isclose(power, 1.0, rel_tol=1e-6), (
-        f"功率守恒 |T|²+|R|² 应 ≈ 1，得到 {power}"
+    assert power <= 1.0 + 1e-9, (
+        f"功率 |T|²+|R|² 应 ≤ 1，得到 {power}"
+    )
+    assert power > 0.5, (
+        f"大部分功率应保留 |T|²+|R|²>0.5，得到 {power}"
     )
     # 元数据
     assert result["n_sections"] == 2
@@ -107,6 +112,34 @@ def test_eme_taper():
     assert result["transmission_db"] < 0, (
         f"锥形 transmission_db 应 < 0，得到 {result['transmission_db']}"
     )
+
+
+def test_eme_taper_low_reflection():
+    """回归测试（R05）: 锥形波导反射率 |R| < 0.1。
+
+    旧 BUG: 界面 S 矩阵用 |r|²=1-|t|² 把场失配归为反射 → |R|=0.391。
+    修复: E/H 连续性推导 r=(β_a-β_b)/(β_a+β_b)，仅 β 导纳失配 → |R|≈0.021。
+    """
+    result = solve_eme(
+        sections=[
+            {"width_um": 1.0, "length_um": 5.0,
+             "n_core": 3.476, "n_clad": 1.444},
+            {"width_um": 0.5, "length_um": 5.0,
+             "n_core": 3.476, "n_clad": 1.444},
+        ],
+        wavelength_um=1.55,
+        n_modes_per_section=2,
+        dx_um=0.01,
+        pad_um=1.0,
+    )
+    r_abs = abs(result["reflection"])
+    assert r_abs < 0.1, (
+        f"锥形波导 |R| 应 < 0.1（β 导纳失配反射），得到 {r_abs}"
+    )
+    # neff 应在导模范围 n_clad < neff < n_core
+    for s in result["sections_info"]:
+        assert s["neff"] > s["n_clad"], f"neff 应 > n_clad"
+        assert s["neff"] < s["n_core"], f"neff 应 < n_core"
 
 
 def test_eme_uniform_multisection():

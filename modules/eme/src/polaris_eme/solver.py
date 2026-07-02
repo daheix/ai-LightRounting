@@ -8,8 +8,11 @@
 1. **本征模求解**: 对每段截面（1D slab 波导）求前 K 个本征模
    ∇²E + k₀²n²(x)E = β²E，使用 scipy.sparse.linalg.eigsh
 2. **段内传播**: P = diag(exp(j·β_i·L))（前向）/ diag(exp(-j·β_i·L))（后向）
-3. **界面模式匹配**: 重叠积分 M_{ij} = ∫ E_a^i · E_b^j* dx
-   透射系数 t = M_{00}（基模到基模），反射由功率守恒约束
+3. **界面模式匹配**（E/H 连续性 + 单模 Galerkin 投影，*创新*）:
+   场重叠 P = ∫ E_a · E_b* dx（∫|E|²dx=1 归一化）
+   TE 导纳 Y=β/ωμ，反射 r=(β_a-β_b)/(β_a+β_b)（阻抗失配）
+   透射 t = 2·β_a/(β_a+β_b)·P（β 匹配 × 场重叠）
+   注: 单模近似下场失配功率耦合到高阶模（被忽略），不归为反射
 4. **S 矩阵级联**: Redheffer 星积 S_total = S_1 ⊗ P_1 ⊗ S_2 ⊗ ... ⊗ S_N
 
 ## Input / Process / Output
@@ -25,6 +28,10 @@
 - Sztefanka & Kapon 1993 JLT https://ieeexplore.ieee.org/document/247559
 - scipy.sparse.linalg.eigsh https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.eigsh.html
 - NIST CODATA 2018 https://physics.nist.gov/cuu/Constants/
+- Collin, "Foundations for Microwave Engineering" 2001 §5.1（传输线阻抗反射）
+  https://ieeexplore.ieee.org/book/5263073
+- Marcuse, "Light Transmission Optics" 1981 §8.5（波导模式匹配 E/H 连续性）
+  https://onlinelibrary.wiley.com/doi/book/10.1002/9783527619742
 """
 
 from __future__ import annotations
@@ -401,15 +408,22 @@ def solve_eme(
         beta = sd["mode"]["beta"]
         sd["propagation_phase"] = propagate_phase(beta, sd["length_um"])
 
-    # 3. 界面模式匹配（相邻段基模重叠积分）
-    # 单模 S 矩阵: [[r, t'], [t, r]] (对称 reciprocal)
-    # t = overlap, |t|^2 + |r|^2 = 1 (lossless)
-    # r 虚部符号: r = j*sqrt(1 - |t|^2) (从低 n 到高 n 的反射相位约定)
+    # 3. 界面模式匹配（E/H 连续性 + 单模 Galerkin 投影）
+    # *创新*: 由 Maxwell 界面连续性方程严格推导单模反射/透射系数，
+    #   底层逻辑: E_y 与 H_x 在 z=0 连续，单模近似下分别投影到 E_a/E_b，
+    #   消去透射振幅后反射仅由 TE 导纳失配决定（场失配功率耦合到高阶模，不归反射）。
+    # 推导:
+    #   E 连续: (a_in+a_ref)·E_a = b_trans·E_b  →  投影 E_a: a_in+a_ref = b_trans·P
+    #   H 连续: β_a·(a_in-a_ref)·E_a = β_b·b_trans·E_b  →  投影 E_a: β_a·(a_in-a_ref)=β_b·b_trans·P
+    #   消去 b_trans·P: β_a·(a_in-a_ref) = β_b·(a_in+a_ref)
+    #   → r = a_ref/a_in = (β_a-β_b)/(β_a+β_b)  (TE 导纳 Y=β/ωμ 阻抗失配反射)
+    #   → t_ab = b_trans/a_in = 2·β_a/(β_a+β_b)·P  (含 β 匹配 + 场重叠)
+    # 旧实现 |r|²=1-|t|² 错误地把场失配全部归为反射 → |R| 高估（R05 Bug）。
+    # 参考: Collin 2001 §5.1 传输线反射 / Marcuse 1981 §8.5 波导模式匹配。
     interfaces: list[np.ndarray] = []
     for i in range(len(section_data) - 1):
         mode_a = section_data[i]["mode"]
         mode_b = section_data[i + 1]["mode"]
-        # 网格必须一致（pad/dx 相同，但 width 可能不同 → field 长度相同）
         fa = np.asarray(mode_a["field_1d"], dtype=np.float64)
         fb = np.asarray(mode_b["field_1d"], dtype=np.float64)
         if fa.shape != fb.shape:
@@ -418,20 +432,20 @@ def solve_eme(
                 f"（请确保 dx_um/pad_um 一致，R03 禁止 fall-back）"
             )
         dx = section_data[i]["grid_info"]["dx_um"]
-        t = compute_overlap_1d(fa, fb, dx)
-        t_abs_sq = abs(t) ** 2
-        # 功率守恒: |t|^2 + |r|^2 = 1
-        r_abs_sq = max(0.0, 1.0 - t_abs_sq)
-        r_abs = float(np.sqrt(r_abs_sq))
-        # 反射相位: 从低 n_clad 到高 n_core 时 r 为正，反之为负
-        n_a = section_data[i]["n_core"]
-        n_b = section_data[i + 1]["n_core"]
-        r_sign = 1.0 if n_b > n_a else -1.0
-        r = r_sign * r_abs  # 实数反射系数（无损耗）
-        # 单模 S 矩阵（2×2）
+        # 场重叠积分 P = ∫E_a·E_b dx（∫|E|²dx=1 归一化）
+        P_overlap = compute_overlap_1d(fa, fb, dx)
+        beta_a = float(mode_a["beta"])
+        beta_b = float(mode_b["beta"])
+        # 反射: TE 导纳 Y=β/ωμ，r=(Y_a-Y_b)/(Y_a+Y_b)=(β_a-β_b)/(β_a+β_b)
+        r_left = (beta_a - beta_b) / (beta_a + beta_b)
+        r_right = -r_left
+        # 透射: t = 2·Y_a/(Y_a+Y_b)·P（β 匹配 × 场重叠）
+        t_ab = 2.0 * beta_a / (beta_a + beta_b) * P_overlap
+        t_ba = 2.0 * beta_b / (beta_a + beta_b) * P_overlap
+        # 单模 S 矩阵: [[S11=左反射, S12=右→左透射],[S21=左→右透射, S22=右反射]]
         S = np.array([
-            [r, t],
-            [t, r],
+            [r_left, t_ba],
+            [t_ab, r_right],
         ], dtype=complex)
         interfaces.append(S)
 
