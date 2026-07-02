@@ -1,0 +1,17 @@
+[project]
+name = "polaris-verify-advanced"
+version = "5.0.0"
+description = "PoLaRIS 高级验证子模块（图同构LVS+层次化DRC+eqDRC+KLayout桥接+Calibre接口+曲线DRC）"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "networkx>=3.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[tool.setuptools.packages.find]
+where = ["src"]

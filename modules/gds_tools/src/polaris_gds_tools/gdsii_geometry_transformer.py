@@ -63,7 +63,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from polaris.verification.gdsii_drc_validator import _get_default_layer_map
+from polaris_gds_tools._common import get_default_layer_map as _get_default_layer_map
 
 logger = logging.getLogger(__name__)
 

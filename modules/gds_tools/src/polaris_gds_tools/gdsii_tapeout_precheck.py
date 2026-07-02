@@ -54,15 +54,15 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from polaris.verification.gdsii_cell_hierarchy_analyzer import (
+from polaris_gds_tools.gdsii_cell_hierarchy_analyzer import (
     HierarchyReport,
     analyze_cell_hierarchy,
 )
-from polaris.verification.gdsii_grid_alignment_checker import (
+from polaris_gds_tools.gdsii_grid_alignment_checker import (
     GridCheckReport,
     check_grid_alignment,
 )
-from polaris.verification.gdsii_health_check import (
+from polaris_gds_tools.gdsii_health_check import (
     HealthCheckReport,
     check_gdsii_health,
 )

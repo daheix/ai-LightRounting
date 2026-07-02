@@ -266,12 +266,12 @@ def _import_step_functions() -> dict:
     - Martin Fowler, "Refactoring", 2nd ed., 2018, Ch.6 Extract Function
       https://refactoring.com/catalog/extractFunction.html
     """
-    from polaris.verification.gdsii_statistics import generate_gdsii_statistics
-    from polaris.verification.gdsii_port_extractor import extract_ports
-    from polaris.verification.gdsii_text_label_extractor import (
+    from polaris_gds_tools.gdsii_statistics import generate_gdsii_statistics
+    from polaris_gds_tools.gdsii_port_extractor import extract_ports
+    from polaris_gds_tools.gdsii_text_label_extractor import (
         extract_text_labels,
     )
-    from polaris.verification.gdsii_tapeout_precheck import tapeout_precheck
+    from polaris_gds_tools.gdsii_tapeout_precheck import tapeout_precheck
     return {
         "statistics": generate_gdsii_statistics,
         "ports": extract_ports,

@@ -21,7 +21,7 @@ from __future__ import annotations
 import math
 import re
 
-from polaris.io.multi_format import Cell, FormatLayout, Instance, LayerInfo, Point, Shape
+from polaris_gds_tools.formats.multi_format import Cell, FormatLayout, Instance, LayerInfo, Point, Shape
 
 __all__ = ["read_lef_def", "write_lef_def"]
 

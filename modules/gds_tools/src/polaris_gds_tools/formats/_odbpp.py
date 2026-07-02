@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from xml.etree import ElementTree as ET
 
-from polaris.io.multi_format import Cell, FormatLayout, LayerInfo, Point, Shape
+from polaris_gds_tools.formats.multi_format import Cell, FormatLayout, LayerInfo, Point, Shape
 
 __all__ = ["read_odbpp", "write_odbpp"]
 

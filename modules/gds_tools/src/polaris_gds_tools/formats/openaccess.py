@@ -36,7 +36,7 @@ from __future__ import annotations
 
 import re
 
-from polaris.io.multi_format import (
+from polaris_gds_tools.formats.multi_format import (
     Cell,
     FormatLayout,
     Instance,
