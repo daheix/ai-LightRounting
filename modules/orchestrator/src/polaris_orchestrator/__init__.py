@@ -1,8 +1,9 @@
 """PoLaRIS 编排层（polaris-orchestrator）。
 
-组合 8 个独立子模块（core/pdk/place/route/sim/verify/inverse/quantum）为
+组合 9 个独立子模块（core/pdk/place/route/sim/drc/lvs/inverse/quantum）为
 完整 EDA 流程，提供稳定 Python API ``run_eda_flow``，一键完成 9 个 stage
-（polaris_pdk 在 stage 1 与 stage 7 各用一次）。
+（polaris_pdk 在 stage 1 与 stage 7 各用一次）。polaris-verify 已拆分为
+polaris-drc + polaris-lvs 两个单一职责子模块（v5.0）。
 
 ## 稳定 API
 
@@ -24,8 +25,8 @@
 3. AI 布局      polaris_place.place_circuit  mode="analytical"
 4. 智能布线     polaris_route.route_circuit
 5. 仿真验证     polaris_sim.simulate_mzi_sparam + compute_clements_unitary + simulate_pam4
-6. DRC / LVS    polaris_verify.run_drc + run_lvs
-7. GDS 导出     polaris_pdk.export_gds
+6. DRC / LVS    polaris_drc.run_drc + polaris_lvs.run_lvs
+7. GDS 导出     polaris_gdsio.export_gds
 8. 逆向设计     polaris_inverse.optimize_waveguide_width  n_iterations=10
 9. 量子验证     polaris_quantum.klm_cnot + hom_interference
 

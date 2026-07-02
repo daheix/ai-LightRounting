@@ -7,15 +7,15 @@ extern "C" {
 
 /* polaris_orchestrator_run_eda_flow: 一键运行完整 EDA 流程
  *
- * 9 个 stage 顺序执行（对应 8 个子模块，polaris_pdk 用于 stage 1 与 7）:
+ * 9 个 stage 顺序执行（对应 9 个子模块，polaris_pdk 用于 stage 1，polaris_gdsio 用于 stage 7）:
  *   1. PDK 目录           (polaris_pdk.list_platforms)
  *   2. 电路验证           (polaris_core.validate_circuit)
  *   3. AI 布局            (polaris_place.place_circuit mode="analytical")
  *   4. 智能布线           (polaris_route.route_circuit)
  *   5. 仿真验证           (polaris_sim.simulate_mzi_sparam +
  *                          compute_clements_unitary + simulate_pam4)
- *   6. DRC / LVS          (polaris_verify.run_drc + run_lvs)
- *   7. GDS 导出           (polaris_pdk.export_gds)
+ *   6. DRC / LVS          (polaris_drc.run_drc + polaris_lvs.run_lvs)
+ *   7. GDS 导出           (polaris_gdsio.export_gds)
  *   8. 逆向设计           (polaris_inverse.optimize_waveguide_width
  *                          n_iterations=10 省时)
  *   9. 量子验证           (polaris_quantum.klm_cnot + hom_interference)

@@ -13,6 +13,7 @@ CFLAGS = -Wall -Wextra -O2 -std=c11 \
     -I../../modules/_c_abi \
     -I../../modules/core/c_api \
     -I../../modules/pdk/c_api \
+    -I../../modules/gdsio/c_api \
     -I../../modules/place/c_api \
     -I../../modules/route/c_api \
     -I../../modules/sim/c_api \

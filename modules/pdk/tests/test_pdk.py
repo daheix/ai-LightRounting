@@ -1,25 +1,27 @@
-"""polaris-pdk 子模块测试。
+"""polaris-pdk 子模块测试（v5.1：仅器件库查询）。
+
+v5.1 起 GDSII 导入导出测试已迁移到 polaris-gdsio/tests/test_gdsio.py。
+本文件只测试器件目录查询。
 
 测试覆盖:
 - test_list_platforms: 4 平台（SOI/SiN/InP/LNOI），每平台 9 器件
 - test_get_device: SOI grating_coupler insertion_loss_db=1.9
 - test_get_device_not_found: 不存在的器件 raise RuntimeError（R03 禁止 fall-back）
 - test_list_devices: 列出某平台所有器件
-- test_export_gds: 用 polaris_core.make_circuit 创建 MZI，导出 GDSII，验证 loadable=True
-- test_import_gds: 导入 GDSII，验证 n_structures/n_layers/bbox_um
 
-来源:
+来源（R02 学术诚信）:
 - pytest 文档: https://docs.pytest.org/
-- klayout Database API:
-  https://www.klayout.org/downloads/master/doc-qt4/programming/database_api.html
-- gdsfactory write_gds: https://gdsfactory.github.io/gdsfactory/api.html
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Ligentec ANR PDK: https://www.ligentec.com/
+- Pattern Project / JEPPIX InP: https://www.jeppix.eu/
+- HyperLight LNOI PDK: https://hyperlightphotonics.com/
+- Soares et al., Appl. Sci. 2019, 9(8), 1588:
+  https://doi.org/10.3390/app9081588
 """
 
 from __future__ import annotations
 
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -27,13 +29,10 @@ import pytest
 
 # 让测试既能从已安装包导入，也能从源码树导入（CI/开发模式）
 _SRC = str(Path(__file__).resolve().parents[1] / "src")
-_CORE_SRC = str(Path(__file__).resolve().parents[2] / "core" / "src")
-for _p in (_SRC, _CORE_SRC):
-    if _p not in sys.path:
-        sys.path.insert(0, _p)
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
 
-from polaris_core import make_circuit, make_device
-from polaris_pdk import export_gds, get_device, import_gds, list_devices, list_platforms
+from polaris_pdk import get_device, list_devices, list_platforms
 
 
 def test_list_platforms():
@@ -105,89 +104,12 @@ def test_list_devices():
     assert devs2[0]["params"]["loss_db_cm"] != 999.0
 
 
-def test_export_gds(tmp_path):
-    """用 polaris_core.make_circuit 创建 MZI，导出 GDSII，验证 loadable=True。"""
-    # 构建 MZI 电路：2 光栅耦合器 + 2 Y 分支 + 1 波导
-    gc1 = make_device("gc1", "grating_coupler", 20, 12,
-                      ports=[("wg", 0, 6, "west")],
-                      params={"insertion_loss_db": 1.9},
-                      process_node="220nm SOI")
-    gc2 = make_device("gc2", "grating_coupler", 20, 12,
-                      ports=[("wg", 20, 6, "east")],
-                      params={"insertion_loss_db": 1.9},
-                      process_node="220nm SOI")
-    yb1 = make_device("yb1", "y_branch", 10, 2,
-                      ports=[("in", 0, 1, "west"),
-                             ("out1", 10, 0.5, "east"),
-                             ("out2", 10, -0.5, "east")],
-                      process_node="220nm SOI")
-    yb2 = make_device("yb2", "y_branch", 10, 2,
-                      ports=[("in", 0, 0.5, "west"),
-                             ("out1", 10, 1, "east"),
-                             ("out2", 10, -1, "east")],
-                      process_node="220nm SOI")
-    wg = make_device("wg1", "strip_waveguide", 50, 0.5,
-                     ports=[("in", 0, 0, "west"), ("out", 50, 0, "east")],
-                     process_node="220nm SOI")
-    circuit = make_circuit(
-        "MZI",
-        devices=[gc1, gc2, yb1, yb2, wg],
-        connections=[
-            ["gc1", "wg", "yb1", "in"],
-            ["yb1", "out1", "wg", "in"],
-            ["wg", "out", "yb2", "in"],
-            ["yb2", "out1", "gc2", "wg"],
-        ],
-        canvas_w=200.0,
-        canvas_h=50.0,
-        process_node="220nm SOI",
-    )
-    out_path = str(tmp_path / "mzi.gds")
-    result = export_gds(circuit, out_path)
-    assert isinstance(result, dict)
-    assert result["path"] == str(Path(out_path).resolve())
-    assert result["file_size_bytes"] > 0
-    assert result["n_structures"] >= 2  # 顶层 + 至少 1 子 cell
-    assert result["n_layers"] >= 1
-    assert result["loadable"] is True
-    # 文件确实存在
-    assert Path(out_path).exists()
-    # JSON 可序列化
-    json.dumps(result)
-
-
-def test_import_gds(tmp_path):
-    """导入 GDSII，验证 n_structures/n_layers/layers/bbox_um 字段。"""
-    # 先导出一个 GDSII 再导入（端到端往返）
-    dev = make_device("d1", "strip_waveguide", 10, 0.5,
-                      ports=[("in", 0, 0, "west"), ("out", 10, 0, "east")])
-    circuit = make_circuit("TestCircuit", devices=[dev], connections=[],
-                           canvas_w=100.0, canvas_h=20.0)
-    gds_path = str(tmp_path / "test.gds")
-    export_gds(circuit, gds_path)
-
-    result = import_gds(gds_path)
-    assert isinstance(result, dict)
-    assert result["n_structures"] >= 1
-    assert result["n_layers"] >= 1
-    assert isinstance(result["layers"], list)
-    assert len(result["layers"]) == result["n_layers"]
-    for layer in result["layers"]:
-        assert "gds_layer" in layer
-        assert "gds_datatype" in layer
-        assert "polaris_name" in layer
-        assert "n_shapes" in layer
-    assert "bbox_um" in result
-    for k in ("xmin", "ymin", "xmax", "ymax"):
-        assert k in result["bbox_um"]
-    # WG 层 (1, 0) 应存在
-    wg_layers = [l for l in result["layers"] if l["gds_layer"] == 1]
-    assert len(wg_layers) >= 1
-    # JSON 可序列化
-    json.dumps(result)
-
-
-def test_import_gds_not_found():
-    """导入不存在的文件 raise FileNotFoundError（R03 禁止 fall-back）。"""
-    with pytest.raises(FileNotFoundError):
-        import_gds("/nonexistent/path/file.gds")
+def test_pdk_no_gdsio_attr():
+    """v5.1: polaris-pdk 不再导出 export_gds/import_gds（已拆到 polaris-gdsio）。"""
+    import polaris_pdk
+    assert not hasattr(polaris_pdk, "export_gds")
+    assert not hasattr(polaris_pdk, "import_gds")
+    # __all__ 只含器件库查询 API
+    assert set(polaris_pdk.__all__) == {
+        "list_platforms", "get_device", "list_devices", "__version__",
+    }

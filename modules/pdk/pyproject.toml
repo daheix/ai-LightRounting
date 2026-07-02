@@ -1,9 +1,9 @@
 [project]
 name = "polaris-pdk"
-version = "5.0.0"
-description = "PoLaRIS PDK 器件库管理 + GDSII 导入导出（SOI/SiN/InP/LNOI 四平台）"
+version = "5.1.0"
+description = "PoLaRIS PDK 器件库管理（SOI/SiN/InP/LNOI 四平台 36 器件，单一职责）"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24", "klayout>=0.28"]
+dependencies = ["numpy>=1.24"]
 
 [build-system]
 requires = ["setuptools>=68"]

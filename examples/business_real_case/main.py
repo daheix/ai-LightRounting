@@ -73,6 +73,7 @@ ROOT = Path(__file__).resolve().parents[2]
 for m in (
     "core",
     "pdk",
+    "gdsio",
     "place",
     "route",
     "sim",
@@ -84,8 +85,9 @@ for m in (
     sys.path.insert(0, str(ROOT / f"modules/{m}/src"))
 
 from polaris_core import make_circuit, make_device, validate_circuit
+from polaris_gdsio import export_gds
 from polaris_inverse import optimize_waveguide_width
-from polaris_pdk import export_gds, list_platforms
+from polaris_pdk import list_platforms
 from polaris_place import place_circuit
 from polaris_quantum import hom_interference, klm_cnot
 from polaris_route import route_circuit
@@ -94,7 +96,8 @@ from polaris_sim import (
     simulate_mzi_sparam,
     simulate_pam4,
 )
-from polaris_verify import run_drc, run_lvs
+from polaris_drc import run_drc
+from polaris_lvs import run_lvs
 
 # 输出目录（GDSII 等产物落盘位置）
 OUTPUT_DIR = str(ROOT / "out" / "business_real_case")
@@ -342,8 +345,8 @@ def approach_b_direct_modules() -> None:
     print(f"  PAM4 眼图 ({pam4['n_symbols']} 符号 @ {pam4['bit_rate_gbps']:.0f}Gbps):")
     print(f"    BER = {pam4['ber']:.2e}  SNR = {pam4['snr_db']:.2f} dB")
 
-    # ---- 6. polaris_verify: DRC / LVS ----
-    print("\n[6/8] polaris_verify: DRC / LVS 验证")
+    # ---- 6. polaris_drc / polaris_lvs: DRC / LVS ----
+    print("\n[6/8] polaris_drc / polaris_lvs: DRC / LVS 验证")
     drc = run_drc(circuit, placement["placements"])
     print(f"  DRC: {drc['n_rules']} 条规则, 通过率 {drc['pass_rate']:.1%} "
           f"({drc['n_passed']}/{drc['n_rules']}), "

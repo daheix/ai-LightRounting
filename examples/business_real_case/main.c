@@ -58,6 +58,7 @@
 /* 包含 8 个子模块 C ABI 头文件 + orchestrator 编排层 */
 #include "core.h"
 #include "pdk.h"
+#include "gdsio.h"
 #include "place.h"
 #include "route.h"
 #include "sim.h"
@@ -291,9 +292,9 @@ static int approach_b_direct_modules(const polaris_circuit_t* circuit) {
     polaris_result_free(&result);
     memset(&result, 0, sizeof(result));
 
-    /* ---- 7. polaris_pdk: GDSII 导出 ---- */
-    printf("\n[7/8] polaris_pdk: GDSII 导出\n");
-    err = polaris_pdk_export_gds(circuit, "out/business_real_case/MZI_100G.gds", &result);
+    /* ---- 7. polaris_gdsio: GDSII 导出 ---- */
+    printf("\n[7/8] polaris_gdsio: GDSII 导出\n");
+    err = polaris_gdsio_export(circuit, "out/business_real_case/MZI_100G.gds", &result);
     if (err != POLARIS_OK) {
         printf("  [FAIL] export_gds: %s\n", polaris_error_message(err));
         ret = 1; goto cleanup;

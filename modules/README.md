@@ -1,19 +1,20 @@
 # PoLaRIS 子模块架构总览
 
-PoLaRIS v5.0 拆分为 **8 个独立子模块 + 1 个编排层**，每个子模块独立目录/独立 pyproject/独立测试/独立 C ABI 头文件，可独立管理升级。
+PoLaRIS v5.1 拆分为 **9 个独立子模块 + 1 个编排层**，每个子模块独立目录/独立 pyproject/独立测试/独立 C ABI 头文件，可独立管理升级。
 
 ## 子模块划分
 
 | # | 子模块 | 路径 | 职责 | Python API | C ABI 函数 |
 |---|--------|------|------|-----------|-----------|
 | 1 | polaris-core | `modules/core/` | 核心数据结构（CircuitSpec/DeviceSpec/Tensor） | `make_device`, `make_circuit`, `validate_circuit`, `Tensor` | `polaris_core_make_device`, `polaris_core_make_circuit`, `polaris_core_validate_circuit` |
-| 2 | polaris-pdk | `modules/pdk/` | PDK 管理（4平台36器件 + GDSII 导入导出） | `list_platforms`, `get_device`, `list_devices`, `export_gds`, `import_gds` | `polaris_pdk_list_platforms`, `polaris_pdk_get_device`, `polaris_pdk_export_gds` |
-| 3 | polaris-place | `modules/place/` | AI 布局（解析布局 + AlphaChip Edge-GNN+PPO） | `place_circuit`, `compute_hpwl`, `render_ascii_layout` | `polaris_place_circuit`, `polaris_place_compute_hpwl` |
-| 4 | polaris-route | `modules/route/` | 智能布线（curvy 曲线波导） | `route_circuit`, `compute_path_loss` | `polaris_route_circuit` |
-| 5 | polaris-sim | `modules/sim/` | 仿真（频域S参数/Clements酉矩阵/PAM4） | `waveguide_s`, `mmi_1x2_s`, `mmi_2x2_s`, `grating_coupler_s`, `simulate_mzi_sparam`, `compute_clements_unitary`, `simulate_pam4` | `polaris_sim_mzi_sparam`, `polaris_sim_clements_unitary`, `polaris_sim_pam4` |
-| 6 | polaris-verify | `modules/verify/` | 验证（DRC 12条规则 + LVS 网表比对） | `run_drc`, `run_lvs` | `polaris_verify_drc`, `polaris_verify_lvs` |
-| 7 | polaris-inverse | `modules/inverse/` | 逆向设计（JAX jax.grad 自动微分 *创新*） | `optimize_waveguide_width` | `polaris_inverse_optimize_width` |
-| 8 | polaris-quantum | `modules/quantum/` | 量子光子（玻色采样/KLM/HOM/Clements） | `boson_sampling`, `klm_cnot`, `hom_interference`, `clements_unitary` | `polaris_quantum_boson_sampling`, `polaris_quantum_klm_cnot`, `polaris_quantum_hom` |
+| 2 | polaris-pdk | `modules/pdk/` | PDK 器件库（4平台36器件，单一职责） | `list_platforms`, `get_device`, `list_devices` | `polaris_pdk_list_platforms`, `polaris_pdk_get_device` |
+| 3 | polaris-gdsio | `modules/gdsio/` | GDSII 导入导出（klayout.db 后端，单一职责） | `export_gds`, `import_gds` | `polaris_gdsio_export`, `polaris_gdsio_import` |
+| 4 | polaris-place | `modules/place/` | AI 布局（解析布局 + AlphaChip Edge-GNN+PPO） | `place_circuit`, `compute_hpwl`, `render_ascii_layout` | `polaris_place_circuit`, `polaris_place_compute_hpwl` |
+| 5 | polaris-route | `modules/route/` | 智能布线（curvy 曲线波导） | `route_circuit`, `compute_path_loss` | `polaris_route_circuit` |
+| 6 | polaris-sim | `modules/sim/` | 仿真（频域S参数/Clements酉矩阵/PAM4） | `waveguide_s`, `mmi_1x2_s`, `mmi_2x2_s`, `grating_coupler_s`, `simulate_mzi_sparam`, `compute_clements_unitary`, `simulate_pam4` | `polaris_sim_mzi_sparam`, `polaris_sim_clements_unitary`, `polaris_sim_pam4` |
+| 7 | polaris-verify | `modules/verify/` | 验证（DRC 12条规则 + LVS 网表比对） | `run_drc`, `run_lvs` | `polaris_verify_drc`, `polaris_verify_lvs` |
+| 8 | polaris-inverse | `modules/inverse/` | 逆向设计（JAX jax.grad 自动微分 *创新*） | `optimize_waveguide_width` | `polaris_inverse_optimize_width` |
+| 9 | polaris-quantum | `modules/quantum/` | 量子光子（玻色采样/KLM/HOM/Clements） | `boson_sampling`, `klm_cnot`, `hom_interference`, `clements_unitary` | `polaris_quantum_boson_sampling`, `polaris_quantum_klm_cnot`, `polaris_quantum_hom` |
 | - | polaris-orchestrator | `modules/orchestrator/` | 业务编排层（一键调用8子模块） | `run_eda_flow` | `polaris_orchestrator_run_eda_flow` |
 
 ## C ABI 公共层
@@ -38,7 +39,8 @@ PoLaRIS v5.0 拆分为 **8 个独立子模块 + 1 个编排层**，每个子模�
 | `validate_circuit(circuit)` | `polaris_core_validate_circuit(...)` | `polaris_error_t` |
 | `list_platforms()` | `polaris_pdk_list_platforms(...)` | `polaris_result_t` (JSON) |
 | `get_device(platform, type)` | `polaris_pdk_get_device(...)` | `polaris_result_t` (JSON) |
-| `export_gds(circuit, path)` | `polaris_pdk_export_gds(...)` | `polaris_result_t` (JSON) |
+| `export_gds(circuit, path)` | `polaris_gdsio_export(...)` | `polaris_result_t` (JSON) |
+| `import_gds(gds_path)` | `polaris_gdsio_import(...)` | `polaris_result_t` (JSON) |
 | `place_circuit(circuit, mode)` | `polaris_place_circuit(...)` | `polaris_placement_result_t` |
 | `compute_hpwl(circuit, placements)` | `polaris_place_compute_hpwl(...)` | `double` |
 | `route_circuit(circuit, placements, mode)` | `polaris_route_circuit(...)` | `polaris_routing_result_t` |

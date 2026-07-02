@@ -8,8 +8,8 @@
     3. AI 布局        polaris_place.place_circuit  mode="analytical"
     4. 智能布线       polaris_route.route_circuit
     5. 仿真验证       polaris_sim.simulate_mzi_sparam + compute_clements_unitary + simulate_pam4
-    6. DRC / LVS      polaris_verify.run_drc + run_lvs
-    7. GDS 导出       polaris_pdk.export_gds
+    6. DRC / LVS      polaris_drc.run_drc + polaris_lvs.run_lvs
+    7. GDS 导出       polaris_gdsio.export_gds
     8. 逆向设计       polaris_inverse.optimize_waveguide_width  n_iterations=10
     9. 量子验证       polaris_quantum.klm_cnot + hom_interference
 
@@ -49,13 +49,15 @@ import traceback
 from typing import Any, Callable
 
 import polaris_core
+import polaris_gdsio
 import polaris_inverse
 import polaris_pdk
 import polaris_place
 import polaris_quantum
 import polaris_route
 import polaris_sim
-import polaris_verify
+import polaris_drc
+import polaris_lvs
 
 # 编排层版本（与子模块对齐到 5.0.0）
 __version__ = "5.0.0"
@@ -115,8 +117,8 @@ def _stage_drc_lvs(circuit: dict, ctx: dict) -> Any:
     若 stage 3 失败导致 placements 缺失，run_drc 自身 raise（R03）。
     """
     placements = ctx.get("placements")
-    drc = polaris_verify.run_drc(circuit, placements)
-    lvs = polaris_verify.run_lvs(circuit)
+    drc = polaris_drc.run_drc(circuit, placements)
+    lvs = polaris_lvs.run_lvs(circuit)
     return {
         "drc": drc,
         "lvs": lvs,
@@ -128,7 +130,7 @@ def _stage_export_gds(circuit: dict, ctx: dict) -> Any:
     output_dir = ctx["output_dir"]
     os.makedirs(output_dir, exist_ok=True)
     gds_path = os.path.join(output_dir, f"{circuit.get('name', 'circuit')}.gds")
-    return polaris_pdk.export_gds(circuit, gds_path)
+    return polaris_gdsio.export_gds(circuit, gds_path)
 
 
 def _stage_inverse(_circuit: dict, _ctx: dict) -> Any:
