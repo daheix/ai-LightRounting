@@ -9,8 +9,16 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
 import numpy as np
 import pytest
+
+# 让测试既能从已安装包导入，也能从源码树导入（CI/开发模式）
+_SRC = str(Path(__file__).resolve().parents[1] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
 
 
 # =============================================================================

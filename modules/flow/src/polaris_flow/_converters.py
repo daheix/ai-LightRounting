@@ -28,10 +28,49 @@ SimLoop 闭环返回纯 dict 布局/路径（``{name: {x,y,w,h}}`` /
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 from polaris_core.specs import CircuitSpec
 
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Placement 数据结构（v5.0 本地定义，router 输入契约）
+# ---------------------------------------------------------------------------
+# v5.0 拆分后 polaris-core 未提供 Placement（仅 DeviceSpec/CircuitSpec），
+# 且 polaris-flow 的 pyproject.toml 仅依赖 polaris-core，故在此本地定义
+# 最小化 Placement（duck typing: device 需提供 bbox/rotate）。
+#
+# 来源（R02 学术诚信）:
+# - DREAMPlace TCAD 2020 Placement 数据结构 https://arxiv.org/abs/2004.10746
+# - gdsfactory ComponentReference https://gdsfactory.github.io/gdsfactory/
+# - OpenROAD odb inst 数据结构 https://github.com/The-OpenROAD-Project/OpenROAD
+# - SiEPIC EBeam PDK 放置模型 https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+# - KLayout CellInstArray https://www.klayout.de/doc/manual/gdsii.html
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Placement:
+    """单个器件的放置结果（GDS 导出输入契约）。
+
+    device 采用 duck typing: 需提供 ``rotate(angle_deg)`` 与 ``bbox``
+    （含 xmin/xmax/ymin/ymax）。兼容 polaris-pdk-advanced.Device。
+    """
+
+    instance_id: str
+    device: object
+    x: float
+    y: float
+    rotation: int = 0
+
+    def bbox_abs(self) -> tuple[float, float, float, float]:
+        """返回放置后轴对齐包围盒 (xmin, ymin, xmax, ymax)。"""
+        dev = self.device.rotate(self.rotation) if self.rotation else self.device
+        w = dev.bbox.xmax - dev.bbox.xmin
+        h = dev.bbox.ymax - dev.bbox.ymin
+        return (self.x, self.y, self.x + w, self.y + h)
 
 
 # Direction 字母 → Direction 枚举（DeviceSpec.ports 元组第 4 项）
@@ -42,7 +81,7 @@ def _get_dir_letter_map() -> dict[str, object]:
     """延迟构造方向字母映射（避免顶层 import 循环）。"""
     global _DIR_LETTER_TO_DIRECTION
     if _DIR_LETTER_TO_DIRECTION is None:
-        from polaris.pdk.port import Direction
+        from polaris_pdk_advanced._base import Direction
 
         _DIR_LETTER_TO_DIRECTION = {
             "E": Direction.EAST,
@@ -86,7 +125,7 @@ def _build_ports_from_spec(spec_ports: list) -> list:
 
     DeviceSpec.ports 格式: ``[(name, x, y, direction_letter), ...]``。
     """
-    from polaris.pdk.port import Direction, Port
+    from polaris_pdk_advanced._base import Direction, Port
 
     dir_map = _get_dir_letter_map()
     ports: list[Port] = []
@@ -111,7 +150,7 @@ def _build_ports_from_spec(spec_ports: list) -> list:
 
 def _build_device_from_spec(spec) -> object:
     """从 DeviceSpec 构造 Device 对象（含端口与包围盒）。"""
-    from polaris.pdk.device import BoundingBox, Device
+    from polaris_pdk_advanced._base import BoundingBox, Device
 
     ports = _build_ports_from_spec(spec.ports)
     category = _DEVICE_TYPE_TO_CATEGORY.get(spec.device_type, "passive")
@@ -140,8 +179,6 @@ def convert_to_placements(circuit: CircuitSpec, sim_placements: dict) -> dict:
     Returns:
         ``{instance_id: Placement}`` 映射。
     """
-    from polaris.engine.floorplan_env import Placement
-
     spec_by_name = {dev.name: dev for dev in circuit.devices}
     placements: dict[str, Placement] = {}
     for inst_id, pl_dict in sim_placements.items():
@@ -177,8 +214,8 @@ def convert_to_paths(sim_paths: dict) -> dict:
     Returns:
         ``{int: WaveguidePath}`` 映射（按枚举顺序编号）。
     """
-    from polaris.router.path_geometry import path_length, path_loss
-    from polaris.router.waveguide_router import WaveguidePath
+    from polaris_router_advanced.path_geometry import path_length, path_loss
+    from polaris_router_advanced.waveguide_router import WaveguidePath
 
     # SOI 平台传播损耗 3 dB/cm（SiEPIC EBeam PDK 标准值）
     soi_loss_db_cm = 3.0
