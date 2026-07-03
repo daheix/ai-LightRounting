@@ -11,15 +11,17 @@
 #   7. 报告最终状态
 #
 # 使用方法：
-#   bash all_init_inone.sh              # 完整初始化（沙箱重启后用这个）
+#   bash all_init_inone.sh              # 完整初始化（沙箱重启后用这个，默认离线优先）
 #   bash all_init_inone.sh -v           # 详细输出
 #   bash all_init_inone.sh --no-daemon  # 不启动守护进程
 #   bash all_init_inone.sh --force      # 强制重新安装（忽略标记）
+#   bash all_init_inone.sh --offline    # 纯离线模式（网络不好时用，不在线补装）
 #
-# 对接 3dtool 子仓库:
-#   - wheels/: 47 个 cp314 wheel（numpy/scipy/matplotlib/pydantic/pytest/ruff/mypy 等）
-#   - 离线安装优先（--no-index --find-links=3dtool/wheels），缺失的在线补装
-#   - 参考 3dtool/install.sh 的离线安装模式
+# 双离线源（网络不好时避免在线安装）:
+#   3dtool/wheels/    - 47 个通用 cp314 wheel（3dtool 维护，numpy/scipy/matplotlib 等）
+#   polaris_wheels/   - 43 个 PoLaRIS 特有 wheel（jax/sax/klayout/gymnasium 及依赖）
+#   合计 90 个 wheel，340M，覆盖 PoLaRIS 全部依赖
+#   参考: pip 官方 wheelhouse 模式 https://pip.pypa.io/en/stable/topics/repeatable-installs/
 #
 # 规则依据:
 #   R01 方案检索: 离线 wheel 安装参考 pip 官方文档 + 3dtool/install.sh
@@ -34,10 +36,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="${SCRIPT_DIR}"
 MODULES_DIR="${REPO_DIR}/modules"
 WHEELS_DIR="${REPO_DIR}/3dtool/wheels"
+POLARIS_WHEELS_DIR="${REPO_DIR}/polaris_wheels"
 MARK_FILE="/tmp/.polaris_installed"
 VERBOSE=0
 NO_DAEMON=0
 FORCE=0
+OFFLINE=0
 
 ts() { date "+%Y-%m-%d %H:%M:%S"; }
 log() { echo "[$(ts)] [init] $*"; }
@@ -49,6 +53,7 @@ for arg in "$@"; do
         -v|--verbose) VERBOSE=1 ;;
         --no-daemon) NO_DAEMON=1 ;;
         --force) FORCE=1 ;;
+        --offline) OFFLINE=1 ;;
     esac
 done
 
@@ -93,62 +98,64 @@ if ! bash "${SETUP_SUB}" ${SUB_ARGS}; then
 fi
 log "  submodule: $(git submodule status 2>&1 | head -1)"
 
-# 检查 wheels 目录（3dtool 对接关键）
+# 检查 wheels 目录（双离线源，3dtool 对接关键）
 if [ ! -d "${WHEELS_DIR}" ] || [ -z "$(ls -A "${WHEELS_DIR}"/*.whl 2>/dev/null)" ]; then
     err "3dtool/wheels/ 不存在或为空: ${WHEELS_DIR}"
     err "无法离线安装依赖（R03 禁止 fall-back）"
     exit 1
 fi
 WHEEL_COUNT=$(ls "${WHEELS_DIR}"/*.whl 2>/dev/null | wc -l)
-log "  wheels: ${WHEEL_COUNT} 个离线 wheel（Python 3.14 cp314）"
+POLARIS_WHEEL_COUNT=$(ls "${POLARIS_WHEELS_DIR}"/*.whl 2>/dev/null | wc -l)
+TOTAL_WHEELS=$((WHEEL_COUNT + POLARIS_WHEEL_COUNT))
+log "  离线源: 3dtool/wheels/${WHEEL_COUNT} + polaris_wheels/${POLARIS_WHEEL_COUNT} = ${TOTAL_WHEELS} wheel"
 
-# ========== 步骤4: 升级打包工具 + 离线安装 wheels ==========
-log "[4/7] 离线安装 3dtool/wheels/ 依赖（${WHEEL_COUNT} 个 wheel）..."
+# ========== 步骤4: 双离线源安装 wheels（纯离线优先，在线补装兜底） ==========
+log "[4/7] 安装依赖（双离线源: 3dtool/wheels + polaris_wheels）..."
 
-# 4a: 升级打包工具（Python 3.14 需要 setuptools>=75，wheels 里有）
+# 4a: 升级打包工具（Python 3.14 需要 setuptools>=75）
 logv "  4a: 升级 pip/setuptools/wheel..."
 pip install --upgrade pip setuptools wheel 2>&1 | tail -2 || {
     err "pip/setuptools/wheel 升级失败"
     exit 1
 }
 
-# 4b: 离线安装所有 wheel（参考 3dtool/install.sh 模式）
-# gerbonara 依赖 quart（未打包），用 --no-deps 安装
-logv "  4b: 离线安装所有 wheel（--no-index --find-links）..."
-declare -a OTHER_WHEELS=()
-for w in "${WHEELS_DIR}"/*.whl; do
-    case "$(basename "$w")" in
-        gerbonara-*) continue ;;
-    esac
-    OTHER_WHEELS+=("$w")
-done
-if [ ${#OTHER_WHEELS[@]} -gt 0 ]; then
-    pip install --no-index --find-links="${WHEELS_DIR}" "${OTHER_WHEELS[@]}" 2>&1 | tail -3 || {
-        err "离线 wheel 安装失败"
-        exit 1
-    }
+# 4b: 纯离线安装所有 wheel（双源 --no-index --find-links + requirements-pinned.txt）
+# 参考: pip 官方 wheelhouse 模式 https://pip.pypa.io/en/stable/topics/repeatable-installs/
+# 用 -r requirements-pinned.txt 让 pip 自动从双源解析最优版本，避免重复包冲突
+# gerbonara 依赖 quart（未打包），用 --no-deps 单独安装
+logv "  4b: 纯离线安装（--no-index --find-links 双源 + requirements-pinned.txt）..."
+REQUIREMENTS_FILE="${REPO_DIR}/requirements-pinned.txt"
+if [ ! -f "${REQUIREMENTS_FILE}" ]; then
+    err "requirements-pinned.txt 不存在: ${REQUIREMENTS_FILE}"
+    exit 1
 fi
-# gerbonara 单独 --no-deps
+if ! pip install --no-index \
+    --find-links="${POLARIS_WHEELS_DIR}" \
+    --find-links="${WHEELS_DIR}" \
+    -r "${REQUIREMENTS_FILE}" 2>&1 | tail -5; then
+    err "离线 wheel 安装失败（依赖解析冲突？检查 requirements-pinned.txt 版本）"
+    exit 1
+fi
+# gerbonara 单独 --no-deps（quart 未打包）
 GERB_WHL=$(ls "${WHEELS_DIR}"/gerbonara-*.whl 2>/dev/null | head -1)
 if [ -n "${GERB_WHL}" ]; then
     pip install --no-index --no-deps "${GERB_WHL}" 2>&1 | tail -2 || logv "  gerbonara 安装跳过"
 fi
-log "  离线安装完成（${WHEEL_COUNT} wheel）"
+log "  离线安装完成（${TOTAL_WHEELS} wheel）"
 
-# 4c: 在线补装 wheels 里没有的依赖（jax[cpu]/sax/klayout/gymnasium）
-# 这些是 PoLaRIS 特有依赖，3dtool wheels 不包含
-logv "  4c: 在线补装 PoLaRIS 特有依赖（jax[cpu]/sax/klayout/gymnasium）..."
-pip install \
-    "jax[cpu]" \
-    "jaxlib[cpu]" \
-    sax \
-    klayout \
-    gymnasium \
-    2>&1 | tail -3 || {
-    err "在线补装失败（网络问题？）"
-    exit 1
-}
-log "  在线补装完成"
+# 4c: 纯离线模式跳过在线补装；否则在线补装缺失依赖（兜底）
+if [ "${OFFLINE}" = "1" ]; then
+    log "  [offline 模式] 跳过在线补装"
+else
+    logv "  4c: 在线补装缺失依赖（兜底，网络不好可跳过用 --offline）..."
+    pip install \
+        "jax[cpu]" \
+        "jaxlib[cpu]" \
+        sax \
+        klayout \
+        gymnasium \
+        2>&1 | tail -3 || logv "  在线补装跳过（网络问题，离线源已覆盖）"
+fi
 
 # ========== 步骤5: editable 安装 PoLaRIS 33 模块 ==========
 log "[5/7] 安装 PoLaRIS 33 模块（editable）..."
@@ -250,7 +257,7 @@ echo "submodule:   $(git submodule status 2>&1 | head -1)"
 echo "Python:      $(python --version 2>&1)"
 echo "JAX 平台:    $(python -c 'import jax; print(jax.default_backend())' 2>/dev/null)（R04 合规）"
 echo "模块:        ${MODULE_OK}/33"
-echo "离线 wheel:  ${WHEEL_COUNT}"
+echo "离线 wheel:  3dtool/${WHEEL_COUNT} + polaris/${POLARIS_WHEEL_COUNT} = ${TOTAL_WHEELS}"
 echo "标记文件:    $(cat /tmp/.polaris_installed 2>/dev/null || echo '未写入')"
 echo ""
 echo "守护进程:"
