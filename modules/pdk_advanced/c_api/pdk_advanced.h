@@ -7,8 +7,12 @@
  * .pic.yml 解析 + 反向转换 + 版本兼容检测）、OptoDesigner 版图驱动设计
  * （Design Intent / PyCell / flexConnector / Hierarchy / PDAflow）、
  * PCell 多视图参数化单元（@polaris_cell 装饰器 + LRU 缓存 + 仿射/贝塞尔变换）、
- * YAML PDK 配置系统、多 PDK 实例管理器、VPIphotonics PDK、L-Edit GPIC iPDK、
- * 多 foundry 平台元数据、模块库、工艺节点、SiEPIC 映射、版本兼容检测。
+ * YAML PDK 配置系统、多 PDK 实例管理器、多 foundry 平台元数据、
+ * 模块库、工艺节点、SiEPIC 映射、版本兼容检测。
+ *
+ * R03 合规声明（2026-07-03）：删除 "VPIphotonics PDK、L-Edit GPIC iPDK"
+ * 声明（src/ 下无对应实现，属声明-未实现违规）。基础 4 foundry PDK
+ * （SiEPIC/Ligentec/PatternProject/HyperLight）见 ../pdk/c_api/pdk.h。
  *
  * 基础 PDK 器件库查询（4 平台 36 器件）见 ../pdk/c_api/pdk.h。
  * 类型定义见 ../_c_abi/polaris_types.h（polaris_result_t 等 POD 结构）。
