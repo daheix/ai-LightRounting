@@ -70,6 +70,13 @@ from polaris_trainer.checkpoint import (
     PLATFORM_SIN,
     PLATFORM_SOI,
 )
+from polaris_trainer.distributed_rollout import (
+    ENV_FACTORIES,
+    ParallelRolloutCollector,
+    RolloutBatch,
+    collect_rollouts_parallel,
+    register_env_factory,
+)
 from polaris_trainer.ppo import (
     ActorCritic,
     Minibatch,
@@ -155,6 +162,12 @@ __all__ = [
     "POLICY_RANDOM",
     "POLICY_CURRICULUM",
     "ALL_POLICIES",
+    # R35 CPU 多进程并行 rollout
+    "RolloutBatch",
+    "ParallelRolloutCollector",
+    "collect_rollouts_parallel",
+    "register_env_factory",
+    "ENV_FACTORIES",
     # Checkpoint 管理
     "CheckpointManager",
     "ALL_PLATFORMS",

@@ -1,6 +1,6 @@
 """polaris-trainer 子模块深度测试（v5.0）。
 
-测试覆盖（33 个测试，R03 禁止 fall-back，R04 不参与 GPU）:
+测试覆盖（36 个测试，R03 禁止 fall-back，R04 不参与 GPU）:
 - 导入/导出/常量: test_import_and_exports, test_module_constants
 - PPOConfig & 数据类: test_ppo_config_defaults, test_rollout_buffer_and_replay_alias,
   test_transition_and_minibatch_fields
@@ -22,6 +22,8 @@
 - R355 HybridPlacementAgent: test_hybrid_placement_set_fixed_and_auto_place
 - CheckpointManager: test_checkpoint_manager_roundtrip,
   test_checkpoint_manager_list_and_invalid_agent_raise
+- R35 CPU 多进程并行 rollout: test_parallel_rollout_basic,
+  test_parallel_rollout_aggregation, test_parallel_rollout_invalid_input_raises
 - R03/R04 综合: test_no_fallback_r03_r04
 
 学术依据（R02 学术诚信，≥5 个文献 URL）:
@@ -73,6 +75,7 @@ from polaris_trainer import (  # noqa: E402
     Minibatch,
     MultiObjectiveParetoReward,
     MultiObjectiveRewardConfig,
+    ParallelRolloutCollector,
     PLATFORM_INP,
     PLATFORM_LNOI,
     PLATFORM_SIN,
@@ -87,9 +90,11 @@ from polaris_trainer import (  # noqa: E402
     PretrainedPolicyConfig,
     PretrainedPolicyLibrary,
     ReplayBuffer,
+    RolloutBatch,
     RolloutBuffer,
     TrainConfig,
     Transition,
+    collect_rollouts_parallel,
     compute_gae,
     discretize_floorplan_action,
     infer_obs_dim,
@@ -97,6 +102,7 @@ from polaris_trainer import (  # noqa: E402
     lr_scale,
     obs_to_vector,
     pad_obs,
+    register_env_factory,
     train_ppo,
     train_with_env_factory,
 )
@@ -961,3 +967,142 @@ def test_no_fallback_r03_r04():
         opt.compute_gae(np.array([]), np.array([]), np.array([]))
     assert ALL_PLATFORMS == ("SOI", "SiN", "InP", "LNOI")
     assert ALL_POLICIES == ("heuristic", "random", "curriculum")
+
+
+# =============================================================================
+# §13 R35 CPU 多进程并行 rollout（ParallelRolloutCollector）
+#
+# 学术依据: Schulman 2017 PPO 多 env 采样 https://arxiv.org/abs/1707.06347 /
+# SB3 SubprocVecEnv https://stable-baselines3.readthedocs.io/en/master/guide/examples.html /
+# Python concurrent.futures https://docs.python.org/3/library/concurrent.futures.html /
+# Mayor 2025 ICML 并行采样 https://arxiv.org/abs/2506.03404 /
+# Circuit Training 多 env https://github.com/google-research/circuit_training
+# =============================================================================
+
+
+def _make_mock_env_configs(n: int, obs_dim: int = 8, action_dim: int = 2,
+                           max_steps: int = 20, seed_base: int = 0) -> list[dict]:
+    """构造 n 个 mock env 配置（可 pickle，含 type/obs_dim/action_dim/seed）。"""
+    return [
+        {
+            "type": "mock",
+            "obs_dim": obs_dim,
+            "action_dim": action_dim,
+            "max_steps": max_steps,
+            "seed": seed_base + i,
+        }
+        for i in range(n)
+    ]
+
+
+def test_parallel_rollout_basic():
+    """ParallelRolloutCollector: 2 worker 基本 rollout（PPOAgent pickle + mock env）。
+
+    验证：返回 batch 数 = worker 数；每个 batch 含 states/actions/rewards/
+    next_states/dones 五个数组，形状与 n_steps/obs_dim/action_dim 匹配；
+    worker_id 与提交顺序一致。
+    """
+    np.random.seed(42)
+    agent = PPOAgent(obs_dim=8, action_dim=2, hidden_dim=16)
+    env_configs = _make_mock_env_configs(n=2, obs_dim=8, action_dim=2, seed_base=0)
+    batches = collect_rollouts_parallel(agent, env_configs, n_steps=5, n_workers=2)
+    # 返回 batch 数 = worker 数
+    assert len(batches) == 2
+    for i, batch in enumerate(batches):
+        assert isinstance(batch, RolloutBatch)
+        assert batch.worker_id == i
+        # 形状: [n_steps, obs_dim] / [n_steps, action_dim] / [n_steps]
+        assert batch.states.shape == (5, 8)
+        assert batch.actions.shape == (5, 2)
+        assert batch.rewards.shape == (5,)
+        assert batch.next_states.shape == (5, 8)
+        assert batch.dones.shape == (5,)
+        # 数组有限
+        assert np.all(np.isfinite(batch.states))
+        assert np.all(np.isfinite(batch.rewards))
+        # dones 是 bool
+        assert batch.dones.dtype == bool
+        # __len__ / total_steps
+        assert len(batch) == 5
+        assert batch.total_steps() == 5
+        assert isinstance(batch.total_reward(), float)
+
+
+def test_parallel_rollout_aggregation():
+    """ParallelRolloutCollector: 多 worker 轨迹聚合（batch_size = n_envs × n_steps）。
+
+    验证：3 worker × 4 steps = 12 步；拼接后 states 形状 (12, obs_dim)；
+    worker_ids 覆盖 [0,1,2]；不同 worker 因 seed 不同产生不同轨迹。
+    """
+    np.random.seed(7)
+    agent = PPOAgent(obs_dim=8, action_dim=2, hidden_dim=16)
+    env_configs = _make_mock_env_configs(n=3, obs_dim=8, action_dim=2, seed_base=100)
+    collector = ParallelRolloutCollector(n_workers=3)
+    batches = collector.collect(agent, env_configs, n_steps=4)
+    assert len(batches) == 3
+    # 聚合总步数 = 3 × 4 = 12（PPO on-policy: batch_size = n_envs × n_steps）
+    total = sum(b.total_steps() for b in batches)
+    assert total == 12
+    # 拼接 states
+    all_states = np.concatenate([b.states for b in batches], axis=0)
+    assert all_states.shape == (12, 8)
+    all_actions = np.concatenate([b.actions for b in batches], axis=0)
+    assert all_actions.shape == (12, 2)
+    all_rewards = np.concatenate([b.rewards for b in batches], axis=0)
+    assert all_rewards.shape == (12,)
+    # worker_ids 覆盖 0/1/2
+    assert sorted(b.worker_id for b in batches) == [0, 1, 2]
+    # 不同 worker（不同 seed）产生不同 states（概率 1，因 seed 不同）
+    assert not np.allclose(batches[0].states, batches[1].states)
+    # n_workers 默认 = min(cpu_count, len(configs))，不传 n_workers 也应工作
+    collector_default = ParallelRolloutCollector()
+    batches_default = collector_default.collect(agent, env_configs, n_steps=4)
+    assert len(batches_default) == 3
+
+
+def test_parallel_rollout_invalid_input_raises():
+    """ParallelRolloutCollector: 无效输入 raise（R03 禁止 fall-back）。
+
+    覆盖：agent=None / env_configs 空 / env_configs 非 list / n_steps<=0 /
+    n_workers<=0 / env_config 缺 type / env_config type 未注册 /
+    env_config 非 dict（主进程 _validate_inputs raise）。
+    """
+    agent = PPOAgent(obs_dim=8, action_dim=2, hidden_dim=16)
+    collector = ParallelRolloutCollector()
+    # agent=None → ValueError（R03）
+    with pytest.raises(ValueError, match="agent 不能为 None"):
+        collector.collect(None, _make_mock_env_configs(2), n_steps=4)
+    # env_configs 空 → ValueError（R03）
+    with pytest.raises(ValueError, match="env_configs 不能为空"):
+        collector.collect(agent, [], n_steps=4)
+    # env_configs 非 list → ValueError（R03）
+    with pytest.raises(ValueError, match="env_configs 须为 list"):
+        collector.collect(agent, "not_a_list", n_steps=4)  # type: ignore[arg-type]
+    # n_steps<=0 → ValueError（R03）
+    with pytest.raises(ValueError, match="n_steps 须 > 0"):
+        collector.collect(agent, _make_mock_env_configs(2), n_steps=0)
+    with pytest.raises(ValueError, match="n_steps 须 > 0"):
+        collector.collect(agent, _make_mock_env_configs(2), n_steps=-3)
+    # n_workers<=0 → ValueError（R03）
+    with pytest.raises(ValueError, match="n_workers 须 > 0"):
+        ParallelRolloutCollector(n_workers=0)
+    with pytest.raises(ValueError, match="n_workers 须 > 0"):
+        ParallelRolloutCollector(n_workers=-1)
+    # env_config 缺 type → worker 内 _make_env raise ValueError，经 future.result 传播（R03）
+    bad_configs_no_type = [{"obs_dim": 8, "action_dim": 2, "seed": 0}]
+    with pytest.raises(ValueError, match="缺 'type'"):
+        collect_rollouts_parallel(agent, bad_configs_no_type, n_steps=3, n_workers=1)
+    # env_config type 未注册 → ValueError（R03）
+    bad_configs_unknown = [{"type": "nonexistent_env", "obs_dim": 8, "seed": 0}]
+    with pytest.raises(ValueError, match="未注册"):
+        collect_rollouts_parallel(agent, bad_configs_unknown, n_steps=3, n_workers=1)
+    # env_config 非 dict → 主进程 _validate_inputs raise ValueError（R03）
+    bad_configs_not_dict = ["not_a_dict"]
+    with pytest.raises(ValueError, match="须为 dict"):
+        collect_rollouts_parallel(agent, bad_configs_not_dict, n_steps=3, n_workers=1)  # type: ignore[arg-type]
+    # register_env_factory 重复注册 → ValueError（R03）
+    with pytest.raises(ValueError, match="已注册"):
+        register_env_factory("mock", lambda cfg: None)
+    # register_env_factory 空名 → ValueError（R03）
+    with pytest.raises(ValueError, match="工厂名非法"):
+        register_env_factory("", lambda cfg: None)
