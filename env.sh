@@ -50,6 +50,15 @@ if [ -d "${_POLARIS_DIR}/3dtool/scripts" ]; then
         *) export PATH="${_POLARIS_DIR}/3dtool/scripts:${PATH}" ;;
     esac
 fi
+
+# 3dtool AppImage 工具入口（30个工具: kicad/openEMS/ElmerSolver/ngspice 等）
+# 按需恢复后才有，不存在不影响 source env.sh
+if [ -d "${_POLARIS_DIR}/3dtool-appimage/bin" ]; then
+    case ":${PATH}:" in
+        *":${_POLARIS_DIR}/3dtool-appimage/bin:"*) : ;;
+        *) export PATH="${_POLARIS_DIR}/3dtool-appimage/bin:${PATH}" ;;
+    esac
+fi
 unset _POLARIS_DIR
 
 # PYTHONPATH：确保 PoLaRIS modules 可导入（editable 安装后通常不需要，此处兜底）

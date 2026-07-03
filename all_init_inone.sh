@@ -109,6 +109,33 @@ POLARIS_WHEEL_COUNT=$(ls "${POLARIS_WHEELS_DIR}"/*.whl 2>/dev/null | wc -l)
 TOTAL_WHEELS=$((WHEEL_COUNT + POLARIS_WHEEL_COUNT))
 log "  离线源: 3dtool/wheels/${WHEEL_COUNT} + polaris_wheels/${POLARIS_WHEEL_COUNT} = ${TOTAL_WHEELS} wheel"
 
+# ========== 步骤3.5: 按需拉取 3dtool AppImage 工具（30个工具+kicad/openEMS/ElmerSolver/ngspice） ==========
+# *创新*: 按需拉取 + 选择性解包（sparse 排除 2.0G，git cat-file 按需拉 410M 核心）
+log "[3.5/7] 按需拉取 3dtool AppImage 工具（核心: AppRun+bin+lib = 410M）..."
+RESTORE_3DTOOL="${REPO_DIR}/scripts/restore_3dtool_selective.sh"
+if [ -f "${RESTORE_3DTOOL}" ]; then
+    RESTORE_ARGS=""
+    [ "${VERBOSE}" = "1" ] && RESTORE_ARGS="-v"
+    [ "${FORCE}" = "1" ] && RESTORE_ARGS="${RESTORE_ARGS} --force"
+    if ! bash "${RESTORE_3DTOOL}" ${RESTORE_ARGS}; then
+        err "3dtool AppImage 恢复失败（R03 禁止 fall-back）"
+        exit 1
+    fi
+    # 将 3dtool-appimage/bin 加入 PATH
+    APPIMAGE_BIN="${REPO_DIR}/3dtool-appimage/bin"
+    if [ -d "${APPIMAGE_BIN}" ]; then
+        case ":${PATH}:" in
+            *":${APPIMAGE_BIN}:"*) : ;;
+            *) export PATH="${APPIMAGE_BIN}:${PATH}" ;;
+        esac
+        TOOL_COUNT=$(ls "${APPIMAGE_BIN}" 2>/dev/null | wc -l)
+        log "  3dtool 工具: ${TOOL_COUNT} 个已加入 PATH"
+    fi
+else
+    err "restore_3dtool_selective.sh 不存在: ${RESTORE_3DTOOL}"
+    exit 1
+fi
+
 # ========== 步骤4: 双离线源安装 wheels（纯离线优先，在线补装兜底） ==========
 log "[4/7] 安装依赖（双离线源: 3dtool/wheels + polaris_wheels）..."
 
@@ -258,6 +285,8 @@ echo "Python:      $(python --version 2>&1)"
 echo "JAX 平台:    $(python -c 'import jax; print(jax.default_backend())' 2>/dev/null)（R04 合规）"
 echo "模块:        ${MODULE_OK}/33"
 echo "离线 wheel:  3dtool/${WHEEL_COUNT} + polaris/${POLARIS_WHEEL_COUNT} = ${TOTAL_WHEELS}"
+echo "3dtool 工具: $(ls 3dtool-appimage/bin/ 2>/dev/null | wc -l) 个（kicad/openEMS/ElmerSolver/ngspice）"
+echo "磁盘剩余:    $(df -h / | tail -1 | awk '{print $4}')"
 echo "标记文件:    $(cat /tmp/.polaris_installed 2>/dev/null || echo '未写入')"
 echo ""
 echo "守护进程:"

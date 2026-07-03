@@ -1,220 +1,142 @@
-# 3dtool 环境方案 — 三层离线包体系
+# 3dtool 环境方案 — 统一管理 + 按需拉取 + 三层离线包
 
 > R01 方案检索 · R02 学术诚信 · R03 禁止 fall-back · R04 不参与 GPU
 > 创建: 2026-07-03 · 适用: PoLaRIS v5.0 + 3dtool 子仓库
 
-## 一、问题背景
+## 一、3dtool 统一管理架构
 
-沙箱环境特性：
-1. 每次重启后 site-packages 全部丢失（Python 依赖需重装）
-2. 网络不稳定（在线安装可能失败）
-3. 3dtool 仓库含 2.0G AppImage 分片（全量 clone 磁盘爆）
-4. git submodule 标准命令会全量拉取（需 sparse-checkout 跳过大文件）
-
-## 二、方案设计（三层离线包体系）
-
-### Layer 1: 3dtool/wheels/ — 通用 Python wheel（3dtool 维护）
-
-- 数量: 47 个 cp314 wheel（Python 3.14 专用）
-- 大小: 122M
-- 内容: numpy/scipy/matplotlib/pydantic/pytest/ruff/mypy/openpyxl/reportlab/rtree/shapely 等
-- 维护: daheix/3dtool 仓库（子仓库，sparse-checkout 拉取）
-
-### Layer 2: polaris_wheels/ — PoLaRIS 特有 wheel（主仓库维护）
-
-- 数量: 43 个 cp314 wheel
-- 大小: 218M
-- 内容: jax/jaxlib/sax/klayout/gymnasium/jaxtyping/jaxellip/klujax 及其全部依赖
-- 维护: PoLaRIS 主仓库（git 跟踪）
-- 生成命令: `pip download --dest polaris_wheels --only-binary=:all: jax[cpu] jaxlib[cpu] sax klayout gymnasium`
-
-### Layer 3: requirements-pinned.txt — 版本锁定
-
-- 数量: 69 个包（pip freeze 生成 + 清洗）
-- 作用: 锁定精确版本，确保可重复安装
-- 参考: [pip 官方 Repeatable Installs](https://pip.pypa.io/en/stable/topics/repeatable-installs/)
-
-### 合计覆盖
-
-| 离线源 | wheel 数 | 大小 | 覆盖范围 |
-|--------|---------|------|---------|
-| 3dtool/wheels/ | 47 | 122M | 通用 Python 包 |
-| polaris_wheels/ | 43 | 218M | PoLaRIS 特有（jax/sax/klayout/gymnasium） |
-| **合计** | **90** | **340M** | **PoLaRIS 全部依赖** |
-
-## 三、一键配置环境流程（all_init_inone.sh）
+3dtool 子仓库提供两类资源，PoLaRIS 统一管理：
 
 ```
-[1/7] 检查 main 分支（R11）
-[2/7] source env.sh（JAX CPU 强制 R04）
-[3/7] 恢复 3dtool 子仓库（sparse: wheels scripts tools，跳过 2.0G 分片）
-[4/7] 双离线源安装 wheels（3dtool/wheels + polaris_wheels + requirements-pinned.txt）
-      ├── 4a: 升级 pip/setuptools/wheel
-      ├── 4b: 纯离线安装（--no-index --find-links 双源 -r requirements-pinned.txt）
-      └── 4c: 在线补装（兜底，--offline 模式跳过）
-[5/7] editable 安装 PoLaRIS 33 模块
-[6/7] 四重验证（依赖+工具+模块+JAX CPU）
-[7/7] 启动守护进程（auto_commit V8 + keepalive）
+3dtool/（git submodule, sparse-checkout）
+├── wheels/              ← Layer 1: 47 个 cp314 离线 wheel（122M，Python 依赖）
+├── scripts/             ← 3dtool 工具脚本
+├── tools/               ← AppImage 打包脚本
+└── 3dtool/appimage-parts/  ← 2.0G AppImage 分片（sparse 排除，按需拉取）
+    ├── manifest.json        ← 组件清单（md5+分片信息）
+    ├── AppRun.tar.gz        ← 启动器（2.6K）
+    ├── bin.tar.gz           ← 30 个工具（55M: kicad/openEMS/ElmerSolver/ngspice）
+    ├── lib.tar.gz.part_*    ← .so 共享库（354M, 4 分片）
+    ├── python-runtime.tar.gz ← Python 运行时（103M，跳过：沙箱有 pyenv）
+    ├── python-site-packages  ← Python 包（735M，跳过：有 wheels）
+    ├── kicad-*.tar.gz        ← KiCad 数据（可选）
+    └── jre.tar.gz.part_*     ← Java 运行时（可选）
 ```
 
-### 使用方法
+### 两类资源对接方式
+
+| 资源类型 | 来源 | 对接方式 | 脚本 |
+|---------|------|---------|------|
+| Python wheel | 3dtool/wheels/ | pip install --no-index --find-links | all_init_inone.sh 步骤4 |
+| AppImage 工具 | 3dtool/appimage-parts/ | git cat-file 按需拉取 + tar 解包 | restore_3dtool_selective.sh |
+
+## 二、*创新*: 按需拉取 + 选择性解包
+
+### 问题
+
+3dtool AppImage 完整 2.0G，但沙箱磁盘只有 40G（已用 39G）。全量拉取磁盘爆。
+
+### 方案
+
+1. sparse-checkout 排除 `appimage-parts/`（工作区不占 2.0G）
+2. 用 `git cat-file -p HEAD:3dtool/appimage-parts/<file>` 按需拉取单个 blob
+3. 按 manifest.json 选择性解包（跳过不需要的组件）
+
+### 底层理论
+
+git partial clone 的 promisor remote 支持 `git cat-file` 按需拉取任意 blob，sparse-checkout 排除目录不影响 git cat-file 访问该路径的 blob。
+参考: [git partial clone 官方文档](https://git-scm.com/docs/partial-clone)
+
+### 组件分层（体积最小化）
+
+| 组件 | 压缩大小 | 解压大小 | PoLaRIS 需要 | 决策 |
+|------|---------|---------|-------------|------|
+| AppRun | 2.6K | 8K | ✓ 启动器 | 拉取 |
+| bin | 55M | 55M | ✓ 30 个工具 | 拉取 |
+| lib | 354M | 1.1G | ✓ .so 依赖 | 拉取 |
+| python-runtime | 103M | - | ✗ 沙箱有 pyenv | 跳过 |
+| python-site-packages | 735M | - | ✗ 有 wheels | 跳过 |
+| kicad-3dmodels | 458M | - | 可选 | --with-3dmodels |
+| kicad-symbols | 23M | - | 可选 | --with-kicad |
+| kicad-footprints | 15M | - | 可选 | --with-kicad |
+| kicad-demos | 96M | - | ✗ 示例 | 跳过 |
+| kicad-misc | 23M | - | 可选 | --with-kicad |
+| jre | 222M | - | 可选 | --with-jre |
+
+### 体积对比
+
+| 配置 | 拉取大小 | 解压大小 | 命令 |
+|------|---------|---------|------|
+| 完整 | 2.0G | 2.0G+ | `--all` |
+| 核心（默认） | 410M | 1.1G | （默认） |
+| +KiCad 数据 | 471M | - | `--with-kicad` |
+| +3D 模型 | 929M | - | `--with-3dmodels` |
+| +JRE | 1151M | - | `--with-jre` |
+
+## 三、3dtool AppImage 工具列表（30 个）
+
+| 工具 | 用途 | PoLaRIS 路标 |
+|------|------|-------------|
+| kicad | KiCad PCB 设计 | R3 KLayout/gdsfactory |
+| kicad-cli | KiCad 命令行 | R3 |
+| eeschema | KiCad 原理图 | R3 |
+| pcbnew | KiCad PCB 编辑 | R3 |
+| gerbview | Gerber 查看 | R3 |
+| pcb_calculator | PCB 计算器 | R3 |
+| bitmap2component | 位图转封装 | R3 |
+| ngspice | SPICE 电路仿真 | R5 Lumerical |
+| openEMS | FDTD 电磁仿真 | R4 OptoDesigner |
+| nf2ff | 近场转远场 | R4 |
+| sar_calc | SAR 计算 | R4 |
+| ElmerSolver | 有限元多物理场 | R4 |
+| ElmerSolver_mpi | Elmer MPI 并行 | R4 |
+| ElmerGrid | Elmer 网格 | R4 |
+| python3.11 | Python 3.11 运行时 | 工具内嵌 |
+
+## 四、一键配置环境流程（all_init_inone.sh）
+
+```
+[1/7]   检查 main 分支（R11）
+[2/7]   source env.sh（JAX CPU 强制 R04 + 3dtool-appimage/bin 加入 PATH）
+[3/7]   恢复 3dtool 子仓库（sparse: wheels scripts tools）
+[3.5/7] 按需拉取 3dtool AppImage 工具（git cat-file 按需拉 410M 核心）
+        *创新*: sparse 排除 2.0G，git cat-file 按需拉取
+[4/7]   双离线源安装 wheels（3dtool/wheels + polaris_wheels）
+[5/7]   editable 安装 PoLaRIS 33 模块
+[6/7]   四重验证（依赖+工具+模块+JAX CPU）
+[7/7]   启动守护进程（auto_commit V8 + keepalive）
+```
+
+## 五、使用方法
 
 ```bash
-bash all_init_inone.sh              # 完整初始化（默认离线优先+在线兜底）
-bash all_init_inone.sh --offline    # 纯离线模式（网络不好时用，不在线补装）
+bash all_init_inone.sh              # 完整初始化（默认）
+bash all_init_inone.sh --offline    # 纯离线模式
 bash all_init_inone.sh -v           # 详细输出
-bash all_init_inone.sh --no-daemon  # 不启动守护进程
-bash all_init_inone.sh --force      # 强制重新安装
+
+# 单独恢复 3dtool 工具
+bash scripts/restore_3dtool_selective.sh                    # 核心组件（410M）
+bash scripts/restore_3dtool_selective.sh --with-kicad       # +KiCad 数据
+bash scripts/restore_3dtool_selective.sh --with-3dmodels    # +3D 模型
+bash scripts/restore_3dtool_selective.sh --all              # 全部（2.0G）
 ```
 
-## 四、网络不好时的保证
+## 六、文献来源（R02 学术诚信）
 
-### 场景1: 完全断网
+1. [git partial clone 官方文档](https://git-scm.com/docs/partial-clone) — git cat-file 按需拉取 blob
+2. [git sparse-checkout 官方文档](https://git-scm.com/docs/git-sparse-checkout/) — 目录级稀疏检出
+3. [pip 官方: Repeatable Installs (wheelhouse)](https://pip.pypa.io/en/stable/topics/repeatable-installs/) — 离线 wheel 安装
+4. [CSDN: pip 离线安装包的方法](https://blog.csdn.net/jjj_web/article/details/150113184) — 中文离线安装指南
+5. [InfoWorld: Air-gapped Python](http://www.itinfoworld.org/airgapped-python-setting-up-python-without-a-network.html) — 气隙环境配置
 
-```bash
-bash all_init_inone.sh --offline --no-daemon
+## 七、自测结果（R13）
+
+```
+3dtool 工具: kicad-cli ✓ ngspice ✓ openEMS ✓ ElmerSolver ✓
+3dtool 工具数: 30 个
+PoLaRIS 模块: 33/33
+离线 wheel: 47
+JAX 平台: cpu（R04 合规）
+磁盘剩余: 1.1G
 ```
 
-- 3dtool 子仓库: 从 git submodule 恢复（需 git 协议，不走 PyPI）
-- Python 依赖: 纯离线安装（90 个 wheel，340M）
-- PoLaRIS 模块: editable 安装（本地代码）
-- **无需任何 PyPI 网络**
-
-### 场景2: 网络不稳定
-
-```bash
-bash all_init_inone.sh  # 默认模式
-```
-
-- 优先离线安装（90 个 wheel）
-- 在线补装失败不致命（离线源已覆盖）
-- 不会因网络问题中断
-
-### 场景3: 首次配置（有网络）
-
-```bash
-bash all_init_inone.sh  # 离线+在线补装
-```
-
-- 离线安装全部 90 个 wheel
-- 在线补装确保最新（jax[cpu]/sax/klayout/gymnasium）
-
-## 五、3dtool 子仓库对接
-
-### 5.1 子仓库管理（标准 git submodule）
-
-```bash
-# .gitmodules（公开 URL，可提交）
-[submodule "3dtool"]
-    path = 3dtool
-    url = https://github.com/daheix/3dtool.git
-    branch = main
-    sparse = true
-
-# .git/config（带 token，本地不提交）
-git config submodule.3dtool.url "https://x-access-token:TOKEN@github.com/daheix/3dtool"
-```
-
-### 5.2 sparse-checkout（跳过 2.0G 分片）
-
-```bash
-git sparse-checkout init --cone
-git sparse-checkout set wheels scripts tools
-# 跳过: 3dtool/appimage-parts/（2.0G AppImage 分片）
-```
-
-### 5.3 3dtool 各目录用途
-
-| 目录 | 用途 | PoLaRIS 是否使用 |
-|------|------|-----------------|
-| `wheels/` | 47 个 cp314 离线 wheel | ✓ 离线安装源 |
-| `scripts/` | 3dtool 工具脚本 | ✓ PATH 加入 |
-| `tools/` | AppImage 打包脚本 | 参考 |
-| `3dtool/appimage-parts/` | 2.0G AppImage 分片 | ✗ 跳过（sparse 排除） |
-| `src/` | 3dtool 源码 | ✗ 不使用 |
-| `examples/` | 3dtool 示例 | ✗ 不使用 |
-
-## 六、方案对比（业界最佳实践）
-
-| 方案 | 来源 | 优点 | 缺点 | 本项目采用 |
-|------|------|------|------|-----------|
-| pip wheel + wheelhouse | [pip 官方](https://pip.pypa.io/en/stable/topics/repeatable-installs/) | 官方推荐，简单 | 单源 | ✓ 双源改进 |
-| pip download + --no-index | [CSDN](https://blog.csdn.net/jjj_web/article/details/150113184) | 跨平台 | 需手动管理 | ✓ 用 requirements-pinned.txt |
-| devpi 私有索引 | devpi.org | 企业级 | 太重 | ✗ 不适用 |
-| pypioffline 镜像 | [PyPI](https://pypi.org/project/pypioffline/) | 全量镜像 | 672k 包太重 | ✗ 不适用 |
-| Docker 容器化 | [InfoWorld](http://www.itinfoworld.org/airgapped-python-setting-up-python-without-a-network.html) | 隔离性好 | 需 Docker | ✗ 沙箱无 Docker |
-
-**本项目创新点（*创新*）**：双离线源 + sparse-checkout + requirements-pinned.txt 三层组合
-- 创新逻辑: 3dtool/wheels（子仓库维护通用包）+ polaris_wheels（主仓库维护特有包）分层管理，避免单仓库膨胀
-- 底层理论: pip `--find-links` 支持多源（[pip 文档](https://pip.pypa.io/en/stable/cli/pip_install/#install-find-links)），自动从多源解析最优版本
-- 案例支持: 沙箱重启模拟测试，纯离线 90 wheel 安装成功，33/33 模块，75 测试通过
-
-## 七、文献来源（R02 学术诚信）
-
-1. [pip 官方: Repeatable Installs (wheelhouse 模式)](https://pip.pypa.io/en/stable/topics/repeatable-installs/) — pip 官方离线安装文档
-2. [CSDN: pip 离线安装包的方法](https://blog.csdn.net/jjj_web/article/details/150113184) — 中文离线安装完整指南
-3. [InfoWorld: Air-gapped Python](http://www.itinfoworld.org/airgapped-python-setting-up-python-without-a-network.html) — 气隙环境 Python 配置
-4. [Qiita: Pythonパッケージをオフライン環境に持ち込む](https://qiita.com/Moge800/items/f06120d5795d7c16f287) — 离线环境 wheel 批量安装
-5. [PyPI: pypioffline](https://pypi.org/project/pypioffline/) — PyPI 本地镜像工具
-6. [pip 官方: pip install --find-links](https://pip.pypa.io/en/stable/cli/pip_install/#install-find-links) — 多源 find-links 文档
-
-## 八、自测结果（R13）
-
-### 测试1: 纯离线模式（模拟断网）
-
-```bash
-rm -rf 3dtool .git/modules/3dtool /tmp/.polaris_installed
-pip uninstall -y jax jaxlib sax klayout gymnasium numpy scipy matplotlib pydantic pytest ruff mypy
-bash all_init_inone.sh --offline --no-daemon
-```
-
-结果:
-- 3dtool 自动恢复（3fada06, 47 wheel, 122M）✓
-- polaris_wheels 离线安装（43 wheel, 218M）✓
-- 33/33 模块安装成功 ✓
-- 75 测试通过 ✓
-- JAX CPU 合规（R04）✓
-- 无任何错误 ✓
-
-### 测试2: 工具验证
-
-```bash
-python -m pytest --version   # pytest 9.0.3 ✓
-python -m ruff --version     # ruff 0.15.11 ✓
-python -c "import polaris_core, jax, sax, klayout, gymnasium"  # 全部导入成功 ✓
-```
-
-## 九、维护指南
-
-### 9.1 更新 polaris_wheels/（新增依赖时）
-
-```bash
-# 1. 安装新依赖
-pip install <new-package>
-
-# 2. 下载 wheel
-pip download --dest polaris_wheels --only-binary=:all: <new-package>
-
-# 3. 更新 requirements-pinned.txt
-pip freeze | grep <new-package> >> requirements-pinned.txt
-
-# 4. 提交
-git add polaris_wheels/ requirements-pinned.txt
-git commit -m "deps: 新增 <new-package> 离线 wheel"
-```
-
-### 9.2 更新 3dtool/wheels/（3dtool 仓库维护）
-
-```bash
-cd 3dtool
-git pull origin main
-cd ..
-git add 3dtool
-git commit -m "chore: 更新 3dtool 子仓库（新 wheel）"
-```
-
-### 9.3 沙箱重启后恢复
-
-```bash
-bash all_init_inone.sh  # 一条命令搞定
-```

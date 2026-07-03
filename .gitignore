@@ -18,29 +18,14 @@ build/
 .venv/
 venv/
 
-# 3dtool 目录：只跟踪安装脚本(.sh)、submodule 指针、分片压缩包清单
-# 保留的脚本：install.sh / tidy3d_install.sh / gdsfactory/install.sh
-# 逐层排除：先忽略全部，再逐级放行目录，最后放行 .sh
-# 解压后的 3dtool-appimage/ 不上传（体积大，可由分片恢复）
-3dtool/*
-!3dtool/wheels/
-3dtool/wheels/*
-!3dtool/wheels/install.sh
-!3dtool/wheels/MANIFEST.txt
-!3dtool/wheels/tidy3d_install.sh
-!3dtool/wheels/gdsfactory/
-3dtool/wheels/gdsfactory/*
-!3dtool/wheels/gdsfactory/install.sh
+# 3dtool 子仓库（git submodule，由 git 管理，不直接跟踪文件）
+# 3dtool/ 目录是 git submodule gitlink，内容不提交主仓库
 
-# 3dtool 子仓库（daheix/3dtool 作为 git submodule）
-!3dtool/subrepo/
-3dtool/subrepo/*
-!3dtool/subrepo/3dtool/
-# submodule 目录内由 gitlink 跟踪，不直接跟踪文件（git 自身处理）
+# 3dtool-appimage 解压目录（按需恢复，体积大 1.1G，不提交）
+3dtool-appimage/
 
-# 3dtool appimage-parts 分片压缩包（1.2G+，不提交到 git，由 daheix/3dtool 仓库管理）
-3dtool/subrepo/3dtool/3dtool/appimage-parts/*.tar.gz
-3dtool/subrepo/3dtool/3dtool/appimage-parts/*.part_*
+# polaris_wheels 离线 wheel（218M，本地维护，不提交）
+polaris_wheels/
 
 # 密钥与凭据
 .env
