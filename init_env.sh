@@ -86,12 +86,10 @@ else
 fi
 
 if [ "${QUICK}" = "1" ]; then
-    log "[quick 模式] 跳过 unshallow 和 submodule，直接安装依赖"
-    # 跳到步骤4
-    log "[2-3/7] 跳过（quick 模式）"
-    SKIP_SUBMODULE=1
+    log "[quick 模式] 跳过 unshallow（子仓库仍恢复，幂等无开销）"
+    # 步骤2 跳过
+    log "[2/7] 跳过 unshallow（quick 模式）"
 else
-    SKIP_SUBMODULE=0
     # 步骤2: 修复 shallow clone
     log "[2/7] 修复 shallow clone..."
     cd "${REPO_DIR}"
@@ -108,24 +106,24 @@ else
     else
         log "  git 历史完整 (${COMMIT_COUNT} commits)，跳过"
     fi
+fi
 
-    # 步骤3: 恢复 3dtool 子仓库（幂等，install.sh 步骤2 也会调用，此处先恢复确保 wheels 可用）
-    # 用标准 git submodule 命令 + sparse-checkout（跳过 1.6G 分片）
-    log "[3/7] 恢复 3dtool 子仓库（标准 git submodule + sparse-checkout）..."
-    SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
-    if [ -f "${SETUP_SUBMODULE}" ]; then
-        SETUP_ARGS=""
-        [ "${VERBOSE}" = "1" ] && SETUP_ARGS="-v"
-        if ! bash "${SETUP_SUBMODULE}" ${SETUP_ARGS}; then
-            err "3dtool 子仓库恢复失败（R03 禁止 fall-back）"
-            exit 1
-        fi
-        SUB_STATUS=$(git submodule status 2>&1 | head -1)
-        log "  submodule: ${SUB_STATUS}"
-    else
-        err "setup_3dtool_submodule.sh 不存在: ${SETUP_SUBMODULE}"
+# 步骤3: 恢复 3dtool 子仓库（无论 quick 与否都执行，幂等：健康会跳过）
+# 用标准 git submodule 命令 + sparse-checkout（跳过 1.6G 分片）
+log "[3/7] 恢复 3dtool 子仓库（标准 git submodule + sparse-checkout）..."
+SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
+if [ -f "${SETUP_SUBMODULE}" ]; then
+    SETUP_ARGS=""
+    [ "${VERBOSE}" = "1" ] && SETUP_ARGS="-v"
+    if ! bash "${SETUP_SUBMODULE}" ${SETUP_ARGS}; then
+        err "3dtool 子仓库恢复失败（R03 禁止 fall-back）"
         exit 1
     fi
+    SUB_STATUS=$(git submodule status 2>&1 | head -1)
+    log "  submodule: ${SUB_STATUS}"
+else
+    err "setup_3dtool_submodule.sh 不存在: ${SETUP_SUBMODULE}"
+    exit 1
 fi
 
 # 步骤4: 安装核心依赖 + 33 模块（调用 install.sh）
