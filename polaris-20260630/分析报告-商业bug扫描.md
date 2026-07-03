@@ -1,5 +1,15 @@
 # PoLaRIS 商业 Bug 扫描报告
 
+> ⚠️ **已过时（2026-07-03 标注）**: 本报告扫描的是已删除的 v4 `src/polaris/`（421 文件/165512 行）。
+> 该目录 2026-07-02 已删（commit 0277a9c），项目重构为 v5.0 33 子模块 monorepo。
+> 报告中的 P0/P1/P2/P3 任务全部过时:
+> - P0-1 bbox 0 兜底: v5.0 非违规（bbox.empty() 合法判断）
+> - P0-2 环检测 ValueError:pass: v5.0 已修复（raise RuntimeError）
+> - P0-3 负灵敏度 pass: v5.0 已修复（raise ValueError）
+> - P0-4 CuPyBackend GPU API: 随 v4 删除（v5.0 零 GPU 违规）
+> v5.0 真实审计结果见 `docs/36-RoundMap.md` §0.2 和 `操作记录.md` 2026-07-03 轮次。
+> 本报告保留作历史参考，勿据此时任务清单派发工作。
+
 > 扫描时间：2026-06-30
 > 扫描范围：`src/polaris/` 全量代码（421 个 .py 文件，165512 行）
 > 扫描分支：main
