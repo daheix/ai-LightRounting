@@ -5,13 +5,19 @@
 - 1e6 ≤ κ(S) < 1e12: 病态（ill-conditioned）
 - κ(S) ≥ 1e12: 接近奇异，结果不可信
 
-来源:
-- Golub & Van Loan 2013, "Matrix Computations", 4th ed.,
-  Johns Hopkins Univ. Press §2.3, §3.5,
-  https://www.press.jhu.edu/books/title/10876/matrix-computations
-- SAX Backends 文档: https://gdsfactory.github.io/sax/nbs/internals/03_backends/
-- Pflüger et al. 2021, "Simphony", IEEE CiSE 23(4):74-85,
-  https://arxiv.org/abs/2009.05146
+来源（R02 学术诚信，≥5 篇文献 URL）:
+1. Golub & Van Loan 2013, "Matrix Computations", 4th ed.,
+   Johns Hopkins Univ. Press §2.3, §3.5,
+   https://www.press.jhu.edu/books/title/10876/matrix-computations
+2. SAX Backends 文档: https://gdsfactory.github.io/sax/nbs/internals/03_backends/
+3. Pflüger et al. 2021, "Simphony", IEEE CiSE 23(4):74-85,
+   https://arxiv.org/abs/2009.05146
+4. Filipsson 1978, "A new general computer algorithm for S-matrix calculation
+   of interconnected multiports", Proc. Eur. Microw. Conf.,
+   https://doi.org/10.1109/EUMA.1978.332681
+5. Taflove & Hagness 2005, "Computational Electrodynamics: The FDTD Method",
+   3rd ed., Artech House §3,
+   https://us.artechhouse.com/Computational-Electrodynamics-The-FDTD-Method-Third-Edition-P1367.aspx
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO。
 """

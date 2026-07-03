@@ -50,14 +50,19 @@ dict::
 - 谐振波长由实际扫描 argmin 决定（不硬编码）
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
-- Saleh & Teich, "Fundamentals of Photonics", Wiley 2019, §4.4（MZI 传输率公式）
-- SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-- Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §4.4
-- Simphony MZI 教程
-  https://simphonyphotonics.readthedocs.io/en/stable/tutorials/mzi.html
-- Soldano & Pennings, J. Lightwave Technol. 13(4), 1995（MMI 原理）
-  https://ieeexplore.ieee.org/document/374358
-- Yariv & Yeh, "Optical Waves in Crystals", Wiley 1984, §4.2（干涉仪）
+1. Saleh & Teich, "Fundamentals of Photonics", Wiley 2019, §4.4（MZI 传输率公式）
+   https://www.wiley.com/en-us/Fundamentals+of+Photonics%2C+3rd+Edition-p-9781119303930
+2. SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+3. Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §4.4
+   https://www.cambridge.org/core/books/silicon-photonics-design/
+4. Simphony MZI 教程
+   https://simphonyphotonics.readthedocs.io/en/stable/tutorials/mzi.html
+5. Soldano & Pennings, J. Lightwave Technol. 13(4), 1995（MMI 原理）
+   https://ieeexplore.ieee.org/document/374358
+6. Yariv & Yeh, "Optical Waves in Crystals", Wiley 1984, §4.2（干涉仪）
+   https://www.wiley.com/en-us/Optical+Waves+in+Crystals%3A+Propagation+and+Control+of+Laser+Radiation-p-9780471430810
+7. Pflügger et al. 2021, "Simphony", IEEE CiSE 23(4):74-85
+   https://arxiv.org/abs/2009.05146
 """
 
 from __future__ import annotations

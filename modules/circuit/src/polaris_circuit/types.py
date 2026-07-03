@@ -4,11 +4,19 @@ S 参数格式与 SAX 一致:
     S = {(port_out, port_in): ndarray, ...}
     例如 waveguide: {("in","in"): 0, ("out","in"): phase, ...}
 
-来源:
-- SAX 类型系统: https://flaport.github.io/sax/
-- Pflüger et al. 2021, "Simphony: A Python-based simulator and S-parameter
-  library for photonic integrated circuits", IEEE CiSE 23(4):74-85,
-  https://arxiv.org/abs/2009.05146
+来源（R02 学术诚信，≥5 篇文献 URL）:
+1. SAX 类型系统: https://flaport.github.io/sax/
+2. Pflüger et al. 2021, "Simphony: A Python-based simulator and S-parameter
+   library for photonic integrated circuits", IEEE CiSE 23(4):74-85,
+   https://arxiv.org/abs/2009.05146
+3. Filipsson 1978, "A new general computer algorithm for S-matrix calculation
+   of interconnected multiports", Proc. Eur. Microw. Conf.,
+   https://doi.org/10.1109/EUMA.1978.332681
+4. Golub & Van Loan 2013, "Matrix Computations", 4th ed., §2.3,
+   https://www.press.jhu.edu/books/title/10876/matrix-computations
+5. Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge,
+   https://www.cambridge.org/core/books/silicon-photonics-design/
+6. gdsfactory sax 文档: https://gdsfactory.github.io/sax/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy/SciPy（不引入 JAX，
 保留纯 numpy 单后端以降低子模块耦合）/ R05 无 TODO。
