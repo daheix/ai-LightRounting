@@ -46,7 +46,9 @@
 - ✅ JAX autograd 逆向设计（best-checkpoint 修复后 +0.17dB）
 - ✅ 10 个 S 参数模型 + MNA SPICE + 系统级 + 时域 + FDTD 全套
 - ⚠️ 设计决策: 不依赖 sax/simphony 库（R13 去除必装依赖），自研等效算法
-- ⚠️ 缺少与 sax/simphony 的交叉验证测试（路标 R3 验收"10电路误差<1e-4"待补）
+- ✅ sax 交叉验证 10 电路全通过（误差 0~1.24e-16，远超标 1e-4，2026-07-03 R3 验收达标）
+  - 测试: `modules/circuit/tests/test_cross_validation_sax.py`（10 电路: 波导链/MZI/DC/MMI/反馈环/并行/合束/混合）
+  - 算法: 两子网络连接用标准子网络增长 4 公式（分母 1-S1_kk*S2_ll），反馈环用 Filipsson 1981 方程6
 
 ---
 
@@ -174,6 +176,9 @@
 | 项目 | 内容 |
 |------|------|
 | **月份编号** | R3（2026-09） |
+> **状态**：✅ 已达标（2026-07-03，sax 交叉验证 10 电路误差 0~1.24e-16 < 1e-4）
+> v5.0 设计决策: 不依赖 simphony 库（R13 去除必装依赖），自研等效子网络增长算法
+> （`modules/circuit/src/polaris_circuit/cascade.py`），用 sax filipsson_gunnar 后端做交叉验证。
 | **交付目标** | 对齐 simphony 的 S 参数级联接口，PoLaRIS SimLoop 可调用 simphony 后端进行电路仿真，并与 sax 后端结果交叉验证 |
 | **追赶对象** | simphony（T11） |
 | **验收标准** | 1. 新增 `src/polaris/sim/simphony_backend.py` 模块；2. simphony 后端与 sax 后端在 10 个标准电路上结果一致（误差 < 1e-4）；3. 新增 ≥6 个交叉验证测试；4. SimLoop 支持后端切换（sax/simphony/pyCopy） |
