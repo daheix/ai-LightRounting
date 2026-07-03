@@ -158,18 +158,13 @@ MODULE_FAIL=0
 for mod_pyproject in "${MODULES_DIR}"/*/pyproject.toml; do
     mod_dir="$(dirname "${mod_pyproject}")"
     mod_name="$(basename "${mod_dir}")"
-    if pip install -e "${mod_dir}" --no-deps 2>&1 | tail -1 | grep -q "Successfully"; then
+    # 用 pip 的 exit code 判断成功（不依赖输出文本，因为 WARNING 会干扰 grep）
+    if pip install -e "${mod_dir}" --no-deps >/dev/null 2>&1; then
         MODULE_OK=$((MODULE_OK + 1))
         logv "  [${mod_name}] ✓"
     else
-        # 再检查一次（有些已安装的不会显示 Successfully）
-        if pip install -e "${mod_dir}" --no-deps 2>&1 | grep -qi "already"; then
-            MODULE_OK=$((MODULE_OK + 1))
-            logv "  [${mod_name}] ✓ (已安装)"
-        else
-            MODULE_FAIL=$((MODULE_FAIL + 1))
-            err "  [${mod_name}] ✗ 安装失败"
-        fi
+        MODULE_FAIL=$((MODULE_FAIL + 1))
+        err "  [${mod_name}] ✗ 安装失败"
     fi
 done
 log "  模块安装: ${MODULE_OK} 成功 / ${MODULE_FAIL} 失败"
