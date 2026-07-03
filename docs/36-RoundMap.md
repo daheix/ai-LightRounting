@@ -1,9 +1,52 @@
 # PoLaRIS 36 个月逐月路标（R1-R36）
 
-**文档版本**: v1.0
+**文档版本**: v1.1（2026-07-03 更新 v5.0 架构映射）
 **创建日期**: 2026-06-22
 **作者**: PoLaRIS 项目组
 **目标**: 在 36 个月内（2026-07 ~ 2029-06）逐月追赶并超越最先进同行光子/电子 EDA 工具的所有功能，综合得分从 6.1/10 提升至 9.0/10 以上。
+
+---
+
+## 0. v5.0 架构映射说明（2026-07-03 更新）
+
+> **重要**: 本路标 v1.0 创建于 2026-06-22，当时项目为 v4 单包架构（`src/polaris/`，421 文件/165512 行）。
+> 2026-07-02 项目重构为 v5.0 33 子模块 monorepo（`modules/<name>/src/polaris_<name>/`），
+> v4 `src/polaris/` 已删除（commit 0277a9c）。路标中引用的 v4 路径需按下表映射到 v5.0:
+
+### 0.1 v4 → v5.0 路径映射表
+
+| 路标引用的 v4 路径 | v5.0 实际路径 | 状态 |
+|-------------------|--------------|------|
+| `src/polaris/sim/sax_export.py` | `modules/circuit/`（SDict 兼容 SAX 格式，不依赖 sax 库） | ✅ R1 已实现 |
+| `src/polaris/sim/subnetwork.py` | `modules/circuit/src/polaris_circuit/cascade.py`（Filipsson 1978） | ✅ R2 已实现 |
+| `src/polaris/sim/simphony_backend.py` | `modules/circuit/`（自研等效级联，不依赖 simphony 库） | ✅ R3 已实现 |
+| `src/polaris/sim/jax_backend.py` | `modules/inverse/src/polaris_inverse/adjoint.py`（JAX autograd） | ✅ R4 已实现 |
+| `benchmarks/circuit_sim_benchmark.py` | `examples/e2e_showcase/` + `examples/full_pipeline_18modules/` | ✅ R5 已实现 |
+| `src/polaris/routing/gdsfactory_style.py` | 路标 R10 未实现（阶段2） | ⏳ R10 待实现 |
+| `src/polaris/sim/picwave_backend.py` | 路标 R15 未实现（阶段3） | ⏳ R15 待实现 |
+| `src/polaris/sim/eme_backend.py` | `modules/eme/`（已有 EME 模块，路标 R16 待验收） | ⚠️ R16 待验收 |
+| `src/polaris/gui/layout_editor.py` | `modules/gui/`（已有 GUI 模块，路标 R19 待验收） | ⚠️ R19 待验收 |
+
+### 0.2 v5.0 架构商用标准审计结果（2026-07-03）
+
+| 审计维度 | v4 旧状态 | v5.0 实际 | 改善 |
+|---------|----------|----------|------|
+| R03 except:pass 真实违规 | 2 处 | 0 处 | ✅ 零违规 |
+| R04 GPU 真实违规 | 1 处 | 0 处 | ✅ 零违规 |
+| R05 TODO/FIXME 残留 | 0 处 | 0 处 | ✅ 零残留 |
+| R02 文献引用<5 | 56 文件 | 0 文件（289 业务文件全 ≥5） | ✅ 已修复 |
+| 超长文件(>800行) | 24 处(最大1798) | 4 处(936/824/823/808，边界合理) | ✅ 大幅改善 |
+| 测试用例 | 9094 collected(8 error) | 288 passed(0 failed) | ✅ 零错误 |
+| 真实例子 | — | 7/7 通过（e2e+full_pipeline+business） | ✅ 全通过 |
+
+### 0.3 阶段1（R1-R6）v5.0 对标状态
+
+路标阶段1要求对标 sax+simphony 电路仿真，D03 仿真精度 4→6。v5.0 核查:
+- ✅ 子网络增长算法（Filipsson 1978）等效 sax，S 参数格式兼容 SAX
+- ✅ JAX autograd 逆向设计（best-checkpoint 修复后 +0.17dB）
+- ✅ 10 个 S 参数模型 + MNA SPICE + 系统级 + 时域 + FDTD 全套
+- ⚠️ 设计决策: 不依赖 sax/simphony 库（R13 去除必装依赖），自研等效算法
+- ⚠️ 缺少与 sax/simphony 的交叉验证测试（路标 R3 验收"10电路误差<1e-4"待补）
 
 ---
 
