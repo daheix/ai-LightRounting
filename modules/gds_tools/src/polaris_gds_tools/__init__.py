@@ -132,6 +132,14 @@ from polaris_gds_tools.gdsii_tapeout_precheck import tapeout_precheck
 from polaris_gds_tools.gdsii_batch_pipeline import run_batch_pipeline
 from polaris_gds_tools.gdsii_drc_area import check_area
 
+# --- 曲线离散化与样条曲线（v5.0 R11 路标：GDS/OASIS 1nm 精度导出）---
+from polaris_gds_tools.curve_discretization import (
+    bspline_curve,
+    catmull_rom_spline,
+    discretize_curve_1nm,
+    discretize_to_gds_path,
+)
+
 __version__ = "5.1.0"
 
 __all__ = [
@@ -193,4 +201,9 @@ __all__ = [
     "tapeout_precheck",
     "run_batch_pipeline",
     "check_area",
+    # 曲线离散化与样条曲线（v5.0 R11 路标）
+    "discretize_curve_1nm",
+    "bspline_curve",
+    "catmull_rom_spline",
+    "discretize_to_gds_path",
 ]

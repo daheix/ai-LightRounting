@@ -60,11 +60,26 @@ class Tidy3DBackend:
         self.config = config
 
     def run_cloud(self) -> dict:
-        """运行 Tidy3D 云仿真。
+        """运行 Tidy3D 云仿真（R27 路标：真实调用 tidy3d webapi）。
+
+        通过 ``tidy3d.webapi.run()`` 提交 :class:`tidy3d.Simulation` 到 Tidy3D
+        云端 FDTD 求解器，等待仿真完成并下载 :class:`tidy3d.SimulationData`，
+        解析返回 ``transmission``/``reflection``/``field`` 等字段。
+
+        R03 禁止 fall-back: tidy3d 未安装 raise ImportError；无 api_key raise
+        RuntimeError；云调用异常直接向上抛出，不返回任何假数据。
+        R04 合规: GPU 加速完全在 Tidy3D 云端完成，本机仅做 Python 调用与
+        NumPy 结果解析，不引入任何 GPU 后端依赖。
+
+        学术依据 / 官方文档:
+        - Tidy3D Web API https://docs.flexcompute.com/projects/tidy3d/en/latest/api/webapi.html
+        - tidy3d.Simulation https://docs.flexcompute.com/projects/tidy3d/en/stable/api/_autosummary/tidy3d.Simulation.html
+        - tidy3d.SimulationData https://docs.flexcompute.com/projects/tidy3d/en/latest/api/_autosummary/tidy3d.SimulationData.html
+        - WebAPI Tutorial https://docs.flexcompute.com/projects/tidy3d/en/latest/notebooks/WebAPI.html
 
         Raises:
             ImportError: tidy3d 包未安装。
-            RuntimeError: 无 API key。
+            RuntimeError: 无 API key 或云调用失败。
         """
         if importlib.util.find_spec("tidy3d") is None:
             raise ImportError(
@@ -75,9 +90,90 @@ class Tidy3DBackend:
             raise RuntimeError(
                 "Tidy3D 云仿真需要 API key，请通过 Tidy3DConfig(api_key=...) 提供。"
                 "获取: https://www.flexcompute.com/tidy3d/")
-        raise NotImplementedError(
-            "Tidy3D 云 API 调用需 tidy3d 包已安装且有效 API key，"
-            "当前环境不满足，禁止 fall-back（R03）。")
+        # 延迟 import（R11/R13: 不在模块顶部 import tidy3d，避免强制依赖）
+        import tidy3d as td
+        from tidy3d import web
+        web.configure(self.config.api_key)
+        sim = self._build_simulation(td)
+        sim_data = web.run(
+            sim,
+            task_name="polaris_tidy3d",
+            folder_name="PoLaRIS",
+            verbose=True,
+        )
+        return self._extract_results(sim_data)
+
+    def _build_simulation(self, td) -> "td.Simulation":
+        """构建 :class:`tidy3d.Simulation` 对象（基底+光源+监视器+PML+网格）。
+
+        以 1550nm 平面波入射 SiO₂ 介质块为最小可运行示例，配置透射/反射
+        FluxMonitor + FieldMonitor，全 PML 边界，均匀网格。
+
+        学术依据: Tidy3D Simulation 构造
+        https://docs.flexcompute.com/projects/tidy3d/en/stable/api/_autosummary/tidy3d.Simulation.html
+        边界: https://docs.flexcompute.com/projects/tidy3d/en/latest/notebooks/BoundaryConditions.html
+        """
+        wl_um = self.config.wavelength_um
+        freq0 = _C0 / (wl_um * 1e-6)          # 中心频率 Hz
+        fwidth = freq0 / 10.0                  # 脉冲宽度 Hz（10% 相对带宽）
+        run_time = 10.0 / fwidth               # 仿真时长 s（10 倍脉冲衰减）
+        # 介质与结构：SiO₂ 基底（半空间），折射率来自模块常数 _N_SIO2
+        sio2 = td.Medium.from_nk(n=_N_SIO2, k=0.0, freq=freq0)
+        substrate = td.Structure(
+            geometry=td.Box(center=(0.0, 0.0, -2.0), size=(td.inf, td.inf, 4.0)),
+            medium=sio2,
+        )
+        # 光源：x 偏振高斯脉冲平面波，从 -x 端入射
+        source = td.UniformCurrentSource(
+            center=(-3.0, 0.0, 0.0),
+            size=(0.0, td.inf, td.inf),
+            source_time=td.GaussianPulse(freq0=freq0, fwidth=fwidth),
+            polarization="Ex",
+        )
+        # 监视器：透射/反射 FluxMonitor + FieldMonitor
+        monitor_trans = td.FluxMonitor(
+            center=(3.0, 0.0, 0.0), size=(0.0, td.inf, td.inf),
+            freqs=[freq0], name="transmission",
+        )
+        monitor_refl = td.FluxMonitor(
+            center=(-2.5, 0.0, 0.0), size=(0.0, td.inf, td.inf),
+            freqs=[freq0], name="reflection",
+        )
+        monitor_field = td.FieldMonitor(
+            center=(0.0, 0.0, 0.0), size=(td.inf, td.inf, 0.0),
+            freqs=[freq0], name="field",
+        )
+        return td.Simulation(
+            size=(8.0, 4.0, 4.0),
+            grid_spec=td.GridSpec.uniform(dl=self.config.dx_um),
+            structures=[substrate],
+            sources=[source],
+            monitors=[monitor_trans, monitor_refl, monitor_field],
+            run_time=run_time,
+            boundary_spec=td.BoundarySpec.all_sides(boundary=td.PML()),
+        )
+
+    def _extract_results(self, sim_data) -> dict:
+        """从 :class:`tidy3d.SimulationData` 提取 transmission/reflection/field。
+
+        学术依据: Tidy3D SimulationData 监视器输出
+        https://docs.flexcompute.com/projects/tidy3d/en/latest/api/_autosummary/tidy3d.SimulationData.html
+        """
+        trans = float(np.asarray(sim_data["transmission"].flux).item())
+        refl = float(np.asarray(sim_data["reflection"].flux).item())
+        field_data = sim_data["field"]
+        field_dict: dict[str, np.ndarray] = {}
+        for comp in ("Ex", "Ey", "Ez", "Hx", "Hy", "Hz"):
+            comp_data = getattr(field_data, comp, None)
+            if comp_data is not None:
+                field_dict[comp] = np.asarray(comp_data.values)
+        return {
+            "transmission": trans,
+            "reflection": refl,
+            "field": field_dict,
+            "n_steps": self.config.n_steps,
+            "wavelength_um": self.config.wavelength_um,
+        }
 
 
 # =============================================================================

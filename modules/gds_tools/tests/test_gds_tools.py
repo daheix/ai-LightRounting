@@ -911,3 +911,132 @@ def test_check_area_finds_violations(test_gds):
     n_viol = (len(report.violations) if hasattr(report, "violations")
               else getattr(report, "violation_count", 0))
     assert n_viol > 0, "高面积阈值应报告违规"
+
+
+# ===========================================================================
+# 曲线离散化与样条曲线测试（v5.0 R11 路标：GDS/OASIS 1nm 精度导出）
+# 来源（R02 学术诚信）:
+# - de Boor 1978 A Practical Guide to Splines
+#   https://link.springer.com/book/10.1007/978-1-4612-6332-9
+# - Catmull & Rom 1974 Computer Aided Geometric Design
+#   https://www.sciencedirect.com/science/article/pii/B9780120790500500205
+# - SEMI P39 OASIS https://en.wikipedia.org/wiki/Open_Artwork_System_Interchange_Standard
+# - GDSII 1nm dbu https://www.klayout.org/doc/manual/database.html
+# - Piegl & Tiller 1997 The NURBS Book §3.5
+#   https://link.springer.com/book/10.1007/978-3-642-59223-2
+# ===========================================================================
+
+
+def test_discretize_curve_1nm_arc_length():
+    """discretize_curve_1nm 验证 1nm 弧长步长离散化。
+
+    曲线 (t, t²)，t ∈ [0, 1]，理论弧长 ≈ 1.4789μm，1nm 步长 → ~1480 点。
+    相邻点弦长应接近 1nm（0.001μm），数量级与理论一致。
+    """
+    import numpy as np
+    from polaris_gds_tools.curve_discretization import discretize_curve_1nm
+
+    pts = discretize_curve_1nm(lambda t: (t, t ** 2), 0.0, 1.0, tol_um=0.001)
+    assert pts.ndim == 2 and pts.shape[1] == 2, f"shape={pts.shape}"
+    # 弧长 ≈ 1.4789μm，1nm 步长 → ~1480 点，允许 1000~2000 范围
+    n = pts.shape[0]
+    assert 1000 <= n <= 2000, f"1nm 离散化点数 {n} 不在预期范围"
+
+    # 相邻点弦长应接近 1nm（首点除外，平均弦长 0.001~0.002μm）
+    diffs = np.diff(pts, axis=0)
+    seg = np.sqrt(np.einsum("ij,ij->i", diffs, diffs))
+    mean_seg = float(np.mean(seg))
+    assert 0.0005 <= mean_seg <= 0.002, f"平均弧长步长 {mean_seg} 偏离 1nm"
+
+    # 端点正确（首点 = t=0，末点 = t=1）
+    assert abs(pts[0, 0] - 0.0) < 1e-9 and abs(pts[0, 1] - 0.0) < 1e-9
+    assert abs(pts[-1, 0] - 1.0) < 1e-6 and abs(pts[-1, 1] - 1.0) < 1e-6
+
+
+def test_bspline_curve_basic():
+    """bspline_curve 验证 B-spline（de Boor 算法）基本功能。
+
+    clamped B-spline 曲线首末端点必须经过首末控制点。
+    """
+    import numpy as np
+    from polaris_gds_tools.curve_discretization import bspline_curve
+
+    ctrl = np.array([[0.0, 0.0], [1.0, 2.0], [3.0, 1.0], [4.0, 0.0]])
+    pts = bspline_curve(ctrl, degree=3, n_points=50)
+    assert pts.shape == (50, 2), f"shape={pts.shape}"
+
+    # clamped B-spline 首末端点经过首末控制点
+    assert np.allclose(pts[0], ctrl[0], atol=1e-9), \
+        f"首点 {pts[0]} != 首控制点 {ctrl[0]}"
+    assert np.allclose(pts[-1], ctrl[-1], atol=1e-9), \
+        f"末点 {pts[-1]} != 末控制点 {ctrl[-1]}"
+
+    # 曲线应在控制点凸包内（x 坐标范围检查）
+    assert pts[:, 0].min() >= ctrl[:, 0].min() - 1e-9
+    assert pts[:, 0].max() <= ctrl[:, 0].max() + 1e-9
+
+
+def test_catmull_rom_basic():
+    """catmull_rom_spline 验证 Catmull-Rom 样条基本功能。
+
+    Catmull-Rom 是插值样条，必须过所有控制点。
+    """
+    import numpy as np
+    from polaris_gds_tools.curve_discretization import catmull_rom_spline
+
+    ctrl = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 0.0], [3.0, 1.0]])
+    pts = catmull_rom_spline(ctrl, n_points=80)
+    assert pts.shape == (80, 2), f"shape={pts.shape}"
+
+    # Catmull-Rom 过所有控制点：在控制点附近应能找到对应点
+    for cp in ctrl:
+        dists = np.sqrt(np.sum((pts - cp) ** 2, axis=1))
+        assert dists.min() < 1e-6, f"控制点 {cp} 不在曲线上（min_dist={dists.min()})"
+
+    # 端点必须等于首末控制点（端点镜像保证）
+    assert np.allclose(pts[0], ctrl[0], atol=1e-9), \
+        f"首点 {pts[0]} != 首控制点 {ctrl[0]}"
+    assert np.allclose(pts[-1], ctrl[-1], atol=1e-9), \
+        f"末点 {pts[-1]} != 末控制点 {ctrl[-1]}"
+
+
+def test_discretize_invalid_input_raises():
+    """验证无效输入 raise（R03 禁止 fall-back，不返回空数组）。"""
+    import numpy as np
+    from polaris_gds_tools.curve_discretization import (
+        bspline_curve,
+        catmull_rom_spline,
+        discretize_curve_1nm,
+        discretize_to_gds_path,
+    )
+
+    # discretize_curve_1nm: end <= start
+    with pytest.raises(RuntimeError):
+        discretize_curve_1nm(lambda t: (t, t), 1.0, 0.0)
+    # discretize_curve_1nm: tol_um <= 0
+    with pytest.raises(RuntimeError):
+        discretize_curve_1nm(lambda t: (t, t), 0.0, 1.0, tol_um=0.0)
+    # discretize_curve_1nm: curve_func 不可调用
+    with pytest.raises(RuntimeError):
+        discretize_curve_1nm("not_callable", 0.0, 1.0)
+
+    # bspline_curve: 控制点数 < 2
+    with pytest.raises(RuntimeError):
+        bspline_curve(np.array([[0.0, 0.0]]), degree=1)
+    # bspline_curve: degree >= n_ctrl
+    with pytest.raises(RuntimeError):
+        bspline_curve(np.array([[0.0, 0.0], [1.0, 1.0]]), degree=2)
+    # bspline_curve: 非 (N,2) 形状
+    with pytest.raises(RuntimeError):
+        bspline_curve(np.array([0.0, 1.0, 2.0]), degree=1)
+
+    # catmull_rom_spline: 控制点数 < 2
+    with pytest.raises(RuntimeError):
+        catmull_rom_spline(np.array([[0.0, 0.0]]))
+    # catmull_rom_spline: n_points < 2
+    with pytest.raises(RuntimeError):
+        catmull_rom_spline(np.array([[0.0, 0.0], [1.0, 1.0]]), n_points=1)
+
+    # discretize_to_gds_path: dbu_um <= 0
+    with pytest.raises(RuntimeError):
+        discretize_to_gds_path(lambda t: (t, t), 0.0, 1.0, dbu_um=0.0)
