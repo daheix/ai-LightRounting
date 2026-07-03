@@ -23,7 +23,6 @@ set -euo pipefail
 
 WORKSPACE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 THREEDTOOL_DIR="${WORKSPACE}/3dtool"
-EXTRAS_PARTS="${WORKSPACE}/polaris-extras.tar.gz.part_"
 MARK_FILE="/tmp/.polaris_installed"
 NO_DAEMON=0
 
@@ -48,13 +47,19 @@ source "${THREEDTOOL_DIR}/env.sh"
 SITE_PKG="${THREEDTOOL_DIR}/python-runtime/lib/python3.14/site-packages"
 
 # ============================================================
-# 步骤 3: 解压 PoLaRIS 特有包（分片合并 → 解压）
-#   polaris-extras.tar.gz 原始 137M > GitHub 100M 限制，
-#   拆成 part_00/part_01 提交，运行时 cat 合并解压
+# 步骤 3: 安装 PoLaRIS 特有 wheel（polaris_wheels/，离线 pip install）
+#   jax/sax/klayout/gymnasium/optax 等 PoLaRIS 专用包
+#   --no-index 离线安装，find-links 同时指向 3dtool/wheels 解决基础依赖
 # ============================================================
-log "[3/6] 合并分片并解压 PoLaRIS 特有包..."
-ls "${EXTRAS_PARTS}"* >/dev/null 2>&1 || fail "polaris-extras 分片不存在: ${EXTRAS_PARTS}*"
-cat "${EXTRAS_PARTS}"* | tar xz -C "${SITE_PKG}"
+POLARIS_WHEELS="${WORKSPACE}/polaris_wheels"
+log "[3/6] 安装 PoLaRIS 特有 wheel（polaris_wheels/）..."
+[ -d "${POLARIS_WHEELS}" ] || fail "polaris_wheels 目录不存在: ${POLARIS_WHEELS}"
+POLARIS_WHL_COUNT=$(ls "${POLARIS_WHEELS}"/*.whl 2>/dev/null | wc -l)
+[ "${POLARIS_WHL_COUNT}" -ge 20 ] || fail "polaris_wheels 数量不足: ${POLARIS_WHL_COUNT}"
+"${THREEDTOOL_PYTHON}" -m pip install --no-index \
+    --find-links="${THREEDTOOL_DIR}/wheels" \
+    --find-links="${POLARIS_WHEELS}" \
+    "${POLARIS_WHEELS}"/*.whl 2>&1 | tail -3
 
 # ============================================================
 # 步骤 4: 验证 PoLaRIS 特有包（jax CPU 强制 R04）

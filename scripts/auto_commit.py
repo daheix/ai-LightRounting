@@ -45,7 +45,7 @@ import time
 from pathlib import Path
 
 # 配置
-INTERVAL_SECONDS = 6 * 60  # 6 分钟轮询
+INTERVAL_SECONDS = 9 * 60  # 9 分钟轮询（用户规则 v3）
 REPO_DIR = Path(__file__).resolve().parent.parent
 LOG_FILE = REPO_DIR / "auto_commit.log"
 MAIN_BRANCH = "main"
