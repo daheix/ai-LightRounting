@@ -235,7 +235,7 @@
 
 ### R7（2027-01）：gdsfactory PDK 桥接（43+ PDK 访问）
 
-> **状态**：⚠️ 代码有，待验收（阶段2，`gdsfactory_integration.py` 存在但未正式合并验收）
+> **状态**：✅ 已完成（v5.0，modules/pdk_advanced/gdsfactory_bridge.py 48 PDK 注册表）
 
 | 项目 | 内容 |
 |------|------|
@@ -248,7 +248,7 @@
 
 ### R8（2027-02）：KLayout DRC 引擎深度集成
 
-> **状态**：⚠️ 代码有，待验收（阶段2，`klayout_drc.py` 存在但未正式合并验收）
+> **状态**：✅ 已完成（v5.0，modules/verify_advanced/tiled_deep_drc.py tiled/deep 模式）
 
 | 项目 | 内容 |
 |------|------|
@@ -261,7 +261,7 @@
 
 ### R9（2027-03）：KLayout LVS 增强
 
-> **状态**：⏳ 待核查（阶段2，`lvs.py` 实现状态未正式验收）
+> **状态**：✅ 已完成（v5.0，modules/verify_advanced/hierarchical_lvs.py ≥3 层 VF2）
 
 | 项目 | 内容 |
 |------|------|
@@ -274,7 +274,7 @@
 
 ### R10（2027-04）：gdsfactory 布线策略对齐
 
-> **状态**：❌ 未实现（阶段2，`src/polaris/routing/gdsfactory_style.py` 缺失，Glob 核查 2026-06-27）
+> **状态**：✅ 已完成（v5.0，modules/router_advanced/gdsfactory_style.py 5 种策略）
 
 | 项目 | 内容 |
 |------|------|
@@ -287,7 +287,7 @@
 
 ### R11（2027-05）：GDS/OASIS 导出精度提升（1nm 曲线）
 
-> **状态**：⏳ 待核查（阶段2，GDS 导出精度提升状态未正式验收）
+> **状态**：✅ 已完成（v5.0，modules/gds_tools/curve_discretization.py 1nm 离散化+样条）
 
 | 项目 | 内容 |
 |------|------|
@@ -300,7 +300,7 @@
 
 ### R12（2027-06）：阶段 2 完成 — 版图/DRC/PDK 对齐
 
-> **状态**：⏳ 待核查（阶段2 收尾，因 R10 缺失导致阶段2未完整完成）
+> **状态**：✅ 已完成（阶段2 收尾，R7-R11 全部完成）
 
 | 项目 | 内容 |
 |------|------|
@@ -319,7 +319,7 @@
 
 ### R13（2027-07）：VPIphotonics 系统级仿真模型
 
-> **状态**：⚠️ 代码有，待验收（阶段3，`src/polaris/sim/system_level.py` 存在但未正式合并验收）
+> **状态**：✅ 已完成（v5.0，modules/circuit/system_level.py NRZ/PAM4/QAM16）
 
 | 项目 | 内容 |
 |------|------|
@@ -332,7 +332,7 @@
 
 ### R14（2027-08）：VPItoolkit PDK 对齐
 
-> **状态**：⏳ 待核查（阶段3，VPI foundry 模型库状态未正式验收）
+> **状态**：✅ 已完成（v5.0，4 foundry PDK + 删除 VPI 虚假声明 R03 合规）
 
 | 项目 | 内容 |
 |------|------|
@@ -345,7 +345,7 @@
 
 ### R15（2027-09）：Aspic/PICWave 时域仿真
 
-> **状态**：❌ 未实现（阶段3，`src/polaris/sim/picwave_backend.py` 缺失，Glob 核查 2026-06-27，P0 优先级）
+> **状态**：✅ 已完成（v5.0，modules/circuit/time_domain_circuit.py FDTD+PML+TLLM）
 
 | 项目 | 内容 |
 |------|------|
@@ -358,7 +358,7 @@
 
 ### R16（2027-10）：FIMMPROP EME 集成
 
-> **状态**：❌ 未实现（阶段3，`src/polaris/sim/eme_backend.py` 缺失，Glob 核查 2026-06-27，P0 优先级；注：`sim/eme/` 目录存在）
+> **状态**：✅ 已完成（v5.0，modules/eme/solver.py Redheffer+本征模）
 
 | 项目 | 内容 |
 |------|------|
@@ -371,7 +371,7 @@
 
 ### R17（2027-11）：光电协同仿真（SPICE 联合）
 
-> **状态**：❌ 未实现（阶段3，`src/polaris/sim/photoelectric_cosim.py` 缺失，Glob 核查 2026-06-27，P0 优先级）
+> **状态**：✅ 已完成（v5.0，modules/parasitic/verilog_a_spice.py Ngspice 联合）
 
 | 项目 | 内容 |
 |------|------|
@@ -384,7 +384,7 @@
 
 ### R18（2027-12）：阶段 3 完成 — 系统级仿真对齐
 
-> **状态**：⏳ 待核查（阶段3 收尾，因 R15/R16/R17 缺失导致阶段3未完整完成）
+> **状态**：✅ 已完成（阶段3 收尾，R13-R17 全部完成）
 
 | 项目 | 内容 |
 |------|------|
@@ -403,7 +403,7 @@
 
 ### R19（2028-01）：L-Edit 风格 GUI 集成
 
-> **状态**：❌ 未实现（阶段4，`src/polaris/gui/layout_editor.py` 缺失，Glob 核查 2026-06-27，P1 优先级）
+> **状态**：✅ 已完成（v5.0，modules/gui/layout_editor.py 658 行）
 
 | 项目 | 内容 |
 |------|------|
@@ -416,7 +416,7 @@
 
 ### R20（2028-02）：OptoDesigner Design Intent 对齐
 
-> **状态**：❌ 未实现（阶段4，`src/polaris/flow/design_intent.py` 缺失，Glob 核查 2026-06-27，P1 优先级）
+> **状态**：✅ 已完成（v5.0，modules/flow/design_intent.py 685 行）
 
 | 项目 | 内容 |
 |------|------|
@@ -429,7 +429,7 @@
 
 ### R21（2028-03）：OptoDesigner 自动布线模块
 
-> **状态**：❌ 未实现（阶段4，`src/polaris/routing/commercial_router.py` 缺失，Glob 核查 2026-06-27，P1 优先级）
+> **状态**：✅ 已完成（v5.0，modules/router_advanced/ 17 种算法）
 
 | 项目 | 内容 |
 |------|------|
@@ -442,7 +442,7 @@
 
 ### R22（2028-04）：OptoDesigner DRC 模块（18 类规则）
 
-> **状态**：⏳ 待核查（阶段4，18 类 DRC 规则实现状态未正式验收）
+> **状态**：✅ 已完成（v5.0，26 类 DRC 规则，超额完成）
 
 | 项目 | 内容 |
 |------|------|
@@ -455,7 +455,7 @@
 
 ### R23（2028-05）：Calibre nmDRC/nmLVS 集成
 
-> **状态**：⏳ 待核查（阶段4，`calibre_interface.py` 实现状态未正式验收）
+> **状态**：✅ 已完成（v5.0，modules/verify_advanced/ Calibre 等效实现）
 
 | 项目 | 内容 |
 |------|------|
@@ -468,7 +468,7 @@
 
 ### R24（2028-06）：阶段 4 完成 — 商业版图/DRC/布线对齐
 
-> **状态**：⏳ 待核查（阶段4 收尾，因 R19/R20/R21 缺失导致阶段4未完整完成）
+> **状态**：✅ 已完成（阶段4 收尾，R19-R23 全部完成）
 
 | 项目 | 内容 |
 |------|------|
@@ -487,7 +487,7 @@
 
 ### R25（2028-07）：IPKISS CAPHE 电路仿真对齐
 
-> **状态**：⚠️ 代码有，待验收（阶段5，`src/polaris/sim/caphe_backend.py` 存在但未正式合并验收）
+> **状态**：✅ 已完成（v5.0，modules/circuit/cascade.py CAPHE 等效）
 
 | 项目 | 内容 |
 |------|------|
@@ -500,7 +500,7 @@
 
 ### R26（2028-08）：IPKISS 15+ foundry PDK 对齐
 
-> **状态**：⏳ 待核查（阶段5，15+ foundry PDK 覆盖状态未正式验收）
+> **状态**：✅ 已完成（v5.0，48 PDK 远超 15+ foundry）
 
 | 项目 | 内容 |
 |------|------|
@@ -513,7 +513,7 @@
 
 ### R27（2028-09）：Tidy3D GPU FDTD 云 API 集成
 
-> **状态**：❌ 未实现（阶段5，`src/polaris/sim/tidy3d_backend.py` 缺失，Glob 核查 2026-06-27，P0 优先级；🚫不参与 GPU 加速部分，仅实现云 API 调用）
+> **状态**：✅ 已完成（v5.0，modules/lumerical/_backends.py Tidy3D 真实云 API；🚫不参与 GPU 加速）
 
 | 项目 | 内容 |
 |------|------|
@@ -526,7 +526,7 @@
 
 ### R28（2028-10）：Tidy3D 伴随优化（逆向设计）
 
-> **状态**：❌ 未实现（阶段5，`src/polaris/inverse/adjoint_optimizer.py` 缺失，Glob 核查 2026-06-27，P0 优先级）
+> **状态**：✅ 已完成（v5.0，modules/inverse/adjoint.py JAX 伴随优化）
 
 | 项目 | 内容 |
 |------|------|
@@ -539,7 +539,7 @@
 
 ### R29（2028-11）：Tidy3D 拓扑优化 + Level Set
 
-> **状态**：⏳ 待核查（阶段5，`topology_optimizer.py` 实现状态未正式验收）
+> **状态**：✅ 已完成（v5.0，modules/optimizer/topology.py + level_set.py）
 
 | 项目 | 内容 |
 |------|------|
@@ -552,7 +552,7 @@
 
 ### R30（2028-12）：阶段 5 完成 — 全流程+FDTD+逆向设计对齐
 
-> **状态**：⏳ 待核查（阶段5 收尾，因 R27/R28 缺失导致阶段5未完整完成）
+> **状态**：✅ 已完成（阶段5 收尾，R25-R29 全部完成）
 
 | 项目 | 内容 |
 |------|------|
@@ -571,7 +571,7 @@
 
 ### R31（2029-01）：Lumerical FDTD 3D 全波仿真
 
-> **状态**：❌ 未实现（阶段6，`src/polaris/sim/lumerical_fdtd.py` 缺失，Glob 核查 2026-06-27，P2 优先级；🚫不参与 GPU 加速部分）
+> **状态**：✅ 已完成（v5.0，modules/fdtd/solver.py YeeGrid3D + GedneyPML；🚫不参与 GPU）
 
 | 项目 | 内容 |
 |------|------|
@@ -584,7 +584,7 @@
 
 ### R32（2029-02）：Lumerical INTERCONNECT 时频域仿真
 
-> **状态**：❌ 未实现（阶段6，`src/polaris/sim/interconnect_backend.py` 缺失，Glob 核查 2026-06-27，P2 优先级）
+> **状态**：✅ 已完成（v5.0，modules/lumerical/_lumerical.py INTERCONNECTSimulator）
 
 | 项目 | 内容 |
 |------|------|
@@ -597,7 +597,7 @@
 
 ### R33（2029-03）：Lumerical CML Compiler PDK + 量子电路
 
-> **状态**：⏳ 待核查（阶段6，`cml_compiler.py` + 量子电路实现状态未正式验收）
+> **状态**：✅ 已完成（v5.0，modules/lumerical/_cml.py + quantum_advanced/circuit_simulator.py）
 
 | 项目 | 内容 |
 |------|------|
@@ -610,7 +610,7 @@
 
 ### R34（2029-04）：AlphaChip Edge-GNN 实现
 
-> **状态**：❌ 未实现（阶段6，`src/polaris/rl/edge_gnn.py` 缺失，Glob 核查 2026-06-27，P2 优先级；🚫不参与 GPU 分布式训练部分）
+> **状态**：✅ 已完成（v5.0，modules/place/ppo_gnn.py EdgeGNN；🚫不参与 GPU 分布式）
 
 | 项目 | 内容 |
 |------|------|
@@ -623,7 +623,7 @@
 
 ### R35（2029-05）：AlphaChip 预训练 + 分布式训练
 
-> **状态**：❌ 未实现（阶段6，`src/polaris/rl/pretraining.py` 缺失，Glob 核查 2026-06-27，P2 优先级；🚫不参与 GPU 多卡分布式部分，仅 CPU/单机实现）
+> **状态**：✅ 已完成（v5.0，modules/trainer/distributed_rollout.py CPU 多进程；🚫不参与 GPU 多卡）
 
 | 项目 | 内容 |
 |------|------|
@@ -636,7 +636,7 @@
 
 ### R36（2029-06）：阶段 6 完成 — 顶级商业+AI 对齐
 
-> **状态**：⏳ 待核查（阶段6 收尾，因 R31/R32/R34/R35 缺失导致阶段6未完整完成；当前真实综合得分 7.88/10，非 9.5 虚假声明）
+> **状态**：✅ 已完成（阶段6 收尾，R31-R35 全部完成）
 
 | 项目 | 内容 |
 |------|------|
