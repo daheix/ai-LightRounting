@@ -1,22 +1,27 @@
-"""polaris-pdk-advanced 子模块 smoke test（v5.1.0）。
+"""polaris-pdk-advanced 子模块深度测试（v5.1.0）。
 
-覆盖 6 个核心模块的关键 API，验证迁移后功能完整可用：
-- gdsfactory_bridge: 48 PDK 注册表查询 / PDK 互操作层注册 / R03 raise 行为
-- pcell: @polaris_cell 装饰器缓存 / TransformMatrix 仿射变换 / 贝塞尔变换
+覆盖 6 个核心模块的全部公开 API，验证迁移后功能完整可用：
+- gdsfactory_bridge: 48 PDK 注册表查询 / PDK 互操作层注册 / LayerStack/CrossSection
+  转换 / .pic.yml 解析 / 版本兼容性 / R03 raise 行为
+- pcell: @polaris_cell 装饰器缓存 / TransformMatrix 仿射变换 / 贝塞尔变换 / LRU 缓存
 - yaml_config: YAML 解析/序列化 roundtrip / 校验 / 构建 PolarisPDK
-- multi_pdk_manager: 激活/快照/恢复（Memento）/ 合并（Composite）
-- optodesigner: PyCellFactory / DesignIntentEngine 多层掩膜 / FlexConnector 贝塞尔
-- _base: Device 旋转/平移
+- multi_pdk_manager: 激活/快照/恢复（Memento）/ 合并（Composite）/ 元数据查询
+- optodesigner: PyCellFactory 10 种器件 / DesignIntentEngine 多层掩膜 /
+  FlexConnector 贝塞尔 / HierarchyDesign 层级 / PDAflow SPT 导出
+- _base: Device 旋转/平移/footprint / Direction / BoundingBox / Port / Source
 
-R03 合规验证: get_gdsfactory_pdk 未注册时 raise KeyError，禁止 fall-back。
+R03 合规验证: 所有未知输入 raise，禁止 fall-back。
 
-来源（R02 学术诚信）:
+学术依据（R02 学术诚信，docstring 含 ≥5 文献 URL）:
 - pytest 文档: https://docs.pytest.org/
 - gdsfactory PDK: https://gdsfactory.github.io/gdsfactory/
 - Synopsys OptoDesigner:
   https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner.html
 - Fowler 2002 PoEAA: https://martinfowler.com/books/eaa.html
 - Farin 2002 CAGD: https://www.elsevier.com/books/curves-and-surfaces-for-cagd/farin/978-0-12-460521-2
+- Gamma 1994 Design Patterns: https://en.wikipedia.org/wiki/Design_Patterns
+- PDAflow API: http://pdaflow.org/
+- PhIDO arXiv:2508.14123: https://arxiv.org/abs/2508.14123
 """
 
 from __future__ import annotations
@@ -44,20 +49,30 @@ from polaris_pdk_advanced import (  # noqa: E402
     GDSFACTORY_PDK_REGISTRY,
     HierarchyDesign,
     MultiPDKManager,
+    PCellCache,
     PCellMultiView,
     PDKSnapshot,
+    PDAflowInterop,
+    PolarisCrossSection,
+    PolarisLayerLevel,
+    PolarisLayerStack,
     PolarisPDK,
     PolarisPDKRegistry,
+    PolarisSection,
     Port,
+    PyCell,
     PyCellFactory,
     Source,
     TechnologyRule,
     TransformMatrix,
+    VersionCompatibility,
     ai_generate_pcell,
     build_polaris_pdk_from_yaml,
+    check_gdsfactory_version_compatibility,
     clear_pcell_cache,
     get_gdsfactory_pdk,
     list_gdsfactory_pdks,
+    parse_pic_yaml,
     parse_pdk_yaml,
     polaris_cell,
     serialize_pdk_yaml,
@@ -65,15 +80,13 @@ from polaris_pdk_advanced import (  # noqa: E402
 )
 
 
-# ===== gdsfactory_bridge smoke test =====
+# ===== gdsfactory_bridge 深度测试 =====
 
 
 def test_package_version_and_exports():
     """包版本与导出符号数符合预期（迁移完整性）。"""
     assert ppa.__version__ == "5.1.0"
-    # __all__ 含 6 个子模块的公开符号 + __version__
     assert len(ppa.__all__) >= 50
-    # 关键符号均已导出
     for name in (
         "GDSFACTORY_PDK_REGISTRY", "PolarisPDKRegistry", "MultiPDKManager",
         "PCellMultiView", "polaris_cell", "TransformMatrix",
@@ -90,14 +103,12 @@ def test_list_gdsfactory_pdks_returns_48():
     assert isinstance(pdks, list)
     assert len(pdks) == 48
     assert len(GDSFACTORY_PDK_REGISTRY) == 48
-    # 每个 PDK 含必要字段且 source_url 非空（R02 学术诚信）
     for info in pdks:
         assert "name" in info
         assert "platform" in info
         assert "process_node" in info
         assert "source_url" in info
         assert info["source_url"], f"PDK {info['name']} source_url 为空（违反 R02）"
-    # 抽样验证关键 PDK 存在
     names = {p["name"] for p in pdks}
     for key in ("generic", "ubcpdk", "siepic", "gf180mcu", "ihp", "skywater130"):
         assert key in names, f"缺少关键 PDK: {key}"
@@ -108,16 +119,26 @@ def test_get_gdsfactory_pdk_known_and_unknown():
     info = get_gdsfactory_pdk("generic")
     assert info.name == "generic"
     assert info.platform == "SOI"
-    assert info.source_url  # 非空
-    # 未知 PDK raise KeyError（禁止 fall-back）
+    assert info.source_url
     with pytest.raises(KeyError):
         get_gdsfactory_pdk("nonexistent_pdk_12345")
+
+
+def test_pdk_info_all_fields():
+    """PDKInfo 所有字段完整且类型正确（R02 溯源）。"""
+    info = get_gdsfactory_pdk("siepic")
+    assert info.name == "siepic"
+    assert info.platform == "SOI"
+    assert info.process_node == "220nm SOI"
+    assert info.import_name == "siepic"
+    assert info.layer_stack_name == "siepic"
+    assert info.description
+    assert info.source_url == "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
 
 
 def test_polaris_pdk_registry_register_and_conflict():
     """PolarisPDKRegistry 注册/查询/冲突检测（*创新* 互操作层）。"""
     reg = PolarisPDKRegistry()
-    # 注册两个无冲突 PDK
     pdk_a = PolarisPDK(name="a", platform="SOI", process_node="220nm SOI",
                        devices={"wg_a": _make_device("wg_a")})
     pdk_b = PolarisPDK(name="b", platform="SiN", process_node="300nm SiN",
@@ -126,12 +147,9 @@ def test_polaris_pdk_registry_register_and_conflict():
     reg.register("b", pdk_b)
     assert reg.list_pdks() == ["a", "b"]
     assert reg.get("a") is pdk_a
-    # 重复注册 raise ValueError（R03）
     with pytest.raises(ValueError):
         reg.register("a", pdk_a)
-    # 无冲突
     assert reg.detect_conflicts() == []
-    # 构造冲突：两个 PDK 含同名组件
     pdk_c = PolarisPDK(name="c", platform="SOI", process_node="220nm SOI",
                        devices={"wg_a": _make_device("wg_a")})
     reg.register("c", pdk_c)
@@ -141,7 +159,112 @@ def test_polaris_pdk_registry_register_and_conflict():
     assert set(conflicts[0].pdk_names) == {"a", "c"}
 
 
-# ===== pcell smoke test =====
+def test_polaris_pdk_registry_get_unknown():
+    """PolarisPDKRegistry.get 未知 PDK raise KeyError（R03）。"""
+    reg = PolarisPDKRegistry()
+    with pytest.raises(KeyError):
+        reg.get("nonexistent")
+
+
+def test_polaris_layer_stack_and_level():
+    """PolarisLayerStack/PolarisLayerLevel 数据类（对标 gdsfactory LayerStack）。"""
+    level = PolarisLayerLevel(
+        layer="1/0", thickness_nm=220.0, zmin_nm=0.0, material="Si",
+        sidewall_angle_deg=0.0, refractive_index=complex(3.476, 0.0),
+    )
+    assert level.layer == "1/0"
+    assert level.thickness_nm == 220.0
+    assert level.material == "Si"
+    assert level.refractive_index == complex(3.476, 0.0)
+    stack = PolarisLayerStack(name="test", levels=[level])
+    assert stack.name == "test"
+    assert len(stack.levels) == 1
+    assert stack.levels[0] is level
+
+
+def test_polaris_cross_section_and_section():
+    """PolarisCrossSection/PolarisSection 数据类（对标 gdsfactory CrossSection）。"""
+    sec = PolarisSection(width_um=0.5, offset_um=0.0, layer="WG",
+                         ports=("in", "out"))
+    assert sec.width_um == 0.5
+    assert sec.layer == "WG"
+    assert sec.ports == ("in", "out")
+    assert sec.hidden is False
+    xs = PolarisCrossSection(name="strip", sections=[sec], width_um=0.5)
+    assert xs.name == "strip"
+    assert len(xs.sections) == 1
+    assert xs.width_um == 0.5
+
+
+def test_parse_pic_yaml():
+    """parse_pic_yaml 解析 .pic.yml 布局文件。"""
+    yaml_content = """\
+name: test_circuit
+instances:
+  wg1:
+    component: straight
+    settings:
+      length: 10.0
+  wg2:
+    component: bend
+    settings:
+      radius: 5.0
+placements:
+  wg1:
+    x: 0.0
+    y: 0.0
+  wg2:
+    x: 10.0
+    y: 0.0
+    rotation: 0.0
+connections:
+  wg1,out: wg2,in
+routes:
+  r1:
+    links:
+      wg2,out: wg3,in
+    settings:
+      strategy: auto
+ports:
+  in: wg1,in
+  out: wg2,out
+"""
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".pic.yml", delete=False, encoding="utf-8"
+    ) as f:
+        f.write(yaml_content)
+        yaml_path = f.name
+    try:
+        spec = parse_pic_yaml(yaml_path)
+        assert spec.name == "test_circuit"
+        assert len(spec.instances) == 2
+        assert spec.instances[0].component == "straight"
+        assert len(spec.connections) == 1
+        assert spec.connections[0].source == "wg1,out"
+        assert len(spec.routes) == 1
+        assert spec.routes[0].strategy == "auto"
+        assert spec.ports["in"] == "wg1,in"
+    finally:
+        Path(yaml_path).unlink()
+
+
+def test_parse_pic_yaml_not_found():
+    """parse_pic_yaml 文件不存在 raise FileNotFoundError（R03）。"""
+    with pytest.raises(FileNotFoundError):
+        parse_pic_yaml("/nonexistent/path/to/file.pic.yml")
+
+
+def test_check_gdsfactory_version_compatibility():
+    """check_gdsfactory_version_compatibility 返回兼容性报告。"""
+    report = check_gdsfactory_version_compatibility()
+    assert isinstance(report, VersionCompatibility)
+    assert isinstance(report.compatible, bool)
+    assert report.python_version
+    assert report.reason
+    assert report.recommended_action
+
+
+# ===== pcell 深度测试 =====
 
 
 def test_polaris_cell_decorator_caches():
@@ -163,65 +286,110 @@ def test_polaris_cell_decorator_caches():
 
     c1 = straight(width=0.5, length=10.0)
     c2 = straight(width=0.5, length=10.0)
-    assert c1 is c2  # 缓存命中，同一实例
-    # 不同参数返回不同实例
+    assert c1 is c2
     c3 = straight(width=0.6, length=10.0)
     assert c3 is not c1
-    # 类型校验：传错类型 raise TypeError（R03）
     with pytest.raises(TypeError):
         straight(width="not_a_float")  # type: ignore[arg-type]
-    # Observer Pattern: add_port 同步到 netlist_view
     assert "in" in c1.get_netlist()["ports"]
 
 
 def test_transform_matrix_affine_and_bezier():
     """TransformMatrix 仿射变换 + 贝塞尔曲线变换（*创新*）。"""
-    # 单位矩阵
     m = TransformMatrix()
     p = m.apply(np.array([1.0, 2.0]))
     assert np.allclose(p, [1.0, 2.0])
-    # 平移 + 旋转
     m2 = m.translate(10.0, 20.0).rotate(90.0)
     p2 = m2.apply(np.array([1.0, 0.0]))
-    # 旋转 90°: (1,0)->(0,1)，再平移 (10,20) -> (10, 21)
     assert np.allclose(p2, [10.0, 21.0])
-    # 逆变换
     inv = m2.inverse()
     p3 = inv.apply(p2)
     assert np.allclose(p3, [1.0, 0.0])
-    # 贝塞尔变换（*创新*）：3 控制点二次贝塞尔
     cp = np.array([[0.0, 0.0], [1.0, 2.0], [2.0, 0.0]])
     pt_mid = TransformMatrix.bezier_transform(cp, 0.5)
-    # B(0.5) = 0.25*P0 + 0.5*P1 + 0.25*P2 = (1.0, 1.0)
     assert np.allclose(pt_mid, [1.0, 1.0])
-    # 奇异矩阵求逆 raise ValueError（R03）
     singular = TransformMatrix(a=0.0, b=0.0, c=0.0, d=0.0)
     with pytest.raises(ValueError):
         singular.inverse()
 
 
+def test_transform_matrix_scale_shear_compose():
+    """TransformMatrix scale/shear/compose 变换。"""
+    m = TransformMatrix()
+    scaled = m.scale(2.0)
+    p = scaled.apply(np.array([1.0, 1.0]))
+    assert np.allclose(p, [2.0, 2.0])
+    scaled_xy = m.scale(2.0, 3.0)
+    p2 = scaled_xy.apply(np.array([1.0, 1.0]))
+    assert np.allclose(p2, [2.0, 3.0])
+    sheared = m.shear(1.0)
+    p3 = sheared.apply(np.array([1.0, 0.0]))
+    assert np.allclose(p3, [1.0, 0.0])
+    p4 = sheared.apply(np.array([0.0, 1.0]))
+    assert np.allclose(p4, [1.0, 1.0])
+    composed = m.translate(5.0, 5.0).scale(2.0)
+    p5 = composed.apply(np.array([1.0, 1.0]))
+    assert np.allclose(p5, [7.0, 7.0])
+
+
+def test_transform_matrix_apply_pointset():
+    """TransformMatrix.apply 应用到点集 (N, 2)。"""
+    m = TransformMatrix().translate(1.0, 2.0)
+    pts = np.array([[0.0, 0.0], [1.0, 1.0], [2.0, 3.0]])
+    result = m.apply(pts)
+    assert result.shape == (3, 2)
+    assert np.allclose(result[0], [1.0, 2.0])
+    assert np.allclose(result[1], [2.0, 3.0])
+    with pytest.raises(ValueError):
+        m.apply(np.array([1.0, 2.0, 3.0]))
+    with pytest.raises(ValueError):
+        m.apply(np.array([[1.0, 2.0, 3.0]]))
+
+
+def test_pcell_cache_lru():
+    """PCellCache LRU 淘汰与命中率统计。"""
+    cache = PCellCache(maxsize=2)
+    cell1 = PCellMultiView(name="c1")
+    cell2 = PCellMultiView(name="c2")
+    cell3 = PCellMultiView(name="c3")
+    cache.put(("c1",), cell1)
+    cache.put(("c2",), cell2)
+    assert cache.size == 2
+    assert cache.get(("c1",)) is cell1
+    cache.put(("c3",), cell3)
+    assert cache.size == 2
+    assert cache.get(("c2",)) is None
+    assert cache.get(("c3",)) is cell3
+    assert cache.hit_rate > 0.0
+    with pytest.raises(ValueError):
+        PCellCache(maxsize=0)
+
+
 def test_ai_generate_pcell_templates():
     """ai_generate_pcell 模板匹配生成 4 种器件代码（*创新*）。"""
-    # 环谐振器
     code_ring = ai_generate_pcell("半径5μm的环谐振器")
     assert "@polaris_cell" in code_ring
     assert "ring_resonator" in code_ring
     assert "radius: float = 5.0" in code_ring
-    # MMI
     code_mmi = ai_generate_pcell("宽度0.5长度10的mmi")
     assert "mmi1x2" in code_mmi
-    # 波导
     code_wg = ai_generate_pcell("width 0.5 length 10 waveguide")
     assert "straight_waveguide" in code_wg
-    # Y 分支
     code_yb = ai_generate_pcell("width 0.5 的 Y 分支")
     assert "y_branch" in code_yb
-    # 无法识别 raise ValueError（R03）
     with pytest.raises(ValueError):
         ai_generate_pcell("完全无法识别的器件描述 xyz123")
 
 
-# ===== yaml_config smoke test =====
+def test_ai_generate_pcell_ring_with_gap():
+    """ai_generate_pcell 环谐振器提取 gap/width 参数。"""
+    code = ai_generate_pcell("半径10间距0.3宽度0.8的环")
+    assert "radius: float = 10.0" in code
+    assert "gap: float = 0.3" in code
+    assert "width: float = 0.8" in code
+
+
+# ===== yaml_config 深度测试 =====
 
 
 def test_yaml_pdk_roundtrip_and_validation():
@@ -279,7 +447,6 @@ cells:
         f.write(yaml_content)
         yaml_path = f.name
     try:
-        # 解析
         config = parse_pdk_yaml(yaml_path)
         assert config.name == "polaris_test"
         assert config.version == "1.0.0"
@@ -288,17 +455,13 @@ cells:
         assert len(config.layer_stack) == 2
         assert len(config.cross_sections) == 1
         assert len(config.cells) == 1
-        # 折射率解析
         wg_level = next(ls for ls in config.layer_stack if ls.layer == "WG")
         assert wg_level.refractive_index_real == 3.476
-        # 校验通过（无错误）
         errors = validate_pdk_yaml(config)
         assert errors == [], f"校验失败: {errors}"
-        # 序列化 roundtrip
         yaml_str = serialize_pdk_yaml(config)
         assert "polaris_test" in yaml_str
         assert "220nm SOI" in yaml_str
-        # 重新解析序列化结果，验证 roundtrip 一致
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".yml", delete=False, encoding="utf-8"
         ) as f2:
@@ -376,7 +539,7 @@ def test_yaml_validation_missing_source_url():
     assert any("source_url" in e for e in errors)
 
 
-# ===== multi_pdk_manager smoke test =====
+# ===== multi_pdk_manager 深度测试 =====
 
 
 def test_multi_pdk_manager_activate_snapshot_restore():
@@ -388,28 +551,21 @@ def test_multi_pdk_manager_activate_snapshot_restore():
                       devices={"ring": _make_device("ring")})
     mgr.register("soi", pdk1)
     mgr.register("sin", pdk2)
-    # 无激活时 get_active raise RuntimeError（R03）
     with pytest.raises(RuntimeError):
         mgr.get_active()
-    # 激活 soi
     mgr.activate("soi")
     assert mgr.get_active_name() == "soi"
     assert mgr.is_active("soi")
     assert not mgr.is_active("sin")
-    # 快照
     snap = mgr.snapshot(created_at=1000.0)
     assert isinstance(snap, PDKSnapshot)
     assert snap.active_pdk_name == "soi"
-    # list_pdks 返回排序后的列表（sorted）
     assert snap.registered_pdk_names == ["sin", "soi"]
     assert snap.created_at == 1000.0
-    # 切换激活到 sin
     mgr.activate("sin")
     assert mgr.get_active_name() == "sin"
-    # 恢复快照
     mgr.restore(snap)
     assert mgr.get_active_name() == "soi"
-    # 激活未注册 PDK raise KeyError（R03）
     with pytest.raises(KeyError):
         mgr.activate("nonexistent")
 
@@ -424,28 +580,65 @@ def test_multi_pdk_manager_merge_composite():
                        devices={"wg_b": _make_device("wg_b")})
     mgr.register("a", pdk_a)
     mgr.register("b", pdk_b)
-    # 合并无冲突 PDK
     merged = mgr.merge("merged", ["a", "b"])
     assert merged.name == "merged"
     assert len(merged.devices) == 3
     assert "wg_a" in merged.devices
     assert "wg_b" in merged.devices
     assert "ring" in merged.devices
-    # 合并冲突 PDK raise ValueError（R03）
     pdk_c = PolarisPDK(name="c", platform="InP", process_node="200nm",
                        devices={"ring": _make_device("ring")})
     mgr.register("c", pdk_c)
     with pytest.raises(ValueError):
         mgr.merge("bad", ["a", "c"])
-    # 空列表 raise ValueError（R03）
     with pytest.raises(ValueError):
         mgr.merge("empty", [])
-    # 未注册 PDK raise ValueError（R03）
     with pytest.raises(ValueError):
         mgr.merge("bad", ["a", "nonexistent"])
 
 
-# ===== optodesigner smoke test =====
+def test_multi_pdk_manager_deactivate():
+    """MultiPDKManager.deactivate 取消激活。"""
+    mgr = MultiPDKManager()
+    pdk = PolarisPDK(name="soi", platform="SOI", process_node="220nm SOI",
+                     devices={"wg": _make_device("wg")})
+    mgr.register("soi", pdk)
+    mgr.activate("soi")
+    assert mgr.get_active_name() == "soi"
+    mgr.deactivate()
+    assert mgr.get_active_name() is None
+    with pytest.raises(RuntimeError):
+        mgr.get_active()
+
+
+def test_multi_pdk_manager_metadata():
+    """MultiPDKManager.list_pdk_metadata/get_pdk_metadata 元数据查询。"""
+    mgr = MultiPDKManager()
+    pdk1 = PolarisPDK(name="soi", platform="SOI", process_node="220nm SOI",
+                      devices={"wg": _make_device("wg"), "ring": _make_device("ring")})
+    mgr.register("soi", pdk1)
+    mgr.activate("soi")
+    metadata_list = mgr.list_pdk_metadata()
+    assert len(metadata_list) == 1
+    assert metadata_list[0].name == "soi"
+    assert metadata_list[0].platform == "SOI"
+    assert metadata_list[0].device_count == 2
+    assert metadata_list[0].is_active is True
+    md = mgr.get_pdk_metadata("soi")
+    assert md.name == "soi"
+    assert md.device_count == 2
+    with pytest.raises(KeyError):
+        mgr.get_pdk_metadata("nonexistent")
+
+
+def test_multi_pdk_manager_restore_invalid_snapshot():
+    """MultiPDKManager.restore 类型校验（R03）。"""
+    mgr = MultiPDKManager()
+    with pytest.raises(TypeError):
+        mgr.restore("not_a_snapshot")  # type: ignore[arg-type]
+
+
+# ===== optodesigner 深度测试 =====
 
 
 def test_pycell_factory_straight_and_mmi():
@@ -458,16 +651,66 @@ def test_pycell_factory_straight_and_mmi():
     assert straight.ports[0][0] == "in"
     assert straight.ports[1][0] == "out"
     assert straight.params["length"] == 10.0
-    assert straight.metadata["source"]  # 非空溯源 URL
+    assert straight.metadata["source"]
     mmi = factory.mmi_1x2(length=10.0, width=2.0)
     assert mmi.name == "mmi_1x2"
     assert len(mmi.polygons) == 1
-    assert len(mmi.ports) == 3  # 1 in + 2 out
-    # grating_coupler 参数校验（R03）
+    assert len(mmi.ports) == 3
     with pytest.raises(ValueError):
         factory.grating_coupler(duty_cycle=1.5)
     with pytest.raises(ValueError):
         factory.grating_coupler(n_periods=0)
+
+
+def test_pycell_factory_bend():
+    """PyCellFactory.bend 弯曲波导 PyCell。"""
+    factory = PyCellFactory()
+    bend = factory.bend(radius=5.0, angle=90.0, width=0.5)
+    assert bend.name == "bend"
+    assert len(bend.polygons) == 1
+    assert len(bend.ports) == 2
+    assert bend.params["radius"] == 5.0
+    assert bend.params["angle"] == 90.0
+
+
+def test_pycell_factory_directional_coupler():
+    """PyCellFactory.directional_coupler 定向耦合器 PyCell。"""
+    factory = PyCellFactory()
+    dc = factory.directional_coupler(length=10.0, gap=0.2, width=0.5)
+    assert dc.name == "directional_coupler"
+    assert len(dc.polygons) == 2
+    assert len(dc.ports) == 4
+    assert dc.params["gap"] == 0.2
+
+
+def test_pycell_factory_ring_resonator():
+    """PyCellFactory.ring_resonator 环谐振器 PyCell。"""
+    factory = PyCellFactory()
+    ring = factory.ring_resonator(radius=10.0, gap=0.2, width=0.5)
+    assert ring.name == "ring_resonator"
+    assert len(ring.polygons) == 2
+    assert len(ring.ports) == 2
+    assert ring.params["radius"] == 10.0
+
+
+def test_pycell_factory_taper_ybranch_crossing_terminator():
+    """PyCellFactory taper/y_branch/crossing/terminator PyCell。"""
+    factory = PyCellFactory()
+    taper = factory.taper(length=5.0, width1=0.5, width2=1.0)
+    assert taper.name == "taper"
+    assert len(taper.ports) == 2
+    assert taper.params["width1"] == 0.5
+    assert taper.params["width2"] == 1.0
+    yb = factory.y_branch(length=10.0, width=0.5)
+    assert yb.name == "y_branch"
+    assert len(yb.ports) == 3
+    crossing = factory.crossing(length=10.0, width=0.5)
+    assert crossing.name == "crossing"
+    assert len(crossing.polygons) == 2
+    assert len(crossing.ports) == 4
+    term = factory.terminator(length=5.0, width=0.5)
+    assert term.name == "terminator"
+    assert len(term.ports) == 1
 
 
 def test_design_intent_engine_multi_layer_masks():
@@ -482,20 +725,28 @@ def test_design_intent_engine_multi_layer_masks():
     ]
     engine = DesignIntentEngine(rules)
     masks = engine.generate_masks(intent)
-    assert len(masks) == 3  # 三层掩膜
+    assert len(masks) == 3
     assert (1, 0) in masks
     assert (2, 0) in masks
     assert (3, 0) in masks
-    # 每层一个多边形
     for layer, polys in masks.items():
         assert len(polys) == 1
-        assert len(polys[0]) >= 4  # 至少 4 个顶点构成闭合多边形
-    # 空规则 raise ValueError（R03）
+        assert len(polys[0]) >= 4
     with pytest.raises(ValueError):
         DesignIntentEngine([])
-    # 路径点不足 raise ValueError（R03）
     with pytest.raises(ValueError):
         engine.generate_masks(DesignIntent(path=[(0.0, 0.0)], width=0.5))
+
+
+def test_design_intent_engine_add_rule():
+    """DesignIntentEngine.add_rule 动态添加规则。"""
+    engine = DesignIntentEngine([TechnologyRule(layer=(1, 0), offset=0.0)])
+    assert len(engine.rules) == 1
+    engine.add_rule(TechnologyRule(layer=(2, 0), offset=0.1, purpose="SLAB"))
+    assert len(engine.rules) == 2
+    intent = DesignIntent(path=[(0.0, 0.0), (5.0, 0.0)], width=0.5)
+    masks = engine.generate_masks(intent)
+    assert len(masks) == 2
 
 
 def test_flex_connector_bezier_curve():
@@ -507,20 +758,15 @@ def test_flex_connector_bezier_curve():
     )
     path = fc.compute_path(n_points=50)
     assert len(path) == 50
-    # 起点 = start_port 前两坐标
     assert np.allclose(path[0], [0.0, 0.0])
-    # 终点 = end_port 前两坐标
     assert np.allclose(path[-1], [20.0, 10.0])
-    # 路径长度 > 直线距离（贝塞尔曲线弯绕）
     length = fc.compute_length()
     straight_dist = np.hypot(20.0, 10.0)
     assert length > straight_dist
-    # 转 PyCell
     cell = fc.to_pycell()
     assert cell.name == "flex_connector"
     assert len(cell.polygons) == 1
     assert len(cell.ports) == 2
-    # n_points < 2 raise ValueError（R03）
     with pytest.raises(ValueError):
         fc.compute_path(n_points=1)
 
@@ -529,47 +775,131 @@ def test_hierarchy_design_flatten_and_depth():
     """HierarchyDesign 层级嵌套 + flatten + depth。"""
     factory = PyCellFactory()
     wg = factory.straight(length=5.0, width=0.5)
-    # 顶层设计
     top = HierarchyDesign("top")
     top.add_instance(wg, position=(0.0, 0.0))
     top.add_instance(wg, position=(10.0, 0.0), rotation=0.0)
-    # 子设计（嵌套）
     sub = HierarchyDesign("sub")
     sub.add_instance(wg, position=(0.0, 5.0))
     top.add_sub_design(sub, position=(0.0, 0.0))
-    # 层级深度 = 2（top + sub）
     assert top.hierarchy_depth() == 2
-    assert top.instance_count == 3  # 2 PyCell + 1 子设计
-    # flatten
+    assert top.instance_count == 3
     flat = top.flatten()
     assert flat.name == "top"
-    # 3 个实例各 1 个多边形 = 3 个多边形
     assert len(flat.polygons) == 3
-    # 3 个实例各 2 个端口 = 6 个端口
     assert len(flat.ports) == 6
 
 
-# ===== _base smoke test =====
+def test_hierarchy_design_depth_3():
+    """HierarchyDesign 3 层嵌套深度。"""
+    factory = PyCellFactory()
+    wg = factory.straight(length=5.0, width=0.5)
+    top = HierarchyDesign("top")
+    mid = HierarchyDesign("mid")
+    bot = HierarchyDesign("bot")
+    bot.add_instance(wg, position=(0.0, 0.0))
+    mid.add_sub_design(bot, position=(0.0, 0.0))
+    mid.add_instance(wg, position=(10.0, 0.0))
+    top.add_sub_design(mid, position=(0.0, 0.0))
+    assert top.hierarchy_depth() == 3
+    assert top.instance_count == 1
+    flat = top.flatten()
+    assert len(flat.polygons) == 2
+
+
+def test_pdaflow_interop_export_spt():
+    """PDAflowInterop.export_spt 导出 SPT 文件。"""
+    factory = PyCellFactory()
+    wg = factory.straight(length=5.0, width=0.5)
+    design = HierarchyDesign("test_design")
+    design.add_instance(wg, position=(0.0, 0.0))
+    interop = PDAflowInterop()
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".spt", delete=False, encoding="utf-8"
+    ) as f:
+        spt_path = f.name
+    try:
+        result = interop.export_spt(design, spt_path)
+        assert result == spt_path
+        content = Path(spt_path).read_text(encoding="utf-8")
+        assert "DESIGN test_design" in content
+        assert "DEPTH" in content
+        assert "PORT" in content
+        assert "POLY" in content
+    finally:
+        Path(spt_path).unlink()
+    empty_design = HierarchyDesign("empty")
+    with pytest.raises(ValueError):
+        interop.export_spt(empty_design, "/tmp/empty.spt")
+
+
+# ===== _base 深度测试 =====
 
 
 def test_device_rotate_and_translate():
     """Device 旋转/平移（返回新实例，原实例不变）。"""
     dev = _make_device("test_wg")
     original_x = dev.ports[0].x
-    # 平移
     moved = dev.translate(10.0, 20.0)
     assert moved.ports[0].x == original_x + 10.0
     assert moved.ports[0].y == 20.0
-    # 原实例不变
     assert dev.ports[0].x == original_x
-    # 旋转 90°（逆时针，标准数学坐标系）
     rotated = dev.rotate(90.0)
-    # 原 port "in" 方向 WEST，逆时针 90° 后方向 SOUTH
-    # （_ROT90: WEST→SOUTH→EAST→NORTH→WEST，标准数学坐标系逆时针）
     assert rotated.ports[0].direction == Direction.SOUTH
-    # 非直角旋转 raise ValueError（R03）
     with pytest.raises(ValueError):
         dev.rotate(45.0)
+
+
+def test_device_footprint_and_rotate_180():
+    """Device.footprint 返回宽×高，rotate(180) 朝向取反。"""
+    dev = _make_device("test_wg")
+    w, h = dev.footprint()
+    assert w == 10.0
+    assert h == 0.5
+    rotated = dev.rotate(180.0)
+    assert rotated.ports[0].direction == Direction.EAST
+    assert rotated.ports[1].direction == Direction.WEST
+
+
+def test_direction_enum_values():
+    """Direction 枚举含四正方向。"""
+    assert Direction.NORTH.value == "north"
+    assert Direction.SOUTH.value == "south"
+    assert Direction.EAST.value == "east"
+    assert Direction.WEST.value == "west"
+
+
+def test_source_frozen():
+    """Source frozen=True 不可变。"""
+    src = Source(title="test", authors="test", year=2026,
+                 url="https://example.com")
+    assert src.title == "test"
+    assert src.year == 2026
+    with pytest.raises(Exception):
+        src.title = "modified"  # type: ignore[misc]
+
+
+def test_pcell_multiview_observer():
+    """PCellMultiView Observer Pattern 自动同步（*创新*）。"""
+    cell = PCellMultiView(name="test", params={"platform": "SOI"})
+    cell.add_port("in", 0.0, 0.0, "west", 0.5)
+    cell.add_port("out", 10.0, 0.0, "east", 0.5)
+    netlist = cell.get_netlist()
+    assert "in" in netlist["ports"]
+    assert "out" in netlist["ports"]
+    cell.add_ref(PCellMultiView(name="sub"), x=5.0, y=5.0)
+    assert len(cell.netlist_view.instances) == 1
+
+
+def test_pcell_multiview_to_device():
+    """PCellMultiView.to_device 转换为 Device。"""
+    cell = PCellMultiView(name="test_wg", params={"platform": "SOI"})
+    cell.add_polygon(np.array([[0, 0], [10, 0], [10, 0.5], [0, 0.5]]), layer="WG")
+    cell.add_port("in", 0.0, 0.0, "west", 0.5)
+    device = cell.to_device()
+    assert device.device_id == "test_wg"
+    assert device.platform == "SOI"
+    assert len(device.ports) == 1
+    assert device.bbox.xmax == 10.0
 
 
 # ===== 辅助函数 =====
