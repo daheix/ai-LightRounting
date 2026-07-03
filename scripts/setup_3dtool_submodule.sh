@@ -37,8 +37,11 @@ SUBMODULE_WORKTREE="${REPO_DIR}/${SUBMODULE_PATH}"
 VERBOSE=0
 FORCE=0
 
-# sparse-checkout 只保留的目录（跳过 1.6G 的 appimage-parts/）
-SPARSE_DIRS="scripts tools"
+# sparse-checkout 只保留的目录（跳过 2.0G 的 3dtool/appimage-parts/）
+# wheels/: 47 个 Python 3.14 cp314 离线 wheel（122M，含 numpy/scipy/jax 等）
+# scripts/: 3dtool 工具脚本
+# tools/: AppImage 打包脚本
+SPARSE_DIRS="wheels scripts tools"
 
 # 解析参数
 for arg in "$@"; do
