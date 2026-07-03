@@ -167,10 +167,14 @@ def test_fom_normalization_regression():
             f"（旧 BUG 出现 8e16/3e18/2e20 等裸场强值）"
         )
 
-    # 3. improvement_db 不应大幅为负（旧 BUG = -4.08 dB）
-    assert result["improvement_db"] >= -1.0, (
-        f"improvement_db={result['improvement_db']} < -1 dB"
-        f"（旧 BUG = -4.08 dB，FoM 大幅变差，归一化后不应出现）"
+    # 3. improvement_db >= 0（best-checkpoint 追踪保证，2026-07-03 R05 修复）
+    #    旧 BUG = -4.08 dB（未归一化）/ -0.72 dB（n=10 优化器震荡，final 反降）。
+    #    修复后 run_adjoint_optimization 返回历史最优 FoM（best_fom），
+    #    best >= initial 恒成立（best 至少记录 fom_history[0]=initial），
+    #    故 improvement_db = 10*log10(best/initial) >= 0。
+    assert result["improvement_db"] >= 0.0, (
+        f"improvement_db={result['improvement_db']} < 0 dB"
+        f"（best-checkpoint 修复后应 >= 0；旧 BUG n=10 为 -0.72 dB）"
     )
 
     # 4. fom_history 无量级跳变（旧 BUG: 8e16→3e18→2e20 暴涨 1e2~1e4 倍）
@@ -187,3 +191,33 @@ def test_fom_normalization_regression():
 def test_inverse_version():
     """验证子模块版本号为 5.0.0（与 8 子模块统一版本对齐）。"""
     assert polaris_inverse.__version__ == "5.0.0"
+
+
+def test_best_checkpoint_no_degradation():
+    """*R05 回归测试（2026-07-03）*: best-checkpoint 追踪保证 FoM 不退化。
+
+    复现旧 BUG: n=10 迭代时 heavy-ball 动量过冲震荡，final FoM 反低于 initial
+    （improvement_db = -0.72 dB，stage10 注释自承"另案修复"未修）。
+
+    修复后断言（best-checkpoint 追踪）:
+    - final_fom >= initial_fom（历史最优 >= 初始，恒成立）
+    - improvement_db >= 0（10*log10(best/initial) >= 0）
+    - optimal_width_nm 对应 best_fom 时刻的宽度（非末步宽度）
+    """
+    # n=10 是旧 bug 明确触发点（stage10 注释: n=10 → -0.72 dB）
+    result = optimize_waveguide_width(n_iterations=10, learning_rate=0.5)
+
+    # best-checkpoint 保证: final_fom（=best_fom）>= initial_fom
+    assert result["final_fom"] >= result["initial_fom"], (
+        f"final_fom={result['final_fom']} < initial_fom={result['initial_fom']}"
+        f"（best-checkpoint 修复后应 >=；旧 BUG n=10 final 反降）"
+    )
+    # improvement_db >= 0
+    assert result["improvement_db"] >= 0.0, (
+        f"improvement_db={result['improvement_db']} < 0"
+        f"（旧 BUG = -0.72 dB，best-checkpoint 修复后应 >= 0）"
+    )
+    # optimal_width_nm 应为正有限值（best_width 对应）
+    assert result["optimal_width_nm"] > 0, (
+        f"optimal_width_nm={result['optimal_width_nm']} 应为正"
+    )

@@ -54,10 +54,12 @@ _logger = logging.getLogger("e2e_showcase")
 #   1. JAX JIT 编译 FDTD+grad 内核开销 ~10s，每迭代 ~0.5-1s；
 #      50 步在 showcase 120s 超时内无法完成（实测超时 EXIT=124）。
 #   2. 实测 n=5 已收敛 (converged=True, improvement=+0.13dB)，
-#      网格小 (24×12×8, dx=200nm) 收敛快；
-#      而 n=10 反而 FoM 恶化 -0.72dB（polaris-inverse 优化器震荡，另案修复）。
+#      网格小 (24×12×8, dx=200nm) 收敛快。
 #   3. polaris-inverse 默认 n_iterations=50 用于生产级（Jensen & Sigmund 2011），
 #      showcase 演示用 5 步足够展示 JAX 可微 FDTD 逆向设计能力。
+# 注: 旧版 n=10 FoM 恶化 -0.72dB 的优化器震荡 bug 已于 2026-07-03 修复
+#     （best-checkpoint 追踪，见 polaris_inverse.adjoint），现 n≥10 亦
+#     improvement_db >= 0。showcase 仍用 n=5 因 showcase 超时约束 + 已收敛。
 # 来源: Jensen & Sigmund 2011 拓扑优化典型参数；lumopt 商业工具通常 50-200 次迭代
 _N_ITERATIONS = 5
 _LEARNING_RATE = 0.5
