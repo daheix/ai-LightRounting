@@ -132,7 +132,8 @@ except Exception as e:
     fi
     
     # 磁盘
-    echo "  磁盘: $(df -h /workspace | tail -1 | awk '{print $4\" 可用 (\"$5\" 使用)\"}')"
+    disk_info=$(df -h /workspace | tail -1 | awk '{print $4 " 可用 (" $5 " 使用)"}')
+    echo "  磁盘: ${disk_info}"
     
     # 测试进程是否存活
     if pgrep -f "batch_test_1000_circuits" >/dev/null 2>&1; then

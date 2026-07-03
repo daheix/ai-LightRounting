@@ -37,6 +37,11 @@ polaris-extras.tar.gz
 # 训练检查点（体积大）
 checkpoints/
 
+# 测试产物与输出目录（运行时生成，不入库）
+out/
+demo_output/
+/tmp/polaris_batch_test/
+
 # IDE 文件
 .idea/
 .vscode/

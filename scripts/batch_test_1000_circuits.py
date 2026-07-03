@@ -121,9 +121,9 @@ def test_single_circuit(entry: dict) -> TestResult:
             elapsed_sec=0.0, error=f"读取电路失败: {e}",
         )
 
-    # 构建 CircuitSpec
+    # 构建 CircuitSpec（v5.0: polaris.data.specs → polaris_core.specs）
     try:
-        from polaris.data.specs import CircuitSpec, DeviceSpec
+        from polaris_core.specs import CircuitSpec, DeviceSpec
 
         instances = circuit_data.get("instances", {})
         devices = []
@@ -152,31 +152,72 @@ def test_single_circuit(entry: dict) -> TestResult:
             elapsed_sec=0.0, error=f"构建 CircuitSpec 失败: {e}",
         )
 
-    # 执行端到端流水线
+    # 执行端到端流水线（v5.0: IntegratedPipeline 未迁移，改用 run_eda_flow）
+    # run_eda_flow 签名: (circuit: dict, output_dir: str, skip_stages, strict) -> dict
+    # 返回 {stages: [{stage_id, name, status, duration, result, error}],
+    #       n_success, n_failed, n_skipped, total_duration}
+    # stage 3 result = place_circuit() → {placements, hpwl, ...}
+    # stage 4 result = route_circuit() → {paths, total_loss_db, n_crossings, n_bends, ...}
+    # stage 6 result = {drc: {n_rules, n_violations, n_passed, pass_rate, ...}, lvs: ...}
     t0 = time.perf_counter()
     try:
-        from polaris.pipeline.integrated import IntegratedPipeline, PipelineConfig
+        from polaris_core import circuit_to_dict
+        from polaris_orchestrator.flow import run_eda_flow
 
-        # 快速模式：max_sim_iterations=1，输出到 /tmp（减少磁盘 I/O）
+        # CircuitSpec → polaris-core 风格 circuit dict（device_type 字段标准化）
+        circuit_dict = circuit_to_dict(spec)
+
+        # 输出到 /tmp（减少磁盘 I/O）
         iter_output = Path("/tmp/polaris_batch_test") / name
         iter_output.mkdir(parents=True, exist_ok=True)
-        config = PipelineConfig(
-            canvas_w=spec.canvas_w,
-            canvas_h=spec.canvas_h,
-            grid_size=10.0,
-            max_sim_iterations=1,  # 快速模式：仅 1 次仿真迭代
+
+        # 跳过 stage 8（逆向设计）和 stage 9（量子验证），批量测试聚焦
+        # 布局/布线/DRC/仿真核心指标，省时（每电路约省 60% 时间）
+        flow_result = run_eda_flow(
+            circuit=circuit_dict,
             output_dir=str(iter_output),
+            skip_stages=[8, 9],
+            strict=False,
         )
-        pipeline = IntegratedPipeline(config=config)
-        result = pipeline.run(spec)
         elapsed = time.perf_counter() - t0
+
+        # 从 stages 提取指标（R03: stage 失败时该字段缺失，记为失败状态而非假数据）
+        stages = {s["stage_id"]: s for s in flow_result["stages"]}
+        place_res = stages.get(3, {}).get("result") or {}
+        route_res = stages.get(4, {}).get("result") or {}
+        drc_lvs_res = stages.get(6, {}).get("result") or {}
+        if isinstance(drc_lvs_res, dict):
+            drc_res = drc_lvs_res.get("drc", {}) or {}
+        else:
+            drc_res = {}
+
+        # success: 关键 stage（2验证/3布局/4布线/6DRC）全部成功
+        critical_ids = [2, 3, 4, 6]
+        success = all(
+            stages.get(sid, {}).get("status") == "success" for sid in critical_ids
+        )
+        # DRC 通过 = 无违规（n_violations == 0）；stage 失败时 drc_res 为空 → False
+        drc_passed = bool(drc_res) and drc_res.get("n_violations", -1) == 0
+        total_loss_db = float(route_res.get("total_loss_db", 0.0)) if route_res else 0.0
+        n_crossings = int(route_res.get("n_crossings", 0)) if route_res else 0
+
+        # 失败时收集错误信息（R03: 失败即告警，不假数据）
+        error_msg = ""
+        if not success:
+            failed_stages = [
+                f"stage{s['stage_id']}({s['name']}): {s.get('error') or s['status']}"
+                for s in flow_result["stages"]
+                if s["status"] != "success" and s["status"] != "skipped"
+            ]
+            error_msg = "; ".join(failed_stages) if failed_stages else "未知失败"
 
         return TestResult(
             name=name, topology=topology, scale=scale, platform=platform,
-            n_devices=result.n_devices, n_connections=result.n_connections,
-            success=True, drc_passed=result.drc_passed,
-            total_loss_db=result.total_loss_db, n_crossings=result.n_crossings,
-            sim_iterations=result.sim_iterations, elapsed_sec=elapsed,
+            n_devices=len(spec.devices), n_connections=len(spec.connections),
+            success=success, drc_passed=drc_passed,
+            total_loss_db=total_loss_db, n_crossings=n_crossings,
+            sim_iterations=1, elapsed_sec=elapsed,
+            error=error_msg,
         )
     except Exception as e:
         elapsed = time.perf_counter() - t0
