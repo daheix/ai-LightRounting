@@ -109,18 +109,21 @@ else
         log "  git 历史完整 (${COMMIT_COUNT} commits)，跳过"
     fi
 
-    # 步骤3: 拉取 3dtool 子仓库
-    log "[3/7] 拉取 3dtool 子仓库..."
-    cd "${REPO_DIR}"
-    if [ -f .gitmodules ]; then
-        git submodule update --init --recursive 2>&1 | tail -5 || {
-            err "submodule update 失败"
+    # 步骤3: 恢复 3dtool 子仓库（幂等 sparse clone 注册）
+    # 不用 git submodule update --init（会全量拉 1.6G 爆磁盘）
+    log "[3/7] 恢复 3dtool 子仓库（幂等 sparse clone 注册）..."
+    SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
+    if [ -f "${SETUP_SUBMODULE}" ]; then
+        SETUP_ARGS=""
+        [ "${VERBOSE}" = "1" ] && SETUP_ARGS="-v"
+        if ! bash "${SETUP_SUBMODULE}" ${SETUP_ARGS}; then
+            err "3dtool 子仓库恢复失败（R03 禁止 fall-back）"
             exit 1
-        }
+        fi
         SUB_STATUS=$(git submodule status 2>&1 | head -1)
         log "  submodule: ${SUB_STATUS}"
     else
-        err ".gitmodules 不存在，无子仓库配置"
+        err "setup_3dtool_submodule.sh 不存在: ${SETUP_SUBMODULE}"
         exit 1
     fi
 fi

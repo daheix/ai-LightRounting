@@ -67,15 +67,25 @@ else
     echo "[1/5] 跳过 unshallow（--no-unshallow）"
 fi
 
-# 步骤2: 拉取 3dtool 子仓库
+# 步骤2: 恢复 3dtool 子仓库（幂等，沙箱重启后自动 sparse clone 注册）
+# 为什么不用 `git submodule update --init`？
+#   - 3dtool 仓库含 1.6G 分片，全量 clone 磁盘爆
+#   - sparse 配置在 .git/modules/3dtool/，沙箱重启后丢失
+#   - 必须用 setup_3dtool_submodule.sh 重新 sparse clone 注册
 echo ""
-echo "[2/5] 初始化 3dtool 子仓库..."
-cd "${REPO_DIR}"
-if [ -f .gitmodules ]; then
-    git submodule update --init --recursive 2>&1 | tail -5 || echo "  [WARN] submodule update 失败（可能已初始化）"
+echo "[2/5] 恢复 3dtool 子仓库（幂等 sparse clone 注册）..."
+SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
+if [ -f "${SETUP_SUBMODULE}" ]; then
+    SETUP_ARGS=""
+    [ "${VERBOSE:-0}" = "1" ] && SETUP_ARGS="-v"
+    if ! bash "${SETUP_SUBMODULE}" ${SETUP_ARGS}; then
+        echo "[ERROR] 3dtool 子仓库恢复失败（R03 禁止 fall-back）"
+        exit 1
+    fi
     echo "  submodule status: $(git submodule status 2>&1 | head -1)"
 else
-    echo "  [SKIP] 无 .gitmodules"
+    echo "[ERROR] setup_3dtool_submodule.sh 不存在: ${SETUP_SUBMODULE}"
+    exit 1
 fi
 echo "[2/5] 完成"
 
