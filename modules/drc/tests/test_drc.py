@@ -1,22 +1,36 @@
-"""polaris-drc 子模块测试（从 polaris-verify 测试拆分 DRC 部分）。
+"""polaris-drc 子模块深度测试（覆盖全 API，R05 回归防护）。
 
-测试覆盖（≥3 个 pytest，R13 强制自测）:
-- test_drc_n_rules_12: 验证默认 DRC 规则数 = 12（SiEPIC EBeam PDK 完整规则集）
-- test_drc_pass_rate_range: 验证 pass_rate ∈ [0, 1]（合法物理范围）
-- test_drc_invalid_circuit_raises: 非法 circuit 缺字段 raise RuntimeError（R03）
-- test_drc_invalid_placements_raises: 非法 placements 缺字段 raise RuntimeError
-- test_drc_empty_placements_raises: 空 placements raise RuntimeError
-- test_drc_violations_overlap: 故意制造重叠，验证 NO_OVERLAP 规则触发
-- test_drc_simple_waveguide: 简单波导布局验证（与验证脚本一致）
+测试覆盖（47 个 pytest）:
+- 模块导出与版本（3）
+- CheckType 枚举完整性（2）
+- DRCRule dataclass（3）
+- DEFAULT_DRC_RULES 内容校验（5）
+- DRCViolation dataclass（1）
+- DRCEngine 初始化（3）
+- run_drc / run_drc_rules 入口与校验（5）
+- 12 条 SiEPIC EBeam PDK DRC 规则逐一验证（21）:
+  MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/BOUNDARY/NO_OVERLAP/
+  PORT_ALIGNMENT/PORT_DIRECTION/PORT_CONNECTIVITY/PORT_FACING/DENSITY_MAX/
+  DENSITY_MIN（每规则 pass + fail，NO_OVERLAP 额外 touching 用例）
+- 综合布局与边界情况（4）
 
-来源（R02 学术诚信）:
-- pytest 文档: https://docs.pytest.org/
-- SiEPIC EBeam PDK DRC runset: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-- KLayout DRC 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
-- Chrostowski & Hochberg 2015 Silicon Photonics Design
-  https://www.cambridge.org/core/books/silicon-photonics-design/
-- Ericson "Real-Time Collision Detection" §5.1.3 AABB 距离
-  https://realtimecollisiondetection.net/
+学术依据（R02 学术诚信，≥5 个文献 URL）:
+- SiEPIC EBeam PDK DRC runset（WG_MIN_WIDTH=0.4μm, WG_MIN_SPACE=1.0μm 等真实
+  工艺规则源码）URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
+  URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+- KLayout DRC 文档（width_check/space_check/area_check 算子语义）
+  URL: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+  URL: https://doi.org/10.1109/DAC56929.2023.10247734
+- Berg et al. 2014, "Computational Geometry", Springer（AABB 相交/距离）
+  URL: https://doi.org/10.1007/978-3-540-77974-2
+- Ericson, "Real-Time Collision Detection", MK 2005（AABB 距离公式 §5.1.3）
+  URL: https://realtimecollisiondetection.net/
+- pytest 文档: URL: https://docs.pytest.org/
+
+合规: R02 学术诚信 / R03 禁止 fall-back（测试用真实几何数据）/ R04 不参与 GPU
+      / R05 Bug 必修（无 TODO/FIXME）。
 """
 
 from __future__ import annotations
@@ -32,7 +46,20 @@ if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 import polaris_drc  # noqa: E402
-from polaris_drc import run_drc  # noqa: E402
+from polaris_drc import (  # noqa: E402
+    DEFAULT_DRC_RULES,
+    CheckType,
+    DRCEngine,
+    DRCRule,
+    DRCViolation,
+    run_drc,
+    run_drc_rules,
+)
+
+
+# =============================================================================
+# 测试辅助构造函数（真实几何数据，R03 禁止 fall-back）
+# =============================================================================
 
 
 def _make_simple_circuit() -> dict:
@@ -60,6 +87,64 @@ def _make_simple_placements() -> dict:
     return {"wg": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 0.5}}
 
 
+def _make_clean_circuit() -> dict:
+    """构造 DRC clean 电路（2 器件 + 1 连接，所有规则通过）。
+
+    d1.out (east) ↔ d2.in (west)，端口方向相对；
+    端口 y 坐标对齐（共享 y 轴），dx=10μm 但 dy=0 ≤ 容差 5μm，PORT_ALIGNMENT 通过。
+    """
+    return {
+        "name": "clean",
+        "devices": [
+            {"name": "d1", "device_type": "strip_waveguide",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "strip_waveguide",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [("d1", "out", "d2", "in")],
+        "canvas_w": 100,
+        "canvas_h": 100,
+    }
+
+
+def _make_clean_placements() -> dict:
+    """构造 DRC clean 布局（间距 10μm ≥ 1.0μm，无重叠，密度 0.1%）。"""
+    return {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+
+
+def _violation_rule_names(result: dict) -> set[str]:
+    """从 run_drc 结果提取触发的规则名集合。"""
+    return {v["rule_name"] for v in result["violations"]}
+
+
+# =============================================================================
+# 1. 模块导出与版本（3 个测试）
+# =============================================================================
+
+
+def test_drc_version():
+    """验证 polaris-drc 子模块版本号 5.0.0（与原 polaris-verify 一致）。"""
+    assert polaris_drc.__version__ == "5.0.0"
+
+
+def test_drc_module_imports():
+    """验证 polaris_drc 模块导出全部公共 API（__all__ 完整性）。"""
+    expected = {
+        "run_drc", "DRCEngine", "DRCRule", "DRCViolation",
+        "CheckType", "DEFAULT_DRC_RULES", "run_drc_rules", "__version__",
+    }
+    assert expected.issubset(set(dir(polaris_drc))), (
+        f"polaris_drc 缺少导出: {expected - set(dir(polaris_drc))}"
+    )
+    assert set(polaris_drc.__all__) == expected - {"__version__"} | {"__version__"}
+    # 关键类/函数可调用
+    assert callable(run_drc)
+    assert callable(run_drc_rules)
+
+
 def test_drc_n_rules_12():
     """验证默认 DRC 规则数为 12（SiEPIC EBeam PDK 完整规则集）。
 
@@ -75,15 +160,578 @@ def test_drc_n_rules_12():
     )
 
 
+# =============================================================================
+# 2. CheckType 枚举完整性（2 个测试）
+# =============================================================================
+
+
+def test_check_type_enum_values():
+    """验证 CheckType 枚举 12 个值与 KLayout DRC 规则类别对应。
+
+    来源: KLayout DRC 规则类别
+    https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    """
+    assert CheckType.MIN_SPACING.value == "min_spacing"
+    assert CheckType.MIN_WIDTH.value == "min_width"
+    assert CheckType.MIN_HEIGHT.value == "min_height"
+    assert CheckType.MIN_AREA.value == "min_area"
+    assert CheckType.BOUNDARY.value == "boundary"
+    assert CheckType.NO_OVERLAP.value == "no_overlap"
+    assert CheckType.PORT_ALIGNMENT.value == "port_alignment"
+    assert CheckType.PORT_DIRECTION.value == "port_direction"
+    assert CheckType.PORT_CONNECTIVITY.value == "port_connectivity"
+    assert CheckType.PORT_FACING.value == "port_facing"
+    assert CheckType.DENSITY_MAX.value == "density_max"
+    assert CheckType.DENSITY_MIN.value == "density_min"
+
+
+def test_check_type_enum_count():
+    """验证 CheckType 枚举数量为 12（与 DEFAULT_DRC_RULES 一一对应）。"""
+    members = list(CheckType)
+    assert len(members) == 12, f"CheckType 应有 12 个成员，实际 {len(members)}"
+    # 枚举值唯一
+    values = [m.value for m in members]
+    assert len(set(values)) == 12, "CheckType 枚举值应唯一"
+
+
+# =============================================================================
+# 3. DRCRule dataclass（3 个测试）
+# =============================================================================
+
+
+def test_drc_rule_dataclass_fields():
+    """验证 DRCRule dataclass 字段（name/check_type/threshold/severity/description）。"""
+    rule = DRCRule(
+        name="TEST_RULE",
+        check_type=CheckType.MIN_WIDTH,
+        threshold=0.5,
+        severity=0.8,
+        description="测试规则",
+    )
+    assert rule.name == "TEST_RULE"
+    assert rule.check_type == CheckType.MIN_WIDTH
+    assert rule.threshold == 0.5
+    assert rule.severity == 0.8
+    assert rule.description == "测试规则"
+
+
+def test_drc_rule_frozen():
+    """验证 DRCRule 是 frozen dataclass（不可变，R05 防止意外修改规则）。
+
+    frozen dataclass 修改字段应 raise FrozenInstanceError（AttributeError 子类）。
+    """
+    rule = DRCRule(
+        name="FROZEN_TEST",
+        check_type=CheckType.MIN_SPACING,
+        threshold=1.0,
+    )
+    with pytest.raises(AttributeError):
+        rule.threshold = 999.0  # type: ignore[misc]
+    with pytest.raises(AttributeError):
+        rule.name = "MUTATED"  # type: ignore[misc]
+
+
+def test_drc_rule_default_severity():
+    """验证 DRCRule 默认 severity=1.0，description 为空字符串。"""
+    rule = DRCRule(
+        name="DEFAULT_TEST",
+        check_type=CheckType.MIN_AREA,
+        threshold=0.1,
+    )
+    assert rule.severity == 1.0
+    assert rule.description == ""
+
+
+# =============================================================================
+# 4. DEFAULT_DRC_RULES 内容校验（5 个测试）
+# =============================================================================
+
+
+def test_default_rules_count():
+    """验证 DEFAULT_DRC_RULES 包含 12 条规则。"""
+    assert len(DEFAULT_DRC_RULES) == 12, (
+        f"DEFAULT_DRC_RULES 应有 12 条，实际 {len(DEFAULT_DRC_RULES)}"
+    )
+
+
+def test_default_rules_thresholds():
+    """验证 DEFAULT_DRC_RULES 各规则阈值与 SiEPIC EBeam PDK runset 一致。
+
+    阈值来源: SiEPIC EBeam PDK DRC runset 源码
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    rules_by_name = {r.name: r for r in DEFAULT_DRC_RULES}
+    assert rules_by_name["MIN_SPACING"].threshold == 1.0   # WG_MIN_SPACE
+    assert rules_by_name["MIN_WIDTH"].threshold == 0.5     # SLAB150_MIN_WIDTH
+    assert rules_by_name["MIN_HEIGHT"].threshold == 0.4    # WG_MIN_WIDTH
+    assert rules_by_name["MIN_AREA"].threshold == 0.1      # WG_MIN_AREA
+    assert rules_by_name["BOUNDARY"].threshold == 0.0
+    assert rules_by_name["NO_OVERLAP"].threshold == 0.0
+    assert rules_by_name["PORT_ALIGNMENT"].threshold == 5.0
+    assert rules_by_name["PORT_DIRECTION"].threshold == 0.0
+    assert rules_by_name["PORT_CONNECTIVITY"].threshold == 0.0
+    assert rules_by_name["PORT_FACING"].threshold == 0.0
+    assert rules_by_name["DENSITY_MAX"].threshold == 80.0
+    assert rules_by_name["DENSITY_MIN"].threshold == 0.01
+
+
+def test_default_rules_unique_names():
+    """验证 DEFAULT_DRC_RULES 规则名唯一（无重复）。"""
+    names = [r.name for r in DEFAULT_DRC_RULES]
+    assert len(set(names)) == 12, f"规则名有重复: {names}"
+
+
+def test_default_rules_severity_range():
+    """验证 DEFAULT_DRC_RULES 所有 severity ∈ (0, 1]（合法物理范围）。"""
+    for rule in DEFAULT_DRC_RULES:
+        assert 0.0 < rule.severity <= 1.0, (
+            f"规则 {rule.name} severity={rule.severity} 超出 (0, 1] 范围"
+        )
+
+
+def test_default_rules_descriptions_nonempty():
+    """验证 DEFAULT_DRC_RULES 所有规则描述非空（R02 学术诚信，可溯源）。"""
+    for rule in DEFAULT_DRC_RULES:
+        assert rule.description, f"规则 {rule.name} 描述为空"
+        assert isinstance(rule.check_type, CheckType)
+
+
+# =============================================================================
+# 5. DRCViolation dataclass（1 个测试）
+# =============================================================================
+
+
+def test_drc_violation_construction():
+    """验证 DRCViolation dataclass 构造与字段（与 KLayout Violation 格式对齐）。"""
+    v = DRCViolation(
+        rule_name="MIN_WIDTH",
+        severity=1.0,
+        message="器件 wg 宽度 0.3μm < 阈值 0.5μm",
+        device_name="wg",
+        location=(5.0, 0.25),
+    )
+    assert v.rule_name == "MIN_WIDTH"
+    assert v.severity == 1.0
+    assert "宽度" in v.message
+    assert v.device_name == "wg"
+    assert v.location == (5.0, 0.25)
+    # location 是 tuple（可迭代，长度 2）
+    assert len(v.location) == 2
+
+
+# =============================================================================
+# 6. DRCEngine 初始化（3 个测试）
+# =============================================================================
+
+
+def test_engine_init_default_rules():
+    """验证 DRCEngine 默认使用 DEFAULT_DRC_RULES。"""
+    engine = DRCEngine()
+    assert engine.rules is DEFAULT_DRC_RULES
+    assert len(engine.rules) == 12
+
+
+def test_engine_init_custom_rules():
+    """验证 DRCEngine 接受自定义规则列表。"""
+    custom = [
+        DRCRule(name="C1", check_type=CheckType.MIN_WIDTH, threshold=0.5),
+        DRCRule(name="C2", check_type=CheckType.MIN_SPACING, threshold=1.0),
+    ]
+    engine = DRCEngine(custom)
+    assert engine.rules is custom
+    assert len(engine.rules) == 2
+
+
+def test_engine_init_empty_rules_raises():
+    """验证空规则列表 raise RuntimeError（R03 禁止 fall-back）。"""
+    with pytest.raises(RuntimeError, match="不能为空"):
+        DRCEngine([])
+
+
+# =============================================================================
+# 7. run_drc / run_drc_rules 入口与校验（5 个测试）
+# =============================================================================
+
+
+def test_run_drc_returns_dict_structure():
+    """验证 run_drc 返回 dict 含全部必要字段（n_rules/n_violations/n_passed/
+    pass_rate/violations）。"""
+    result = run_drc(_make_simple_circuit(), _make_simple_placements())
+    for key in ("n_rules", "n_violations", "n_passed", "pass_rate", "violations"):
+        assert key in result, f"DRC 结果缺少字段: {key}"
+    assert isinstance(result["violations"], list)
+    # violation 结构完整
+    for v in result["violations"]:
+        for field in ("rule_name", "severity", "message", "device_name", "location"):
+            assert field in v, f"violation 缺少字段: {field}"
+        assert isinstance(v["location"], list) and len(v["location"]) == 2
+
+
+def test_run_drc_rules_returns_list():
+    """验证 run_drc_rules 返回 list[DRCViolation]（便捷入口）。"""
+    violations = run_drc_rules(_make_simple_circuit(), _make_simple_placements())
+    assert isinstance(violations, list)
+    for v in violations:
+        assert isinstance(v, DRCViolation)
+
+
+def test_run_drc_invalid_circuit_raises():
+    """非法 circuit（缺字段）应 raise RuntimeError（R03 禁止 fall-back）。"""
+    placements = {"wg": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 0.5}}
+    with pytest.raises(RuntimeError, match="circuit"):
+        run_drc({}, placements)  # 缺 name/devices/canvas_w/canvas_h
+
+
+def test_run_drc_invalid_placements_raises():
+    """非法 placements（器件缺字段）应 raise RuntimeError。"""
+    circuit = _make_simple_circuit()
+    with pytest.raises(RuntimeError, match="placements"):
+        run_drc(circuit, {"wg": {"x": 0.0}})  # 缺 y/w/h
+
+
+def test_run_drc_empty_placements_raises():
+    """空 placements 应 raise RuntimeError（R03 禁止 fall-back）。"""
+    circuit = _make_simple_circuit()
+    with pytest.raises(RuntimeError, match="placements"):
+        run_drc(circuit, {})
+
+
+# =============================================================================
+# 8. 几何规则（MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/NO_OVERLAP/BOUNDARY）
+# =============================================================================
+
+
+def test_min_spacing_pass():
+    """MIN_SPACING 通过：两器件间距 10μm ≥ 阈值 1.0μm。
+
+    AABB 距离公式: Ericson "Real-Time Collision Detection" §5.1.3。
+    d1 AABB=(10,10,20,10.5), d2 AABB=(30,10,40,10.5),
+    dx=max(30-20,10-40,0)=10, dy=0, dist=10 ≥ 1.0。
+    """
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "MIN_SPACING" not in _violation_rule_names(result)
+
+
+def test_min_spacing_fail():
+    """MIN_SPACING 违规：两器件间距 0.5μm < 阈值 1.0μm。
+
+    d1 AABB=(10,10,20,10.5), d2 AABB=(20.5,10,30.5,10.5),
+    dx=max(20.5-20,10-30.5,0)=0.5, dy=0, dist=0.5 < 1.0。
+    """
+    circuit = _make_clean_circuit()
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 20.5, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "MIN_SPACING" in _violation_rule_names(result)
+
+
+def test_min_width_pass():
+    """MIN_WIDTH 通过：器件宽度 10μm ≥ 阈值 0.5μm。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "MIN_WIDTH" not in _violation_rule_names(result)
+
+
+def test_min_width_fail():
+    """MIN_WIDTH 违规：器件宽度 0.3μm < 阈值 0.5μm（SiEPIC SLAB150_MIN_WIDTH）。"""
+    circuit = {
+        "name": "narrow",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {"d1": {"x": 0.0, "y": 0.0, "w": 0.3, "h": 0.5}}
+    result = run_drc(circuit, placements)
+    assert "MIN_WIDTH" in _violation_rule_names(result)
+
+
+def test_min_height_pass():
+    """MIN_HEIGHT 通过：器件高度 0.5μm ≥ 阈值 0.4μm。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "MIN_HEIGHT" not in _violation_rule_names(result)
+
+
+def test_min_height_fail():
+    """MIN_HEIGHT 违规：器件高度 0.3μm < 阈值 0.4μm（SiEPIC WG_MIN_WIDTH）。"""
+    circuit = {
+        "name": "short",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {"d1": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 0.3}}
+    result = run_drc(circuit, placements)
+    assert "MIN_HEIGHT" in _violation_rule_names(result)
+
+
+def test_min_area_pass():
+    """MIN_AREA 通过：器件面积 5μm² ≥ 阈值 0.1μm²（SiEPIC WG_MIN_AREA）。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "MIN_AREA" not in _violation_rule_names(result)
+
+
+def test_min_area_fail():
+    """MIN_AREA 违规：器件面积 0.05μm² < 阈值 0.1μm²。"""
+    circuit = {
+        "name": "tiny",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    # w=0.2, h=0.25, area=0.05 < 0.1（同时触发 MIN_WIDTH，但 MIN_AREA 也在）
+    placements = {"d1": {"x": 0.0, "y": 0.0, "w": 0.2, "h": 0.25}}
+    result = run_drc(circuit, placements)
+    assert "MIN_AREA" in _violation_rule_names(result)
+
+
+def test_no_overlap_pass():
+    """NO_OVERLAP 通过：两器件不重叠。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "NO_OVERLAP" not in _violation_rule_names(result)
+
+
+def test_no_overlap_fail():
+    """NO_OVERLAP 违规：两器件完全重叠。
+
+    AABB 相交判定: Berg "Computational Geometry" §2.1 区间相交。
+    """
+    circuit = {
+        "name": "overlap",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [("d1", "out", "d2", "in")],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "d1": {"x": 50.0, "y": 50.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 50.0, "y": 50.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "NO_OVERLAP" in _violation_rule_names(result)
+
+
+def test_no_overlap_touching_allowed():
+    """NO_OVERLAP 边界相切允许：两器件边相切不算重叠。
+
+    d1 AABB=(10,10,20,10.5), d2 AABB=(20,10,30,10.5),
+    x_overlap = a[0]<b[2] and b[0]<a[2] → 10<30 and 20<20 → False（touching 不重叠）。
+    """
+    circuit = _make_clean_circuit()
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 20.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "NO_OVERLAP" not in _violation_rule_names(result)
+
+
+def test_boundary_inside():
+    """BOUNDARY 通过：器件在画布边界内。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "BOUNDARY" not in _violation_rule_names(result)
+
+
+def test_boundary_outside():
+    """BOUNDARY 违规：器件超出画布边界。
+
+    d1 AABB=(45,45,55,45.5)，canvas=(50,50)，x+w=55 > 50。
+    """
+    circuit = {
+        "name": "outside",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 50, "canvas_h": 50,
+    }
+    placements = {"d1": {"x": 45.0, "y": 45.0, "w": 10.0, "h": 0.5}}
+    result = run_drc(circuit, placements)
+    assert "BOUNDARY" in _violation_rule_names(result)
+
+
+# =============================================================================
+# 9. 端口规则（PORT_DIRECTION/PORT_CONNECTIVITY/PORT_FACING/PORT_ALIGNMENT）
+# =============================================================================
+
+
+def test_port_direction_valid():
+    """PORT_DIRECTION 通过：端口方向 north/south/east/west 合法。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "PORT_DIRECTION" not in _violation_rule_names(result)
+
+
+def test_port_direction_invalid():
+    """PORT_DIRECTION 违规：端口方向 'up' 非法（不在合法集合中）。"""
+    circuit = {
+        "name": "dir_invalid",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "up")]}],
+        "connections": [],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {"d1": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 0.5}}
+    result = run_drc(circuit, placements)
+    assert "PORT_DIRECTION" in _violation_rule_names(result)
+
+
+def test_port_connectivity_connected():
+    """PORT_CONNECTIVITY 通过：所有器件至少有一个端口被连接。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "PORT_CONNECTIVITY" not in _violation_rule_names(result)
+
+
+def test_port_connectivity_isolated():
+    """PORT_CONNECTIVITY 违规：器件无任何连接（孤立器件）。"""
+    result = run_drc(_make_simple_circuit(), _make_simple_placements())
+    assert "PORT_CONNECTIVITY" in _violation_rule_names(result)
+
+
+def test_port_facing_correct():
+    """PORT_FACING 通过：连接端口方向相对（east↔west）。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "PORT_FACING" not in _violation_rule_names(result)
+
+
+def test_port_facing_wrong():
+    """PORT_FACING 违规：连接端口方向非相对（east↔east）。
+
+    d1.out=east, d2.in=east，(east, east) 不在 _FACING_PAIRS 中。
+    """
+    circuit = {
+        "name": "facing_wrong",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "east"), ("out", 10, 0, "west")]},
+        ],
+        "connections": [("d1", "out", "d2", "in")],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "PORT_FACING" in _violation_rule_names(result)
+
+
+def test_port_alignment_pass():
+    """PORT_ALIGNMENT 通过：连接端口共享 y 轴（dy=0 ≤ 容差 5μm）。
+
+    d1.out abs=(20,10), d2.in abs=(30,10), dx=10>5 但 dy=0≤5，不违规
+    （规则要求 dx>tol AND dy>tol 才违规）。
+    """
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "PORT_ALIGNMENT" not in _violation_rule_names(result)
+
+
+def test_port_alignment_fail():
+    """PORT_ALIGNMENT 违规：连接端口 dx>5 且 dy>5（未对齐）。
+
+    d1.out abs=(20,10), d2.in abs=(50,30), dx=30>5, dy=20>5。
+    """
+    circuit = _make_clean_circuit()
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 50.0, "y": 30.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "PORT_ALIGNMENT" in _violation_rule_names(result)
+
+
+# =============================================================================
+# 10. 密度规则（DENSITY_MAX / DENSITY_MIN）
+# =============================================================================
+
+
+def test_density_max_pass():
+    """DENSITY_MAX 通过：布局密度 0.1% ≤ 阈值 80%。
+
+    公式: density = Σ(device_area) / canvas_area × 100%。
+    来源: Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度上限）。
+    """
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "DENSITY_MAX" not in _violation_rule_names(result)
+
+
+def test_density_max_fail():
+    """DENSITY_MAX 违规：布局密度 81% > 阈值 80%。
+
+    canvas=10×10=100μm², device=9×9=81μm², density=81%。
+    """
+    circuit = {
+        "name": "dense",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 10, "canvas_h": 10,
+    }
+    placements = {"d1": {"x": 0.0, "y": 0.0, "w": 9.0, "h": 9.0}}
+    result = run_drc(circuit, placements)
+    assert "DENSITY_MAX" in _violation_rule_names(result)
+
+
+def test_density_min_pass():
+    """DENSITY_MIN 通过：布局密度 0.1% ≥ 阈值 0.01%。"""
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert "DENSITY_MIN" not in _violation_rule_names(result)
+
+
+def test_density_min_fail():
+    """DENSITY_MIN 违规：布局密度 1e-6% < 阈值 0.01%（避免空版图）。
+
+    canvas=10000×10000=1e8μm², device=1×1=1μm², density=1e-6%。
+    """
+    circuit = {
+        "name": "sparse",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 10000, "canvas_h": 10000,
+    }
+    placements = {"d1": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}}
+    result = run_drc(circuit, placements)
+    assert "DENSITY_MIN" in _violation_rule_names(result)
+
+
+# =============================================================================
+# 11. 综合布局与边界情况（4 个测试）
+# =============================================================================
+
+
+def test_drc_clean_layout():
+    """DRC clean 布局：所有 12 条规则通过，n_violations=0，pass_rate=1.0。
+
+    构造 2 器件 + 1 连接的合法布局：
+    - 几何规则：间距 10μm ≥ 1.0，宽 10 ≥ 0.5，高 0.5 ≥ 0.4，面积 5 ≥ 0.1
+    - 边界：都在 100×100 画布内
+    - 端口：方向合法、已连接、east↔west 相对、y 轴对齐
+    - 密度：0.1% ∈ [0.01%, 80%]
+    """
+    result = run_drc(_make_clean_circuit(), _make_clean_placements())
+    assert result["n_violations"] == 0, (
+        f"DRC clean 布局应无违规，实际 n_violations={result['n_violations']}, "
+        f"violations={result['violations']}"
+    )
+    assert result["pass_rate"] == 1.0
+    assert result["n_passed"] == 12
+
+
 def test_drc_pass_rate_range():
     """验证 pass_rate ∈ [0, 1]（合法物理范围）。
 
     pass_rate = n_passed / n_rules，n_rules=12，n_passed ∈ [0, 12]，
     所以 pass_rate ∈ [0, 1]。
     """
-    circuit = _make_simple_circuit()
-    placements = _make_simple_placements()
-    result = run_drc(circuit, placements)
+    result = run_drc(_make_simple_circuit(), _make_simple_placements())
     assert 0.0 <= result["pass_rate"] <= 1.0, (
         f"pass_rate 应 ∈ [0, 1]，实际 {result['pass_rate']}"
     )
@@ -92,88 +740,37 @@ def test_drc_pass_rate_range():
     assert result["n_passed"] + len(violated_rules) == result["n_rules"]
 
 
-def test_drc_invalid_circuit_raises():
-    """非法 circuit（缺字段）应 raise RuntimeError（R03 禁止 fall-back）。"""
-    placements = {"wg": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 0.5}}
-    with pytest.raises(RuntimeError, match="circuit"):
-        run_drc({}, placements)  # 缺 name/devices/canvas_w/canvas_h
+def test_drc_duplicate_device_name_raises():
+    """器件名重复应 raise RuntimeError（_build_device_map 检测，R03）。
 
-
-def test_drc_invalid_placements_raises():
-    """非法 placements（器件缺字段）应 raise RuntimeError。"""
-    circuit = _make_simple_circuit()
-    with pytest.raises(RuntimeError, match="placements"):
-        run_drc(circuit, {"wg": {"x": 0.0}})  # 缺 y/w/h
-
-
-def test_drc_empty_placements_raises():
-    """空 placements 应 raise RuntimeError（R03 禁止 fall-back）。"""
-    circuit = _make_simple_circuit()
-    with pytest.raises(RuntimeError, match="placements"):
-        run_drc(circuit, {})
-
-
-def test_drc_violations_overlap():
-    """故意制造器件重叠，验证 NO_OVERLAP 规则触发（n_violations>0）。
-
-    构造两个完全重叠的器件布局，DRC 应报告 NO_OVERLAP 与 MIN_SPACING 违规。
+    PORT_ALIGNMENT 检查调用 _build_device_map，发现器件名重复即 raise。
     """
     circuit = {
-        "name": "overlap",
+        "name": "dup",
         "devices": [
-            {"name": "d1", "device_type": "strip_waveguide",
+            {"name": "d1", "device_type": "wg",
              "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
-            {"name": "d2", "device_type": "strip_waveguide",
+            {"name": "d1", "device_type": "wg",
              "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
         ],
-        "connections": [],
-        "canvas_w": 100,
-        "canvas_h": 100,
+        "connections": [("d1", "out", "d1", "in")],
+        "canvas_w": 100, "canvas_h": 100,
     }
-    # 两个器件完全重叠（同位置同尺寸区域）
-    placements = {
-        "d1": {"x": 50.0, "y": 50.0, "w": 10.0, "h": 0.5},
-        "d2": {"x": 50.0, "y": 50.0, "w": 10.0, "h": 0.5},
-    }
-    result = run_drc(circuit, placements)
-    assert result["n_violations"] > 0, (
-        f"重叠布局应触发违规，n_violations={result['n_violations']}"
-    )
-    rule_names = {v["rule_name"] for v in result["violations"]}
-    assert "NO_OVERLAP" in rule_names, (
-        f"重叠应触发 NO_OVERLAP 规则，实际触发: {rule_names}"
-    )
+    placements = {"d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5}}
+    with pytest.raises(RuntimeError, match="重复"):
+        run_drc(circuit, placements)
 
 
 def test_drc_simple_waveguide():
     """简单波导布局验证（与任务验证脚本一致）。
 
     单个 strip_waveguide 10μm × 0.5μm，画布 100×100μm。
-    验证:
-    - 返回 dict 含全部必要字段
-    - n_rules=12
-    - pass_rate > 0
-    - violation 结构完整
+    验证: 返回 dict 含全部必要字段，n_rules=12，pass_rate > 0。
     """
     circuit = _make_simple_circuit()
     placements = _make_simple_placements()
     result = run_drc(circuit, placements)
-
-    # 必要字段
-    for key in ("n_rules", "n_violations", "n_passed", "pass_rate", "violations"):
-        assert key in result, f"DRC 结果缺少字段: {key}"
-
     assert result["n_rules"] == 12
     assert result["pass_rate"] > 0.0, (
         f"合法布局至少部分规则通过，pass_rate={result['pass_rate']}"
     )
-    # 验证 violation 结构
-    for v in result["violations"]:
-        for field in ("rule_name", "severity", "message", "device_name", "location"):
-            assert field in v, f"violation 缺少字段: {field}"
-        assert isinstance(v["location"], list) and len(v["location"]) == 2
-
-
-def test_drc_version():
-    """验证 polaris-drc 子模块版本号 5.0.0（与原 polaris-verify 一致）。"""
-    assert polaris_drc.__version__ == "5.0.0"
