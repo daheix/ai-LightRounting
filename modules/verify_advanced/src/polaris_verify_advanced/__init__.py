@@ -16,6 +16,8 @@ Calibre xACT 寄生提取、Calibre LFD 光刻友好设计、曲线感知 DRC �
 ### Process（处理）
 - 图同构 LVS 比对（VF2 算法，NetworkX GraphMatcher）
 - 层次化 DRC（BVH 加速 + 自适应行分块，OpenDRC 论文）
+- tiled / deep 模式 DRC（R8 路标：分块扫描 + 边界扩展去重 / 递归层次化
+  flatten + 跨层次检查，对齐 KLayout DRC tiling & deep mode）
 - 方程驱动 DRC（eqDRC，对齐 Siemens Calibre eqDRC）
 - KLayout DRC runset 桥接（width/space/notch/enclose/area/density/via）
 - Calibre xACT 寄生 RC 提取（R=ρL/(wh), C=C_pp+C_fringe+C_coupling）
@@ -66,6 +68,14 @@ from .graph_lvs import (
     run_graph_lvs,
     verify_port_orientation,
     verify_waveguide_length,
+)
+
+# --- 层次化 LVS（≥3 层递归比对，R9 路标）---
+from .hierarchical_lvs import (
+    HierarchicalLVS,
+    HierarchicalLVSReport,
+    LevelMatchResult,
+    run_hierarchical_lvs,
 )
 
 # --- LVS 进阶类型与连接性 ---
@@ -130,6 +140,15 @@ from .hierarchical_drc import (
     run_hierarchical_drc,
 )
 
+# --- tiled / deep 模式 DRC（R8 路标）---
+from .tiled_deep_drc import (
+    DRCReport,
+    DeepDRC,
+    TiledDRC,
+    run_deep_drc,
+    run_tiled_drc,
+)
+
 # --- Calibre xACT 寄生提取 ---
 from .calibre_interface import (
     EPSILON_0,
@@ -186,6 +205,11 @@ __all__ = [
     "run_graph_lvs",
     "verify_port_orientation",
     "verify_waveguide_length",
+    # 层次化 LVS（≥3 层递归比对，R9 路标）
+    "HierarchicalLVS",
+    "HierarchicalLVSReport",
+    "LevelMatchResult",
+    "run_hierarchical_lvs",
     # LVS 进阶
     "ConnectivityReport",
     "DeviceMatchResult",
@@ -231,6 +255,12 @@ __all__ = [
     "HierarchicalDRC",
     "RowPartition",
     "run_hierarchical_drc",
+    # tiled / deep 模式 DRC（R8 路标）
+    "DRCReport",
+    "DeepDRC",
+    "TiledDRC",
+    "run_deep_drc",
+    "run_tiled_drc",
     # Calibre xACT
     "EPSILON_0",
     "EPS_R_SI",
