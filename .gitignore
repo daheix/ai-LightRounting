@@ -21,16 +21,14 @@ venv/
 # 3dtool 子仓库（git submodule，由 git 管理，不直接跟踪文件）
 # 3dtool/ 目录是 git submodule gitlink，内容不提交主仓库
 
-# 3dtool-appimage 解压目录（按需恢复，体积大 1.1G，不提交）
-3dtool-appimage/
-
-# polaris_wheels 离线 wheel（218M，本地维护，不提交）
-polaris_wheels/
-
 # 密钥与凭据
 .env
 *.key
 credentials.json
+
+# polaris-extras 完整包不提交（137M > GitHub 100M 限制）
+# 只提交分片 polaris-extras.tar.gz.part_00 / part_01，运行时 cat 合并
+polaris-extras.tar.gz
 
 # 大型版图文件（按需用 LFS）
 *.gds
@@ -45,7 +43,6 @@ checkpoints/
 *.swp
 *.swo
 
-# 自动提交守护进程日志（V6）
+# 自动提交守护进程日志
 auto_commit.log
-
-polaris_wheels/
+*.log
