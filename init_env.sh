@@ -109,9 +109,9 @@ else
         log "  git 历史完整 (${COMMIT_COUNT} commits)，跳过"
     fi
 
-    # 步骤3: 恢复 3dtool 子仓库（幂等 sparse clone 注册）
-    # 不用 git submodule update --init（会全量拉 1.6G 爆磁盘）
-    log "[3/7] 恢复 3dtool 子仓库（幂等 sparse clone 注册）..."
+    # 步骤3: 恢复 3dtool 子仓库（幂等，install.sh 步骤2 也会调用，此处先恢复确保 wheels 可用）
+    # 用标准 git submodule 命令 + sparse-checkout（跳过 1.6G 分片）
+    log "[3/7] 恢复 3dtool 子仓库（标准 git submodule + sparse-checkout）..."
     SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
     if [ -f "${SETUP_SUBMODULE}" ]; then
         SETUP_ARGS=""
@@ -129,11 +129,12 @@ else
 fi
 
 # 步骤4: 安装核心依赖 + 33 模块（调用 install.sh）
+# 步骤3 已恢复子仓库，故传 --skip-submodule 避免重复（install.sh 幂等，但省日志）
 log "[4/7] 安装依赖与模块（调用 install.sh）..."
 if [ "${QUICK}" = "1" ]; then
-    INSTALL_ARGS="--no-unshallow"
+    INSTALL_ARGS="--no-unshallow --skip-submodule"
 else
-    INSTALL_ARGS=""
+    INSTALL_ARGS="--skip-submodule"
 fi
 if [ "${VERBOSE}" = "1" ]; then
     INSTALL_ARGS="${INSTALL_ARGS} -v"

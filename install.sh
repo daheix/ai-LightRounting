@@ -34,11 +34,14 @@ WHEELS_DIR="${REPO_DIR}/3dtool/wheels"
 MODULES_DIR="${REPO_DIR}/modules"
 MARK_FILE="/tmp/.polaris_installed"
 DO_UNSHALLOW=1
+DO_SUBMODULE=1
+VERBOSE=0
 
 # 解析参数
 for arg in "$@"; do
     case "${arg}" in
         --no-unshallow) DO_UNSHALLOW=0 ;;
+        --skip-submodule) DO_SUBMODULE=0 ;;
         -v|--verbose) VERBOSE=1 ;;
     esac
 done
@@ -68,26 +71,27 @@ else
 fi
 
 # 步骤2: 恢复 3dtool 子仓库（幂等，沙箱重启后自动 sparse clone 注册）
-# 为什么不用 `git submodule update --init`？
-#   - 3dtool 仓库含 1.6G 分片，全量 clone 磁盘爆
-#   - sparse 配置在 .git/modules/3dtool/，沙箱重启后丢失
-#   - 必须用 setup_3dtool_submodule.sh 重新 sparse clone 注册
-echo ""
-echo "[2/5] 恢复 3dtool 子仓库（幂等 sparse clone 注册）..."
-SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
-if [ -f "${SETUP_SUBMODULE}" ]; then
-    SETUP_ARGS=""
-    [ "${VERBOSE:-0}" = "1" ] && SETUP_ARGS="-v"
-    if ! bash "${SETUP_SUBMODULE}" ${SETUP_ARGS}; then
-        echo "[ERROR] 3dtool 子仓库恢复失败（R03 禁止 fall-back）"
+# 可通过 --skip-submodule 跳过（init_env.sh 已调用时用）
+if [ "${DO_SUBMODULE}" = "1" ]; then
+    echo ""
+    echo "[2/5] 恢复 3dtool 子仓库（标准 git submodule + sparse-checkout）..."
+    SETUP_SUBMODULE="${REPO_DIR}/scripts/setup_3dtool_submodule.sh"
+    if [ -f "${SETUP_SUBMODULE}" ]; then
+        SETUP_ARGS=""
+        [ "${VERBOSE}" = "1" ] && SETUP_ARGS="-v"
+        if ! bash "${SETUP_SUBMODULE}" ${SETUP_ARGS}; then
+            echo "[ERROR] 3dtool 子仓库恢复失败（R03 禁止 fall-back）"
+            exit 1
+        fi
+        echo "  submodule status: $(git submodule status 2>&1 | head -1)"
+    else
+        echo "[ERROR] setup_3dtool_submodule.sh 不存在: ${SETUP_SUBMODULE}"
         exit 1
     fi
-    echo "  submodule status: $(git submodule status 2>&1 | head -1)"
+    echo "[2/5] 完成"
 else
-    echo "[ERROR] setup_3dtool_submodule.sh 不存在: ${SETUP_SUBMODULE}"
-    exit 1
+    echo "[2/5] 跳过子仓库恢复（--skip-submodule）"
 fi
-echo "[2/5] 完成"
 
 # 步骤3: 安装核心依赖
 echo ""
