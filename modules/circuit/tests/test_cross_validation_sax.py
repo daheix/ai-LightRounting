@@ -72,17 +72,20 @@ def _dc_s() -> dict:
     """2x2 定向耦合器 S 参数（理想 3dB）。
 
     S = [[0, 1/sqrt(2), 1/sqrt(2)*1j, 0], ...]（交叉/bar 标准定义）。
+    所有值用 np.full_like 数组（sax 要求与波长数组同形，标量会致类型不一致）。
     来源: Saleh & Teich 2019 §4.4 / Yariv & Yeh 1984 §4.2。
     """
     r = 1.0 / np.sqrt(2.0)
     ri = r * 1j
     zeros = np.zeros_like(WL)
-    ones = np.ones_like(WL) * 0.0  # 理想耦合器反射=0
+    ones = np.zeros_like(WL)  # 理想耦合器反射=0
+    r_arr = np.full_like(WL, r)
+    ri_arr = np.full_like(WL, ri)
     return {
-        ("in1", "in1"): ones, ("in2", "in1"): r, ("out1", "in1"): ri, ("out2", "in1"): zeros,
-        ("in1", "in2"): r, ("in2", "in2"): ones, ("out1", "in2"): zeros, ("out2", "in2"): ri,
-        ("in1", "out1"): ri, ("in2", "out1"): zeros, ("out1", "out1"): ones, ("out2", "out1"): r,
-        ("in1", "out2"): zeros, ("in2", "out2"): ri, ("out1", "out2"): r, ("out2", "out2"): ones,
+        ("in1", "in1"): ones, ("in2", "in1"): r_arr, ("out1", "in1"): ri_arr, ("out2", "in1"): zeros,
+        ("in1", "in2"): r_arr, ("in2", "in2"): ones, ("out1", "in2"): zeros, ("out2", "in2"): ri_arr,
+        ("in1", "out1"): ri_arr, ("in2", "out1"): zeros, ("out1", "out1"): ones, ("out2", "out1"): r_arr,
+        ("in1", "out2"): zeros, ("in2", "out2"): ri_arr, ("out1", "out2"): r_arr, ("out2", "out2"): ones,
     }
 
 
@@ -94,11 +97,12 @@ def _mmi_1x2_s() -> dict:
     """
     r = 1.0 / np.sqrt(2.0)
     zeros = np.zeros_like(WL)
+    r_arr = np.full_like(WL, r)
     return {
         ("in", "in"): zeros,
-        ("out1", "in"): np.full_like(WL, r), ("out2", "in"): np.full_like(WL, r),
-        ("in", "out1"): np.full_like(WL, r), ("out2", "out1"): zeros,
-        ("in", "out2"): np.full_like(WL, r), ("out1", "out2"): zeros,
+        ("out1", "in"): r_arr, ("out2", "in"): r_arr,
+        ("in", "out1"): r_arr, ("out2", "out1"): zeros,
+        ("in", "out2"): r_arr, ("out1", "out2"): zeros,
         ("out1", "out1"): zeros, ("out2", "out2"): zeros, ("out1", "out2"): zeros, ("out2", "out1"): zeros,
     }
 
