@@ -108,6 +108,8 @@ fi
 
 # PoLaRIS 核心依赖（R04: jax 纯 CPU 版，不装 jax[cuda]）
 # 依赖来源：PoLaRIS 33 模块 pyproject.toml 共用依赖 + R04 CPU 战略
+echo "  先升级打包工具（Python 3.14 需要 setuptools>=75）..."
+pip install --upgrade pip setuptools wheel 2>&1 | tail -2
 echo "  在线安装 PoLaRIS 核心依赖..."
 pip install \
     numpy \
