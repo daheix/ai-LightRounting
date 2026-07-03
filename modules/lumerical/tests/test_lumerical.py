@@ -51,6 +51,33 @@ def test_physical_constants():
     assert pl._SOREF_DN_AP == -8.5e-18
 
 
+def test_public_constants_and_availability():
+    """验证公开常量（CODATA 2018 / SiEPIC PDK）与后端可用性探测函数。
+
+    R02 学术诚信: CODATA 2018 精确定义值 / SiEPIC EBeam PDK SOI 波导参数 /
+    IEEE Std 100-2000 Np-dB 换算。
+    """
+    # 光电协同常数（CODATA 2018 精确值，非测量值）
+    assert pl.PLANCK_CONSTANT == 6.62607015e-34   # 普朗克常数 J·s
+    assert pl.ELECTRON_CHARGE == 1.602176634e-19  # 元电荷 C
+    assert pl.SPEED_OF_LIGHT == 2.99792458e8      # 真空光速 m/s
+    # SOI 波导解析模型参数（SiEPIC EBeam PDK 1550nm）
+    assert pl.SOI_N_EFF_CENTER == 2.34   # 中心有效折射率 @ 1550nm
+    assert pl.SOI_DN_D_LAMBDA == -0.5    # 色散 dn_eff/dλ
+    assert pl.SOI_ALPHA_DB_PER_UM == 5e-5  # 传播损耗 dB/μm
+    # IEEE Std 100-2000: 1 Np = 4.343 dB
+    assert pl.DB_TO_NP == 4.343
+    # CML 容差（无源性/互易性诊断阈值）
+    assert pl.PASSIVITY_TOL == 1e-6
+    assert pl.RECIPROCITY_TOL == 1e-9
+    # 后端可用性探测（importlib 探测，返回 bool，R03 合规）
+    assert isinstance(pl.is_meep_available(), bool)
+    assert isinstance(pl.is_tidy3d_available(), bool)
+    # MEEP 通常未安装 → False；check_meep_availability 与 is_meep_available 一致
+    if not pl.is_meep_available():
+        assert pl.check_meep_availability() == pl.MeepAvailability.NOT_INSTALLED
+
+
 # =============================================================================
 # 2. Lumerical MODE 基本功能（Marcatili 近似，纯 NumPy）
 # =============================================================================
