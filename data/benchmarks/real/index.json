@@ -1,0 +1,2685 @@
+{
+  "description": "PoLaRIS 真实光子/模拟电路用例索引。所有文件从公开 GitHub 仓库下载（codeload zip），未做任何内容修改。source 字段标注原始仓库来源，origin 字段提供可溯源的 GitHub blob URL。",
+  "generated_by": "scripts/download_real_circuits.py",
+  "download_method": "codeload.github.com zip + zipfile selective extract",
+  "network_note": "raw.githubusercontent.com GET 在沙箱中被 SSL 拦截，改用 codeload.github.com zip 下载方案。",
+  "total": 327,
+  "by_source": {
+    "SiEPIC_EBeam_PDK": 219,
+    "gdsfactory": 52,
+    "ALIGN (Chentang2nd/ALIGN-custom fork)": 56
+  },
+  "by_format": {
+    "GDS": 219,
+    "pic.yml": 47,
+    "yml": 5,
+    "JSON": 56
+  },
+  "source_status": {
+    "siepic": {
+      "status": "ok",
+      "count": 219
+    },
+    "gdsfactory": {
+      "status": "ok",
+      "count": 52
+    },
+    "picbench": {
+      "status": "no_files",
+      "count": 0
+    },
+    "align": {
+      "status": "ok",
+      "count": 56
+    }
+  },
+  "references": [
+    {
+      "source": "SiEPIC_EBeam_PDK",
+      "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+      "license": "LGPL-2.1",
+      "authors": "Lukas Chrostowski et al. (UBC / SiEPIC)",
+      "extracted": "全仓库 **/*.gds (< 2MB, 含 Examples/klayout/docs/PCM)"
+    },
+    {
+      "source": "gdsfactory",
+      "url": "https://github.com/gdsfactory/gdsfactory",
+      "doi": "10.1117/1.JOM.2.4.043501",
+      "license": "MIT",
+      "authors": "Joaquin Matres et al. (2014-2024)",
+      "extracted": "全仓库 **/*.pic.yml + samples/netlists/*.yml"
+    },
+    {
+      "source": "picbench",
+      "url": "https://github.com/TiagoCavaco/picbench",
+      "status": "unavailable (404 as of 2026-07-04)",
+      "note": "本地 data/benchmarks/picbench_*.json (24 个) 为早期下载"
+    },
+    {
+      "source": "ALIGN",
+      "url": "https://github.com/ALIGN-analoglayout/ALIGN",
+      "fork_url": "https://github.com/Chentang2nd/ALIGN-custom",
+      "license": "BSD-3-Clause",
+      "ref": "Agarwal et al., ALIGN, DAC 2020",
+      "extracted": "examples/**/*.json (const/primitives/verilog, 排除配置文件)"
+    }
+  ],
+  "files": [
+    {
+      "name": "Astar_example",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Astar_example.GDS",
+      "size": 111294,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Astar_example.GDS"
+    },
+    {
+      "name": "Bragg",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Bragg.gds",
+      "size": 274144,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Bragg.gds"
+    },
+    {
+      "name": "Bragg_QuarterShift_test",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Bragg_QuarterShift_test.gds",
+      "size": 221338,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Bragg_QuarterShift_test.gds"
+    },
+    {
+      "name": "Crossings",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Crossings.gds",
+      "size": 136644,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Crossings.gds"
+    },
+    {
+      "name": "ebeam_taper_475_500_te1550_testcircuit",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__CustomComponentTutorial__ebeam_taper_475_500_te1550_testcircuit.GDS",
+      "size": 124886,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/CustomComponentTutorial/ebeam_taper_475_500_te1550_testcircuit.GDS"
+    },
+    {
+      "name": "crossing_tiny",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Custom_Component__crossing_tiny.gds",
+      "size": 1032,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Custom_Component/crossing_tiny.gds"
+    },
+    {
+      "name": "EBeam_LukasChrostowski_E_LVS",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__EBeam_LukasChrostowski_E_LVS.gds",
+      "size": 250194,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/EBeam_LukasChrostowski_E_LVS.gds"
+    },
+    {
+      "name": "EBeam_openEBL_maxwell",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__EBeam_openEBL_maxwell.GDS",
+      "size": 1157900,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/EBeam_openEBL_maxwell.GDS"
+    },
+    {
+      "name": "GSiP_1_RingMod",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__GSiP__GSiP_1_RingMod.gds",
+      "size": 73346,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/GSiP/GSiP_1_RingMod.gds"
+    },
+    {
+      "name": "GSiP_4_RingFilter",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__GSiP__GSiP_4_RingFilter.gds",
+      "size": 74696,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/GSiP/GSiP_4_RingFilter.gds"
+    },
+    {
+      "name": "GSiP_RingModulator",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__GSiP__GSiP_RingModulator.gds",
+      "size": 290426,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/GSiP/GSiP_RingModulator.gds"
+    },
+    {
+      "name": "GSiP_RingReceiver2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__GSiP__GSiP_RingReceiver2.gds",
+      "size": 130980,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/GSiP/GSiP_RingReceiver2.gds"
+    },
+    {
+      "name": "GSiP_RingResonator",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__GSiP__GSiP_RingResonator.gds",
+      "size": 24306,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/GSiP/GSiP_RingResonator.gds"
+    },
+    {
+      "name": "GSiP_RingMod_Transceiver",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__GSiP__Transceiver__GSiP_RingMod_Transceiver.gds",
+      "size": 372850,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/GSiP/Transceiver/GSiP_RingMod_Transceiver.gds"
+    },
+    {
+      "name": "2x2_example",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__JSTQE-2019__2x2_example.GDS",
+      "size": 260446,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/JSTQE-2019/2x2_example.GDS"
+    },
+    {
+      "name": "MZI1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MZI1.gds",
+      "size": 169530,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MZI1.gds"
+    },
+    {
+      "name": "MZI1_round_path",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MZI1_round_path.GDS",
+      "size": 156702,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MZI1_round_path.GDS"
+    },
+    {
+      "name": "MZI_TE_TM",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MZI_TE_TM.gds",
+      "size": 242298,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MZI_TE_TM.gds"
+    },
+    {
+      "name": "MZI_bdc",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MZI_bdc.gds",
+      "size": 156226,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MZI_bdc.gds"
+    },
+    {
+      "name": "MZI_bdc_1000microns",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MZI_bdc_1000microns.gds",
+      "size": 150360,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MZI_bdc_1000microns.gds"
+    },
+    {
+      "name": "MZI_bdc_500microns",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MZI_bdc_500microns.gds",
+      "size": 150334,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MZI_bdc_500microns.gds"
+    },
+    {
+      "name": "MiniChip_1mm",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MiniChip_1mm.gds",
+      "size": 1498280,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MiniChip_1mm.gds"
+    },
+    {
+      "name": "MonteCarlo_MZI_Balanced",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MonteCarlo_MZI_Balanced.GDS",
+      "size": 144742,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MonteCarlo_MZI_Balanced.GDS"
+    },
+    {
+      "name": "MonteCarlo_MZI_Balanced2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MonteCarlo_MZI_Balanced2.gds",
+      "size": 158254,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MonteCarlo_MZI_Balanced2.gds"
+    },
+    {
+      "name": "MonteCarlo_MZI_∆L=pi",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__MonteCarlo_MZI_∆L=pi.GDS",
+      "size": 158918,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/MonteCarlo_MZI_∆L=pi.GDS"
+    },
+    {
+      "name": "PDK_MC_verification",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__PDK_MC_verification.gds",
+      "size": 197312,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/PDK_MC_verification.gds"
+    },
+    {
+      "name": "RingResonator",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__RingResonator.gds",
+      "size": 147458,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/RingResonator.gds"
+    },
+    {
+      "name": "Ring_series",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Ring_series.gds",
+      "size": 135030,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Ring_series.gds"
+    },
+    {
+      "name": "RotationFlip_test",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__RotationFlip_test.gds",
+      "size": 112186,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/RotationFlip_test.gds"
+    },
+    {
+      "name": "SiEPIC_EBeam_PDK_Verification_Check",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiEPIC_EBeam_PDK_Verification_Check.gds",
+      "size": 267492,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiEPIC_EBeam_PDK_Verification_Check.gds"
+    },
+    {
+      "name": "SiEPIC_Tools_EBeam_PDK_Verification_Check",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiEPIC_Tools_EBeam_PDK_Verification_Check.gds",
+      "size": 446518,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiEPIC_Tools_EBeam_PDK_Verification_Check.gds"
+    },
+    {
+      "name": "SiEPIC_Tools_EBeam_PDK_Verification_Check2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiEPIC_Tools_EBeam_PDK_Verification_Check2.gds",
+      "size": 427276,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiEPIC_Tools_EBeam_PDK_Verification_Check2.gds"
+    },
+    {
+      "name": "Crossing220nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Optimized__Crossing220nmPlatform.gds",
+      "size": 562,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Optimized/Crossing220nmPlatform.gds"
+    },
+    {
+      "name": "EdgeCoupler220nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Optimized__EdgeCoupler220nmPlatform.gds",
+      "size": 226,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Optimized/EdgeCoupler220nmPlatform.gds"
+    },
+    {
+      "name": "MMI2x2_positive_resist220nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Optimized__MMI2x2_positive_resist220nmPlatform.gds",
+      "size": 498,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Optimized/MMI2x2_positive_resist220nmPlatform.gds"
+    },
+    {
+      "name": "Crossing220nmPlatform_12umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Parameter Sweep__Crossing220nmPlatform_12umLong.gds",
+      "size": 562,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Parameter Sweep/Crossing220nmPlatform_12umLong.gds"
+    },
+    {
+      "name": "Crossing220nmPlatform_8umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Parameter Sweep__Crossing220nmPlatform_8umLong.gds",
+      "size": 562,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Parameter Sweep/Crossing220nmPlatform_8umLong.gds"
+    },
+    {
+      "name": "EdgeCoupler220nmPlatform_400umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Parameter Sweep__EdgeCoupler220nmPlatform_400umLong.gds",
+      "size": 338,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Parameter Sweep/EdgeCoupler220nmPlatform_400umLong.gds"
+    },
+    {
+      "name": "EdgeCoupler220nmPlatform_500umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Parameter Sweep__EdgeCoupler220nmPlatform_500umLong.gds",
+      "size": 338,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Parameter Sweep/EdgeCoupler220nmPlatform_500umLong.gds"
+    },
+    {
+      "name": "MMI2x2_positive_resist220nmPlatform_150umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Parameter Sweep__MMI2x2_positive_resist220nmPlatform_150umLong.gds",
+      "size": 498,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Parameter Sweep/MMI2x2_positive_resist220nmPlatform_150umLong.gds"
+    },
+    {
+      "name": "MMI2x2_positive_resist220nmPlatform_170umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_220nm__Parameter Sweep__MMI2x2_positive_resist220nmPlatform_170umLong.gds",
+      "size": 498,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_220nm/Parameter Sweep/MMI2x2_positive_resist220nmPlatform_170umLong.gds"
+    },
+    {
+      "name": "Crossing400nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Optimized__Crossing400nmPlatform.gds",
+      "size": 562,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Optimized/Crossing400nmPlatform.gds"
+    },
+    {
+      "name": "EdgeCoupler400nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Optimized__EdgeCoupler400nmPlatform.gds",
+      "size": 226,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Optimized/EdgeCoupler400nmPlatform.gds"
+    },
+    {
+      "name": "MMI1x2_positive_resist400nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Optimized__MMI1x2_positive_resist400nmPlatform.gds",
+      "size": 418,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Optimized/MMI1x2_positive_resist400nmPlatform.gds"
+    },
+    {
+      "name": "MMI2x2_positive_resist400nmPlatform",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Optimized__MMI2x2_positive_resist400nmPlatform.gds",
+      "size": 498,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Optimized/MMI2x2_positive_resist400nmPlatform.gds"
+    },
+    {
+      "name": "Crossing400nmPlatform_5umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__Crossing400nmPlatform_5umLong.gds",
+      "size": 562,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/Crossing400nmPlatform_5umLong.gds"
+    },
+    {
+      "name": "Crossing400nmPlatform_7umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__Crossing400nmPlatform_7umLong.gds",
+      "size": 562,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/Crossing400nmPlatform_7umLong.gds"
+    },
+    {
+      "name": "EdgeCoupler400nmPlatform_400umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__EdgeCoupler400nmPlatform_400umLong.gds",
+      "size": 242,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/EdgeCoupler400nmPlatform_400umLong.gds"
+    },
+    {
+      "name": "EdgeCoupler400nmPlatform_500umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__EdgeCoupler400nmPlatform_500umLong.gds",
+      "size": 242,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/EdgeCoupler400nmPlatform_500umLong.gds"
+    },
+    {
+      "name": "MMI1X2_positive_resist400nmPlatform_50umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__MMI1X2_positive_resist400nmPlatform_50umLong.gds",
+      "size": 418,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/MMI1X2_positive_resist400nmPlatform_50umLong.gds"
+    },
+    {
+      "name": "MMI1X2_positive_resist400nmPlatform_60umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__MMI1X2_positive_resist400nmPlatform_60umLong.gds",
+      "size": 418,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/MMI1X2_positive_resist400nmPlatform_60umLong.gds"
+    },
+    {
+      "name": "MMI2X2_positive_resist400nmPlatform_160umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__MMI2X2_positive_resist400nmPlatform_160umLong.gds",
+      "size": 498,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/MMI2X2_positive_resist400nmPlatform_160umLong.gds"
+    },
+    {
+      "name": "MMI2X2_positive_resist400nmPlatform_180umLong",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__SiN_400nm__Parameter Sweep__MMI2X2_positive_resist400nmPlatform_180umLong.gds",
+      "size": 498,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/SiN_400nm/Parameter Sweep/MMI2X2_positive_resist400nmPlatform_180umLong.gds"
+    },
+    {
+      "name": "Simple_MZI",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__Simple_MZI.gds",
+      "size": 121570,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/Simple_MZI.gds"
+    },
+    {
+      "name": "contraDC1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__contraDC1.gds",
+      "size": 1136832,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/contraDC1.gds"
+    },
+    {
+      "name": "disconnected_pins_MZI",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__disconnected_pins_MZI.gds",
+      "size": 163404,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/disconnected_pins_MZI.gds"
+    },
+    {
+      "name": "disconnected_pins_ring",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__disconnected_pins_ring.gds",
+      "size": 157802,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/disconnected_pins_ring.gds"
+    },
+    {
+      "name": "EBeam_ignoreIOs",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam__EBeam_ignoreIOs.gds",
+      "size": 136586,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam/EBeam_ignoreIOs.gds"
+    },
+    {
+      "name": "MZI_ebeam_dc_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam__MZI_ebeam_dc_te1550.gds",
+      "size": 123064,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam/MZI_ebeam_dc_te1550.gds"
+    },
+    {
+      "name": "MZI_smallsplitter",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam__MonteCarlo__MZI_smallsplitter.gds",
+      "size": 206550,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam/MonteCarlo/MZI_smallsplitter.gds"
+    },
+    {
+      "name": "RingResonator",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam__RingResonator.gds",
+      "size": 135656,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam/RingResonator.gds"
+    },
+    {
+      "name": "RingResonator_TM",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam__RingResonator_TM.GDS",
+      "size": 113486,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam/RingResonator_TM.GDS"
+    },
+    {
+      "name": "tiny",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam__tiny.gds",
+      "size": 109656,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam/tiny.gds"
+    },
+    {
+      "name": "ebeam_taper_475_500_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__ebeam_taper_475_500_te1550.gds",
+      "size": 820,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/ebeam_taper_475_500_te1550.gds"
+    },
+    {
+      "name": "SamanJahani_BLeskid200v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid200v1.GDS",
+      "size": 1779374,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid200v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLeskid250v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid250v1.GDS",
+      "size": 1791344,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid250v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLeskid300v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid300v1.GDS",
+      "size": 1568722,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid300v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLeskid350v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid350v1.GDS",
+      "size": 1779532,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid350v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLeskid400v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid400v1.GDS",
+      "size": 1566582,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid400v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLeskid450v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid450v1.GDS",
+      "size": 1777484,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid450v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLeskid500v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLeskid500v1.GDS",
+      "size": 1783604,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLeskid500v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw200v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw200v1.GDS",
+      "size": 1071314,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw200v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw200v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw200v2.GDS",
+      "size": 1178576,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw200v2.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw250v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw250v1.GDS",
+      "size": 1082188,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw250v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw250v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw250v2.GDS",
+      "size": 1204132,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw250v2.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw300v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw300v1.GDS",
+      "size": 1075018,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw300v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw300v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw300v2.GDS",
+      "size": 1183858,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw300v2.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw350v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw350v1.GDS",
+      "size": 1071320,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw350v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw350v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw350v2.GDS",
+      "size": 1178812,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw350v2.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw400v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw400v1.GDS",
+      "size": 1070194,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw400v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw400v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw400v2.GDS",
+      "size": 1176270,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw400v2.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw450v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw450v1.GDS",
+      "size": 1069106,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw450v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw450v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw450v2.GDS",
+      "size": 1173742,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw450v2.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw500v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw500v1.GDS",
+      "size": 1072370,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw500v1.GDS"
+    },
+    {
+      "name": "SamanJahani_BLsw500v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Bending loss__SamanJahani_BLsw500v2.GDS",
+      "size": 1181326,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Bending loss/SamanJahani_BLsw500v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm110v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm110v1.GDS",
+      "size": 841352,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm110v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm110v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm110v2.GDS",
+      "size": 832720,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm110v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm125v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm125v1.GDS",
+      "size": 841280,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm125v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm125v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm125v2.GDS",
+      "size": 832690,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm125v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm140v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm140v1.GDS",
+      "size": 841280,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm140v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm140v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm140v2.GDS",
+      "size": 832654,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm140v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm155v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm155v1.GDS",
+      "size": 841280,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm155v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm155v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm155v2.GDS",
+      "size": 832642,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm155v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm170v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm170v1.GDS",
+      "size": 841280,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm170v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm170v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm170v2.GDS",
+      "size": 832690,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm170v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm185v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm185v1.GDS",
+      "size": 841278,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm185v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm185v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm185v2.GDS",
+      "size": 832642,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm185v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm80v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm80v1.GDS",
+      "size": 841422,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm80v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm80v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm80v2.GDS",
+      "size": 832754,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm80v2.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm95v1",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm95v1.GDS",
+      "size": 841344,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm95v1.GDS"
+    },
+    {
+      "name": "SamanJahani_Eskid60nm95v2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__eskid__GDS files__Crosstalk__SamanJahani_Eskid60nm95v2.GDS",
+      "size": 832724,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/eskid/GDS files/Crosstalk/SamanJahani_Eskid60nm95v2.GDS"
+    },
+    {
+      "name": "mzi_adjustable_splitter",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__mzi_adjustable_splitter.gds",
+      "size": 138432,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/mzi_adjustable_splitter.gds"
+    },
+    {
+      "name": "mzi_bends_test",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__mzi_bends_test.gds",
+      "size": 176782,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/mzi_bends_test.gds"
+    },
+    {
+      "name": "PWB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__photonic wirebonds__PWB.gds",
+      "size": 19572,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/photonic wirebonds/PWB.gds"
+    },
+    {
+      "name": "EBeam_heaters_2StageMZIwithHeater",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__thermo-optic__EBeam_heaters_2StageMZIwithHeater.GDS",
+      "size": 154750,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/thermo-optic/EBeam_heaters_2StageMZIwithHeater.GDS"
+    },
+    {
+      "name": "EBeam_heaters_BraggGratingwithHeater",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__thermo-optic__EBeam_heaters_BraggGratingwithHeater.gds",
+      "size": 114500,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/thermo-optic/EBeam_heaters_BraggGratingwithHeater.gds"
+    },
+    {
+      "name": "EBeam_heaters_MZIwithHeater",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__thermo-optic__EBeam_heaters_MZIwithHeater.GDS",
+      "size": 129164,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/thermo-optic/EBeam_heaters_MZIwithHeater.GDS"
+    },
+    {
+      "name": "EBeam_heaters_simple",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__thermo-optic__EBeam_heaters_simple.gds",
+      "size": 38544,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/thermo-optic/EBeam_heaters_simple.gds"
+    },
+    {
+      "name": "wg_test",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__wg_test.gds",
+      "size": 238,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/wg_test.gds"
+    },
+    {
+      "name": "wg_test2",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Examples__wg_test2.gds",
+      "size": 12650,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Examples/wg_test2.gds"
+    },
+    {
+      "name": "ebeam_crossing4",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Lumerical_EBeam_CML__EBeam__fdtd__crossing4__ebeam_crossing4.gds",
+      "size": 1860,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Lumerical_EBeam_CML/EBeam/fdtd/crossing4/ebeam_crossing4.gds"
+    },
+    {
+      "name": "y_480",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Lumerical_EBeam_CML__EBeam__fdtd__ebeam_y_1550__y_480.gds",
+      "size": 11044,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Lumerical_EBeam_CML/EBeam/fdtd/ebeam_y_1550/y_480.gds"
+    },
+    {
+      "name": "y_500",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Lumerical_EBeam_CML__EBeam__fdtd__ebeam_y_1550__y_500.gds",
+      "size": 11996,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Lumerical_EBeam_CML/EBeam/fdtd/ebeam_y_1550/y_500.gds"
+    },
+    {
+      "name": "y_520",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Lumerical_EBeam_CML__EBeam__fdtd__ebeam_y_1550__y_520.gds",
+      "size": 11020,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Lumerical_EBeam_CML/EBeam/fdtd/ebeam_y_1550/y_520.gds"
+    },
+    {
+      "name": "cdc_layout",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/Lumerical_EBeam_CML__EBeam__source_data__CDC__cdc_layout.gds",
+      "size": 402858,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/Lumerical_EBeam_CML/EBeam/source_data/CDC/cdc_layout.gds"
+    },
+    {
+      "name": "EBeam_CD_500nm",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/PCM__EBeam_CD_500nm.gds",
+      "size": 27296,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/PCM/EBeam_CD_500nm.gds"
+    },
+    {
+      "name": "cdc_layout",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__contra_directional_coupler__CDC__cdc_layout.gds",
+      "size": 402858,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/contra_directional_coupler/CDC/cdc_layout.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TE_FullEtch",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Adiabatic3dB_TE_FullEtch__Adiabatic3dB_TE_FullEtch.gds",
+      "size": 4112,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Adiabatic3dB_TE_FullEtch/Adiabatic3dB_TE_FullEtch.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TE_FullEtch_TestSet",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Adiabatic3dB_TE_FullEtch__Adiabatic3dB_TE_FullEtch_TestSet.gds",
+      "size": 1776800,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Adiabatic3dB_TE_FullEtch/Adiabatic3dB_TE_FullEtch_TestSet.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TM_FullEtch",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Adiabatic3dB_TM_FullEtch__Adiabatic3dB_TM_FullEtch.gds",
+      "size": 6144,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Adiabatic3dB_TM_FullEtch/Adiabatic3dB_TM_FullEtch.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TM_FullEtch_TestSet",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Adiabatic3dB_TM_FullEtch__Adiabatic3dB_TM_FullEtch_TestSet.gds",
+      "size": 1206558,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Adiabatic3dB_TM_FullEtch/Adiabatic3dB_TM_FullEtch_TestSet.gds"
+    },
+    {
+      "name": "Cband_DualPol_AdiabaticCoupler_WG600_300_Gap100_CoupilngL125",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__McGill__Cband_DualPol_AdiabaticCoupler__GDS__Cband_DualPol_AdiabaticCoupler_WG600_300_Gap100_CoupilngL125.gds",
+      "size": 4262,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/McGill/Cband_DualPol_AdiabaticCoupler/GDS/Cband_DualPol_AdiabaticCoupler_WG600_300_Gap100_CoupilngL125.gds"
+    },
+    {
+      "name": "Cband_TE_AdiabaticCoupler_WG550_350_Gap100_CoupilngL100",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__McGill__Cband_TE_AdiabaticCoupler__GDS__Cband_TE_AdiabaticCoupler_WG550_350_Gap100_CoupilngL100.gds",
+      "size": 4192,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/McGill/Cband_TE_AdiabaticCoupler/GDS/Cband_TE_AdiabaticCoupler_WG550_350_Gap100_CoupilngL100.gds"
+    },
+    {
+      "name": "Cband_TM_AdiabaticCoupler_WG600_300_Gap100_CoupilngL50",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__McGill__Cband_TM_AdiabaticCoupler__GDS__Cband_TM_AdiabaticCoupler_WG600_300_Gap100_CoupilngL50.gds",
+      "size": 4256,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/McGill/Cband_TM_AdiabaticCoupler/GDS/Cband_TM_AdiabaticCoupler_WG600_300_Gap100_CoupilngL50.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TE_FullEtch",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__UBC Adiabatic Couplers__Adiabatic3dB_TE_FullEtch__Adiabatic3dB_TE_FullEtch.gds",
+      "size": 6144,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/UBC Adiabatic Couplers/Adiabatic3dB_TE_FullEtch/Adiabatic3dB_TE_FullEtch.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TE_FullEtch_TestSet",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__UBC Adiabatic Couplers__Adiabatic3dB_TE_FullEtch__Adiabatic3dB_TE_FullEtch_TestSet.gds",
+      "size": 1776798,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/UBC Adiabatic Couplers/Adiabatic3dB_TE_FullEtch/Adiabatic3dB_TE_FullEtch_TestSet.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TM_FullEtch",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__UBC Adiabatic Couplers__Adiabatic3dB_TM_FullEtch__Adiabatic3dB_TM_FullEtch.gds",
+      "size": 6144,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/UBC Adiabatic Couplers/Adiabatic3dB_TM_FullEtch/Adiabatic3dB_TM_FullEtch.gds"
+    },
+    {
+      "name": "Adiabatic3dB_TM_FullEtch_TestSet",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB__UBC Adiabatic Couplers__Adiabatic3dB_TM_FullEtch__Adiabatic3dB_TM_FullEtch_TestSet.gds",
+      "size": 1206558,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB/UBC Adiabatic Couplers/Adiabatic3dB_TM_FullEtch/Adiabatic3dB_TM_FullEtch_TestSet.gds"
+    },
+    {
+      "name": "Han_SWGA3dB_OL2016",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_adiabatic_coupler__Splitter_Adiabatic_3dB_SWG__Han_SWGA3dB_OL2016.GDS",
+      "size": 45056,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_adiabatic_coupler/Splitter_Adiabatic_3dB_SWG/Han_SWGA3dB_OL2016.GDS"
+    },
+    {
+      "name": "ebeam_bdc_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_bdc__experiment__TE_3dB_BDC_splitter__ebeam_bdc_te1550.GDS",
+      "size": 7104,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_bdc/experiment/TE_3dB_BDC_splitter/ebeam_bdc_te1550.GDS"
+    },
+    {
+      "name": "3dB_coupler_TM",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_bdc__experiment__TM_3dB_BDC_splitter__GDS__3dB_coupler_TM.gds",
+      "size": 6380,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_bdc/experiment/TM_3dB_BDC_splitter/GDS/3dB_coupler_TM.gds"
+    },
+    {
+      "name": "lukasc_BraggShift",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_bragg__refs__lukasc_BraggShift.gds",
+      "size": 89428,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_bragg/refs/lukasc_BraggShift.gds"
+    },
+    {
+      "name": "Terminator",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ebeam_terminator__Terminator.gds",
+      "size": 182,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ebeam_terminator/Terminator.gds"
+    },
+    {
+      "name": "Ring_OFC2014",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/docs__components__ebeam__ring_resonators__refs__Ring_OFC2014.gds",
+      "size": 69230,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/docs/components/ebeam/ring_resonators/refs/Ring_OFC2014.gds"
+    },
+    {
+      "name": "ebeam_splitter_swg_assist_te1310_ANT",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__ANT__ebeam_splitter_swg_assist_te1310_ANT.GDS",
+      "size": 49140,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/ANT/ebeam_splitter_swg_assist_te1310_ANT.GDS"
+    },
+    {
+      "name": "ebeam_splitter_swg_assist_te1550_ANT",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__ANT__ebeam_splitter_swg_assist_te1550_ANT.GDS",
+      "size": 49138,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/ANT/ebeam_splitter_swg_assist_te1550_ANT.GDS"
+    },
+    {
+      "name": "GCs_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__GCs_BB.gds",
+      "size": 29666,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/GCs_BB.gds"
+    },
+    {
+      "name": "ebeam_adiabatic_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_adiabatic_te1550.gds",
+      "size": 5072,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_adiabatic_te1550.gds"
+    },
+    {
+      "name": "ebeam_adiabatic_tm1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_adiabatic_tm1550.gds",
+      "size": 5072,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_adiabatic_tm1550.gds"
+    },
+    {
+      "name": "ebeam_bdc_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_bdc_te1550.gds",
+      "size": 7674,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_bdc_te1550.gds"
+    },
+    {
+      "name": "ebeam_crossing4",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_crossing4.gds",
+      "size": 1566,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_crossing4.gds"
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_gc_te1550.gds",
+      "size": 115348,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_gc_te1550.gds"
+    },
+    {
+      "name": "ebeam_gc_tm1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_gc_tm1550.gds",
+      "size": 92308,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_gc_tm1550.gds"
+    },
+    {
+      "name": "ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=20um",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=20um.gds",
+      "size": 8016,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=20um.gds"
+    },
+    {
+      "name": "ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=40um",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=40um.gds",
+      "size": 8016,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_routing_taper_te1550_w=500nm_to_w=3000nm_L=40um.gds"
+    },
+    {
+      "name": "ebeam_splitter_swg_assist_te1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_splitter_swg_assist_te1310.gds",
+      "size": 36446,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_splitter_swg_assist_te1310.gds"
+    },
+    {
+      "name": "ebeam_splitter_swg_assist_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_splitter_swg_assist_te1550.gds",
+      "size": 36438,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_splitter_swg_assist_te1550.gds"
+    },
+    {
+      "name": "ebeam_terminator_te1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_terminator_te1310.gds",
+      "size": 640,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_terminator_te1310.gds"
+    },
+    {
+      "name": "ebeam_terminator_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_terminator_te1550.gds",
+      "size": 756,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_terminator_te1550.gds"
+    },
+    {
+      "name": "ebeam_terminator_tm1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_terminator_tm1550.gds",
+      "size": 692,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_terminator_tm1550.gds"
+    },
+    {
+      "name": "ebeam_y_1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_y_1310.gds",
+      "size": 12244,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_y_1310.gds"
+    },
+    {
+      "name": "ebeam_y_1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_y_1550.gds",
+      "size": 12006,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_y_1550.gds"
+    },
+    {
+      "name": "ebeam_y_adiabatic",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_y_adiabatic.gds",
+      "size": 15170,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_y_adiabatic.gds"
+    },
+    {
+      "name": "ebeam_y_adiabatic_500pin",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__ebeam_y_adiabatic_500pin.gds",
+      "size": 15176,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/ebeam_y_adiabatic_500pin.gds"
+    },
+    {
+      "name": "taper_si_simm_1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__taper_si_simm_1310.gds",
+      "size": 638,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/taper_si_simm_1310.gds"
+    },
+    {
+      "name": "taper_si_simm_1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam__taper_si_simm_1550.gds",
+      "size": 650,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam/taper_si_simm_1550.gds"
+    },
+    {
+      "name": "Alignment_Marker",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__Alignment_Marker.GDS",
+      "size": 632,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/Alignment_Marker.GDS"
+    },
+    {
+      "name": "Packaging_FibreArray_8ch",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__Packaging_FibreArray_8ch.gds",
+      "size": 1280,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/Packaging_FibreArray_8ch.gds"
+    },
+    {
+      "name": "SEM_example",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__SEM_example.gds",
+      "size": 430,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/SEM_example.gds"
+    },
+    {
+      "name": "ebeam_BondPad",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_BondPad.gds",
+      "size": 844,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_BondPad.gds"
+    },
+    {
+      "name": "ebeam_BondPad_75",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_BondPad_75.gds",
+      "size": 746,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_BondPad_75.gds"
+    },
+    {
+      "name": "ebeam_bdc_tm1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_bdc_tm1550.gds",
+      "size": 6776,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_bdc_tm1550.gds"
+    },
+    {
+      "name": "ebeam_gc_te1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_gc_te1310.gds",
+      "size": 144694,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_gc_te1310.gds"
+    },
+    {
+      "name": "ebeam_gc_te1310_broadband",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_gc_te1310_broadband.gds",
+      "size": 267532,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_gc_te1310_broadband.gds"
+    },
+    {
+      "name": "ebeam_gc_te1550_90nmSlab",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_gc_te1550_90nmSlab.gds",
+      "size": 30186,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_gc_te1550_90nmSlab.gds"
+    },
+    {
+      "name": "ebeam_gc_te1550_broadband",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_gc_te1550_broadband.GDS",
+      "size": 215568,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_gc_te1550_broadband.GDS"
+    },
+    {
+      "name": "ebeam_splitter_adiabatic_swg_te1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_splitter_adiabatic_swg_te1550.gds",
+      "size": 44052,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_splitter_adiabatic_swg_te1550.gds"
+    },
+    {
+      "name": "ebeam_swg_edgecoupler",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_swg_edgecoupler.gds",
+      "size": 24416,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_swg_edgecoupler.gds"
+    },
+    {
+      "name": "ebeam_terminator_te1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_terminator_te1310.gds",
+      "size": 704,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_terminator_te1310.gds"
+    },
+    {
+      "name": "ebeam_y_adiabatic_1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__ebeam_y_adiabatic_1310.gds",
+      "size": 15312,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/ebeam_y_adiabatic_1310.gds"
+    },
+    {
+      "name": "metal_via",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__metal_via.gds",
+      "size": 788,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/metal_via.gds"
+    },
+    {
+      "name": "pbs_1550_eskid",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__pbs_1550_eskid.gds",
+      "size": 46372,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/pbs_1550_eskid.gds"
+    },
+    {
+      "name": "photonic_wirebond_surfacetaper_1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__photonic_wirebond_surfacetaper_1310.gds",
+      "size": 2572,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/photonic_wirebond_surfacetaper_1310.gds"
+    },
+    {
+      "name": "photonic_wirebond_surfacetaper_1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__photonic_wirebond_surfacetaper_1550.gds",
+      "size": 2572,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/photonic_wirebond_surfacetaper_1550.gds"
+    },
+    {
+      "name": "siepic_o_gc_te1270_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__siepic_o_gc_te1270_BB.GDS",
+      "size": 4058,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/siepic_o_gc_te1270_BB.GDS"
+    },
+    {
+      "name": "siepic_o_pwbstlas_si_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__siepic_o_pwbstlas_si_BB.GDS",
+      "size": 4624,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/siepic_o_pwbstlas_si_BB.GDS"
+    },
+    {
+      "name": "thermal_phase_shifters",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Beta__thermal_phase_shifters.gds",
+      "size": 3654,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Beta/thermal_phase_shifters.gds"
+    },
+    {
+      "name": "ebeam_dream_FAVE_SiN_1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FAVE_SiN_1310_BB.gds",
+      "size": 41422,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FAVE_SiN_1310_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FAVE_SiN_1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FAVE_SiN_1550_BB.gds",
+      "size": 41422,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FAVE_SiN_1550_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FAVE_Si_1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FAVE_Si_1310_BB.gds",
+      "size": 41420,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FAVE_Si_1310_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FAVE_Si_1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FAVE_Si_1550_BB.gds",
+      "size": 41420,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FAVE_Si_1550_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FaML_Shuksan_SiN_1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FaML_Shuksan_SiN_1310_BB.gds",
+      "size": 39072,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FaML_Shuksan_SiN_1310_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FaML_Shuksan_SiN_1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FaML_Shuksan_SiN_1550_BB.gds",
+      "size": 39072,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FaML_Shuksan_SiN_1550_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FaML_SiN_1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FaML_SiN_1310_BB.gds",
+      "size": 38936,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FaML_SiN_1310_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FaML_SiN_1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FaML_SiN_1550_BB.gds",
+      "size": 38936,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FaML_SiN_1550_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FaML_Si_1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FaML_Si_1310_BB.gds",
+      "size": 38964,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FaML_Si_1310_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_FaML_Si_1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_FaML_Si_1550_BB.gds",
+      "size": 38964,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_FaML_Si_1550_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_Laser_SiN_1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_Laser_SiN_1310_BB.gds",
+      "size": 39714,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_Laser_SiN_1310_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_Laser_SiN_1310_Bond_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_Laser_SiN_1310_Bond_BB.gds",
+      "size": 39718,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_Laser_SiN_1310_Bond_BB.gds"
+    },
+    {
+      "name": "ebeam_dream_splitter_1x2_te1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_dream_splitter_1x2_te1550_BB.gds",
+      "size": 26554,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_dream_splitter_1x2_te1550_BB.gds"
+    },
+    {
+      "name": "ebeam_sin_dream_splitter1x2_te1310_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_sin_dream_splitter1x2_te1310_BB.gds",
+      "size": 26948,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_sin_dream_splitter1x2_te1310_BB.gds"
+    },
+    {
+      "name": "ebeam_sin_dream_splitter1x2_te1550_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_Dream__ebeam_sin_dream_splitter1x2_te1550_BB.gds",
+      "size": 26948,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_Dream/ebeam_sin_dream_splitter1x2_te1550_BB.gds"
+    },
+    {
+      "name": "ANT_MMI_1x2_te1550_3dB_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ANT_MMI_1x2_te1550_3dB_BB.gds",
+      "size": 41358,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ANT_MMI_1x2_te1550_3dB_BB.gds"
+    },
+    {
+      "name": "GC_SiN_TE_1310_8degOxide_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__GC_SiN_TE_1310_8degOxide_BB.gds",
+      "size": 4948,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/GC_SiN_TE_1310_8degOxide_BB.gds"
+    },
+    {
+      "name": "GC_SiN_TE_1550_8degOxide_BB",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__GC_SiN_TE_1550_8degOxide_BB.gds",
+      "size": 4742,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/GC_SiN_TE_1550_8degOxide_BB.gds"
+    },
+    {
+      "name": "ULaval",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ULaval.gds",
+      "size": 8770,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ULaval.gds"
+    },
+    {
+      "name": "crossing_SiN_1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__crossing_SiN_1550.gds",
+      "size": 2342,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/crossing_SiN_1550.gds"
+    },
+    {
+      "name": "crossing_SiN_1550_extended",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__crossing_SiN_1550_extended.gds",
+      "size": 16564,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/crossing_SiN_1550_extended.gds"
+    },
+    {
+      "name": "crossing_horizontal",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__crossing_horizontal.gds",
+      "size": 29490,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/crossing_horizontal.gds"
+    },
+    {
+      "name": "crossing_manhattan",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__crossing_manhattan.gds",
+      "size": 816,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/crossing_manhattan.gds"
+    },
+    {
+      "name": "ebeam_BondPad",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_BondPad.gds",
+      "size": 844,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_BondPad.gds"
+    },
+    {
+      "name": "ebeam_DC_2-1_te895",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_DC_2-1_te895.gds",
+      "size": 3778,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_DC_2-1_te895.gds"
+    },
+    {
+      "name": "ebeam_DC_te895",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_DC_te895.gds",
+      "size": 3852,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_DC_te895.gds"
+    },
+    {
+      "name": "ebeam_Polarizer_TM_1550_UQAM",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_Polarizer_TM_1550_UQAM.gds",
+      "size": 14970,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_Polarizer_TM_1550_UQAM.gds"
+    },
+    {
+      "name": "ebeam_YBranch_895",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_YBranch_895.gds",
+      "size": 11994,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_YBranch_895.gds"
+    },
+    {
+      "name": "ebeam_gc_te895",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_gc_te895.gds",
+      "size": 48256,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_gc_te895.gds"
+    },
+    {
+      "name": "ebeam_terminator_SiN_1310",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_terminator_SiN_1310.gds",
+      "size": 532,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_terminator_SiN_1310.gds"
+    },
+    {
+      "name": "ebeam_terminator_SiN_1550",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_terminator_SiN_1550.gds",
+      "size": 532,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_terminator_SiN_1550.gds"
+    },
+    {
+      "name": "ebeam_terminator_SiN_te895",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__ebeam_terminator_SiN_te895.gds",
+      "size": 710,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/ebeam_terminator_SiN_te895.gds"
+    },
+    {
+      "name": "port_SiN_800",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__port_SiN_800.gds",
+      "size": 652,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/port_SiN_800.gds"
+    },
+    {
+      "name": "taper_SiN_750_3000",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__taper_SiN_750_3000.gds",
+      "size": 480,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/taper_SiN_750_3000.gds"
+    },
+    {
+      "name": "taper_SiN_750_800",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__gds__EBeam_SiN__taper_SiN_750_800.gds",
+      "size": 1042,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/gds/EBeam_SiN/taper_SiN_750_800.gds"
+    },
+    {
+      "name": "openEBL_competition2018T1_MZI_your_GitHub_username",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__SiEPIC-EBeam-competition__openEBL_competition2018T1_MZI_your_GitHub_username.gds",
+      "size": 212416,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/SiEPIC-EBeam-competition/openEBL_competition2018T1_MZI_your_GitHub_username.gds"
+    },
+    {
+      "name": "openEBL_competition2018T1_TE_your_GitHub_username",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__SiEPIC-EBeam-competition__openEBL_competition2018T1_TE_your_GitHub_username.gds",
+      "size": 204492,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/SiEPIC-EBeam-competition/openEBL_competition2018T1_TE_your_GitHub_username.gds"
+    },
+    {
+      "name": "openEBL_competition2018T1_TM_your_GitHub_username",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__SiEPIC-EBeam-competition__openEBL_competition2018T1_TM_your_GitHub_username.gds",
+      "size": 194500,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/SiEPIC-EBeam-competition/openEBL_competition2018T1_TM_your_GitHub_username.gds"
+    },
+    {
+      "name": "openEBL_competition2018T1_example",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__SiEPIC-EBeam-competition__openEBL_competition2018T1_example.gds",
+      "size": 1070,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/SiEPIC-EBeam-competition/openEBL_competition2018T1_example.gds"
+    },
+    {
+      "name": "openEBL_competition2018T1_your_GitHub_username",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__SiEPIC-EBeam-competition__openEBL_competition2018T1_your_GitHub_username.gds",
+      "size": 676,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/SiEPIC-EBeam-competition/openEBL_competition2018T1_your_GitHub_username.gds"
+    },
+    {
+      "name": "Laser_Warning_Symbol",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__pcells_EBeam_Beta__Laser_Warning_Symbol.gds",
+      "size": 822,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/pcells_EBeam_Beta/Laser_Warning_Symbol.gds"
+    },
+    {
+      "name": "DP_Edge_coupler_for_PWB_BB_logo",
+      "source": "SiEPIC_EBeam_PDK",
+      "format": "GDS",
+      "path": "siepic/klayout__EBeam__pymacros__pcells_EBeam_Dream__DP_Edge_coupler_for_PWB_BB_logo.gds",
+      "size": 28046,
+      "origin": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK/blob/master/klayout/EBeam/pymacros/pcells_EBeam_Dream/DP_Edge_coupler_for_PWB_BB_logo.gds"
+    },
+    {
+      "name": "demo_backwards_compatibility.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__demo_backwards_compatibility.pic.yml",
+      "size": 289,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/demo_backwards_compatibility.pic.yml"
+    },
+    {
+      "name": "demo_jinja.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__demo_jinja.pic.yml",
+      "size": 536,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/demo_jinja.pic.yml"
+    },
+    {
+      "name": "aar_around_the_back.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_around_the_back.pic.yml",
+      "size": 517,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_around_the_back.pic.yml"
+    },
+    {
+      "name": "aar_around_the_back2.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_around_the_back2.pic.yml",
+      "size": 639,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_around_the_back2.pic.yml"
+    },
+    {
+      "name": "aar_around_the_back3.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_around_the_back3.pic.yml",
+      "size": 724,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_around_the_back3.pic.yml"
+    },
+    {
+      "name": "aar_bundles01.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_bundles01.pic.yml",
+      "size": 1419,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_bundles01.pic.yml"
+    },
+    {
+      "name": "aar_bundles02.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_bundles02.pic.yml",
+      "size": 1510,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_bundles02.pic.yml"
+    },
+    {
+      "name": "aar_bundles03.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_bundles03.pic.yml",
+      "size": 1407,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_bundles03.pic.yml"
+    },
+    {
+      "name": "aar_indirect.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_indirect.pic.yml",
+      "size": 526,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_indirect.pic.yml"
+    },
+    {
+      "name": "aar_simple.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_simple.pic.yml",
+      "size": 540,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_simple.pic.yml"
+    },
+    {
+      "name": "aar_steps01.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_steps01.pic.yml",
+      "size": 1154,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_steps01.pic.yml"
+    },
+    {
+      "name": "aar_steps02_final.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_steps02_final.pic.yml",
+      "size": 913,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_steps02_final.pic.yml"
+    },
+    {
+      "name": "aar_steps02_initial.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_steps02_initial.pic.yml",
+      "size": 689,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_steps02_initial.pic.yml"
+    },
+    {
+      "name": "aar_steps03.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_steps03.pic.yml",
+      "size": 1232,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_steps03.pic.yml"
+    },
+    {
+      "name": "aar_wonky_connector.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__aar_wonky_connector.pic.yml",
+      "size": 763,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/aar_wonky_connector.pic.yml"
+    },
+    {
+      "name": "connections_demo.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__connections_demo.pic.yml",
+      "size": 422,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/connections_demo.pic.yml"
+    },
+    {
+      "name": "mirror_demo.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__mirror_demo.pic.yml",
+      "size": 191,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/mirror_demo.pic.yml"
+    },
+    {
+      "name": "mmis.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__mmis.pic.yml",
+      "size": 266,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/mmis.pic.yml"
+    },
+    {
+      "name": "mzi_lattice_filter.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__mzi_lattice_filter.pic.yml",
+      "size": 729,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/mzi_lattice_filter.pic.yml"
+    },
+    {
+      "name": "new_factories.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__new_factories.pic.yml",
+      "size": 130,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/new_factories.pic.yml"
+    },
+    {
+      "name": "pads.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__pads.pic.yml",
+      "size": 410,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/pads.pic.yml"
+    },
+    {
+      "name": "pads_path_length_match.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__pads_path_length_match.pic.yml",
+      "size": 646,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/pads_path_length_match.pic.yml"
+    },
+    {
+      "name": "pads_steps.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__pads_steps.pic.yml",
+      "size": 469,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/pads_steps.pic.yml"
+    },
+    {
+      "name": "ports_demo.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__ports_demo.pic.yml",
+      "size": 253,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/ports_demo.pic.yml"
+    },
+    {
+      "name": "relative_port_placing.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__relative_port_placing.pic.yml",
+      "size": 363,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/relative_port_placing.pic.yml"
+    },
+    {
+      "name": "routes.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__routes.pic.yml",
+      "size": 411,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/routes.pic.yml"
+    },
+    {
+      "name": "routes_custom.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__routes_custom.pic.yml",
+      "size": 471,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/routes_custom.pic.yml"
+    },
+    {
+      "name": "routes_mmi.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__routes_mmi.pic.yml",
+      "size": 282,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/routes_mmi.pic.yml"
+    },
+    {
+      "name": "routes_path_length_match.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__routes_path_length_match.pic.yml",
+      "size": 449,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/routes_path_length_match.pic.yml"
+    },
+    {
+      "name": "routes_steps.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__routes_steps.pic.yml",
+      "size": 615,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/routes_steps.pic.yml"
+    },
+    {
+      "name": "routes_waypoints.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/docs__notebooks__yaml_pics__routes_waypoints.pic.yml",
+      "size": 504,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/docs/notebooks/yaml_pics/routes_waypoints.pic.yml"
+    },
+    {
+      "name": "aar_basic_01.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_basic_01.pic.yml",
+      "size": 556,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_basic_01.pic.yml"
+    },
+    {
+      "name": "aar_bundles.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_bundles.pic.yml",
+      "size": 6076,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_bundles.pic.yml"
+    },
+    {
+      "name": "aar_error_intermediate_180.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_error_intermediate_180.pic.yml",
+      "size": 443,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_error_intermediate_180.pic.yml"
+    },
+    {
+      "name": "aar_error_overconstrained.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_error_overconstrained.pic.yml",
+      "size": 464,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_error_overconstrained.pic.yml"
+    },
+    {
+      "name": "aar_gone_wrong.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_gone_wrong.pic.yml",
+      "size": 1550,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_gone_wrong.pic.yml"
+    },
+    {
+      "name": "aar_implicit_final_angle.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_implicit_final_angle.pic.yml",
+      "size": 1311,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_implicit_final_angle.pic.yml"
+    },
+    {
+      "name": "aar_slalom.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_slalom.pic.yml",
+      "size": 604,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_slalom.pic.yml"
+    },
+    {
+      "name": "aar_start_end_customizations.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_start_end_customizations.pic.yml",
+      "size": 3314,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_start_end_customizations.pic.yml"
+    },
+    {
+      "name": "aar_step_definitions.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_step_definitions.pic.yml",
+      "size": 1492,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_step_definitions.pic.yml"
+    },
+    {
+      "name": "aar_tricky_connections.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__aar_tricky_connections.pic.yml",
+      "size": 3067,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/aar_tricky_connections.pic.yml"
+    },
+    {
+      "name": "all_angle_routes.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__all_angle_routing__all_angle_routes.pic.yml",
+      "size": 3796,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/all_angle_routing/all_angle_routes.pic.yml"
+    },
+    {
+      "name": "mask.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__demo__circuits__mask.pic.yml",
+      "size": 598,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/demo/circuits/mask.pic.yml"
+    },
+    {
+      "name": "mzi_lattice_filter.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__demo__circuits__mzi_lattice_filter.pic.yml",
+      "size": 597,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/demo/circuits/mzi_lattice_filter.pic.yml"
+    },
+    {
+      "name": "mzi_ubcpdk.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__demo__circuits__mzi_ubcpdk.pic.yml",
+      "size": 634,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/demo/circuits/mzi_ubcpdk.pic.yml"
+    },
+    {
+      "name": "pads.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__demo__circuits__pads.pic.yml",
+      "size": 380,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/demo/circuits/pads.pic.yml"
+    },
+    {
+      "name": "rectangles.pic",
+      "source": "gdsfactory",
+      "format": "pic.yml",
+      "path": "gdsfactory/gdsfactory__samples__demo__circuits__rectangles.pic.yml",
+      "size": 235,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/demo/circuits/rectangles.pic.yml"
+    },
+    {
+      "name": "bend_mirror",
+      "source": "gdsfactory",
+      "format": "yml",
+      "path": "gdsfactory/gdsfactory__samples__netlists__bend_mirror.yml",
+      "size": 1429,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/netlists/bend_mirror.yml"
+    },
+    {
+      "name": "bend_rotated",
+      "source": "gdsfactory",
+      "format": "yml",
+      "path": "gdsfactory/gdsfactory__samples__netlists__bend_rotated.yml",
+      "size": 925,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/netlists/bend_rotated.yml"
+    },
+    {
+      "name": "bend_translated_rotated",
+      "source": "gdsfactory",
+      "format": "yml",
+      "path": "gdsfactory/gdsfactory__samples__netlists__bend_translated_rotated.yml",
+      "size": 1335,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/netlists/bend_translated_rotated.yml"
+    },
+    {
+      "name": "mzi",
+      "source": "gdsfactory",
+      "format": "yml",
+      "path": "gdsfactory/gdsfactory__samples__netlists__mzi.yml",
+      "size": 9278,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/netlists/mzi.yml"
+    },
+    {
+      "name": "straight_with_bend",
+      "source": "gdsfactory",
+      "format": "yml",
+      "path": "gdsfactory/gdsfactory__samples__netlists__straight_with_bend.yml",
+      "size": 1286,
+      "origin": "https://github.com/gdsfactory/gdsfactory/blob/main/gdsfactory/samples/netlists/straight_with_bend.yml"
+    },
+    {
+      "name": "comparator.const.1",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/align__pdk__finfet__examples__comparator__comparator.const.1.json",
+      "size": 1300,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/align/pdk/finfet/examples/comparator/comparator.const.1.json"
+    },
+    {
+      "name": "comparator.const.2",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/align__pdk__finfet__examples__comparator__comparator.const.2.json",
+      "size": 1288,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/align/pdk/finfet/examples/comparator/comparator.const.2.json"
+    },
+    {
+      "name": "comparator.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/align__pdk__finfet__examples__comparator__comparator.const.json",
+      "size": 4,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/align/pdk/finfet/examples/comparator/comparator.const.json"
+    },
+    {
+      "name": "niwc_opamp.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/align__pdk__finfet__examples__niwc_opamp__niwc_opamp.const.json",
+      "size": 686,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/align/pdk/finfet/examples/niwc_opamp/niwc_opamp.const.json"
+    },
+    {
+      "name": "niwc_opamp_split.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/align__pdk__finfet__examples__niwc_opamp_split__niwc_opamp_split.const.json",
+      "size": 54,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/align/pdk/finfet/examples/niwc_opamp_split/niwc_opamp_split.const.json"
+    },
+    {
+      "name": "VCO_type2_65.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__VCO_type2_65__VCO_type2_65.const.json",
+      "size": 170,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/VCO_type2_65/VCO_type2_65.const.json"
+    },
+    {
+      "name": "adder.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__adder__adder.const.json",
+      "size": 110,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/adder/adder.const.json"
+    },
+    {
+      "name": "block_spacing_bug.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__block_spacing_bug__block_spacing_bug.const.json",
+      "size": 130,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/block_spacing_bug/block_spacing_bug.const.json"
+    },
+    {
+      "name": "__primitives__",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming__1_topology____primitives__.json",
+      "size": 494,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming/1_topology/__primitives__.json"
+    },
+    {
+      "name": "bottom_plate_4path_beamforming.verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming__1_topology__bottom_plate_4path_beamforming.verilog.json",
+      "size": 19450,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming/1_topology/bottom_plate_4path_beamforming.verilog.json"
+    },
+    {
+      "name": "__primitives__",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming_hierarchical__1_topology____primitives__.json",
+      "size": 494,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming_hierarchical/1_topology/__primitives__.json"
+    },
+    {
+      "name": "bottom_plate_4path_beamforming_hierarchical.verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming_hierarchical__1_topology__bottom_plate_4path_beamforming_hierarchical.verilog.json",
+      "size": 7363,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming_hierarchical/1_topology/bottom_plate_4path_beamforming_hierarchical.verilog.json"
+    },
+    {
+      "name": "CAP_MIM_wt32_lt32",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming_hierarchical__2_primitives__CAP_MIM_wt32_lt32.json",
+      "size": 726,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming_hierarchical/2_primitives/CAP_MIM_wt32_lt32.json"
+    },
+    {
+      "name": "RES_w1u_l14u",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming_hierarchical__2_primitives__RES_w1u_l14u.json",
+      "size": 437,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming_hierarchical/2_primitives/RES_w1u_l14u.json"
+    },
+    {
+      "name": "SW_NMOS_wr2u_lr60n_nr16",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming_hierarchical__2_primitives__SW_NMOS_wr2u_lr60n_nr16.json",
+      "size": 1147,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming_hierarchical/2_primitives/SW_NMOS_wr2u_lr60n_nr16.json"
+    },
+    {
+      "name": "TIA_1",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__bottom_plate_4path_beamforming_hierarchical__2_primitives__TIA_1.json",
+      "size": 13023,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/bottom_plate_4path_beamforming_hierarchical/2_primitives/TIA_1.json"
+    },
+    {
+      "name": "CASCODE_CURRENT_MIRROR_OTA.placement_verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__cascode_current_mirror_ota__CASCODE_CURRENT_MIRROR_OTA.placement_verilog.json",
+      "size": 25567,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/cascode_current_mirror_ota/CASCODE_CURRENT_MIRROR_OTA.placement_verilog.json"
+    },
+    {
+      "name": "CASCODE_CURRENT_MIRROR_OTA_0.scaled_placement_verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__cascode_current_mirror_ota__CASCODE_CURRENT_MIRROR_OTA_0.scaled_placement_verilog.json",
+      "size": 22828,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/cascode_current_mirror_ota/CASCODE_CURRENT_MIRROR_OTA_0.scaled_placement_verilog.json"
+    },
+    {
+      "name": "cascode_current_mirror_ota.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__cascode_current_mirror_ota__cascode_current_mirror_ota.const.json",
+      "size": 270,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/cascode_current_mirror_ota/cascode_current_mirror_ota.const.json"
+    },
+    {
+      "name": "common_source.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__common_source__common_source.const.json",
+      "size": 176,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/common_source/common_source.const.json"
+    },
+    {
+      "name": "comparator1.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__comparator1__comparator1.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/comparator1/comparator1.const.json"
+    },
+    {
+      "name": "current_mirror_ota.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__current_mirror_ota__current_mirror_ota.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/current_mirror_ota/current_mirror_ota.const.json"
+    },
+    {
+      "name": "double_tail_sense_amplifier.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__double_tail_sense_amplifier__double_tail_sense_amplifier.const.json",
+      "size": 182,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/double_tail_sense_amplifier/double_tail_sense_amplifier.const.json"
+    },
+    {
+      "name": "FIVE_TRANSISTOR_OTA_0.scaled_placement_verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__five_transistor_ota__FIVE_TRANSISTOR_OTA_0.scaled_placement_verilog.json",
+      "size": 6184,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/five_transistor_ota/FIVE_TRANSISTOR_OTA_0.scaled_placement_verilog.json"
+    },
+    {
+      "name": "five_transistor_ota.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__five_transistor_ota__five_transistor_ota.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/five_transistor_ota/five_transistor_ota.const.json"
+    },
+    {
+      "name": "five_transistor_ota_Bulk.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__five_transistor_ota_Bulk__five_transistor_ota_Bulk.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/five_transistor_ota_Bulk/five_transistor_ota_Bulk.const.json"
+    },
+    {
+      "name": "five_transistor_ota_high_frequency.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__five_transistor_ota_high_frequency__five_transistor_ota_high_frequency.const.json",
+      "size": 116,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/five_transistor_ota_high_frequency/five_transistor_ota_high_frequency.const.json"
+    },
+    {
+      "name": "HIGH_SPEED_COMPARATOR_0.scaled_placement_verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__high_speed_comparator__HIGH_SPEED_COMPARATOR_0.scaled_placement_verilog.json",
+      "size": 23662,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/high_speed_comparator/HIGH_SPEED_COMPARATOR_0.scaled_placement_verilog.json"
+    },
+    {
+      "name": "high_speed_comparator.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__high_speed_comparator__high_speed_comparator.const.json",
+      "size": 3349,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/high_speed_comparator/high_speed_comparator.const.json"
+    },
+    {
+      "name": "high_speed_comparator_charge_flow.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__high_speed_comparator_charge_flow__high_speed_comparator_charge_flow.const.json",
+      "size": 6667,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/high_speed_comparator_charge_flow/high_speed_comparator_charge_flow.const.json"
+    },
+    {
+      "name": "inverter_current_starved.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__inverter_current_starved__inverter_current_starved.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/inverter_current_starved/inverter_current_starved.const.json"
+    },
+    {
+      "name": "linear_equalizer.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__linear_equalizer__linear_equalizer.const.json",
+      "size": 109,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/linear_equalizer/linear_equalizer.const.json"
+    },
+    {
+      "name": "CLK_IO_DIST_NW1.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__mimo_bulk__CLK_IO_DIST_NW1.const.json",
+      "size": 83,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/mimo_bulk/CLK_IO_DIST_NW1.const.json"
+    },
+    {
+      "name": "mimo_bulk.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__mimo_bulk__mimo_bulk.const.json",
+      "size": 223,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/mimo_bulk/mimo_bulk.const.json"
+    },
+    {
+      "name": "powertrain.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__powertrain__powertrain.const.json",
+      "size": 55,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/powertrain/powertrain.const.json"
+    },
+    {
+      "name": "powertrain_binary.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__powertrain_binary__powertrain_binary.const.json",
+      "size": 55,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/powertrain_binary/powertrain_binary.const.json"
+    },
+    {
+      "name": "powertrain_thermo.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__powertrain_thermo__powertrain_thermo.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/powertrain_thermo/powertrain_thermo.const.json"
+    },
+    {
+      "name": "ring_oscillator.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__ring_oscillator__ring_oscillator.const.json",
+      "size": 110,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/ring_oscillator/ring_oscillator.const.json"
+    },
+    {
+      "name": "ring_oscillator_stage.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__ring_oscillator__ring_oscillator_stage.const.json",
+      "size": 231,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/ring_oscillator/ring_oscillator_stage.const.json"
+    },
+    {
+      "name": "sc_dc_dc_converter.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__sc_dc_dc_converter__sc_dc_dc_converter.const.json",
+      "size": 56,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/sc_dc_dc_converter/sc_dc_dc_converter.const.json"
+    },
+    {
+      "name": "single_to_differential_converter.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__single_to_differential_converter__single_to_differential_converter.const.json",
+      "size": 109,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/single_to_differential_converter/single_to_differential_converter.const.json"
+    },
+    {
+      "name": "switched_capacitor_filter.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__switched_capacitor_filter__switched_capacitor_filter.const.json",
+      "size": 830,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/switched_capacitor_filter/switched_capacitor_filter.const.json"
+    },
+    {
+      "name": "TELESCOPIC_OTA.placement_verilog",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__telescopic_ota__TELESCOPIC_OTA.placement_verilog.json",
+      "size": 12596,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/telescopic_ota/TELESCOPIC_OTA.placement_verilog.json"
+    },
+    {
+      "name": "telescopic_ota.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__telescopic_ota__telescopic_ota.const.json",
+      "size": 114,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/telescopic_ota/telescopic_ota.const.json"
+    },
+    {
+      "name": "telescopic_ota_guard_ring.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__telescopic_ota_guard_ring__telescopic_ota_guard_ring.const.json",
+      "size": 232,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/telescopic_ota_guard_ring/telescopic_ota_guard_ring.const.json"
+    },
+    {
+      "name": "telescopic_ota_with_bias.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__telescopic_ota_with_bias__telescopic_ota_with_bias.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/telescopic_ota_with_bias/telescopic_ota_with_bias.const.json"
+    },
+    {
+      "name": "test_vga.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__test_vga__test_vga.const.json",
+      "size": 254,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/test_vga/test_vga.const.json"
+    },
+    {
+      "name": "unity_gain_buffers.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__unity_gain_buffers__unity_gain_buffers.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/unity_gain_buffers/unity_gain_buffers.const.json"
+    },
+    {
+      "name": "variable_gain_amplifier.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__variable_gain_amplifier__variable_gain_amplifier.const.json",
+      "size": 168,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/variable_gain_amplifier/variable_gain_amplifier.const.json"
+    },
+    {
+      "name": "DIFF2SING_v1.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vco_dtype_12_hierarchical__DIFF2SING_v1.const.json",
+      "size": 65,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vco_dtype_12_hierarchical/DIFF2SING_v1.const.json"
+    },
+    {
+      "name": "THREE_TERMINAL_INV.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vco_dtype_12_hierarchical__THREE_TERMINAL_INV.const.json",
+      "size": 65,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vco_dtype_12_hierarchical/THREE_TERMINAL_INV.const.json"
+    },
+    {
+      "name": "vco_dtype_12_hierarchical.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vco_dtype_12_hierarchical__vco_dtype_12_hierarchical.const.json",
+      "size": 169,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vco_dtype_12_hierarchical/vco_dtype_12_hierarchical.const.json"
+    },
+    {
+      "name": "vco_dtype_12_hierarchical_res.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vco_dtype_12_hierarchical_res__vco_dtype_12_hierarchical_res.const.json",
+      "size": 108,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vco_dtype_12_hierarchical_res/vco_dtype_12_hierarchical_res.const.json"
+    },
+    {
+      "name": "VCO_type2_65.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vco_dtype_12_hierarchical_res_constrained__VCO_type2_65.const.json",
+      "size": 654,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vco_dtype_12_hierarchical_res_constrained/VCO_type2_65.const.json"
+    },
+    {
+      "name": "vco_dtype_12_hierarchical_res_constrained.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vco_dtype_12_hierarchical_res_constrained__vco_dtype_12_hierarchical_res_constrained.const.json",
+      "size": 169,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vco_dtype_12_hierarchical_res_constrained/vco_dtype_12_hierarchical_res_constrained.const.json"
+    },
+    {
+      "name": "vga_stage.const",
+      "source": "ALIGN (Chentang2nd/ALIGN-custom fork)",
+      "format": "JSON",
+      "path": "align/examples__vga_stage__vga_stage.const.json",
+      "size": 324,
+      "origin": "https://github.com/Chentang2nd/ALIGN-custom/blob/master/examples/vga_stage/vga_stage.const.json"
+    }
+  ]
+}
