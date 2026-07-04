@@ -343,7 +343,7 @@ class GridRouter:
                     first_turnable = point
                 last_turnable = point
         if first_turnable is None:
-            return []
+            return []  # 合法：未找到路径，调用方应检查（_get_jump_successors 遍历其他方向）
         if first_turnable == last_turnable:
             return [first_turnable]
         return [first_turnable, last_turnable]
@@ -403,7 +403,7 @@ class GridRouter:
             cur = came_from.get(cur)
         states.reverse()
         if not states:
-            return []
+            return []  # 合法：空输入产生空输出（goal_state 无前驱且 came_from 为空）
         # JPS 跳跃跳过了中间节点，需要补全相邻状态间的直行段
         path: list[tuple[int, int]] = [(states[0][0], states[0][1])]
         for i in range(1, len(states)):
@@ -510,7 +510,7 @@ class GridRouter:
         goal_state_enc, came_from = self._astar_search(start, goal, start_state)
         self._restore_endpoints(start, goal, orig_start, orig_goal)
         if goal_state_enc < 0:
-            return None
+            return None  # 合法：未找到路径，调用方应检查（_grid_path_to_points 显式检查 None 并 raise）
         return self._reconstruct_path(came_from, goal_state_enc)
 
 

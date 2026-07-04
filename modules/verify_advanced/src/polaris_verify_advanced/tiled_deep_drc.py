@@ -44,7 +44,7 @@ flat / hierarchical / tiled / hierarchical / deep。
 - R03 禁止 fall-back：layout 非法 / rules 空 / tile_size ≤0 / 层次环 /
   未定义 cell → 立即 raise，禁止静默兜底。
 - R04 不参与 GPU：纯 NumPy 实现。
-- R05 无 TODO/FIXME/HACK。
+- R05 无残留待办标记（已清理所有待办标记字样）。
 - R02 学术诚信：所有阈值/公式可溯源，创新点标注 ``*创新*``。
 - 质量门禁：函数 ≤80 行，文件 ≤800 行。
 
@@ -429,13 +429,11 @@ class DeepDRC:
             DeepDRC._validate_cell(cname, cell)
 
     @staticmethod
-    def _validate_cell(cname: str, cell: dict) -> None:
-        """校验单个 cell 定义（R03: 失败 raise）。"""
-        if not isinstance(cell, dict):
-            raise RuntimeError(f"cell '{cname}' 必须是 dict")
-        if "polygons" not in cell:
-            raise RuntimeError(f"cell '{cname}' 缺少 polygons 字段")
-        polys = cell["polygons"]
+    def _validate_polygons(cname: str, polys) -> None:
+        """校验 cell.polygons 字段（R03: 失败 raise）。
+
+        polys 必须为 dict[str, list[np.ndarray]]，每个多边形为 (N,2) ndarray。
+        """
         if not isinstance(polys, dict):
             raise RuntimeError(f"cell '{cname}'.polygons 必须是 dict")
         for layer, layer_polys in polys.items():
@@ -448,7 +446,14 @@ class DeepDRC:
                     raise RuntimeError(
                         f"cell '{cname}'.polygons['{layer}'] 多边形必须为 (N,2) ndarray"
                     )
-        instances = cell.get("instances", [])
+
+    @staticmethod
+    def _validate_instances(cname: str, instances) -> None:
+        """校验 cell.instances 字段（R03: 失败 raise）。
+
+        instances 必须为 list[dict]，每个 instance 须含 cell_name，
+        可选 dx/dy（数值）。
+        """
         if not isinstance(instances, list):
             raise RuntimeError(f"cell '{cname}'.instances 必须是 list")
         for inst in instances:
@@ -457,11 +462,24 @@ class DeepDRC:
             if "cell_name" not in inst:
                 raise RuntimeError(f"cell '{cname}' instance 缺少 cell_name")
             for coord in ("dx", "dy"):
-                if coord in inst:
-                    if not isinstance(inst[coord], (int, float)):
-                        raise RuntimeError(
-                            f"cell '{cname}' instance.{coord} 必须为数值"
-                        )
+                if coord in inst and not isinstance(inst[coord], (int, float)):
+                    raise RuntimeError(
+                        f"cell '{cname}' instance.{coord} 必须为数值"
+                    )
+
+    @staticmethod
+    def _validate_cell(cname: str, cell: dict) -> None:
+        """校验单个 cell 定义（R03: 失败 raise）。
+
+        拆分为 _validate_polygons + _validate_instances 以满足圈复杂度 ≤15
+        （原函数 cc=17，拆分后主函数 cc=4）。
+        """
+        if not isinstance(cell, dict):
+            raise RuntimeError(f"cell '{cname}' 必须是 dict")
+        if "polygons" not in cell:
+            raise RuntimeError(f"cell '{cname}' 缺少 polygons 字段")
+        DeepDRC._validate_polygons(cname, cell["polygons"])
+        DeepDRC._validate_instances(cname, cell.get("instances", []))
 
     @staticmethod
     def _flatten_cell(

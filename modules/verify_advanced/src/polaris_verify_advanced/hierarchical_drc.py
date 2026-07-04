@@ -59,7 +59,7 @@ class BVH:
     def build(self, polygons: list[np.ndarray]) -> BVHNode | None:
         """构建 BVH（递归中位数分割，O(n log n)）。空输入返回 None。"""
         if not polygons:
-            return None
+            return None  # 合法：空多边形列表 → 无 BVH 节点，调用方应检查 root is None
         bboxes = [self._polygon_bbox(p) for p in polygons]
         idx = list(range(len(polygons)))
         self.root = self._build_recursive(idx, polygons, bboxes)
@@ -113,7 +113,7 @@ class BVH:
     def query(self, region: tuple[float, float, float, float]) -> list[np.ndarray]:
         """查询与 region 相交的多边形（O(log n + k)）。"""
         if self.root is None:
-            return []
+            return []  # 合法：BVH 未构建（空输入）→ 无相交多边形，空输入产生空输出
         result: list[np.ndarray] = []
         self._query_recursive(self.root, region, result)
         return result
@@ -149,7 +149,7 @@ class RowPartition:
     def partition(self, polygons: list[np.ndarray]) -> list[list[np.ndarray]]:
         """自适应行分块。"""
         if not polygons:
-            return []
+            return []  # 合法：空多边形列表 → 无分块，空输入产生空输出
         y_centers = [float(p[:, 1].mean()) for p in polygons]
         order = sorted(range(len(polygons)), key=lambda i: y_centers[i])
         n = len(polygons)
@@ -204,7 +204,7 @@ class HierarchicalDRC:
         """层次化模式执行单条规则（BVH + 行分块）。"""
         polys = layout.get(rule.layer_name, [])
         if not polys:
-            return []
+            return []  # 合法：该层无多边形 → 无违规，空输入产生空输出
         bvh = BVH()
         bvh.build(polys)
         blocks = RowPartition().partition(polys)
@@ -219,7 +219,7 @@ class HierarchicalDRC:
         """flat 模式执行单条规则。"""
         polys = layout.get(rule.layer_name, [])
         if not polys:
-            return []
+            return []  # 合法：该层无多边形 → 无违规，空输入产生空输出
         return self._dispatch_check(rule, polys, layout, None)
 
     def _dispatch_check(
@@ -370,7 +370,7 @@ class HierarchicalDRC:
     ) -> list[DRCViolation]:
         """density 检查。公式: ρ=ΣA_i/A_total×100%。来源: Banerjee 2024; SiEPIC。"""
         if not region:
-            return []
+            return []  # 合法：region 为空 → 无多边形 → 无密度违规，空输入产生空输出
         total_area = sum(self._polygon_area(p) for p in region)
         cell_bbox = BVH._merge_bboxes([BVH._polygon_bbox(p) for p in region])
         cell_area = max((cell_bbox[2] - cell_bbox[0]) * (cell_bbox[3] - cell_bbox[1]), 1e-15)
@@ -382,7 +382,7 @@ class HierarchicalDRC:
                     f"层密度 {density_pct:.1f}% 超出范围 [{min_density:.0f}%, {max_density:.0f}%]",
                 )
             ]
-        return []
+        return []  # 合法：密度在范围内 → 检查通过 → 无违规
 
     def _check_via(
         self,

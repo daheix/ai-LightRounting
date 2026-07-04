@@ -21,6 +21,25 @@ from enum import Enum
 import numpy as np  # noqa: F401  R04 纯 NumPy 依赖一致性
 
 
+class VerifyError(RuntimeError):
+    """verify_advanced 模块统一业务异常（R03 禁止 fall-back）。
+
+    用于 DRC/LVS 检查中"假数据兜底"场景的替代：当检查无法正常执行
+    （如规则配置缺失、GDS 数据非法、阈值非法等）时，必须 raise 本异常，
+    而非返回空违规列表让调用方误以为检查通过。
+
+    合法的"空输入产生空输出"不在本异常覆盖范围（应直接返回空列表 + 注释）。
+
+    来源:
+    - R03 禁止 fall-back: /workspace/.trae/rules/R03-禁止fall-back.md
+    - Calibre nmDRC 错误处理: https://eda.sw.siemens.com/en-US/calibre/
+    - KLayout DRC runset 错误模型:
+      https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    """
+
+    pass
+
+
 class ViolationType(Enum):
     """违规类型枚举（覆盖 SiEPIC EBeam PDK 与商业 foundry runset 常见规则类别）。
 
@@ -96,15 +115,20 @@ def _find_layer_index(layout, layer_num: int, datatype: int) -> int | None:
 
     Returns:
         层索引，层不存在返回 None。
+
+    Note:
+        合法：查找失败返回 None，调用方应检查（如 _get_layer_index 中
+        layer_idx is None 时视为 GDS 无该层并跳过规则，而非业务错误）。
     """
     for idx in layout.layer_indexes():
         info = layout.get_info(idx)
         if info.layer == layer_num and info.datatype == datatype:
             return idx
-    return None
+    return None  # 合法：GDS 中无此 (layer, datatype) 组合，调用方应检查
 
 
 __all__ = [
+    "VerifyError",
     "ViolationType",
     "Violation",
     "LVSMismatchType",

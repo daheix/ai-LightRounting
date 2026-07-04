@@ -274,11 +274,11 @@ class GlobalRouter:
     def _port_abs(self, inst_id: str, port_name: str) -> tuple[float, float] | None:
         """获取实例某端口的绝对坐标（μm），实例/端口不存在返回 None。"""
         if inst_id not in self.placements:
-            return None
+            return None  # 合法：未找到路径，调用方应检查（_conn_endpoints 显式检查 None）
         pl = self.placements[inst_id]
         ports = pl.port_positions()
         if port_name not in ports:
-            return None
+            return None  # 合法：未找到路径，调用方应检查（_conn_endpoints 显式检查 None）
         return ports[port_name]
 
     def _sort_connections(self, rudy: np.ndarray) -> list[tuple[int, NetlistConnection, float]]:
@@ -373,7 +373,7 @@ class GlobalRouter:
                 came_from[(nx, ny)] = (x, y)
                 h = abs(nx - gx) + abs(ny - gy)
                 heapq.heappush(pq, (ng + h, ng, nx, ny))
-        return None
+        return None  # 合法：未找到路径，调用方应检查（_route_single_connection 显式检查 None）
 
     def _extract_waypoints(self, gcell_path: list[tuple[int, int]]) -> list[tuple[float, float]]:
         """从 GCell 路径提取途经点（每个 GCell 中心，μm 坐标）。"""
@@ -483,7 +483,7 @@ def _pattern_route(
         if _path_valid_and_ok(path, demand, capacity, n_gx, n_gy):
             candidates.append((_path_cost(path, curvy), path))
     if not candidates:
-        return None
+        return None  # 合法：未找到路径，调用方应检查（_route_single_connection 显式检查 None 并回退 A*）
     return min(candidates, key=lambda x: x[0])[1]
 
 

@@ -31,6 +31,8 @@ from pathlib import Path
 
 import numpy as np
 
+from ._types import VerifyError
+
 # 物理常数（来源: CODATA 2018 + Banerjee ECE 225 UCSB，R02 学术诚信）
 # https://courses.ece.ucsb.edu/ECE225/225_S16Banerjee/Lectures/Lecture11_ece225.pdf
 
@@ -288,7 +290,7 @@ def _spatial_candidate_pairs(
     """
     n = len(polys)
     if n < 2:
-        return []
+        return []  # 合法：多边形少于 2 个无法形成候选对，空输入产生空输出
     try:
         from scipy.spatial import cKDTree
     except ImportError as exc:
@@ -312,7 +314,13 @@ def _spatial_candidate_pairs(
     max_half_diag = float(half_diags.max()) if n > 0 else 0.0
     r_query = threshold + max_half_diag * 2.0
     if r_query <= 0:
-        return []
+        # R03 禁止 fall-back：r_query <= 0 意味着 threshold <= -2*max_half_diag ≤ 0，
+        # 即 DRC 阈值非正。阈值非法是规则配置错误，必须 raise 而非返回空让人误以为通过。
+        raise VerifyError(
+            f"空间候选对查询半径 r_query={r_query:.6f} ≤ 0："
+            f"threshold={threshold:.6f}, max_half_diag={max_half_diag:.6f}。"
+            f"DRC 阈值必须 > 0（R03 禁止 fall-back）。"
+        )
 
     tree = cKDTree(centers)
     pairs_set = tree.query_pairs(r=r_query, output_type="set")

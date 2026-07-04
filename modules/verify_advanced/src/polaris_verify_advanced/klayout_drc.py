@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from ._layer_map import POLARIS_GDS_LAYER_MAP, get_layer_tuple
-from ._types import Violation, ViolationType
+from ._types import VerifyError, Violation, ViolationType
 
 logger = logging.getLogger(__name__)
 
@@ -263,11 +263,11 @@ class KLayoutDRCRunner:
                 "DRC 规则 %s 引用的层 %s 在当前 GDS 中不存在，跳过该规则",
                 rule.name, rule.layer_name,
             )
-            return []
+            return []  # 合法：GDS 无该层 → 规则无检查对象 → 无违规（非业务错误）
 
         region = db.Region(layout.begin_shapes(cell, layer_idx))
         if region.is_empty():
-            return []
+            return []  # 合法：该层存在但无图形 → 无违规，空输入产生空输出
 
         if rule.check_type == DRCCheckType.WIDTH:
             return self._check_width(region, rule, dbu)
@@ -288,15 +288,20 @@ class KLayoutDRCRunner:
         )
 
     def _get_layer_index(self, layout, layer_name: str) -> int | None:
-        """按层名获取 KLayout 层索引。"""
+        """按层名获取 KLayout 层索引。
+
+        合法：层名未在 POLARIS_GDS_LAYER_MAP 注册或 GDS 中无此 (layer, datatype)
+        时返回 None，调用方应检查（如 _run_rule 中 layer_idx is None 视为 GDS 无该层
+        并跳过规则，而非业务错误）。
+        """
         if layer_name not in POLARIS_GDS_LAYER_MAP:
-            return None
+            return None  # 合法：层名未在 PoLaRIS 层映射注册，调用方应检查
         layer_num, datatype = get_layer_tuple(layer_name)
         for idx in layout.layer_indexes():
             existing = layout.get_info(idx)
             if existing.layer == layer_num and existing.datatype == datatype:
                 return idx
-        return None
+        return None  # 合法：GDS 中无此 (layer, datatype)，调用方应检查
 
     def _check_width(self, region, rule: DRCRule, dbu: float) -> list[Violation]:
         """最小宽度检查。来源: KLayout Region.width_check。"""
@@ -323,21 +328,28 @@ class KLayoutDRCRunner:
         import klayout.db as db  # 延迟导入
         layout, cell, dbu = ctx.layout, ctx.cell, ctx.dbu
         if rule.enclosure_layer_name is None:
-            logger.warning(
-                "DRC 包围规则 %s 未指定 enclosure_layer_name，跳过",
-                rule.name,
+            # R03 禁止 fall-back：ENCLOSE 规则定义缺少 enclosure_layer_name 是
+            # 规则配置错误，必须 raise 而非静默跳过让人误以为包围检查通过。
+            raise VerifyError(
+                f"DRC 包围规则 {rule.name} 未指定 enclosure_layer_name"
+                f"（ENCLOSE 检查必须提供外层名，R03 禁止 fall-back）"
             )
-            return []
         outer_idx = self._get_layer_index(layout, rule.enclosure_layer_name)
         if outer_idx is None:
             logger.warning(
                 "DRC 包围规则 %s 引用的包围层 %s 在当前 GDS 中不存在，跳过",
                 rule.name, rule.enclosure_layer_name,
             )
-            return []
+            return []  # 合法：GDS 无包围层 → 规则无检查对象 → 无违规（非业务错误）
         outer_region = db.Region(layout.begin_shapes(cell, outer_idx))
         if outer_region.is_empty():
-            return []
+            # R03 禁止 fall-back：包围层在 GDS 中存在但无图形，意味着所有内层图形
+            # 都未被包围（应全部违规）。返回 [] 会让人误以为包围检查通过。
+            raise VerifyError(
+                f"DRC 包围规则 {rule.name} 的包围层 {rule.enclosure_layer_name}"
+                f" 在 GDS 中存在但无图形：所有内层图形均未被包围，无法静默跳过"
+                f"（R03 禁止 fall-back）。"
+            )
         threshold_dbu = int(rule.threshold_um / dbu)
         edge_pairs = inner_region.enclosed_check(threshold_dbu, outer_region)
         return self._edge_pairs_to_violations(edge_pairs, rule, dbu)
@@ -365,12 +377,18 @@ class KLayoutDRCRunner:
     ) -> list[Violation]:
         """层密度检查（CMP 工艺要求）。"""
         if region.is_empty():
-            return []
+            return []  # 合法：该层无图形 → 无密度违规，空输入产生空输出
         layer_area_dbu2 = float(region.area())
         cell_bbox = cell.bbox()
         cell_area_dbu2 = float(cell_bbox.area())
         if cell_area_dbu2 <= 0:
-            return []
+            # R03 禁止 fall-back：cell 包围盒面积为 0 是 GDS 数据非法
+            # （空 cell 或几何退化），必须 raise 而非返回 [] 让人误以为密度合规。
+            raise VerifyError(
+                f"DRC 密度规则 {rule.name}：cell 包围盒面积 = {cell_area_dbu2} ≤ 0，"
+                f"GDS 数据非法（空 cell 或几何退化），无法计算密度"
+                f"（R03 禁止 fall-back）。"
+            )
         density_pct = layer_area_dbu2 / cell_area_dbu2 * 100.0
         min_density = rule.threshold_um
         max_density = rule.max_density if rule.max_density is not None else 100.0
@@ -383,7 +401,7 @@ class KLayoutDRCRunner:
                     device_name=rule.layer_name, location=loc,
                 )
             ]
-        return []
+        return []  # 合法：密度在范围内 → 检查通过 → 无违规
 
     def _check_via(self, region, rule: DRCRule, dbu: float) -> list[Violation]:
         """通孔规则检查（尺寸+间距组合）。"""

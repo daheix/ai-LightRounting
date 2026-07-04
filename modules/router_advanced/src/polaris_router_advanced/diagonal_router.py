@@ -161,7 +161,7 @@ class DiagonalGridRouter(GridRouter):
                     nf = ng + self._heuristic((nx, ny), goal)
                     heapq.heappush(open_h, (nf, ng, nx, ny, d, new_straight))
         self._restore_endpoints(start, goal, orig_start, orig_goal)
-        return None
+        return None  # 合法：未找到路径，调用方应检查（route 签名声明 | None）
 
     def _reconstruct_path_tuple(
         self,

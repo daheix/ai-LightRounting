@@ -123,12 +123,12 @@ class AdaptiveCrossingInserter:
         x4, y4 = p4
         denom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
         if abs(denom) < 1e-12:
-            return None
+            return None  # 合法：未找到路径，调用方应检查（两线段平行/共线，几何上无交点）
         t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denom
         u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denom
         if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
             return (x1 + t * (x2 - x1), y1 + t * (y2 - y1))
-        return None
+        return None  # 合法：未找到路径，调用方应检查（两线段不相交，几何上无交点）
 
     def insert_crossings(
         self,

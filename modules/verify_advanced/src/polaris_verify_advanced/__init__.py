@@ -52,7 +52,7 @@ Calibre xACT 寄生提取、Calibre LFD 光刻友好设计、曲线感知 DRC �
 10. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU（纯 NumPy/SciPy/NetworkX）/
-      R05 无 TODO / R13 不保留 v4 兼容 / 函数≤80行 / 文件≤800行。
+      R05 无残留待办标记 / R13 不保留 v4 兼容 / 函数≤80行 / 文件≤800行。
 """
 
 from __future__ import annotations

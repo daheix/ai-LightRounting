@@ -375,11 +375,15 @@ class GraphIsomorphismLVSComparer:
 
     @staticmethod
     def _find_edge_length(edges: list, src: str, tgt: str) -> float | None:
-        """在边列表中查找指定源/目标的边长度。"""
+        """在边列表中查找指定源/目标的边长度。
+
+        合法：查找失败返回 None，调用方应检查（_verify_wire_lengths 中
+        若返回 None 则跳过该边长校验，而非业务错误）。
+        """
         for u, v, length in edges:
             if (u == src and v == tgt) or (u == tgt and v == src):
                 return length
-        return None
+        return None  # 合法：边列表中无此 (src, tgt) 边，调用方应检查
 
     def _verify_port_orientation(
         self, mapping: dict, ref_graph: nx.Graph, ext_graph: nx.Graph
@@ -495,6 +499,10 @@ def _build_matcher(reference_netlist, extracted_netlist):
 
         Returns:
             (matcher, ref_graph, ext_graph) 元组。matcher 为 None 表示图不同构。
+
+    Note:
+        合法：matcher 为 None 表示参考/提取网表图不同构（LVS 不匹配），
+        调用方应检查 matcher 是否为 None 并据此报告 LVS 失败，而非业务错误。
     """
     comparer = GraphIsomorphismLVSComparer()
     ref_graph = comparer.build_graph(reference_netlist)
@@ -506,6 +514,7 @@ def _build_matcher(reference_netlist, extracted_netlist):
         edge_match=GraphIsomorphismLVSComparer._edge_match,
     )
     if not matcher.is_isomorphic():
+        # 合法：图不同构 → matcher=None，调用方应检查并报告 LVS 不匹配
         return None, ref_graph, ext_graph
     return matcher, ref_graph, ext_graph
 

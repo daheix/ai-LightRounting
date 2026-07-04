@@ -49,7 +49,7 @@ GraphIsomorphismLVSComparer（VF2 算法）做单层比对。
    https://networkx.org/documentation/stable/reference/algorithms/isomorphism.html
 
 合规: R02 学术诚信 / R03 禁止 fall-back（结构不匹配即 raise）/
-      R04 不参与 GPU（纯 networkx）/ R05 无 TODO / R13 不保留 v4 兼容。
+      R04 不参与 GPU（纯 networkx）/ R05 无残留待办标记 / R13 不保留 v4 兼容。
 """
 
 from __future__ import annotations

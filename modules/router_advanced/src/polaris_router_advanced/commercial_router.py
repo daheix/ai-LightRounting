@@ -498,7 +498,7 @@ class CommercialRouter:
                     obs = obs[: len(obs) // 2]
                 else:
                     obs = []
-        return []  # 重布失败信号(显式空,由 route_all 验证成功率)
+        return []  # 合法：未找到路径，调用方应检查（_reroute_all 通过 if path 显式统计失败率）
 
     @staticmethod
     def _port_to_point(port: dict[str, float], name: str) -> tuple[float, float]:

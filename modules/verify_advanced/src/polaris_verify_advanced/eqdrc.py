@@ -315,7 +315,7 @@ class EqDRCEngine:
                 message=f"覆盖率 {coverage:.4f} < 最小 {min_coverage:.4f}"
                         f"（总面积={total:.4f}, 区域={area:.4f}）",
             )]
-        return []
+        return []  # 合法：覆盖率 ≥ min_coverage → 检查通过 → 无违规
 
     def run_all(self, layout: dict) -> list[EqDRCViolation]:
         """运行所有 eqDRC 规则。

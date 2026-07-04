@@ -199,7 +199,7 @@ def _route_single_net(
         grid_path = ctx.router.route(sg, eg)
         if grid_path is None:
             logger.error("网 %s rip-up 后仍失败", net.net_id)
-            return None
+            return None  # 合法：未找到路径，调用方应检查（_route_iteration 显式收集 failed）
     return _finalize_path(net, grid_path, ctx, path_cells_map)
 
 

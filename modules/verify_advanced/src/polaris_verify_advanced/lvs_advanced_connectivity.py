@@ -151,6 +151,7 @@ def _find_isolated_groups(
         root = find(d)
         groups.setdefault(root, []).append(d)
     if not groups:
+        # 合法：devices 为空 → 无连通分量 → 无孤立组，空输入产生空输出
         return []
     sorted_groups = sorted(groups.values(), key=len, reverse=True)
     return sorted_groups[1:]

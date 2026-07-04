@@ -344,11 +344,11 @@ class RoutingEnv(gym.Env):
             waypoints 列表（μm 坐标），无全局路径时返回空列表。
         """
         if not self._global_routes:
-            return []
+            return []  # 合法：未找到路径，调用方应检查（无全局路径时返回空，调用方按需处理）
         for gr in self._global_routes:
             if gr.conn_idx == self._conn_idx:
                 return list(gr.waypoints)
-        return []
+        return []  # 合法：未找到路径，调用方应检查（当前连接无全局路径，调用方按需处理）
 
     def _try_route(self, params: _RouteParams) -> float:
         """执行单连接布线，返回 reward。失败时返回适度惩罚。"""
