@@ -419,7 +419,7 @@ def _find_layer(ly, layer: int, datatype: int):
         info = ly.get_info(li)
         if int(info.layer) == layer and int(info.datatype) == datatype:
             return li
-    return None
+    return None  # 合法：查找失败，层不存在（合法的 GDS 层配置状态）
 
 
 def _shape_to_port(shape, layer: int, datatype: int, dbu: float,
@@ -475,7 +475,7 @@ def _shape_to_port(shape, layer: int, datatype: int, dbu: float,
             text_matched=False,
         )
     # 非_box 非_polygon 的 shape（如 text/path）跳过
-    return None
+    return None  # 合法：查找失败，非 box/polygon shape 不构成端口
 
 
 def _render_text_report(report: PortReport) -> str:

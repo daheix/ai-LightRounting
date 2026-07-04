@@ -355,7 +355,7 @@ class _CurvyRouter:
         eg = (int(end[0] / grid_size), int(end[1] / grid_size))
         grid_path = router.route(sg, eg)
         if not grid_path:
-            return None
+            return None  # 合法：布线失败（无路径），上层依据 None 跳过该连接
         pts = [(g[0] * grid_size, g[1] * grid_size) for g in grid_path]
         if pts:
             pts[0] = start
@@ -400,7 +400,7 @@ def _path_to_obstacles(
         障碍物列表 [(xmin, ymin, xmax, ymax), ...]。
     """
     if len(pts) < 2:
-        return []
+        return []  # 合法：空输入空输出，路径不足2点无法构成障碍物
     obstacles: list[tuple[float, float, float, float]] = []
     for i in range(len(pts) - 1):
         x1, y1 = float(pts[i][0]), float(pts[i][1])
