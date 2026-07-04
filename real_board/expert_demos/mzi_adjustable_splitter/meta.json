@@ -13,9 +13,14 @@
   "extract_time": "2026-06-20T05:35:49.633419",
   "circuit_name": "f",
   "n_devices": 5,
-  "n_connections": 0,
+  "n_connections": 4,
   "n_placements": 5,
   "n_routes": 472,
   "canvas_w_um": 173385.5,
-  "canvas_h_um": 254060.7
+  "canvas_h_um": 254060.7,
+  "connection_inference": {
+    "method": "routes_endpoint_matching_with_mst_fallback",
+    "mode": "active_devices",
+    "source": "inferred_from_routes_json"
+  }
 }

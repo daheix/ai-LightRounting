@@ -13,9 +13,14 @@
   "extract_time": "2026-06-20T05:35:48.835814",
   "circuit_name": "MZI1",
   "n_devices": 3,
-  "n_connections": 0,
+  "n_connections": 2,
   "n_placements": 3,
   "n_routes": 364,
   "canvas_w_um": 136860.0,
-  "canvas_h_um": 137360.0
+  "canvas_h_um": 137360.0,
+  "connection_inference": {
+    "method": "routes_endpoint_matching_with_mst_fallback",
+    "mode": "active_devices",
+    "source": "inferred_from_routes_json"
+  }
 }

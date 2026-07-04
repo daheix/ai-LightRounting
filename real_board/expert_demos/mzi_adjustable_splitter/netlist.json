@@ -148,5 +148,30 @@
       "params": {}
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "waveguide_bump$1",
+      "pin2",
+      "ebeam_bdc_te1550",
+      "pin1"
+    ],
+    [
+      "ebeam_bdc_te1550",
+      "pin1",
+      "ebeam_terminator_te1550",
+      "pin1"
+    ],
+    [
+      "waveguide_bump$1",
+      "pin2",
+      "ebeam_bdc_te1550_1",
+      "pin1"
+    ],
+    [
+      "ebeam_gc_te1550",
+      "pin1",
+      "ebeam_terminator_te1550",
+      "pin1"
+    ]
+  ]
 }

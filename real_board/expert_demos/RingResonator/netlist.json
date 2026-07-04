@@ -226,5 +226,36 @@
       }
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "ebeam_dc_halfring_straight$1",
+      "pin2",
+      "ebeam_dc_halfring_straight$1_1",
+      "pin1"
+    ],
+    [
+      "ebeam_dc_halfring_straight",
+      "pin2",
+      "ebeam_dc_halfring_straight_1",
+      "pin2"
+    ],
+    [
+      "ebeam_gc_te1550_1",
+      "pin1",
+      "ebeam_dc_halfring_straight$1_1",
+      "pin2"
+    ],
+    [
+      "ebeam_dc_halfring_straight",
+      "pin2",
+      "ebeam_gc_te1550",
+      "pin1"
+    ],
+    [
+      "ebeam_dc_halfring_straight",
+      "pin2",
+      "ebeam_gc_te1550_1",
+      "pin1"
+    ]
+  ]
 }

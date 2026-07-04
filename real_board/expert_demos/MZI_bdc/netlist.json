@@ -2,6 +2,58 @@
   "name": "Waveguide_Bend",
   "canvas_w": 100.0,
   "canvas_h": 100.0,
-  "devices": [],
-  "connections": []
+  "devices": [
+    {
+      "name": "io_port_in",
+      "device_type": "grating_coupler_1d",
+      "width_um": 10.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "source": "inferred_from_route",
+        "route_index": 0,
+        "endpoint": [
+          5.0,
+          -0.25
+        ]
+      }
+    },
+    {
+      "name": "io_port_out",
+      "device_type": "grating_coupler_1d",
+      "width_um": 10.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "source": "inferred_from_route",
+        "route_index": 0,
+        "endpoint": [
+          4.8500000000000005,
+          -0.248
+        ]
+      }
+    }
+  ],
+  "connections": [
+    [
+      "io_port_in",
+      "pin1",
+      "io_port_out",
+      "pin1"
+    ]
+  ]
 }

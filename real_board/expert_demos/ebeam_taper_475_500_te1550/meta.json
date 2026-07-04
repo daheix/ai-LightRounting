@@ -12,10 +12,15 @@
   },
   "extract_time": "2026-06-20T05:35:49.512279",
   "circuit_name": "ebeam_taper_475_500_te1550",
-  "n_devices": 0,
-  "n_connections": 0,
-  "n_placements": 0,
+  "n_devices": 2,
+  "n_connections": 1,
+  "n_placements": 2,
   "n_routes": 1,
   "canvas_w_um": 100.0,
-  "canvas_h_um": 100.0
+  "canvas_h_um": 100.0,
+  "connection_inference": {
+    "method": "routes_endpoint_matching_with_mst_fallback",
+    "mode": "pure_waveguide",
+    "source": "inferred_from_routes_json"
+  }
 }

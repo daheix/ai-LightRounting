@@ -106,5 +106,24 @@
       "params": {}
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "ebeam_y_1550",
+      "pin2",
+      "ebeam_bdc_te1550",
+      "pin1"
+    ],
+    [
+      "ebeam_terminator_te1550",
+      "pin1",
+      "ebeam_bdc_te1550",
+      "pin1"
+    ],
+    [
+      "ebeam_y_1550",
+      "pin2",
+      "ebeam_gc_te1550",
+      "pin1"
+    ]
+  ]
 }

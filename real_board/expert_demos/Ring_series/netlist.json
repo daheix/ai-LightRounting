@@ -151,5 +151,24 @@
       }
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "DirectionalCoupler_SeriesRings$1",
+      "pin2",
+      "DirectionalCoupler_SeriesRings$1_2",
+      "pin2"
+    ],
+    [
+      "DirectionalCoupler_SeriesRings$1",
+      "pin2",
+      "DirectionalCoupler_SeriesRings$1_1",
+      "pin2"
+    ],
+    [
+      "ebeam_gc_te1550",
+      "pin1",
+      "DirectionalCoupler_SeriesRings$1_2",
+      "pin1"
+    ]
+  ]
 }

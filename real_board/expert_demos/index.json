@@ -79,68 +79,89 @@
         "n_routes": 1,
         "status": "success"
       }
-    ]
+    ],
+    "total_connections": 25
   },
   "records": [
     {
       "name": "Crossings",
       "n_devices": 5,
       "n_routes": 320,
-      "status": "success"
+      "status": "success",
+      "n_connections": 4,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "MZI1",
       "n_devices": 3,
       "n_routes": 364,
-      "status": "success"
+      "status": "success",
+      "n_connections": 2,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "MZI_bdc",
-      "n_devices": 0,
+      "n_devices": 2,
       "n_routes": 1,
-      "status": "success"
+      "status": "success",
+      "n_connections": 1,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "MZI_bdc_500microns",
       "n_devices": 4,
       "n_routes": 329,
-      "status": "success"
+      "status": "success",
+      "n_connections": 3,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "RingResonator",
       "n_devices": 6,
       "n_routes": 1256,
-      "status": "success"
+      "status": "success",
+      "n_connections": 5,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "Ring_series",
       "n_devices": 4,
       "n_routes": 636,
-      "status": "success"
+      "status": "success",
+      "n_connections": 3,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "Simple_MZI",
-      "n_devices": 1,
+      "n_devices": 2,
       "n_routes": 311,
-      "status": "success"
+      "status": "success",
+      "n_connections": 1,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "ebeam_taper_475_500_te1550",
-      "n_devices": 0,
+      "n_devices": 2,
       "n_routes": 1,
-      "status": "success"
+      "status": "success",
+      "n_connections": 1,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "mzi_adjustable_splitter",
       "n_devices": 5,
       "n_routes": 472,
-      "status": "success"
+      "status": "success",
+      "n_connections": 4,
+      "connection_inference": "routes_endpoint_matching"
     },
     {
       "name": "wg_test",
-      "n_devices": 0,
+      "n_devices": 2,
       "n_routes": 1,
-      "status": "success"
+      "status": "success",
+      "n_connections": 1,
+      "connection_inference": "routes_endpoint_matching"
     }
   ]
 }

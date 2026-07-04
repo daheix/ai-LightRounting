@@ -23,7 +23,32 @@
         ]
       ],
       "params": {}
+    },
+    {
+      "name": "io_port_external",
+      "device_type": "grating_coupler_1d",
+      "width_um": 10.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "source": "inferred_for_single_device",
+        "anchor_device": "ebeam_gc_te1550"
+      }
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "ebeam_gc_te1550",
+      "pin1",
+      "io_port_external",
+      "pin1"
+    ]
+  ]
 }

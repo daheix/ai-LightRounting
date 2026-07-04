@@ -751,5 +751,18 @@
       }
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "ebeam_y_1550",
+      "pin2",
+      "ebeam_y_1550_1",
+      "pin2"
+    ],
+    [
+      "ebeam_y_1550",
+      "pin2",
+      "ebeam_gc_te1550",
+      "pin1"
+    ]
+  ]
 }

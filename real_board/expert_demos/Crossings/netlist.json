@@ -157,5 +157,30 @@
       "params": {}
     }
   ],
-  "connections": []
+  "connections": [
+    [
+      "ebeam_crossing4",
+      "pin1",
+      "ebeam_crossing4_1",
+      "pin3"
+    ],
+    [
+      "ebeam_crossing4",
+      "pin3",
+      "ebeam_crossing4_2",
+      "pin1"
+    ],
+    [
+      "ebeam_crossing4_2",
+      "pin3",
+      "ebeam_crossing4_3",
+      "pin1"
+    ],
+    [
+      "ebeam_crossing4_1",
+      "pin2",
+      "ebeam_gc_te1550",
+      "pin1"
+    ]
+  ]
 }

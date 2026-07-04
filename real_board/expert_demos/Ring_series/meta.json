@@ -13,9 +13,14 @@
   "extract_time": "2026-06-20T05:35:49.427229",
   "circuit_name": "series_rings",
   "n_devices": 4,
-  "n_connections": 0,
+  "n_connections": 3,
   "n_placements": 4,
   "n_routes": 636,
   "canvas_w_um": 81960.85,
-  "canvas_h_um": 381060.7
+  "canvas_h_um": 381060.7,
+  "connection_inference": {
+    "method": "routes_endpoint_matching_with_mst_fallback",
+    "mode": "active_devices",
+    "source": "inferred_from_routes_json"
+  }
 }

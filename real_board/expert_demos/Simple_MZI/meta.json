@@ -12,10 +12,15 @@
   },
   "extract_time": "2026-06-20T05:35:49.508615",
   "circuit_name": "Simple_MZI",
-  "n_devices": 1,
-  "n_connections": 0,
-  "n_placements": 1,
+  "n_devices": 2,
+  "n_connections": 1,
+  "n_placements": 2,
   "n_routes": 311,
   "canvas_w_um": 100.0,
-  "canvas_h_um": 127060.7
+  "canvas_h_um": 127060.7,
+  "connection_inference": {
+    "method": "routes_endpoint_matching_with_mst_fallback",
+    "mode": "single_device_virtual_io",
+    "source": "inferred_from_routes_json"
+  }
 }
