@@ -300,7 +300,15 @@ def main() -> int:
                             i + 1, total, 100 * (i + 1) / total, rate, eta)
     else:
         # 并行模式
-        with Pool(n_workers) as pool:
+        # R05 Bug 修复: worker 长时间运行后状态异常（forkserver + JAX 多进程死锁）
+        # 根因: 4 worker 跑 1200 电路时，某 worker 处理 ~300 个后卡死（JAX/klayout
+        # 在 forkserver 模式下多进程资源累积导致死锁）。
+        # 修复: maxtasksperchild=30 让 worker 每处理 30 个电路后自动重启，
+        #   释放 JAX/klayout 累积的资源；同时进度保存频率从 20 改为 5（减少崩溃丢失）。
+        # 来源: Python multiprocessing.Pool maxtasksperchild 官方文档
+        #   https://docs.python.org/3/library/multiprocessing.html#multiprocessing.pool.Pool
+        # 回归测试: scripts/debug_stuck_circuits.py 单独跑 20 个卡住电路全部成功（0.3-2.7s）
+        with Pool(n_workers, maxtasksperchild=30) as pool:
             for i, result in enumerate(pool.imap_unordered(test_single_circuit, circuits)):
                 results[result.name] = result
                 status = "OK" if result.success else "FAIL"
@@ -308,8 +316,8 @@ def main() -> int:
                 logger.info("[%4d/%d] %s | %s | drc=%s | loss=%.2f | %.2fs",
                             i + 1, total, result.name, status, drc,
                             result.total_loss_db, result.elapsed_sec)
-                # 每 20 个保存一次进度
-                if (i + 1) % 20 == 0:
+                # 每 5 个保存一次进度（R05: 减少崩溃时丢失的结果数）
+                if (i + 1) % 5 == 0:
                     save_progress(results)
                     elapsed = time.perf_counter() - t_start
                     rate = (i + 1) / elapsed
