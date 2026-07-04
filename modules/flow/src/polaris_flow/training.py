@@ -281,9 +281,11 @@ class TrainingPipeline:
 
         Returns:
             布线日志中 total_loss_db 的平均值（布局无损耗指标，返回 0）。
+            注意：0.0 表示"无布线日志/无损耗指标"，**非**"完美布线"——
+            调用方区分二者应同时检查 routing_logs 是否为空。
         """
         if not routing_logs:
-            return 0.0
+            return 0.0  # 合法默认值：无布线日志即无损耗指标（非完美布线 0 损耗）
         losses = [lg.get("total_loss_db", 0.0) for lg in routing_logs]
         return sum(losses) / len(losses) if losses else 0.0
 
@@ -577,12 +579,12 @@ def _parse_nets(netlist: dict) -> list[tuple[str, str, str, str]]:
 def _make_connection(src: str, dst: str) -> list[tuple[str, str, str, str]]:
     """从 src/dst 端点字符串构造连接（空则返回空列表）。"""
     if not src or not dst:
-        return []
+        return []  # 合法：空输入空输出，src/dst 缺失无法构成连接
     sd, sp = _split_port_ref(src)
     dd, dp = _split_port_ref(dst)
     if sd and dd:
         return [(sd, sp, dd, dp)]
-    return []
+    return []  # 合法：空输入空输出，端口解析失败（无 device 名）
 
 
 def _extract_conn_endpoints(conn) -> tuple[str, str]:

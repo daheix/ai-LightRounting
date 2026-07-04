@@ -170,7 +170,7 @@ def _detect_cycle(rename_map: dict[str, str]) -> list[str] | None:
             cycle_start = path.index(node)
             return path[cycle_start:] + [node]
         if node in visited:
-            return None
+            return None  # 合法：查找失败，节点已访问且无循环
         visited.add(node)
         rec_stack.add(node)
         path.append(node)
@@ -182,14 +182,14 @@ def _detect_cycle(rename_map: dict[str, str]) -> list[str] | None:
                 return result
         path.pop()
         rec_stack.remove(node)
-        return None
+        return None  # 合法：查找失败，当前分支无循环
 
     for old_name in rename_map:
         if old_name not in visited:
             result = dfs(old_name)
             if result is not None:
                 return result
-    return None
+    return None  # 合法：查找失败，整个 rename_map 无循环引用
 
 
 # =============================================================================

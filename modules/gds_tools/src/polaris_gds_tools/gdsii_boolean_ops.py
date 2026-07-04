@@ -341,7 +341,7 @@ def _apply_boolean_operator(db, op: str, r_a, r_b):
 def _compute_result_bbox(r_result, dbu: float, count_result: int):
     """计算结果 Region 的 bbox（R340 内部辅助）。"""
     if count_result <= 0:
-        return None
+        return None  # 合法：空输入空输出，无结果多边形则无 bbox
     bbox = r_result.bbox()
     return (
         (float(bbox.left) * dbu, float(bbox.bottom) * dbu),

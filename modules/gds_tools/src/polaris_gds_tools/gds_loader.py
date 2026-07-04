@@ -215,7 +215,7 @@ def _find_layer(ly, layer: int, datatype: int):
         info = ly.get_info(li)
         if int(info.layer) == layer and int(info.datatype) == datatype:
             return li
-    return None
+    return None  # 合法：查找失败，层不存在（合法的 GDS 层配置状态）
 
 
 def load_gds_to_circuit(gds_path: str | Path) -> dict:
@@ -410,7 +410,7 @@ def _collect_devrec_polygon_devices(top, ly, dbu: float) -> list[dict]:
     """
     li_devrec = _find_layer(ly, _DEVREC_LAYER[0], _DEVREC_LAYER[1])
     if li_devrec is None:
-        return []
+        return []  # 合法：查找失败，无 DEVREC 层（触发策略 C 顶层 cell 自身）
     polygons: list[tuple[float, float, float, float]] = []
     texts: list[tuple[str, float, float]] = []
     for it in top.begin_shapes_rec(li_devrec):
@@ -433,7 +433,7 @@ def _collect_devrec_polygon_devices(top, ly, dbu: float) -> list[dict]:
             px, py = _apply_trans(trans, raw.x, raw.y)
             texts.append((txt, px, py))
     if not polygons:
-        return []
+        return []  # 合法：空输入空输出，DEVREC 层无 polygon（触发策略 C）
     instances: list[dict] = []
     name_counter: dict[str, int] = {}
     for (xmin, ymin, xmax, ymax) in polygons:
@@ -468,7 +468,7 @@ def _match_nearest_text(
             best_dist = dist
             best_text = txt
     if not best_text or best_dist > max_dist:
-        return None
+        return None  # 合法：查找失败，max_dist 内未匹配到文本
     return _extract_component_name(best_text)
 
 
@@ -538,7 +538,7 @@ def _extract_pin_shapes(top, ly, dbu: float) -> tuple[list, list]:
     """
     li_pin = _find_layer(ly, _PIN_LAYER[0], _PIN_LAYER[1])
     if li_pin is None:
-        return [], []
+        return [], []  # 合法：查找失败，无 PIN 层（无端口信息可提取）
     pin_paths: list[list[tuple[float, float]]] = []
     pin_texts: list[tuple[str, float, float]] = []
     for it in top.begin_shapes_rec(li_pin):
@@ -594,7 +594,7 @@ def _extract_pin_ports(top, ly, dbu: float) -> list[dict]:
     """提取 PIN 层端口并匹配 text→path。无 PIN 层时返回空列表。"""
     pin_paths, pin_texts = _extract_pin_shapes(top, ly, dbu)
     if not pin_texts:
-        return []
+        return []  # 合法：空输入空输出，无 PIN 文本则无端口
     return _match_text_to_path(pin_texts, pin_paths)
 
 

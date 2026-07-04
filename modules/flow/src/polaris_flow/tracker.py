@@ -56,7 +56,7 @@ class JobTracker:
         """查询作业状态"""
         meta = self._read_job_metadata(job_id)
         if meta is None:
-            return None
+            return None  # 合法：查找失败，作业元数据不存在
         return meta.get("status")
 
     def get_job(self, job_id: str) -> dict | None:
@@ -67,7 +67,7 @@ class JobTracker:
         """列出所有作业（可选状态过滤）"""
         jobs: list[dict] = []
         if not self.base_output_dir.exists():
-            return []
+            return []  # 合法：空输入空输出，工作空间目录尚未创建
         for job_dir in sorted(self.base_output_dir.iterdir()):
             if not job_dir.is_dir():
                 continue
@@ -83,10 +83,10 @@ class JobTracker:
         """查询阶段结果"""
         slug = self.STAGE_SLUGS.get(stage_id)
         if slug is None:
-            return None
+            return None  # 合法：查找失败，非法阶段 ID
         path = self.base_output_dir / job_id / "stages" / slug / "output.json"
         if not path.exists():
-            return None
+            return None  # 合法：查找失败，该阶段尚未产出 output.json
         return json.loads(path.read_text(encoding="utf-8"))
 
     def get_history(self, job_id: str) -> list[dict]:
@@ -107,5 +107,5 @@ class JobTracker:
         """
         path = self.base_output_dir / job_id / "job.json"
         if not path.exists():
-            return None
+            return None  # 合法：查找失败，作业 job.json 不存在（查询未命中）
         return json.loads(path.read_text(encoding="utf-8"))

@@ -56,9 +56,11 @@ def _gerber_decode_coord(raw: str, dec_digits: int, suppression: str) -> float:
     """将 Gerber 坐标整数串解码为浮点（按零抑制规则补齐）。
 
     来源: UCAMCO Spec；artwork.com（L=前导零抑制，T=尾随零抑制）。
+    空字符串 raw 返回 0.0——Gerber 格式允许省略坐标（继承前值或原点），
+    UCAMCO Gerber Spec §3.1 规定省略坐标字段为合法语法，非文件损坏。
     """
     if not raw:
-        return 0.0
+        return 0.0  # 合法默认值：Gerber 省略坐标 = 原点 0.0（UCAMCO Spec §3.1 合法语法）
     total = _GERBER_INT_DIGITS + dec_digits
     if suppression == "L":
         padded = raw.rjust(total, "0")

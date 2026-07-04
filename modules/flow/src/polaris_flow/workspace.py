@@ -139,7 +139,7 @@ class Workspace:
         """读取阶段输出 JSON，不存在返回 None"""
         path = self.stage_dir(stage_slug) / "output.json"
         if not path.exists():
-            return None
+            return None  # 合法：查找失败，该阶段尚未产出 output.json
         return json.loads(path.read_text(encoding="utf-8"))
 
     def write_job_metadata(self, job_dict: dict) -> Path:
@@ -151,7 +151,7 @@ class Workspace:
         """读取作业元数据，不存在返回 None"""
         path = self.base_path / "job.json"
         if not path.exists():
-            return None
+            return None  # 合法：查找失败，job.json 尚未创建（新工作空间）
         return json.loads(path.read_text(encoding="utf-8"))
 
     def write_log(self, message: str, level: str = "INFO") -> None:

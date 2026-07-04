@@ -132,7 +132,7 @@ class TaskResult:
         """执行耗时（秒）。"""
         if self.start_time and self.end_time:
             return self.end_time - self.start_time
-        return None
+        return None  # 合法：任务未开始/未完成，无耗时数据
 
 
 @dataclass

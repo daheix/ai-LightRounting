@@ -78,7 +78,7 @@ class StageResult:
         """阶段执行耗时（秒），未完成时返回 None"""
         if self.start_time and self.end_time:
             return (self.end_time - self.start_time).total_seconds()
-        return None
+        return None  # 合法：阶段未开始/未完成，无耗时数据
 
 
 @dataclass

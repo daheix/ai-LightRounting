@@ -204,9 +204,13 @@ _CIF_HANDLERS: dict[str, Callable[[_CifState, list[str]], None]] = {
 
 
 def _cif_rotation_angle(vec: list[float]) -> float:
-    """CIF 旋转向量 (rx, ry) → 度数。"""
+    """CIF 旋转向量 (rx, ry) → 度数。
+
+    无旋转向量（len<2）返回 0.0 表示无旋转——CIF 规范中省略旋转
+    向量等价于 0°（参考 CIF 语法 B 命令的可选旋转段）。
+    """
     if len(vec) < 2:
-        return 0.0
+        return 0.0  # 合法默认值：CIF 省略旋转向量 = 0°（非解析错误）
     return math.degrees(math.atan2(vec[1], vec[0]))
 
 
@@ -281,7 +285,7 @@ def _cif_parse_call(toks: list[str]) -> Instance:
 def _cif_pick_top(cells: list[Cell]) -> Cell | None:
     """选择顶层单元：未被其他单元调用的最后一个。"""
     if not cells:
-        return None
+        return None  # 合法：空输入空输出，无 cell 无法选顶层
     called = {i.cell_name for c in cells for i in c.instances}
     candidates = [c for c in cells if c.name not in called]
     return candidates[-1] if candidates else cells[-1]

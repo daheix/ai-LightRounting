@@ -179,7 +179,7 @@ def _oa_dispatch_line(
         cells.append(current)
         return current, i + 1, layers
     if cmd == "END":
-        return None, i + 1, layers
+        return None, i + 1, layers  # 合法：状态机控制流，END 重置 current=None 表示退出当前 cell
     if cmd == "END_OA":
         return current, i + 1, layers
     if current is None:

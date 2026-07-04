@@ -559,7 +559,7 @@ def _render_json_report(report: SizingReport) -> str:
 
     def _bbox_dict(bbox):
         if bbox is None:
-            return None
+            return None  # 合法：空输入空输出，bbox=None 表示无尺寸数据
         (xmin, ymin), (xmax, ymax) = bbox
         return {
             "xmin_um": xmin, "ymin_um": ymin,

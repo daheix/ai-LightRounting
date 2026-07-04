@@ -280,7 +280,7 @@ class CircuitModelView(IPKISSView):
         """
         model = _get_model_map().get(self.cell.cell_type)
         if model is None:
-            return None
+            return None  # 合法：查找失败，该器件类型无电路模型（无需仿真）
         # 预绑定 PCell 参数到模型（部分参数透传给模型函数）
         bound_params = {
             k: v

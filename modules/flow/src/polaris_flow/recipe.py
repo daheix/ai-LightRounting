@@ -142,7 +142,7 @@ class Recipe:
         """
         m = re.match(r"^(\w+):\s*(.*)$", line)
         if not m or line.startswith(" "):
-            return None, False
+            return None, False  # 合法：非顶层行/非匹配，handled=False 表示交由下层处理
         key, val = m.group(1), m.group(2)
         if val == "":
             d[key] = {}
