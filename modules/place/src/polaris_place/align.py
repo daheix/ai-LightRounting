@@ -31,6 +31,7 @@ from __future__ import annotations
 import math
 
 from polaris_place.legalize import (
+    _ALIGN_MIN_SPACING,
     _ALIGN_PORT_TOL_UM,
     _find_nearest_legal_pos_1d,
 )
@@ -129,7 +130,7 @@ def _no_overlap_at(
         dx = max(other[0] - aabb[2], aabb[0] - other[2], 0.0)
         dy = max(other[1] - aabb[3], aabb[1] - other[3], 0.0)
         dist = math.hypot(dx, dy)
-        if dist < 1.0:  # _ALIGN_MIN_SPACING = 1.0
+        if dist < _ALIGN_MIN_SPACING:
             return False
     return True
 

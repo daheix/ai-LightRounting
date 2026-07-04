@@ -8,6 +8,19 @@
 - ``"ppo_gnn"``: AlphaChip Edge-GNN + PPO ActorCritic AI 布局，
   需预训练 checkpoint，无 checkpoint 时 raise（R03 禁止 fall-back）。
 
+## 模块拆分（R11 质量门禁：单文件 ≤800 行）
+
+``analytical.py`` 原 1480 行已按功能拆分为 5 个文件:
+- ``analytical.py``: 主入口（FFDH 调度 + AnalyticalConfig + Adam 优化器）
+- ``metrics.py``: HPWL/密度梯度/Tarjan SCC/拓扑深度
+- ``legalize.py``: FFDH 合法化 + 1D 最近合法位置搜索 + 共享常量
+- ``align.py``: 端口对齐后处理（_align_d2_global + _align_ports）
+- ``residual.py``: 残余违规成对双向修复（_residual_pair_fix 已拆子函数）
+
+向后兼容: ``from polaris_place.analytical import X`` 仍可用（analytical.py
+re-export 所有内部函数），新代码推荐 ``from polaris_place.metrics import X``
+直接从子模块导入。
+
 设计原则:
 - 对外 API 返回 JSON-serializable dict（与 polaris-core 一致）
 - 纯 NumPy 实现（R04: 不参与 GPU）
@@ -28,10 +41,13 @@
 
 from __future__ import annotations
 
+# 显式导入子模块，使其成为 polaris_place 包属性
+# （polaris_place.metrics / polaris_place.align 等可直接访问）
+from polaris_place import align, legalize, metrics, residual  # noqa: F401
 from polaris_place.analytical import AnalyticalConfig, place_analytical
 from polaris_place.ppo_gnn import place_ppo_gnn
 
-__version__ = "5.0.0"
+__version__ = "5.1.0"
 
 # 器件类型 → ASCII 字符映射（G=grating_coupler, M=mmi, W=waveguide, P=phase_shifter, D=detector）
 _DEVICE_GLYPH: dict[str, str] = {

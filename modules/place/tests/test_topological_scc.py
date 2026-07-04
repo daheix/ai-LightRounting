@@ -67,11 +67,11 @@ for _p in (_SRC, _CORE_SRC, _GDS_SRC):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from polaris_place.analytical import (  # noqa: E402
+from polaris_place.analytical import place_analytical  # noqa: E402
+from polaris_place.metrics import (  # noqa: E402
     _condensation_dag,
     _tarjan_scc,
     _topological_depth,
-    place_analytical,
 )
 
 
@@ -379,7 +379,7 @@ def test_siepic_gds_topology_depth_safe(
     gds_filename: str, expected_n_dev: int, expected_n_conn: int,
 ):
     """6 个 SiEPIC GDS 用例: _topological_depth 含环安全（直接验证核心修复点）。"""
-    from polaris_place.analytical import _topological_depth
+    from polaris_place.metrics import _topological_depth
 
     circuit = _load_siepic_gds(gds_filename)
     names = [d["name"] for d in circuit["devices"]]
