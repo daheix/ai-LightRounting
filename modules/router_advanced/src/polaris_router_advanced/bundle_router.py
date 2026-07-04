@@ -134,7 +134,7 @@ def route_bundle(
             f"ports1 和 ports2 长度不匹配: {len(ports1)} != {len(ports2)}"
         )
     if not ports1:
-        return []
+        return []  # 合法：空输入产生空输出
     r = _make_router(router, kwargs)
     sep = max(0, int(separation))
     sorted1, sorted2 = _sort_ports(ports1, ports2)
@@ -175,7 +175,7 @@ def route_bundle_path_length_match(
     """
     routes = route_bundle(ports1, ports2, **kwargs)
     if not routes:
-        return []
+        return []  # 合法：空输入产生空输出（上游 route_bundle 空端口已返回空）
     float_routes = [[(float(x), float(y)) for x, y in r] for r in routes]
     lengths = [path_length(r) for r in float_routes]
     target = max(lengths)
@@ -220,7 +220,7 @@ def route_bundle_from_waypoints(
     if not waypoints:
         raise ValueError("waypoints 不能为空")
     if not ports1:
-        return []
+        return []  # 合法：空输入产生空输出
     r = _make_router(kwargs.get("router"), kwargs)
     routes: list[list[tuple[int, int]]] = []
     for p1, p2 in zip(ports1, ports2, strict=False):
@@ -258,7 +258,7 @@ def auto_taper(
         带 width 的路径 [(x, y, w), ...]。
     """
     if not route:
-        return []
+        return []  # 合法：空输入产生空输出（空路径无法做 taper）
     n = len(route)
     if taper_length <= 0:
         return [(x, y, end_width) for x, y in route]
