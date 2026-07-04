@@ -98,20 +98,20 @@
     {
       "name": "wg2",
       "type": "strip_waveguide",
-      "width_um": 40.0,
-      "height_um": 0.5,
+      "width_um": 0.5,
+      "height_um": 40.0,
       "ports": [
         [
           "in",
           0.0,
-          0.0,
-          "W"
+          40.0,
+          "N"
         ],
         [
           "out",
-          40.0,
           0.0,
-          "E"
+          0.0,
+          "S"
         ]
       ],
       "params": {
@@ -210,20 +210,20 @@
     {
       "name": "wg4",
       "type": "strip_waveguide",
-      "width_um": 40.0,
-      "height_um": 0.5,
+      "width_um": 0.5,
+      "height_um": 40.0,
       "ports": [
         [
           "in",
           0.0,
-          0.0,
-          "W"
+          40.0,
+          "N"
         ],
         [
           "out",
-          40.0,
           0.0,
-          "E"
+          0.0,
+          "S"
         ]
       ],
       "params": {

@@ -261,8 +261,18 @@ class PolarizationArrayGenerator(CircuitGenerator):
             ["in2", 10.0, 0.0, "N"],
             ["out", 20.0, 5.0, "E"],
         ]
-        # waveguide 端口: in(W), out(E)
-        wg_ports = [["in", 0.0, 0.0, "W"], ["out", 40.0, 0.0, "E"]]
+        # TE 路径波导（水平）: in(W), out(E)
+        # 用于 PBS.through(E) → wg_te.in(W) → wg_te.out(E) → PBC.in1(W)
+        # 连接方向: east↔west 相对（合法）
+        wg_te_ports = [["in", 0.0, 0.0, "W"], ["out", 40.0, 0.0, "E"]]
+        # TM 路径波导（垂直）: in(N), out(S)
+        # 用于 PBS.drop(S) → wg_tm.in(N) → wg_tm.out(S) → PBC.in2(N)
+        # 连接方向: south↔north 相对（合法，修复 PORT_FACING 真违规）
+        # 修复说明: 原设计 wg_tm 用水平波导 in(W)/out(E)，导致
+        #   PBS.drop(S)→wg_tm.in(W) south↔west 非相对，
+        #   wg_tm.out(E)→PBC.in2(N) east↔north 非相对。
+        # 改为垂直波导后两端连接均为 south↔north 相对。
+        wg_tm_ports = [["in", 0.0, 40.0, "N"], ["out", 0.0, 0.0, "S"]]
 
         devices: list[dict] = []
         connections: list[list] = []
@@ -270,8 +280,8 @@ class PolarizationArrayGenerator(CircuitGenerator):
         for _ in range(n_groups):
             pbs_name = self._next_device_name("pbs")
             pbc_name = self._next_device_name("pbc")
-            wg_te_name = self._next_device_name("wg")  # TE 路径波导
-            wg_tm_name = self._next_device_name("wg")  # TM 路径波导
+            wg_te_name = self._next_device_name("wg")  # TE 路径波导（水平）
+            wg_tm_name = self._next_device_name("wg")  # TM 路径波导（垂直）
 
             devices.append(
                 self._make_device(pbs_name, "polarization_beam_splitter",
@@ -281,19 +291,21 @@ class PolarizationArrayGenerator(CircuitGenerator):
                 self._make_device(pbc_name, "polarization_beam_combiner",
                                   pbc_ports, 20.0, 10.0, pbc_params)
             )
+            # TE 路径波导: 水平 40×0.5μm
             devices.append(
                 self._make_device(wg_te_name, "strip_waveguide",
-                                  wg_ports, 40.0, 0.5, wg_params)
+                                  wg_te_ports, 40.0, 0.5, wg_params)
             )
+            # TM 路径波导: 垂直 0.5×40μm（与 PBS.drop(S)/PBC.in2(N) 方向相对）
             devices.append(
                 self._make_device(wg_tm_name, "strip_waveguide",
-                                  wg_ports, 40.0, 0.5, wg_params)
+                                  wg_tm_ports, 0.5, 40.0, wg_params)
             )
 
-            # PBS.through(TE) → waveguide → PBC.in1(TE)
+            # PBS.through(TE,E) → waveguide(W) → PBC.in1(TE,W)  [east↔west 相对]
             connections.append(self._make_connection(pbs_name, "through", wg_te_name, "in"))
             connections.append(self._make_connection(wg_te_name, "out", pbc_name, "in1"))
-            # PBS.drop(TM) → waveguide → PBC.in2(TM)
+            # PBS.drop(TM,S) → waveguide(N) → PBC.in2(TM,N)  [south↔north 相对]
             connections.append(self._make_connection(pbs_name, "drop", wg_tm_name, "in"))
             connections.append(self._make_connection(wg_tm_name, "out", pbc_name, "in2"))
 
