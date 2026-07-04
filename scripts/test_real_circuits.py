@@ -46,6 +46,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 import time
 import traceback
@@ -492,30 +493,159 @@ def parse_gdsfactory_json(data: dict, name: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# gdsfactory Jinja2 模板渲染（R02 学术诚信）
+# ---------------------------------------------------------------------------
+
+# gdsfactory YAML 1.1 complex-key 占位符: {? {var: 'default'} : 'default'}
+# 这是 gdsfactory 把 Jinja2 `{{ var }}` 在 YAML 上下文（flow mapping）中
+# 安全编码后的形式。PyYAML 的 safe_load 无法解析（key 为 unhashable dict），
+# 故需还原为 Jinja2 语法后再渲染。
+# 来源: gdsfactory netlist 格式
+#   https://gdsfactory.github.io/gdsfactory/
+#   https://deepwiki.com/gdsfactory/gdsfactory/5.2-yaml-based-layout-generation
+#   (settings 段变量定义 + `${settings.var}` / Jinja2 模板扩展)
+_PLACEHOLDER_RE = re.compile(
+    r"\{\?\s*\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*'[^']*'\s*\}\s*:\s*'[^']*'\s*\}"
+)
+
+# 检测文本是否含 Jinja2 模板标记（避免对普通 yml 多余渲染）
+_JINJA_MARKER_RE = re.compile(r"\{%|{{|{?\s*\{")
+
+_DEFAULT_SETTINGS_HEADER_RE = re.compile(r'^default_settings:\s*\n', re.MULTILINE)
+
+
+def _extract_default_settings(text: str) -> dict:
+    """从 gdsfactory YAML 文本提取 ``default_settings`` 段变量默认值。
+
+    ``default_settings`` 格式（gdsfactory 模板 netlist 约定）::
+
+        default_settings:
+          var_name:
+            value: <scalar>
+            description: "..."
+
+    在 Jinja2 渲染前调用（因为含 ``{% %}`` 的文本 yaml 无法直接解析），
+    逐行截取 ``default_settings:`` 到下一个顶层 key 之间的内容，
+    单独用 yaml 解析。
+
+    Args:
+        text: YAML 文本（已做占位符还原）。
+
+    Returns:
+        ``{var_name: value}`` 字典；无 ``default_settings`` 段时返回空 dict。
+    """
+    m = _DEFAULT_SETTINGS_HEADER_RE.search(text)
+    if not m:
+        return {}
+    start = m.end()
+    lines = text.split('\n')
+    header_line_idx = text[:start].count('\n')
+    block_lines: list[str] = []
+    for line in lines[header_line_idx:]:
+        # 遇到下一个顶层 key（行首非空白、非注释、非 Jinja 块）则停止
+        if line and not line[0].isspace() and not line.startswith('#') \
+                and not line.startswith('{%') and not line.startswith('{{'):
+            break
+        block_lines.append(line)
+    block_text = 'default_settings:\n' + '\n'.join(block_lines)
+    try:
+        import yaml as _yaml
+        data = _yaml.safe_load(block_text)
+    except Exception:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    ds = data.get('default_settings', {})
+    if not isinstance(ds, dict):
+        return {}
+    result: dict = {}
+    for var_name, spec in ds.items():
+        if isinstance(spec, dict) and 'value' in spec:
+            result[var_name] = spec['value']
+        elif isinstance(spec, (int, float, str)):
+            result[var_name] = spec
+    return result
+
+
+def _render_jinja_yaml(text: str) -> str:
+    """渲染含 Jinja2 模板的 gdsfactory YAML 文本。
+
+    流程（R03 禁止 fall-back: 任一步失败即 raise）:
+        1. 预处理: ``{? {var: '...'} : '...'}`` → ``{{ var }}`` (Jinja2 语法)
+        2. 提取 ``default_settings`` 段构造变量字典
+        3. jinja2 渲染（``StrictUndefined``: 变量未定义即 raise）
+
+    Args:
+        text: 含 Jinja2 模板的 YAML 文本。
+
+    Returns:
+        渲染后的纯 YAML 文本。
+
+    Raises:
+        ImportError: jinja2 未安装。
+        jinja2.TemplateError: 模板语法错误或变量未定义（R03）。
+    """
+    try:
+        import jinja2
+    except ImportError as e:
+        raise ImportError(f"渲染 Jinja2 模板需要 jinja2: {e}") from e
+
+    # 1. 预处理占位符 {? {var: '...'} : '...'} → {{ var }}
+    text = _PLACEHOLDER_RE.sub(r'{{ \1 }}', text)
+
+    # 2. 提取 default_settings 变量
+    variables = _extract_default_settings(text)
+
+    # 3. jinja2 渲染
+    env = jinja2.Environment(
+        loader=jinja2.BaseLoader(),
+        undefined=jinja2.StrictUndefined,  # R03: 变量未定义即 raise
+        trim_blocks=True,     # 自动删除 block 标签后的换行（保持 YAML 缩进）
+        lstrip_blocks=True,    # 自动删除 block 标签行首空白
+        keep_trailing_newline=True,
+    )
+    template = env.from_string(text)
+    return template.render(**variables)
+
+
 def parse_gdsfactory_yml(text: str, name: str) -> dict:
     """解析 gdsfactory ``.pic.yml``/``.yml`` 为 polaris-core circuit dict。
 
     gdsfactory YAML 结构::
         instances: {name: {component, settings}}
         nets: [{p1: "inst,port", p2: "inst,port"}, ...]
-        connections: [{p1, p2}] (旧版)
-        routes: (新版用 nets 代替)
+        connections: [{p1, p2}] (旧版) 或 {"inst,port": "inst,port"} (Jinja 模板版)
+        routes: {route_name: {links: {"inst,port": "inst,port"}}}
+        default_settings: {var: {value, description}}  # Jinja2 模板变量
+
+    支持两种语法:
+        1. 纯 YAML: 直接 ``yaml.safe_load``
+        2. Jinja2 模板: 含 ``{% for %}``/``{{ var }}``/``{? {var: ''} : ''}``，
+           先用 ``_render_jinja_yaml`` 渲染（填充 ``default_settings`` 默认值），
+           再 ``yaml.safe_load``。
 
     Args:
-        text: YAML 文本。
+        text: YAML 文本（可含 Jinja2 模板）。
         name: 用例名。
 
     Returns:
         polaris-core 风格 circuit dict。
 
     Raises:
-        ValueError: 结构非法或字段缺失。
-        ImportError: PyYAML 未安装。
+        ValueError: 结构非法或字段缺失（R03 禁止 fall-back）。
+        ImportError: PyYAML / jinja2 未安装。
+        jinja2.TemplateError: Jinja2 渲染失败（变量未定义等）。
     """
     try:
         import yaml
     except ImportError as e:
         raise ImportError(f"解析 YAML 需要 PyYAML: {e}") from e
+
+    # Jinja-aware 渲染: 含 {% %} / {{ }} / {? { 占位符时先渲染
+    if _JINJA_MARKER_RE.search(text):
+        text = _render_jinja_yaml(text)
+
     data = yaml.safe_load(text) or {}
 
     instances = data.get("instances", {})
@@ -545,12 +675,18 @@ def parse_gdsfactory_yml(text: str, name: str) -> dict:
             p2 = net.get("p2")
             if p1 and p2:
                 _add_link(p1, p2)
-    for conn in connections:
-        if isinstance(conn, dict):
-            p1 = conn.get("p1")
-            p2 = conn.get("p2")
-            if p1 and p2:
-                _add_link(p1, p2)
+    if isinstance(connections, dict):
+        # Jinja 模板版: {"inst,port": "inst,port"}
+        for ref1, ref2 in connections.items():
+            _add_link(ref1, ref2)
+    elif isinstance(connections, list):
+        # 旧版: [{p1, p2}]
+        for conn in connections:
+            if isinstance(conn, dict):
+                p1 = conn.get("p1")
+                p2 = conn.get("p2")
+                if p1 and p2:
+                    _add_link(p1, p2)
     if isinstance(routes, dict):
         for rname, rdef in routes.items():
             if isinstance(rdef, dict):
