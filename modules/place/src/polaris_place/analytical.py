@@ -732,88 +732,208 @@ def _find_nearest_legal_pos_1d(
     return best
 
 
-def _align_d2_on_axis(
+def _align_d2_global(
     placements: dict[str, dict[str, float]],
     d2_name: str,
+    d2_dev: dict,
+    incoming_conns: list[tuple],
+    device_map: dict[str, dict],
     d2_connected: set[str],
-    w2: float,
-    h2: float,
     canvas_w: float,
     canvas_h: float,
-    axis: str,
-    port_off: float,
-    abs_other: float,
-) -> float:
-    """在 axis 轴上对齐 d2，使端口偏差最小化。
+) -> None:
+    """对 d2 设备，考虑所有入向连接，全局搜索最优位置（*创新* + R05 修复）。
 
-    axis='y': 调整 d2.y，使 |d2.y + port_off - abs_other| 最小
-    axis='x': 调整 d2.x，使 |d2.x + port_off - abs_other| 最小
+    ## 核心问题（R05 Bug）
 
-    策略（两级）:
-        1. 完全对齐: new_pos = abs_other - port_off（偏差=0）
-        2. 完全对齐失败（重叠/间距）→ _find_nearest_legal_pos_1d 找最近合法位置
+    原算法（_align_ports 贪心逐连接对齐）的根因缺陷:
+    - dc3 有 2 个入向连接 ps1→dc3.in1 (dy=6.7, 通过) 和
+      ps2→dc3.in2 (dy=13, 失败)
+    - 处理 ps2→dc3.in2 时移动 dc3 使 dy=0，但破坏了 ps1→dc3.in1
+      (dy 变成 25.7 > tol)
+    - 贪心策略无法处理多端口器件的多连接同时对齐
 
-    仅在偏差减小时才移动（保证单调改善，不破坏已对齐的连接）。
-    若当前偏差已在容差内（≤ _ALIGN_PORT_TOL_UM），直接返回不移动。
+    ## 新算法（全局候选评估，*创新*）
 
-    Args:
-        placements: 当前布局（会被原地修改）。
-        d2_name: 待调整器件名。
-        d2_connected: d2 的直接连接邻居集合（跳过 MIN_SPACING）。
-        w2, h2: d2 的宽高。
-        canvas_w, canvas_h: 画布尺寸。
-        axis: 对齐轴 'y' 或 'x'。
-        port_off: d2 端口在 axis 方向的相对偏移。
-        abs_other: 对端端口在 axis 方向的绝对坐标。
+    1. 收集 d2 的所有入向连接，计算当前 dx/dy 和通过状态
+    2. 生成候选位置:
+       a. 当前位置（baseline，保证不劣化）
+       b. 每个连接的 x 完全对齐位置（保持 cur_y）
+       c. 每个连接的 y 完全对齐位置（保持 cur_x）
+       d. x 对齐 + 可行 y 范围交点（同时满足多连接的 dy ≤ tol）
+       e. y 对齐 + 可行 x 范围交点
+       f. 对每个候选，若重叠，用 _find_nearest_legal_pos_1d 找最近合法
+    3. 评估每个候选:
+       - 边界检查、NO_OVERLAP/MIN_SPACING 检查
+       - 不破坏检查: 所有当前通过的连接仍通过
+       - 评分 = 通过连接数（不破坏前提下）
+    4. 选择评分最高（同分选总偏差最小）的位置
 
-    Returns:
-        移动后（或未移动）的端口偏差 (float)。
+    ## 底层逻辑
+
+    PORT_ALIGNMENT 规则: dx > tol AND dy > tol 才违规，任一轴 ≤ tol 即
+    通过。当多个源端口共享相同 x 坐标（矩阵拓扑常见，同一列的 ps 器件），
+    对齐 d2.x 到该 x 使所有连接 dx=0 同时通过。全局候选评估确保找到
+    此类多连接同时对齐的位置，避免贪心策略的破坏问题。
+
+    ## 不破坏原则（R03 合规）
+
+    移动 d2 前验证所有当前通过的入向连接在新位置仍通过。若移动会破坏
+    任何已通过的连接，则拒绝该候选（保持原位是合法策略，非 fall-back）。
+
+    来源（R02 学术诚信）:
+        - PORT_ALIGNMENT 规则: SiEPIC EBeam PDK DRC runset
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - 约束优化投影: Boyd & Vandenberghe "Convex Optimization" §4
+          https://web.stanford.edu/~boyd/cvxbook/
+        - AABB 碰撞检测: Ericson "Real-Time Collision Detection" §5.1.3
+          https://realtimecollisiondetection.net/
+        - DREAMPlace TCAD 2020（合法化在约束域内优化）
+          https://arxiv.org/abs/2004.10746
+        - 多端口器件对齐: Chrostowski & Hochberg "Silicon Photonics Design"
+          CUP 2015 §4.3 https://www.cambridge.org/core/books/silicon-photonics-design/
+        - Berg "Computational Geometry" Springer（区间合并求可行域）
+          https://doi.org/10.1007/978-3-540-77974-2
     """
+    if not incoming_conns:
+        return
+
     pl2 = placements[d2_name]
     cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
-    if axis == "y":
-        target = abs_other - port_off
-        canvas_limit = canvas_h
-        size = h2
-        cur_pos = cur_y
-    else:
-        target = abs_other - port_off
-        canvas_limit = canvas_w
-        size = w2
-        cur_pos = cur_x
-    cur_dev = abs(cur_pos + port_off - abs_other)
-    if cur_dev <= _ALIGN_PORT_TOL_UM:
-        return cur_dev  # 已在容差内，无需移动
+    w2, h2 = float(pl2["w"]), float(pl2["h"])
+    TOL = _ALIGN_PORT_TOL_UM
 
-    # 1. 完全对齐（偏差=0）
-    new_pos = max(0.0, min(target, canvas_limit - size))
-    if axis == "y":
-        ok = _no_overlap_at(placements, d2_name, cur_x, new_pos, w2, h2, d2_connected)
-    else:
-        ok = _no_overlap_at(placements, d2_name, new_pos, cur_y, w2, h2, d2_connected)
-    if ok:
-        new_dev = abs(new_pos + port_off - abs_other)
-        if new_dev < cur_dev:
-            if axis == "y":
-                placements[d2_name]["y"] = new_pos
-            else:
-                placements[d2_name]["x"] = new_pos
-        return new_dev
+    # 收集每个入向连接的端口信息
+    conn_infos: list[dict] = []
+    for conn in incoming_conns:
+        d1_name = str(conn[0])
+        p1_name = conn[1]
+        p2_name = conn[3]
+        if d1_name not in placements:
+            continue
+        port1 = _find_port_in_dev(device_map.get(d1_name, {}), p1_name)
+        port2 = _find_port_in_dev(d2_dev, p2_name)
+        if port1 is None or port2 is None:
+            continue
+        pl1 = placements[d1_name]
+        conn_infos.append({
+            "d1_name": d1_name,
+            "port2_x": port2[0],
+            "port2_y": port2[1],
+            "abs1_x": float(pl1["x"]) + port1[0],
+            "abs1_y": float(pl1["y"]) + port1[1],
+        })
 
-    # 2. 完全对齐失败 → 最近合法位置（*创新*，约束域内最小化偏差）
-    nearest = _find_nearest_legal_pos_1d(
-        placements, d2_name, cur_x, cur_y, w2, h2,
-        target, canvas_limit, axis, d2_connected,
-    )
-    if nearest is not None:
-        new_dev = abs(nearest + port_off - abs_other)
-        if new_dev < cur_dev:
-            if axis == "y":
-                placements[d2_name]["y"] = nearest
-            else:
-                placements[d2_name]["x"] = nearest
-            return new_dev
-    return cur_dev
+    if not conn_infos:
+        return
+
+    def compute_devs(x: float, y: float) -> list[tuple[float, float]]:
+        return [
+            (abs(ci["abs1_x"] - (x + ci["port2_x"])),
+             abs(ci["abs1_y"] - (y + ci["port2_y"])))
+            for ci in conn_infos
+        ]
+
+    def is_pass(dx: float, dy: float) -> bool:
+        return dx <= TOL or dy <= TOL
+
+    cur_devs = compute_devs(cur_x, cur_y)
+    cur_passes = [is_pass(dx, dy) for dx, dy in cur_devs]
+    cur_score = sum(cur_passes)
+    cur_total_dev = sum(dx + dy for dx, dy in cur_devs)
+
+    # 生成候选位置
+    raw_candidates: list[tuple[float, float]] = [(cur_x, cur_y)]
+    for ci in conn_infos:
+        # x 完全对齐（保持 cur_y）
+        tx = max(0.0, min(ci["abs1_x"] - ci["port2_x"], canvas_w - w2))
+        raw_candidates.append((tx, cur_y))
+        # y 完全对齐（保持 cur_x）
+        ty = max(0.0, min(ci["abs1_y"] - ci["port2_y"], canvas_h - h2))
+        raw_candidates.append((cur_x, ty))
+
+    # x 对齐 + 可行 y 范围交点（*创新*，同时满足多连接的 dy ≤ tol）
+    for ci in conn_infos:
+        tx = max(0.0, min(ci["abs1_x"] - ci["port2_x"], canvas_w - w2))
+        y_lo, y_hi = -float("inf"), float("inf")
+        for ci2 in conn_infos:
+            dx2 = abs(ci2["abs1_x"] - (tx + ci2["port2_x"]))
+            if dx2 > TOL:
+                y_lo = max(y_lo, ci2["abs1_y"] - TOL - ci2["port2_y"])
+                y_hi = min(y_hi, ci2["abs1_y"] + TOL - ci2["port2_y"])
+        if y_lo <= y_hi:
+            y_lo_c = max(y_lo, 0.0)
+            y_hi_c = min(y_hi, canvas_h - h2)
+            if y_lo_c <= y_hi_c:
+                ty = max(y_lo_c, min(cur_y, y_hi_c))
+                raw_candidates.append((tx, ty))
+
+    # y 对齐 + 可行 x 范围交点
+    for ci in conn_infos:
+        ty = max(0.0, min(ci["abs1_y"] - ci["port2_y"], canvas_h - h2))
+        x_lo, x_hi = -float("inf"), float("inf")
+        for ci2 in conn_infos:
+            dy2 = abs(ci2["abs1_y"] - (ty + ci2["port2_y"]))
+            if dy2 > TOL:
+                x_lo = max(x_lo, ci2["abs1_x"] - TOL - ci2["port2_x"])
+                x_hi = min(x_hi, ci2["abs1_x"] + TOL - ci2["port2_x"])
+        if x_lo <= x_hi:
+            x_lo_c = max(x_lo, 0.0)
+            x_hi_c = min(x_hi, canvas_w - w2)
+            if x_lo_c <= x_hi_c:
+                tx = max(x_lo_c, min(cur_x, x_hi_c))
+                raw_candidates.append((tx, ty))
+
+    # 对每个候选，若重叠，尝试最近合法位置（扩展候选集）
+    expanded: set[tuple[float, float]] = set()
+    for x, y in raw_candidates:
+        expanded.add((round(x, 6), round(y, 6)))
+        # 尝试最近合法 y（保持 x）
+        ny = _find_nearest_legal_pos_1d(
+            placements, d2_name, x, y, w2, h2, y, canvas_h, "y", d2_connected
+        )
+        if ny is not None:
+            expanded.add((round(x, 6), round(ny, 6)))
+        # 尝试最近合法 x（保持 y）
+        nx = _find_nearest_legal_pos_1d(
+            placements, d2_name, x, y, w2, h2, x, canvas_w, "x", d2_connected
+        )
+        if nx is not None:
+            expanded.add((round(nx, 6), round(y, 6)))
+
+    # 评估所有候选，选最优
+    best_pos = (cur_x, cur_y)
+    best_score = cur_score
+    best_total_dev = cur_total_dev
+
+    for x, y in expanded:
+        # 边界检查
+        if x < 0.0 or x + w2 > canvas_w or y < 0.0 or y + h2 > canvas_h:
+            continue
+        # NO_OVERLAP/MIN_SPACING 检查
+        if not _no_overlap_at(placements, d2_name, x, y, w2, h2, d2_connected):
+            continue
+        # 偏差
+        devs = compute_devs(x, y)
+        # 不破坏检查: 当前通过的连接仍需通过
+        broke_any = False
+        for i, (dx, dy) in enumerate(devs):
+            if cur_passes[i] and not is_pass(dx, dy):
+                broke_any = True
+                break
+        if broke_any:
+            continue
+        # 评分 = 通过连接数
+        score = sum(1 for dx, dy in devs if is_pass(dx, dy))
+        total_dev = sum(dx + dy for dx, dy in devs)
+        if score > best_score or (score == best_score and total_dev < best_total_dev):
+            best_score = score
+            best_total_dev = total_dev
+            best_pos = (x, y)
+
+    # 应用最佳位置
+    placements[d2_name]["x"] = best_pos[0]
+    placements[d2_name]["y"] = best_pos[1]
 
 
 def _align_ports(
@@ -822,23 +942,26 @@ def _align_ports(
     canvas_w: float,
     canvas_h: float,
 ) -> dict[str, dict[str, float]]:
-    """端口对齐后处理（*创新*，光电子布局专用）。
+    """端口对齐后处理（*创新*，光电子布局专用，全局多连接对齐）。
 
     FFDH 合法化只保证无重叠和拓扑序，不考虑端口对齐。本函数在 FFDH 后
-    对每个连接调整下游器件位置，使连接两端端口坐标对齐（共享 x 或 y），
-    减少 PORT_ALIGNMENT DRC 违规和波导弯曲损耗。
+    对每个下游器件 d2 调整位置，使其所有入向连接的端口坐标对齐（dx 或
+    dy ≤ 容差），减少 PORT_ALIGNMENT DRC 违规和波导弯曲损耗。
 
-    ## 算法
+    ## 算法（全局多连接对齐，*创新* + R05 修复）
 
     1. 按拓扑顺序遍历器件（depth 从小到大，保证上游先固定）
-    2. 对每个连接 (d1.p1 → d2.p2)，d2 作为待调整器件:
-       a. 计算两端端口绝对坐标 abs1, abs2
-       b. 根据端口方向决定对齐轴:
-          - east↔west 水平连接: 对齐 y（使两端端口 y 相同）
-          - north↔south 垂直连接: 对齐 x
-          - 方向不明确: 对齐偏差较大的轴
-       c. 调整 d2 位置使端口对齐，边界裁剪到画布内
-       d. 检查调整后无重叠（与所有其他器件），冲突则回退保持原位置
+    2. 对每个 d2 设备，收集所有入向连接，调用 _align_d2_global:
+       a. 生成候选位置: 当前位置、每连接的 x/y 完全对齐、可行范围交点
+       b. 对每个候选检查: 边界、NO_OVERLAP/MIN_SPACING、不破坏已通过连接
+       c. 评分 = 通过连接数（不破坏前提下），选评分最高的位置
+    3. 不破坏原则: 移动 d2 前验证所有当前通过的入向连接在新位置仍通过，
+       否则拒绝该候选（保持原位是合法策略，非 fall-back）
+
+    ## R05 Bug 修复（贪心破坏问题）
+
+    原算法逐连接贪心对齐: 处理连接 2 时移动 d2 使 dy=0，但破坏了连接 1
+    （已通过变成失败）。新算法全局评估所有连接，确保不破坏任何已通过连接。
 
     ## *创新点*
 
@@ -849,7 +972,8 @@ def _align_ports(
     FFDH 后处理步骤，桥接 VLSI 布局算法与光电子物理约束。
 
     底层逻辑: 拓扑顺序保证上游器件先固定位置，下游器件对齐到上游端口；
-    重叠检查保证对齐不破坏 FFDH 的无重叠保证；边界裁剪保证器件在画布内。
+    全局候选评估保证多连接同时对齐（矩阵拓扑中同列源端口共享 x 坐标，
+    对齐 d2.x 使所有连接 dx=0 同时通过）；不破坏原则保证不劣化。
 
     Args:
         placements: FFDH 合法化后的布局 {name: {x, y, w, h}}（左下角坐标）。
@@ -870,6 +994,8 @@ def _align_ports(
           https://ieeexplore.ieee.org/document/4685534
         - Berg "Computational Geometry" Springer（AABB 相交判定）
           https://doi.org/10.1007/978-3-540-77974-2
+        - Boyd & Vandenberghe "Convex Optimization" §4（约束优化投影）
+          https://web.stanford.edu/~boyd/cvxbook/
     """
     if not placements:
         return placements
@@ -910,124 +1036,29 @@ def _align_ports(
         connected_neighbors.setdefault(d1_name, set()).add(d2_name_conn)
         connected_neighbors.setdefault(d2_name_conn, set()).add(d1_name)
 
+    # 预收集每个 d2 设备的入向连接（d2 作为下游的所有连接）
+    incoming_per_d2: dict[str, list[tuple]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d2_name_conn = str(conn[2])
+        if d2_name_conn in placements:
+            incoming_per_d2.setdefault(d2_name_conn, []).append(tuple(conn))
+
+    # 按拓扑顺序对每个 d2 做全局对齐（考虑所有入向连接，避免贪心破坏）
     for i in order:
         d2_name = names[i]
         if d2_name not in placements:
             continue
         d2_dev = device_map.get(d2_name, {})
-        # d2 的直接连接邻居（这些器件跳过 MIN_SPACING 检查，但仍检查 NO_OVERLAP）
         d2_connected = connected_neighbors.get(d2_name, set())
-
-        # 遍历所有连接到 d2 的连接（d2 作为下游 d2）
-        for conn in circuit.get("connections", []):
-            if len(conn) < 4:
-                continue
-            d1_name, p1_name, d2_conn, p2_name = (
-                str(conn[0]), conn[1], str(conn[2]), conn[3]
-            )
-            if d2_conn != d2_name:
-                continue
-            if d1_name not in placements or d2_name not in placements:
-                continue
-
-            port1 = _find_port_in_dev(device_map.get(d1_name, {}), p1_name)
-            port2 = _find_port_in_dev(d2_dev, p2_name)
-            if port1 is None or port2 is None:
-                continue
-
-            pl1 = placements[d1_name]
-            pl2 = placements[d2_name]
-            # 端口绝对坐标 = 器件左下角 + 端口相对偏移
-            abs1_x = float(pl1["x"]) + port1[0]
-            abs1_y = float(pl1["y"]) + port1[1]
-            abs2_x = float(pl2["x"]) + port2[0]
-            abs2_y = float(pl2["y"]) + port2[1]
-
-            dir1 = _normalize_dir(port1[2])
-            dir2 = _normalize_dir(port2[2])
-            w2 = float(pl2["w"])
-            h2 = float(pl2["h"])
-
-            # 决定主轴和副轴
-            # DRC PORT_ALIGNMENT 判定: dx > tol AND dy > tol 才算违规
-            # 因此只要 dx ≤ tol 或 dy ≤ tol 之一即对齐通过
-            # 主轴 = 优先对齐的轴；副轴 = 主轴偏差仍 > tol 时的备选
-            if (dir1, dir2) in (("east", "west"), ("west", "east")):
-                # 水平连接（east↔west），主轴 y（对齐 y 使 dy ≤ tol）
-                primary_axis, secondary_axis = "y", "x"
-            elif (dir1, dir2) in (("north", "south"), ("south", "north")):
-                # 垂直连接（north↔south），主轴 x（对齐 x 使 dx ≤ tol）
-                primary_axis, secondary_axis = "x", "y"
-            else:
-                # 方向不明确，选偏差较大的轴为主轴（偏差大的轴优先对齐）
-                if abs(abs1_y - abs2_y) >= abs(abs1_x - abs2_x):
-                    primary_axis, secondary_axis = "y", "x"
-                else:
-                    primary_axis, secondary_axis = "x", "y"
-
-            # *R05 Bug 修复*: 主副轴独立对齐策略
-            # 原代码先提交主轴移动，再在新位置检查副轴。但副轴在原始位置可能可行，
-            # 主轴移动后改变了副轴重叠检查的参考点，可能阻挡原本可行的副轴对齐。
-            #
-            # PORT_ALIGNMENT 规则: dx > tol AND dy > tol 才违规，
-            # 任一轴 ≤ tol 即通过。因此正确策略: 从原始位置独立尝试两轴，
-            # 根据实际 dx/dy 选最优结果。
-            #
-            # 策略（*创新*）: 双候选独立评估
-            #   1. 候选 1: 从原始位置做主轴对齐 → 记录 (dx1, dy1)
-            #   2. 恢复原始位置
-            #   3. 候选 2: 从原始位置做副轴对齐 → 记录 (dx2, dy2)
-            #   4. 选择: 任一候选通过则选通过的；都通过/都不通过则选 max(dx,dy) 较小者
-            orig_x, orig_y = float(pl2["x"]), float(pl2["y"])
-
-            # 候选 1: 主轴对齐（从原始位置，_align_d2_on_axis 内部完全对齐→最近合法位置）
-            if primary_axis == "y":
-                _align_d2_on_axis(
-                    placements, d2_name, d2_connected, w2, h2,
-                    canvas_w, canvas_h, "y", port2[1], abs1_y,
-                )
-            else:
-                _align_d2_on_axis(
-                    placements, d2_name, d2_connected, w2, h2,
-                    canvas_w, canvas_h, "x", port2[0], abs1_x,
-                )
-            p1_x = float(placements[d2_name]["x"])
-            p1_y = float(placements[d2_name]["y"])
-            dx1 = abs(abs1_x - (p1_x + port2[0]))
-            dy1 = abs(abs1_y - (p1_y + port2[1]))
-
-            # 候选 2: 副轴对齐（恢复原始位置后，从原始位置对齐副轴）
-            placements[d2_name]["x"] = orig_x
-            placements[d2_name]["y"] = orig_y
-            if secondary_axis == "y":
-                _align_d2_on_axis(
-                    placements, d2_name, d2_connected, w2, h2,
-                    canvas_w, canvas_h, "y", port2[1], abs1_y,
-                )
-            else:
-                _align_d2_on_axis(
-                    placements, d2_name, d2_connected, w2, h2,
-                    canvas_w, canvas_h, "x", port2[0], abs1_x,
-                )
-            p2_x = float(placements[d2_name]["x"])
-            p2_y = float(placements[d2_name]["y"])
-            dx2 = abs(abs1_x - (p2_x + port2[0]))
-            dy2 = abs(abs1_y - (p2_y + port2[1]))
-
-            # 选择更优候选: PORT_ALIGNMENT 通过 = dx ≤ tol OR dy ≤ tol
-            pass1 = (dx1 <= _ALIGN_PORT_TOL_UM) or (dy1 <= _ALIGN_PORT_TOL_UM)
-            pass2 = (dx2 <= _ALIGN_PORT_TOL_UM) or (dy2 <= _ALIGN_PORT_TOL_UM)
-            # 默认保留候选 2（已在 placements 中），仅在以下情况恢复候选 1:
-            #   - 候选 1 通过且候选 2 不通过
-            #   - 两者同状态（都通过或都不通过）且候选 1 的 max(dx,dy) 更小
-            if pass1 and not pass2:
-                placements[d2_name]["x"] = p1_x
-                placements[d2_name]["y"] = p1_y
-            elif pass2 and not pass1:
-                pass  # 保留候选 2（已在 placements 中）
-            elif max(dx1, dy1) <= max(dx2, dy2):
-                placements[d2_name]["x"] = p1_x
-                placements[d2_name]["y"] = p1_y
+        incoming = incoming_per_d2.get(d2_name, [])
+        if not incoming:
+            continue
+        _align_d2_global(
+            placements, d2_name, d2_dev, incoming, device_map,
+            d2_connected, canvas_w, canvas_h,
+        )
 
     return placements
 
