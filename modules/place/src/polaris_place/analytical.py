@@ -965,30 +965,69 @@ def _align_ports(
                 else:
                     primary_axis, secondary_axis = "x", "y"
 
-            # 主轴对齐（完全对齐 → 最近合法位置，_align_d2_on_axis 内部处理）
+            # *R05 Bug 修复*: 主副轴独立对齐策略
+            # 原代码先提交主轴移动，再在新位置检查副轴。但副轴在原始位置可能可行，
+            # 主轴移动后改变了副轴重叠检查的参考点，可能阻挡原本可行的副轴对齐。
+            #
+            # PORT_ALIGNMENT 规则: dx > tol AND dy > tol 才违规，
+            # 任一轴 ≤ tol 即通过。因此正确策略: 从原始位置独立尝试两轴，
+            # 根据实际 dx/dy 选最优结果。
+            #
+            # 策略（*创新*）: 双候选独立评估
+            #   1. 候选 1: 从原始位置做主轴对齐 → 记录 (dx1, dy1)
+            #   2. 恢复原始位置
+            #   3. 候选 2: 从原始位置做副轴对齐 → 记录 (dx2, dy2)
+            #   4. 选择: 任一候选通过则选通过的；都通过/都不通过则选 max(dx,dy) 较小者
+            orig_x, orig_y = float(pl2["x"]), float(pl2["y"])
+
+            # 候选 1: 主轴对齐（从原始位置，_align_d2_on_axis 内部完全对齐→最近合法位置）
             if primary_axis == "y":
-                dev = _align_d2_on_axis(
+                _align_d2_on_axis(
                     placements, d2_name, d2_connected, w2, h2,
                     canvas_w, canvas_h, "y", port2[1], abs1_y,
                 )
             else:
-                dev = _align_d2_on_axis(
+                _align_d2_on_axis(
                     placements, d2_name, d2_connected, w2, h2,
                     canvas_w, canvas_h, "x", port2[0], abs1_x,
                 )
+            p1_x = float(placements[d2_name]["x"])
+            p1_y = float(placements[d2_name]["y"])
+            dx1 = abs(abs1_x - (p1_x + port2[0]))
+            dy1 = abs(abs1_y - (p1_y + port2[1]))
 
-            # 若主轴偏差仍 > tol，尝试副轴（使副轴偏差 ≤ tol，DRC 不违规）
-            if dev > _ALIGN_PORT_TOL_UM:
-                if secondary_axis == "y":
-                    _align_d2_on_axis(
-                        placements, d2_name, d2_connected, w2, h2,
-                        canvas_w, canvas_h, "y", port2[1], abs1_y,
-                    )
-                else:
-                    _align_d2_on_axis(
-                        placements, d2_name, d2_connected, w2, h2,
-                        canvas_w, canvas_h, "x", port2[0], abs1_x,
-                    )
+            # 候选 2: 副轴对齐（恢复原始位置后，从原始位置对齐副轴）
+            placements[d2_name]["x"] = orig_x
+            placements[d2_name]["y"] = orig_y
+            if secondary_axis == "y":
+                _align_d2_on_axis(
+                    placements, d2_name, d2_connected, w2, h2,
+                    canvas_w, canvas_h, "y", port2[1], abs1_y,
+                )
+            else:
+                _align_d2_on_axis(
+                    placements, d2_name, d2_connected, w2, h2,
+                    canvas_w, canvas_h, "x", port2[0], abs1_x,
+                )
+            p2_x = float(placements[d2_name]["x"])
+            p2_y = float(placements[d2_name]["y"])
+            dx2 = abs(abs1_x - (p2_x + port2[0]))
+            dy2 = abs(abs1_y - (p2_y + port2[1]))
+
+            # 选择更优候选: PORT_ALIGNMENT 通过 = dx ≤ tol OR dy ≤ tol
+            pass1 = (dx1 <= _ALIGN_PORT_TOL_UM) or (dy1 <= _ALIGN_PORT_TOL_UM)
+            pass2 = (dx2 <= _ALIGN_PORT_TOL_UM) or (dy2 <= _ALIGN_PORT_TOL_UM)
+            # 默认保留候选 2（已在 placements 中），仅在以下情况恢复候选 1:
+            #   - 候选 1 通过且候选 2 不通过
+            #   - 两者同状态（都通过或都不通过）且候选 1 的 max(dx,dy) 更小
+            if pass1 and not pass2:
+                placements[d2_name]["x"] = p1_x
+                placements[d2_name]["y"] = p1_y
+            elif pass2 and not pass1:
+                pass  # 保留候选 2（已在 placements 中）
+            elif max(dx1, dy1) <= max(dx2, dy2):
+                placements[d2_name]["x"] = p1_x
+                placements[d2_name]["y"] = p1_y
 
     return placements
 
