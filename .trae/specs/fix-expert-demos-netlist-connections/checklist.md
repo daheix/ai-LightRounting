@@ -33,10 +33,10 @@
 - [x] index.json records 与各 demo meta.json 一致
 
 ## 代码提交（R11）
-- [ ] `git branch --show-current` = main
-- [ ] `git add` 精确文件（27 个，无 `git add -A`）
-- [ ] `git commit -m "fix: expert_demos netlist连接缺失修复（10/10连接数>0）"`
-- [ ] `git push origin main`（无 --force）
+- [x] `git branch --show-current` = main
+- [x] `git add` 精确文件（30 个，无 `git add -A`）
+- [x] `git commit -m "fix: expert_demos netlist连接缺失修复（10/10连接数>0）"` (commit 58831d4)
+- [x] `git push origin main` (0167416..58831d4，无 --force)
 
 ## 操作记录（R07）
 - [x] `操作记录.md` 已追加 R347 轮次记录

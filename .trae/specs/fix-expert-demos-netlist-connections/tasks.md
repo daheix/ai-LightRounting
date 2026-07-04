@@ -31,9 +31,9 @@
   - [x] SubTask 5.3: 总器件数 35，总连接数 25，符合 MST 特性（连接数 = 器件数 - 1）
 
 - [x] Task 6: 按 R11 提交代码
-  - [ ] SubTask 6.1: `git add` 精确文件（27 个：1 脚本 + 10 netlist + 4 placements + 10 meta + 1 index + 1 操作记录）
-  - [ ] SubTask 6.2: `git commit -m "fix: expert_demos netlist连接缺失修复（10/10连接数>0）"`
-  - [ ] SubTask 6.3: `git push origin main`
+  - [x] SubTask 6.1: `git add` 精确文件（30 个：1 脚本 + 10 netlist + 4 placements + 10 meta + 1 index + 1 操作记录 + 3 spec 文档）
+  - [x] SubTask 6.2: `git commit -m "fix: expert_demos netlist连接缺失修复（10/10连接数>0）"` (commit 58831d4)
+  - [x] SubTask 6.3: `git push origin main` (0167416..58831d4)
 
 - [x] Task 7: 按 R07 追加操作记录
   - [x] SubTask 7.1: 在 `操作记录.md` 追加 R347 轮次记录
