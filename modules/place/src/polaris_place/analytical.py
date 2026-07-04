@@ -1026,6 +1026,7 @@ def _align_ports(
 
     # 按拓扑顺序处理（depth 从小到大）
     order = sorted(range(len(names)), key=lambda i: depth[i])
+    order_rev = list(reversed(order))  # 反向拓扑序（下游先处理，移开阻挡器件）
 
     # 构建每个器件的直接连接邻居集合（用于 MIN_SPACING 跳过，与 DRC engine 一致）
     connected_neighbors: dict[str, set[str]] = {}
@@ -1045,20 +1046,26 @@ def _align_ports(
         if d2_name_conn in placements:
             incoming_per_d2.setdefault(d2_name_conn, []).append(tuple(conn))
 
-    # 按拓扑顺序对每个 d2 做全局对齐（考虑所有入向连接，避免贪心破坏）
-    for i in order:
-        d2_name = names[i]
-        if d2_name not in placements:
-            continue
-        d2_dev = device_map.get(d2_name, {})
-        d2_connected = connected_neighbors.get(d2_name, set())
-        incoming = incoming_per_d2.get(d2_name, [])
-        if not incoming:
-            continue
-        _align_d2_global(
-            placements, d2_name, d2_dev, incoming, device_map,
-            d2_connected, canvas_w, canvas_h,
-        )
+    # *创新*: 多趟对齐（3 趟 zigzag）
+    # 第 1 趟正向拓扑序（上游先对齐），第 2 趟反向（下游先移开阻挡），
+    # 第 3 趟正向收尾。解决"下游器件阻挡上游器件对齐位置"的问题:
+    # dc13 想移到 (185,37) 但 dc14 在 FFDH 位置阻挡；第 2 趟 dc14 先
+    # 被处理移走，第 3 趟 dc13 即可移到 (185,37)。不破坏原则保证
+    # 每趟不劣化（score 单调非减）。
+    for pass_idx, pass_order in enumerate([order, order_rev, order]):
+        for i in pass_order:
+            d2_name = names[i]
+            if d2_name not in placements:
+                continue
+            d2_dev = device_map.get(d2_name, {})
+            d2_connected = connected_neighbors.get(d2_name, set())
+            incoming = incoming_per_d2.get(d2_name, [])
+            if not incoming:
+                continue
+            _align_d2_global(
+                placements, d2_name, d2_dev, incoming, device_map,
+                d2_connected, canvas_w, canvas_h,
+            )
 
     return placements
 
