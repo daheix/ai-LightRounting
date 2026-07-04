@@ -54,11 +54,11 @@
   - [ ] SubTask 15.2: 提取legalize.py（合法化）
   - [ ] SubTask 15.3: 提取residual.py（残余修复）
   - [ ] SubTask 15.4: 提取metrics.py（HPWL/密度梯度）
-- [ ] Task 16: 拆分pdk/catalog.py（936L→catalog+devices+filters）
-- [ ] Task 17: 拆分gui/interactive.py（824L→widgets+dialogs+menus）
-- [ ] Task 18: 拆分gui/web_server.py（823L→routes+handlers+static）
-- [ ] Task 19: 拆分quantum_advanced/distributed_ppo.py（808L→actor+critic+rollout+update）
-- [ ] Task 20: 拆分drc/engine.py（803L→rules+checks+reporter）
+- [x] Task 16: 拆分pdk/catalog.py（936L→catalog+devices+filters）✅ 76L/781L/128L, 43测试通过
+- [x] Task 17: 拆分gui/interactive.py（824L→widgets+dialogs+menus）✅ 93L/594L/268L, 30测试通过
+- [x] Task 18: 拆分gui/web_server.py（823L→routes+handlers+static）✅ 156L/353L/487L, 30测试通过
+- [x] Task 19: 拆分quantum_advanced/distributed_ppo.py（808L→actor+critic+rollout+update）✅ 406L/229L/90L/295L, 42测试通过
+- [x] Task 20: 拆分drc/engine.py（803L→rules+checks+reporter）✅ 465L/219L/233L, 51测试通过
 
 ## 阶段6: P2 超长函数拆分+高复杂度降低（并行，按模块分批）
 

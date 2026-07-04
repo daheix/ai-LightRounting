@@ -23,11 +23,11 @@
 
 ## R11质量门禁
 - [ ] place/analytical.py 1480L拆分到≤800L
-- [ ] pdk/catalog.py 936L拆分到≤800L
-- [ ] gui/interactive.py 824L拆分到≤800L
-- [ ] gui/web_server.py 823L拆分到≤800L
-- [ ] quantum_advanced/distributed_ppo.py 808L拆分到≤800L
-- [ ] drc/engine.py 803L拆分到≤800L
+- [x] pdk/catalog.py 936L拆分到≤800L ✅ 76L/781L/128L, 43测试通过
+- [x] gui/interactive.py 824L拆分到≤800L ✅ 93L/594L/268L, 30测试通过
+- [x] gui/web_server.py 823L拆分到≤800L ✅ 156L/353L/487L, 30测试通过
+- [x] quantum_advanced/distributed_ppo.py 808L拆分到≤800L ✅ 406L/229L/90L/295L, 42测试通过
+- [x] drc/engine.py 803L拆分到≤800L ✅ 465L/219L/233L, 51测试通过
 - [ ] 43个超80行函数拆分
 - [ ] 12个圈复杂度>15函数降低
 
