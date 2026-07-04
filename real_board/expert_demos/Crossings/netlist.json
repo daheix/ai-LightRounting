@@ -1,0 +1,161 @@
+{
+  "name": "a",
+  "canvas_w": 57154.95,
+  "canvas_h": 127060.7,
+  "devices": [
+    {
+      "name": "ebeam_crossing4",
+      "device_type": "ebeam_crossing4",
+      "width_um": 9.700000000000045,
+      "height_um": 9.699999999999989,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_crossing4_1",
+      "device_type": "ebeam_crossing4",
+      "width_um": 9.700000000000728,
+      "height_um": 9.699999999999989,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "N"
+        ],
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_crossing4_2",
+      "device_type": "ebeam_crossing4",
+      "width_um": 9.700000000000728,
+      "height_um": 9.699999999999989,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_crossing4_3",
+      "device_type": "ebeam_crossing4",
+      "width_um": 9.69999999999709,
+      "height_um": 9.699999999999989,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "pin2",
+          0.0,
+          0.0,
+          "S"
+        ],
+        [
+          "pin3",
+          0.0,
+          0.0,
+          "E"
+        ],
+        [
+          "pin4",
+          0.0,
+          0.0,
+          "N"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "ebeam_gc_te1550",
+      "device_type": "grating_coupler_1d",
+      "width_um": 33.099999999998545,
+      "height_um": 21.39999999999418,
+      "ports": [
+        [
+          "pin1",
+          0.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    }
+  ],
+  "connections": []
+}

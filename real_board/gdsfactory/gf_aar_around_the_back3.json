@@ -1,0 +1,57 @@
+{
+  "source": "GDSFactory",
+  "name": "aar_around_the_back3",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/aar_around_the_back3.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": [],
+  "routes": {
+    "optical": {
+      "routing_strategy": "route_bundle_all_angle",
+      "settings": {
+        "bend": {
+          "component": "bend_circular",
+          "settings": {
+            "radius": 5
+          }
+        },
+        "start_angle": 90,
+        "end_angle": 180
+      },
+      "links": {
+        "mmi_short,o1": "mmi_long,o1"
+      }
+    }
+  },
+  "placements": {
+    "mmi_short": {
+      "rotation": 180
+    },
+    "mmi_long": {
+      "port": "o1",
+      "rotation": -140,
+      "x": "mmi_short,o1",
+      "y": "mmi_short,o1",
+      "dx": 50,
+      "dy": 20
+    }
+  }
+}

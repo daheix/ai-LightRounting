@@ -1,0 +1,35 @@
+{
+  "source": "GDSFactory",
+  "name": "routes_mmi",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/routes_mmi.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "mmi_bottom": {
+      "component": "mmi2x2"
+    },
+    "mmi_top": {
+      "component": "mmi2x2"
+    }
+  },
+  "connections": [],
+  "routes": {
+    "optical": {
+      "links": {
+        "mmi_bottom,o4": "mmi_top,o1",
+        "mmi_bottom,o3": "mmi_top,o2"
+      },
+      "settings": {
+        "cross_section": "strip"
+      }
+    }
+  },
+  "placements": {
+    "mmi_top": {
+      "x": 100,
+      "y": 100
+    }
+  }
+}

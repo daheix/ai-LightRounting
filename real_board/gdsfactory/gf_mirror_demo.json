@@ -1,0 +1,28 @@
+{
+  "source": "GDSFactory",
+  "name": "mirror_demo",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/mirror_demo.pic.yml",
+  "n_instances": 1,
+  "n_connections": 0,
+  "n_routes": 0,
+  "has_placements": true,
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": [],
+  "routes": {},
+  "placements": {
+    "mmi_long": {
+      "x": 0,
+      "y": 0,
+      "mirror": "o1",
+      "rotation": 0
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "source": "GDSFactory",
+  "name": "pads",
+  "file": "gdsfactory/gdsfactory/samples/demo/circuits/pads.pic.yml",
+  "n_instances": 4,
+  "n_connections": 0,
+  "n_routes": 1,
+  "has_placements": true,
+  "instances": {
+    "bl": {
+      "component": "pad"
+    },
+    "tl": {
+      "component": "pad"
+    },
+    "br": {
+      "component": "pad"
+    },
+    "tr": {
+      "component": "pad"
+    }
+  },
+  "connections": [],
+  "routes": {
+    "electrical": {
+      "settings": {
+        "cross_section": "metal_routing",
+        "separation": 20,
+        "end_straight_length": 100
+      },
+      "links": {
+        "tl,e3": "tr,e1",
+        "bl,e3": "br,e1"
+      }
+    }
+  },
+  "placements": {
+    "tl": {
+      "x": 0,
+      "y": 500
+    },
+    "br": {
+      "x": 400,
+      "y": 400
+    },
+    "tr": {
+      "x": 400,
+      "y": 600
+    }
+  }
+}

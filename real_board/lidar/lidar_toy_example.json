@@ -1,0 +1,151 @@
+{
+  "source": "LiDAR",
+  "name": "toy_example",
+  "file": "LiDAR/src/picroute/benchmarks/toy_example/toy_example.gp.yml",
+  "n_devices": 6,
+  "n_nets": 2,
+  "has_placements": false,
+  "instances": {
+    "fanout_yb_0_0": {
+      "component": "mmi1x2",
+      "settings": {
+        "macro_type": "m_mmi1x2_2",
+        "placement": [
+          "PLACED",
+          [
+            120,
+            80
+          ],
+          "N",
+          [
+            10,
+            10,
+            10,
+            10
+          ]
+        ]
+      }
+    },
+    "fanout_yb_0_1": {
+      "component": "mmi1x2",
+      "settings": {
+        "macro_type": "m_mmi1x2_2",
+        "placement": [
+          "PLACED",
+          [
+            70,
+            52
+          ],
+          "E",
+          [
+            10,
+            10,
+            10,
+            10
+          ]
+        ]
+      }
+    },
+    "fanout_yb_0_2": {
+      "component": "mmi1x2",
+      "settings": {
+        "macro_type": "m_mmi1x2_2",
+        "placement": [
+          "PLACED",
+          [
+            20,
+            20
+          ],
+          "S",
+          [
+            10,
+            10,
+            10,
+            10
+          ]
+        ]
+      }
+    },
+    "mrr_array_0_mrr_0": {
+      "component": "ring_single_pn",
+      "settings": {
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "PLACED",
+          [
+            0,
+            60
+          ],
+          "N",
+          [
+            10,
+            10,
+            10,
+            10
+          ]
+        ]
+      }
+    },
+    "obstacle1": {
+      "component": "rectangle",
+      "settings": {
+        "size": [
+          10,
+          60
+        ],
+        "layer": "WG",
+        "macro_type": "m_ring_double_pn_1",
+        "placement": [
+          "PLACED",
+          [
+            50,
+            30
+          ],
+          "N",
+          [
+            10,
+            10,
+            10,
+            10
+          ]
+        ]
+      }
+    },
+    "obstacle2": {
+      "component": "rectangle",
+      "settings": {
+        "size": [
+          10,
+          10
+        ],
+        "layer": "WG",
+        "macro_type": "m_ring_double_pn_2",
+        "placement": [
+          "PLACED",
+          [
+            50,
+            35
+          ],
+          "N",
+          [
+            10,
+            10,
+            10,
+            10
+          ]
+        ]
+      }
+    }
+  },
+  "nets": {
+    "n_0": [
+      "mrr_array_0_mrr_0,o2",
+      "fanout_yb_0_0,o1"
+    ],
+    "n_1": [
+      "fanout_yb_0_1,o2",
+      "fanout_yb_0_2,o1"
+    ]
+  },
+  "placements": {}
+}

@@ -1,0 +1,3311 @@
+{
+  "source": "LiDAR",
+  "name": "mrr_weight_bank_4x4",
+  "file": "LiDAR/src/picroute/benchmarks/mrr_weight_bank_4x4/mrr_weight_bank_4x4.yml",
+  "n_devices": 31,
+  "n_nets": 30,
+  "has_placements": false,
+  "instances": {
+    "gc_array_in_gc_0": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            0,
+            250.0
+          ],
+          "FN",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_in_gc_1": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            0,
+            350.0
+          ],
+          "FN",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_in_gc_2": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            0,
+            450.0
+          ],
+          "FN",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_in_gc_3": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            0,
+            550.0
+          ],
+          "FN",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mod_array_in_mrr_0": {
+      "component": "ring_double_pn",
+      "settings": {
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "sections": [
+            {
+              "width": 0.5,
+              "offset": 0.0,
+              "insets": null,
+              "layer": "WG",
+              "port_names": [
+                "o1",
+                "o2"
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "_default",
+              "hidden": false,
+              "simplify": null,
+              "width_function": null,
+              "offset_function": null
+            },
+            {
+              "width": 6.0,
+              "offset": 0,
+              "insets": null,
+              "layer": "SLAB90",
+              "port_names": [
+                null,
+                null
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "slab",
+              "hidden": false,
+              "simplify": 0.05,
+              "width_function": null,
+              "offset_function": null
+            }
+          ],
+          "components_along_path": [],
+          "radius": 20.0,
+          "radius_min": 20.0,
+          "bbox_layers": [
+            "DEVREC"
+          ],
+          "bbox_offsets": [
+            0.0
+          ]
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "macro_type": "m_ring_double_pn_1",
+        "placement": [
+          "UNPLACED",
+          [
+            87.164,
+            250.0
+          ],
+          "W",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mod_array_in_mrr_1": {
+      "component": "ring_double_pn",
+      "settings": {
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "sections": [
+            {
+              "width": 0.5,
+              "offset": 0.0,
+              "insets": null,
+              "layer": "WG",
+              "port_names": [
+                "o1",
+                "o2"
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "_default",
+              "hidden": false,
+              "simplify": null,
+              "width_function": null,
+              "offset_function": null
+            },
+            {
+              "width": 6.0,
+              "offset": 0,
+              "insets": null,
+              "layer": "SLAB90",
+              "port_names": [
+                null,
+                null
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "slab",
+              "hidden": false,
+              "simplify": 0.05,
+              "width_function": null,
+              "offset_function": null
+            }
+          ],
+          "components_along_path": [],
+          "radius": 20.0,
+          "radius_min": 20.0,
+          "bbox_layers": [
+            "DEVREC"
+          ],
+          "bbox_offsets": [
+            0.0
+          ]
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "macro_type": "m_ring_double_pn_1",
+        "placement": [
+          "UNPLACED",
+          [
+            87.164,
+            350.0
+          ],
+          "W",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mod_array_in_mrr_2": {
+      "component": "ring_double_pn",
+      "settings": {
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "sections": [
+            {
+              "width": 0.5,
+              "offset": 0.0,
+              "insets": null,
+              "layer": "WG",
+              "port_names": [
+                "o1",
+                "o2"
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "_default",
+              "hidden": false,
+              "simplify": null,
+              "width_function": null,
+              "offset_function": null
+            },
+            {
+              "width": 6.0,
+              "offset": 0,
+              "insets": null,
+              "layer": "SLAB90",
+              "port_names": [
+                null,
+                null
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "slab",
+              "hidden": false,
+              "simplify": 0.05,
+              "width_function": null,
+              "offset_function": null
+            }
+          ],
+          "components_along_path": [],
+          "radius": 20.0,
+          "radius_min": 20.0,
+          "bbox_layers": [
+            "DEVREC"
+          ],
+          "bbox_offsets": [
+            0.0
+          ]
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "macro_type": "m_ring_double_pn_1",
+        "placement": [
+          "UNPLACED",
+          [
+            87.164,
+            450.0
+          ],
+          "W",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mod_array_in_mrr_3": {
+      "component": "ring_double_pn",
+      "settings": {
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "sections": [
+            {
+              "width": 0.5,
+              "offset": 0.0,
+              "insets": null,
+              "layer": "WG",
+              "port_names": [
+                "o1",
+                "o2"
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "_default",
+              "hidden": false,
+              "simplify": null,
+              "width_function": null,
+              "offset_function": null
+            },
+            {
+              "width": 6.0,
+              "offset": 0,
+              "insets": null,
+              "layer": "SLAB90",
+              "port_names": [
+                null,
+                null
+              ],
+              "port_types": [
+                "optical",
+                "optical"
+              ],
+              "name": "slab",
+              "hidden": false,
+              "simplify": 0.05,
+              "width_function": null,
+              "offset_function": null
+            }
+          ],
+          "components_along_path": [],
+          "radius": 20.0,
+          "radius_min": 20.0,
+          "bbox_layers": [
+            "DEVREC"
+          ],
+          "bbox_offsets": [
+            0.0
+          ]
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "macro_type": "m_ring_double_pn_1",
+        "placement": [
+          "UNPLACED",
+          [
+            87.164,
+            550.0
+          ],
+          "W",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "fanout_yb_0_0": {
+      "component": "mmi1x2",
+      "settings": {
+        "width": null,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": {
+          "function": "taper"
+        },
+        "cross_section": "xs_sc",
+        "macro_type": "m_mmi1x2_2",
+        "placement": [
+          "UNPLACED",
+          [
+            132.01570237522031,
+            400.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "fanout_yb_1_0": {
+      "component": "mmi1x2",
+      "settings": {
+        "width": null,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": {
+          "function": "taper"
+        },
+        "cross_section": "xs_sc",
+        "macro_type": "m_mmi1x2_2",
+        "placement": [
+          "UNPLACED",
+          [
+            162.01570237522031,
+            350.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "fanout_yb_1_1": {
+      "component": "mmi1x2",
+      "settings": {
+        "width": null,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": {
+          "function": "taper"
+        },
+        "cross_section": "xs_sc",
+        "macro_type": "m_mmi1x2_2",
+        "placement": [
+          "UNPLACED",
+          [
+            162.01570237522031,
+            450.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_0_mrr_0": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            217.51570237522031,
+            250.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_0_mrr_1": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            217.51570237522031,
+            350.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_0_mrr_2": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            217.51570237522031,
+            450.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_0_mrr_3": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            217.51570237522031,
+            550.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_1_mrr_0": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            262.36620179219324,
+            250.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_1_mrr_1": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            262.36620179219324,
+            350.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_1_mrr_2": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            262.36620179219324,
+            450.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_1_mrr_3": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            262.36620179219324,
+            550.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_2_mrr_0": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            307.2167012091661,
+            250.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_2_mrr_1": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            307.2167012091661,
+            350.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_2_mrr_2": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            307.2167012091661,
+            450.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_2_mrr_3": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            307.2167012091661,
+            550.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_3_mrr_0": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            352.06720062613897,
+            250.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_3_mrr_1": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            352.06720062613897,
+            350.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_3_mrr_2": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            352.06720062613897,
+            450.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "mrr_array_3_mrr_3": {
+      "component": "ring_single_pn",
+      "settings": {
+        "gap": 0.3,
+        "radius": 5.0,
+        "doping_angle": 85,
+        "cross_section": {
+          "function": "cross_section",
+          "settings": {
+            "radius": 10,
+            "radius_min": 5,
+            "sections": [
+              {
+                "width": 4.85,
+                "offset": 0,
+                "insets": null,
+                "layer": "SLAB90",
+                "port_names": [
+                  null,
+                  null
+                ],
+                "port_types": [
+                  "optical",
+                  "optical"
+                ],
+                "name": "slab",
+                "hidden": false,
+                "simplify": null,
+                "width_function": null,
+                "offset_function": null
+              }
+            ]
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "pn_cross_section": {
+          "function": "pn",
+          "settings": {
+            "width_doping": 2.425,
+            "width_slab": 4.85,
+            "layer_via": "VIAC",
+            "width_via": 0.5,
+            "layer_metal": "M1",
+            "width_metal": 0.5
+          },
+          "module": "gdsfactory.cross_section"
+        },
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "heater_vias": {
+          "function": "via_stack",
+          "settings": {
+            "size": [
+              0.5,
+              0.5
+            ],
+            "layers": [
+              "M1",
+              "M2"
+            ],
+            "vias": [
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIAC",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              },
+              {
+                "function": "via",
+                "settings": {
+                  "layer": "VIA1",
+                  "size": [
+                    0.1,
+                    0.1
+                  ],
+                  "spacing": [
+                    0.2,
+                    0.2
+                  ],
+                  "enclosure": 0.1
+                },
+                "module": "gdsfactory.components.via"
+              }
+            ]
+          },
+          "module": "gdsfactory.components.via_stack"
+        },
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3",
+        "placement": [
+          "UNPLACED",
+          [
+            352.06720062613897,
+            550.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_out_gc_0": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            772.836,
+            250.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_out_gc_1": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            772.836,
+            350.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_out_gc_2": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            772.836,
+            450.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    },
+    "gc_array_out_gc_3": {
+      "component": "grating_coupler_elliptical_lumerical",
+      "settings": {
+        "parameters": [
+          -2.429836,
+          0.1,
+          0.48007,
+          0.1,
+          0.607398,
+          0.1,
+          0.449884,
+          0.1,
+          0.427412,
+          0.1,
+          0.47579,
+          0.1,
+          0.502665,
+          0.100029,
+          0.510037,
+          0.1,
+          0.4944,
+          0.10796,
+          0.474006,
+          0.149727,
+          0.432728,
+          0.183953,
+          0.387202,
+          0.236018,
+          0.360322,
+          0.242618,
+          0.357704,
+          0.260664,
+          0.35261,
+          0.246682,
+          0.371749,
+          0.229208,
+          0.377696,
+          0.224653,
+          0.376544,
+          0.220418,
+          0.380476,
+          0.219236,
+          0.379887,
+          0.217004,
+          0.382917,
+          0.218278,
+          0.364132,
+          0.237291,
+          0.367683,
+          0.248651,
+          0.344151,
+          0.273357,
+          0.330623,
+          0.273504
+        ],
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0",
+        "placement": [
+          "FIXED",
+          [
+            772.836,
+            550.0
+          ],
+          "N",
+          [
+            30,
+            30,
+            30,
+            30
+          ]
+        ]
+      }
+    }
+  },
+  "nets": {
+    "n_0": [
+      "fanout_yb_0_0,o2",
+      "fanout_yb_1_0,o1"
+    ],
+    "n_1": [
+      "fanout_yb_0_0,o3",
+      "fanout_yb_1_1,o1"
+    ],
+    "n_2": [
+      "gc_array_in_gc_0,o1",
+      "mod_array_in_mrr_0,o4"
+    ],
+    "n_3": [
+      "gc_array_in_gc_1,o1",
+      "mod_array_in_mrr_1,o4"
+    ],
+    "n_4": [
+      "gc_array_in_gc_2,o1",
+      "mod_array_in_mrr_2,o4"
+    ],
+    "n_5": [
+      "gc_array_in_gc_3,o1",
+      "mod_array_in_mrr_3,o4"
+    ],
+    "n_6": [
+      "mod_array_in_mrr_0,o2",
+      "mod_array_in_mrr_1,o1"
+    ],
+    "n_7": [
+      "mod_array_in_mrr_1,o2",
+      "mod_array_in_mrr_2,o1"
+    ],
+    "n_8": [
+      "mod_array_in_mrr_2,o2",
+      "mod_array_in_mrr_3,o1"
+    ],
+    "n_9": [
+      "mod_array_in_mrr_0,o1",
+      "fanout_yb_0_0,o1"
+    ],
+    "n_10": [
+      "fanout_yb_1_0,o2",
+      "mrr_array_0_mrr_0,o1"
+    ],
+    "n_11": [
+      "fanout_yb_1_0,o3",
+      "mrr_array_0_mrr_1,o1"
+    ],
+    "n_12": [
+      "fanout_yb_1_1,o2",
+      "mrr_array_0_mrr_2,o1"
+    ],
+    "n_13": [
+      "fanout_yb_1_1,o3",
+      "mrr_array_0_mrr_3,o1"
+    ],
+    "n_14": [
+      "mrr_array_0_mrr_0,o2",
+      "mrr_array_1_mrr_0,o1"
+    ],
+    "n_15": [
+      "mrr_array_0_mrr_1,o2",
+      "mrr_array_1_mrr_1,o1"
+    ],
+    "n_16": [
+      "mrr_array_0_mrr_2,o2",
+      "mrr_array_1_mrr_2,o1"
+    ],
+    "n_17": [
+      "mrr_array_0_mrr_3,o2",
+      "mrr_array_1_mrr_3,o1"
+    ],
+    "n_18": [
+      "mrr_array_1_mrr_0,o2",
+      "mrr_array_2_mrr_0,o1"
+    ],
+    "n_19": [
+      "mrr_array_1_mrr_1,o2",
+      "mrr_array_2_mrr_1,o1"
+    ],
+    "n_20": [
+      "mrr_array_1_mrr_2,o2",
+      "mrr_array_2_mrr_2,o1"
+    ],
+    "n_21": [
+      "mrr_array_1_mrr_3,o2",
+      "mrr_array_2_mrr_3,o1"
+    ],
+    "n_22": [
+      "mrr_array_2_mrr_0,o2",
+      "mrr_array_3_mrr_0,o1"
+    ],
+    "n_23": [
+      "mrr_array_2_mrr_1,o2",
+      "mrr_array_3_mrr_1,o1"
+    ],
+    "n_24": [
+      "mrr_array_2_mrr_2,o2",
+      "mrr_array_3_mrr_2,o1"
+    ],
+    "n_25": [
+      "mrr_array_2_mrr_3,o2",
+      "mrr_array_3_mrr_3,o1"
+    ],
+    "n_26": [
+      "mrr_array_3_mrr_0,o2",
+      "gc_array_out_gc_0,o1"
+    ],
+    "n_27": [
+      "mrr_array_3_mrr_1,o2",
+      "gc_array_out_gc_1,o1"
+    ],
+    "n_28": [
+      "mrr_array_3_mrr_2,o2",
+      "gc_array_out_gc_2,o1"
+    ],
+    "n_29": [
+      "mrr_array_3_mrr_3,o2",
+      "gc_array_out_gc_3,o1"
+    ]
+  },
+  "placements": {}
+}

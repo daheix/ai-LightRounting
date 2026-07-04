@@ -1,0 +1,35 @@
+{
+  "source": "GDSFactory",
+  "name": "mmis",
+  "file": "gdsfactory/docs/notebooks/yaml_pics/mmis.pic.yml",
+  "n_instances": 2,
+  "n_connections": 0,
+  "n_routes": 0,
+  "has_placements": true,
+  "instances": {
+    "mmi_long": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 10
+      }
+    },
+    "mmi_short": {
+      "component": "mmi1x2",
+      "settings": {
+        "width_mmi": 4.5,
+        "length_mmi": 5
+      }
+    }
+  },
+  "connections": [],
+  "routes": {},
+  "placements": {
+    "mmi_long": {
+      "port": "o1",
+      "x": 20,
+      "y": 10,
+      "mirror": false
+    }
+  }
+}
