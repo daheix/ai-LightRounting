@@ -472,6 +472,9 @@ def _find_device_key(dev: DeviceSpec) -> str | None:
     for key, std_dev in STANDARD_DEVICES.items():
         if std_dev.device_type == dev.device_type:
             return key
+    # 合法：DeviceSpec 类型不在 STANDARD_DEVICES 字典中，调用方据此跳过
+    # 该器件的参数扫描（generate_param_sweep_variants 检测 None 后 continue）。
+    # 非 fall-back：未命中字典是合法查找结果，不伪造键名。
     return None
 
 

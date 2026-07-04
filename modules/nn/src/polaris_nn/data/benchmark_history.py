@@ -239,6 +239,8 @@ class HistoryTracker:
         """
         history = self.get_history(benchmark_name)
         if not history.entries:
+            # 合法：该 benchmark 无历史记录，无法分析趋势，调用方据此跳过或提示。
+            # 非 fall-back：空历史不伪造 TrendAnalysis 数据。
             return None
         hpwls = [e.report.hpwl_um for e in history.entries]
         first_hpwl = hpwls[0]

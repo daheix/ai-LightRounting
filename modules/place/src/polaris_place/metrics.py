@@ -343,6 +343,8 @@ def _topological_depth(
         - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
     """
     if n == 0:
+        # 合法：无器件输入则拓扑深度为空列表（与 Tarjan SCC/Kahn 拓扑排序
+        # 在 N=0 时的标准定义一致，CLRS §22.4）。非 fall-back：不伪造深度。
         return []
 
     sccs = _tarjan_scc(n, connections)

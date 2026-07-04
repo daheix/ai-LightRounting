@@ -250,6 +250,8 @@ class TransientHeatResult:
             若达到稳态则返回最后一步温度场，否则返回 None。
         """
         if len(self.temperatures) < 2:
+            # 合法：步数不足 2 步无法判定稳态，调用方据此等待更多采样。
+            # 非 fall-back：不伪造温度场。
             return None
         T_last = self.temperatures[-1]
         T_prev = self.temperatures[-2]
@@ -257,6 +259,8 @@ class TransientHeatResult:
         scale = np.max(np.abs(T_last)) + 1e-30
         if max_change / scale < rtol:
             return T_last
+        # 合法：未达稳态（max_change/scale >= rtol），调用方据此继续仿真。
+        # 非 fall-back：不返回未收敛温度场冒充稳态。
         return None
 
 

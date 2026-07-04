@@ -72,6 +72,8 @@ def _find_port_in_dev(
         if len(port) >= 3 and str(port[0]) == port_name:
             direction = str(port[3]) if len(port) >= 4 else "unknown"
             return (float(port[1]), float(port[2]), direction)
+    # 合法：端口未找到，调用方据此跳过该连接（align.py:218 / residual.py:69 均判 None 后 continue）。
+    # 非 fall-back：未在 device.ports 中匹配到 port_name 是契约内的合法查找结果。
     return None
 
 

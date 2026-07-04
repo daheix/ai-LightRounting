@@ -102,6 +102,9 @@ def find_checkpoint() -> str | None:
     for path in candidates:
         if Path(path).exists():
             return path
+    # 合法：查找函数未命中，由调用方 place_ppo_gnn 决策（ppo_gnn.py:547-553
+    # 显式 raise RuntimeError 禁止降级）。非 fall-back：本函数仅负责查找，
+    # 不决策是否降级，决策权在调用方。
     return None
 
 

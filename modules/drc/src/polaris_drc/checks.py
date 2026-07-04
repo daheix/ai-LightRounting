@@ -114,6 +114,9 @@ def find_port(device: dict, port_name: str
         if len(port) >= 3 and str(port[0]) == port_name:
             direction = str(port[3]) if len(port) >= 4 else "unknown"
             return (float(port[1]), float(port[2]), direction)
+    # 合法：端口未找到，调用方据此跳过该连接的 PORT_ALIGNMENT 检查
+    # （engine.py 调用方判 None 后 continue）。非 fall-back：未命中 ports
+    # 列表是合法查找结果，不伪造端口坐标导致误判 DRC 违规。
     return None
 
 
@@ -205,6 +208,8 @@ def check_density_range(rule: DRCRule, circuit: dict, placements: dict,
         thr = density_min_threshold_by_canvas(canvas_w, canvas_h)
     violated = (density_pct > thr) if is_max else (density_pct < thr)
     if not violated:
+        # 合法：密度在阈值内无违规，返回空违规列表（DRC 检查标准空结果）。
+        # 非 fall-back：不伪造违规。
         return []
     canvas_cx = canvas_w / 2.0
     canvas_cy = canvas_h / 2.0

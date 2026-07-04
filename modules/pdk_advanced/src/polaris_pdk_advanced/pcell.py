@@ -101,6 +101,8 @@ class PCellCache:
             self._hits += 1
             return self._store[key]
         self._misses += 1
+        # 合法：缓存未命中（LRU miss），调用方据此重建 PCell。
+        # 非 fall-back：返回 None 是缓存协议的标准 miss 信号。
         return None
 
     def put(self, key: tuple, cell: PCellMultiView) -> None:
@@ -622,6 +624,8 @@ def _extract_number(description: str, *patterns: str) -> float | None:
         match = re.search(pat, description, re.IGNORECASE)
         if match:
             return float(match.group(1))
+    # 合法：所有 pattern 均未匹配到数字，调用方据此使用默认值或跳过。
+    # 非 fall-back：正则未命中是合法查找结果，不伪造数值。
     return None
 
 

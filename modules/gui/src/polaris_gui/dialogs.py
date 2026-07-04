@@ -121,6 +121,9 @@ class MacroDebugger:
             if event == "call":
                 # next 模式且已开始跟踪则不进入子帧
                 if self._step_mode == "next" and self._executed_lines:
+                    # 合法：sys.settrace 协议要求返回 None 表示"不跟踪该子帧"，
+                    # 见 Python docs sys.settrace "If trace returns None, tracing
+                    # is turned off for the scope being entered."
                     return None
                 return trace
             if event != "line":
@@ -203,6 +206,8 @@ class MacroIDE:
             more = self._console.push(source)
             if more:
                 raise SyntaxError(f"控制台输入不完整: {source!r}")
+            # 合法：Python 语句无返回值（与 KLayout Macro IDE / REPL 协议一致，
+            # 语句执行成功返回 None）。非 fall-back：不伪造返回值。
             return None
 
     def set_breakpoint(self, line: int, cond: str | None = None) -> None:

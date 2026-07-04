@@ -270,6 +270,9 @@ def _infer_pic_ir_ports(
     """
     template = _LIDAR_PORT_TEMPLATES.get(component)
     if template is None:
+        # 合法：component 不在预定义 _LIDAR_PORT_TEMPLATES 中，调用方据此
+        # 跳过端口推断或回退到 YAML 显式 ports 字段（load_pic_ir 检测后处理）。
+        # 非 fall-back：未命中模板不伪造端口坐标。
         return []
     # 按实际尺寸缩放端口位置（模板基于标准尺寸）
     ports: list[tuple[str, float, float, str]] = []

@@ -278,7 +278,10 @@ def _find_nearest_legal_pos_1d(
     lo = 0.0
     hi = canvas_limit - size
     if hi < lo:
-        return None  # 画布太小
+        # 合法：画布太小放不下该器件，调用方据此跳过该候选位置
+        # （align.py:296 / residual.py:175 均判 None 后保留原位置）。
+        # 非 fall-back：返回 None 是契约内的合法信号，不替代真实布局。
+        return None
 
     # 候选点: 边界 lo/hi + 每个禁止区间的边界（touching 合法）
     candidates = [lo, hi]
