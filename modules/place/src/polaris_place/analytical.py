@@ -41,10 +41,13 @@
 
 from __future__ import annotations
 
+import logging
 import math
 from dataclasses import dataclass
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 __all__ = ["AnalyticalConfig", "place_analytical"]
 
@@ -1021,7 +1024,10 @@ def _align_ports(
     try:
         depth = _topological_depth(len(names), idx_conns)
     except RuntimeError:
-        # 连接存在环（极少见），跳过端口对齐（R03: 不假数据，保持 FFDH 结果）
+        logger.warning(
+            "拓扑排序检测到环，跳过端口对齐优化，保持 FFDH 初始布局结果"
+            "（电路含反馈环路，不影响正确性，仅少一次优化）"
+        )
         return placements
 
     # 按拓扑顺序处理（depth 从小到大）

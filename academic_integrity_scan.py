@@ -5,7 +5,7 @@ import os
 import re
 from pathlib import Path
 
-POLARIS_DIR = Path("/workspace/src/polaris")
+POLARIS_DIR = Path("/workspace/modules")
 
 # 文献引用模式
 CITATION_PATTERNS = [

@@ -22,6 +22,7 @@ GDS 加载/Region 检查函数时才 import klayout.db。这使得子模块在�
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -29,6 +30,8 @@ from typing import Any
 
 from ._layer_map import POLARIS_GDS_LAYER_MAP, get_layer_tuple
 from ._types import Violation, ViolationType
+
+logger = logging.getLogger(__name__)
 
 
 class DRCCheckType(Enum):
@@ -256,6 +259,10 @@ class KLayoutDRCRunner:
         import klayout.db as db  # 延迟导入
         layer_idx = self._get_layer_index(layout, rule.layer_name)
         if layer_idx is None:
+            logger.warning(
+                "DRC 规则 %s 引用的层 %s 在当前 GDS 中不存在，跳过该规则",
+                rule.name, rule.layer_name,
+            )
             return []
 
         region = db.Region(layout.begin_shapes(cell, layer_idx))
@@ -316,9 +323,17 @@ class KLayoutDRCRunner:
         import klayout.db as db  # 延迟导入
         layout, cell, dbu = ctx.layout, ctx.cell, ctx.dbu
         if rule.enclosure_layer_name is None:
+            logger.warning(
+                "DRC 包围规则 %s 未指定 enclosure_layer_name，跳过",
+                rule.name,
+            )
             return []
         outer_idx = self._get_layer_index(layout, rule.enclosure_layer_name)
         if outer_idx is None:
+            logger.warning(
+                "DRC 包围规则 %s 引用的包围层 %s 在当前 GDS 中不存在，跳过",
+                rule.name, rule.enclosure_layer_name,
+            )
             return []
         outer_region = db.Region(layout.begin_shapes(cell, outer_idx))
         if outer_region.is_empty():
