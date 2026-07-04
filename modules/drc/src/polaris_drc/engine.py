@@ -76,11 +76,27 @@ __all__ = [
 
 # 端口合法方向集合
 _VALID_DIRECTIONS = frozenset(("north", "south", "east", "west"))
+# 端口方向缩写→全称映射（电路 JSON 常用 N/S/E/W，DRC 统一为 north/south/east/west）
+_DIR_ABBR_MAP = {
+    "n": "north", "s": "south", "e": "east", "w": "west",
+    "north": "north", "south": "south", "east": "east", "west": "west",
+}
 # 端口方向相对映射（连接两端方向应相对）
 _FACING_PAIRS = frozenset(
     (("east", "west"), ("west", "east"),
      ("north", "south"), ("south", "north"))
 )
+
+
+def _normalize_direction(direction: str) -> str:
+    """规范化端口方向（N→north, S→south, E→east, W→west）。
+
+    支持大小写缩写（N/S/E/W）和全称（north/south/east/west）。
+    非法方向原样返回（由 PORT_DIRECTION 规则报违规）。
+    """
+    return _DIR_ABBR_MAP.get(str(direction).lower(), str(direction))
+
+
 # 端口对齐容差（μm），来源: SiEPIC 波导对准容差
 _PORT_ALIGN_TOL_UM = 5.0
 
@@ -539,7 +555,7 @@ class DRCEngine:
                         location=(0.0, 0.0),
                     ))
                     continue
-                direction = str(port[3])
+                direction = _normalize_direction(str(port[3]))
                 if direction not in _VALID_DIRECTIONS:
                     violations.append(DRCViolation(
                         rule_name=rule.name,
@@ -584,8 +600,8 @@ class DRCEngine:
             port2 = _find_port(device_map.get(d2, {}), p2)
             if port1 is None or port2 is None:
                 continue
-            dir1 = port1[2] if len(port1) >= 3 else "unknown"
-            dir2 = port2[2] if len(port2) >= 3 else "unknown"
+            dir1 = _normalize_direction(port1[2]) if len(port1) >= 3 else "unknown"
+            dir2 = _normalize_direction(port2[2]) if len(port2) >= 3 else "unknown"
             if (dir1, dir2) not in _FACING_PAIRS:
                 abs1 = _port_abs(placements[d1], port1)
                 violations.append(DRCViolation(
