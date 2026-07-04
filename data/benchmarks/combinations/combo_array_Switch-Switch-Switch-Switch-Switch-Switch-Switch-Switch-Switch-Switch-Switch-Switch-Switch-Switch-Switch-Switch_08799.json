@@ -1,0 +1,2918 @@
+{
+  "name": "combo_array_Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch-Switch_08799",
+  "description": "组合电路 (array): Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch + Switch",
+  "platform": "InP",
+  "topology": "combination_array",
+  "scale": "XS",
+  "canvas_w": 3200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c0_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c0_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c0_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c0_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c2_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c3_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c4_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c4_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c4_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c4_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c4_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c5_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c5_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c5_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c5_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c5_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c6_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c6_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c6_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c6_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c6_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c7_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c7_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c7_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c7_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c7_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c8_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c8_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c8_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c8_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c8_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c9_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c9_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c9_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c9_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c9_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c10_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c10_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c10_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c10_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c10_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c11_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c11_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c11_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c11_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c11_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c12_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c12_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c12_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c12_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c12_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c13_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c13_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c13_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c13_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c13_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c14_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c14_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c14_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c14_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c14_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c15_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c15_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c15_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c15_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c15_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_wg_in1",
+      "out",
+      "c0_sw1",
+      "in1"
+    ],
+    [
+      "c0_wg_in2",
+      "out",
+      "c0_sw1",
+      "in2"
+    ],
+    [
+      "c0_sw1",
+      "out1",
+      "c0_wg_out1",
+      "in"
+    ],
+    [
+      "c0_sw1",
+      "out2",
+      "c0_wg_out2",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_sw1",
+      "in1"
+    ],
+    [
+      "c1_wg_in2",
+      "out",
+      "c1_sw1",
+      "in2"
+    ],
+    [
+      "c1_sw1",
+      "out1",
+      "c1_wg_out1",
+      "in"
+    ],
+    [
+      "c1_sw1",
+      "out2",
+      "c1_wg_out2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_sw1",
+      "in1"
+    ],
+    [
+      "c2_wg_in2",
+      "out",
+      "c2_sw1",
+      "in2"
+    ],
+    [
+      "c2_sw1",
+      "out1",
+      "c2_wg_out1",
+      "in"
+    ],
+    [
+      "c2_sw1",
+      "out2",
+      "c2_wg_out2",
+      "in"
+    ],
+    [
+      "c3_wg_in1",
+      "out",
+      "c3_sw1",
+      "in1"
+    ],
+    [
+      "c3_wg_in2",
+      "out",
+      "c3_sw1",
+      "in2"
+    ],
+    [
+      "c3_sw1",
+      "out1",
+      "c3_wg_out1",
+      "in"
+    ],
+    [
+      "c3_sw1",
+      "out2",
+      "c3_wg_out2",
+      "in"
+    ],
+    [
+      "c4_wg_in1",
+      "out",
+      "c4_sw1",
+      "in1"
+    ],
+    [
+      "c4_wg_in2",
+      "out",
+      "c4_sw1",
+      "in2"
+    ],
+    [
+      "c4_sw1",
+      "out1",
+      "c4_wg_out1",
+      "in"
+    ],
+    [
+      "c4_sw1",
+      "out2",
+      "c4_wg_out2",
+      "in"
+    ],
+    [
+      "c5_wg_in1",
+      "out",
+      "c5_sw1",
+      "in1"
+    ],
+    [
+      "c5_wg_in2",
+      "out",
+      "c5_sw1",
+      "in2"
+    ],
+    [
+      "c5_sw1",
+      "out1",
+      "c5_wg_out1",
+      "in"
+    ],
+    [
+      "c5_sw1",
+      "out2",
+      "c5_wg_out2",
+      "in"
+    ],
+    [
+      "c6_wg_in1",
+      "out",
+      "c6_sw1",
+      "in1"
+    ],
+    [
+      "c6_wg_in2",
+      "out",
+      "c6_sw1",
+      "in2"
+    ],
+    [
+      "c6_sw1",
+      "out1",
+      "c6_wg_out1",
+      "in"
+    ],
+    [
+      "c6_sw1",
+      "out2",
+      "c6_wg_out2",
+      "in"
+    ],
+    [
+      "c7_wg_in1",
+      "out",
+      "c7_sw1",
+      "in1"
+    ],
+    [
+      "c7_wg_in2",
+      "out",
+      "c7_sw1",
+      "in2"
+    ],
+    [
+      "c7_sw1",
+      "out1",
+      "c7_wg_out1",
+      "in"
+    ],
+    [
+      "c7_sw1",
+      "out2",
+      "c7_wg_out2",
+      "in"
+    ],
+    [
+      "c8_wg_in1",
+      "out",
+      "c8_sw1",
+      "in1"
+    ],
+    [
+      "c8_wg_in2",
+      "out",
+      "c8_sw1",
+      "in2"
+    ],
+    [
+      "c8_sw1",
+      "out1",
+      "c8_wg_out1",
+      "in"
+    ],
+    [
+      "c8_sw1",
+      "out2",
+      "c8_wg_out2",
+      "in"
+    ],
+    [
+      "c9_wg_in1",
+      "out",
+      "c9_sw1",
+      "in1"
+    ],
+    [
+      "c9_wg_in2",
+      "out",
+      "c9_sw1",
+      "in2"
+    ],
+    [
+      "c9_sw1",
+      "out1",
+      "c9_wg_out1",
+      "in"
+    ],
+    [
+      "c9_sw1",
+      "out2",
+      "c9_wg_out2",
+      "in"
+    ],
+    [
+      "c10_wg_in1",
+      "out",
+      "c10_sw1",
+      "in1"
+    ],
+    [
+      "c10_wg_in2",
+      "out",
+      "c10_sw1",
+      "in2"
+    ],
+    [
+      "c10_sw1",
+      "out1",
+      "c10_wg_out1",
+      "in"
+    ],
+    [
+      "c10_sw1",
+      "out2",
+      "c10_wg_out2",
+      "in"
+    ],
+    [
+      "c11_wg_in1",
+      "out",
+      "c11_sw1",
+      "in1"
+    ],
+    [
+      "c11_wg_in2",
+      "out",
+      "c11_sw1",
+      "in2"
+    ],
+    [
+      "c11_sw1",
+      "out1",
+      "c11_wg_out1",
+      "in"
+    ],
+    [
+      "c11_sw1",
+      "out2",
+      "c11_wg_out2",
+      "in"
+    ],
+    [
+      "c12_wg_in1",
+      "out",
+      "c12_sw1",
+      "in1"
+    ],
+    [
+      "c12_wg_in2",
+      "out",
+      "c12_sw1",
+      "in2"
+    ],
+    [
+      "c12_sw1",
+      "out1",
+      "c12_wg_out1",
+      "in"
+    ],
+    [
+      "c12_sw1",
+      "out2",
+      "c12_wg_out2",
+      "in"
+    ],
+    [
+      "c13_wg_in1",
+      "out",
+      "c13_sw1",
+      "in1"
+    ],
+    [
+      "c13_wg_in2",
+      "out",
+      "c13_sw1",
+      "in2"
+    ],
+    [
+      "c13_sw1",
+      "out1",
+      "c13_wg_out1",
+      "in"
+    ],
+    [
+      "c13_sw1",
+      "out2",
+      "c13_wg_out2",
+      "in"
+    ],
+    [
+      "c14_wg_in1",
+      "out",
+      "c14_sw1",
+      "in1"
+    ],
+    [
+      "c14_wg_in2",
+      "out",
+      "c14_sw1",
+      "in2"
+    ],
+    [
+      "c14_sw1",
+      "out1",
+      "c14_wg_out1",
+      "in"
+    ],
+    [
+      "c14_sw1",
+      "out2",
+      "c14_wg_out2",
+      "in"
+    ],
+    [
+      "c15_wg_in1",
+      "out",
+      "c15_sw1",
+      "in1"
+    ],
+    [
+      "c15_wg_in2",
+      "out",
+      "c15_sw1",
+      "in2"
+    ],
+    [
+      "c15_sw1",
+      "out1",
+      "c15_wg_out1",
+      "in"
+    ],
+    [
+      "c15_sw1",
+      "out2",
+      "c15_wg_out2",
+      "in"
+    ],
+    [
+      "c0_wg_out1",
+      "out",
+      "c1_wg_in1",
+      "in"
+    ],
+    [
+      "c0_wg_out2",
+      "out",
+      "c1_wg_in2",
+      "in"
+    ],
+    [
+      "c1_wg_out1",
+      "out",
+      "c2_wg_in1",
+      "in"
+    ],
+    [
+      "c1_wg_out2",
+      "out",
+      "c2_wg_in2",
+      "in"
+    ],
+    [
+      "c2_wg_out1",
+      "out",
+      "c3_wg_in1",
+      "in"
+    ],
+    [
+      "c2_wg_out2",
+      "out",
+      "c3_wg_in2",
+      "in"
+    ],
+    [
+      "c3_wg_out1",
+      "out",
+      "c4_wg_in1",
+      "in"
+    ],
+    [
+      "c3_wg_out2",
+      "out",
+      "c4_wg_in2",
+      "in"
+    ],
+    [
+      "c4_wg_out1",
+      "out",
+      "c5_wg_in1",
+      "in"
+    ],
+    [
+      "c4_wg_out2",
+      "out",
+      "c5_wg_in2",
+      "in"
+    ],
+    [
+      "c5_wg_out1",
+      "out",
+      "c6_wg_in1",
+      "in"
+    ],
+    [
+      "c5_wg_out2",
+      "out",
+      "c6_wg_in2",
+      "in"
+    ],
+    [
+      "c6_wg_out1",
+      "out",
+      "c7_wg_in1",
+      "in"
+    ],
+    [
+      "c6_wg_out2",
+      "out",
+      "c7_wg_in2",
+      "in"
+    ],
+    [
+      "c7_wg_out1",
+      "out",
+      "c8_wg_in1",
+      "in"
+    ],
+    [
+      "c7_wg_out2",
+      "out",
+      "c8_wg_in2",
+      "in"
+    ],
+    [
+      "c8_wg_out1",
+      "out",
+      "c9_wg_in1",
+      "in"
+    ],
+    [
+      "c8_wg_out2",
+      "out",
+      "c9_wg_in2",
+      "in"
+    ],
+    [
+      "c9_wg_out1",
+      "out",
+      "c10_wg_in1",
+      "in"
+    ],
+    [
+      "c9_wg_out2",
+      "out",
+      "c10_wg_in2",
+      "in"
+    ],
+    [
+      "c10_wg_out1",
+      "out",
+      "c11_wg_in1",
+      "in"
+    ],
+    [
+      "c10_wg_out2",
+      "out",
+      "c11_wg_in2",
+      "in"
+    ],
+    [
+      "c11_wg_out1",
+      "out",
+      "c12_wg_in1",
+      "in"
+    ],
+    [
+      "c11_wg_out2",
+      "out",
+      "c12_wg_in2",
+      "in"
+    ],
+    [
+      "c12_wg_out1",
+      "out",
+      "c13_wg_in1",
+      "in"
+    ],
+    [
+      "c12_wg_out2",
+      "out",
+      "c13_wg_in2",
+      "in"
+    ],
+    [
+      "c13_wg_out1",
+      "out",
+      "c14_wg_in1",
+      "in"
+    ],
+    [
+      "c13_wg_out2",
+      "out",
+      "c14_wg_in2",
+      "in"
+    ],
+    [
+      "c14_wg_out1",
+      "out",
+      "c15_wg_in1",
+      "in"
+    ],
+    [
+      "c14_wg_out2",
+      "out",
+      "c15_wg_in2",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "array",
+    "n_components": 16,
+    "component_sources": [
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 208799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 209799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 210799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 211799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 212799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 213799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 214799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 215799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 216799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 217799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 218799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 219799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 220799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 221799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 222799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 223799,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    ],
+    "n_bridges": 30,
+    "n_total_devices": 80,
+    "n_total_connections": 94,
+    "seed": 8799,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ],
+    "array_size": 16,
+    "base_scale": "XS"
+  }
+}

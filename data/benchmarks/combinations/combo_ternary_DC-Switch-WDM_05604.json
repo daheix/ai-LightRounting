@@ -1,0 +1,1593 @@
+{
+  "name": "combo_ternary_DC-Switch-WDM_05604",
+  "description": "组合电路 (ternary): DC + Switch + WDM",
+  "platform": "SiN",
+  "topology": "combination_ternary",
+  "scale": "S",
+  "canvas_w": 1200.0,
+  "canvas_h": 400.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 1.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c0_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c0_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 1.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c0_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c0_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 1.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c0_dc3",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 2
+      }
+    },
+    {
+      "name": "c0_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 1.0,
+        "role": "tap_2"
+      }
+    },
+    {
+      "name": "c0_dc4",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 3
+      }
+    },
+    {
+      "name": "c0_wg5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 1.0,
+        "role": "tap_3"
+      }
+    },
+    {
+      "name": "c0_wg6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 1.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c1_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_sw2",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_sw3",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_sw4",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_sw5",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_sw6",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_awg1",
+      "type": "arrayed_waveguide_grating",
+      "width_um": 100.0,
+      "height_um": 80.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          15.0,
+          "W"
+        ],
+        [
+          "in3",
+          0.0,
+          25.0,
+          "W"
+        ],
+        [
+          "in4",
+          0.0,
+          35.0,
+          "W"
+        ],
+        [
+          "in5",
+          0.0,
+          45.0,
+          "W"
+        ],
+        [
+          "in6",
+          0.0,
+          55.0,
+          "W"
+        ],
+        [
+          "in7",
+          0.0,
+          65.0,
+          "W"
+        ],
+        [
+          "in8",
+          0.0,
+          75.0,
+          "W"
+        ],
+        [
+          "out1",
+          100.0,
+          5.0,
+          "E"
+        ],
+        [
+          "out2",
+          100.0,
+          15.0,
+          "E"
+        ],
+        [
+          "out3",
+          100.0,
+          25.0,
+          "E"
+        ],
+        [
+          "out4",
+          100.0,
+          35.0,
+          "E"
+        ],
+        [
+          "out5",
+          100.0,
+          45.0,
+          "E"
+        ],
+        [
+          "out6",
+          100.0,
+          55.0,
+          "E"
+        ],
+        [
+          "out7",
+          100.0,
+          65.0,
+          "E"
+        ],
+        [
+          "out8",
+          100.0,
+          75.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "channels": 8,
+        "fsr_nm": 160.0,
+        "insertion_loss_db": 3.0,
+        "source": "Takada et al., 1984; SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c2_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_out8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_wg1",
+      "out",
+      "c0_dc1",
+      "in1"
+    ],
+    [
+      "c0_dc1",
+      "out2",
+      "c0_wg2",
+      "in"
+    ],
+    [
+      "c0_dc1",
+      "out1",
+      "c0_dc2",
+      "in1"
+    ],
+    [
+      "c0_dc2",
+      "out2",
+      "c0_wg3",
+      "in"
+    ],
+    [
+      "c0_dc2",
+      "out1",
+      "c0_dc3",
+      "in1"
+    ],
+    [
+      "c0_dc3",
+      "out2",
+      "c0_wg4",
+      "in"
+    ],
+    [
+      "c0_dc3",
+      "out1",
+      "c0_dc4",
+      "in1"
+    ],
+    [
+      "c0_dc4",
+      "out2",
+      "c0_wg5",
+      "in"
+    ],
+    [
+      "c0_dc4",
+      "out1",
+      "c0_wg6",
+      "in"
+    ],
+    [
+      "c1_sw1",
+      "out1",
+      "c1_sw3",
+      "in1"
+    ],
+    [
+      "c1_sw1",
+      "out2",
+      "c1_sw3",
+      "in2"
+    ],
+    [
+      "c1_sw2",
+      "out1",
+      "c1_sw4",
+      "in1"
+    ],
+    [
+      "c1_sw2",
+      "out2",
+      "c1_sw4",
+      "in2"
+    ],
+    [
+      "c1_sw3",
+      "out1",
+      "c1_sw5",
+      "in1"
+    ],
+    [
+      "c1_sw3",
+      "out2",
+      "c1_sw5",
+      "in2"
+    ],
+    [
+      "c1_sw4",
+      "out1",
+      "c1_sw6",
+      "in1"
+    ],
+    [
+      "c1_sw4",
+      "out2",
+      "c1_sw6",
+      "in2"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_sw1",
+      "in1"
+    ],
+    [
+      "c1_wg_in2",
+      "out",
+      "c1_sw1",
+      "in2"
+    ],
+    [
+      "c1_wg_in3",
+      "out",
+      "c1_sw2",
+      "in1"
+    ],
+    [
+      "c1_wg_in4",
+      "out",
+      "c1_sw2",
+      "in2"
+    ],
+    [
+      "c1_sw5",
+      "out1",
+      "c1_wg_out1",
+      "in"
+    ],
+    [
+      "c1_sw5",
+      "out2",
+      "c1_wg_out2",
+      "in"
+    ],
+    [
+      "c1_sw6",
+      "out1",
+      "c1_wg_out3",
+      "in"
+    ],
+    [
+      "c1_sw6",
+      "out2",
+      "c1_wg_out4",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_awg1",
+      "in1"
+    ],
+    [
+      "c2_awg1",
+      "out1",
+      "c2_wg_out1",
+      "in"
+    ],
+    [
+      "c2_wg_in2",
+      "out",
+      "c2_awg1",
+      "in2"
+    ],
+    [
+      "c2_awg1",
+      "out2",
+      "c2_wg_out2",
+      "in"
+    ],
+    [
+      "c2_wg_in3",
+      "out",
+      "c2_awg1",
+      "in3"
+    ],
+    [
+      "c2_awg1",
+      "out3",
+      "c2_wg_out3",
+      "in"
+    ],
+    [
+      "c2_wg_in4",
+      "out",
+      "c2_awg1",
+      "in4"
+    ],
+    [
+      "c2_awg1",
+      "out4",
+      "c2_wg_out4",
+      "in"
+    ],
+    [
+      "c2_wg_in5",
+      "out",
+      "c2_awg1",
+      "in5"
+    ],
+    [
+      "c2_awg1",
+      "out5",
+      "c2_wg_out5",
+      "in"
+    ],
+    [
+      "c2_wg_in6",
+      "out",
+      "c2_awg1",
+      "in6"
+    ],
+    [
+      "c2_awg1",
+      "out6",
+      "c2_wg_out6",
+      "in"
+    ],
+    [
+      "c2_wg_in7",
+      "out",
+      "c2_awg1",
+      "in7"
+    ],
+    [
+      "c2_awg1",
+      "out7",
+      "c2_wg_out7",
+      "in"
+    ],
+    [
+      "c2_wg_in8",
+      "out",
+      "c2_awg1",
+      "in8"
+    ],
+    [
+      "c2_awg1",
+      "out8",
+      "c2_wg_out8",
+      "in"
+    ],
+    [
+      "c0_wg2",
+      "out",
+      "c1_wg_in1",
+      "in"
+    ],
+    [
+      "c0_wg3",
+      "out",
+      "c1_wg_in2",
+      "in"
+    ],
+    [
+      "c0_wg4",
+      "out",
+      "c1_wg_in3",
+      "in"
+    ],
+    [
+      "c0_wg5",
+      "out",
+      "c1_wg_in4",
+      "in"
+    ],
+    [
+      "c1_wg_out1",
+      "out",
+      "c2_wg_in1",
+      "in"
+    ],
+    [
+      "c1_wg_out2",
+      "out",
+      "c2_wg_in2",
+      "in"
+    ],
+    [
+      "c1_wg_out3",
+      "out",
+      "c2_wg_in3",
+      "in"
+    ],
+    [
+      "c1_wg_out4",
+      "out",
+      "c2_wg_in4",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "ternary",
+    "n_components": 3,
+    "component_sources": [
+      {
+        "topology": "DC",
+        "scale": "S",
+        "platform": "SiN",
+        "seed": 205604,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Switch",
+        "scale": "S",
+        "platform": "SiN",
+        "seed": 206604,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "WDM",
+        "scale": "S",
+        "platform": "SiN",
+        "seed": 207604,
+        "source": "Takada et al. 1984; SiEPIC AWG"
+      }
+    ],
+    "n_bridges": 8,
+    "n_total_devices": 41,
+    "n_total_connections": 49,
+    "seed": 5604,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ]
+  }
+}

@@ -1,0 +1,382 @@
+{
+  "name": "combo_binary_Switch-Switch_03952",
+  "description": "组合电路 (binary): Switch + Switch",
+  "platform": "SOI",
+  "topology": "combination_binary",
+  "scale": "XS",
+  "canvas_w": 400.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c0_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c0_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c0_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c0_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_sw1",
+      "type": "optical_switch_2x2",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "insertion_loss_db": 0.5,
+        "crosstalk_db": -30.0,
+        "switch_time_ns": 10.0,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    },
+    {
+      "name": "c1_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_wg_in1",
+      "out",
+      "c0_sw1",
+      "in1"
+    ],
+    [
+      "c0_wg_in2",
+      "out",
+      "c0_sw1",
+      "in2"
+    ],
+    [
+      "c0_sw1",
+      "out1",
+      "c0_wg_out1",
+      "in"
+    ],
+    [
+      "c0_sw1",
+      "out2",
+      "c0_wg_out2",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_sw1",
+      "in1"
+    ],
+    [
+      "c1_wg_in2",
+      "out",
+      "c1_sw1",
+      "in2"
+    ],
+    [
+      "c1_sw1",
+      "out1",
+      "c1_wg_out1",
+      "in"
+    ],
+    [
+      "c1_sw1",
+      "out2",
+      "c1_wg_out2",
+      "in"
+    ],
+    [
+      "c0_wg_out1",
+      "out",
+      "c1_wg_in1",
+      "in"
+    ],
+    [
+      "c0_wg_out2",
+      "out",
+      "c1_wg_in2",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "binary",
+    "n_components": 2,
+    "component_sources": [
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 403952,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      },
+      {
+        "topology": "Switch",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 404952,
+        "source": "Benes 1965; Spanke & Murphy JLT 1988"
+      }
+    ],
+    "n_bridges": 2,
+    "n_total_devices": 10,
+    "n_total_connections": 10,
+    "seed": 3952,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ]
+  }
+}

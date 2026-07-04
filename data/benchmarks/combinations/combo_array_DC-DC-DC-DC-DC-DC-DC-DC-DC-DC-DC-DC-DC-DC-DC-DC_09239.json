@@ -1,0 +1,3776 @@
+{
+  "name": "combo_array_DC-DC-DC-DC-DC-DC-DC-DC-DC-DC-DC-DC-DC-DC-DC-DC_09239",
+  "description": "组合电路 (array): DC + DC + DC + DC + DC + DC + DC + DC + DC + DC + DC + DC + DC + DC + DC + DC",
+  "platform": "InP",
+  "topology": "combination_array",
+  "scale": "XS",
+  "canvas_w": 3200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c0_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c0_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c0_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c0_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c0_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c1_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c1_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c1_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c1_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c1_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c1_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c2_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c2_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c2_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c2_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c2_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c2_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c3_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c3_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c3_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c3_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c3_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c3_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c4_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c4_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c4_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c4_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c4_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c4_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c5_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c5_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c5_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c5_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c5_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c5_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c6_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c6_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c6_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c6_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c6_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c6_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c7_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c7_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c7_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c7_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c7_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c7_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c8_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c8_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c8_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c8_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c8_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c8_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c9_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c9_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c9_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c9_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c9_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c9_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c10_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c10_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c10_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c10_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c10_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c10_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c11_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c11_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c11_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c11_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c11_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c11_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c12_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c12_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c12_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c12_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c12_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c12_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c13_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c13_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c13_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c13_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c13_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c13_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c14_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c14_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c14_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c14_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c14_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c14_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    },
+    {
+      "name": "c15_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "input"
+      }
+    },
+    {
+      "name": "c15_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 0
+      }
+    },
+    {
+      "name": "c15_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_0"
+      }
+    },
+    {
+      "name": "c15_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "index": 1
+      }
+    },
+    {
+      "name": "c15_wg3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "tap_1"
+      }
+    },
+    {
+      "name": "c15_wg4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "length_um": 50.0,
+        "source": "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "width_um": 2.0,
+        "role": "through"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_wg1",
+      "out",
+      "c0_dc1",
+      "in1"
+    ],
+    [
+      "c0_dc1",
+      "out2",
+      "c0_wg2",
+      "in"
+    ],
+    [
+      "c0_dc1",
+      "out1",
+      "c0_dc2",
+      "in1"
+    ],
+    [
+      "c0_dc2",
+      "out2",
+      "c0_wg3",
+      "in"
+    ],
+    [
+      "c0_dc2",
+      "out1",
+      "c0_wg4",
+      "in"
+    ],
+    [
+      "c1_wg1",
+      "out",
+      "c1_dc1",
+      "in1"
+    ],
+    [
+      "c1_dc1",
+      "out2",
+      "c1_wg2",
+      "in"
+    ],
+    [
+      "c1_dc1",
+      "out1",
+      "c1_dc2",
+      "in1"
+    ],
+    [
+      "c1_dc2",
+      "out2",
+      "c1_wg3",
+      "in"
+    ],
+    [
+      "c1_dc2",
+      "out1",
+      "c1_wg4",
+      "in"
+    ],
+    [
+      "c2_wg1",
+      "out",
+      "c2_dc1",
+      "in1"
+    ],
+    [
+      "c2_dc1",
+      "out2",
+      "c2_wg2",
+      "in"
+    ],
+    [
+      "c2_dc1",
+      "out1",
+      "c2_dc2",
+      "in1"
+    ],
+    [
+      "c2_dc2",
+      "out2",
+      "c2_wg3",
+      "in"
+    ],
+    [
+      "c2_dc2",
+      "out1",
+      "c2_wg4",
+      "in"
+    ],
+    [
+      "c3_wg1",
+      "out",
+      "c3_dc1",
+      "in1"
+    ],
+    [
+      "c3_dc1",
+      "out2",
+      "c3_wg2",
+      "in"
+    ],
+    [
+      "c3_dc1",
+      "out1",
+      "c3_dc2",
+      "in1"
+    ],
+    [
+      "c3_dc2",
+      "out2",
+      "c3_wg3",
+      "in"
+    ],
+    [
+      "c3_dc2",
+      "out1",
+      "c3_wg4",
+      "in"
+    ],
+    [
+      "c4_wg1",
+      "out",
+      "c4_dc1",
+      "in1"
+    ],
+    [
+      "c4_dc1",
+      "out2",
+      "c4_wg2",
+      "in"
+    ],
+    [
+      "c4_dc1",
+      "out1",
+      "c4_dc2",
+      "in1"
+    ],
+    [
+      "c4_dc2",
+      "out2",
+      "c4_wg3",
+      "in"
+    ],
+    [
+      "c4_dc2",
+      "out1",
+      "c4_wg4",
+      "in"
+    ],
+    [
+      "c5_wg1",
+      "out",
+      "c5_dc1",
+      "in1"
+    ],
+    [
+      "c5_dc1",
+      "out2",
+      "c5_wg2",
+      "in"
+    ],
+    [
+      "c5_dc1",
+      "out1",
+      "c5_dc2",
+      "in1"
+    ],
+    [
+      "c5_dc2",
+      "out2",
+      "c5_wg3",
+      "in"
+    ],
+    [
+      "c5_dc2",
+      "out1",
+      "c5_wg4",
+      "in"
+    ],
+    [
+      "c6_wg1",
+      "out",
+      "c6_dc1",
+      "in1"
+    ],
+    [
+      "c6_dc1",
+      "out2",
+      "c6_wg2",
+      "in"
+    ],
+    [
+      "c6_dc1",
+      "out1",
+      "c6_dc2",
+      "in1"
+    ],
+    [
+      "c6_dc2",
+      "out2",
+      "c6_wg3",
+      "in"
+    ],
+    [
+      "c6_dc2",
+      "out1",
+      "c6_wg4",
+      "in"
+    ],
+    [
+      "c7_wg1",
+      "out",
+      "c7_dc1",
+      "in1"
+    ],
+    [
+      "c7_dc1",
+      "out2",
+      "c7_wg2",
+      "in"
+    ],
+    [
+      "c7_dc1",
+      "out1",
+      "c7_dc2",
+      "in1"
+    ],
+    [
+      "c7_dc2",
+      "out2",
+      "c7_wg3",
+      "in"
+    ],
+    [
+      "c7_dc2",
+      "out1",
+      "c7_wg4",
+      "in"
+    ],
+    [
+      "c8_wg1",
+      "out",
+      "c8_dc1",
+      "in1"
+    ],
+    [
+      "c8_dc1",
+      "out2",
+      "c8_wg2",
+      "in"
+    ],
+    [
+      "c8_dc1",
+      "out1",
+      "c8_dc2",
+      "in1"
+    ],
+    [
+      "c8_dc2",
+      "out2",
+      "c8_wg3",
+      "in"
+    ],
+    [
+      "c8_dc2",
+      "out1",
+      "c8_wg4",
+      "in"
+    ],
+    [
+      "c9_wg1",
+      "out",
+      "c9_dc1",
+      "in1"
+    ],
+    [
+      "c9_dc1",
+      "out2",
+      "c9_wg2",
+      "in"
+    ],
+    [
+      "c9_dc1",
+      "out1",
+      "c9_dc2",
+      "in1"
+    ],
+    [
+      "c9_dc2",
+      "out2",
+      "c9_wg3",
+      "in"
+    ],
+    [
+      "c9_dc2",
+      "out1",
+      "c9_wg4",
+      "in"
+    ],
+    [
+      "c10_wg1",
+      "out",
+      "c10_dc1",
+      "in1"
+    ],
+    [
+      "c10_dc1",
+      "out2",
+      "c10_wg2",
+      "in"
+    ],
+    [
+      "c10_dc1",
+      "out1",
+      "c10_dc2",
+      "in1"
+    ],
+    [
+      "c10_dc2",
+      "out2",
+      "c10_wg3",
+      "in"
+    ],
+    [
+      "c10_dc2",
+      "out1",
+      "c10_wg4",
+      "in"
+    ],
+    [
+      "c11_wg1",
+      "out",
+      "c11_dc1",
+      "in1"
+    ],
+    [
+      "c11_dc1",
+      "out2",
+      "c11_wg2",
+      "in"
+    ],
+    [
+      "c11_dc1",
+      "out1",
+      "c11_dc2",
+      "in1"
+    ],
+    [
+      "c11_dc2",
+      "out2",
+      "c11_wg3",
+      "in"
+    ],
+    [
+      "c11_dc2",
+      "out1",
+      "c11_wg4",
+      "in"
+    ],
+    [
+      "c12_wg1",
+      "out",
+      "c12_dc1",
+      "in1"
+    ],
+    [
+      "c12_dc1",
+      "out2",
+      "c12_wg2",
+      "in"
+    ],
+    [
+      "c12_dc1",
+      "out1",
+      "c12_dc2",
+      "in1"
+    ],
+    [
+      "c12_dc2",
+      "out2",
+      "c12_wg3",
+      "in"
+    ],
+    [
+      "c12_dc2",
+      "out1",
+      "c12_wg4",
+      "in"
+    ],
+    [
+      "c13_wg1",
+      "out",
+      "c13_dc1",
+      "in1"
+    ],
+    [
+      "c13_dc1",
+      "out2",
+      "c13_wg2",
+      "in"
+    ],
+    [
+      "c13_dc1",
+      "out1",
+      "c13_dc2",
+      "in1"
+    ],
+    [
+      "c13_dc2",
+      "out2",
+      "c13_wg3",
+      "in"
+    ],
+    [
+      "c13_dc2",
+      "out1",
+      "c13_wg4",
+      "in"
+    ],
+    [
+      "c14_wg1",
+      "out",
+      "c14_dc1",
+      "in1"
+    ],
+    [
+      "c14_dc1",
+      "out2",
+      "c14_wg2",
+      "in"
+    ],
+    [
+      "c14_dc1",
+      "out1",
+      "c14_dc2",
+      "in1"
+    ],
+    [
+      "c14_dc2",
+      "out2",
+      "c14_wg3",
+      "in"
+    ],
+    [
+      "c14_dc2",
+      "out1",
+      "c14_wg4",
+      "in"
+    ],
+    [
+      "c15_wg1",
+      "out",
+      "c15_dc1",
+      "in1"
+    ],
+    [
+      "c15_dc1",
+      "out2",
+      "c15_wg2",
+      "in"
+    ],
+    [
+      "c15_dc1",
+      "out1",
+      "c15_dc2",
+      "in1"
+    ],
+    [
+      "c15_dc2",
+      "out2",
+      "c15_wg3",
+      "in"
+    ],
+    [
+      "c15_dc2",
+      "out1",
+      "c15_wg4",
+      "in"
+    ],
+    [
+      "c0_wg2",
+      "out",
+      "c1_wg1",
+      "in"
+    ],
+    [
+      "c0_wg3",
+      "out",
+      "c1_dc1",
+      "in2"
+    ],
+    [
+      "c0_wg4",
+      "out",
+      "c1_dc2",
+      "in2"
+    ],
+    [
+      "c1_wg2",
+      "out",
+      "c2_wg1",
+      "in"
+    ],
+    [
+      "c1_wg3",
+      "out",
+      "c2_dc1",
+      "in2"
+    ],
+    [
+      "c1_wg4",
+      "out",
+      "c2_dc2",
+      "in2"
+    ],
+    [
+      "c2_wg2",
+      "out",
+      "c3_wg1",
+      "in"
+    ],
+    [
+      "c2_wg3",
+      "out",
+      "c3_dc1",
+      "in2"
+    ],
+    [
+      "c2_wg4",
+      "out",
+      "c3_dc2",
+      "in2"
+    ],
+    [
+      "c3_wg2",
+      "out",
+      "c4_wg1",
+      "in"
+    ],
+    [
+      "c3_wg3",
+      "out",
+      "c4_dc1",
+      "in2"
+    ],
+    [
+      "c3_wg4",
+      "out",
+      "c4_dc2",
+      "in2"
+    ],
+    [
+      "c4_wg2",
+      "out",
+      "c5_wg1",
+      "in"
+    ],
+    [
+      "c4_wg3",
+      "out",
+      "c5_dc1",
+      "in2"
+    ],
+    [
+      "c4_wg4",
+      "out",
+      "c5_dc2",
+      "in2"
+    ],
+    [
+      "c5_wg2",
+      "out",
+      "c6_wg1",
+      "in"
+    ],
+    [
+      "c5_wg3",
+      "out",
+      "c6_dc1",
+      "in2"
+    ],
+    [
+      "c5_wg4",
+      "out",
+      "c6_dc2",
+      "in2"
+    ],
+    [
+      "c6_wg2",
+      "out",
+      "c7_wg1",
+      "in"
+    ],
+    [
+      "c6_wg3",
+      "out",
+      "c7_dc1",
+      "in2"
+    ],
+    [
+      "c6_wg4",
+      "out",
+      "c7_dc2",
+      "in2"
+    ],
+    [
+      "c7_wg2",
+      "out",
+      "c8_wg1",
+      "in"
+    ],
+    [
+      "c7_wg3",
+      "out",
+      "c8_dc1",
+      "in2"
+    ],
+    [
+      "c7_wg4",
+      "out",
+      "c8_dc2",
+      "in2"
+    ],
+    [
+      "c8_wg2",
+      "out",
+      "c9_wg1",
+      "in"
+    ],
+    [
+      "c8_wg3",
+      "out",
+      "c9_dc1",
+      "in2"
+    ],
+    [
+      "c8_wg4",
+      "out",
+      "c9_dc2",
+      "in2"
+    ],
+    [
+      "c9_wg2",
+      "out",
+      "c10_wg1",
+      "in"
+    ],
+    [
+      "c9_wg3",
+      "out",
+      "c10_dc1",
+      "in2"
+    ],
+    [
+      "c9_wg4",
+      "out",
+      "c10_dc2",
+      "in2"
+    ],
+    [
+      "c10_wg2",
+      "out",
+      "c11_wg1",
+      "in"
+    ],
+    [
+      "c10_wg3",
+      "out",
+      "c11_dc1",
+      "in2"
+    ],
+    [
+      "c10_wg4",
+      "out",
+      "c11_dc2",
+      "in2"
+    ],
+    [
+      "c11_wg2",
+      "out",
+      "c12_wg1",
+      "in"
+    ],
+    [
+      "c11_wg3",
+      "out",
+      "c12_dc1",
+      "in2"
+    ],
+    [
+      "c11_wg4",
+      "out",
+      "c12_dc2",
+      "in2"
+    ],
+    [
+      "c12_wg2",
+      "out",
+      "c13_wg1",
+      "in"
+    ],
+    [
+      "c12_wg3",
+      "out",
+      "c13_dc1",
+      "in2"
+    ],
+    [
+      "c12_wg4",
+      "out",
+      "c13_dc2",
+      "in2"
+    ],
+    [
+      "c13_wg2",
+      "out",
+      "c14_wg1",
+      "in"
+    ],
+    [
+      "c13_wg3",
+      "out",
+      "c14_dc1",
+      "in2"
+    ],
+    [
+      "c13_wg4",
+      "out",
+      "c14_dc2",
+      "in2"
+    ],
+    [
+      "c14_wg2",
+      "out",
+      "c15_wg1",
+      "in"
+    ],
+    [
+      "c14_wg3",
+      "out",
+      "c15_dc1",
+      "in2"
+    ],
+    [
+      "c14_wg4",
+      "out",
+      "c15_dc2",
+      "in2"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "array",
+    "n_components": 16,
+    "component_sources": [
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 609239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 610239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 611239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 612239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 613239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 614239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 615239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 616239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 617239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 618239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 619239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 620239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 621239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 622239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 623239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "DC",
+        "scale": "XS",
+        "platform": "InP",
+        "seed": 624239,
+        "source": "SiEPic 定向耦合器阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    ],
+    "n_bridges": 45,
+    "n_total_devices": 96,
+    "n_total_connections": 125,
+    "seed": 9239,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ],
+    "array_size": 16,
+    "base_scale": "XS"
+  }
+}

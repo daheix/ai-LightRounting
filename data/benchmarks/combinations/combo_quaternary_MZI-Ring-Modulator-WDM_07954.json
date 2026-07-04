@@ -1,0 +1,1250 @@
+{
+  "name": "combo_quaternary_MZI-Ring-Modulator-WDM_07954",
+  "description": "组合电路 (quaternary): MZI + Ring + Modulator + WDM",
+  "platform": "LNOI",
+  "topology": "combination_quaternary",
+  "scale": "S",
+  "canvas_w": 1600.0,
+  "canvas_h": 400.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c0_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c0_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c1_ring1",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 50.0,
+        "gap_um": 0.2,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_wg1",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 30.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_wg2",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 30.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c2_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm3",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm4",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c2_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c2_det3",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c2_det4",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_awg1",
+      "type": "arrayed_waveguide_grating",
+      "width_um": 100.0,
+      "height_um": 80.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          15.0,
+          "W"
+        ],
+        [
+          "in3",
+          0.0,
+          25.0,
+          "W"
+        ],
+        [
+          "in4",
+          0.0,
+          35.0,
+          "W"
+        ],
+        [
+          "in5",
+          0.0,
+          45.0,
+          "W"
+        ],
+        [
+          "in6",
+          0.0,
+          55.0,
+          "W"
+        ],
+        [
+          "in7",
+          0.0,
+          65.0,
+          "W"
+        ],
+        [
+          "in8",
+          0.0,
+          75.0,
+          "W"
+        ],
+        [
+          "out1",
+          100.0,
+          5.0,
+          "E"
+        ],
+        [
+          "out2",
+          100.0,
+          15.0,
+          "E"
+        ],
+        [
+          "out3",
+          100.0,
+          25.0,
+          "E"
+        ],
+        [
+          "out4",
+          100.0,
+          35.0,
+          "E"
+        ],
+        [
+          "out5",
+          100.0,
+          45.0,
+          "E"
+        ],
+        [
+          "out6",
+          100.0,
+          55.0,
+          "E"
+        ],
+        [
+          "out7",
+          100.0,
+          65.0,
+          "E"
+        ],
+        [
+          "out8",
+          100.0,
+          75.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "channels": 8,
+        "fsr_nm": 160.0,
+        "insertion_loss_db": 3.0,
+        "source": "Takada et al., 1984; SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c3_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_in8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c3_wg_out8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_dc1",
+      "out1",
+      "c0_wg1",
+      "in"
+    ],
+    [
+      "c0_dc1",
+      "out2",
+      "c0_wg2",
+      "in"
+    ],
+    [
+      "c0_wg1",
+      "out",
+      "c0_dc2",
+      "in1"
+    ],
+    [
+      "c0_wg2",
+      "out",
+      "c0_dc2",
+      "in2"
+    ],
+    [
+      "c0_dc2",
+      "out1",
+      "c0_det1",
+      "in"
+    ],
+    [
+      "c1_ring1",
+      "through",
+      "c1_wg1",
+      "in"
+    ],
+    [
+      "c1_wg1",
+      "out",
+      "c1_det1",
+      "in"
+    ],
+    [
+      "c1_ring1",
+      "drop",
+      "c1_wg2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm1",
+      "in"
+    ],
+    [
+      "c2_mzm1",
+      "out",
+      "c2_det1",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm2",
+      "in"
+    ],
+    [
+      "c2_mzm2",
+      "out",
+      "c2_det2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm3",
+      "in"
+    ],
+    [
+      "c2_mzm3",
+      "out",
+      "c2_det3",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm4",
+      "in"
+    ],
+    [
+      "c2_mzm4",
+      "out",
+      "c2_det4",
+      "in"
+    ],
+    [
+      "c3_wg_in1",
+      "out",
+      "c3_awg1",
+      "in1"
+    ],
+    [
+      "c3_awg1",
+      "out1",
+      "c3_wg_out1",
+      "in"
+    ],
+    [
+      "c3_wg_in2",
+      "out",
+      "c3_awg1",
+      "in2"
+    ],
+    [
+      "c3_awg1",
+      "out2",
+      "c3_wg_out2",
+      "in"
+    ],
+    [
+      "c3_wg_in3",
+      "out",
+      "c3_awg1",
+      "in3"
+    ],
+    [
+      "c3_awg1",
+      "out3",
+      "c3_wg_out3",
+      "in"
+    ],
+    [
+      "c3_wg_in4",
+      "out",
+      "c3_awg1",
+      "in4"
+    ],
+    [
+      "c3_awg1",
+      "out4",
+      "c3_wg_out4",
+      "in"
+    ],
+    [
+      "c3_wg_in5",
+      "out",
+      "c3_awg1",
+      "in5"
+    ],
+    [
+      "c3_awg1",
+      "out5",
+      "c3_wg_out5",
+      "in"
+    ],
+    [
+      "c3_wg_in6",
+      "out",
+      "c3_awg1",
+      "in6"
+    ],
+    [
+      "c3_awg1",
+      "out6",
+      "c3_wg_out6",
+      "in"
+    ],
+    [
+      "c3_wg_in7",
+      "out",
+      "c3_awg1",
+      "in7"
+    ],
+    [
+      "c3_awg1",
+      "out7",
+      "c3_wg_out7",
+      "in"
+    ],
+    [
+      "c3_wg_in8",
+      "out",
+      "c3_awg1",
+      "in8"
+    ],
+    [
+      "c3_awg1",
+      "out8",
+      "c3_wg_out8",
+      "in"
+    ],
+    [
+      "c0_dc2",
+      "out2",
+      "c1_ring1",
+      "in"
+    ],
+    [
+      "c1_wg2",
+      "out",
+      "c2_wg_in1",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "quaternary",
+    "n_components": 4,
+    "component_sources": [
+      {
+        "topology": "MZI",
+        "scale": "S",
+        "platform": "LNOI",
+        "seed": 107954,
+        "source": "SiEPIC EBeam PDK MZI 阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Ring",
+        "scale": "S",
+        "platform": "LNOI",
+        "seed": 108954,
+        "source": "SiEPIC RingResonator, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "S",
+        "platform": "LNOI",
+        "seed": 109954,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "WDM",
+        "scale": "S",
+        "platform": "LNOI",
+        "seed": 110954,
+        "source": "Takada et al. 1984; SiEPIC AWG"
+      }
+    ],
+    "n_bridges": 2,
+    "n_total_devices": 35,
+    "n_total_connections": 34,
+    "seed": 7954,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ]
+  }
+}

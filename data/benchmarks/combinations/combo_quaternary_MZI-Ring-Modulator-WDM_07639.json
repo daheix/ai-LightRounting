@@ -1,0 +1,7158 @@
+{
+  "name": "combo_quaternary_MZI-Ring-Modulator-WDM_07639",
+  "description": "组合电路 (quaternary): MZI + Ring + Modulator + WDM",
+  "platform": "InP",
+  "topology": "combination_quaternary",
+  "scale": "XL",
+  "canvas_w": 12000.0,
+  "canvas_h": 3000.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c0_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c0_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c1_ring1",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 250.0,
+        "gap_um": 0.2,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_wg1",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 30.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_wg2",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 30.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c1_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm3",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm4",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm5",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm6",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm7",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm8",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm9",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm10",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm11",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm12",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm13",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm14",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm15",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm16",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm17",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm18",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm19",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm20",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm21",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm22",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm23",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm24",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm25",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm26",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm27",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm28",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm29",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm30",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm31",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm32",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det3",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det4",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det5",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det6",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det7",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det8",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det9",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det10",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det11",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det12",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det13",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det14",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det15",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det16",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det17",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det18",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det19",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det20",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det21",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det22",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det23",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det24",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det25",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det26",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det27",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det28",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det29",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det30",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det31",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c2_det32",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_awg1",
+      "type": "arrayed_waveguide_grating",
+      "width_um": 100.0,
+      "height_um": 640.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          15.0,
+          "W"
+        ],
+        [
+          "in3",
+          0.0,
+          25.0,
+          "W"
+        ],
+        [
+          "in4",
+          0.0,
+          35.0,
+          "W"
+        ],
+        [
+          "in5",
+          0.0,
+          45.0,
+          "W"
+        ],
+        [
+          "in6",
+          0.0,
+          55.0,
+          "W"
+        ],
+        [
+          "in7",
+          0.0,
+          65.0,
+          "W"
+        ],
+        [
+          "in8",
+          0.0,
+          75.0,
+          "W"
+        ],
+        [
+          "in9",
+          0.0,
+          85.0,
+          "W"
+        ],
+        [
+          "in10",
+          0.0,
+          95.0,
+          "W"
+        ],
+        [
+          "in11",
+          0.0,
+          105.0,
+          "W"
+        ],
+        [
+          "in12",
+          0.0,
+          115.0,
+          "W"
+        ],
+        [
+          "in13",
+          0.0,
+          125.0,
+          "W"
+        ],
+        [
+          "in14",
+          0.0,
+          135.0,
+          "W"
+        ],
+        [
+          "in15",
+          0.0,
+          145.0,
+          "W"
+        ],
+        [
+          "in16",
+          0.0,
+          155.0,
+          "W"
+        ],
+        [
+          "in17",
+          0.0,
+          165.0,
+          "W"
+        ],
+        [
+          "in18",
+          0.0,
+          175.0,
+          "W"
+        ],
+        [
+          "in19",
+          0.0,
+          185.0,
+          "W"
+        ],
+        [
+          "in20",
+          0.0,
+          195.0,
+          "W"
+        ],
+        [
+          "in21",
+          0.0,
+          205.0,
+          "W"
+        ],
+        [
+          "in22",
+          0.0,
+          215.0,
+          "W"
+        ],
+        [
+          "in23",
+          0.0,
+          225.0,
+          "W"
+        ],
+        [
+          "in24",
+          0.0,
+          235.0,
+          "W"
+        ],
+        [
+          "in25",
+          0.0,
+          245.0,
+          "W"
+        ],
+        [
+          "in26",
+          0.0,
+          255.0,
+          "W"
+        ],
+        [
+          "in27",
+          0.0,
+          265.0,
+          "W"
+        ],
+        [
+          "in28",
+          0.0,
+          275.0,
+          "W"
+        ],
+        [
+          "in29",
+          0.0,
+          285.0,
+          "W"
+        ],
+        [
+          "in30",
+          0.0,
+          295.0,
+          "W"
+        ],
+        [
+          "in31",
+          0.0,
+          305.0,
+          "W"
+        ],
+        [
+          "in32",
+          0.0,
+          315.0,
+          "W"
+        ],
+        [
+          "in33",
+          0.0,
+          325.0,
+          "W"
+        ],
+        [
+          "in34",
+          0.0,
+          335.0,
+          "W"
+        ],
+        [
+          "in35",
+          0.0,
+          345.0,
+          "W"
+        ],
+        [
+          "in36",
+          0.0,
+          355.0,
+          "W"
+        ],
+        [
+          "in37",
+          0.0,
+          365.0,
+          "W"
+        ],
+        [
+          "in38",
+          0.0,
+          375.0,
+          "W"
+        ],
+        [
+          "in39",
+          0.0,
+          385.0,
+          "W"
+        ],
+        [
+          "in40",
+          0.0,
+          395.0,
+          "W"
+        ],
+        [
+          "in41",
+          0.0,
+          405.0,
+          "W"
+        ],
+        [
+          "in42",
+          0.0,
+          415.0,
+          "W"
+        ],
+        [
+          "in43",
+          0.0,
+          425.0,
+          "W"
+        ],
+        [
+          "in44",
+          0.0,
+          435.0,
+          "W"
+        ],
+        [
+          "in45",
+          0.0,
+          445.0,
+          "W"
+        ],
+        [
+          "in46",
+          0.0,
+          455.0,
+          "W"
+        ],
+        [
+          "in47",
+          0.0,
+          465.0,
+          "W"
+        ],
+        [
+          "in48",
+          0.0,
+          475.0,
+          "W"
+        ],
+        [
+          "in49",
+          0.0,
+          485.0,
+          "W"
+        ],
+        [
+          "in50",
+          0.0,
+          495.0,
+          "W"
+        ],
+        [
+          "in51",
+          0.0,
+          505.0,
+          "W"
+        ],
+        [
+          "in52",
+          0.0,
+          515.0,
+          "W"
+        ],
+        [
+          "in53",
+          0.0,
+          525.0,
+          "W"
+        ],
+        [
+          "in54",
+          0.0,
+          535.0,
+          "W"
+        ],
+        [
+          "in55",
+          0.0,
+          545.0,
+          "W"
+        ],
+        [
+          "in56",
+          0.0,
+          555.0,
+          "W"
+        ],
+        [
+          "in57",
+          0.0,
+          565.0,
+          "W"
+        ],
+        [
+          "in58",
+          0.0,
+          575.0,
+          "W"
+        ],
+        [
+          "in59",
+          0.0,
+          585.0,
+          "W"
+        ],
+        [
+          "in60",
+          0.0,
+          595.0,
+          "W"
+        ],
+        [
+          "in61",
+          0.0,
+          605.0,
+          "W"
+        ],
+        [
+          "in62",
+          0.0,
+          615.0,
+          "W"
+        ],
+        [
+          "in63",
+          0.0,
+          625.0,
+          "W"
+        ],
+        [
+          "in64",
+          0.0,
+          635.0,
+          "W"
+        ],
+        [
+          "out1",
+          100.0,
+          5.0,
+          "E"
+        ],
+        [
+          "out2",
+          100.0,
+          15.0,
+          "E"
+        ],
+        [
+          "out3",
+          100.0,
+          25.0,
+          "E"
+        ],
+        [
+          "out4",
+          100.0,
+          35.0,
+          "E"
+        ],
+        [
+          "out5",
+          100.0,
+          45.0,
+          "E"
+        ],
+        [
+          "out6",
+          100.0,
+          55.0,
+          "E"
+        ],
+        [
+          "out7",
+          100.0,
+          65.0,
+          "E"
+        ],
+        [
+          "out8",
+          100.0,
+          75.0,
+          "E"
+        ],
+        [
+          "out9",
+          100.0,
+          85.0,
+          "E"
+        ],
+        [
+          "out10",
+          100.0,
+          95.0,
+          "E"
+        ],
+        [
+          "out11",
+          100.0,
+          105.0,
+          "E"
+        ],
+        [
+          "out12",
+          100.0,
+          115.0,
+          "E"
+        ],
+        [
+          "out13",
+          100.0,
+          125.0,
+          "E"
+        ],
+        [
+          "out14",
+          100.0,
+          135.0,
+          "E"
+        ],
+        [
+          "out15",
+          100.0,
+          145.0,
+          "E"
+        ],
+        [
+          "out16",
+          100.0,
+          155.0,
+          "E"
+        ],
+        [
+          "out17",
+          100.0,
+          165.0,
+          "E"
+        ],
+        [
+          "out18",
+          100.0,
+          175.0,
+          "E"
+        ],
+        [
+          "out19",
+          100.0,
+          185.0,
+          "E"
+        ],
+        [
+          "out20",
+          100.0,
+          195.0,
+          "E"
+        ],
+        [
+          "out21",
+          100.0,
+          205.0,
+          "E"
+        ],
+        [
+          "out22",
+          100.0,
+          215.0,
+          "E"
+        ],
+        [
+          "out23",
+          100.0,
+          225.0,
+          "E"
+        ],
+        [
+          "out24",
+          100.0,
+          235.0,
+          "E"
+        ],
+        [
+          "out25",
+          100.0,
+          245.0,
+          "E"
+        ],
+        [
+          "out26",
+          100.0,
+          255.0,
+          "E"
+        ],
+        [
+          "out27",
+          100.0,
+          265.0,
+          "E"
+        ],
+        [
+          "out28",
+          100.0,
+          275.0,
+          "E"
+        ],
+        [
+          "out29",
+          100.0,
+          285.0,
+          "E"
+        ],
+        [
+          "out30",
+          100.0,
+          295.0,
+          "E"
+        ],
+        [
+          "out31",
+          100.0,
+          305.0,
+          "E"
+        ],
+        [
+          "out32",
+          100.0,
+          315.0,
+          "E"
+        ],
+        [
+          "out33",
+          100.0,
+          325.0,
+          "E"
+        ],
+        [
+          "out34",
+          100.0,
+          335.0,
+          "E"
+        ],
+        [
+          "out35",
+          100.0,
+          345.0,
+          "E"
+        ],
+        [
+          "out36",
+          100.0,
+          355.0,
+          "E"
+        ],
+        [
+          "out37",
+          100.0,
+          365.0,
+          "E"
+        ],
+        [
+          "out38",
+          100.0,
+          375.0,
+          "E"
+        ],
+        [
+          "out39",
+          100.0,
+          385.0,
+          "E"
+        ],
+        [
+          "out40",
+          100.0,
+          395.0,
+          "E"
+        ],
+        [
+          "out41",
+          100.0,
+          405.0,
+          "E"
+        ],
+        [
+          "out42",
+          100.0,
+          415.0,
+          "E"
+        ],
+        [
+          "out43",
+          100.0,
+          425.0,
+          "E"
+        ],
+        [
+          "out44",
+          100.0,
+          435.0,
+          "E"
+        ],
+        [
+          "out45",
+          100.0,
+          445.0,
+          "E"
+        ],
+        [
+          "out46",
+          100.0,
+          455.0,
+          "E"
+        ],
+        [
+          "out47",
+          100.0,
+          465.0,
+          "E"
+        ],
+        [
+          "out48",
+          100.0,
+          475.0,
+          "E"
+        ],
+        [
+          "out49",
+          100.0,
+          485.0,
+          "E"
+        ],
+        [
+          "out50",
+          100.0,
+          495.0,
+          "E"
+        ],
+        [
+          "out51",
+          100.0,
+          505.0,
+          "E"
+        ],
+        [
+          "out52",
+          100.0,
+          515.0,
+          "E"
+        ],
+        [
+          "out53",
+          100.0,
+          525.0,
+          "E"
+        ],
+        [
+          "out54",
+          100.0,
+          535.0,
+          "E"
+        ],
+        [
+          "out55",
+          100.0,
+          545.0,
+          "E"
+        ],
+        [
+          "out56",
+          100.0,
+          555.0,
+          "E"
+        ],
+        [
+          "out57",
+          100.0,
+          565.0,
+          "E"
+        ],
+        [
+          "out58",
+          100.0,
+          575.0,
+          "E"
+        ],
+        [
+          "out59",
+          100.0,
+          585.0,
+          "E"
+        ],
+        [
+          "out60",
+          100.0,
+          595.0,
+          "E"
+        ],
+        [
+          "out61",
+          100.0,
+          605.0,
+          "E"
+        ],
+        [
+          "out62",
+          100.0,
+          615.0,
+          "E"
+        ],
+        [
+          "out63",
+          100.0,
+          625.0,
+          "E"
+        ],
+        [
+          "out64",
+          100.0,
+          635.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "channels": 64,
+        "fsr_nm": 1280.0,
+        "insertion_loss_db": 3.0,
+        "source": "Takada et al., 1984; SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c3_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out3",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out4",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out5",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out6",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out7",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out8",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out9",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out10",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out11",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out12",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out13",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out14",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out15",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out16",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in17",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out17",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in18",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out18",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in19",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out19",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in20",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out20",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in21",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out21",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in22",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out22",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in23",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out23",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in24",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out24",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in25",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out25",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in26",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out26",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in27",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out27",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in28",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out28",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in29",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out29",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in30",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out30",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in31",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out31",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in32",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out32",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in33",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out33",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in34",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out34",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in35",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out35",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in36",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out36",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in37",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out37",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in38",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out38",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in39",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out39",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in40",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out40",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in41",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out41",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in42",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out42",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in43",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out43",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in44",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out44",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in45",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out45",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in46",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out46",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in47",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out47",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in48",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out48",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in49",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out49",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in50",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out50",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in51",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out51",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in52",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out52",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in53",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out53",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in54",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out54",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in55",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out55",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in56",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out56",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in57",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out57",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in58",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out58",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in59",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out59",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in60",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out60",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in61",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out61",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in62",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out62",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in63",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out63",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_in64",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    },
+    {
+      "name": "c3_wg_out64",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 2.0,
+        "length_um": 50.0,
+        "source": "https://www.imec-int.com/technologies/photonics"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_dc1",
+      "out1",
+      "c0_wg1",
+      "in"
+    ],
+    [
+      "c0_dc1",
+      "out2",
+      "c0_wg2",
+      "in"
+    ],
+    [
+      "c0_wg1",
+      "out",
+      "c0_dc2",
+      "in1"
+    ],
+    [
+      "c0_wg2",
+      "out",
+      "c0_dc2",
+      "in2"
+    ],
+    [
+      "c0_dc2",
+      "out1",
+      "c0_det1",
+      "in"
+    ],
+    [
+      "c1_ring1",
+      "through",
+      "c1_wg1",
+      "in"
+    ],
+    [
+      "c1_wg1",
+      "out",
+      "c1_det1",
+      "in"
+    ],
+    [
+      "c1_ring1",
+      "drop",
+      "c1_wg2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm1",
+      "in"
+    ],
+    [
+      "c2_mzm1",
+      "out",
+      "c2_det1",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm2",
+      "in"
+    ],
+    [
+      "c2_mzm2",
+      "out",
+      "c2_det2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm3",
+      "in"
+    ],
+    [
+      "c2_mzm3",
+      "out",
+      "c2_det3",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm4",
+      "in"
+    ],
+    [
+      "c2_mzm4",
+      "out",
+      "c2_det4",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm5",
+      "in"
+    ],
+    [
+      "c2_mzm5",
+      "out",
+      "c2_det5",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm6",
+      "in"
+    ],
+    [
+      "c2_mzm6",
+      "out",
+      "c2_det6",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm7",
+      "in"
+    ],
+    [
+      "c2_mzm7",
+      "out",
+      "c2_det7",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm8",
+      "in"
+    ],
+    [
+      "c2_mzm8",
+      "out",
+      "c2_det8",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm9",
+      "in"
+    ],
+    [
+      "c2_mzm9",
+      "out",
+      "c2_det9",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm10",
+      "in"
+    ],
+    [
+      "c2_mzm10",
+      "out",
+      "c2_det10",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm11",
+      "in"
+    ],
+    [
+      "c2_mzm11",
+      "out",
+      "c2_det11",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm12",
+      "in"
+    ],
+    [
+      "c2_mzm12",
+      "out",
+      "c2_det12",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm13",
+      "in"
+    ],
+    [
+      "c2_mzm13",
+      "out",
+      "c2_det13",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm14",
+      "in"
+    ],
+    [
+      "c2_mzm14",
+      "out",
+      "c2_det14",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm15",
+      "in"
+    ],
+    [
+      "c2_mzm15",
+      "out",
+      "c2_det15",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm16",
+      "in"
+    ],
+    [
+      "c2_mzm16",
+      "out",
+      "c2_det16",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm17",
+      "in"
+    ],
+    [
+      "c2_mzm17",
+      "out",
+      "c2_det17",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm18",
+      "in"
+    ],
+    [
+      "c2_mzm18",
+      "out",
+      "c2_det18",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm19",
+      "in"
+    ],
+    [
+      "c2_mzm19",
+      "out",
+      "c2_det19",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm20",
+      "in"
+    ],
+    [
+      "c2_mzm20",
+      "out",
+      "c2_det20",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm21",
+      "in"
+    ],
+    [
+      "c2_mzm21",
+      "out",
+      "c2_det21",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm22",
+      "in"
+    ],
+    [
+      "c2_mzm22",
+      "out",
+      "c2_det22",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm23",
+      "in"
+    ],
+    [
+      "c2_mzm23",
+      "out",
+      "c2_det23",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm24",
+      "in"
+    ],
+    [
+      "c2_mzm24",
+      "out",
+      "c2_det24",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm25",
+      "in"
+    ],
+    [
+      "c2_mzm25",
+      "out",
+      "c2_det25",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm26",
+      "in"
+    ],
+    [
+      "c2_mzm26",
+      "out",
+      "c2_det26",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm27",
+      "in"
+    ],
+    [
+      "c2_mzm27",
+      "out",
+      "c2_det27",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm28",
+      "in"
+    ],
+    [
+      "c2_mzm28",
+      "out",
+      "c2_det28",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm29",
+      "in"
+    ],
+    [
+      "c2_mzm29",
+      "out",
+      "c2_det29",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm30",
+      "in"
+    ],
+    [
+      "c2_mzm30",
+      "out",
+      "c2_det30",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm31",
+      "in"
+    ],
+    [
+      "c2_mzm31",
+      "out",
+      "c2_det31",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm32",
+      "in"
+    ],
+    [
+      "c2_mzm32",
+      "out",
+      "c2_det32",
+      "in"
+    ],
+    [
+      "c3_wg_in1",
+      "out",
+      "c3_awg1",
+      "in1"
+    ],
+    [
+      "c3_awg1",
+      "out1",
+      "c3_wg_out1",
+      "in"
+    ],
+    [
+      "c3_wg_in2",
+      "out",
+      "c3_awg1",
+      "in2"
+    ],
+    [
+      "c3_awg1",
+      "out2",
+      "c3_wg_out2",
+      "in"
+    ],
+    [
+      "c3_wg_in3",
+      "out",
+      "c3_awg1",
+      "in3"
+    ],
+    [
+      "c3_awg1",
+      "out3",
+      "c3_wg_out3",
+      "in"
+    ],
+    [
+      "c3_wg_in4",
+      "out",
+      "c3_awg1",
+      "in4"
+    ],
+    [
+      "c3_awg1",
+      "out4",
+      "c3_wg_out4",
+      "in"
+    ],
+    [
+      "c3_wg_in5",
+      "out",
+      "c3_awg1",
+      "in5"
+    ],
+    [
+      "c3_awg1",
+      "out5",
+      "c3_wg_out5",
+      "in"
+    ],
+    [
+      "c3_wg_in6",
+      "out",
+      "c3_awg1",
+      "in6"
+    ],
+    [
+      "c3_awg1",
+      "out6",
+      "c3_wg_out6",
+      "in"
+    ],
+    [
+      "c3_wg_in7",
+      "out",
+      "c3_awg1",
+      "in7"
+    ],
+    [
+      "c3_awg1",
+      "out7",
+      "c3_wg_out7",
+      "in"
+    ],
+    [
+      "c3_wg_in8",
+      "out",
+      "c3_awg1",
+      "in8"
+    ],
+    [
+      "c3_awg1",
+      "out8",
+      "c3_wg_out8",
+      "in"
+    ],
+    [
+      "c3_wg_in9",
+      "out",
+      "c3_awg1",
+      "in9"
+    ],
+    [
+      "c3_awg1",
+      "out9",
+      "c3_wg_out9",
+      "in"
+    ],
+    [
+      "c3_wg_in10",
+      "out",
+      "c3_awg1",
+      "in10"
+    ],
+    [
+      "c3_awg1",
+      "out10",
+      "c3_wg_out10",
+      "in"
+    ],
+    [
+      "c3_wg_in11",
+      "out",
+      "c3_awg1",
+      "in11"
+    ],
+    [
+      "c3_awg1",
+      "out11",
+      "c3_wg_out11",
+      "in"
+    ],
+    [
+      "c3_wg_in12",
+      "out",
+      "c3_awg1",
+      "in12"
+    ],
+    [
+      "c3_awg1",
+      "out12",
+      "c3_wg_out12",
+      "in"
+    ],
+    [
+      "c3_wg_in13",
+      "out",
+      "c3_awg1",
+      "in13"
+    ],
+    [
+      "c3_awg1",
+      "out13",
+      "c3_wg_out13",
+      "in"
+    ],
+    [
+      "c3_wg_in14",
+      "out",
+      "c3_awg1",
+      "in14"
+    ],
+    [
+      "c3_awg1",
+      "out14",
+      "c3_wg_out14",
+      "in"
+    ],
+    [
+      "c3_wg_in15",
+      "out",
+      "c3_awg1",
+      "in15"
+    ],
+    [
+      "c3_awg1",
+      "out15",
+      "c3_wg_out15",
+      "in"
+    ],
+    [
+      "c3_wg_in16",
+      "out",
+      "c3_awg1",
+      "in16"
+    ],
+    [
+      "c3_awg1",
+      "out16",
+      "c3_wg_out16",
+      "in"
+    ],
+    [
+      "c3_wg_in17",
+      "out",
+      "c3_awg1",
+      "in17"
+    ],
+    [
+      "c3_awg1",
+      "out17",
+      "c3_wg_out17",
+      "in"
+    ],
+    [
+      "c3_wg_in18",
+      "out",
+      "c3_awg1",
+      "in18"
+    ],
+    [
+      "c3_awg1",
+      "out18",
+      "c3_wg_out18",
+      "in"
+    ],
+    [
+      "c3_wg_in19",
+      "out",
+      "c3_awg1",
+      "in19"
+    ],
+    [
+      "c3_awg1",
+      "out19",
+      "c3_wg_out19",
+      "in"
+    ],
+    [
+      "c3_wg_in20",
+      "out",
+      "c3_awg1",
+      "in20"
+    ],
+    [
+      "c3_awg1",
+      "out20",
+      "c3_wg_out20",
+      "in"
+    ],
+    [
+      "c3_wg_in21",
+      "out",
+      "c3_awg1",
+      "in21"
+    ],
+    [
+      "c3_awg1",
+      "out21",
+      "c3_wg_out21",
+      "in"
+    ],
+    [
+      "c3_wg_in22",
+      "out",
+      "c3_awg1",
+      "in22"
+    ],
+    [
+      "c3_awg1",
+      "out22",
+      "c3_wg_out22",
+      "in"
+    ],
+    [
+      "c3_wg_in23",
+      "out",
+      "c3_awg1",
+      "in23"
+    ],
+    [
+      "c3_awg1",
+      "out23",
+      "c3_wg_out23",
+      "in"
+    ],
+    [
+      "c3_wg_in24",
+      "out",
+      "c3_awg1",
+      "in24"
+    ],
+    [
+      "c3_awg1",
+      "out24",
+      "c3_wg_out24",
+      "in"
+    ],
+    [
+      "c3_wg_in25",
+      "out",
+      "c3_awg1",
+      "in25"
+    ],
+    [
+      "c3_awg1",
+      "out25",
+      "c3_wg_out25",
+      "in"
+    ],
+    [
+      "c3_wg_in26",
+      "out",
+      "c3_awg1",
+      "in26"
+    ],
+    [
+      "c3_awg1",
+      "out26",
+      "c3_wg_out26",
+      "in"
+    ],
+    [
+      "c3_wg_in27",
+      "out",
+      "c3_awg1",
+      "in27"
+    ],
+    [
+      "c3_awg1",
+      "out27",
+      "c3_wg_out27",
+      "in"
+    ],
+    [
+      "c3_wg_in28",
+      "out",
+      "c3_awg1",
+      "in28"
+    ],
+    [
+      "c3_awg1",
+      "out28",
+      "c3_wg_out28",
+      "in"
+    ],
+    [
+      "c3_wg_in29",
+      "out",
+      "c3_awg1",
+      "in29"
+    ],
+    [
+      "c3_awg1",
+      "out29",
+      "c3_wg_out29",
+      "in"
+    ],
+    [
+      "c3_wg_in30",
+      "out",
+      "c3_awg1",
+      "in30"
+    ],
+    [
+      "c3_awg1",
+      "out30",
+      "c3_wg_out30",
+      "in"
+    ],
+    [
+      "c3_wg_in31",
+      "out",
+      "c3_awg1",
+      "in31"
+    ],
+    [
+      "c3_awg1",
+      "out31",
+      "c3_wg_out31",
+      "in"
+    ],
+    [
+      "c3_wg_in32",
+      "out",
+      "c3_awg1",
+      "in32"
+    ],
+    [
+      "c3_awg1",
+      "out32",
+      "c3_wg_out32",
+      "in"
+    ],
+    [
+      "c3_wg_in33",
+      "out",
+      "c3_awg1",
+      "in33"
+    ],
+    [
+      "c3_awg1",
+      "out33",
+      "c3_wg_out33",
+      "in"
+    ],
+    [
+      "c3_wg_in34",
+      "out",
+      "c3_awg1",
+      "in34"
+    ],
+    [
+      "c3_awg1",
+      "out34",
+      "c3_wg_out34",
+      "in"
+    ],
+    [
+      "c3_wg_in35",
+      "out",
+      "c3_awg1",
+      "in35"
+    ],
+    [
+      "c3_awg1",
+      "out35",
+      "c3_wg_out35",
+      "in"
+    ],
+    [
+      "c3_wg_in36",
+      "out",
+      "c3_awg1",
+      "in36"
+    ],
+    [
+      "c3_awg1",
+      "out36",
+      "c3_wg_out36",
+      "in"
+    ],
+    [
+      "c3_wg_in37",
+      "out",
+      "c3_awg1",
+      "in37"
+    ],
+    [
+      "c3_awg1",
+      "out37",
+      "c3_wg_out37",
+      "in"
+    ],
+    [
+      "c3_wg_in38",
+      "out",
+      "c3_awg1",
+      "in38"
+    ],
+    [
+      "c3_awg1",
+      "out38",
+      "c3_wg_out38",
+      "in"
+    ],
+    [
+      "c3_wg_in39",
+      "out",
+      "c3_awg1",
+      "in39"
+    ],
+    [
+      "c3_awg1",
+      "out39",
+      "c3_wg_out39",
+      "in"
+    ],
+    [
+      "c3_wg_in40",
+      "out",
+      "c3_awg1",
+      "in40"
+    ],
+    [
+      "c3_awg1",
+      "out40",
+      "c3_wg_out40",
+      "in"
+    ],
+    [
+      "c3_wg_in41",
+      "out",
+      "c3_awg1",
+      "in41"
+    ],
+    [
+      "c3_awg1",
+      "out41",
+      "c3_wg_out41",
+      "in"
+    ],
+    [
+      "c3_wg_in42",
+      "out",
+      "c3_awg1",
+      "in42"
+    ],
+    [
+      "c3_awg1",
+      "out42",
+      "c3_wg_out42",
+      "in"
+    ],
+    [
+      "c3_wg_in43",
+      "out",
+      "c3_awg1",
+      "in43"
+    ],
+    [
+      "c3_awg1",
+      "out43",
+      "c3_wg_out43",
+      "in"
+    ],
+    [
+      "c3_wg_in44",
+      "out",
+      "c3_awg1",
+      "in44"
+    ],
+    [
+      "c3_awg1",
+      "out44",
+      "c3_wg_out44",
+      "in"
+    ],
+    [
+      "c3_wg_in45",
+      "out",
+      "c3_awg1",
+      "in45"
+    ],
+    [
+      "c3_awg1",
+      "out45",
+      "c3_wg_out45",
+      "in"
+    ],
+    [
+      "c3_wg_in46",
+      "out",
+      "c3_awg1",
+      "in46"
+    ],
+    [
+      "c3_awg1",
+      "out46",
+      "c3_wg_out46",
+      "in"
+    ],
+    [
+      "c3_wg_in47",
+      "out",
+      "c3_awg1",
+      "in47"
+    ],
+    [
+      "c3_awg1",
+      "out47",
+      "c3_wg_out47",
+      "in"
+    ],
+    [
+      "c3_wg_in48",
+      "out",
+      "c3_awg1",
+      "in48"
+    ],
+    [
+      "c3_awg1",
+      "out48",
+      "c3_wg_out48",
+      "in"
+    ],
+    [
+      "c3_wg_in49",
+      "out",
+      "c3_awg1",
+      "in49"
+    ],
+    [
+      "c3_awg1",
+      "out49",
+      "c3_wg_out49",
+      "in"
+    ],
+    [
+      "c3_wg_in50",
+      "out",
+      "c3_awg1",
+      "in50"
+    ],
+    [
+      "c3_awg1",
+      "out50",
+      "c3_wg_out50",
+      "in"
+    ],
+    [
+      "c3_wg_in51",
+      "out",
+      "c3_awg1",
+      "in51"
+    ],
+    [
+      "c3_awg1",
+      "out51",
+      "c3_wg_out51",
+      "in"
+    ],
+    [
+      "c3_wg_in52",
+      "out",
+      "c3_awg1",
+      "in52"
+    ],
+    [
+      "c3_awg1",
+      "out52",
+      "c3_wg_out52",
+      "in"
+    ],
+    [
+      "c3_wg_in53",
+      "out",
+      "c3_awg1",
+      "in53"
+    ],
+    [
+      "c3_awg1",
+      "out53",
+      "c3_wg_out53",
+      "in"
+    ],
+    [
+      "c3_wg_in54",
+      "out",
+      "c3_awg1",
+      "in54"
+    ],
+    [
+      "c3_awg1",
+      "out54",
+      "c3_wg_out54",
+      "in"
+    ],
+    [
+      "c3_wg_in55",
+      "out",
+      "c3_awg1",
+      "in55"
+    ],
+    [
+      "c3_awg1",
+      "out55",
+      "c3_wg_out55",
+      "in"
+    ],
+    [
+      "c3_wg_in56",
+      "out",
+      "c3_awg1",
+      "in56"
+    ],
+    [
+      "c3_awg1",
+      "out56",
+      "c3_wg_out56",
+      "in"
+    ],
+    [
+      "c3_wg_in57",
+      "out",
+      "c3_awg1",
+      "in57"
+    ],
+    [
+      "c3_awg1",
+      "out57",
+      "c3_wg_out57",
+      "in"
+    ],
+    [
+      "c3_wg_in58",
+      "out",
+      "c3_awg1",
+      "in58"
+    ],
+    [
+      "c3_awg1",
+      "out58",
+      "c3_wg_out58",
+      "in"
+    ],
+    [
+      "c3_wg_in59",
+      "out",
+      "c3_awg1",
+      "in59"
+    ],
+    [
+      "c3_awg1",
+      "out59",
+      "c3_wg_out59",
+      "in"
+    ],
+    [
+      "c3_wg_in60",
+      "out",
+      "c3_awg1",
+      "in60"
+    ],
+    [
+      "c3_awg1",
+      "out60",
+      "c3_wg_out60",
+      "in"
+    ],
+    [
+      "c3_wg_in61",
+      "out",
+      "c3_awg1",
+      "in61"
+    ],
+    [
+      "c3_awg1",
+      "out61",
+      "c3_wg_out61",
+      "in"
+    ],
+    [
+      "c3_wg_in62",
+      "out",
+      "c3_awg1",
+      "in62"
+    ],
+    [
+      "c3_awg1",
+      "out62",
+      "c3_wg_out62",
+      "in"
+    ],
+    [
+      "c3_wg_in63",
+      "out",
+      "c3_awg1",
+      "in63"
+    ],
+    [
+      "c3_awg1",
+      "out63",
+      "c3_wg_out63",
+      "in"
+    ],
+    [
+      "c3_wg_in64",
+      "out",
+      "c3_awg1",
+      "in64"
+    ],
+    [
+      "c3_awg1",
+      "out64",
+      "c3_wg_out64",
+      "in"
+    ],
+    [
+      "c0_dc2",
+      "out2",
+      "c1_ring1",
+      "in"
+    ],
+    [
+      "c1_wg2",
+      "out",
+      "c2_wg_in1",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "quaternary",
+    "n_components": 4,
+    "component_sources": [
+      {
+        "topology": "MZI",
+        "scale": "XL",
+        "platform": "InP",
+        "seed": 7639,
+        "source": "SiEPIC EBeam PDK MZI 阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Ring",
+        "scale": "XL",
+        "platform": "InP",
+        "seed": 8639,
+        "source": "SiEPIC RingResonator, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XL",
+        "platform": "InP",
+        "seed": 9639,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "WDM",
+        "scale": "XL",
+        "platform": "InP",
+        "seed": 10639,
+        "source": "Takada et al. 1984; SiEPIC AWG"
+      }
+    ],
+    "n_bridges": 2,
+    "n_total_devices": 203,
+    "n_total_connections": 202,
+    "seed": 7639,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ]
+  }
+}

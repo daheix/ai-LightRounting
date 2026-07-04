@@ -1,0 +1,1393 @@
+{
+  "name": "combo_ternary_MZI-Ring-Modulator_05858",
+  "description": "组合电路 (ternary): MZI + Ring + Modulator",
+  "platform": "SiN",
+  "topology": "combination_ternary",
+  "scale": "L",
+  "canvas_w": 4500.0,
+  "canvas_h": 1500.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c0_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c0_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c1_ring1",
+      "type": "ring_resonator",
+      "width_um": 10.0,
+      "height_um": 11.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "through",
+          10.0,
+          0.0,
+          "E"
+        ],
+        [
+          "drop",
+          10.0,
+          11.0,
+          "E"
+        ],
+        [
+          "add",
+          0.0,
+          11.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius_um": 100.0,
+        "gap_um": 0.2,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg1",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_wg2",
+      "type": "strip_waveguide",
+      "width_um": 30.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          30.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 30.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c1_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.0,
+        "length_um": 50.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm3",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm4",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm5",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm6",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm7",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm8",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm9",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm10",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm11",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm12",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm13",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm14",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm15",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm16",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det3",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det4",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det5",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det6",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det7",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det8",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det9",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det10",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det11",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det12",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det13",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det14",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det15",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    },
+    {
+      "name": "c2_det16",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.ligentec.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_dc1",
+      "out1",
+      "c0_wg1",
+      "in"
+    ],
+    [
+      "c0_dc1",
+      "out2",
+      "c0_wg2",
+      "in"
+    ],
+    [
+      "c0_wg1",
+      "out",
+      "c0_dc2",
+      "in1"
+    ],
+    [
+      "c0_wg2",
+      "out",
+      "c0_dc2",
+      "in2"
+    ],
+    [
+      "c0_dc2",
+      "out1",
+      "c0_det1",
+      "in"
+    ],
+    [
+      "c1_ring1",
+      "through",
+      "c1_wg1",
+      "in"
+    ],
+    [
+      "c1_wg1",
+      "out",
+      "c1_det1",
+      "in"
+    ],
+    [
+      "c1_ring1",
+      "drop",
+      "c1_wg2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm1",
+      "in"
+    ],
+    [
+      "c2_mzm1",
+      "out",
+      "c2_det1",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm2",
+      "in"
+    ],
+    [
+      "c2_mzm2",
+      "out",
+      "c2_det2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm3",
+      "in"
+    ],
+    [
+      "c2_mzm3",
+      "out",
+      "c2_det3",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm4",
+      "in"
+    ],
+    [
+      "c2_mzm4",
+      "out",
+      "c2_det4",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm5",
+      "in"
+    ],
+    [
+      "c2_mzm5",
+      "out",
+      "c2_det5",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm6",
+      "in"
+    ],
+    [
+      "c2_mzm6",
+      "out",
+      "c2_det6",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm7",
+      "in"
+    ],
+    [
+      "c2_mzm7",
+      "out",
+      "c2_det7",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm8",
+      "in"
+    ],
+    [
+      "c2_mzm8",
+      "out",
+      "c2_det8",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm9",
+      "in"
+    ],
+    [
+      "c2_mzm9",
+      "out",
+      "c2_det9",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm10",
+      "in"
+    ],
+    [
+      "c2_mzm10",
+      "out",
+      "c2_det10",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm11",
+      "in"
+    ],
+    [
+      "c2_mzm11",
+      "out",
+      "c2_det11",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm12",
+      "in"
+    ],
+    [
+      "c2_mzm12",
+      "out",
+      "c2_det12",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm13",
+      "in"
+    ],
+    [
+      "c2_mzm13",
+      "out",
+      "c2_det13",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm14",
+      "in"
+    ],
+    [
+      "c2_mzm14",
+      "out",
+      "c2_det14",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm15",
+      "in"
+    ],
+    [
+      "c2_mzm15",
+      "out",
+      "c2_det15",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm16",
+      "in"
+    ],
+    [
+      "c2_mzm16",
+      "out",
+      "c2_det16",
+      "in"
+    ],
+    [
+      "c0_dc2",
+      "out2",
+      "c1_ring1",
+      "in"
+    ],
+    [
+      "c1_wg2",
+      "out",
+      "c2_wg_in1",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "ternary",
+    "n_components": 3,
+    "component_sources": [
+      {
+        "topology": "MZI",
+        "scale": "L",
+        "platform": "SiN",
+        "seed": 205858,
+        "source": "SiEPIC EBeam PDK MZI 阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Ring",
+        "scale": "L",
+        "platform": "SiN",
+        "seed": 206858,
+        "source": "SiEPIC RingResonator, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "L",
+        "platform": "SiN",
+        "seed": 207858,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      }
+    ],
+    "n_bridges": 2,
+    "n_total_devices": 42,
+    "n_total_connections": 42,
+    "seed": 5858,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ]
+  }
+}

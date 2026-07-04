@@ -1,0 +1,2562 @@
+{
+  "name": "combo_array_Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator-Modulator_09867",
+  "description": "组合电路 (array): Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator + Modulator",
+  "platform": "SOI",
+  "topology": "combination_array",
+  "scale": "XS",
+  "canvas_w": 3200.0,
+  "canvas_h": 200.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c0_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c0_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c0_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c0_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c1_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c2_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c2_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c2_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c2_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c3_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c3_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c3_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c3_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c3_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c4_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c4_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c4_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c4_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c4_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c5_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c5_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c5_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c5_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c5_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c6_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c6_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c6_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c6_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c6_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c7_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c7_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c7_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c7_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c7_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c8_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c8_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c8_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c8_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c8_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c9_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c9_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c9_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c9_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c9_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c10_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c10_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c10_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c10_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c10_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c11_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c11_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c11_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c11_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c11_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c12_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c12_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c12_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c12_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c12_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c13_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c13_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c13_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c13_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c13_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c14_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c14_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c14_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c14_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c14_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c15_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 0.5,
+        "length_um": 50.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c15_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c15_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c15_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    },
+    {
+      "name": "c15_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_wg_in1",
+      "out",
+      "c0_mzm1",
+      "in"
+    ],
+    [
+      "c0_mzm1",
+      "out",
+      "c0_det1",
+      "in"
+    ],
+    [
+      "c0_wg_in1",
+      "out",
+      "c0_mzm2",
+      "in"
+    ],
+    [
+      "c0_mzm2",
+      "out",
+      "c0_det2",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm1",
+      "in"
+    ],
+    [
+      "c1_mzm1",
+      "out",
+      "c1_det1",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm2",
+      "in"
+    ],
+    [
+      "c1_mzm2",
+      "out",
+      "c1_det2",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm1",
+      "in"
+    ],
+    [
+      "c2_mzm1",
+      "out",
+      "c2_det1",
+      "in"
+    ],
+    [
+      "c2_wg_in1",
+      "out",
+      "c2_mzm2",
+      "in"
+    ],
+    [
+      "c2_mzm2",
+      "out",
+      "c2_det2",
+      "in"
+    ],
+    [
+      "c3_wg_in1",
+      "out",
+      "c3_mzm1",
+      "in"
+    ],
+    [
+      "c3_mzm1",
+      "out",
+      "c3_det1",
+      "in"
+    ],
+    [
+      "c3_wg_in1",
+      "out",
+      "c3_mzm2",
+      "in"
+    ],
+    [
+      "c3_mzm2",
+      "out",
+      "c3_det2",
+      "in"
+    ],
+    [
+      "c4_wg_in1",
+      "out",
+      "c4_mzm1",
+      "in"
+    ],
+    [
+      "c4_mzm1",
+      "out",
+      "c4_det1",
+      "in"
+    ],
+    [
+      "c4_wg_in1",
+      "out",
+      "c4_mzm2",
+      "in"
+    ],
+    [
+      "c4_mzm2",
+      "out",
+      "c4_det2",
+      "in"
+    ],
+    [
+      "c5_wg_in1",
+      "out",
+      "c5_mzm1",
+      "in"
+    ],
+    [
+      "c5_mzm1",
+      "out",
+      "c5_det1",
+      "in"
+    ],
+    [
+      "c5_wg_in1",
+      "out",
+      "c5_mzm2",
+      "in"
+    ],
+    [
+      "c5_mzm2",
+      "out",
+      "c5_det2",
+      "in"
+    ],
+    [
+      "c6_wg_in1",
+      "out",
+      "c6_mzm1",
+      "in"
+    ],
+    [
+      "c6_mzm1",
+      "out",
+      "c6_det1",
+      "in"
+    ],
+    [
+      "c6_wg_in1",
+      "out",
+      "c6_mzm2",
+      "in"
+    ],
+    [
+      "c6_mzm2",
+      "out",
+      "c6_det2",
+      "in"
+    ],
+    [
+      "c7_wg_in1",
+      "out",
+      "c7_mzm1",
+      "in"
+    ],
+    [
+      "c7_mzm1",
+      "out",
+      "c7_det1",
+      "in"
+    ],
+    [
+      "c7_wg_in1",
+      "out",
+      "c7_mzm2",
+      "in"
+    ],
+    [
+      "c7_mzm2",
+      "out",
+      "c7_det2",
+      "in"
+    ],
+    [
+      "c8_wg_in1",
+      "out",
+      "c8_mzm1",
+      "in"
+    ],
+    [
+      "c8_mzm1",
+      "out",
+      "c8_det1",
+      "in"
+    ],
+    [
+      "c8_wg_in1",
+      "out",
+      "c8_mzm2",
+      "in"
+    ],
+    [
+      "c8_mzm2",
+      "out",
+      "c8_det2",
+      "in"
+    ],
+    [
+      "c9_wg_in1",
+      "out",
+      "c9_mzm1",
+      "in"
+    ],
+    [
+      "c9_mzm1",
+      "out",
+      "c9_det1",
+      "in"
+    ],
+    [
+      "c9_wg_in1",
+      "out",
+      "c9_mzm2",
+      "in"
+    ],
+    [
+      "c9_mzm2",
+      "out",
+      "c9_det2",
+      "in"
+    ],
+    [
+      "c10_wg_in1",
+      "out",
+      "c10_mzm1",
+      "in"
+    ],
+    [
+      "c10_mzm1",
+      "out",
+      "c10_det1",
+      "in"
+    ],
+    [
+      "c10_wg_in1",
+      "out",
+      "c10_mzm2",
+      "in"
+    ],
+    [
+      "c10_mzm2",
+      "out",
+      "c10_det2",
+      "in"
+    ],
+    [
+      "c11_wg_in1",
+      "out",
+      "c11_mzm1",
+      "in"
+    ],
+    [
+      "c11_mzm1",
+      "out",
+      "c11_det1",
+      "in"
+    ],
+    [
+      "c11_wg_in1",
+      "out",
+      "c11_mzm2",
+      "in"
+    ],
+    [
+      "c11_mzm2",
+      "out",
+      "c11_det2",
+      "in"
+    ],
+    [
+      "c12_wg_in1",
+      "out",
+      "c12_mzm1",
+      "in"
+    ],
+    [
+      "c12_mzm1",
+      "out",
+      "c12_det1",
+      "in"
+    ],
+    [
+      "c12_wg_in1",
+      "out",
+      "c12_mzm2",
+      "in"
+    ],
+    [
+      "c12_mzm2",
+      "out",
+      "c12_det2",
+      "in"
+    ],
+    [
+      "c13_wg_in1",
+      "out",
+      "c13_mzm1",
+      "in"
+    ],
+    [
+      "c13_mzm1",
+      "out",
+      "c13_det1",
+      "in"
+    ],
+    [
+      "c13_wg_in1",
+      "out",
+      "c13_mzm2",
+      "in"
+    ],
+    [
+      "c13_mzm2",
+      "out",
+      "c13_det2",
+      "in"
+    ],
+    [
+      "c14_wg_in1",
+      "out",
+      "c14_mzm1",
+      "in"
+    ],
+    [
+      "c14_mzm1",
+      "out",
+      "c14_det1",
+      "in"
+    ],
+    [
+      "c14_wg_in1",
+      "out",
+      "c14_mzm2",
+      "in"
+    ],
+    [
+      "c14_mzm2",
+      "out",
+      "c14_det2",
+      "in"
+    ],
+    [
+      "c15_wg_in1",
+      "out",
+      "c15_mzm1",
+      "in"
+    ],
+    [
+      "c15_mzm1",
+      "out",
+      "c15_det1",
+      "in"
+    ],
+    [
+      "c15_wg_in1",
+      "out",
+      "c15_mzm2",
+      "in"
+    ],
+    [
+      "c15_mzm2",
+      "out",
+      "c15_det2",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "array",
+    "n_components": 16,
+    "component_sources": [
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1209867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1210867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1211867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1212867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1213867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1214867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1215867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1216867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1217867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1218867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1219867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1220867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1221867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1222867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1223867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XS",
+        "platform": "SOI",
+        "seed": 1224867,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      }
+    ],
+    "n_bridges": 0,
+    "n_total_devices": 80,
+    "n_total_connections": 64,
+    "seed": 9867,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ],
+    "array_size": 16,
+    "base_scale": "XS"
+  }
+}

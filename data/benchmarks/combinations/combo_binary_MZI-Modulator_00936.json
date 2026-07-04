@@ -1,0 +1,2265 @@
+{
+  "name": "combo_binary_MZI-Modulator_00936",
+  "description": "组合电路 (binary): MZI + Modulator",
+  "platform": "LNOI",
+  "topology": "combination_binary",
+  "scale": "XL",
+  "canvas_w": 6000.0,
+  "canvas_h": 3000.0,
+  "instances": {},
+  "devices": [
+    {
+      "name": "c0_dc1",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_dc2",
+      "type": "directional_coupler",
+      "width_um": 30.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "in1",
+          0.0,
+          7.0,
+          "W"
+        ],
+        [
+          "in2",
+          0.0,
+          3.0,
+          "W"
+        ],
+        [
+          "out1",
+          30.0,
+          7.0,
+          "E"
+        ],
+        [
+          "out2",
+          30.0,
+          3.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "gap_um": 0.2,
+        "coupling_length_um": 20.0,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c0_wg1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c0_wg2",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c0_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          10.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "source": "SiEPIC EBeam PDK"
+      }
+    },
+    {
+      "name": "c1_wg_in1",
+      "type": "strip_waveguide",
+      "width_um": 50.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "in",
+          0.0,
+          0.0,
+          "W"
+        ],
+        [
+          "out",
+          50.0,
+          0.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "width_um": 1.5,
+        "length_um": 50.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_mzm1",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm2",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm3",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm4",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm5",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm6",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm7",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm8",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm9",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm10",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm11",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm12",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm13",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm14",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm15",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm16",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm17",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm18",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm19",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm20",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm21",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm22",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm23",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm24",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm25",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm26",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm27",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm28",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm29",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm30",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm31",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_mzm32",
+      "type": "mach_zehnder_modulator",
+      "width_um": 50.0,
+      "height_um": 15.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ],
+        [
+          "rf_in",
+          25.0,
+          15.0,
+          "N"
+        ],
+        [
+          "out",
+          50.0,
+          5.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "vpi_V": 3.5,
+        "bandwidth_GHz": 40.0,
+        "insertion_loss_db": 4.0,
+        "source": "SiEPIC EBeam PDK; LNOI 电光调制器"
+      }
+    },
+    {
+      "name": "c1_det1",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det2",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det3",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det4",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det5",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det6",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det7",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det8",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det9",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det10",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det11",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det12",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det13",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det14",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det15",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det16",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det17",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det18",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det19",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det20",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det21",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det22",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det23",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det24",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det25",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det26",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det27",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det28",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det29",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det30",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det31",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    },
+    {
+      "name": "c1_det32",
+      "type": "photodetector",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "in",
+          0.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "responsivity_A_W": 0.8,
+        "bandwidth_GHz": 40.0,
+        "source": "https://www.hyperlightcorp.com/"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "c0_dc1",
+      "out1",
+      "c0_wg1",
+      "in"
+    ],
+    [
+      "c0_dc1",
+      "out2",
+      "c0_wg2",
+      "in"
+    ],
+    [
+      "c0_wg1",
+      "out",
+      "c0_dc2",
+      "in1"
+    ],
+    [
+      "c0_wg2",
+      "out",
+      "c0_dc2",
+      "in2"
+    ],
+    [
+      "c0_dc2",
+      "out1",
+      "c0_det1",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm1",
+      "in"
+    ],
+    [
+      "c1_mzm1",
+      "out",
+      "c1_det1",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm2",
+      "in"
+    ],
+    [
+      "c1_mzm2",
+      "out",
+      "c1_det2",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm3",
+      "in"
+    ],
+    [
+      "c1_mzm3",
+      "out",
+      "c1_det3",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm4",
+      "in"
+    ],
+    [
+      "c1_mzm4",
+      "out",
+      "c1_det4",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm5",
+      "in"
+    ],
+    [
+      "c1_mzm5",
+      "out",
+      "c1_det5",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm6",
+      "in"
+    ],
+    [
+      "c1_mzm6",
+      "out",
+      "c1_det6",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm7",
+      "in"
+    ],
+    [
+      "c1_mzm7",
+      "out",
+      "c1_det7",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm8",
+      "in"
+    ],
+    [
+      "c1_mzm8",
+      "out",
+      "c1_det8",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm9",
+      "in"
+    ],
+    [
+      "c1_mzm9",
+      "out",
+      "c1_det9",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm10",
+      "in"
+    ],
+    [
+      "c1_mzm10",
+      "out",
+      "c1_det10",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm11",
+      "in"
+    ],
+    [
+      "c1_mzm11",
+      "out",
+      "c1_det11",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm12",
+      "in"
+    ],
+    [
+      "c1_mzm12",
+      "out",
+      "c1_det12",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm13",
+      "in"
+    ],
+    [
+      "c1_mzm13",
+      "out",
+      "c1_det13",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm14",
+      "in"
+    ],
+    [
+      "c1_mzm14",
+      "out",
+      "c1_det14",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm15",
+      "in"
+    ],
+    [
+      "c1_mzm15",
+      "out",
+      "c1_det15",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm16",
+      "in"
+    ],
+    [
+      "c1_mzm16",
+      "out",
+      "c1_det16",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm17",
+      "in"
+    ],
+    [
+      "c1_mzm17",
+      "out",
+      "c1_det17",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm18",
+      "in"
+    ],
+    [
+      "c1_mzm18",
+      "out",
+      "c1_det18",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm19",
+      "in"
+    ],
+    [
+      "c1_mzm19",
+      "out",
+      "c1_det19",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm20",
+      "in"
+    ],
+    [
+      "c1_mzm20",
+      "out",
+      "c1_det20",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm21",
+      "in"
+    ],
+    [
+      "c1_mzm21",
+      "out",
+      "c1_det21",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm22",
+      "in"
+    ],
+    [
+      "c1_mzm22",
+      "out",
+      "c1_det22",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm23",
+      "in"
+    ],
+    [
+      "c1_mzm23",
+      "out",
+      "c1_det23",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm24",
+      "in"
+    ],
+    [
+      "c1_mzm24",
+      "out",
+      "c1_det24",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm25",
+      "in"
+    ],
+    [
+      "c1_mzm25",
+      "out",
+      "c1_det25",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm26",
+      "in"
+    ],
+    [
+      "c1_mzm26",
+      "out",
+      "c1_det26",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm27",
+      "in"
+    ],
+    [
+      "c1_mzm27",
+      "out",
+      "c1_det27",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm28",
+      "in"
+    ],
+    [
+      "c1_mzm28",
+      "out",
+      "c1_det28",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm29",
+      "in"
+    ],
+    [
+      "c1_mzm29",
+      "out",
+      "c1_det29",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm30",
+      "in"
+    ],
+    [
+      "c1_mzm30",
+      "out",
+      "c1_det30",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm31",
+      "in"
+    ],
+    [
+      "c1_mzm31",
+      "out",
+      "c1_det31",
+      "in"
+    ],
+    [
+      "c1_wg_in1",
+      "out",
+      "c1_mzm32",
+      "in"
+    ],
+    [
+      "c1_mzm32",
+      "out",
+      "c1_det32",
+      "in"
+    ],
+    [
+      "c0_dc2",
+      "out2",
+      "c1_wg_in1",
+      "in"
+    ]
+  ],
+  "metadata": {
+    "combination_type": "binary",
+    "n_components": 2,
+    "component_sources": [
+      {
+        "topology": "MZI",
+        "scale": "XL",
+        "platform": "LNOI",
+        "seed": 936,
+        "source": "SiEPIC EBeam PDK MZI 阵列, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+      },
+      {
+        "topology": "Modulator",
+        "scale": "XL",
+        "platform": "LNOI",
+        "seed": 1936,
+        "source": "SiEPIC MZM; LNOI 电光调制器"
+      }
+    ],
+    "n_bridges": 1,
+    "n_total_devices": 70,
+    "n_total_connections": 70,
+    "seed": 936,
+    "source": "PoLaRIS 组合电路生成器（基于真实板子拓扑组合）",
+    "references": [
+      "Clements et al., Optica 2016, https://doi.org/10.1364/OPTICA.3.001460",
+      "Reck et al., PRL 1994, https://doi.org/10.1103/PhysRevLett.73.58",
+      "Spanke & Murphy, JLT 1988",
+      "Soldano & Pennings, JLT 1995",
+      "SiEPIC EBeam PDK, https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
+    ]
+  }
+}
