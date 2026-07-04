@@ -337,64 +337,252 @@ def _compute_hpwl_pos(
     return total
 
 
+def _tarjan_scc(
+    n: int,
+    connections: list[tuple[int, int]],
+) -> list[list[int]]:
+    """Tarjan 强连通分量（SCC）算法（迭代版，防递归栈溢出）。
+
+    强连通分量 = 有向图中任意两节点互相可达的最大节点集。环（自环、
+    简单环、嵌套环）必然整体落入同一 SCC。Tarjan 算法用一次 DFS + 低链接
+    值（low-link）+ 显式栈在 O(V+E) 时间内找出所有 SCC。
+
+    *创新点（针对光子电路反馈环）*: 光子电路含 MZI 两臂反馈、Crossings
+    双向传输等物理环，GDS loader 生成的有向连接必然含环。Kahn 拓扑排序
+    要求 DAG，遇环即失败。Tarjan SCC 把环收缩为单节点，使后续 Kahn 在
+    condensation DAG 上可正常运行，是处理含环有向图的**正确算法**，
+    非 fall-back（R03 合规）。
+
+    算法核心（Tarjan 1972）:
+        1. DFS 遍历，每个节点 v 维护 index[v]（发现序号）和 low[v]
+           （v 或 v 子树能回溯到的最小 index）
+        2. 节点 v 入栈
+        3. 对 v 的每条出边 (v, w):
+           - w 未访问: 递归 DFS(w)，更新 low[v] = min(low[v], low[w])
+           - w 在栈中: 更新 low[v] = min(low[v], index[w])
+        4. 若 low[v] == index[v]: 弹栈直到 v（含），构成一个 SCC
+
+    迭代版（防 Python 递归深度限制，默认 1000）用显式栈模拟 DFS，
+    适合 n≥1000 的大电路。
+
+    Args:
+        n: 节点数。
+        connections: 索引化有向边列表 ``[(src, dst), ...]``。
+
+    Returns:
+        SCC 列表，每个 SCC 是节点索引列表。SCC 之间的拓扑序: 返回顺序
+        为逆拓扑序（先发现的 SCC 拓扑序靠后），但本函数不保证顺序，
+        由调用方在 condensation DAG 上跑 Kahn 得到准确拓扑序。
+
+    来源（R02 学术诚信）:
+        - Tarjan, R. "Depth-first search and linear graph algorithms",
+          SIAM Journal on Computing 1(2): 146-160, 1972,
+          DOI: 10.1137/0201010
+          https://doi.org/10.1137/0201010
+        - Tarjan SCC (Wikipedia)
+          https://en.wikipedia.org/wiki/Tarjan%27s_strongly_connected_components_algorithm
+        - CLRS Introduction to Algorithms 3rd ed. §22.5 Strongly Connected Components
+        - Iterative DFS (Wikipedia)
+          https://en.wikipedia.org/wiki/Depth-first_search
+        - Sedgewick & Wayne "Algorithms" 4th ed. §4.2.5 Strong Components
+          https://algs4.cs.princeton.edu/42digraph/
+    """
+    # 邻接表
+    adj: list[list[int]] = [[] for _ in range(n)]
+    for src, dst in connections:
+        if 0 <= src < n and 0 <= dst < n:
+            adj[src].append(dst)
+
+    index_counter = [0]  # 全局发现计数器（list 包裹以便闭包修改）
+    indices = [-1] * n   # -1 = 未访问
+    lowlink = [0] * n
+    on_stack = [False] * n
+    stack: list[int] = []
+    sccs: list[list[int]] = []
+
+    # 迭代 DFS 状态: (v, child_iterator_index)
+    # 每个栈帧记录当前正在遍历 v 的第几个出边
+    dfs_stack: list[tuple[int, int]] = []
+
+    for start in range(n):
+        if indices[start] != -1:
+            continue
+        dfs_stack.append((start, 0))
+        while dfs_stack:
+            v, ci = dfs_stack[-1]
+            if ci == 0:
+                # 首次访问 v: 初始化 index/lowlink，入栈
+                indices[v] = index_counter[0]
+                lowlink[v] = index_counter[0]
+                index_counter[0] += 1
+                stack.append(v)
+                on_stack[v] = True
+            if ci < len(adj[v]):
+                w = adj[v][ci]
+                dfs_stack[-1] = (v, ci + 1)
+                if indices[w] == -1:
+                    # w 未访问: 递归 DFS(w)
+                    dfs_stack.append((w, 0))
+                elif on_stack[w]:
+                    # w 在栈中: 回边，更新 lowlink[v]
+                    if indices[w] < lowlink[v]:
+                        lowlink[v] = indices[w]
+            else:
+                # v 的所有出边处理完: 检查是否为 SCC 根
+                if lowlink[v] == indices[v]:
+                    scc: list[int] = []
+                    while True:
+                        w = stack.pop()
+                        on_stack[w] = False
+                        scc.append(w)
+                        if w == v:
+                            break
+                    sccs.append(scc)
+                dfs_stack.pop()
+                # 回溯: 父节点 u 用 lowlink[v] 更新 lowlink[u]
+                if dfs_stack:
+                    u = dfs_stack[-1][0]
+                    if lowlink[v] < lowlink[u]:
+                        lowlink[u] = lowlink[v]
+    return sccs
+
+
+def _condensation_dag(
+    n: int,
+    connections: list[tuple[int, int]],
+    sccs: list[list[int]],
+) -> tuple[list[int], list[tuple[int, int]]]:
+    """把有向图收缩为 condensation DAG（每个 SCC 一个虚拟节点）。
+
+    Condensation DAG: 原图的每个 SCC 收缩为单个虚拟节点，SCC 之间的边
+    （不同 SCC 间的有向边）保留为虚拟节点间的边，SCC 内部的边丢弃
+    （已在环内）。形成的图必为 DAG（无环），可跑 Kahn 拓扑排序。
+
+    来源（R02 学术诚信）:
+        - Condensation (graph theory) Wikipedia
+          https://en.wikipedia.org/wiki/Condensation_(graph_theory)
+        - Tarjan 1972 SIAM J. Comput. DOI:10.1137/0201010
+        - CLRS Introduction to Algorithms 3rd ed. §22.5
+        - Sedgewick & Wayne "Algorithms" 4th ed. §4.2.5
+        - Kahn 1962 拓扑排序 https://doi.org/10.1145/368996.369025
+
+    Args:
+        n: 原图节点数。
+        connections: 原图索引化有向边。
+        sccs: ``_tarjan_scc`` 返回的 SCC 列表。
+
+    Returns:
+        ``(node_to_scc, dag_edges)``:
+        - ``node_to_scc[v]``: 原节点 v 所属 SCC 编号（0..len(sccs)-1）
+        - ``dag_edges``: condensation DAG 的索引化边列表（去重后）
+    """
+    node_to_scc = [0] * n
+    for scc_id, scc in enumerate(sccs):
+        for v in scc:
+            node_to_scc[v] = scc_id
+    # condensation DAG 边（去重）
+    n_scc = len(sccs)
+    edge_set: set[tuple[int, int]] = set()
+    for src, dst in connections:
+        if 0 <= src < n and 0 <= dst < n:
+            s1 = node_to_scc[src]
+            s2 = node_to_scc[dst]
+            if s1 != s2:
+                edge_set.add((s1, s2))
+    dag_edges = sorted(edge_set)
+    return node_to_scc, dag_edges
+
+
 def _topological_depth(
     n: int,
     connections: list[tuple[int, int]],
 ) -> list[int]:
-    """计算每个器件的拓扑深度（Kahn 算法 + 最长路径）。
+    """计算每个器件的拓扑深度（Tarjan SCC + Kahn 最长路径，含环安全）。
 
-    拓扑深度 = 从源器件（入度=0）到当前器件的最长路径长度。源器件 depth=0，
-    下游器件 depth = max(上游 depth) + 1。用于 FFDH 合法化时保证信号流
-    方向 x 递增（拓扑序靠后的器件 x 坐标更大，避免后端器件被塞到前端
-    器件的行内空隙导致物理重叠与 DRC 违规）。
+    拓扑深度 = 从源器件（入度=0 的 SCC）到当前器件所在 SCC 的最长路径长度。
+    源 SCC depth=0，下游 SCC depth = max(上游 SCC depth) + 1。
+    **同一 SCC 内的所有器件 depth 相同**（环内器件拓扑等价）。
 
-    算法: Kahn 算法（Kahn 1962）逐层剥离入度=0 的节点，同时维护最长路径
-    depth。可检测环（电路连接不应有环，有环则 raise，R03 禁止 fall-back）。
+    用于 FFDH 合法化时保证信号流方向 x 递增: 拓扑序靠后的器件 x 坐标更大，
+    避免后端器件被塞到前端器件的行内空隙导致物理重叠与 DRC 违规。同一 SCC
+    内的器件 depth 相同，FFDH 按高度/位置排序，物理环内器件可同行放置。
+
+    ## 算法（Tarjan SCC + condensation DAG + Kahn，*创新*）
+
+    1. 跑 Tarjan SCC 把含环有向图分解为 SCC 集合
+    2. 构建 condensation DAG（每个 SCC 一个虚拟节点，SCC 间边保留）
+    3. 在 condensation DAG 上跑 Kahn + 最长路径，得到每个 SCC 的 depth
+    4. 同一 SCC 内所有器件 depth = SCC 的 depth
+
+    ## 为什么不是 fall-back（R03 合规）
+
+    Kahn 拓扑排序要求 DAG，遇环即 raise 是**算法选型错误**，非业务错误。
+    光子电路物理上存在反馈环（MZI 两臂、Crossings 双向），GDS loader
+    生成的有向连接必然含环。Tarjan SCC + condensation DAG 是处理含环
+    有向图拓扑排序的**标准正确方法**（CLRS §22.5），结果是唯一确定的
+    （每个 SCC 的 depth 唯一，同一 SCC 内器件 depth 相等），不是兜底
+    假数据。R03 禁止的是用假数据让程序跑通，本算法用正确的图论方法
+    解决含环图的拓扑排序问题，是 R05 要求的根因修复。
 
     Args:
         n: 器件数。
-        connections: 索引化连接列表 ``[(src_idx, dst_idx), ...]``。
+        connections: 索引化有向连接列表 ``[(src_idx, dst_idx), ...]``。
 
     Returns:
         每个器件的拓扑深度列表 ``[depth_0, depth_1, ...]``。
 
-    Raises:
-        RuntimeError: 连接存在环（无法拓扑排序，R03 禁止 fall-back）。
-
     来源（R02 学术诚信）:
+        - Tarjan 1972 "Depth-first search and linear graph algorithms"
+          SIAM J. Comput. 1(2): 146-160, DOI: 10.1137/0201010
+          https://doi.org/10.1137/0201010
         - Kahn 1962 "Topological Sorting of Large Networks"
           https://doi.org/10.1145/368996.369025
-        - CLRS Introduction to Algorithms 3rd ed. §22.4 Topological sort
-        - Topological sorting (Wikipedia)
-          https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
+        - CLRS Introduction to Algorithms 3rd ed. §22.4-22.5
+        - Condensation (graph theory)
+          https://en.wikipedia.org/wiki/Condensation_(graph_theory)
         - Longest path in DAG
           https://en.wikipedia.org/wiki/Longest_path_problem#Acyclic_graphs
         - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
     """
     from collections import deque
 
-    adj: list[list[int]] = [[] for _ in range(n)]
-    indeg = [0] * n
-    for src, dst in connections:
-        adj[src].append(dst)
-        indeg[dst] += 1
-    depth = [0] * n
-    queue: deque[int] = deque(i for i in range(n) if indeg[i] == 0)
+    if n == 0:
+        return []
+
+    # 1. Tarjan SCC 分解（含环安全，O(V+E)）
+    sccs = _tarjan_scc(n, connections)
+
+    # 2. Condensation DAG（SCC 收缩为虚拟节点）
+    node_to_scc, dag_edges = _condensation_dag(n, connections, sccs)
+    n_scc = len(sccs)
+
+    # 3. 在 condensation DAG 上跑 Kahn + 最长路径
+    dag_adj: list[list[int]] = [[] for _ in range(n_scc)]
+    dag_indeg = [0] * n_scc
+    for s1, s2 in dag_edges:
+        dag_adj[s1].append(s2)
+        dag_indeg[s2] += 1
+    scc_depth = [0] * n_scc
+    queue: deque[int] = deque(i for i in range(n_scc) if dag_indeg[i] == 0)
     processed = 0
     while queue:
         u = queue.popleft()
         processed += 1
-        for v in adj[u]:
-            if depth[u] + 1 > depth[v]:
-                depth[v] = depth[u] + 1
-            indeg[v] -= 1
-            if indeg[v] == 0:
+        for v in dag_adj[u]:
+            if scc_depth[u] + 1 > scc_depth[v]:
+                scc_depth[v] = scc_depth[u] + 1
+            dag_indeg[v] -= 1
+            if dag_indeg[v] == 0:
                 queue.append(v)
-    if processed != n:
+    # condensation DAG 必为 DAG（Tarjan SCC 保证），Kahn 必处理完所有节点
+    if processed != n_scc:
         raise RuntimeError(
-            f"电路连接存在环，无法拓扑排序（processed={processed}/"
-            f"{n}，R03 禁止 fall-back，请检查 connections 是否含环）"
+            f"condensation DAG 仍有环（不应发生，Tarjan SCC 已分解）: "
+            f"processed={processed}/{n_scc}，请检查 _tarjan_scc 实现"
         )
+
+    # 4. 同一 SCC 内所有器件 depth = SCC 的 depth
+    depth = [scc_depth[node_to_scc[v]] for v in range(n)]
     return depth
 
 
@@ -409,8 +597,9 @@ def _legalize(
     """FFDH 合法化：消除重叠，保证信号流方向 x 递增。
 
     在经典 FFDH（Coffman et al. 1980）基础上增加两个拓扑约束（*创新*）:
-    1. 拓扑深度排序: 先用 Kahn 算法计算每个器件的拓扑深度（信号流层级），
-       按 (拓扑深度, -高度, pos_y) 排序，拓扑序靠前的先放置
+    1. 拓扑深度排序: 先用 Tarjan SCC + Kahn 计算每个器件的拓扑深度
+       （信号流层级，含环安全，环内器件 depth 相同），按
+       (拓扑深度, -高度, pos_y) 排序，拓扑序靠前的先放置
     2. 候选行拓扑约束: 装箱候选行需满足行内最大拓扑深度 < 当前器件拓扑深度
        （保证同一行内信号流 x 递增，且跨行也保持拓扑序）
     3. 信号流方向起始 x（*创新*）: 新行/候选行的起始 x 考虑上游器件右边界，
@@ -446,6 +635,8 @@ def _legalize(
         - FFDH: Coffman et al. SIAM J. Comput. 9(4) 1980
           https://epubs.siam.org/doi/10.1137/0209062
         - Kahn 1962 拓扑排序 https://doi.org/10.1145/368996.369025
+        - Tarjan 1972 SCC https://doi.org/10.1137/0201010
+          （含环图拓扑排序: SCC + condensation DAG）
         - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
         - HPWL: Kahng & Lienig IEEE TCAD 2009
           https://ieeexplore.ieee.org/document/4685534
@@ -1347,14 +1538,10 @@ def _align_ports(
         if d1 in name_to_idx and d2 in name_to_idx:
             idx_conns.append((name_to_idx[d1], name_to_idx[d2]))
 
-    try:
-        depth = _topological_depth(len(names), idx_conns)
-    except RuntimeError:
-        logger.warning(
-            "拓扑排序检测到环，跳过端口对齐优化，保持 FFDH 初始布局结果"
-            "（电路含反馈环路，不影响正确性，仅少一次优化）"
-        )
-        return placements
+    # 拓扑深度（Tarjan SCC + Kahn，含环安全: 环内器件 depth 相同）
+    # R03 合规: _topological_depth 不再因环失败（Tarjan SCC 正确处理含环图），
+    # 若仍抛异常说明 _tarjan_scc 实现有 bug，应让异常冒泡告警而非静默降级。
+    depth = _topological_depth(len(names), idx_conns)
 
     # 按拓扑顺序处理（depth 从小到大）
     order = sorted(range(len(names)), key=lambda i: depth[i])
