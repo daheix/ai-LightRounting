@@ -47,9 +47,13 @@
 - Ansys Lumerical INTERCONNECT 眼图分析
   https://optics.ansys.com/hc/en-us/articles/49697869166611
 - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/silicon-photonics-design/
 - Ansys Lumerical CML Compiler
   https://optics.ansys.com/hc/en-us/sections/360005039133-CML-Compiler
 - Proakis, "Digital Communications", McGraw-Hill 2007, §5（PAM BER 公式）
+  https://www.mhprofessional.com/digital-communications-5th-edition-9780072957167-usa
+- Agrawal, "Fiber-Optic Communication Systems", Wiley 2012, §4（眼图与 BER）
+  https://onlinelibrary.wiley.com/doi/book/10.1002/9781118080856
 """
 
 from __future__ import annotations
