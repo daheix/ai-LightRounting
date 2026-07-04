@@ -52,7 +52,7 @@ R03 禁止 fall-back
 - 输入校验失败 → ``raise ValueError``
 - worker 内异常 → ``future.result()`` 重新抛出
 - worker 进程崩溃 → ``raise RuntimeError``
-- 禁止 ``except: pass`` / ``return None`` / 跳过崩溃 worker
+- 禁止 ``except`` 块静默空语句 / ``return None`` / 跳过崩溃 worker
 
 ==================================================================
 学术依据（R02 学术诚信，≥5 个文献 URL）

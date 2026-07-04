@@ -1264,3 +1264,27 @@ def test_lazy_export_raises_on_missing_core() -> None:
     # 访问不存在的属性必 raise AttributeError
     with pytest.raises(AttributeError):
         _ = polaris_flow.NotExistAttrXYZ
+
+
+# =============================================================================
+# R03 回归测试：禁止 except 块仅空语句静默吞异常（AST 级检测）
+#
+# 防止未来再引入 except 块体仅空语句的 fall-back（R03 最严重违规）。
+# 学术依据: Effective Python Item 32 — 优先抛异常而非返回 None/静默吞没。
+# =============================================================================
+def test_no_except_empty_body_r03() -> None:
+    """R03 回归：src 下所有 .py 禁止 except 块体仅空语句静默吞异常。"""
+    import ast
+    from pathlib import Path
+    src_dir = Path(__file__).resolve().parents[1] / "src"
+    violations: list[str] = []
+    for py in src_dir.rglob("*.py"):
+        tree = ast.parse(py.read_text(encoding="utf-8"), filename=str(py))
+        for node in ast.walk(tree):
+            if (isinstance(node, ast.ExceptHandler)
+                    and len(node.body) == 1
+                    and isinstance(node.body[0], ast.Pass)):
+                violations.append(f"{py.name}:{node.lineno}")
+    assert not violations, (
+        f"R03 违规: 发现 except 块仅空语句静默吞异常: {violations}"
+    )

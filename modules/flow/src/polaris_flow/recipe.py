@@ -205,7 +205,7 @@ class Recipe:
 def _coerce_scalar(val: str):
     """将字符串标量转换为 int/float/str（内部辅助函数）。
 
-    R03 合规：原 ``except (ValueError, AttributeError): pass`` 是静默吞异常的
+    R03 合规：原 ``except (ValueError, AttributeError)`` 块静默空语句是吞异常的
     fall-back——对 ``str`` 输入 ``str.replace``/``str.isdigit`` 永不抛这两类异常，
     该 except 仅在调用方违反类型契约（传入非 str）时掩盖 Bug。现已移除：
     非字符串输入由 ``val.isdigit()`` 自然抛 ``AttributeError`` 上抛告警，

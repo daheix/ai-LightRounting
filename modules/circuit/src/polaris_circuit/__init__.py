@@ -80,7 +80,7 @@ Output（输出）:
 合规声明
 ================================================================
 - R02 学术诚信: 所有参数/公式可溯源，本 docstring 含 10 篇文献 URL
-- R03 禁止 fall-back: 失败即 raise，无 except:pass / return None
+- R03 禁止 fall-back: 失败即 raise，无 except 块静默空语句 / return None
 - R04 不参与 GPU: 纯 NumPy/SciPy，无 CuPy/CUDA/JAX 后端
 - R05 无 TODO/FIXME/HACK 残留
 - R13 不保留 v4 兼容: 去除 sax 必装依赖、jax 后端，简化为纯 numpy 单后端

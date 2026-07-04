@@ -14,7 +14,7 @@
 
 ## R03 禁止 fall-back
 
-业务错误一律 ``raise``，禁止 except:pass / return None / 假数据兜底。
+业务错误一律 ``raise``，禁止 except 块静默空语句 / return None / 假数据兜底。
 
 ## 学术依据（R02 学术诚信，≥5 个文献 URL）
 
