@@ -113,17 +113,18 @@ while true; do
     # 测试进度
     if [ -f "${PROGRESS_FILE}" ]; then
         "${THREEDTOOL_PYTHON}" -c "
-import json, sys
+import json
 from pathlib import Path
-p = Path('${PROGRESS_FILE}')
 try:
-    d = json.loads(p.read_text())
-    done = d.get('done', d.get('total_done', 0))
-    total = d.get('total', d.get('total_count', 0))
-    succ = d.get('success', d.get('passed', 0))
-    fail = d.get('failed', d.get('failures', 0))
+    d = json.loads(Path('${PROGRESS_FILE}').read_text())
+    total = d.get('total', 0)
+    results = d.get('results', [])
+    done = len(results)
+    succ = sum(1 for r in results if isinstance(r, dict) and r.get('success'))
+    fail = done - succ
+    drc = sum(1 for r in results if isinstance(r, dict) and r.get('drc_passed'))
     pct = (done/total*100) if total else 0
-    print(f'  测试进度: {done}/{total} ({pct:.1f}%) 成功={succ} 失败={fail}')
+    print(f'  测试进度: {done}/{total} ({pct:.1f}%) 成功={succ} 失败={fail} DRC通过={drc}')
 except Exception as e:
     print(f'  读进度失败: {e}')
 " 2>&1
@@ -146,9 +147,13 @@ except Exception as e:
 import json
 from pathlib import Path
 d = json.loads(Path('${PROGRESS_FILE}').read_text())
-print(f'    完成: {d.get(\"done\",0)}/{d.get(\"total\",0)}')
-print(f'    成功: {d.get(\"success\",d.get(\"passed\",0))}')
-print(f'    失败: {d.get(\"failed\",d.get(\"failures\",0))}')
+total = d.get('total', 0)
+results = d.get('results', [])
+done = len(results)
+succ = sum(1 for r in results if isinstance(r, dict) and r.get('success'))
+drc = sum(1 for r in results if isinstance(r, dict) and r.get('drc_passed'))
+print(f'    完成: {done}/{total}')
+print(f'    成功: {succ}  失败: {done-succ}  DRC通过: {drc}')
 " 2>&1
         fi
         echo "[onekey] 测试结束，退出循环"
