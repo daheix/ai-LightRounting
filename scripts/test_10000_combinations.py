@@ -118,11 +118,45 @@ def test_one(circuit_info: dict) -> dict:
         }
 
 
+def test_one_with_timeout(args):
+    """带超时的单电路测试。R03: 超时即标记失败, 不伪造结果。"""
+    circuit_info, timeout_s = args
+    import signal
+
+    class TimeoutError(Exception):
+        pass
+
+    def handler(signum, frame):
+        raise TimeoutError(f"test timed out after {timeout_s}s")
+
+    signal.signal(signal.SIGALRM, handler)
+    signal.alarm(timeout_s)
+    try:
+        return test_one(circuit_info)
+    except TimeoutError as e:
+        return {
+            'name': circuit_info['name'],
+            'path': circuit_info['path'],
+            'combination_type': circuit_info['combination_type'],
+            'n_devices': circuit_info.get('n_devices', -1),
+            'n_connections': circuit_info.get('n_connections', -1),
+            'success': False,
+            'drc_passed': False,
+            'drc_violations': -1,
+            'insertion_loss_db': None,
+            'elapsed_s': timeout_s,
+            'error': f"TimeoutError: 超过{timeout_s}s未完成",
+        }
+    finally:
+        signal.alarm(0)
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--workers', type=int, default=min(8, cpu_count()))
+    parser.add_argument('--workers', type=int, default=min(6, cpu_count()))
     parser.add_argument('--limit', type=int, default=0, help='0=全部')
-    parser.add_argument('--save-every', type=int, default=200, help='每N个保存一次进度')
+    parser.add_argument('--save-every', type=int, default=100, help='每N个保存一次进度')
+    parser.add_argument('--timeout', type=int, default=60, help='单电路超时秒数')
     args = parser.parse_args()
 
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] 加载索引...")
@@ -144,8 +178,10 @@ def main():
     t_start = time.time()
     done = 0
 
-    with Pool(args.workers, maxtasksperchild=20) as pool:
-        for i, r in enumerate(pool.imap_unordered(test_one, circuits), 1):
+    task_args = [(c, args.timeout) for c in circuits]
+
+    with Pool(args.workers, maxtasksperchild=15) as pool:
+        for i, r in enumerate(pool.imap_unordered(test_one_with_timeout, task_args, chunksize=1), 1):
             results.append(r)
             done = i
 
