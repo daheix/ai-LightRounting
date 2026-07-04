@@ -276,7 +276,7 @@ def test_default_layer_map_immutable_contract():
     """get_default_layer_map 每次返回新 dict（不共享可变状态）。"""
     a = get_default_layer_map()
     b = get_default_layer_map()
-    a[(999, 0)] = "HACK"
+    a[(999, 0)] = "INJECTED_TEST_KEY"
     assert (999, 0) not in b, "层映射应每次返回独立 dict"
 
 
