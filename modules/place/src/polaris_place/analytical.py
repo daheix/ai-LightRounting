@@ -629,24 +629,31 @@ def _find_nearest_legal_pos_1d(
         fixed_hi = fixed_y + h
 
     # 收集禁止区间（axis 方向）
+    # R05 Bug 修复: 垂直方向判定需考虑 MIN_SPACING（非连接邻居）。
+    # 原代码仅检查 strict overlap，导致两器件在垂直方向"几乎接触但不重叠"
+    # （如 fixed_hi = ox1 - 0.5）时，沿 axis 方向放置会违反 MIN_SPACING
+    # （真实 DRC 用 L∞ 距离判定：dx < spacing AND dy < spacing 即违规）。
+    # 修复: 对非连接邻居，垂直方向影响范围扩展 MIN_SPACING 距离。
     forbidden: list[tuple[float, float]] = []
     for nm, pl in placements.items():
         if nm == exclude_name:
             continue
         ox1, oy1 = float(pl["x"]), float(pl["y"])
         ox2, oy2 = ox1 + float(pl["w"]), oy1 + float(pl["h"])
+        # MIN_SPACING 间距（非连接邻居需保持，与 DRC engine 一致）
+        spacing = 0.0 if nm in connected_names else _ALIGN_MIN_SPACING
         if axis == "y":
-            # x 方向必须重叠才有 y 方向禁止区间
-            if fixed_hi <= ox1 or fixed_lo >= ox2:
+            # x 方向（垂直方向）影响范围: 重叠 OR 间距 < MIN_SPACING
+            # 当 fixed 与 other 在 x 方向的距离 < spacing 时，y 方向需保持间距
+            if fixed_hi <= ox1 - spacing or fixed_lo >= ox2 + spacing:
                 continue
             other_lo, other_hi = oy1, oy2
         else:  # axis == "x"
-            # y 方向必须重叠才有 x 方向禁止区间
-            if fixed_hi <= oy1 or fixed_lo >= oy2:
+            # y 方向（垂直方向）影响范围: 重叠 OR 间距 < MIN_SPACING
+            if fixed_hi <= oy1 - spacing or fixed_lo >= oy2 + spacing:
                 continue
             other_lo, other_hi = ox1, ox2
-        # MIN_SPACING: 非连接邻居需额外间距
-        spacing = 0.0 if nm in connected_names else _ALIGN_MIN_SPACING
+        # 沿 axis 方向也需 MIN_SPACING 间距（touching + spacing 合法）
         f_min = other_lo - size - spacing
         f_max = other_hi + spacing
         forbidden.append((f_min, f_max))
@@ -687,6 +694,90 @@ def _find_nearest_legal_pos_1d(
             best_dist = dist
             best = c
     return best
+
+
+def _align_d2_on_axis(
+    placements: dict[str, dict[str, float]],
+    d2_name: str,
+    d2_connected: set[str],
+    w2: float,
+    h2: float,
+    canvas_w: float,
+    canvas_h: float,
+    axis: str,
+    port_off: float,
+    abs_other: float,
+) -> float:
+    """在 axis 轴上对齐 d2，使端口偏差最小化。
+
+    axis='y': 调整 d2.y，使 |d2.y + port_off - abs_other| 最小
+    axis='x': 调整 d2.x，使 |d2.x + port_off - abs_other| 最小
+
+    策略（两级）:
+        1. 完全对齐: new_pos = abs_other - port_off（偏差=0）
+        2. 完全对齐失败（重叠/间距）→ _find_nearest_legal_pos_1d 找最近合法位置
+
+    仅在偏差减小时才移动（保证单调改善，不破坏已对齐的连接）。
+    若当前偏差已在容差内（≤ _ALIGN_PORT_TOL_UM），直接返回不移动。
+
+    Args:
+        placements: 当前布局（会被原地修改）。
+        d2_name: 待调整器件名。
+        d2_connected: d2 的直接连接邻居集合（跳过 MIN_SPACING）。
+        w2, h2: d2 的宽高。
+        canvas_w, canvas_h: 画布尺寸。
+        axis: 对齐轴 'y' 或 'x'。
+        port_off: d2 端口在 axis 方向的相对偏移。
+        abs_other: 对端端口在 axis 方向的绝对坐标。
+
+    Returns:
+        移动后（或未移动）的端口偏差 (float)。
+    """
+    pl2 = placements[d2_name]
+    cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
+    if axis == "y":
+        target = abs_other - port_off
+        canvas_limit = canvas_h
+        size = h2
+        cur_pos = cur_y
+    else:
+        target = abs_other - port_off
+        canvas_limit = canvas_w
+        size = w2
+        cur_pos = cur_x
+    cur_dev = abs(cur_pos + port_off - abs_other)
+    if cur_dev <= _ALIGN_PORT_TOL_UM:
+        return cur_dev  # 已在容差内，无需移动
+
+    # 1. 完全对齐（偏差=0）
+    new_pos = max(0.0, min(target, canvas_limit - size))
+    if axis == "y":
+        ok = _no_overlap_at(placements, d2_name, cur_x, new_pos, w2, h2, d2_connected)
+    else:
+        ok = _no_overlap_at(placements, d2_name, new_pos, cur_y, w2, h2, d2_connected)
+    if ok:
+        new_dev = abs(new_pos + port_off - abs_other)
+        if new_dev < cur_dev:
+            if axis == "y":
+                placements[d2_name]["y"] = new_pos
+            else:
+                placements[d2_name]["x"] = new_pos
+        return new_dev
+
+    # 2. 完全对齐失败 → 最近合法位置（*创新*，约束域内最小化偏差）
+    nearest = _find_nearest_legal_pos_1d(
+        placements, d2_name, cur_x, cur_y, w2, h2,
+        target, canvas_limit, axis, d2_connected,
+    )
+    if nearest is not None:
+        new_dev = abs(nearest + port_off - abs_other)
+        if new_dev < cur_dev:
+            if axis == "y":
+                placements[d2_name]["y"] = nearest
+            else:
+                placements[d2_name]["x"] = nearest
+            return new_dev
+    return cur_dev
 
 
 def _align_ports(
@@ -821,62 +912,47 @@ def _align_ports(
             w2 = float(pl2["w"])
             h2 = float(pl2["h"])
 
-            # 决定对齐轴
+            # 决定主轴和副轴
             # DRC PORT_ALIGNMENT 判定: dx > tol AND dy > tol 才算违规
             # 因此只要 dx ≤ tol 或 dy ≤ tol 之一即对齐通过
+            # 主轴 = 优先对齐的轴；副轴 = 主轴偏差仍 > tol 时的备选
             if (dir1, dir2) in (("east", "west"), ("west", "east")):
-                # 水平连接（east↔west），优先对齐 y（主轴）
-                target_y = abs1_y - port2[1]
-                new_y = max(0.0, min(target_y, canvas_h - h2))
-                if _no_overlap_at(placements, d2_name,
-                                  float(pl2["x"]), new_y, w2, h2,
-                                  d2_connected):
-                    placements[d2_name]["y"] = new_y
-                else:
-                    # 主轴对齐会重叠，尝试副轴对齐 x（使 dx=0 ≤ tol）
-                    target_x = abs1_x - port2[0]
-                    new_x = max(0.0, min(target_x, canvas_w - w2))
-                    if _no_overlap_at(placements, d2_name,
-                                      new_x, float(pl2["y"]), w2, h2,
-                                      d2_connected):
-                        placements[d2_name]["x"] = new_x
+                # 水平连接（east↔west），主轴 y（对齐 y 使 dy ≤ tol）
+                primary_axis, secondary_axis = "y", "x"
             elif (dir1, dir2) in (("north", "south"), ("south", "north")):
-                # 垂直连接（north↔south），优先对齐 x（主轴）
-                target_x = abs1_x - port2[0]
-                new_x = max(0.0, min(target_x, canvas_w - w2))
-                if _no_overlap_at(placements, d2_name,
-                                  new_x, float(pl2["y"]), w2, h2,
-                                  d2_connected):
-                    placements[d2_name]["x"] = new_x
-                else:
-                    # 主轴对齐会重叠，尝试副轴对齐 y
-                    target_y = abs1_y - port2[1]
-                    new_y = max(0.0, min(target_y, canvas_h - h2))
-                    if _no_overlap_at(placements, d2_name,
-                                      float(pl2["x"]), new_y, w2, h2,
-                                      d2_connected):
-                        placements[d2_name]["y"] = new_y
+                # 垂直连接（north↔south），主轴 x（对齐 x 使 dx ≤ tol）
+                primary_axis, secondary_axis = "x", "y"
             else:
-                # 方向不明确，尝试两个轴，选择能对齐且不重叠的
-                target_y = abs1_y - port2[1]
-                new_y = max(0.0, min(target_y, canvas_h - h2))
-                y_ok = _no_overlap_at(placements, d2_name,
-                                      float(pl2["x"]), new_y, w2, h2,
-                                      d2_connected)
-                target_x = abs1_x - port2[0]
-                new_x = max(0.0, min(target_x, canvas_w - w2))
-                x_ok = _no_overlap_at(placements, d2_name,
-                                      new_x, float(pl2["y"]), w2, h2,
-                                      d2_connected)
-                # 优先对齐偏差较大的轴
-                dx = abs(abs1_x - abs2_x)
-                dy = abs(abs1_y - abs2_y)
-                if dy >= dx and y_ok:
-                    placements[d2_name]["y"] = new_y
-                elif x_ok:
-                    placements[d2_name]["x"] = new_x
-                elif y_ok:
-                    placements[d2_name]["y"] = new_y
+                # 方向不明确，选偏差较大的轴为主轴（偏差大的轴优先对齐）
+                if abs(abs1_y - abs2_y) >= abs(abs1_x - abs2_x):
+                    primary_axis, secondary_axis = "y", "x"
+                else:
+                    primary_axis, secondary_axis = "x", "y"
+
+            # 主轴对齐（完全对齐 → 最近合法位置，_align_d2_on_axis 内部处理）
+            if primary_axis == "y":
+                dev = _align_d2_on_axis(
+                    placements, d2_name, d2_connected, w2, h2,
+                    canvas_w, canvas_h, "y", port2[1], abs1_y,
+                )
+            else:
+                dev = _align_d2_on_axis(
+                    placements, d2_name, d2_connected, w2, h2,
+                    canvas_w, canvas_h, "x", port2[0], abs1_x,
+                )
+
+            # 若主轴偏差仍 > tol，尝试副轴（使副轴偏差 ≤ tol，DRC 不违规）
+            if dev > _ALIGN_PORT_TOL_UM:
+                if secondary_axis == "y":
+                    _align_d2_on_axis(
+                        placements, d2_name, d2_connected, w2, h2,
+                        canvas_w, canvas_h, "y", port2[1], abs1_y,
+                    )
+                else:
+                    _align_d2_on_axis(
+                        placements, d2_name, d2_connected, w2, h2,
+                        canvas_w, canvas_h, "x", port2[0], abs1_x,
+                    )
 
     return placements
 
