@@ -388,14 +388,27 @@ class DRCEngine:
 
         公式: spacing = min AABB_distance(Devices_i, Devices_j)，对所有对。
         来源: SiEPIC WG_MIN_SPACE 1.0μm；KLayout space_check。
+
+        例外: 直接连接的器件对（波导↔器件）跳过——波导连接器件时
+        touching/小间距是正常物理连接，非耦合串扰（R05 Bug 修复）。
         """
         thr = rule.threshold
         names = list(placements.keys())
         boxes = {nm: _aabb(placements[nm]) for nm in names}
+        # 构建直接连接对集合（从 connections 提取）
+        connected_pairs: set[tuple[str, str]] = set()
+        for conn in circuit.get("connections", []):
+            if len(conn) >= 4:
+                d1, d2 = str(conn[0]), str(conn[2])
+                connected_pairs.add((d1, d2))
+                connected_pairs.add((d2, d1))
         violations: list[DRCViolation] = []
         for i in range(len(names)):
             for j in range(i + 1, len(names)):
                 ni, nj = names[i], names[j]
+                # 跳过直接连接的器件对（波导连接器件 touching 正常）
+                if (ni, nj) in connected_pairs:
+                    continue
                 dist = _aabb_distance(boxes[ni], boxes[nj])
                 if dist < thr:
                     loc = _aabb_center(_merge_aabb(boxes[ni], boxes[nj]))
