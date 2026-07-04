@@ -1,0 +1,68 @@
+{
+  "description": "PoLaRIS 真实板子数据集 - 商用版自动布局布线训练教材",
+  "version": "1.0.0",
+  "created": "2026-07-04",
+  "purpose": "1) 真实端到端测试基准 2) 自动布局布线 RL/BC 训练基础教材 3) 商用版本溯源",
+  "sources": {
+    "siepic": {
+      "description": "SiEPIC EBeam PDK 真实 GDS 版图 (UBC/SiEPIC)",
+      "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+      "license": "LGPL-2.1",
+      "authors": "Lukas Chrostowski et al. (UBC)",
+      "format": "GDSII",
+      "count": 229
+    },
+    "gdsfactory": {
+      "description": "gdsfactory 真实电路 netlist (含 .pic.yml + .yml + gf_*.json)",
+      "url": "https://github.com/gdsfactory/gdsfactory",
+      "license": "MIT",
+      "authors": "gdsfactory community",
+      "format": "YAML/JSON netlist",
+      "count": 89
+    },
+    "picbench": {
+      "description": "picbench 光子电路基准集",
+      "url": "https://github.com/TiagoCavaco/picbench",
+      "license": "MIT",
+      "authors": "Tiago Cavaco et al.",
+      "format": "JSON",
+      "count": 24
+    },
+    "lidar": {
+      "description": "LiDAR ISPD 2025 公开基准电路",
+      "url": "https://github.com/ALIGN-analoglayout/ALIGN",
+      "license": "BSD-3-Clause",
+      "authors": "ISPD 2025 organizers",
+      "format": "JSON",
+      "count": 9
+    },
+    "align": {
+      "description": "ALIGN EPIC 基准电路 (Chentang2nd fork)",
+      "url": "https://github.com/Chentang2nd/ALIGN-custom",
+      "license": "BSD-3-Clause",
+      "authors": "ALIGN community",
+      "format": "JSON",
+      "count": 56
+    },
+    "expert_demos": {
+      "description": "从 SiEPIC GDS 提取的专家 (网表,布局,布线) 三元组 - BC 训练教材",
+      "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+      "license": "LGPL-2.1",
+      "authors": "PoLaRIS team (从 SiEPIC 提取)",
+      "format": "JSON (netlist+placements+routes)",
+      "count": 11
+    }
+  },
+  "total_files": 448,
+  "usage": {
+    "testing": "端到端流水线测试 (place→route→sim→drc→gds)",
+    "training": "BC 预训练 + RL 微调的自动布局布线智能体训练教材",
+    "commercial": "商用版本发布前的真实电路回归基准"
+  },
+  "references": [
+    "Chrostowski & Hochberg, Silicon Photonics Design, CUP 2015, ISBN 9781107016838",
+    "SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+    "gdsfactory: https://doi.org/10.1117/1.JOM.2.4.043501",
+    "ALIGN: DAC 2020"
+  ]
+}

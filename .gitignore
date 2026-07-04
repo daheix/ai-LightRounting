@@ -34,6 +34,10 @@ polaris-extras.tar.gz
 *.gds
 *.oas
 
+# 真实板子数据集例外：real_board/ 下的所有文件都入库（训练教材+回归基准）
+!real_board/**
+!real_board/**/*
+
 # 训练检查点（体积大）
 checkpoints/
 
