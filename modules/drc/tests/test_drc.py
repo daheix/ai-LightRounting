@@ -267,7 +267,7 @@ def test_default_rules_thresholds():
     assert rules_by_name["MIN_AREA"].threshold == 0.1      # WG_MIN_AREA
     assert rules_by_name["BOUNDARY"].threshold == 0.0
     assert rules_by_name["NO_OVERLAP"].threshold == 0.0
-    assert rules_by_name["PORT_ALIGNMENT"].threshold == 5.0
+    assert rules_by_name["PORT_ALIGNMENT"].threshold == 10.0  # 5.0→10.0 SiEPIC EBeam PDK 实际波导弯曲容差
     assert rules_by_name["PORT_DIRECTION"].threshold == 0.0
     assert rules_by_name["PORT_CONNECTIVITY"].threshold == 0.0
     assert rules_by_name["PORT_FACING"].threshold == 0.0
@@ -417,11 +417,25 @@ def test_min_spacing_fail():
 
     d1 AABB=(10,10,20,10.5), d2 AABB=(20.5,10,30.5,10.5),
     dx=max(20.5-20,10-30.5,0)=0.5, dy=0, dist=0.5 < 1.0。
+
+    注: d1 和 d2 必须无连接（R05 修复: 连接邻居跳过 MIN_SPACING 检查，
+    因为波导连接 touching 正常）。用独立器件 d3/d4 测试 MIN_SPACING。
     """
-    circuit = _make_clean_circuit()
+    circuit = {
+        "name": "min_spacing_fail",
+        "devices": [
+            {"name": "d3", "device_type": "strip_waveguide",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d4", "device_type": "strip_waveguide",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [],  # 无连接: d3/d4 独立器件，MIN_SPACING 必须检查
+        "canvas_w": 100,
+        "canvas_h": 100,
+    }
     placements = {
-        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
-        "d2": {"x": 20.5, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d3": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d4": {"x": 20.5, "y": 10.0, "w": 10.0, "h": 0.5},
     }
     result = run_drc(circuit, placements)
     assert "MIN_SPACING" in _violation_rule_names(result)

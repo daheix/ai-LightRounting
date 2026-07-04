@@ -13,6 +13,9 @@
 - [x] 对齐后处理不破坏 NO_OVERLAP/MIN_SPACING 约束（`_no_overlap_at` 每候选位置验证，连接邻居跳过 MIN_SPACING）
 - [x] 6 种矩阵拓扑（clements/reck/spanke/mmi_array/dc_array/polarization_array）DRC 通过率 ≥ 90%（实测 54/60 = 90.0%）
 - [x] 修复未引入新 fall-back（R03 合规）
+- [x] 第 4 趟残余违规成对双向修复 `_residual_pair_fix` 已实现（单器件候选 + `_find_nearest_legal_pos_1d` 最近合法位置 + 联合中点候选 + 全局未通过数严格减少接受准则，覆盖 L/XL 规模"双方都被锁住"场景）
+- [x] drc 测试 test_default_rules_thresholds / test_min_spacing_fail 已修复（PORT_ALIGNMENT 5.0→10.0 期望值更新；MIN_SPACING test 改用无连接器件适配 R05 修复）
+- [x] place + drc 模块单元测试 96/96 通过
 
 ## DRC 规则阈值文献审查
 - [x] PORT_ALIGNMENT 5μm 容差的文献来源已核对（SiEPIC EBeam PDK / Chrostowski 2015，实际波导弯曲容差 10-20μm）
