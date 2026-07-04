@@ -53,7 +53,15 @@ def load_circuit(json_path: str) -> dict:
 
 
 def test_one(circuit_info: dict) -> dict:
-    """测试单个组合电路。R03: 失败即记录真实根因。"""
+    """测试单个组合电路。R03: 失败即记录真实根因。
+
+    R05 修复（2026-07-04，Switch 60s 超时 Bug）:
+        原实现在 run_eda_flow strict=False 模式下，stage 失败被编排层
+        try/except 捕获并标记 stage failed，但 test_one 仍返回 error=None，
+        导致失败案例无法看到具体卡在哪个 stage（仅 elapsed=60s）。现修改
+        为: 若任一关键 stage failed，error 字段记录"电路名 + 首个失败
+        stage_id + stage_name + stage error"，便于诊断根因。
+    """
     from polaris_orchestrator.flow import run_eda_flow
 
     json_path = circuit_info['path']
@@ -75,13 +83,35 @@ def test_one(circuit_info: dict) -> dict:
         key_stages = [2, 3, 4, 6]
         success = all(stages.get(s, {}).get("status") == "success" for s in key_stages)
 
+        # R05 修复: 失败时记录首个失败 stage 的错误信息（含电路名+卡死阶段）
+        error_msg = None
+        if not success:
+            failed_stages = [
+                s for s in flow_result["stages"]
+                if s.get("status") == "failed"
+            ]
+            if failed_stages:
+                first = failed_stages[0]
+                stage_err = first.get("error") or "(unknown error)"
+                error_msg = (
+                    f"电路 {circuit_info['name']} 卡在 stage "
+                    f"{first['stage_id']} ({first['name']}): {stage_err[:150]}"
+                )
+            else:
+                error_msg = f"电路 {circuit_info['name']} 失败但无 stage 标记 failed"
+
         drc_violations = -1
         drc_passed = False
         if success:
             drc_lvs = stages.get(6, {}).get("result") or {}
             if isinstance(drc_lvs, dict):
                 drc = drc_lvs.get("drc", {}) or {}
-                drc_violations = drc.get("total_violations", -1)
+                # R05 Bug 修复: 字段名必须与 polaris_drc.run_drc() 返回结构一致
+                # polaris_drc.run_drc() 返回 {n_rules, n_violations, n_passed,
+                # pass_rate, violations}（见 modules/drc/src/polaris_drc/__init__.py）
+                # 原代码误用 total_violations 导致所有电路 DRC 违规数恒为 -1
+                # 与 test_real_circuits.py L887 用法对齐: n_violations
+                drc_violations = drc.get("n_violations", -1)
                 drc_passed = (drc_violations == 0)
 
         insertion_loss_db = None
@@ -100,7 +130,7 @@ def test_one(circuit_info: dict) -> dict:
             'drc_violations': drc_violations,
             'insertion_loss_db': insertion_loss_db,
             'elapsed_s': round(elapsed, 2),
-            'error': None,
+            'error': error_msg,
         }
     except Exception as e:
         return {
