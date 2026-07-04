@@ -61,7 +61,7 @@
 - [ ] 含商用发布结论（通过/不通过 + 待优化项）
 
 ## 代码提交与操作记录
-- [ ] 每个小任务完成后 git add 精确文件 → commit → push origin main（用户指示本轮由主进程统一提交，暂缓）
+- [x] 每个小任务完成后 git add 精确文件 → commit → push origin main（commit e793e78 已推送 origin/main）
 - [x] `操作记录.md` 已追加本轮记录（轮次编号、交付文件、测试结果、规则依据）
 - [x] 无 fall-back 残留（R03）
 - [x] 无 TODO/FIXME/HACK 残留（R05）
