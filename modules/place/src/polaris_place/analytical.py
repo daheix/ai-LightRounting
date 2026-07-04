@@ -41,6 +41,7 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -408,6 +409,10 @@ def _legalize(
         - Bin packing (Wikipedia)
           https://en.wikipedia.org/wiki/Bin_packing_problem
     """
+    # MIN_SPACING 间距（来源: SiEPIC EBeam PDK WG_MIN_SPACE=1.0μm，
+    # 与 polaris-drc engine.py MIN_SPACING 阈值一致，R02 学术诚信）
+    # 行内器件间需保持 SPACING 间距，避免 MIN_SPACING DRC 违规（R05 Bug 修复）。
+    SPACING = 1.0
     n = len(names)
     if n == 0:
         return {}
@@ -425,20 +430,32 @@ def _legalize(
         candidates = [
             r for r in range(len(rows))
             if rows[r][1] >= h * 1.1
+            and (
+                # 行内首个器件无需间距；后续器件需 SPACING 间距
+                rows[r][2] == 0.0
+                or rows[r][2] + SPACING + w <= canvas_w
+            )
             and rows[r][2] + w <= canvas_w
             and rows[r][3] < d  # 拓扑序: 行内最大 depth < 当前 depth
         ]
         if candidates:
             r = candidates[0]  # FFDH: 第一个满足拓扑约束的候选行
             ys, rh, xc, _ = rows[r]
-            cx = xc + w / 2.0
+            if xc > 0.0:
+                # 行内已有器件：在 xc 基础上加 SPACING 间距放置
+                cx = xc + SPACING + w / 2.0
+                rows[r][2] = xc + SPACING + w
+            else:
+                # 行内首个器件：从 x=0 放置
+                cx = w / 2.0
+                rows[r][2] = w
             cy = ys + rh / 2.0
-            rows[r][2] = xc + w
             rows[r][3] = d  # 更新行内最大拓扑深度
             placements[names[i]] = (cx, cy)
         else:
             new_h = h * 1.1
-            ys = rows[-1][0] + rows[-1][1] if rows else 0.0
+            # 行间也需 SPACING 间距（垂直方向 MIN_SPACING）
+            ys = (rows[-1][0] + rows[-1][1] + SPACING) if rows else 0.0
             cx = w / 2.0
             cy = ys + new_h / 2.0
             rows.append([ys, new_h, w, d])
@@ -492,6 +509,11 @@ def _aabb_overlap_strict(
     return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
+# MIN_SPACING 间距（与 polaris-drc engine.py MIN_SPACING 阈值一致，R02）
+# _align_ports 后处理移动器件时需保持此间距，避免 MIN_SPACING DRC 违规。
+_ALIGN_MIN_SPACING = 1.0
+
+
 def _no_overlap_at(
     placements: dict[str, dict[str, float]],
     exclude_name: str,
@@ -499,18 +521,27 @@ def _no_overlap_at(
     y: float,
     w: float,
     h: float,
+    connected_names: set[str] | None = None,
 ) -> bool:
-    """检查新位置 (x, y, w, h) 是否与其他器件重叠（排除 exclude_name）。
+    """检查新位置 (x, y, w, h) 是否与其他器件重叠或间距不足（排除 exclude_name）。
+
+    同时检查 NO_OVERLAP（strict）和 MIN_SPACING（1.0μm）。
+    直接连接的器件对跳过 MIN_SPACING 检查（与 DRC engine 一致：波导连接
+    touching 正常，R05 Bug 修复）。
 
     Args:
         placements: 当前所有器件布局。
         exclude_name: 排除的器件名（即正在调整的器件）。
         x, y: 新位置左下角坐标。
         w, h: 器件宽高。
+        connected_names: 与 exclude_name 直接连接的器件名集合，
+            这些器件跳过 MIN_SPACING 检查（但仍检查 NO_OVERLAP）。
 
     Returns:
-        True 表示无重叠（可放置），False 表示有重叠。
+        True 表示无重叠且间距满足（可放置），False 表示有重叠或间距不足。
     """
+    if connected_names is None:
+        connected_names = set()
     aabb = (x, y, x + w, y + h)
     for nm, pl in placements.items():
         if nm == exclude_name:
@@ -518,7 +549,16 @@ def _no_overlap_at(
         other = (float(pl["x"]), float(pl["y"]),
                  float(pl["x"]) + float(pl["w"]),
                  float(pl["y"]) + float(pl["h"]))
+        # NO_OVERLAP 检查（所有器件对，包括连接的）
         if _aabb_overlap_strict(aabb, other):
+            return False
+        # MIN_SPACING 检查（跳过直接连接的器件对）
+        if nm in connected_names:
+            continue
+        dx = max(other[0] - aabb[2], aabb[0] - other[2], 0.0)
+        dy = max(other[1] - aabb[3], aabb[1] - other[3], 0.0)
+        dist = math.hypot(dx, dy)
+        if dist < _ALIGN_MIN_SPACING:
             return False
     return True
 
@@ -608,11 +648,22 @@ def _align_ports(
     # 按拓扑顺序处理（depth 从小到大）
     order = sorted(range(len(names)), key=lambda i: depth[i])
 
+    # 构建每个器件的直接连接邻居集合（用于 MIN_SPACING 跳过，与 DRC engine 一致）
+    connected_neighbors: dict[str, set[str]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d1_name, d2_name_conn = str(conn[0]), str(conn[2])
+        connected_neighbors.setdefault(d1_name, set()).add(d2_name_conn)
+        connected_neighbors.setdefault(d2_name_conn, set()).add(d1_name)
+
     for i in order:
         d2_name = names[i]
         if d2_name not in placements:
             continue
         d2_dev = device_map.get(d2_name, {})
+        # d2 的直接连接邻居（这些器件跳过 MIN_SPACING 检查，但仍检查 NO_OVERLAP）
+        d2_connected = connected_neighbors.get(d2_name, set())
 
         # 遍历所有连接到 d2 的连接（d2 作为下游 d2）
         for conn in circuit.get("connections", []):
@@ -652,39 +703,45 @@ def _align_ports(
                 target_y = abs1_y - port2[1]
                 new_y = max(0.0, min(target_y, canvas_h - h2))
                 if _no_overlap_at(placements, d2_name,
-                                  float(pl2["x"]), new_y, w2, h2):
+                                  float(pl2["x"]), new_y, w2, h2,
+                                  d2_connected):
                     placements[d2_name]["y"] = new_y
                 else:
                     # 主轴对齐会重叠，尝试副轴对齐 x（使 dx=0 ≤ tol）
                     target_x = abs1_x - port2[0]
                     new_x = max(0.0, min(target_x, canvas_w - w2))
                     if _no_overlap_at(placements, d2_name,
-                                      new_x, float(pl2["y"]), w2, h2):
+                                      new_x, float(pl2["y"]), w2, h2,
+                                      d2_connected):
                         placements[d2_name]["x"] = new_x
             elif (dir1, dir2) in (("north", "south"), ("south", "north")):
                 # 垂直连接（north↔south），优先对齐 x（主轴）
                 target_x = abs1_x - port2[0]
                 new_x = max(0.0, min(target_x, canvas_w - w2))
                 if _no_overlap_at(placements, d2_name,
-                                  new_x, float(pl2["y"]), w2, h2):
+                                  new_x, float(pl2["y"]), w2, h2,
+                                  d2_connected):
                     placements[d2_name]["x"] = new_x
                 else:
                     # 主轴对齐会重叠，尝试副轴对齐 y
                     target_y = abs1_y - port2[1]
                     new_y = max(0.0, min(target_y, canvas_h - h2))
                     if _no_overlap_at(placements, d2_name,
-                                      float(pl2["x"]), new_y, w2, h2):
+                                      float(pl2["x"]), new_y, w2, h2,
+                                      d2_connected):
                         placements[d2_name]["y"] = new_y
             else:
                 # 方向不明确，尝试两个轴，选择能对齐且不重叠的
                 target_y = abs1_y - port2[1]
                 new_y = max(0.0, min(target_y, canvas_h - h2))
                 y_ok = _no_overlap_at(placements, d2_name,
-                                      float(pl2["x"]), new_y, w2, h2)
+                                      float(pl2["x"]), new_y, w2, h2,
+                                      d2_connected)
                 target_x = abs1_x - port2[0]
                 new_x = max(0.0, min(target_x, canvas_w - w2))
                 x_ok = _no_overlap_at(placements, d2_name,
-                                      new_x, float(pl2["y"]), w2, h2)
+                                      new_x, float(pl2["y"]), w2, h2,
+                                      d2_connected)
                 # 优先对齐偏差较大的轴
                 dx = abs(abs1_x - abs2_x)
                 dy = abs(abs1_y - abs2_y)
