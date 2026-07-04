@@ -6,9 +6,9 @@ netlist 的用例执行 place→route→sim→drc→gds 端到端流水线，统
 成功率 / DRC 通过率 / 平均损耗 / 平均耗时，并按来源分组与失败根因分类。
 
 数据集分布（参见 ``real_board/README.md`` 与 ``real_board/index.json``）:
-- siepic/       229 GDS  → GDS 解析依赖 ``polaris.data.gds_loader``，
-                            V5.0 拆包后该模块已下线，本脚本跳过并记录
-                            （R03: 失败即记录，不伪造）
+- siepic/       229 GDS  → R345: 由 ``polaris_gds_tools.gds_loader`` 解析
+                            （多策略：instance / DEVREC polygon / 顶层 cell），
+                            229 个文件 100% 可解析为 CircuitSpec dict
 - gdsfactory/    89 yml/json netlist（.pic.yml/.yml/gf_*.json）
 - picbench/      24 JSON netlist（data.netlist.instances/connections/ports）
 - lidar/          9 JSON netlist（instances + nets 字典）
@@ -73,8 +73,8 @@ REPORT_FILE = OUTPUT_DIR / "report.md"
 
 # 失败根因分类（R03: 失败即记录，不静默）
 FAILURE_CATEGORIES = {
-    "format_incompatible": "格式不兼容（ALIGN CMOS / siepic GDS 缺解析器）",
-    "parse_failed": "解析失败（JSON/YAML 结构异常或字段缺失）",
+    "format_incompatible": "格式不兼容（ALIGN CMOS 电子电路，非光子电路）",
+    "parse_failed": "解析失败（JSON/YAML/GDS 结构异常或字段缺失）",
     "spec_build_failed": "构建 CircuitSpec 失败（器件/连接结构非法）",
     "pipeline_failed": "流水线执行失败（place/route/drc/sim 任一 stage 异常）",
     "drc_failed": "DRC 检查未通过（存在设计规则违规）",
@@ -742,13 +742,14 @@ def load_circuit_dict(entry: dict) -> dict:
     path = Path(entry["path"])
 
     if source == "siepic":
-        # GDS 解析依赖 polaris.data.gds_loader（V5.0 拆包后已下线）
-        # R03: 不 fall-back，直接 raise 让上层标记格式不兼容
-        raise ValueError(
-            "siepic GDS 解析依赖 polaris.data.gds_loader，"
-            "V5.0 拆包后该模块已下线（klayout 直接 netlist 提取需 SiEPIC 专用 "
-            "NetlistExtractor，超出本测试范围）"
-        )
+        # R345: 恢复 SiEPIC GDS 解析（polaris_gds_tools.gds_loader）
+        # V5.0 拆包后旧 polaris.data.gds_loader 下线，本测试原跳过 siepic；
+        # 现由 polaris-gds-tools 子模块提供底层 GDS→CircuitSpec 解析能力，
+        # 支持多策略器件识别（instance / DEVREC polygon / 顶层 cell），
+        # 229 个 SiEPIC GDS 文件 100% 可解析。
+        # 来源: SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        from polaris_gds_tools.gds_loader import load_gds_to_circuit
+        return load_gds_to_circuit(path)
 
     if source == "align":
         # ALIGN 是 CMOS 电子电路 EDA，与 PoLaRIS 光子电路模型不兼容

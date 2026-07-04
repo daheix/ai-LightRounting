@@ -132,6 +132,13 @@ from polaris_gds_tools.gdsii_tapeout_precheck import tapeout_precheck
 from polaris_gds_tools.gdsii_batch_pipeline import run_batch_pipeline
 from polaris_gds_tools.gdsii_drc_area import check_area
 
+# --- SiEPIC GDS 电路解析器（R345，恢复 V5.0 拆包下线的 polaris.data.gds_loader）---
+from polaris_gds_tools.gds_loader import (
+    load_gds_to_circuit,
+    load_gds_to_circuit_spec,
+    siepic_to_polaris,
+)
+
 # --- 曲线离散化与样条曲线（v5.0 R11 路标：GDS/OASIS 1nm 精度导出）---
 from polaris_gds_tools.curve_discretization import (
     bspline_curve,
@@ -201,6 +208,10 @@ __all__ = [
     "tapeout_precheck",
     "run_batch_pipeline",
     "check_area",
+    # SiEPIC GDS 电路解析器（R345）
+    "load_gds_to_circuit",
+    "load_gds_to_circuit_spec",
+    "siepic_to_polaris",
     # 曲线离散化与样条曲线（v5.0 R11 路标）
     "discretize_curve_1nm",
     "bspline_curve",
