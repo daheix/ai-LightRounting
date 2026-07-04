@@ -75,6 +75,7 @@ REPORT_FILE = OUTPUT_DIR / "report.md"
 # 失败根因分类（R03: 失败即记录，不静默）
 FAILURE_CATEGORIES = {
     "format_incompatible": "格式不兼容（ALIGN CMOS 电子电路，非光子电路）",
+    "non_circuit_demo": "非电路演示文件（仅 instances+placements，无 connections/routes/nets）",
     "parse_failed": "解析失败（JSON/YAML/GDS 结构异常或字段缺失）",
     "spec_build_failed": "构建 CircuitSpec 失败（器件/连接结构非法）",
     "pipeline_failed": "流水线执行失败（place/route/drc/sim 任一 stage 异常）",
@@ -434,19 +435,51 @@ def parse_gdsfactory_json(data: dict, name: str) -> dict:
     instances = data.get("instances", {})
     routes = data.get("routes", {})
     explicit_conns = data.get("connections", [])
+    nets = data.get("nets", [])
 
     if not instances:
         raise ValueError("gdsfactory 无 instances")
 
+    # 预筛（R03: 不伪造连接，正确分类）
+    # 19 个 gdsfactory 演示文件只有 instances+placements，无任何连接字段，
+    # 是布局演示而非电路。标记为 non_circuit_demo，不计入 spec_build_failed。
+    # 来源: gdsfactory docs/notebooks/yaml_pics 与 samples/demo/circuits
+    #   https://gdsfactory.github.io/gdsfactory/notebooks/yaml_pics.html
+    has_conns = (
+        (isinstance(explicit_conns, list) and len(explicit_conns) > 0)
+        or (isinstance(explicit_conns, dict) and len(explicit_conns) > 0)
+        or (isinstance(routes, dict) and any(
+            isinstance(rdef, dict) and rdef.get("links")
+            for rdef in routes.values()
+        ))
+        or (isinstance(nets, list) and len(nets) > 0)
+    )
+    if not has_conns:
+        raise ValueError("non_circuit_demo: gdsfactory 仅 instances+placements，无 connections/routes/nets")
+
     dev_ports: dict[str, list[str]] = defaultdict(list)
     edges: list[tuple[str, str, str, str]] = []
-    # 显式 connections（list of [inst,port,inst,port] 或 dict）
-    for c in explicit_conns:
-        if isinstance(c, (list, tuple)) and len(c) == 4:
-            i1, p1, i2, p2 = c
+    # 显式 connections（list of [inst,port,inst,port] 或 dict: {"inst,port": "inst,port"}）
+    # Bug 修复（R05）: 原仅处理 list 类型，漏掉 dict 类型（Jinja 模板版/connections_demo）
+    #   来源: gdsfactory netlist 格式
+    #     https://gdsfactory.github.io/gdsfactory/ (connections 字段两种语法)
+    if isinstance(explicit_conns, dict):
+        for ref1, ref2 in explicit_conns.items():
+            try:
+                i1, p1 = _split_port_ref(ref1)
+                i2, p2 = _split_port_ref(ref2)
+            except ValueError:
+                continue
             dev_ports[i1].append(p1)
             dev_ports[i2].append(p2)
             edges.append((i1, p1, i2, p2))
+    elif isinstance(explicit_conns, list):
+        for c in explicit_conns:
+            if isinstance(c, (list, tuple)) and len(c) == 4:
+                i1, p1, i2, p2 = c
+                dev_ports[i1].append(p1)
+                dev_ports[i2].append(p2)
+                edges.append((i1, p1, i2, p2))
     # routes.links（dict: "inst,port" → "inst,port"）
     for rname, rdef in routes.items():
         if not isinstance(rdef, dict):
@@ -655,6 +688,23 @@ def parse_gdsfactory_yml(text: str, name: str) -> dict:
 
     if not instances:
         raise ValueError("gdsfactory yml 无 instances")
+
+    # 预筛（R03: 不伪造连接，正确分类）
+    # 10 个 gdsfactory yml 演示文件只有 instances+placements，无任何连接字段，
+    # 是布局演示而非电路。标记为 non_circuit_demo，不计入 spec_build_failed。
+    # 来源: gdsfactory docs/notebooks/yaml_pics 与 samples/netlists
+    #   https://gdsfactory.github.io/gdsfactory/notebooks/yaml_pics.html
+    has_conns = (
+        (isinstance(nets, list) and len(nets) > 0)
+        or (isinstance(connections, list) and len(connections) > 0)
+        or (isinstance(connections, dict) and len(connections) > 0)
+        or (isinstance(routes, dict) and any(
+            isinstance(rdef, dict) and rdef.get("links")
+            for rdef in routes.values()
+        ))
+    )
+    if not has_conns:
+        raise ValueError("non_circuit_demo: gdsfactory yml 仅 instances+placements，无 connections/routes/nets")
 
     dev_ports: dict[str, list[str]] = defaultdict(list)
     edges: list[tuple[str, str, str, str]] = []
@@ -932,6 +982,7 @@ def test_single_case(entry: dict) -> RealTestResult:
 
     失败根因分类（R03: 失败即记录）:
         - format_incompatible: siepic GDS / align CMOS
+        - non_circuit_demo: gdsfactory 仅 instances+placements，无连接（演示文件）
         - parse_failed: JSON/YAML 解析异常
         - spec_build_failed: parser 抛 ValueError
         - pipeline_failed: run_eda_flow 任一关键 stage 失败
@@ -946,10 +997,12 @@ def test_single_case(entry: dict) -> RealTestResult:
     try:
         circuit_dict = load_circuit_dict(entry)
     except ValueError as e:
-        # 区分格式不兼容 vs 解析失败
+        # 区分格式不兼容 / 非电路演示 / 解析失败 / spec 构建失败
         msg = str(e)
         if "不兼容" in msg or "下线" in msg:
             cat = "format_incompatible"
+        elif "non_circuit_demo" in msg:
+            cat = "non_circuit_demo"
         else:
             cat = "parse_failed" if "结构" in msg or "字段" in msg or "无效" in msg else "spec_build_failed"
         return RealTestResult(
@@ -1190,14 +1243,19 @@ def render_report(
         f"{real_success_rate:.1f}% | {n_drc} | {real_drc_rate:.1f}% |"
     )
     lines.append("")
-    # 排除格式不兼容后的真实可测试用例成功率
-    n_testable = sum(1 for r in results if r.failure_category != "format_incompatible")
+    # 排除格式不兼容 / 非电路演示后的真实可测试用例成功率
+    # non_circuit_demo: 仅 instances+placements 的布局演示文件，无电路语义
+    n_testable = sum(
+        1 for r in results
+        if r.failure_category not in ("format_incompatible", "non_circuit_demo")
+    )
     n_testable_success = sum(
-        1 for r in results if r.success and r.failure_category != "format_incompatible"
+        1 for r in results
+        if r.success and r.failure_category not in ("format_incompatible", "non_circuit_demo")
     )
     testable_rate = 100.0 * n_testable_success / n_testable if n_testable else 0.0
     lines.append(
-        f"- 排除格式不兼容后（{n_testable} 个可测试用例）成功率: "
+        f"- 排除格式不兼容 / 非电路演示后（{n_testable} 个可测试用例）成功率: "
         f"{testable_rate:.1f}%"
     )
     lines.append("")
@@ -1212,6 +1270,12 @@ def render_report(
         lines.append(
             f"- 格式不兼容 {by_cat['format_incompatible']} 个：siepic GDS（229）+ "
             f"align CMOS（部分），反映 PoLaRIS 当前不支持 GDS 直接解析与电子电路格式"
+        )
+    if by_cat.get("non_circuit_demo", 0) > 0:
+        lines.append(
+            f"- 非电路演示文件 {by_cat['non_circuit_demo']} 个：gdsfactory yml/json 仅 "
+            f"instances+placements（无 connections/routes/nets），是布局演示而非电路，"
+            f"已正确分类不计入 spec_build_failed（R03: 不伪造连接）"
         )
     if by_cat.get("pipeline_failed", 0) > 0:
         lines.append(
