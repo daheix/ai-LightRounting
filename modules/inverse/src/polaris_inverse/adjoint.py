@@ -233,197 +233,114 @@ def fom_fn(
     return peak_monitor / peak_source
 
 
-def run_adjoint_optimization(
-    n_iterations: int = N_ITERATIONS,
-    learning_rate: float = LEARNING_RATE,
-) -> dict:
-    """执行 Adjoint 逆向设计：JAX 可微分 FDTD 优化波导宽度。
+def _run_adjoint_build_solver():
+    """构建 YeeGrid3D 网格 + DifferentiableFDTD 求解器（含 Gedney PML）。
 
-    流程:
-    1. 构建 YeeGrid3D 网格 + DifferentiableFDTD 求解器
-    2. 启用 Gedney PML 吸收边界
-    3. 定义归一化 FoM(width) = max(|monitor|) / max(|source|)（值域 [0,1]，
-       *修复 R05* 旧版未归一化致场强 ~1e16 梯度裁剪恒触发不收敛）
-    4. *创新* jax.grad 自动计算 dFoM/dwidth（替代手动伴随方程）
-    5. heavy-ball 动量梯度上升优化 width（最大化 FoM）
-    6. 记录 FoM 历史、收敛状态
-
-    Args:
-        n_iterations: 优化迭代次数（默认 50）。
-        learning_rate: 学习率（默认 0.5）。
-
-    Returns:
-        优化结果 dict（best-checkpoint 语义，2026-07-03 R05 修复）::
-
-            {
-                "initial_width_nm": float,    # 初始波导半宽度 (nm)
-                "optimal_width_nm": float,    # 历史最优 FoM 对应宽度 (nm)
-                "initial_fom": float,         # 初始 FoM
-                "final_fom": float,           # 历史最优 FoM（best_fom，非末步）
-                "improvement_db": float,      # 10*log10(best/initial)，恒 >= 0
-                "fom_history": list[float],   # 真实轨迹（含震荡，长度 n_iterations+1）
-                "converged": bool,            # 末 3 步变化 <1%（反映末段稳定性）
-                "iterations": int,            # 实际迭代次数
-            }
-
-        best-checkpoint 说明: 200nm 网格 FoM 景观非光滑，heavy-ball 动量在
-        n≥10 迭代后过冲震荡致末步 FoM 反降。返回历史最优（best_fom/best_width）
-        而非末步，是嘈杂优化的标准做法（torch.save best_model / Keras
-        ModelCheckpoint save_best_only / lumopt 保留最优结构），非 R03 fall-back
-        ——优化器仍执行真实梯度上升，fom_history 记录真实轨迹供诊断。
-
-    Raises:
-        ValueError: n_iterations/learning_rate 非法。
-        RuntimeError: JAX 不可用或优化过程出现 NaN（R03 禁止 fall-back）。
+    来源: Taflove 2005 §4.4 CFL; Gedney 1996 IEEE TAP PML
     """
-    # 参数校验（R03 禁止 fall-back）
-    if not isinstance(n_iterations, int) or n_iterations <= 0:
-        raise ValueError(
-            f"n_iterations 须为正整数，实际 {n_iterations}"
-        )
-    if not isinstance(learning_rate, (int, float)) or learning_rate <= 0:
-        raise ValueError(
-            f"learning_rate 须为正数，实际 {learning_rate}"
-        )
-
-    # 构建 YeeGrid3D 网格
     nx, ny, nz = GRID_NX, GRID_NY, GRID_NZ
     dx = GRID_DX_M
     grid = YeeGrid3D(nx=nx, ny=ny, nz=nz, dx=dx, dy=dx, dz=dx)
-    # 初始化 grid.epsilon_r 为硅背景（PML 系数计算用）
     grid.epsilon_r = jnp.ones((nx, ny, nz)) * EPS_R_SI
-
-    # CFL 稳定条件时间步 + 安全系数
-    # 来源: Taflove 2005 §4.4, Courant-Friedrichs-Lewy 条件
     cfl_dt = grid.cfl_timestep(EPS_R_SI)
     dt = FDTD_DT_SAFETY * float(cfl_dt)
-
-    # 启用 PML 吸收边界（Gedney 1996 IEEE TAP）
-    # 指定 eps_r_bg=EPS_R_SI（硅背景），避免 PML 区域 cb 被放大（Gedney 1996 §III）
     pml = GedneyPML(grid, n_layers=PML_N_LAYERS, eps_r_bg=EPS_R_SI)
     fdtd = DifferentiableFDTD(grid, pml=pml, dt=dt, eps_r_bg=EPS_R_SI)
-
-    # 源/监视器位置（距 PML 4 像素，避免源能量被 PML 吸收）
-    # PML x=[0:2] 和 [22:24]，y=[0:2] 和 [10:12]，z=[0:2] 和 [6:8]
-    # 源 x=PML+4=6, z=PML+1=3；监视器 x=NX-PML-4=18, z=3
     source_pos = (PML_N_LAYERS + 4, ny // 2, PML_N_LAYERS + 1)
     monitor_pos = (nx - PML_N_LAYERS - 4, ny // 2, PML_N_LAYERS + 1)
     source_freq = C0 / (TARGET_WAVELENGTH_UM * 1e-6)
     target_freq = source_freq
+    return grid, fdtd, source_pos, monitor_pos, source_freq, target_freq, nx, ny
 
-    # 初始化波导宽度参数（半宽度，像素）
-    width_param = jnp.array(INITIAL_WIDTH_PIXELS, dtype=jnp.float32)
 
-    # *创新* jax.grad 自动计算 dFoM/dwidth（替代手动伴随方程）
-    # 来源: Mahau 2024 arXiv:2412.12360; Hughes 2018 ACS Photonics
-    grad_fn = jax.grad(fom_fn, argnums=0)
+def _run_adjoint_optimize_loop(
+    n_iterations: int,
+    learning_rate: float,
+    width_param: jnp.ndarray,
+    grad_fn,
+    fdtd: DifferentiableFDTD,
+    grid: YeeGrid3D,
+    source_pos: tuple,
+    source_freq: float,
+    monitor_pos: tuple,
+    target_freq: float,
+    ny: int,
+) -> tuple:
+    """heavy-ball 动量梯度上升优化循环，返回 fom_history 和 best checkpoint。
 
+    来源: Polyak 1964 heavy-ball; Kingma & Ba 2014 Adam best-checkpoint 惯例
+    """
     fom_history: list = []
-    # heavy-ball 动量项（Polyak 1964），抑制梯度符号交替震荡
-    # 来源: Polyak 1964 "Some methods of speeding up the convergence of
-    #       iteration methods"
     velocity = 0.0
-
-    # *修复 R05（2026-07-03）*: 最佳检查点追踪（best-checkpoint tracking）。
-    # 旧 BUG 根因: 200nm 网格（7.75 点/λ）FoM 景观高度非光滑，heavy-ball 动量
-    # 在 n≥10 迭代后过冲震荡，final FoM 反低于 initial（实测 n=10: -0.72 dB，
-    # n=50: 亦恶化）。stage10 注释自承"另案修复"但未修，违反 R05。
-    # 修复策略: 迭代过程中追踪历史最优 FoM 对应的 width，返回 best 而非 final。
-    # 这是非凸/嘈杂优化的标准做法（torch.save best_model / Keras
-    # ModelCheckpoint save_best_only / lumopt 保留最优结构），非 R03 fall-back
-    # ——优化器仍执行真实梯度上升，fom_history 仍记录真实轨迹（含震荡），
-    # 仅 final_fom/optimal_width_nm 改为历史最优，确保 improvement_db >= 0。
-    # 来源: Kingma & Ba 2014 Adam（best-checkpoint 惯例）
-    #   https://arxiv.org/abs/1412.6980；Loshchilov & Hutter 2017 SGDR
-    #   https://arxiv.org/abs/1608.03983；lumopt 最佳结构保留
-    #   https://github.com/chriskeraly/lumopt
     best_fom = -float("inf")
     best_width = float(INITIAL_WIDTH_PIXELS)
 
     for i in range(n_iterations):
-        # 当前 width 的 FoM
         fom_val = float(
-            fom_fn(
-                width_param, fdtd, grid, source_pos, source_freq,
-                FDTD_N_STEPS, monitor_pos, target_freq,
-            )
+            fom_fn(width_param, fdtd, grid, source_pos, source_freq,
+                   FDTD_N_STEPS, monitor_pos, target_freq)
         )
-        # R03 禁止 fall-back: NaN 即 raise
         if not np.isfinite(fom_val):
             raise RuntimeError(
-                f"第 {i} 步 FoM 非有限值 {fom_val}（R03 禁止 fall-back，"
-                f"优化发散）"
+                f"第 {i} 步 FoM 非有限值 {fom_val}（R03 禁止 fall-back）"
             )
         fom_history.append(fom_val)
-
-        # 更新历史最优检查点（strict > 避免噪声抖动反复覆盖）
         if fom_val > best_fom:
             best_fom = fom_val
             best_width = float(width_param)
-
-        # 梯度（*创新* jax.grad 自动微分）
         grad_val = float(
-            grad_fn(
-                width_param, fdtd, grid, source_pos, source_freq,
-                FDTD_N_STEPS, monitor_pos, target_freq,
-            )
+            grad_fn(width_param, fdtd, grid, source_pos, source_freq,
+                    FDTD_N_STEPS, monitor_pos, target_freq)
         )
         if not np.isfinite(grad_val):
             raise RuntimeError(
-                f"第 {i} 步梯度非有限值 {grad_val}（R03 禁止 fall-back，"
-                f"自动微分发散）"
+                f"第 {i} 步梯度非有限值 {grad_val}（R03 禁止 fall-back）"
             )
-
-        # 梯度上升 + 动量（heavy-ball method, Polyak 1964）
-        # 梯度裁剪 [-1, 1] 防 NaN 爆炸。
-        # *修复 R05*: 归一化后梯度 O(0.01-0.1)，裁剪仅作安全网（旧版未归一化
-        # 时梯度 ~1e15 恒触发裁剪为 ±1，方向信息丢失致 width 震荡）
         clipped_grad = max(min(grad_val, 1.0), -1.0)
         velocity = MOMENTUM * velocity + learning_rate * clipped_grad
         width_param = width_param + velocity
-        # 约束宽度在合理范围 [0.5, ny/2 - 1]
         width_param = jnp.clip(width_param, 0.5, ny / 2.0 - 1.0)
 
-    # 最终 FoM（最终 width 的 FoM，作为 fom_history 最后一个元素）
+    return fom_history, best_fom, best_width, width_param
+
+
+def _run_adjoint_finalize(
+    width_param: jnp.ndarray,
+    fom_history: list,
+    best_fom: float,
+    best_width: float,
+    fdtd: DifferentiableFDTD,
+    grid: YeeGrid3D,
+    source_pos: tuple,
+    source_freq: float,
+    monitor_pos: tuple,
+    target_freq: float,
+    n_iterations: int,
+) -> dict:
+    """计算最终 FoM，组装并返回优化结果 dict（best-checkpoint 语义）。"""
     fom_final = float(
-        fom_fn(
-            width_param, fdtd, grid, source_pos, source_freq,
-            FDTD_N_STEPS, monitor_pos, target_freq,
-        )
+        fom_fn(width_param, fdtd, grid, source_pos, source_freq,
+               FDTD_N_STEPS, monitor_pos, target_freq)
     )
     if not np.isfinite(fom_final):
         raise RuntimeError(
             f"最终 FoM 非有限值 {fom_final}（R03 禁止 fall-back）"
         )
     fom_history.append(fom_final)
-    # fom_history 长度 = n_iterations + 1
-    # fom_history[0] = 初始 FoM, fom_history[-1] = 最终（末步）FoM
-    # fom_history 记录真实轨迹（含震荡），用于透明性与诊断
-
-    # 最后一步也可能成为新的最优
     if fom_final > best_fom:
         best_fom = fom_final
         best_width = float(width_param)
 
     fom_initial = fom_history[0]
-    # 改善量（dB）: 10*log10(best/initial)
-    # 基于 best_fom（历史最优），保证 improvement_db >= 0（best >= initial 恒成立，
-    # 因 best 至少记录了 fom_history[0] = initial）。
-    # 保护: fom 可能为 0，用 max(x, 1e-30) 防止 log10(0)
     improvement_db = 10.0 * np.log10(
         max(best_fom, 1e-30) / max(fom_initial, 1e-30)
     )
-
-    # 收敛判定: 最后 3 步 FoM 变化 < 1%（基于真实轨迹，反映末段稳定性）
     converged = False
     if len(fom_history) >= 4:
         recent = fom_history[-4:]
         rel_change = abs(recent[-1] - recent[0]) / max(abs(recent[0]), 1e-30)
         converged = rel_change < 0.01
 
-    # 返回历史最优检查点（best-checkpoint），非末步 final。
-    # optimal_width_nm / final_fom 取 best_width / best_fom，
-    # fom_history 仍为真实轨迹（含震荡，供诊断）。
     return {
         "initial_width_nm": float(INITIAL_WIDTH_PIXELS * GRID_DX_M * 1e9),
         "optimal_width_nm": float(best_width) * GRID_DX_M * 1e9,
@@ -434,6 +351,71 @@ def run_adjoint_optimization(
         "converged": bool(converged),
         "iterations": int(n_iterations),
     }
+
+
+def run_adjoint_optimization(
+    n_iterations: int = N_ITERATIONS,
+    learning_rate: float = LEARNING_RATE,
+) -> dict:
+    """执行 Adjoint 逆向设计：JAX 可微分 FDTD 优化波导宽度。
+
+    流程: 构建 YeeGrid3D+PML → jax.grad 自动微分 → heavy-ball 动量梯度上升
+    → best-checkpoint 返回（历史最优 FoM 对应 width，非末步）。
+
+    best-checkpoint 语义（R05 修复 2026-07-03）: 200nm 网格 FoM 景观非光滑，
+    heavy-ball 动量在 n>=10 后过冲震荡。返回历史最优（best_fom/best_width）
+    而非末步，是嘈杂优化标准做法（torch.save best_model / Keras
+    ModelCheckpoint save_best_only / lumopt 保留最优结构），非 R03 fall-back
+    ——优化器仍执行真实梯度上升，fom_history 记录真实轨迹供诊断。
+
+    Args:
+        n_iterations: 优化迭代次数（默认 50）。
+        learning_rate: 学习率（默认 0.5）。
+
+    Returns:
+        优化结果 dict（best-checkpoint 语义）::
+
+            {
+                "initial_width_nm": float,
+                "optimal_width_nm": float,   # 历史最优 FoM 对应宽度
+                "initial_fom": float,
+                "final_fom": float,          # 历史最优 FoM（best_fom，非末步）
+                "improvement_db": float,     # 10*log10(best/initial)，恒 >= 0
+                "fom_history": list[float],  # 真实轨迹（含震荡）
+                "converged": bool,           # 末 3 步变化 <1%
+                "iterations": int,
+            }
+
+    Raises:
+        ValueError: n_iterations/learning_rate 非法。
+        RuntimeError: JAX 不可用或优化过程出现 NaN（R03 禁止 fall-back）。
+
+    来源（R02 学术诚信）:
+        - Mahau 2024 arXiv:2412.12360 https://arxiv.org/abs/2412.12360
+        - Hughes 2018 ACS Photonics https://arxiv.org/abs/1811.01255
+        - Polyak 1964 heavy-ball
+        - Kingma & Ba 2014 Adam https://arxiv.org/abs/1412.6980
+        - lumopt https://github.com/chriskeraly/lumopt
+    """
+    if not isinstance(n_iterations, int) or n_iterations <= 0:
+        raise ValueError(f"n_iterations 须为正整数，实际 {n_iterations}")
+    if not isinstance(learning_rate, (int, float)) or learning_rate <= 0:
+        raise ValueError(f"learning_rate 须为正数，实际 {learning_rate}")
+
+    grid, fdtd, source_pos, monitor_pos, source_freq, target_freq, _, ny = (
+        _run_adjoint_build_solver()
+    )
+    width_param = jnp.array(INITIAL_WIDTH_PIXELS, dtype=jnp.float32)
+    grad_fn = jax.grad(fom_fn, argnums=0)
+
+    fom_history, best_fom, best_width, width_param = _run_adjoint_optimize_loop(
+        n_iterations, learning_rate, width_param, grad_fn, fdtd, grid,
+        source_pos, source_freq, monitor_pos, target_freq, ny,
+    )
+    return _run_adjoint_finalize(
+        width_param, fom_history, best_fom, best_width, fdtd, grid,
+        source_pos, source_freq, monitor_pos, target_freq, n_iterations,
+    )
 
 
 __all__ = [
