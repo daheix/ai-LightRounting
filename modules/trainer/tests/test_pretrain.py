@@ -140,11 +140,11 @@ def _make_circuit(n: int = 2) -> dict:
     """构造 n 器件测试电路（含 devices 与 nets）。"""
     devices = [
         {"id": f"d{i}", "type": "mzi" if i % 2 == 0 else "mmi",
-         "width": 50.0, "height": 30.0, "ports": ["a", "b"]}
+         "width_um": 50.0, "height_um": 30.0, "ports": ["a", "b"]}
         for i in range(n)
     ]
     nets = [{"src": (f"d{i}", "a"), "dst": (f"d{i + 1}", "a")} for i in range(n - 1)]
-    return {"devices": devices, "nets": nets}
+    return {"devices": devices, "nets": nets, "canvas_w": 1000.0}
 
 
 # =============================================================================
@@ -156,10 +156,11 @@ def test_pareto_reward_and_front():
     """MultiObjectiveParetoReward: compute + pareto_front。"""
     circuit = {
         "devices": [
-            {"id": "d0", "width": 50.0, "height": 30.0, "ports": ["a", "b"]},
-            {"id": "d1", "width": 40.0, "height": 20.0, "ports": ["a", "b"]},
+            {"id": "d0", "width_um": 50.0, "height_um": 30.0, "ports": ["a", "b"]},
+            {"id": "d1", "width_um": 40.0, "height_um": 20.0, "ports": ["a", "b"]},
         ],
         "nets": [{"src": ("d0", "a"), "dst": ("d1", "a")}],
+        "canvas_w": 1000.0,
     }
     placement = {
         "d0": {"x": 0.0, "y": 0.0, "rotation": 0},
@@ -199,7 +200,8 @@ def test_pareto_reward_individual_objectives_and_maximize():
     reward_w = MultiObjectiveParetoReward(cfg)
     res = reward_w.compute(placement, circuit)
     # reward = -(10 * area_norm + 0 + 0 + 0)
-    expected = -(10.0 * area / (3200.0 ** 2))
+    # canvas_w=1000.0（与 specs.py CircuitSpec.canvas_w 对齐，替代原硬编码 3200.0）
+    expected = -(10.0 * area / (1000.0 ** 2))
     assert abs(res["reward"] - expected) < 1e-9
     # pareto_front maximize: 第 0 个在两目标上都最大 → 在前沿
     objs = np.array([[0.9, 0.8], [0.1, 0.2], [0.5, 0.3]])

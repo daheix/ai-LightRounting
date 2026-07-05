@@ -140,11 +140,11 @@ def _make_circuit(n: int = 2) -> dict:
     """构造 n 器件测试电路（含 devices 与 nets）。"""
     devices = [
         {"id": f"d{i}", "type": "mzi" if i % 2 == 0 else "mmi",
-         "width": 50.0, "height": 30.0, "ports": ["a", "b"]}
+         "width_um": 50.0, "height_um": 30.0, "ports": ["a", "b"]}
         for i in range(n)
     ]
     nets = [{"src": (f"d{i}", "a"), "dst": (f"d{i + 1}", "a")} for i in range(n - 1)]
-    return {"devices": devices, "nets": nets}
+    return {"devices": devices, "nets": nets, "canvas_w": 1000.0}
 
 
 # =============================================================================
