@@ -538,6 +538,76 @@ def _align_d2_global(
     placements[d2_name]["y"] = best_pos[1]
 
 
+def _align_ports_build_device_map(circuit: dict) -> dict[str, dict]:
+    """构建器件名 → 器件规格映射（含 ports）。"""
+    device_map: dict[str, dict] = {}
+    for dev in circuit.get("devices", []):
+        nm = dev.get("name")
+        if nm is not None:
+            device_map[nm] = dev
+    return device_map
+
+
+def _align_ports_build_indexes(
+    circuit: dict, placements: dict,
+) -> tuple[list[str], dict[str, int], list[tuple[int, int]],
+           dict[str, set[str]], dict[str, list[tuple]]]:
+    """构建拓扑/邻居/入向连接索引。
+
+    Returns:
+        (names, name_to_idx, idx_conns, connected_neighbors, incoming_per_d2)。
+    """
+    names = list(placements.keys())
+    name_to_idx = {nm: i for i, nm in enumerate(names)}
+    idx_conns: list[tuple[int, int]] = []
+    connected_neighbors: dict[str, set[str]] = {}
+    incoming_per_d2: dict[str, list[tuple]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d1_name, d2_name = str(conn[0]), str(conn[2])
+        # 拓扑连接索引
+        if d1_name in name_to_idx and d2_name in name_to_idx:
+            idx_conns.append((name_to_idx[d1_name], name_to_idx[d2_name]))
+        # 直接连接邻居（用于 MIN_SPACING 跳过，与 DRC engine 一致）
+        connected_neighbors.setdefault(d1_name, set()).add(d2_name)
+        connected_neighbors.setdefault(d2_name, set()).add(d1_name)
+        # 入向连接（d2 作为下游的所有连接）
+        if d2_name in placements:
+            incoming_per_d2.setdefault(d2_name, []).append(tuple(conn))
+    return names, name_to_idx, idx_conns, connected_neighbors, incoming_per_d2
+
+
+def _align_ports_run_multi_pass(
+    placements: dict, names: list[str], order: list[int],
+    order_rev: list[int], device_map: dict,
+    connected_neighbors: dict, incoming_per_d2: dict,
+    canvas_w: float, canvas_h: float,
+) -> None:
+    """多趟对齐（3 趟 zigzag，*创新*）。
+
+    第 1 趟正向拓扑序（上游先对齐），第 2 趟反向（下游先移开阻挡），
+    第 3 趟正向收尾。解决"下游器件阻挡上游器件对齐位置"的问题:
+    dc13 想移到 (185,37) 但 dc14 在 FFDH 位置阻挡；第 2 趟 dc14 先
+    被处理移走，第 3 趟 dc13 即可移到 (185,37)。不破坏原则保证
+    每趟不劣化（score 单调非减）。
+    """
+    for pass_order in (order, order_rev, order):
+        for i in pass_order:
+            d2_name = names[i]
+            if d2_name not in placements:
+                continue
+            d2_dev = device_map.get(d2_name, {})
+            d2_connected = connected_neighbors.get(d2_name, set())
+            incoming = incoming_per_d2.get(d2_name, [])
+            if not incoming:
+                continue
+            _align_d2_global(
+                placements, d2_name, d2_dev, incoming, device_map,
+                d2_connected, canvas_w, canvas_h,
+            )
+
+
 def align_ports(
     placements: dict[str, dict[str, float]],
     circuit: dict,
@@ -588,72 +658,20 @@ def align_ports(
     """
     if not placements:
         return placements
-
-    # 构建器件名 → 器件规格映射（含 ports）
-    device_map: dict[str, dict] = {}
-    for dev in circuit.get("devices", []):
-        nm = dev.get("name")
-        if nm is not None:
-            device_map[nm] = dev
-
-    # 拓扑顺序（保证上游先固定，下游对齐到上游）
-    names = list(placements.keys())
-    name_to_idx = {nm: i for i, nm in enumerate(names)}
-    idx_conns: list[tuple[int, int]] = []
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d1, _p1, d2, _p2 = str(conn[0]), conn[1], str(conn[2]), conn[3]
-        if d1 in name_to_idx and d2 in name_to_idx:
-            idx_conns.append((name_to_idx[d1], name_to_idx[d2]))
-
+    device_map = _align_ports_build_device_map(circuit)
+    (names, _name_to_idx, idx_conns,
+     connected_neighbors, incoming_per_d2) = _align_ports_build_indexes(
+        circuit, placements,
+    )
     try:
         depth = topological_depth(len(names), idx_conns)
     except RuntimeError:
         # 连接存在环（极少见），跳过端口对齐（R03: 不假数据，保持 FFDH 结果）
         return placements
-
-    # 按拓扑顺序处理（depth 从小到大）
     order = sorted(range(len(names)), key=lambda i: depth[i])
     order_rev = list(reversed(order))  # 反向拓扑序（下游先处理，移开阻挡器件）
-
-    # 构建每个器件的直接连接邻居集合（用于 MIN_SPACING 跳过，与 DRC engine 一致）
-    connected_neighbors: dict[str, set[str]] = {}
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d1_name, d2_name_conn = str(conn[0]), str(conn[2])
-        connected_neighbors.setdefault(d1_name, set()).add(d2_name_conn)
-        connected_neighbors.setdefault(d2_name_conn, set()).add(d1_name)
-
-    # 预收集每个 d2 设备的入向连接（d2 作为下游的所有连接）
-    incoming_per_d2: dict[str, list[tuple]] = {}
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d2_name_conn = str(conn[2])
-        if d2_name_conn in placements:
-            incoming_per_d2.setdefault(d2_name_conn, []).append(tuple(conn))
-
-    # *创新*: 多趟对齐（3 趟 zigzag）
-    # 第 1 趟正向拓扑序（上游先对齐），第 2 趟反向（下游先移开阻挡），
-    # 第 3 趟正向收尾。解决"下游器件阻挡上游器件对齐位置"的问题:
-    # dc13 想移到 (185,37) 但 dc14 在 FFDH 位置阻挡；第 2 趟 dc14 先
-    # 被处理移走，第 3 趟 dc13 即可移到 (185,37)。不破坏原则保证
-    # 每趟不劣化（score 单调非减）。
-    for pass_idx, pass_order in enumerate([order, order_rev, order]):
-        for i in pass_order:
-            d2_name = names[i]
-            if d2_name not in placements:
-                continue
-            d2_dev = device_map.get(d2_name, {})
-            d2_connected = connected_neighbors.get(d2_name, set())
-            incoming = incoming_per_d2.get(d2_name, [])
-            if not incoming:
-                continue
-            _align_d2_global(
-                placements, d2_name, d2_dev, incoming, device_map,
-                d2_connected, canvas_w, canvas_h,
-            )
-
+    _align_ports_run_multi_pass(
+        placements, names, order, order_rev, device_map,
+        connected_neighbors, incoming_per_d2, canvas_w, canvas_h,
+    )
     return placements
