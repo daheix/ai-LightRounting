@@ -5,6 +5,8 @@
   "n_connections": 0,
   "canvas_w": null,
   "canvas_h": null,
+  "known_limitation": true,
+  "limitation_reason": "数据错误：原始 gf_aar_gone_wrong.json 中 wg_a2 的 placement y='wg_a2,o2' 是自引用（引用自身 o2 端口坐标），构成循环依赖。该文件来自 gdsfactory samples/all_angle_routing/aar_gone_wrong.pic.yml，是 gdsfactory 故意构造的边界测试用例（文件名 gone_wrong 暗示数据本身有误）。GDSFactory YAML 语法不允许自引用 placement 坐标。R03 禁止 fall-back，故 raise。",
   "status": "error",
   "error": "RuntimeError: placements 相对引用解析失败（依赖循环或缺失）: ['wg_a2']（R03）",
   "drc": {

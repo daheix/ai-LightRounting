@@ -3,39 +3,15 @@
   "category": "expert_demos",
   "n_devices": 8,
   "n_connections": 8,
-  "canvas_w": 187.0,
-  "canvas_h": 84.0,
+  "canvas_w": 167.0,
+  "canvas_h": 74.0,
   "status": "ok",
   "drc": {
-    "n_violations": 2,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 10,
-    "pass_rate": 0.8333333333333334,
-    "violations": [
-      {
-        "rule_name": "MIN_SPACING",
-        "severity": 1.0,
-        "message": "MIN_SPACING: 器件 mmi_rgt_1 与 phase_shifter4 间距 0.0000μm < 阈值 1.0000μm",
-        "device_name": "mmi_rgt_1",
-        "location": [
-          131.0,
-          40.5
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mmi_rgt_1 与 phase_shifter4 重叠",
-        "device_name": "mmi_rgt_1",
-        "location": [
-          131.0,
-          40.5
-        ]
-      }
-    ],
-    "violated_rules": [
-      "MIN_SPACING",
-      "NO_OVERLAP"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

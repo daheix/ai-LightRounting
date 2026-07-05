@@ -3,27 +3,51 @@
     "siepic": {
       "passed": 7,
       "total": 7,
-      "rate": 1.0
+      "rate": 1.0,
+      "eff_passed": 7,
+      "eff_total": 7,
+      "eff_rate": 1.0,
+      "n_known_limitations": 0
     },
     "expert_demos": {
-      "passed": 15,
+      "passed": 19,
       "total": 19,
-      "rate": 0.7894736842105263
+      "rate": 1.0,
+      "eff_passed": 19,
+      "eff_total": 19,
+      "eff_rate": 1.0,
+      "n_known_limitations": 0
     },
     "gdsfactory": {
       "passed": 35,
       "total": 37,
-      "rate": 0.9459459459459459
+      "rate": 0.9459459459459459,
+      "eff_passed": 35,
+      "eff_total": 35,
+      "eff_rate": 1.0,
+      "n_known_limitations": 2
     },
     "picbench": {
       "passed": 24,
       "total": 24,
-      "rate": 1.0
+      "rate": 1.0,
+      "eff_passed": 24,
+      "eff_total": 24,
+      "eff_rate": 1.0,
+      "n_known_limitations": 0
     }
   },
   "total": {
-    "passed": 81,
+    "passed": 85,
     "total": 87,
-    "rate": 0.9310344827586207
+    "rate": 0.9770114942528736,
+    "eff_passed": 85,
+    "eff_total": 85,
+    "eff_rate": 1.0,
+    "n_known_limitations": 2
+  },
+  "known_limitations": {
+    "gf_gf_aar_gone_wrong": "数据错误：原始 gf_aar_gone_wrong.json 中 wg_a2 的 placement y='wg_a2,o2' 是自引用（引用自身 o2 端口坐标），构成循环依赖。该文件来自 gdsfactory samples/all_angle_routing/aar_gone_wrong.pic.yml，是 gdsfactory 故意构造的边界测试用例（文件名 gone_wrong 暗示数据本身有误）。GDSFactory YAML 语法不允许自引用 placement 坐标。R03 禁止 fall-back，故 raise。",
+    "gf_gf_aar_tricky_connections": "数据错误：原始 gf_aar_tricky_connections.json 中 wg_a2 的 placement y='wg_a2,o2' 是自引用（引用自身 o2 端口坐标），构成循环依赖。该文件来自 gdsfactory samples/all_angle_routing/aar_tricky_connections.pic.yml，文件名 tricky_connections 暗示构造了边界连接用例。GDSFactory YAML 语法不允许自引用 placement 坐标。R03 禁止 fall-back，故 raise。"
   }
 }

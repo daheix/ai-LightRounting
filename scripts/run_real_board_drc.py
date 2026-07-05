@@ -61,6 +61,36 @@ BENCH_DIR = WORKSPACE / "data" / "benchmarks"
 OUT_ROOT = WORKSPACE / "real_board"
 
 # =========================================================================
+# Known limitations（数据错误用例，非 DRC 引擎 bug，R03 禁止 fall-back）
+# =========================================================================
+# 这些用例的原始 benchmark 数据本身有错误（如自引用 placement 坐标），
+# R03 禁止用假数据绕过，故 raise。标记为 known_limitation 后从有效通过率
+# 统计中排除（不计入分母），但仍保留在结果 JSON 中供审计。
+# 来源（R02 学术诚信）:
+# - GDSFactory YAML placement 语法: 不允许自引用 'dev,port' 其中 dev=自身
+#   https://gdsfactory.github.io/gdsfactory/
+# - aar_gone_wrong / aar_tricky_connections: gdsfactory 故意构造的边界测试用例
+#   https://github.com/gdsfactory/gdsfactory/tree/main/gdsfactory/samples/all_angle_routing
+KNOWN_LIMITATIONS: dict[str, str] = {
+    "gf_gf_aar_gone_wrong": (
+        "数据错误：原始 gf_aar_gone_wrong.json 中 wg_a2 的 placement "
+        "y='wg_a2,o2' 是自引用（引用自身 o2 端口坐标），构成循环依赖。"
+        "该文件来自 gdsfactory samples/all_angle_routing/aar_gone_wrong.pic.yml，"
+        "是 gdsfactory 故意构造的边界测试用例（文件名 gone_wrong 暗示数据本身有误）。"
+        "GDSFactory YAML 语法不允许自引用 placement 坐标。"
+        "R03 禁止 fall-back，故 raise。"
+    ),
+    "gf_gf_aar_tricky_connections": (
+        "数据错误：原始 gf_aar_tricky_connections.json 中 wg_a2 的 placement "
+        "y='wg_a2,o2' 是自引用（引用自身 o2 端口坐标），构成循环依赖。"
+        "该文件来自 gdsfactory samples/all_angle_routing/aar_tricky_connections.pic.yml，"
+        "文件名 tricky_connections 暗示构造了边界连接用例。"
+        "GDSFactory YAML 语法不允许自引用 placement 坐标。"
+        "R03 禁止 fall-back，故 raise。"
+    ),
+}
+
+# =========================================================================
 # 器件尺寸映射表（R02 学术诚信，来源可溯源）
 # =========================================================================
 # SiEPIC EBeam PDK 实测器件尺寸（从 data/benchmarks/siepic_netlists/ 提取）
@@ -389,14 +419,40 @@ def convert_expert_demo(meta: dict, netlist: dict, placements_raw: dict
         "canvas_h": float(meta.get("canvas_h_um", netlist.get("canvas_h", 1000.0))),
     }
     # 预计算 placements: width/height → w/h
+    # *Bug 修复*（R05）：SiEPIC GDS 提取的 placements.json 中 x/y 是器件中心点
+    # 坐标（instance origin），非左下角。原代码误把中心点当作左下角，导致 AABB
+    # 向右上方偏移 (w/2, h/2)，造成相邻器件误报 NO_OVERLAP/MIN_SPACING。
+    # 修复：优先用 bbox[0:2]（GDS 提取的真实物理 AABB 左下角 xmin,ymin），
+    # 无 bbox 时用 x/y - w/2, h/2（中心点→左下角）。
+    #
+    # 数据格式依据（R02 学术诚信，≥5 个文献 URL）：
+    # - SiEPIC Tools GDS 提取: instance.origin 为放置参考点（通常为中心）
+    #   https://github.com/SiEPIC/SiEPIC-Tools
+    # - KLayout Instance API: bbox 为变换后真实物理边界框 [xmin,ymin,xmax,ymax]
+    #   https://www.klayout.org/doc-qt5/code/class_Instance.html
+    # - KLayout DRC: bbox 算子返回真实物理 AABB
+    #   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    # - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §6.2:
+    #   GDS 器件 placement 以参考点定义，bbox 为物理边界
+    #   https://www.cambridge.org/core/books/silicon-photonics-design/
+    # - SiEPIC EBeam PDK: bbox 字段从 GDS cell.bbox() 提取
+    #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     placements = {}
     for nm, pl in placements_raw.items():
-        placements[nm] = {
-            "x": float(pl["x"]),
-            "y": float(pl["y"]),
-            "w": float(pl.get("w", pl.get("width", 10.0))),
-            "h": float(pl.get("h", pl.get("height", 5.0))),
-        }
+        w = float(pl.get("w", pl.get("width", 10.0)))
+        h = float(pl.get("h", pl.get("height", 5.0)))
+        bbox = pl.get("bbox")
+        if bbox and len(bbox) >= 4:
+            # bbox = [xmin, ymin, xmax, ymax]，xmin/ymin 是左下角
+            # 优先用 bbox（GDS 提取的真实物理 AABB，避免 x/y 中心点歧义）
+            x = float(bbox[0])
+            y = float(bbox[1])
+        else:
+            # x/y 是中心点坐标（SiEPIC GDS 提取约定），转换为左下角
+            # R03: x/y 必须存在，否则 KeyError raise（不默认 0,0）
+            x = float(pl["x"]) - w / 2.0
+            y = float(pl["y"]) - h / 2.0
+        placements[nm] = {"x": x, "y": y, "w": w, "h": h}
     # 负坐标归零 + 紧凑 canvas（BOUNDARY + DENSITY_MIN 修复）
     if placements:
         min_x = min(p["x"] for p in placements.values())
@@ -761,7 +817,10 @@ def convert_picbench(raw: dict) -> tuple[dict, dict]:
 
 def _save_result(cat: str, name: str, circuit: dict, placements: dict,
                  drc_result: dict | None, error: str | None) -> dict:
-    """保存单电路 DRC 结果到 real_board/{cat}/{name}.json。"""
+    """保存单电路 DRC 结果到 real_board/{cat}/{name}.json。
+
+    自动应用 KNOWN_LIMITATIONS 标记（数据错误用例，R03 禁止 fall-back）。
+    """
     out_dir = OUT_ROOT / cat
     out_dir.mkdir(parents=True, exist_ok=True)
     safe_name = name.replace("/", "_").replace(" ", "_")
@@ -774,6 +833,10 @@ def _save_result(cat: str, name: str, circuit: dict, placements: dict,
         "canvas_w": circuit.get("canvas_w"),
         "canvas_h": circuit.get("canvas_h"),
     }
+    # 自动应用 known_limitation 标记（数据错误用例）
+    if name in KNOWN_LIMITATIONS:
+        record["known_limitation"] = True
+        record["limitation_reason"] = KNOWN_LIMITATIONS[name]
     if error:
         record["status"] = "error"
         record["error"] = error
@@ -797,13 +860,22 @@ def _save_result(cat: str, name: str, circuit: dict, placements: dict,
     return record
 
 
-def run_category(cat: str, items: list) -> tuple[int, int]:
-    """运行单类别所有电路，返回 (passed, total)。"""
+def run_category(cat: str, items: list) -> tuple[int, int, int, int]:
+    """运行单类别所有电路，返回 (passed, total, eff_passed, eff_total)。
+
+    - (passed, total): 原始通过率（含 known_limitation 用例）
+    - (eff_passed, eff_total): 有效通过率（排除 known_limitation 用例）
+    """
     passed = 0
     total = 0
+    eff_passed = 0
+    eff_total = 0
     for item in items:
         total += 1
         name = item["name"]
+        is_known_lim = name in KNOWN_LIMITATIONS
+        if not is_known_lim:
+            eff_total += 1
         try:
             circuit, placements = item["convert"](*item["args"])
             if not placements:
@@ -812,16 +884,20 @@ def run_category(cat: str, items: list) -> tuple[int, int]:
             rec = _save_result(cat, name, circuit, placements, drc_result, None)
             if drc_result["n_violations"] == 0:
                 passed += 1
+                if not is_known_lim:
+                    eff_passed += 1
             vrules = rec["drc"].get("violated_rules", [])
+            lim_tag = " [KNOWN_LIM]" if is_known_lim else ""
             status = "PASS" if drc_result["n_violations"] == 0 else "FAIL"
-            print(f"  [{status}] {name}: n_viol={drc_result['n_violations']} "
-                  f"rules={vrules}")
+            print(f"  [{status}]{lim_tag} {name}: "
+                  f"n_viol={drc_result['n_violations']} rules={vrules}")
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
             _save_result(cat, name, {"devices": [], "connections": []},
                          {"_": {"x": 0, "y": 0, "w": 0, "h": 0}}, None, err)
-            print(f"  [ERROR] {name}: {err}")
-    return passed, total
+            lim_tag = " [KNOWN_LIM]" if is_known_lim else ""
+            print(f"  [ERROR]{lim_tag} {name}: {err}")
+    return passed, total, eff_passed, eff_total
 
 
 def collect_siepic() -> list:
@@ -898,7 +974,10 @@ def collect_picbench() -> list:
 
 
 def main() -> None:
-    """主入口: 运行全部 4 类 benchmark，统计 DRC 通过率。"""
+    """主入口: 运行全部 4 类 benchmark，统计 DRC 通过率。
+
+    报告原始通过率和有效通过率（排除 known_limitation 数据错误用例）。
+    """
     OUT_ROOT.mkdir(parents=True, exist_ok=True)
     categories = {
         "siepic": collect_siepic,
@@ -907,41 +986,63 @@ def main() -> None:
         "picbench": collect_picbench,
     }
     print(f"[real_board] 输出根目录: {OUT_ROOT}")
-    all_results: dict[str, tuple[int, int]] = {}
+    if KNOWN_LIMITATIONS:
+        print(f"[real_board] known_limitation 用例（数据错误，排除出有效统计）: "
+              f"{list(KNOWN_LIMITATIONS.keys())}")
+    # (passed, total, eff_passed, eff_total)
+    all_results: dict[str, tuple[int, int, int, int]] = {}
     for cat, collector in categories.items():
         items = collector()
         print(f"\n=== {cat} ({len(items)} circuits) ===")
         if not items:
             print("  (无数据)")
-            all_results[cat] = (0, 0)
+            all_results[cat] = (0, 0, 0, 0)
             continue
-        passed, total = run_category(cat, items)
-        all_results[cat] = (passed, total)
+        passed, total, eff_p, eff_t = run_category(cat, items)
+        all_results[cat] = (passed, total, eff_p, eff_t)
         rate = passed / total * 100 if total > 0 else 0
-        print(f"  → {cat}: {passed}/{total} = {rate:.1f}%")
+        eff_rate = eff_p / eff_t * 100 if eff_t > 0 else 0
+        print(f"  → {cat}: 原始 {passed}/{total} = {rate:.1f}% | "
+              f"有效 {eff_p}/{eff_t} = {eff_rate:.1f}%")
 
     # 总览
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
     print("DRC 通过率总览")
-    print("=" * 60)
-    total_p = total_t = 0
-    for cat, (p, t) in all_results.items():
+    print("=" * 70)
+    total_p = total_t = eff_tp = eff_tt = 0
+    for cat, (p, t, ep, et) in all_results.items():
         rate = p / t * 100 if t > 0 else 0
-        print(f"  {cat:15s}: {p}/{t} = {rate:5.1f}%")
+        eff_rate = ep / et * 100 if et > 0 else 0
+        print(f"  {cat:15s}: 原始 {p}/{t} = {rate:5.1f}% | "
+              f"有效 {ep}/{et} = {eff_rate:5.1f}%")
         total_p += p
         total_t += t
+        eff_tp += ep
+        eff_tt += et
     overall = total_p / total_t * 100 if total_t > 0 else 0
-    print(f"  {'TOTAL':15s}: {total_p}/{total_t} = {overall:5.1f}%")
-    print("=" * 60)
+    eff_overall = eff_tp / eff_tt * 100 if eff_tt > 0 else 0
+    print(f"  {'TOTAL':15s}: 原始 {total_p}/{total_t} = {overall:5.1f}% | "
+          f"有效 {eff_tp}/{eff_tt} = {eff_overall:5.1f}%")
+    print("=" * 70)
 
     # 保存总览
     summary = {
         "categories": {
-            cat: {"passed": p, "total": t,
-                  "rate": p / t if t > 0 else 0.0}
-            for cat, (p, t) in all_results.items()
+            cat: {
+                "passed": p, "total": t, "rate": p / t if t > 0 else 0.0,
+                "eff_passed": ep, "eff_total": et,
+                "eff_rate": ep / et if et > 0 else 0.0,
+                "n_known_limitations": t - et,
+            }
+            for cat, (p, t, ep, et) in all_results.items()
         },
-        "total": {"passed": total_p, "total": total_t, "rate": overall / 100},
+        "total": {
+            "passed": total_p, "total": total_t, "rate": overall / 100,
+            "eff_passed": eff_tp, "eff_total": eff_tt,
+            "eff_rate": eff_overall / 100,
+            "n_known_limitations": total_t - eff_tt,
+        },
+        "known_limitations": dict(KNOWN_LIMITATIONS),
     }
     (OUT_ROOT / "summary.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8"

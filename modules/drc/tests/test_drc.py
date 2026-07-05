@@ -1015,5 +1015,133 @@ def test_drc_simple_waveguide():
     result = run_drc(circuit, placements)
     assert result["n_rules"] == 12
     assert result["pass_rate"] > 0.0, (
-        f"合法布局至少部分规则通过，pass_rate={result['pass_rate']}"
+        f"合法布局至少部分规则会通过，pass_rate={result['pass_rate']}"
+    )
+
+
+# =============================================================================
+# 回归测试：expert_demos 中心点坐标 Bug（R05 Bug 必修）
+# =============================================================================
+# Bug 描述: scripts/run_real_board_drc.py 的 convert_expert_demo 函数
+#   误把 SiEPIC GDS 提取的 placements.json 中 x/y（器件中心点坐标）当作
+#   左下角，导致 AABB 向右上方偏移 (w/2, h/2)，相邻器件误报 NO_OVERLAP。
+# 修复: 优先用 bbox[0:2]（真实物理 AABB 左下角），无 bbox 时 x-w/2, y-h/2。
+# 来源: SiEPIC Tools GDS 提取约定 + KLayout Instance API bbox 语义
+#   https://github.com/SiEPIC/SiEPIC-Tools
+#   https://www.klayout.org/doc-qt5/code/class_Instance.html
+
+
+def test_expert_demos_center_point_to_corner_bbox():
+    """验证 convert_expert_demo 用 bbox 作为左下角（R05 回归）。
+
+    构造中心点坐标 (147, 27) + bbox=[132, 17, 162, 37] + w=30, h=20 的器件，
+    验证转换后 placements.x = 132（bbox[0]），而非 147（中心点 x）。
+    """
+    # 延迟导入：测试 scripts/run_real_board_drc.py 的转换函数
+    sys.path.insert(0, "/workspace/scripts")
+    # 重命名避免与测试模块名冲突
+    import importlib
+    rbd = importlib.import_module("run_real_board_drc")
+
+    meta = {"canvas_w_um": 200.0, "canvas_h_um": 100.0}
+    netlist = {
+        "name": "test_center",
+        "devices": [{
+            "name": "d1",
+            "device_type": "mmi",
+            "width_um": 30.0,
+            "height_um": 20.0,
+            "ports": [["o1", 0, 10, "west"], ["o2", 30, 10, "east"]],
+            "params": {},
+        }],
+        "connections": [],
+        "canvas_w": 200.0,
+        "canvas_h": 100.0,
+    }
+    # x/y=中心点 (147, 27)，bbox=[xmin=132, ymin=17, xmax=162, ymax=37]
+    placements_raw = {
+        "d1": {
+            "x": 147.0, "y": 27.0,
+            "width": 30.0, "height": 20.0,
+            "bbox": [132.0, 17.0, 162.0, 37.0],
+            "rotation": 0.0, "mirror": False,
+        }
+    }
+    circuit, placements = rbd.convert_expert_demo(meta, netlist, placements_raw)
+    # 修复后: x 应为 bbox[0]=132.0（左下角），而非中心点 147.0
+    assert placements["d1"]["x"] == 132.0, (
+        f"bbox 优先: x 应为 132.0（bbox[0]），实际 {placements['d1']['x']}"
+    )
+    assert placements["d1"]["y"] == 17.0, (
+        f"bbox 优先: y 应为 17.0（bbox[1]），实际 {placements['d1']['y']}"
+    )
+    assert placements["d1"]["w"] == 30.0
+    assert placements["d1"]["h"] == 20.0
+
+
+def test_expert_demos_center_point_to_corner_no_bbox():
+    """验证无 bbox 时中心点坐标转左下角（R05 回归）。
+
+    构造中心点 (50, 30) + w=20, h=10（无 bbox）的器件，
+    验证转换后 x = 50 - 20/2 = 40, y = 30 - 10/2 = 25。
+    """
+    sys.path.insert(0, "/workspace/scripts")
+    import importlib
+    rbd = importlib.import_module("run_real_board_drc")
+
+    meta = {"canvas_w_um": 100.0, "canvas_h_um": 100.0}
+    netlist = {
+        "name": "test_no_bbox",
+        "devices": [{
+            "name": "d1",
+            "device_type": "wg",
+            "width_um": 20.0,
+            "height_um": 10.0,
+            "ports": [["o1", 0, 5, "west"], ["o2", 20, 5, "east"]],
+            "params": {},
+        }],
+        "connections": [],
+        "canvas_w": 100.0,
+        "canvas_h": 100.0,
+    }
+    placements_raw = {
+        "d1": {"x": 50.0, "y": 30.0, "width": 20.0, "height": 10.0}
+    }
+    circuit, placements = rbd.convert_expert_demo(meta, netlist, placements_raw)
+    # 修复后: x = 50 - 20/2 = 40, y = 30 - 10/2 = 25
+    assert placements["d1"]["x"] == 40.0, (
+        f"中心点→左下角: x 应为 40.0 (50-20/2)，实际 {placements['d1']['x']}"
+    )
+    assert placements["d1"]["y"] == 25.0, (
+        f"中心点→左下角: y 应为 25.0 (30-10/2)，实际 {placements['d1']['y']}"
+    )
+
+
+def test_expert_demos_mzi_2x2_switch_no_overlap():
+    """验证 mzi_2x2_switch 不再误报 NO_OVERLAP（R05 回归）。
+
+    Bug 修复前: mmi_rgt_1 (中心 147,27) 与 phase_shifter4 (中心 81,44)
+    因中心点当左下角导致 AABB 偏移，误报重叠。
+    修复后: 用 bbox 正确计算 AABB，无重叠。
+    """
+    sys.path.insert(0, "/workspace/scripts")
+    import importlib
+    rbd = importlib.import_module("run_real_board_drc")
+    import json
+    from pathlib import Path
+
+    demo_dir = Path("/workspace/data/expert_demos/mzi_2x2_switch")
+    meta = json.loads((demo_dir / "meta.json").read_text())
+    netlist = json.loads((demo_dir / "netlist.json").read_text())
+    placements_raw = json.loads((demo_dir / "placements.json").read_text())
+
+    circuit, placements = rbd.convert_expert_demo(meta, netlist, placements_raw)
+    result = run_drc(circuit, placements)
+    # 修复后应无 NO_OVERLAP / MIN_SPACING 违规
+    violated = {v["rule_name"] for v in result["violations"]}
+    assert "NO_OVERLAP" not in violated, (
+        f"mzi_2x2_switch 不应误报 NO_OVERLAP，违规: {violated}"
+    )
+    assert "MIN_SPACING" not in violated, (
+        f"mzi_2x2_switch 不应误报 MIN_SPACING，违规: {violated}"
     )
