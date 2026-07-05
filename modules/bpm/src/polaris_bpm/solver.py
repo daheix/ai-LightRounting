@@ -147,6 +147,45 @@ def gaussian_source(
     return field.astype(np.complex128)
 
 
+def _validate_loss_profile_params(
+    nx: int, core_x0: int, core_x1: int, pad_pts: int,
+    loss_db_per_cm: float, cap_strength: float, cap_fraction: float,
+) -> None:
+    """校验 build_loss_profile 入参（R03 禁止 fall-back）。"""
+    if nx < 3:
+        raise ValueError(f"nx 须 >= 3，得到 {nx}")
+    if not (0 <= core_x0 <= core_x1 <= nx):
+        raise ValueError(f"芯区索引非法: [{core_x0},{core_x1}) 网格 {nx}")
+    if pad_pts < 0:
+        raise ValueError(f"pad_pts 须 >= 0，得到 {pad_pts}")
+    if loss_db_per_cm < 0:
+        raise ValueError(f"loss_db_per_cm 须 >= 0，得到 {loss_db_per_cm}")
+    if cap_strength < 0:
+        raise ValueError(f"cap_strength 须 >= 0，得到 {cap_strength}")
+    if not (0.0 <= cap_fraction <= 1.0):
+        raise ValueError(f"cap_fraction 须 ∈ [0,1]，得到 {cap_fraction}")
+
+
+def _apply_cap_boundary(
+    alpha: np.ndarray, nx: int, pad_pts: int,
+    cap_strength: float, cap_fraction: float,
+) -> None:
+    """CAP 吸收边界层: pad 外侧 cap_fraction 加平方渐变 α_cap(t)=cap·t²。
+
+    t ∈ [0,1]: 内侧 0 → 边界 1（除以 cap_pts-1 保证边界恰为 1）。
+    来源: Hadley 1992 Opt. Lett. TBC/CAP 边界。
+    """
+    if cap_strength > 0 and cap_fraction > 0:
+        cap_pts = int(round(pad_pts * cap_fraction))
+        if cap_pts >= 2:
+            t = np.arange(cap_pts, dtype=np.float64) / (cap_pts - 1)
+            ramp = cap_strength * (t ** 2)
+            # 左侧: 内侧 t=0 → 边界 t=1
+            alpha[:cap_pts] = np.maximum(alpha[:cap_pts], ramp[::-1])
+            # 右侧: 内侧 t=0 → 边界 t=1
+            alpha[nx - cap_pts:] = np.maximum(alpha[nx - cap_pts:], ramp)
+
+
 def build_loss_profile(
     nx: int,
     core_x0: int,
@@ -192,21 +231,10 @@ def build_loss_profile(
         - RP Photonics BPM 边界处理
           https://www.rp-photonics.com/numerical_beam_propagation.html
     """
-    if nx < 3:
-        raise ValueError(f"nx 须 >= 3，得到 {nx}")
-    if not (0 <= core_x0 <= core_x1 <= nx):
-        raise ValueError(
-            f"芯区索引非法: [{core_x0},{core_x1}) 网格 {nx}"
-        )
-    if pad_pts < 0:
-        raise ValueError(f"pad_pts 须 >= 0，得到 {pad_pts}")
-    if loss_db_per_cm < 0:
-        raise ValueError(f"loss_db_per_cm 须 >= 0，得到 {loss_db_per_cm}")
-    if cap_strength < 0:
-        raise ValueError(f"cap_strength 须 >= 0，得到 {cap_strength}")
-    if not (0.0 <= cap_fraction <= 1.0):
-        raise ValueError(f"cap_fraction 须 ∈ [0,1]，得到 {cap_fraction}")
-
+    _validate_loss_profile_params(
+        nx, core_x0, core_x1, pad_pts, loss_db_per_cm, cap_strength,
+        cap_fraction,
+    )
     alpha = np.zeros(nx, dtype=np.float64)
     # 芯区 Soref 材料吸收 (功率衰减系数)
     # α_p = loss_dB/cm · ln(10)/10 / 1e4 (μm⁻¹)
@@ -215,19 +243,72 @@ def build_loss_profile(
     if loss_db_per_cm > 0:
         alpha_core = loss_db_per_cm * np.log(10.0) / 10.0 / 1e4
         alpha[core_x0:core_x1] = alpha_core
-
-    # CAP 吸收边界层: pad 外侧 cap_fraction 加平方渐变
-    if cap_strength > 0 and cap_fraction > 0:
-        cap_pts = int(round(pad_pts * cap_fraction))
-        if cap_pts >= 2:
-            # t ∈ [0,1]: 内侧 0 → 边界 1（除以 cap_pts-1 保证边界恰为 1）
-            t = np.arange(cap_pts, dtype=np.float64) / (cap_pts - 1)
-            ramp = cap_strength * (t ** 2)
-            # 左侧: 内侧 t=0 → 边界 t=1
-            alpha[:cap_pts] = np.maximum(alpha[:cap_pts], ramp[::-1])
-            # 右侧: 内侧 t=0 → 边界 t=1
-            alpha[nx - cap_pts:] = np.maximum(alpha[nx - cap_pts:], ramp)
+    _apply_cap_boundary(alpha, nx, pad_pts, cap_strength, cap_fraction)
     return alpha
+
+
+def _validate_cn_params(
+    nx: int, dx: float, dz: float, k0: float, n0: float,
+) -> None:
+    """校验 build_cn_matrices 入参（R03 禁止 fall-back）。"""
+    if nx < 3:
+        raise ValueError(f"n_profile 长度须 >= 3，得到 {nx}")
+    if dx <= 0:
+        raise ValueError(f"dx 须 > 0，得到 {dx}")
+    if dz <= 0:
+        raise ValueError(f"dz 须 > 0，得到 {dz}")
+    if k0 <= 0:
+        raise ValueError(f"k0 须 > 0，得到 {k0}")
+    if n0 <= 0:
+        raise ValueError(f"n0 须 > 0，得到 {n0}")
+
+
+def _build_cn_h_diag(
+    n_profile: np.ndarray, dx: float, k0: float, n0: float,
+) -> tuple:
+    """构造 H 的主/副对角元素（H = (j/(2k₀n₀)) L_x + j·k₀(n²-n₀²)/(2n₀) I）。"""
+    inv_dx2 = 1.0 / (dx * dx)
+    # H 的二阶导系数: j/(2k₀n₀) · 1/dx²
+    coef_lap = 1j / (2.0 * k0 * n0) * inv_dx2
+    # H 的折射率项: j·k₀(n²-n₀²)/(2n₀)
+    coef_n = 1j * k0 * (n_profile ** 2 - n0 ** 2) / (2.0 * n0)
+    # H 的三对角: 主对角 = -2·coef_lap + coef_n, 上下副对角 = coef_lap
+    h_main = -2.0 * coef_lap + coef_n
+    h_off = coef_lap  # ±1 偏移
+    return h_main, h_off
+
+
+def _assemble_cn_banded(
+    h_main: np.ndarray, h_off: np.ndarray, dz: float, nx: int,
+) -> tuple:
+    """组装 CN 三对角 banded 矩阵 A=I-dz/2·H, B=I+dz/2·H（含 Dirichlet 边界）。"""
+    # A = I - dz/2 · H
+    a_main = 1.0 - 0.5 * dz * h_main
+    a_off = -0.5 * dz * h_off
+    # B = I + dz/2 · H
+    b_main = 1.0 + 0.5 * dz * h_main
+    b_off = 0.5 * dz * h_off
+    # solve_banded 的 ab 格式: ab[u+i-j, j] = a[i,j]
+    # 三对角: ab[0] = 上副对角，ab[1] = 主对角，ab[2] = 下副对角
+    A_banded = np.zeros((3, nx), dtype=np.complex128)
+    A_banded[0, 1:] = a_off       # 上副对角
+    A_banded[1, :] = a_main       # 主对角
+    A_banded[2, :-1] = a_off      # 下副对角
+    # 边界条件: Dirichlet E=0（首末行只保留对角）
+    A_banded[0, 1] = 0.0  # (0,1) 处的耦合
+    A_banded[2, -2] = 0.0  # (nx-1, nx-2) 处的耦合
+    A_banded[1, 0] = 1.0   # 首行: E[0] = 0
+    A_banded[1, -1] = 1.0  # 末行: E[nx-1] = 0
+    # B 也用 banded 形式（便于矩阵-向量乘）
+    B_banded = np.zeros((3, nx), dtype=np.complex128)
+    B_banded[0, 1:] = b_off
+    B_banded[1, :] = b_main
+    B_banded[2, :-1] = b_off
+    B_banded[0, 1] = 0.0
+    B_banded[2, -2] = 0.0
+    B_banded[1, 0] = 0.0
+    B_banded[1, -1] = 0.0
+    return A_banded, B_banded
 
 
 def build_cn_matrices(
@@ -259,115 +340,16 @@ def build_cn_matrices(
         ValueError: 参数非法。
     """
     nx = len(n_profile)
-    if nx < 3:
-        raise ValueError(f"n_profile 长度须 >= 3，得到 {nx}")
-    if dx <= 0:
-        raise ValueError(f"dx 须 > 0，得到 {dx}")
-    if dz <= 0:
-        raise ValueError(f"dz 须 > 0，得到 {dz}")
-    if k0 <= 0:
-        raise ValueError(f"k0 须 > 0，得到 {k0}")
-    if n0 <= 0:
-        raise ValueError(f"n0 须 > 0，得到 {n0}")
-
-    inv_dx2 = 1.0 / (dx * dx)
-    # H 的二阶导系数: j/(2k₀n₀) · 1/dx²
-    coef_lap = 1j / (2.0 * k0 * n0) * inv_dx2
-    # H 的折射率项: j·k₀(n²-n₀²)/(2n₀)
-    coef_n = 1j * k0 * (n_profile ** 2 - n0 ** 2) / (2.0 * n0)
-
-    # Crank-Nicolson: A = I - dz/2 · H, B = I + dz/2 · H
-    # H 的三对角: 主对角 = -2·coef_lap + coef_n, 上下副对角 = coef_lap
-    h_main = -2.0 * coef_lap + coef_n
-    h_off = coef_lap  # ±1 偏移
-
-    # A = I - dz/2 · H
-    a_main = 1.0 - 0.5 * dz * h_main
-    a_off = -0.5 * dz * h_off
-
-    # B = I + dz/2 · H（仅对角，因为 RHS 是矩阵-向量乘，banded 也可）
-    b_main = 1.0 + 0.5 * dz * h_main
-    b_off = 0.5 * dz * h_off
-
-    # solve_banded 的 ab 格式: ab[u+i-j, j] = a[i,j]
-    # 三对角: ab[0] = 上副对角（最后一个元素无用），ab[1] = 主对角，ab[2] = 下副对角
-    A_banded = np.zeros((3, nx), dtype=np.complex128)
-    A_banded[0, 1:] = a_off       # 上副对角（ab[0,1:nx] = a[i, i+1]）
-    A_banded[1, :] = a_main       # 主对角
-    A_banded[2, :-1] = a_off      # 下副对角（ab[2,0:nx-1] = a[i+1, i]）
-
-    # 边界条件: Dirichlet E=0（首末行只保留对角）
-    A_banded[0, 1] = 0.0  # (0,1) 处的耦合
-    A_banded[2, -2] = 0.0  # (nx-1, nx-2) 处的耦合
-    A_banded[1, 0] = 1.0   # 首行: E[0] = 0
-    A_banded[1, -1] = 1.0  # 末行: E[nx-1] = 0
-
-    # B 也用 banded 形式（便于矩阵-向量乘）
-    B_banded = np.zeros((3, nx), dtype=np.complex128)
-    B_banded[0, 1:] = b_off
-    B_banded[1, :] = b_main
-    B_banded[2, :-1] = b_off
-    B_banded[0, 1] = 0.0
-    B_banded[2, -2] = 0.0
-    B_banded[1, 0] = 0.0
-    B_banded[1, -1] = 0.0
-
-    return A_banded, B_banded
+    _validate_cn_params(nx, dx, dz, k0, n0)
+    h_main, h_off = _build_cn_h_diag(n_profile, dx, k0, n0)
+    return _assemble_cn_banded(h_main, h_off, dz, nx)
 
 
-def solve_bpm(
-    width_um: float = 0.5,
-    length_um: float = 50.0,
-    wavelength_um: float = 1.55,
-    n_core: float = 3.476,
-    n_clad: float = 1.444,
-    dz_um: float = 0.1,
-    dx_um: float = 0.01,
-    pad_um: float = 2.0,
-) -> dict:
-    """1D Crank-Nicolson split-step BPM 求解器。
-
-    在硅条形波导（n_core 芯 / n_clad 包层）中传播高斯光束，
-    使用 Crank-Nicolson 隐式格式求解抛物波动方程（相位演化），
-    并以 symmetric split-step 显式衰减步引入物理损耗（Soref 材料吸收 + CAP 边界）。
-
-    每步: E^{n+1} = exp(-α·dz/2) · A⁻¹·B · exp(-α·dz/2) · E^n
-    - CN 步: 实折射率，反厄米 H，严格功率守恒（仅相位演化）
-    - 衰减步: α(x) 来自 Soref 芯区损耗 + CAP pad 外侧渐变
-
-    Args:
-        width_um: 波导芯宽度（μm）。
-        length_um: 传播长度（μm）。
-        wavelength_um: 波长（μm）。
-        n_core: 芯区折射率（Si 3.476，Soref 1993）。
-        n_clad: 包层折射率（SiO2 1.444，Soref 1993）。
-        dz_um: 纵向步长（μm）。
-        dx_um: 横向步长（μm）。
-        pad_um: 包层 padding（μm，每侧）。
-
-    Returns:
-        dict: {field_z, transmission_db, n_steps, grid_info, ...}
-            - field_z: 末态场分布 (nx,)（复数）
-            - transmission: 末态功率/初态功率（无量纲）
-            - transmission_db: 传输率（dB，末态功率/初态功率）
-            - p_initial / p_final: 初末功率
-            - n_steps: 实际步数
-            - grid_info: {nx, nz, dx_um, dz_um, window_um, core_x}
-            - physics: {k0, n0, n_core, n_clad}
-            - loss: {loss_db_per_cm, cap_strength, cap_fraction}
-
-    Raises:
-        ValueError: 参数非法（R03 禁止 fall-back）。
-        RuntimeError: 求解失败或结果含 NaN（R03）。
-
-    来源:
-        - Feit & Fleck 1978（BPM）
-        - Crank & Nicolson 1947（隐式格式）
-        - Chung & Dagli 1990（ADI 扩展）
-        - Soref 1993 Proc. IEEE（SOI 损耗）
-        - Hadley 1992 Opt. Lett.（CAP/TBC 边界）
-    """
-    # ---- 参数校验（R03） ----
+def _validate_bpm_grid(
+    width_um: float, length_um: float, wavelength_um: float,
+    n_core: float, n_clad: float, dz_um: float, dx_um: float, pad_um: float,
+) -> tuple:
+    """校验 solve_bpm 入参 + 构建网格/芯区索引（R03 禁止 fall-back）。"""
     if width_um <= 0:
         raise ValueError(f"width_um 须 > 0，得到 {width_um}")
     if length_um <= 0:
@@ -384,8 +366,6 @@ def solve_bpm(
         raise ValueError(f"dx_um ({dx_um}) 须 < width_um ({width_um})")
     if pad_um <= 0:
         raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
-
-    # ---- 构建网格 ----
     window_um = width_um + 2.0 * pad_um
     nx = int(round(window_um / dx_um))
     if nx < 5:
@@ -395,28 +375,26 @@ def solve_bpm(
     if nz < 1:
         raise ValueError(f"步数过少 nz={nz}，请增大 length_um 或减小 dz_um")
     dz = length_um / nz
-
-    # 芯区索引（居中）
     core_x0 = int(round((window_um - width_um) / 2.0 / dx))
     core_x1 = core_x0 + int(round(width_um / dx))
     if core_x0 < 1 or core_x1 > nx - 1:
-        raise ValueError(
-            f"芯区索引越界: x=[{core_x0},{core_x1}) 网格 {nx}"
-        )
+        raise ValueError(f"芯区索引越界: x=[{core_x0},{core_x1}) 网格 {nx}")
+    return window_um, nx, dx, nz, dz, core_x0, core_x1
 
-    # ---- 折射率分布 ----
+
+def _setup_bpm_field(
+    width_um: float, wavelength_um: float, n_core: float, n_clad: float,
+    window_um: float, nx: int, dx: float, dz: float,
+    core_x0: int, core_x1: int,
+) -> tuple:
+    """构建折射率/CN 矩阵/损耗/初始高斯场，返回 BPM 求解上下文。"""
     n_profile = np.full(nx, n_clad, dtype=np.float64)
     n_profile[core_x0:core_x1] = n_core
-
-    # ---- 物理参数 ----
     k0 = 2.0 * np.pi / wavelength_um  # 真空波数（μm⁻¹）
     n0 = n_clad  # 参考折射率（取包层）
-
-    # ---- 构建 Crank-Nicolson 矩阵 ----
     A_banded, B_banded = build_cn_matrices(n_profile, dx, dz, k0, n0)
-
-    # ---- 构建损耗分布 α(x)（Soref 芯区吸收 + CAP 边界吸收） ----
-    pad_pts = core_x0  # 单侧 pad 点数（芯区居中，core_x0 == pad 点数）
+    # 损耗分布 α(x): Soref 芯区吸收 + CAP 边界吸收
+    pad_pts = core_x0  # 单侧 pad 点数（芯区居中）
     alpha_profile = build_loss_profile(
         nx, core_x0, core_x1, pad_pts,
         loss_db_per_cm=LOSS_DB_PER_CM_SI,
@@ -425,54 +403,103 @@ def solve_bpm(
     )
     # symmetric split-step 振幅衰减因子 (|E| *= exp(-α·dz/2))
     attn_half = np.exp(-0.5 * alpha_profile * dz)
-
-    # ---- 初始场: 高斯光束（中心对准波导） ----
+    # 初始场: 高斯光束（中心对准波导，腰斑≈波导宽度，耦合到基模）
     center_um = window_um / 2.0
-    # 腰斑 ≈ 波导宽度（耦合到基模；强限制 SOI 基模场集中在芯区）
     waist_um = width_um
     field = gaussian_source(nx, dx, center_um, waist_um)
-    # 强制边界为 0（Dirichlet）
-    field[0] = 0.0
+    field[0] = 0.0  # Dirichlet 边界
     field[-1] = 0.0
-
-    # 初始功率（衰减前 z=0 处实测功率）
     p_initial = float(np.sum(np.abs(field) ** 2) * dx)
+    return (A_banded, B_banded, alpha_profile, attn_half, field,
+            p_initial, k0, n0)
 
-    # ---- split-step 逐步求解 ----
-    # E^{n+1} = attn_half · CN(E^n) · attn_half  (symmetric split, O(dz³))
+
+def _run_bpm_split_step(
+    field: np.ndarray, attn_half: np.ndarray,
+    A_banded: np.ndarray, B_banded: np.ndarray, nz: int,
+) -> np.ndarray:
+    """symmetric split-step Crank-Nicolson 主循环。
+
+    每步: E^{n+1} = attn_half · A⁻¹·B · attn_half · E^n  (O(dz³))
+    CN 步: 实折射率反厄米 H，严格功率守恒（仅相位演化）。
+    衰减步: α(x) 来自 Soref 芯区损耗 + CAP pad 外侧渐变。
+    """
     for _ in range(nz):
         # 半步衰减（前）
         field = field * attn_half
         # CN 全步（相位演化，实折射率守恒功率）
-        rhs = np.zeros(nx, dtype=np.complex128)
+        rhs = np.zeros_like(field)
         rhs[:] = B_banded[1, :] * field
         rhs[1:] += B_banded[0, 1:] * field[:-1]  # 上副对角
         rhs[:-1] += B_banded[2, :-1] * field[1:]  # 下副对角
-        # 强制边界（Dirichlet E=0）
-        rhs[0] = 0.0
+        rhs[0] = 0.0  # Dirichlet 边界
         rhs[-1] = 0.0
         # 求解 A · E^{n+1} = rhs
         field = solve_banded((1, 1), A_banded, rhs)
         # 半步衰减（后）
         field = field * attn_half
-        # 强制边界
         field[0] = 0.0
         field[-1] = 0.0
         # NaN 校验（R03 禁止 fall-back）
         if np.any(np.isnan(field)) or np.any(np.isinf(field)):
-            raise RuntimeError(
-                "BPM 求解出现 NaN/Inf（R03 禁止 fall-back）"
-            )
+            raise RuntimeError("BPM 求解出现 NaN/Inf（R03 禁止 fall-back）")
+    return field
 
-    # ---- 输出 ----
+
+def solve_bpm(
+    width_um: float = 0.5,
+    length_um: float = 50.0,
+    wavelength_um: float = 1.55,
+    n_core: float = 3.476,
+    n_clad: float = 1.444,
+    dz_um: float = 0.1,
+    dx_um: float = 0.01,
+    pad_um: float = 2.0,
+) -> dict:
+    """1D Crank-Nicolson split-step BPM 求解器。
+
+    在硅条形波导中传播高斯光束，CN 隐式格式求解抛物波动方程（相位演化），
+    symmetric split-step 显式衰减步引入物理损耗（Soref 材料吸收 + CAP 边界）。
+    每步: E^{n+1} = exp(-α·dz/2) · A⁻¹·B · exp(-α·dz/2) · E^n。
+    CN 步实折射率反厄米 H 严格功率守恒（仅相位演化）；
+    衰减步 α(x) 来自 Soref 芯区损耗 + CAP pad 外侧渐变。
+
+    Args:
+        width_um: 波导芯宽度（μm）。
+        length_um: 传播长度（μm）。
+        wavelength_um: 波长（μm）。
+        n_core: 芯区折射率（Si 3.476，Soref 1993）。
+        n_clad: 包层折射率（SiO2 1.444，Soref 1993）。
+        dz_um: 纵向步长（μm）。
+        dx_um: 横向步长（μm）。
+        pad_um: 包层 padding（μm，每侧）。
+
+    Returns:
+        dict: {field_z, transmission_db, n_steps, grid_info, physics, loss}
+
+    Raises:
+        ValueError: 参数非法（R03 禁止 fall-back）。
+        RuntimeError: 求解失败或结果含 NaN（R03）。
+
+    来源: Feit & Fleck 1978（BPM）/ Crank & Nicolson 1947（隐式格式）/
+        Chung & Dagli 1990（ADI）/ Soref 1993 Proc. IEEE（SOI 损耗）/
+        Hadley 1992 Opt. Lett.（CAP/TBC 边界）
+    """
+    (window_um, nx, dx, nz, dz, core_x0, core_x1) = _validate_bpm_grid(
+        width_um, length_um, wavelength_um, n_core, n_clad,
+        dz_um, dx_um, pad_um,
+    )
+    (A_banded, B_banded, alpha_profile, attn_half, field,
+     p_initial, k0, n0) = _setup_bpm_field(
+        width_um, wavelength_um, n_core, n_clad, window_um, nx, dx, dz,
+        core_x0, core_x1,
+    )
+    field = _run_bpm_split_step(field, attn_half, A_banded, B_banded, nz)
     p_final = float(np.sum(np.abs(field) ** 2) * dx)
     if p_initial <= 0:
-        raise RuntimeError(
-            f"初始功率 {p_initial} <= 0（R03 禁止 fall-back）"
-        )
+        raise RuntimeError(f"初始功率 {p_initial} <= 0（R03 禁止 fall-back）")
     transmission = p_final / p_initial
     transmission_db = 10.0 * float(np.log10(max(transmission, 1e-30)))
-
     return {
         "field_z": field.tolist(),
         "transmission": float(transmission),
@@ -482,18 +509,12 @@ def solve_bpm(
         "n_steps": int(nz),
         "wavelength_um": float(wavelength_um),
         "grid_info": {
-            "nx": nx,
-            "nz": nz,
-            "dx_um": float(dx),
-            "dz_um": float(dz),
-            "window_um": float(window_um),
-            "core_x": [core_x0, core_x1],
+            "nx": nx, "nz": nz, "dx_um": float(dx), "dz_um": float(dz),
+            "window_um": float(window_um), "core_x": [core_x0, core_x1],
         },
         "physics": {
-            "k0": float(k0),
-            "n0": float(n0),
-            "n_core": float(n_core),
-            "n_clad": float(n_clad),
+            "k0": float(k0), "n0": float(n0),
+            "n_core": float(n_core), "n_clad": float(n_clad),
         },
         "loss": {
             "loss_db_per_cm": float(LOSS_DB_PER_CM_SI),
