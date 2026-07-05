@@ -244,7 +244,21 @@ def validate_circuit(circuit: dict) -> bool:
     if not isinstance(wl, (int, float)):
         raise RuntimeError("circuit.optical_wavelength_nm 必须是 number")
 
-    for i, dev in enumerate(circuit["devices"]):
+    _validate_circuit_devices(circuit["devices"])
+    # 校验连接引用的器件存在（防止悬空连接）
+    dev_names = {d["name"] for d in circuit["devices"]}
+    _validate_circuit_connections(circuit["connections"], dev_names)
+
+    return True
+
+
+def _validate_circuit_devices(devices: list) -> None:
+    """校验每个 device 的结构完整性（Extract Method，R11 质量门禁）。
+
+    Raises:
+        RuntimeError: device 结构不完整或类型不符。
+    """
+    for i, dev in enumerate(devices):
         if not isinstance(dev, dict):
             raise RuntimeError(
                 f"circuit.devices[{i}] 必须是 dict，得到 {type(dev).__name__}"
@@ -269,9 +283,14 @@ def validate_circuit(circuit: dict) -> bool:
         if not isinstance(params, dict):
             raise RuntimeError(f"circuit.devices[{i}].params 必须是 dict")
 
-    # 校验连接引用的器件存在（防止悬空连接）
-    dev_names = {d["name"] for d in circuit["devices"]}
-    for i, conn in enumerate(circuit["connections"]):
+
+def _validate_circuit_connections(connections: list, dev_names: set) -> None:
+    """校验每条 connection 引用的器件存在（Extract Method，R11 质量门禁）。
+
+    Raises:
+        RuntimeError: connection 结构不符或引用悬空器件。
+    """
+    for i, conn in enumerate(connections):
         if not isinstance(conn, (list, tuple)) or len(conn) != 4:
             raise RuntimeError(
                 f"circuit.connections[{i}] 必须是长度 4 的 list/tuple "
@@ -286,8 +305,6 @@ def validate_circuit(circuit: dict) -> bool:
             raise RuntimeError(
                 f"circuit.connections[{i}] 引用了不存在的器件: {dev2}"
             )
-
-    return True
 
 
 __all__ = [
