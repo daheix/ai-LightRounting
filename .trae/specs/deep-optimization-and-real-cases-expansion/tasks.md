@@ -31,15 +31,15 @@
 
 ## 阶段4: P1 R36路标补齐（并行）
 
-- [ ] Task 15: 实现pretrain.py（BC预训练）
-  - [ ] SubTask 15.1: 创建modules/trainer/src/polaris_trainer/pretrain.py
-  - [ ] SubTask 15.2: 用expert_demos三元组做行为克隆预训练
-- [ ] Task 16: 实现transfer_learning.py（迁移学习）
-  - [ ] SubTask 16.1: 创建modules/trainer/src/polaris_trainer/transfer_learning.py
-  - [ ] SubTask 16.2: 支持加载预训练模型+微调
-- [ ] Task 17: D12逆向设计showcase
-  - [ ] SubTask 17.1: 用adjoint优化3个标准器件（MMI分束器/WDM滤波器/Y分支）
-  - [ ] SubTask 17.2: FoM≥10%记录到docs
+- [x] Task 15: 实现pretrain.py（BC预训练）
+  - [x] SubTask 15.1: 创建modules/trainer/src/polaris_trainer/pretrain.py（460行，已自测：10 demos/35 samples/final_loss=1.2375）
+  - [x] SubTask 15.2: 用expert_demos三元组做行为克隆预训练（MSE损失+Adam，文献Pomerleau 1989/Ross 2011）
+- [x] Task 16: 实现transfer_learning.py（迁移学习）
+  - [x] SubTask 16.1: 创建modules/trainer/src/polaris_trainer/transfer_learning.py（454行，已自测：4参数加载/2冻结/4可训练/final_loss=0.8835）
+  - [x] SubTask 16.2: 支持加载预训练模型+微调（fc1冻结+fc2/routing_head微调，文献Yosinski 2014/Pan 2010）
+- [x] Task 17: D12逆向设计showcase
+  - [x] SubTask 17.1: 用adjoint优化3个标准器件（MMI分束器/WDM滤波器/Y分支）（JAX jax.grad，文献Piggott 2015/Hughes 2018）
+  - [x] SubTask 17.2: FoM≥10%记录到docs（3/3器件改善≥10dB：MMI 16.59dB/WDM 10.06dB/Y分支 10.92dB，docs/inverse_design_showcase.md）
 
 ## 阶段5: P1 13个超800行测试套件拆分（并行）
 

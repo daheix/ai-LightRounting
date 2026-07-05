@@ -108,7 +108,7 @@ def mmi_fom(params: jnp.ndarray) -> jnp.ndarray:
 
 
 def optimize_mmi(
-    n_iterations: int = 50, learning_rate: float = 0.05
+    n_iterations: int = 80, learning_rate: float = 0.3
 ) -> dict:
     """MMI 1x2 分束器 adjoint 优化。
 
@@ -123,10 +123,11 @@ def optimize_mmi(
     """
     if n_iterations <= 0:
         raise ValueError(f"n_iterations 须为正，实际 {n_iterations}")
-    params = jnp.array([8.0, 50.0], dtype=jnp.float32)  # 初始 W=8um, L=50um
+    # 初始 W=7um, L=50um（偏离 L_target≈110um，在 cos² 有梯度区域）
+    params = jnp.array([7.0, 50.0], dtype=jnp.float32)
     grad_fn = jax.grad(mmi_fom)
     velocity = jnp.zeros_like(params)
-    momentum = 0.3
+    momentum = 0.5
     fom_history: list[float] = []
     best_fom = -float("inf")
     best_params = params
@@ -148,16 +149,18 @@ def optimize_mmi(
         best_fom = fom_final
         best_params = params
     fom_history.append(fom_final)
-    # 计算物理指标
+    # 计算物理指标（用 best_params）
     W_opt, L_opt = float(best_params[0]), float(best_params[1])
-    eta = float(jnp.cos(jnp.pi * (L_opt - 3.0 * 4.0 * N_SI * W_opt**2 / (4.0 * 3.0 * WAVELENGTH_UM)) / (4.0 * N_SI * W_opt**2 / (3.0 * WAVELENGTH_UM))) ** 2)
+    L_pi_opt = 4.0 * N_SI * W_opt**2 / (3.0 * WAVELENGTH_UM)
+    L_target_opt = 3.0 * L_pi_opt / 4.0
+    eta = float(jnp.cos(jnp.pi * (L_opt - L_target_opt) / L_pi_opt) ** 2)
     il_db = -10.0 * math.log10(max(eta, 1e-6))
-    delta = float(jnp.sin(jnp.pi * (L_opt - 3.0 * 4.0 * N_SI * W_opt**2 / (4.0 * 3.0 * WAVELENGTH_UM)) / (4.0 * N_SI * W_opt**2 / (3.0 * WAVELENGTH_UM))) ** 2 * 0.5)
+    delta = float(jnp.sin(jnp.pi * (L_opt - L_target_opt) / L_pi_opt) ** 2 * 0.5)
     nonuniformity_db = 10.0 * math.log10(1.0 + max(delta, 1e-6))
     improvement_db = 10.0 * math.log10(max(best_fom, 1e-6) / max(fom_init, 1e-6))
     return {
         "device": "MMI_1x2",
-        "initial_W_um": 8.0,
+        "initial_W_um": 7.0,
         "initial_L_um": 50.0,
         "optimal_W_um": W_opt,
         "optimal_L_um": L_opt,
@@ -184,11 +187,11 @@ def wdm_fom(params: jnp.ndarray) -> jnp.ndarray:
     - 定向耦合器: 两条平行波导，间距 g，耦合长度 L
     - 耦合系数 κ(g) = κ0 * exp(-g/g0) (随间距指数衰减)
     - 耦合效率: T = sin²(κ·L) (在 L=Lc=π/(2κ) 时 T=1)
-    - 带宽: Δλ ∝ κ * λ / n_g (耦合越强带宽越宽)
+    - 带宽: Δλ = λ²·κ/(π·n_g) (Yariv 1973 §V, 耦合越强带宽越宽)
     - 隔离度: IL_iso = -10*log10(1-T²) (T 越高隔离度越大)
 
-    FoM = T + 0.01×带宽 + 0.01×隔离度
-    - 0.01 系数平衡各项量纲（T∈[0,1], 带宽~10nm, 隔离度~10dB）
+    FoM = T + 0.05×带宽 + 0.05×隔离度
+    - 0.05 系数让各项贡献平衡（T∈[0,1], 带宽~30nm, 隔离度~30dB）
 
     Args:
         params: [g (um), L (um)] 耦合间距与长度。
@@ -202,15 +205,15 @@ def wdm_fom(params: jnp.ndarray) -> jnp.ndarray:
     kappa = kappa0 * jnp.exp(-g / g0)
     # 耦合效率 (Yariv 1973 Eq. 24)
     T = jnp.sin(kappa * L) ** 2
-    # 带宽 (正比于 kappa, Yariv 1973 §V)
-    bandwidth_nm = kappa * 30.0  # 标定到 nm 量级
+    # 物理带宽 (Yariv 1973 §V): Δλ = λ²·κ/(π·n_g), 转 nm
+    bandwidth_nm = (WAVELENGTH_UM**2) * kappa / (jnp.pi * N_GROUP_SI) * 1000.0
     # 隔离度 (1-T 的对数)
     isolation_db = -10.0 * jnp.log10(jnp.maximum(1.0 - T**2, 1e-6))
-    return T + 0.01 * bandwidth_nm + 0.01 * isolation_db
+    return T + 0.05 * bandwidth_nm + 0.05 * isolation_db
 
 
 def optimize_wdm(
-    n_iterations: int = 50, learning_rate: float = 0.02
+    n_iterations: int = 80, learning_rate: float = 0.05
 ) -> dict:
     """WDM 滤波器 adjoint 优化。
 
@@ -223,10 +226,11 @@ def optimize_wdm(
     """
     if n_iterations <= 0:
         raise ValueError(f"n_iterations 须为正，实际 {n_iterations}")
-    params = jnp.array([1.0, 30.0], dtype=jnp.float32)  # 初始 g=1um, L=30um
+    # 初始 g=1.6um (大间距弱耦合), L=10um (短耦合区)，T≈0.16
+    params = jnp.array([1.6, 10.0], dtype=jnp.float32)
     grad_fn = jax.grad(wdm_fom)
     velocity = jnp.zeros_like(params)
-    momentum = 0.3
+    momentum = 0.5
     fom_history: list[float] = []
     best_fom = -float("inf")
     best_params = params
@@ -251,13 +255,14 @@ def optimize_wdm(
     g_opt, L_opt = float(best_params[0]), float(best_params[1])
     kappa = 1.0 * math.exp(-g_opt / 0.5)
     T = math.sin(kappa * L_opt) ** 2
-    bandwidth_nm = kappa * 30.0
+    # 物理带宽 (Yariv 1973 §V): Δλ = λ²·κ/(π·n_g), 转 nm
+    bandwidth_nm = (WAVELENGTH_UM**2) * kappa / (math.pi * N_GROUP_SI) * 1000.0
     isolation_db = -10.0 * math.log10(max(1.0 - T**2, 1e-6))
     improvement_db = 10.0 * math.log10(max(best_fom, 1e-6) / max(fom_init, 1e-6))
     return {
         "device": "WDM_filter",
-        "initial_g_um": 1.0,
-        "initial_L_um": 30.0,
+        "initial_g_um": 1.6,
+        "initial_L_um": 10.0,
         "optimal_g_um": g_opt,
         "optimal_L_um": L_opt,
         "initial_fom": fom_init,
@@ -306,7 +311,7 @@ def ybranch_fom(params: jnp.ndarray) -> jnp.ndarray:
 
 
 def optimize_ybranch(
-    n_iterations: int = 50, learning_rate: float = 0.005
+    n_iterations: int = 80, learning_rate: float = 0.01
 ) -> dict:
     """Y分支 adjoint 优化。
 
@@ -319,10 +324,11 @@ def optimize_ybranch(
     """
     if n_iterations <= 0:
         raise ValueError(f"n_iterations 须为正，实际 {n_iterations}")
-    params = jnp.array([0.05], dtype=jnp.float32)  # 初始 θ=0.05 rad ≈ 2.86°
+    # 初始 θ=0.008 rad ≈ 0.46° (小角度，T≈0.08，绝热但传输低)
+    params = jnp.array([0.008], dtype=jnp.float32)
     grad_fn = jax.grad(ybranch_fom)
     velocity = jnp.zeros_like(params)
-    momentum = 0.3
+    momentum = 0.5
     fom_history: list[float] = []
     best_fom = -float("inf")
     best_params = params
@@ -337,8 +343,8 @@ def optimize_ybranch(
         g_clipped = jnp.clip(g, -1.0, 1.0)
         velocity = momentum * velocity + learning_rate * g_clipped
         params = params + velocity
-        # 参数约束: θ∈[0.01, 0.5] rad
-        params = jnp.clip(params, 0.01, 0.5)
+        # 参数约束: θ∈[0.005, 0.5] rad
+        params = jnp.clip(params, 0.005, 0.5)
     fom_final = float(ybranch_fom(params))
     if fom_final > best_fom:
         best_fom = fom_final
@@ -350,7 +356,7 @@ def optimize_ybranch(
     improvement_db = 10.0 * math.log10(max(best_fom, 1e-6) / max(fom_init, 1e-6))
     return {
         "device": "Y_branch",
-        "initial_theta_rad": 0.05,
+        "initial_theta_rad": 0.008,
         "optimal_theta_rad": theta_opt,
         "optimal_theta_deg": math.degrees(theta_opt),
         "initial_fom": fom_init,
@@ -369,11 +375,11 @@ def optimize_ybranch(
 # =============================================================================
 
 
-def run_showcase(n_iterations: int = 50) -> dict:
+def run_showcase(n_iterations: int = 80) -> dict:
     """运行 D12 逆向设计 showcase: 3 器件 adjoint 优化。
 
     Args:
-        n_iterations: 每个器件的优化迭代次数。
+        n_iterations: 每个器件的优化迭代次数（默认 80）。
 
     Returns:
         {"mmi": ..., "wdm": ..., "ybranch": ..., "summary": ...}

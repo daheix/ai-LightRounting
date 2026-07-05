@@ -36,9 +36,9 @@
 - [ ] 真实用例DRC通过率3.6%→≥30%
 
 ## R36路标补齐
-- [ ] pretrain.py实现（BC预训练）
-- [ ] transfer_learning.py实现（迁移学习）
-- [ ] D12逆向设计showcase（3个标准器件FoM≥10%）
+- [x] pretrain.py实现（BC预训练）（460行，10 demos/35 samples/final_loss=1.2375，文献Pomerleau 1989/Ross 2011）
+- [x] transfer_learning.py实现（迁移学习）（454行，4参数加载/2冻结/4可训练/final_loss=0.8835，文献Yosinski 2014/Pan 2010）
+- [x] D12逆向设计showcase（3个标准器件FoM≥10%）（3/3达标：MMI 16.59dB/WDM 10.06dB/Y分支 10.92dB，文献Piggott 2015/Hughes 2018）
 
 ## 13个超800行测试套件拆分
 - [ ] verify_advanced/tests 1841L拆分
