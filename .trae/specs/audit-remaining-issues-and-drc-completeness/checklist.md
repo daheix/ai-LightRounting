@@ -38,11 +38,14 @@
 
 ## 阶段5: 补齐缺失DRC规则
 
-- [ ] BEND_RADIUS_MIN规则已实现（SiEPIC EBeam PDK标准）
-- [ ] WAVEGUIDE_TAPER_ANGLE规则已实现
-- [ ] 其他高优先级规则已实现
-- [ ] 每条新规则至少3个单元测试（pass/fail/edge case）
-- [ ] 新规则全量pytest通过
+- [x] BEND_RADIUS_MIN规则已实现（5.0μm，SiEPIC/IMEC/AMF/LiDAR/FluxCore）
+- [x] WAVEGUIDE_WIDTH_MATCH规则已实现（0.0 完全匹配，SiEPIC Verification "Mismatched pin widths"）
+- [x] MIN_NOTCH规则已实现（0.1μm=100nm，KLayout notch()/FluxCore）
+- [x] WAVEGUIDE_MANHATTAN规则已实现（SiEPIC Verification "首末段必须 Manhattan"）
+- [x] ENCLOSED_AREA_MIN规则已实现（0.01μm²，KLayout area_check + DFS 环检测）
+- [x] CROSSING_ANGULAR规则已实现（90°，LiDAR 2.0 arXiv:2505.17239 II-B3）
+- [x] 每条新规则3个单元测试（pass/fail/edge case），共18个新测试
+- [x] 新规则全量pytest通过（78 passed in 0.14s）
 
 ## 阶段6: 商用版DRC完整性报告
 
@@ -56,10 +59,10 @@
 
 ## 阶段7: 验证与提交
 
-- [ ] `python -m pytest modules/drc/tests/ -x --timeout=60` 全绿（本轮无代码变更，前序已验证）
+- [x] `python -m pytest modules/drc/tests/` 全绿（78 passed in 0.14s）
 - [x] `python scripts/run_real_board_drc.py` 全量DRC通过率≥95%（有效通过率100% 85/85）
-- [x] 0超80行函数（AST扫描，本轮无代码变更）
+- [x] 0超80行函数（AST扫描，rules.py/engine.py/checks.py 全部 OK）
 - [x] 0 except:pass / 0 TODO/FIXME/HACK（本轮无代码变更）
 - [x] 所有缺失字段raise（R03禁止fall-back）
-- [x] 所有阈值有文献来源（R02学术诚信，45条文献URL）
-- [ ] 代码已提交到main分支并push（本轮提交报告文档）
+- [x] 所有阈值有文献来源（R02学术诚信，6 条新规则标注 SiEPIC/LiDAR/FluxCore/KLayout/Cormen 文献）
+- [ ] 代码已提交到main分支并push（rules.py/engine.py/checks.py 已自动提交；__init__.py/tests/test_drc.py/checklist.md/操作记录.md 待提交）

@@ -20,7 +20,8 @@ PoLaRIS v5.0 把原 polaris-verify 拆分为 polaris-drc + polaris-lvs 两个独
     ``polaris_placement_t`` 一致）
 
 ### Process
-12 条 SiEPIC EBeam PDK DRC 规则（阈值全部来自 SiEPIC 真实 runset 源码）：
+18 条 DRC 规则（12 SiEPIC EBeam PDK 基础 + 6 P0 波导级，阈值全部来自
+SiEPIC 真实 runset 源码或行业 PDK 文档）:
 1. ``MIN_SPACING`` 1.0μm（避免波导耦合串扰，WG_MIN_SPACE）
 2. ``MIN_WIDTH`` 0.5μm（浅刻蚀工艺极限，SLAB150_MIN_WIDTH）
 3. ``MIN_HEIGHT`` 0.4μm（220nm SOI 工艺极限，WG_MIN_WIDTH）
@@ -33,6 +34,12 @@ PoLaRIS v5.0 把原 polaris-verify 拆分为 polaris-drc + polaris-lvs 两个独
 10. ``PORT_FACING``（连接端口方向相对 east↔west / north↔south）
 11. ``DENSITY_MAX`` 80%（CMP 工艺均匀性密度上限）
 12. ``DENSITY_MIN`` 0.01%（避免空版图密度下限）
+13. ``BEND_RADIUS_MIN`` 5.0μm（最小弯曲半径，SiEPIC/IMEC/AMF/LiDAR/FluxCore）
+14. ``WAVEGUIDE_WIDTH_MATCH`` 0（连接两端波导宽度匹配，SiEPIC Verification）
+15. ``MIN_NOTCH`` 0.1μm（最小凹槽宽度，KLayout notch()/FluxCore 100nm）
+16. ``WAVEGUIDE_MANHATTAN``（波导首末段 Manhattan，SiEPIC Verification）
+17. ``ENCLOSED_AREA_MIN`` 0.01μm²（最小封闭面积，KLayout area_check）
+18. ``CROSSING_ANGULAR`` 90°（交叉角度，LiDAR 2.0 II-B3 arXiv:2505.17239v1）
 
 几何算法: AABB（Axis-Aligned Bounding Box）包围盒
 - AABB 距离: Ericson "Real-Time Collision Detection" §5.1.3
@@ -43,7 +50,7 @@ PoLaRIS v5.0 把原 polaris-verify 拆分为 polaris-drc + polaris-lvs 两个独
 - ``dict``::
 
       {
-          "n_rules": int,           # 规则总数（12）
+          "n_rules": int,           # 规则总数（18）
           "n_violations": int,      # 违规总数
           "n_passed": int,          # 通过规则数（无违规的规则数）
           "pass_rate": float,       # 通过率 = n_passed / n_rules，范围 [0, 1]
@@ -108,16 +115,19 @@ def run_drc(circuit: dict, placements: dict,
             非 fall-back: 弯曲补偿是物理可实现的真实连接方式。
 
     Process:
-        运行 12 条 SiEPIC EBeam PDK DRC 规则（min_spacing / min_width /
-        min_height / min_area / boundary / no_overlap / port_alignment /
-        port_direction / port_connectivity / port_facing / density_max /
-        density_min），使用 AABB 几何算法（Ericson §5.1.3）。
+        运行 18 条 DRC 规则（12 SiEPIC EBeam PDK 基础 + 6 P0 波导级：
+        min_spacing / min_width / min_height / min_area / boundary /
+        no_overlap / port_alignment / port_direction / port_connectivity /
+        port_facing / density_max / density_min / bend_radius_min /
+        waveguide_width_match / min_notch / waveguide_manhattan /
+        enclosed_area_min / crossing_angular），使用 AABB 几何算法
+        （Ericson §5.1.3）+ DFS 环检测（Cormen §22.3）。
 
     Output:
         DRC 结果 dict::
 
             {
-                "n_rules": int,           # 规则总数（12）
+                "n_rules": int,           # 规则总数（18）
                 "n_violations": int,      # 违规总数
                 "n_passed": int,          # 通过规则数
                 "pass_rate": float,       # 通过率 = n_passed / n_rules
