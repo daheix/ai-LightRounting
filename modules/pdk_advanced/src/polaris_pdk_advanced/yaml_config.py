@@ -446,38 +446,8 @@ def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
         }
         for layer in config.layers
     }
-    layer_stack_list: list = []
-    for level in config.layer_stack:
-        item: dict = {
-            "layer": level.layer,
-            "thickness_nm": level.thickness_nm,
-            "zmin_nm": level.zmin_nm,
-            "material": level.material,
-            "sidewall_angle_deg": level.sidewall_angle_deg,
-        }
-        if level.refractive_index_real is not None:
-            item["refractive_index"] = [
-                level.refractive_index_real,
-                level.refractive_index_imag if level.refractive_index_imag is not None else 0.0,
-            ]
-        layer_stack_list.append(item)
-    cross_sections_dict: dict = {
-        xs.name: {
-            "width_um": xs.width_um,
-            "offset_um": xs.offset_um,
-            "sections": [
-                {
-                    "width_um": s.width_um,
-                    "offset_um": s.offset_um,
-                    "layer": s.layer,
-                    "ports": list(s.ports) if s.ports else None,
-                    "hidden": s.hidden,
-                }
-                for s in xs.sections
-            ],
-        }
-        for xs in config.cross_sections
-    }
+    layer_stack_list = _convert_layer_stack_to_list(config.layer_stack)
+    cross_sections_dict = _convert_cross_sections_to_dict(config.cross_sections)
     cells_dict: dict = {
         cell.name: {
             "platform": cell.platform,
@@ -495,6 +465,47 @@ def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
         "cells": cells_dict,
     }
     return yaml.safe_dump(full_dict, allow_unicode=True, sort_keys=False, default_flow_style=False)
+
+
+def _convert_layer_stack_to_list(layer_stack: list) -> list:
+    """转换 layer_stack 为可序列化 dict 列表（Extract Method，R11 质量门禁）。"""
+    layer_stack_list: list = []
+    for level in layer_stack:
+        item: dict = {
+            "layer": level.layer,
+            "thickness_nm": level.thickness_nm,
+            "zmin_nm": level.zmin_nm,
+            "material": level.material,
+            "sidewall_angle_deg": level.sidewall_angle_deg,
+        }
+        if level.refractive_index_real is not None:
+            item["refractive_index"] = [
+                level.refractive_index_real,
+                level.refractive_index_imag if level.refractive_index_imag is not None else 0.0,
+            ]
+        layer_stack_list.append(item)
+    return layer_stack_list
+
+
+def _convert_cross_sections_to_dict(cross_sections: list) -> dict:
+    """转换 cross_sections 为可序列化 dict（Extract Method，R11 质量门禁）。"""
+    return {
+        xs.name: {
+            "width_um": xs.width_um,
+            "offset_um": xs.offset_um,
+            "sections": [
+                {
+                    "width_um": s.width_um,
+                    "offset_um": s.offset_um,
+                    "layer": s.layer,
+                    "ports": list(s.ports) if s.ports else None,
+                    "hidden": s.hidden,
+                }
+                for s in xs.sections
+            ],
+        }
+        for xs in cross_sections
+    }
 
 
 def _validate_required_fields(config: PDKYamlConfig) -> list[str]:
