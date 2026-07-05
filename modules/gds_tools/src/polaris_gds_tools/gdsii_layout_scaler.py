@@ -288,6 +288,47 @@ def _write_gdsii_layout(ly, out_path: Path):
         ) from e
 
 
+def _execute_scale_gdsii(
+    db, input_path: str | Path, output_path: str | Path,
+    scale_factor: float, grid_dbu: int, max_denominator: int,
+    top_cell_name: str | None,
+) -> ScaleReport:
+    """执行 GDSII 缩放核心逻辑，返回 ScaleReport。
+
+    注: ly 在本函数内保持存活，Cell.bbox() 可正常调用（R05 GC 防护）。
+    """
+    in_path = _validate_scale_inputs(input_path, scale_factor, grid_dbu)
+    out_path = Path(output_path)
+    mult, div = _scale_factor_to_fraction(scale_factor, max_denominator)
+    actual_scale = mult / div
+    ly, top_cell_indices = _read_gdsii_layout(db, in_path, input_path)
+    dbu = float(ly.dbu)
+    cells_to_scale, top_cell_names_list = _select_cells_to_scale(
+        ly, top_cell_indices, top_cell_name
+    )
+    original_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+    if len(cells_to_scale) == 1:
+        original_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
+    for cell in cells_to_scale:
+        ly.scale_and_snap(cell, grid_dbu, mult, div)
+    scaled_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+    if len(cells_to_scale) == 1:
+        scaled_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
+    _write_gdsii_layout(ly, out_path)
+    logger.info(
+        "GDSII 缩放: %s → %s (scale=%s, mult=%d, div=%d, grid=%d dbu, cells=%d)",
+        in_path, out_path, scale_factor, mult, div, grid_dbu,
+        len(cells_to_scale),
+    )
+    return ScaleReport(
+        input_path=str(input_path), output_path=str(output_path),
+        scale_factor=scale_factor, mult=mult, div=div, grid_dbu=grid_dbu,
+        dbu=dbu, top_cell_names=top_cell_names_list,
+        original_bbox_um=original_bbox_um, scaled_bbox_um=scaled_bbox_um,
+        actual_scale=actual_scale,
+    )
+
+
 def scale_gdsii(
     input_path: str | Path,
     output_path: str | Path,
@@ -308,15 +349,13 @@ def scale_gdsii(
         grid_dbu: 网格大小（dbu 单位，默认 1=1 dbu 精度）。
         max_denominator: Fraction 转换的分母上限（默认 10000）。
         top_cell_name: 指定顶层 cell 名（None 缩放所有顶层 cell）。
-            指定后只缩放该 cell，其他顶层 cell 保持不变。
 
     Returns:
         ScaleReport 缩放报告。
 
     Raises:
         FileNotFoundError: 输入文件不存在。
-        ValueError: 文件无效 / scale_factor <= 0 / grid_dbu < 1 /
-            top_cell_name 不存在。
+        ValueError: 文件无效 / scale_factor <= 0 / grid_dbu < 1。
         ImportError: klayout 未安装。
         RuntimeError: 读取或写出失败。
 
@@ -325,62 +364,11 @@ def scale_gdsii(
       https://klayout.org/doc-qt5/code/class_Layout.html
     - Python Fraction:
       https://docs.python.org/3/library/fractions.html
-    - Fowler, "Refactoring" 2nd ed., 2018, Extract Method
-      https://martinfowler.com/books/refactoring.html
     """
     db = _import_klayout_db()
-    in_path = _validate_scale_inputs(input_path, scale_factor, grid_dbu)
-    out_path = Path(output_path)
-
-    # 转换 scale_factor → (mult, div)
-    mult, div = _scale_factor_to_fraction(scale_factor, max_denominator)
-    actual_scale = mult / div
-
-    # 读取 GDSII
-    ly, top_cell_indices = _read_gdsii_layout(db, in_path, input_path)
-    dbu = float(ly.dbu)
-
-    # 确定要缩放的 cell
-    cells_to_scale, top_cell_names_list = _select_cells_to_scale(
-        ly, top_cell_indices, top_cell_name
-    )
-
-    # 记录缩放前 bbox（仅单顶层 cell 时有意义）
-    original_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
-    if len(cells_to_scale) == 1:
-        original_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
-
-    # 执行缩放
-    for cell in cells_to_scale:
-        ly.scale_and_snap(cell, grid_dbu, mult, div)
-
-    # 记录缩放后 bbox
-    scaled_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
-    if len(cells_to_scale) == 1:
-        scaled_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
-
-    # 写出
-    _write_gdsii_layout(ly, out_path)
-
-    logger.info(
-        "GDSII 缩放: %s → %s (scale=%s, mult=%d, div=%d, grid=%d dbu, "
-        "cells=%d)",
-        in_path, out_path, scale_factor, mult, div, grid_dbu,
-        len(cells_to_scale),
-    )
-
-    return ScaleReport(
-        input_path=str(input_path),
-        output_path=str(output_path),
-        scale_factor=scale_factor,
-        mult=mult,
-        div=div,
-        grid_dbu=grid_dbu,
-        dbu=dbu,
-        top_cell_names=top_cell_names_list,
-        original_bbox_um=original_bbox_um,
-        scaled_bbox_um=scaled_bbox_um,
-        actual_scale=actual_scale,
+    return _execute_scale_gdsii(
+        db, input_path, output_path, scale_factor,
+        grid_dbu, max_denominator, top_cell_name,
     )
 
 
