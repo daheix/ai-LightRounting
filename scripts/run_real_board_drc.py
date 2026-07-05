@@ -423,8 +423,13 @@ def convert_expert_demo(meta: dict, netlist: dict, placements_raw: dict
 def _resolve_placement_coord(val, ref_devs: dict, axis: str) -> float:
     """解析 gdsfactory placement 坐标值（数值或 'dev,port' 相对引用）。
 
-    gdsfactory YAML 相对引用语法: x='mmi_short,o1' 表示放置在 mmi_short 的
-    o1 端口的 x 坐标处。来源: https://gdsfactory.github.io/gdsfactory/
+    gdsfactory YAML 相对引用语法:
+    - x='mmi_short,o1'：放置在 mmi_short 的 o1 端口的 x 坐标处
+    - x='rings,east'：放置在 rings 的东边界（右边界 x+w）处
+    - y='rings,south'：放置在 rings 的南边界（下边界 y）处
+
+    方向引用 east/west/north/south 引用器件 AABB 边界（非端口）。
+    来源: https://gdsfactory.github.io/gdsfactory/
 
     Args:
         val: 坐标值（int/float/str）。
@@ -445,7 +450,7 @@ def _resolve_placement_coord(val, ref_devs: dict, axis: str) -> float:
         return float(sval)
     except ValueError:
         pass
-    # 相对引用 'dev,port'
+    # 相对引用 'dev,port' 或 'dev,direction'
     if "," in sval:
         dev, port = _split_ref(sval)
         if dev not in ref_devs:
@@ -455,6 +460,20 @@ def _resolve_placement_coord(val, ref_devs: dict, axis: str) -> float:
         # 引用器件尚未解析（placement 为空）→ raise 触发重试
         if not pl or "x" not in pl or "y" not in pl:
             raise RuntimeError(f"相对引用器件 '{dev}' 尚未解析（延后重试）")
+        # 方向引用 east/west/north/south → 器件 AABB 边界
+        if port in ("east", "west", "north", "south"):
+            px = float(pl.get("x", 0.0))
+            py = float(pl.get("y", 0.0))
+            pw = float(pl.get("w", 0.0))
+            ph = float(pl.get("h", 0.0))
+            if port == "east":
+                return px + pw
+            elif port == "west":
+                return px
+            elif port == "north":
+                return py + ph
+            else:  # south
+                return py
         ports = rd.get("ports", {})
         if port not in ports:
             raise RuntimeError(f"相对引用端口 '{dev}.{port}' 不存在（R03）")
@@ -510,8 +529,20 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
         dev_info[nm] = {"ports": port_map, "dims": (w, h)}
 
     # Pass 2: 解析 placements（支持相对引用，需已解析的 placement 作参考）
+    # GDSFactory 坐标键规范（来源 https://gdsfactory.github.io/gdsfactory/）:
+    # - x/y: 左下角坐标
+    # - xmin/ymin: 等同 x/y（左下角）
+    # - xmax/ymax: 右上角坐标 → x = xmax - w, y = ymax - h
+    # - xc/yc: 中心坐标 → x = xc - w/2, y = yc - h/2
+    # 所有坐标键均可为数值或 'dev,direction' 字符串引用（east/west/north/south）
     raw_placements = raw.get("placements", {})
     placements: dict[str, dict] = {}
+    # 无 placement 的 instance 默认放 (0,0)（GDSFactory 默认行为，非 fall-back）
+    # 这样后续相对引用可解析（如 mzi1 无 placement 时 mzi2 引用 mzi1.east）
+    for nm in dev_info:
+        if nm not in raw_placements:
+            w_d, h_d = dev_info[nm]["dims"]
+            placements[nm] = {"x": 0.0, "y": 0.0, "w": w_d, "h": h_d}
     # 按依赖顺序解析（无相对引用的先解析）
     pending: list[tuple[str, dict]] = []
     for nm, pl in raw_placements.items():
@@ -521,26 +552,42 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
             continue
         if not isinstance(pl, dict):
             continue
-        pending.append((nm, pl))
+        pending.append((nm, dict(pl)))  # 浅拷贝避免污染原始数据
 
     # 迭代解析（最多 3 轮解决依赖链）
     for _round in range(3):
         still_pending = []
         for nm, pl in pending:
             w, h = dev_info[nm]["dims"]
+            ref_devs = {k: {"ports": v["ports"], "placement": placements.get(k, {})}
+                        for k, v in dev_info.items()}
             try:
-                x = _resolve_placement_coord(
-                    pl.get("x", 0.0),
-                    {k: {"ports": v["ports"], "placement": placements.get(k, {})}
-                     for k, v in dev_info.items()},
-                    "x",
-                ) if "x" in pl else 0.0
-                y = _resolve_placement_coord(
-                    pl.get("y", 0.0),
-                    {k: {"ports": v["ports"], "placement": placements.get(k, {})}
-                     for k, v in dev_info.items()},
-                    "y",
-                ) if "y" in pl else 0.0
+                # 解析 x 坐标（优先级: x > xmin > xmax > xc > 默认 0）
+                if "x" in pl:
+                    x = _resolve_placement_coord(pl["x"], ref_devs, "x")
+                elif "xmin" in pl:
+                    x = _resolve_placement_coord(pl["xmin"], ref_devs, "x")
+                elif "xmax" in pl:
+                    # xmax = x + w → x = xmax - w
+                    x = _resolve_placement_coord(pl["xmax"], ref_devs, "x") - w
+                elif "xc" in pl:
+                    # xc = x + w/2 → x = xc - w/2
+                    x = _resolve_placement_coord(pl["xc"], ref_devs, "x") - w / 2.0
+                else:
+                    x = 0.0
+                # 解析 y 坐标（优先级: y > ymin > ymax > yc > 默认 0）
+                if "y" in pl:
+                    y = _resolve_placement_coord(pl["y"], ref_devs, "y")
+                elif "ymin" in pl:
+                    y = _resolve_placement_coord(pl["ymin"], ref_devs, "y")
+                elif "ymax" in pl:
+                    # ymax = y + h → y = ymax - h
+                    y = _resolve_placement_coord(pl["ymax"], ref_devs, "y") - h
+                elif "yc" in pl:
+                    # yc = y + h/2 → y = yc - h/2
+                    y = _resolve_placement_coord(pl["yc"], ref_devs, "y") - h / 2.0
+                else:
+                    y = 0.0
             except RuntimeError:
                 # 依赖尚未解析，延后
                 still_pending.append((nm, pl))

@@ -2,29 +2,16 @@
   "name": "gf_gf_mask",
   "category": "gdsfactory",
   "n_devices": 2,
-  "n_connections": 1,
-  "canvas_w": 405.0,
-  "canvas_h": 305.0,
+  "n_connections": 2,
+  "canvas_w": 655.0,
+  "canvas_h": 355.0,
   "status": "ok",
   "drc": {
-    "n_violations": 1,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "DENSITY_MAX",
-        "severity": 0.6,
-        "message": "DENSITY_MAX: 布局密度 105.2419% 超过上限 80.0000%",
-        "device_name": "canvas",
-        "location": [
-          202.5,
-          152.5
-        ]
-      }
-    ],
-    "violated_rules": [
-      "DENSITY_MAX"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }
