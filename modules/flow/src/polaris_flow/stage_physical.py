@@ -18,6 +18,7 @@
   https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - SiEPIC EBeam PDK 设计规则
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- TILOS MacroPlacement 基准: https://github.com/TILOS-AI-Institute/MacroPlacement
 
 ## 设计约束
 

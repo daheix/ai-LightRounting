@@ -10,6 +10,9 @@
   来源: https://arxiv.org/html/2505.17239v2
 - A* 搜索算法（Hart, Nilsson & Raphael 1968）
   https://en.wikipedia.org/wiki/A*_search_algorithm
+- Hart, Nilsson & Raphael 1968 IEEE 原始论文
+  https://ieeexplore.ieee.org/document/4082128
+- DREAMPlace 深度学习布线: https://arxiv.org/abs/2004.10746
 
 8 方向移动代价：
 - 直行（E/W/N/S）：代价 1.0

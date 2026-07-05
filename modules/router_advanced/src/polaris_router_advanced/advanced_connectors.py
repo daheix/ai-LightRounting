@@ -10,6 +10,7 @@ RF GSG 电极路由、总线路由、高阶贝塞尔连接器（任意角度多�
 - Yu et al., Photonics Research, Vol. 14, No. 2, 2026: https://doi.org/10.1364/PRJ.574190
 - OptoDesigner Advanced Connectors: https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/advanced-connectors-module.html
 - Ghione & Naldi, IEEE TMTT, Vol. 35, No. 3, 1987: https://doi.org/10.1109/TMTT.1987.1133623
+- 欧拉弯曲 Fujisawa 2017: https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 
 ## 合规性
 

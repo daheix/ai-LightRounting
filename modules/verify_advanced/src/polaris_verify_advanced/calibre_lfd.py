@@ -15,6 +15,13 @@
 - 每条 WARNING 热点扣 (100/total_checks)×0.5
 - 支持理论: Wang et al. SPIE 63492Z, Design Variation Index (DVI)
 
+补充文献（R02 ≥5 URL）:
+- OpenDRC DAC 2023 开源 DRC 引擎: https://doi.org/10.1145/3569056.3574135
+- KLayout DRC Runsets 文档: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- Calibre LFD 商业工具链: https://eda.sw.siemens.com/en-US/calibre/lfd/
+- Wang SPIE 63492Z PV-band: https://www.spiedigitallibrary.org/conference-proceedings-of-spie/6349/63492Z/
+- OpenROAD DRC 流程: https://theopenroadproject.org/
+
 合规: R03 禁止 fall-back；R02 学术诚信；R04 不参与 GPU（纯 NumPy）。
 """
 

@@ -11,6 +11,14 @@
   https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件制造鲁棒性
   https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
+
+补充文献（R02 ≥5 URL）:
+- Chrostowski & Hochberg Silicon Photonics Design §6 弯曲波导损耗
+  https://www.cambridge.org/core/books/photonic-electronics/
+- gdsfactory euler_bend 实现: https://github.com/gdsfactory/gdsfactory
+- SiEPIC EBeam PDK 弯曲波导: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- LiDAR ISPD 2025 弯曲感知布线: https://arxiv.org/html/2505.17239v1
+- Bezier 曲线几何: https://dl.acm.org/doi/10.1145/3698364.3705355
 """
 
 from __future__ import annotations

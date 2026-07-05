@@ -16,6 +16,7 @@ GDS 加载/Region 检查函数时才 import klayout.db。这使得子模块在�
   Cambridge University Press 2015, p.353
 - Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
 - Synopsys IC Validator: https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+- OpenDRC DAC 2023 开源 DRC: https://doi.org/10.1145/3569056.3574135
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R13 不保留 v4 兼容。
 """

@@ -24,6 +24,8 @@ Output:
 - Seron et al., Quantum 2024, BosonSampling.jl
   https://arxiv.org/abs/2212.09537
 - Ryser, 1963, "Combinatorial Mathematics"（积和式容斥算法）
+  https://www.maa.org/digital-library/maa-rse-carus-mathematical-monographs
+- Aaronson 玻色采样计算复杂性: https://www.nature.com/articles/s41567-022-01751-7
 
 设计原则
 --------

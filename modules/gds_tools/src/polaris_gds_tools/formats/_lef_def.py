@@ -11,6 +11,7 @@ LEF/DEF 语法实现遵循下列权威来源（规则 18 学术诚信）：
 - Mead & Conway, "Introduction to VLSI Systems", Addison-Wesley 1980
 - Rubin, "Computer Aids for VLSI Design" Appendix B,
   https://iue.tuwien.ac.at/phd/minixhofer/node51.html
+- KLayout LEF/DEF 阅读器: https://www.klayout.org/doc-qt5/manual/lef_def.html
 
 LEF 定义 MACRO（→ Cell，含 OBS/PIN RECT 几何）；
 DEF 定义 COMPONENTS（→ Instance，+ PLACED (x y) N）。

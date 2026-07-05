@@ -9,6 +9,13 @@
 - simphony Subcircuit: https://github.com/BYUCamachoLab/simphony
 - Ploeg et al., "Simphony", IEEE CiSE 2021, §2
 
+补充文献（R02 ≥5 URL）:
+- sax 矩阵化光子仿真库: https://flapport.github.io/sax/
+- gdsfactory 电路构建: https://github.com/gdsfactory/gdsfactory
+- SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Chrostowski & Hochberg Silicon Photonics Design: https://www.cambridge.org/core/books/photonic-electronics/
+- Lumerical INTERCONNECT CML: https://optics.ansys.com/hc/en-us
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO /
 R13 不保留 v4 兼容。
 """

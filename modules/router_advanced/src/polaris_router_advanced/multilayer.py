@@ -10,6 +10,9 @@
   来源: https://www.techrxiv.org/users/961414/articles/1330406
 - LiDAR 2.0 分层曲线波导布线
   来源: https://arxiv.org/html/2505.17239v2
+- SiEPIC EBeam PDK 平台损耗参数
+  来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- gdsfactory 多层路由: https://github.com/gdsfactory/gdsfactory
 
 架构: 每层独立 A* 布线 + 层间 OTV 连接
 - Layer 0: SOI 器件层（有源/无源）

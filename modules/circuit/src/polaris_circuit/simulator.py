@@ -10,6 +10,9 @@
 - Filipsson 1978, Eur. Microw. Conf.,
   https://doi.org/10.1109/EUMA.1978.332681
 - Agrawal, "Fiber-Optic Communication Systems", §2.4 (群延迟)
+  https://www.wiley.com/en-us/Fiber+Optic+Communication+Systems
+- Chrostowski & Hochberg Silicon Photonics Design
+  https://www.cambridge.org/core/books/photonic-electronics/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO /
 R13 不保留 v4 兼容（去掉 jax backend 简化为单 numpy 后端）。

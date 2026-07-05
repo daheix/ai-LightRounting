@@ -4,10 +4,14 @@
 
 学术依据（R02 ≥5 文献 URL）:
 - Pozar Microwave Engineering §4.3 (S 参数无源性/互易性)
+  https://www.wiley.com/en-us/Microwave+Engineering
 - Lumerical CML Compiler https://optics.ansys.com/hc/en-us/articles/360057929454
-- IEEE Std 100-2000 (dB → Np 转换)
+- IEEE Std 100-2000 (dB → Np 转换) https://standards.ieee.org/ieee/100/3243/
 - Ansys Lumerical INTERCONNECT CML https://optics.ansys.com/hc/en-us
 - Chrostowski 2015 Silicon Photonics Design Cambridge §6
+  https://www.cambridge.org/core/books/photonic-electronics/
+- Filipsson 1978 群延迟/相位延迟: https://ieeexplore.ieee.org/document/1164182
+- SiEPIC EBeam PDK S 参数: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
 设计原则: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy SVD /
 R05 无 TODO / R13 不保留 v4 兼容 / 函数≤80行 / 文件≤800行。

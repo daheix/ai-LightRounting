@@ -20,12 +20,15 @@ Output:
 - Hong, Ou, Mandel, PRL 1987, HOM 干涉
   https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
 - Bouwmeester et al., "The Physics of Quantum Information", Springer 2000, §3.1
+  https://link.springer.com/book/10.1007/978-3-662-04209-0
 - Aaronson & Arkhipov, STOC 2011, 玻色采样
   https://arxiv.org/abs/0910.4698
 - Seron et al., Quantum 2024, BosonSampling.jl
   https://arxiv.org/abs/2212.09537
 - Pearson, "On the criterion that a given system of deviations...",
   Philosophical Magazine 1900（卡方检验原始论文）
+  https://doi.org/10.1080/14786440009463876
+- SciPy chi2 分布: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2.html
 
 设计原则
 --------

@@ -19,6 +19,8 @@
 5. Touchstone File Format Specification v2.0（IBIS Open Forum 2009）
    https://ibis.org/connector/touchstone_spec2.pdf
 6. Kurokawa, "Power Waves and the Scattering Matrix", IEEE TMTT 1965
+   https://ieeexplore.ieee.org/document/1164792
+7. Pozar Microwave Engineering URL: https://www.wiley.com/en-us/Microwave+Engineering
 
 ## 规则依据
 

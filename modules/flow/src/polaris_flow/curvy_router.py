@@ -14,6 +14,13 @@
 - LiDAR 2.0 TCAD 2025: https://arxiv.org/html/2505.17239v2
 - Rip-up and reroute: Lillis & Dutt, DAC 1999
   https://dl.acm.org/doi/10.1145/309847.309970
+
+补充文献（R02 ≥5 URL）:
+- A* 路径搜索 Hart 1968: https://ieeexplore.ieee.org/document/4082128
+- DREAMPlace 深度学习布局布线: https://arxiv.org/abs/2004.10746
+- gdsfactory 自动布线: https://github.com/gdsfactory/gdsfactory
+- SiEPIC EBeam PDK 波导宽度: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- 欧拉弯曲 Fujisawa 2017: https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 """
 
 from __future__ import annotations

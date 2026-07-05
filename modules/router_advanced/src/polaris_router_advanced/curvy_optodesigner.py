@@ -16,6 +16,7 @@
 - Synopsys OptoDesigner Autorouting
   URL: https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner.html
 - Pathak & Hu TCAD 2014（Rip-up & Reroute 收敛性）
+  URL: https://ieeexplore.ieee.org/document/6853293
 
 ## 合规性
 

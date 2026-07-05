@@ -8,6 +8,13 @@
 - simphony: https://simphonyphotonics.readthedocs.io/
 - sax: https://flapport.github.io/sax/
 - 查表损耗值来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
+
+补充文献（R02 ≥5 URL）:
+- Chrostowski & Hochberg Silicon Photonics Design 损耗模型
+  https://www.cambridge.org/core/books/photonic-electronics/
+- gdsfactory 仿真接口: https://github.com/gdsfactory/gdsfactory
+- Lumerical INTERCONNECT 电路仿真: https://optics.ansys.com/hc/en-us
+- Pozar Microwave Engineering S 参数: https://www.wiley.com/en-us/Microwave+Engineering
 """
 
 from __future__ import annotations

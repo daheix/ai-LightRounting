@@ -12,8 +12,10 @@
 - SiEPIC EBeam PDK Examples: https://github.com/SiEPIC/SiEPIC_EBeam_PDK/tree/master/Examples
 - klayout Instance class: https://www.klayout.org/klayout-pypi/overview/instances/
 - 模仿学习理论: Pomerleau 1989, "ALVINN: An Autonomous Land Vehicle in a Neural Network"
+  https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
 - 模仿学习综述: Gavenski et al., "A Survey of Imitation Learning Methods",
   ACM PACMMECS 2024, https://arxiv.org/abs/2404.19456
+- PPO 强化学习: https://arxiv.org/abs/1707.06347
 """
 
 from __future__ import annotations

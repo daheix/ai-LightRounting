@@ -40,9 +40,11 @@ dict::
 - Ansys Lumerical INTERCONNECT 眼图分析
   https://optics.ansys.com/hc/en-us/articles/49697869166611
 - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
+  https://www.cambridge.org/core/books/photonic-electronics/
 - Ansys Lumerical CML Compiler
   https://optics.ansys.com/hc/en-us/sections/360005039133-CML-Compiler
 - Proakis, "Digital Communications", McGraw-Hill 2007, §5（PAM BER 公式）
+  https://www.mhhe.com/engcs/electrical/proakis/
 """
 
 from __future__ import annotations

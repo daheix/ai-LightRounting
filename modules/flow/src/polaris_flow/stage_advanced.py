@@ -19,6 +19,7 @@
   https://doi.org/10.1364/OE.21.0021693
 - Piggott 2017 Nature Photonics, 逆向设计实验验证
   https://doi.org/10.1038/nphoton.2017.126
+- Aaronson & Arkhipov 玻色采样: https://arxiv.org/abs/0910.4698
 
 ## 设计约束
 

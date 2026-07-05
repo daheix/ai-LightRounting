@@ -16,6 +16,7 @@
   URL: https://arxiv.org/abs/2004.10746
 - A* 搜索算法（Hart, Nilsson & Raphael 1968）
   URL: https://en.wikipedia.org/wiki/A*_search_algorithm
+- Hart 1968 IEEE 原始论文: https://ieeexplore.ieee.org/document/4082128
 
 ## 合规性
 
