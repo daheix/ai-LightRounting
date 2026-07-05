@@ -196,6 +196,44 @@ def _compute_unnormalized_sensitivity(
 # ============================================================================
 
 
+def _validate_wcd_params(
+    base_params: np.ndarray,
+    param_sigmas: np.ndarray,
+    direction: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    """校验 compute_worst_case_distance 输入参数（Extract Method，R11 质量门禁）。
+
+    Args:
+        base_params: 标称参数 x̂。
+        param_sigmas: 每个参数的容差 σ_i (std dev)。
+        direction: "lower" (f≥T 合格) 或 "upper" (f≤T 合格)。
+
+    Returns:
+        (base_params, param_sigmas) 转换为 float ndarray。
+
+    Raises:
+        ValueError: 参数无效（R03 禁止 fall-back）。
+    """
+    base_params = np.asarray(base_params, dtype=float)
+    param_sigmas = np.asarray(param_sigmas, dtype=float)
+    if base_params.ndim != 1:
+        raise ValueError(
+            f"base_params 必须为 1D，得到 shape {base_params.shape}"
+        )
+    if param_sigmas.shape != base_params.shape:
+        raise ValueError(
+            f"param_sigmas shape {param_sigmas.shape} 与 "
+            f"base_params {base_params.shape} 不匹配"
+        )
+    if np.any(param_sigmas <= 0):
+        raise ValueError(f"param_sigmas 必须 > 0，得到 {param_sigmas}")
+    if direction not in ("lower", "upper"):
+        raise ValueError(
+            f"direction 必须为 'lower' 或 'upper'，得到 '{direction}'"
+        )
+    return base_params, param_sigmas
+
+
 def compute_worst_case_distance(
     func: Callable[[np.ndarray], float],
     base_params: np.ndarray,
@@ -226,23 +264,9 @@ def compute_worst_case_distance(
     - Spence & Soin 1988
     - 一阶方差传播: σ_f² ≈ Σ S_i² σ_i²
     """
-    base_params = np.asarray(base_params, dtype=float)
-    param_sigmas = np.asarray(param_sigmas, dtype=float)
-    if base_params.ndim != 1:
-        raise ValueError(
-            f"base_params 必须为 1D，得到 shape {base_params.shape}"
-        )
-    if param_sigmas.shape != base_params.shape:
-        raise ValueError(
-            f"param_sigmas shape {param_sigmas.shape} 与 "
-            f"base_params {base_params.shape} 不匹配"
-        )
-    if np.any(param_sigmas <= 0):
-        raise ValueError(f"param_sigmas 必须 > 0，得到 {param_sigmas}")
-    if direction not in ("lower", "upper"):
-        raise ValueError(
-            f"direction 必须为 'lower' 或 'upper'，得到 '{direction}'"
-        )
+    base_params, param_sigmas = _validate_wcd_params(
+        base_params, param_sigmas, direction
+    )
 
     try:
         f_nominal = float(func(base_params))
