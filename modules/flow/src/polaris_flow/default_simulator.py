@@ -121,7 +121,22 @@ class _DefaultSimulator:
         客户基于 0 dB 损耗做链路预算，实际产品损耗超标现场部署失败。
         修复：显式取键，KeyError 即 raise 告警。
         规则: R03 禁止 fall-back / R05 Bug 必修
+
+        R05 Bug 修复 unit-mismatch-05（波长 nm/μm 换算）:
+        specs.py 中 optical_wavelength_nm 单位为 nm（默认 1550.0），
+        而 simphony/SAX 仿真器使用 μm（默认扫描 1.5-1.6μm）。
+        调用仿真器前必须显式换算 nm→μm，避免 1550nm 被当作 1550μm
+        导致仿真波长错误（远超硅光通信波段）。
+        规则: R03 禁止 fall-back / R05 Bug 必修
         """
+        # 显式换算 nm→μm（simphony 使用 μm，specs.py 使用 nm）
+        # CircuitSpec.optical_wavelength_nm 是 dataclass 字段（默认 1550.0），
+        # 直接属性访问无 fall-back 风险（字段总存在）
+        wl_um = float(circuit.optical_wavelength_nm) / 1000.0
+        logger.debug(
+            "波长换算 nm→μm: %s nm → %.4f μm（simphony 仿真器使用 μm）",
+            circuit.optical_wavelength_nm, wl_um,
+        )
         result = self._sim.simulate(circuit)
         # R03: 显式取键，禁止 .get(key, default) 静默吞 KeyError
         try:
