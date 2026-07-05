@@ -62,6 +62,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,126 @@ class AreaDRCReport:
 # =============================================================================
 # area 检查主入口
 # =============================================================================
+def _validate_check_area_params(
+    gds_path: str | Path,
+    layer: tuple[int, int],
+    min_area_um2: float,
+    max_violations: int,
+) -> tuple[Any, Path, int, int]:
+    """校验 check_area 参数，返回 (db, in_path, src_layer, src_dt)。"""
+    db = _import_klayout_db()
+    in_path = Path(gds_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {gds_path}")
+    src_layer, src_dt = _validate_layer(layer, "layer")
+    if min_area_um2 <= 0:
+        raise ValueError(
+            f"min_area_um2 必须 > 0，得到 {min_area_um2}。"
+            f"禁止 fall-back（R03）。"
+        )
+    if max_violations <= 0:
+        raise ValueError(
+            f"max_violations 必须 > 0，得到 {max_violations}。"
+            f"禁止 fall-back（R03）。"
+        )
+    return db, in_path, src_layer, src_dt
+
+
+def _load_gdsii_and_extract_region(
+    db: Any,
+    in_path: Path,
+    src_layer: int,
+    src_dt: int,
+    top_cell_name: str | None,
+    gds_path: str | Path,
+) -> tuple[Any, float, Any, int, float]:
+    """读取 GDSII 并提取 Region，返回 (top_cell, dbu, r, total_polygons, total_area_um2)。"""
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
+    r = db.Region(top_cell.begin_shapes_rec(li_src))
+    total_polygons = int(r.count())
+    total_area_dbu2 = float(r.area())
+    total_area_um2 = total_area_dbu2 * dbu * dbu
+    return top_cell, dbu, r, total_polygons, total_area_um2
+
+
+def _check_polygons_area(
+    r: Any, dbu: float, min_area_um2: float, max_violations: int
+) -> tuple[list[AreaDRCViolation], int]:
+    """迭代多边形检查面积违规，返回 (violations, violation_count)。"""
+    violations: list[AreaDRCViolation] = []
+    violation_count = 0
+    for poly in r.each():
+        poly_area_dbu2 = float(poly.area())
+        poly_area_um2 = poly_area_dbu2 * dbu * dbu
+        if poly_area_um2 < min_area_um2:
+            violation_count += 1
+            if len(violations) < max_violations:
+                bbox_db = poly.bbox()
+                violations.append(AreaDRCViolation(
+                    bbox_xmin_um=float(bbox_db.left) * dbu,
+                    bbox_ymin_um=float(bbox_db.bottom) * dbu,
+                    bbox_xmax_um=float(bbox_db.right) * dbu,
+                    bbox_ymax_um=float(bbox_db.top) * dbu,
+                    area_um2=poly_area_um2,
+                    min_area_um2=min_area_um2,
+                ))
+    return violations, violation_count
+
+
+def _assemble_area_drc_report(
+    gds_path: str | Path,
+    src_layer: int,
+    src_dt: int,
+    dbu: float,
+    top_cell: Any,
+    min_area_um2: float,
+    total_polygons: int,
+    violation_count: int,
+    total_area_um2: float,
+    violations: list[AreaDRCViolation],
+) -> AreaDRCReport:
+    """计算违规包围盒 + 日志 + 组装 AreaDRCReport。"""
+    bbox_um: tuple[tuple[float, float], tuple[float, float]] | None = None
+    if violation_count > 0 and violations:
+        xmin = min(v.bbox_xmin_um for v in violations)
+        ymin = min(v.bbox_ymin_um for v in violations)
+        xmax = max(v.bbox_xmax_um for v in violations)
+        ymax = max(v.bbox_ymax_um for v in violations)
+        bbox_um = ((xmin, ymin), (xmax, ymax))
+    logger.info(
+        "GDSII area 检查: %s layer=(%d,%d), min_area=%.6fμm², "
+        "polygons=%d, violations=%d (返回 %d), total_area=%.6fμm²",
+        gds_path, src_layer, src_dt, min_area_um2,
+        total_polygons, violation_count, len(violations),
+        total_area_um2,
+    )
+    return AreaDRCReport(
+        input_path=str(gds_path),
+        layer=(src_layer, src_dt),
+        dbu=dbu,
+        top_cell_name=top_cell.name,
+        min_area_um2=min_area_um2,
+        check_type="area",
+        total_polygons=total_polygons,
+        total_violations=violation_count,
+        total_area_um2=total_area_um2,
+        violations=violations,
+        bbox=bbox_um,
+    )
+
+
 def check_area(
     gds_path: str | Path,
     layer: tuple[int, int],
@@ -176,98 +297,18 @@ def check_area(
     来源:
     - KLayout Region area: https://www.klayout.de/doc-qt5/code/class_Region.html
     """
-    db = _import_klayout_db()
-    in_path = Path(gds_path)
-
-    if not in_path.exists():
-        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {gds_path}")
-
-    src_layer, src_dt = _validate_layer(layer, "layer")
-
-    if min_area_um2 <= 0:
-        raise ValueError(
-            f"min_area_um2 必须 > 0，得到 {min_area_um2}。"
-            f"禁止 fall-back（R03）。"
-        )
-    if max_violations <= 0:
-        raise ValueError(
-            f"max_violations 必须 > 0，得到 {max_violations}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    # 读取 GDSII
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
-    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-    li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
-
-    # 提取 Region（递归遍历所有子 cell）
-    r = db.Region(top_cell.begin_shapes_rec(li_src))
-
-    total_polygons = int(r.count())
-    total_area_dbu2 = float(r.area())
-    total_area_um2 = total_area_dbu2 * dbu * dbu
-
-    violations: list[AreaDRCViolation] = []
-    violation_count = 0
-
-    # 迭代每个独立多边形
-    for poly in r.each():
-        poly_area_dbu2 = float(poly.area())
-        poly_area_um2 = poly_area_dbu2 * dbu * dbu
-
-        if poly_area_um2 < min_area_um2:
-            violation_count += 1
-            if len(violations) < max_violations:
-                bbox_db = poly.bbox()
-                violations.append(AreaDRCViolation(
-                    bbox_xmin_um=float(bbox_db.left) * dbu,
-                    bbox_ymin_um=float(bbox_db.bottom) * dbu,
-                    bbox_xmax_um=float(bbox_db.right) * dbu,
-                    bbox_ymax_um=float(bbox_db.top) * dbu,
-                    area_um2=poly_area_um2,
-                    min_area_um2=min_area_um2,
-                ))
-
-    # 计算所有违规的包围盒
-    bbox_um: tuple[tuple[float, float], tuple[float, float]] | None = None
-    if violation_count > 0 and violations:
-        xmin = min(v.bbox_xmin_um for v in violations)
-        ymin = min(v.bbox_ymin_um for v in violations)
-        xmax = max(v.bbox_xmax_um for v in violations)
-        ymax = max(v.bbox_ymax_um for v in violations)
-        bbox_um = ((xmin, ymin), (xmax, ymax))
-
-    logger.info(
-        "GDSII area 检查: %s layer=(%d,%d), min_area=%.6fμm², "
-        "polygons=%d, violations=%d (返回 %d), total_area=%.6fμm²",
-        in_path, src_layer, src_dt, min_area_um2,
-        total_polygons, violation_count, len(violations),
-        total_area_um2,
+    db, in_path, src_layer, src_dt = _validate_check_area_params(
+        gds_path, layer, min_area_um2, max_violations
     )
-
-    return AreaDRCReport(
-        input_path=str(gds_path),
-        layer=(src_layer, src_dt),
-        dbu=dbu,
-        top_cell_name=top_cell.name,
-        min_area_um2=min_area_um2,
-        check_type="area",
-        total_polygons=total_polygons,
-        total_violations=violation_count,
-        total_area_um2=total_area_um2,
-        violations=violations,
-        bbox=bbox_um,
+    top_cell, dbu, r, total_polygons, total_area_um2 = _load_gdsii_and_extract_region(
+        db, in_path, src_layer, src_dt, top_cell_name, gds_path
+    )
+    violations, violation_count = _check_polygons_area(
+        r, dbu, min_area_um2, max_violations
+    )
+    return _assemble_area_drc_report(
+        gds_path, src_layer, src_dt, dbu, top_cell, min_area_um2,
+        total_polygons, violation_count, total_area_um2, violations,
     )
 
 
