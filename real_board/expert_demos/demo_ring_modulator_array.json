@@ -1,0 +1,91 @@
+{
+  "name": "demo_ring_modulator_array",
+  "category": "expert_demos",
+  "n_devices": 31,
+  "n_connections": 30,
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "status": "ok",
+  "drc": {
+    "n_violations": 7,
+    "n_rules": 12,
+    "n_passed": 10,
+    "pass_rate": 0.8333333333333334,
+    "violations": [
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 mod_array_in_mrr_0 与 fanout_yb_1_0 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "mod_array_in_mrr_0",
+        "location": [
+          82.0,
+          89.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mod_array_in_mrr_0 与 fanout_yb_0_0 重叠",
+        "device_name": "mod_array_in_mrr_0",
+        "location": [
+          74.5,
+          80.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mod_array_in_mrr_0 与 fanout_yb_1_0 重叠",
+        "device_name": "mod_array_in_mrr_0",
+        "location": [
+          82.0,
+          89.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mrr_array_3_mrr_0 与 gc_array_out_gc_0 重叠",
+        "device_name": "mrr_array_3_mrr_0",
+        "location": [
+          322.5,
+          228.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mrr_array_3_mrr_1 与 gc_array_out_gc_1 重叠",
+        "device_name": "mrr_array_3_mrr_1",
+        "location": [
+          322.0,
+          289.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mrr_array_3_mrr_2 与 gc_array_out_gc_2 重叠",
+        "device_name": "mrr_array_3_mrr_2",
+        "location": [
+          404.0,
+          411.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mrr_array_3_mrr_3 与 gc_array_out_gc_3 重叠",
+        "device_name": "mrr_array_3_mrr_3",
+        "location": [
+          322.0,
+          350.0
+        ]
+      }
+    ],
+    "violated_rules": [
+      "MIN_SPACING",
+      "NO_OVERLAP"
+    ]
+  }
+}

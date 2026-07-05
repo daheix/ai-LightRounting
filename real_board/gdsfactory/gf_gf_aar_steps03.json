@@ -1,16 +1,52 @@
 {
   "name": "gf_gf_aar_steps03",
   "category": "gdsfactory",
-  "n_devices": 0,
-  "n_connections": 0,
-  "canvas_w": null,
-  "canvas_h": null,
-  "status": "error",
-  "error": "ValueError: could not convert string to float: 'mmi_short,o1'",
+  "n_devices": 3,
+  "n_connections": 1,
+  "canvas_w": 143.0,
+  "canvas_h": 114.95,
+  "status": "ok",
   "drc": {
-    "n_violations": -1,
-    "pass_rate": 0.0,
-    "violations": [],
-    "error": "ValueError: could not convert string to float: 'mmi_short,o1'"
+    "n_violations": 3,
+    "n_rules": 12,
+    "n_passed": 9,
+    "pass_rate": 0.75,
+    "violations": [
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 mmi_long 与 obstacle1 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "mmi_long",
+        "location": [
+          115.0,
+          89.5
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi_long 与 obstacle1 重叠",
+        "device_name": "mmi_long",
+        "location": [
+          115.0,
+          89.5
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 obstacle1 无任何连接（孤立器件）",
+        "device_name": "obstacle1",
+        "location": [
+          115.0,
+          89.5
+        ]
+      }
+    ],
+    "violated_rules": [
+      "MIN_SPACING",
+      "NO_OVERLAP",
+      "PORT_CONNECTIVITY"
+    ]
   }
 }

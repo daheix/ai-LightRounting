@@ -7,7 +7,7 @@
   "canvas_h": 381060.7,
   "status": "ok",
   "drc": {
-    "n_violations": 6,
+    "n_violations": 5,
     "n_rules": 12,
     "n_passed": 10,
     "pass_rate": 0.8333333333333334,
@@ -50,16 +50,6 @@
         "location": [
           10.75,
           -4179.299999999999
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_gc_te1550 无任何连接（孤立器件）",
-        "device_name": "ebeam_gc_te1550",
-        "location": [
-          -81867.0,
-          220910.7
         ]
       },
       {

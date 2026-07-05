@@ -3,38 +3,15 @@
   "category": "gdsfactory",
   "n_devices": 4,
   "n_connections": 2,
-  "canvas_w": 550.0,
+  "canvas_w": 770.0000000000001,
   "canvas_h": 770.0000000000001,
   "status": "ok",
   "drc": {
-    "n_violations": 2,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 bl 超出画布边界 (-200.00,0.00)-(-100.00,100.00) canvas=(550.0,770.0000000000001)",
-        "device_name": "bl",
-        "location": [
-          -150.0,
-          50.0
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 tl 超出画布边界 (-200.00,500.00)-(-100.00,600.00) canvas=(550.0,770.0000000000001)",
-        "device_name": "tl",
-        "location": [
-          -150.0,
-          550.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "BOUNDARY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

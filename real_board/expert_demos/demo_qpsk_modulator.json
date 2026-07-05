@@ -1,8 +1,8 @@
 {
-  "name": "demo_ring_filter_2",
+  "name": "demo_qpsk_modulator",
   "category": "expert_demos",
-  "n_devices": 7,
-  "n_connections": 6,
+  "n_devices": 5,
+  "n_connections": 5,
   "canvas_w": 1000.0,
   "canvas_h": 1000.0,
   "status": "ok",
@@ -15,21 +15,21 @@
       {
         "rule_name": "NO_OVERLAP",
         "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 wg_mid 与 ring2 重叠",
-        "device_name": "wg_mid",
+        "message": "NO_OVERLAP: 器件 mzm_I 与 combiner 重叠",
+        "device_name": "mzm_I",
         "location": [
-          281.0,
-          60.0
+          238.5,
+          50.0
         ]
       },
       {
         "rule_name": "NO_OVERLAP",
         "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 wg_out 与 gc_out 重叠",
-        "device_name": "wg_out",
+        "message": "NO_OVERLAP: 器件 mzm_Q 与 phase_shifter 重叠",
+        "device_name": "mzm_Q",
         "location": [
-          421.0,
-          55.0
+          256.0,
+          101.0
         ]
       }
     ],

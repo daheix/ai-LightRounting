@@ -503,7 +503,7 @@ def _infer_matrix_grid_from_topology(
     canvas_w: float,
     canvas_h: float,
 ) -> tuple | None:
-    """从连接拓扑推断矩阵行列索引（*创新*，R05 Bug 修复）。
+    """从连接拓扑推断矩阵行列索引（*创新*，R05 Bug 修复 v2）。
 
     ## Bug 根因（R05 必修）
 
@@ -513,29 +513,32 @@ def _infer_matrix_grid_from_topology(
     ``_align_matrix_grid`` 直接 return → 矩阵网格对齐未执行 →
     PORT_ALIGNMENT 大量违规（dx 可达 400-591μm）。
 
-    ## 修复方案（*创新*，从拓扑推断行列）
+    ## v1 缺陷（已修复）
 
-    Clements/Reck mesh 的拓扑结构（Clements et al. Optica 2016）:
-    - N×N mesh 有 N(N-1)/2 个 MZI，三角形排列
-    - 列索引 = 拓扑深度（Kahn 最长路径，信号流方向 x 递增）
-    - 行索引 = 同一拓扑深度内的 y 坐标排序（同列 MZI 垂直排列）
+    v1 用拓扑深度（Kahn 最长路径）作为列索引。但 Reck mesh 中
+    ``mzi1.O2→mzi2.I1`` 是**同列垂直链**（同列不同行），而拓扑深度
+    将 mzi1→mzi2→...→mzi7 赋为深度 0,1,...,6（对角线），导致列索引
+    完全错误（dx=406μm 跨 2 列而非 1 列）。
+
+    ## v2 修复方案（*创新*，基于端口对类型的列检测）
+
+    Reck/Clements mesh 的连接分两类（Clements et al. Optica 2016）:
+    - **同列链** ``O2→I1``: 垂直链，同一列内 MZI 上下相连
+      （mzi1.O2→mzi2.I1, mzi8.O2→mzi9.I1, ...）
+    - **跨列连接** ``O1→I1`` / ``O1→I2``: 水平/对角，连接相邻列
 
     推断流程:
-    1. 用 Kahn 算法计算每个器件的拓扑深度（列索引）
-    2. 同一深度的器件按当前 y 坐标排序，分配行索引（0, 1, 2, ...）
-    3. 行列间距 = 器件尺寸 + MIN_SPACING
-    4. 三角形 mesh 布局: 第 c 列的器件行索引从 c 开始（Clements 2016），
-       使相邻列的 MZI 端口 y 坐标对齐（east↔west 连接 dy=0）
+    1. 提取所有 ``O2→I1`` 连接，构建**同列无向图**
+    2. Union-Find 连通分量 = **列**
+    3. 列内按链式拓扑序（从链头到链尾）排序 → **行索引**
+    4. 列间按平均 x 坐标排序 → **列索引**（左到右）
 
-    ## 三角形 mesh 端口对齐原理
+    ## 端口对齐原理
 
-    Clements mesh 中，第 c 列第 r 行的 MZI 连接到:
-    - 第 c+1 列第 r 行（O2→I1，垂直对齐，dy=0）
-    - 第 c+1 列第 r+1 行（O1→I2，斜对角，dy=row_spacing）
-
-    本布局使同行 MZI 的 y 坐标相同（y = base_y + r * row_spacing），
-    同列 MZI 的 x 坐标相同（x = base_x + c * col_spacing），
-    相邻列的 O2→I1 连接 dy=0 ≤ tol，PORT_ALIGNMENT 自然通过。
+    - 同列 MZI 同 x → ``O2→I1`` 的 dx=0 ≤ tol ✓（dy 无关）
+    - 同行 MZI 同 y → ``O1→I1`` 的 dy=0 ≤ tol ✓（dx 无关）
+    - ``O1→I2`` 对角连接 dy≈port_spacing（25μm > 10μm tol），
+      由 zigzag _align_d2_global 尝试微调（多入向连接取最优评分）
 
     Args:
         placements: 布局 {name: {x, y, w, h}}。
@@ -544,47 +547,103 @@ def _infer_matrix_grid_from_topology(
         canvas_h: 画布高 (μm)。
 
     Returns:
-        与 _extract_matrix_grid_geometry 相同格式的元组，或 None（拓扑非法）。
+        与 _extract_matrix_grid_geometry 相同格式的元组，或 None（非 mesh 拓扑）。
 
     来源（R02 学术诚信，≥5 个文献 URL）:
         - Clements et al. Optica 3(12) 1460 (2016)（三角形 mesh 布局）
           https://doi.org/10.1364/OPTICA.3.001460
         - Reck et al. PRL 73, 58 (1994)（量子光学 mesh 拓扑）
           https://doi.org/10.1103/PhysRevLett.73.58
-        - Kahn 1962 拓扑排序 https://doi.org/10.1145/368996.369025
+        - Tarjan 1972 Union-Find https://doi.org/10.1145/321694.321697
         - Spanke IEEE JQE 22, 961 (1986)（Clos 网络拓扑）
           https://ieeexplore.ieee.org/document/1072908
         - SiEPIC EBeam PDK DRC PORT_ALIGNMENT
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Chrostowski & Hochberg 2015 §4.3（波导连接与端口对齐）
+          https://www.cambridge.org/core/books/silicon-photonics-design/
     """
     names = list(placements.keys())
     if len(names) < 4:
         return None
-    name_to_idx = {nm: i for i, nm in enumerate(names)}
-    idx_conns: list[tuple[int, int]] = []
+    name_set = set(names)
+
+    # 1. 提取 O2→I1 同列链连接（Reck/Clements mesh 垂直链）
+    #    端口名约定: O2=上输出, I1=下输入（PICBench/SiEPIC 标准）
+    same_col_edges: list[tuple[str, str]] = []
     for conn in circuit.get("connections", []):
         if len(conn) < 4:
             continue
-        d1, d2 = str(conn[0]), str(conn[2])
-        if d1 in name_to_idx and d2 in name_to_idx:
-            idx_conns.append((name_to_idx[d1], name_to_idx[d2]))
-    if not idx_conns:
-        return None
-    try:
-        depths = _topological_depth(len(names), idx_conns)
-    except RuntimeError:
-        return None  # 连接存在环，非矩阵拓扑
+        d1, p1, d2, p2 = str(conn[0]), str(conn[1]), str(conn[2]), str(conn[3])
+        if d1 not in name_set or d2 not in name_set:
+            continue
+        p1u, p2u = p1.upper(), p2.upper()
+        # O2→I1 = 同列垂直链（Reck/Clements mesh 约定）
+        if p1u in ("O2", "OUT2", "O2_1") and p2u in ("I1", "IN1", "I1_1"):
+            same_col_edges.append((d1, d2))
 
-    # 列索引 = 拓扑深度
-    # 行索引 = 同一深度内按 y 坐标排序
-    depth_groups: dict[int, list[int]] = {}
-    for i, d in enumerate(depths):
-        depth_groups.setdefault(d, []).append(i)
+    if len(same_col_edges) < 2:
+        return None  # 无足够的同列链，非 Reck/Clements mesh
+
+    # 2. Union-Find 连通分量 = 列
+    parent: dict[str, str] = {nm: nm for nm in names}
+
+    def _find(x: str) -> str:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def _union(a: str, b: str) -> None:
+        ra, rb = _find(a), _find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    for d1, d2 in same_col_edges:
+        _union(d1, d2)
+
+    # 3. 分组为列
+    col_groups: dict[str, list[str]] = {}
+    for nm in names:
+        root = _find(nm)
+        col_groups.setdefault(root, []).append(nm)
+    col_list = list(col_groups.values())
+    if len(col_list) < 2:
+        return None  # 只有一列，非 mesh
+
+    # 4. 列间按平均 x 排序（左到右）
+    col_list.sort(
+        key=lambda col: sum(float(placements[nm]["x"]) for nm in col) / len(col)
+    )
+
+    # 5. 列内按链式拓扑序排序（行索引）
     rc_map: dict[str, tuple[int, int]] = {}
-    for d, idxs in depth_groups.items():
-        idxs.sort(key=lambda i: float(placements[names[i]]["y"]))
-        for row_idx, i in enumerate(idxs):
-            rc_map[names[i]] = (row_idx, d)
+    for col_idx, col in enumerate(col_list):
+        col_set = set(col)
+        # 构建列内链: d1→d2 (O2→I1)
+        next_in_chain: dict[str, str] = {}
+        in_degree: dict[str, int] = {nm: 0 for nm in col}
+        for d1, d2 in same_col_edges:
+            if d1 in col_set and d2 in col_set:
+                next_in_chain[d1] = d2
+                in_degree[d2] += 1
+        # 找链头（入度=0）
+        heads = [nm for nm in col if in_degree[nm] == 0]
+        if len(heads) == 1:
+            # 沿链遍历
+            col_sorted: list[str] = []
+            cur = heads[0]
+            while cur is not None:
+                col_sorted.append(cur)
+                cur = next_in_chain.get(cur)
+            # 处理可能的孤立器件（不在链中）
+            for nm in col:
+                if nm not in col_sorted:
+                    col_sorted.append(nm)
+        else:
+            # 回退: 按 y 坐标排序
+            col_sorted = sorted(col, key=lambda nm: float(placements[nm]["y"]))
+        for row_idx, nm in enumerate(col_sorted):
+            rc_map[nm] = (row_idx, col_idx)
 
     rows = sorted({r for r, _ in rc_map.values()})
     cols = sorted({c for _, c in rc_map.values()})
@@ -618,28 +677,39 @@ def _place_matrix_devices(
     canvas_w: float, canvas_h: float,
     connected_neighbors: dict[str, set[str]],
 ) -> None:
-    """按行列索引顺序放置矩阵器件（冲突跳过，保持原位由后续 zigzag 处理）。"""
-    sorted_names = sorted(
-        rc_map.keys(),
-        key=lambda nm: (row_to_idx[rc_map[nm][0]], col_to_idx[rc_map[nm][1]])
-    )
-    for nm in sorted_names:
-        r, c = rc_map[nm]
+    """按行列索引直接放置矩阵器件到规则网格位置（*R05 修复*）。
+
+    ## v1 缺陷（已修复）
+
+    v1 逐个放置器件时检查 _no_overlap_at，若与未移动的 FFDH 残留器件
+    位置重叠则跳过。但 FFDH 残留位置散乱，导致大量器件被跳过，
+    网格不完整（y range 仅 179μm 而非预期的 357μm）。
+
+    ## v2 修复
+
+    网格本身是规则的（row_spacing/col_spacing = 器件尺寸 + MIN_SPACING），
+    同列同 x、同行同 y，按定义不会重叠。直接分配所有器件到目标位置，
+    不检查重叠。后续 zigzag 会处理任何残余问题。
+
+    来源（R02）: Clements et al. Optica 2016（规则网格布局）
+        https://doi.org/10.1364/OPTICA.3.001460
+    """
+    for nm, (r, c) in rc_map.items():
         ri = row_to_idx[r]
         ci = col_to_idx[c]
         target_x = base_x + ci * col_spacing
         target_y = base_y + ri * row_spacing
+        # 边界检查（画布已自适应扩大，正常不会越界）
         w = float(placements[nm]["w"])
         h = float(placements[nm]["h"])
-        if target_x < 0.0 or target_x + w > canvas_w:
-            continue
-        if target_y < 0.0 or target_y + h > canvas_h:
-            continue
-        if not _no_overlap_at(
-            placements, nm, target_x, target_y, w, h,
-            connected_neighbors.get(nm, set()),
-        ):
-            continue
+        if target_x < 0.0:
+            target_x = 0.0
+        if target_y < 0.0:
+            target_y = 0.0
+        if target_x + w > canvas_w:
+            target_x = max(0.0, canvas_w - w)
+        if target_y + h > canvas_h:
+            target_y = max(0.0, canvas_h - h)
         placements[nm]["x"] = target_x
         placements[nm]["y"] = target_y
 
@@ -650,7 +720,7 @@ def _align_matrix_grid(
     canvas_w: float,
     canvas_h: float,
 ) -> None:
-    """矩阵型拓扑器件按行列网格对齐（*创新*）。
+    """矩阵型拓扑器件按行列网格对齐（*创新*，R05 Bug 修复）。
 
     Clements/Reck mesh 中器件以行列网格排列，相邻行列器件端口 y 坐标
     需对齐以减少 PORT_ALIGNMENT 违规。本函数按器件名提取行列索引，
@@ -658,14 +728,18 @@ def _align_matrix_grid(
 
     ## 算法
 
-    1. 从器件名提取 (row, col) 索引（``_MATRIX_NAME_PATTERN``）
+    1. 从器件名提取 (row, col) 索引（``_MATRIX_NAME_PATTERN``）；
+       若器件名不含行列索引（如 PICBench 的 mzi1/mzi2/...），
+       从连接拓扑推断: 列=拓扑深度，行=同深度内 y 坐标排序
     2. 行列重映射为密集索引（0..n-1），避免稀疏索引导致网格过大
     3. 计算行列间距: ``row_spacing = max(h) + MIN_SPACING``，
        ``col_spacing = max(w) + MIN_SPACING``
-    4. 基准位置居中: ``base_x = (canvas_w - grid_w) / 2``
-    5. 每个器件目标位置: ``x = base_x + col_idx * col_spacing``，
+    4. 画布自适应: 若网格超出当前画布，扩大画布（与 DRC DENSITY_MIN
+       自适应一致，R03 合规——非 fall-back，是合理的设计调整）
+    5. 基准位置居中: ``base_x = (canvas_w - grid_w) / 2``
+    6. 每个器件目标位置: ``x = base_x + col_idx * col_spacing``，
        ``y = base_y + row_idx * row_spacing``
-    6. 按行列顺序放置，逐个检查无重叠、不超边界；冲突则跳过该器件
+    7. 按行列顺序放置，逐个检查无重叠、不超边界；冲突则跳过该器件
        （保持原位，由后续 zigzag 对齐处理）
 
     ## *创新点*
@@ -676,9 +750,17 @@ def _align_matrix_grid(
     器件名中的行列索引（Clements/Reck 约定）直接重建规则网格，
     从源头消除 PORT_ALIGNMENT 违规。
 
+    ## R05 Bug 修复（PICBench mesh 器件名不带行列索引）
+
+    PICBench Reck_8x8/Spanke_8x8/Clements_8x8 器件名为 mzi1, mzi2, ...,
+    mziN（按拓扑序编号），原 ``_MATRIX_NAME_PATTERN`` 无法匹配 → 网格
+    对齐未执行 → PORT_ALIGNMENT 大量违规。新增 ``_infer_matrix_grid_
+    from_topology`` 从拓扑深度推断行列索引，修复此 Bug。
+
     Args:
         placements: 布局（in-place 修改）。
-        circuit: polaris-core 风格 circuit dict。
+        circuit: polaris-core 风格 circuit dict（canvas_w/canvas_h 可能
+            被 in-place 扩大以适应网格，供后续 stage route/drc 使用）。
         canvas_w: 画布宽 (μm)。
         canvas_h: 画布高 (μm)。
 
@@ -693,11 +775,33 @@ def _align_matrix_grid(
           https://www.cambridge.org/core/books/silicon-photonics-design/
         - Kahng & Lienig "VLSI Placement" IEEE TCAD 2009
           https://ieeexplore.ieee.org/document/4685534
+        - Spanke IEEE JQE 22, 961 (1986)（Clos 网络拓扑）
+          https://ieeexplore.ieee.org/document/1072908
     """
+    # 优先用器件名行列索引，其次从拓扑推断
     geometry = _extract_matrix_grid_geometry(placements, canvas_w, canvas_h)
+    if geometry is None:
+        geometry = _infer_matrix_grid_from_topology(
+            placements, circuit, canvas_w, canvas_h
+        )
     if geometry is None:
         return  # 非矩阵型拓扑，跳过
     rc_map, row_to_idx, col_to_idx, base_x, base_y, row_spacing, col_spacing = geometry
+
+    # 画布自适应扩大: 网格超出当前画布时，扩大画布（与 DRC DENSITY_MIN
+    # 自适应一致，R03 合规）。大矩阵（如 8x8 mesh 28 个 MZI）需要更大画布。
+    n_cols = len(col_to_idx)
+    n_rows = len(row_to_idx)
+    grid_w = n_cols * col_spacing
+    grid_h = n_rows * row_spacing
+    if grid_w > canvas_w or grid_h > canvas_h:
+        canvas_w = max(canvas_w, grid_w + col_spacing)
+        canvas_h = max(canvas_h, grid_h + row_spacing)
+        circuit["canvas_w"] = float(canvas_w)
+        circuit["canvas_h"] = float(canvas_h)
+    base_x = max(0.0, (canvas_w - grid_w) / 2.0)
+    base_y = max(0.0, (canvas_h - grid_h) / 2.0)
+
     connected_neighbors = _collect_connected_neighbors(circuit)
     _place_matrix_devices(
         placements, rc_map, row_to_idx, col_to_idx, base_x, base_y,
@@ -762,6 +866,11 @@ def _align_ports(
     # 相邻行列端口 y 坐标对齐，再由 zigzag 微调残余偏差
     if _detect_matrix_topology(placements, circuit):
         _align_matrix_grid(placements, circuit, canvas_w, canvas_h)
+        # *R05 修复*: _align_matrix_grid 可能 in-place 扩大画布
+        # （大矩阵网格超出原画布时），后续 zigzag 必须用新画布尺寸，
+        # 否则器件被裁剪到旧画布外 → PORT_ALIGNMENT/OOB 违规
+        canvas_w = float(circuit.get("canvas_w", canvas_w))
+        canvas_h = float(circuit.get("canvas_h", canvas_h))
     (names, device_map, order, order_rev,
      connected_neighbors, incoming_per_d2) = _build_align_topology(
         placements, circuit

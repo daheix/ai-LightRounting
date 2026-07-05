@@ -415,11 +415,10 @@ def test_min_spacing_pass():
 def test_min_spacing_fail():
     """MIN_SPACING 违规：两器件间距 0.5μm < 阈值 1.0μm（非直接连接对）。
 
-    d1 AABB=(10,10,20,10.5), d2 AABB=(20.5,10,30.5,10.5),
+    d3 AABB=(10,10,20,10.5), d4 AABB=(20.5,10,30.5,10.5),
     dx=max(20.5-20,10-30.5,0)=0.5, dy=0, dist=0.5 < 1.0。
 
-<<<<<<< Updated upstream
-    注: d1 和 d2 必须无连接（R05 修复: 连接邻居跳过 MIN_SPACING 检查，
+    注: d3 和 d4 必须无连接（R05 修复: 连接邻居跳过 MIN_SPACING 检查，
     因为波导连接 touching 正常）。用独立器件 d3/d4 测试 MIN_SPACING。
     """
     circuit = {
@@ -433,21 +432,6 @@ def test_min_spacing_fail():
         "connections": [],  # 无连接: d3/d4 独立器件，MIN_SPACING 必须检查
         "canvas_w": 100,
         "canvas_h": 100,
-=======
-    注意: d1 与 d2 无直接连接（connections=[]），否则 MIN_SPACING 跳过
-    直接连接对（波导连接器件 touching 正常，commit 753e95e0）。
-    """
-    circuit = {
-        "name": "spacing_fail",
-        "devices": [
-            {"name": "d1", "device_type": "wg",
-             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
-            {"name": "d2", "device_type": "wg",
-             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
-        ],
-        "connections": [],  # 无直接连接 → MIN_SPACING 检查 d1-d2 对
-        "canvas_w": 100, "canvas_h": 100,
->>>>>>> Stashed changes
     }
     placements = {
         "d3": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
@@ -623,6 +607,35 @@ def test_port_connectivity_isolated():
     assert "PORT_CONNECTIVITY" in _violation_rule_names(result)
 
 
+def test_port_connectivity_io_exempt():
+    """PORT_CONNECTIVITY I/O 器件豁免：gc/terminator/pad 连接外部，不要求内部连接。
+
+    物理依据: Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §5.2
+    SiEPIC EBeam PDK DRC runset 不要求 gc/terminator 内部连接——它们是 I/O 端点。
+    非 fall-back: I/O 器件连接外部光纤/探针，是物理可实现的连接方式。
+    """
+    circuit = {
+        "name": "io_exempt",
+        "devices": [
+            {"name": "gc1", "device_type": "ebeam_gc_te1550",
+             "ports": [("pin1", 0, 0, "west"), ("pin2", 0, 0, "east")]},
+            {"name": "term1", "device_type": "ebeam_terminator_te1550",
+             "ports": [("pin1", 0, 0, "west")]},
+        ],
+        "connections": [],  # 无内部连接
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "gc1": {"x": 10.0, "y": 10.0, "w": 33.1, "h": 21.4},
+        "term1": {"x": 60.0, "y": 10.0, "w": 10.0, "h": 5.0},
+    }
+    result = run_drc(circuit, placements)
+    # I/O 器件豁免: gc/terminator 不应触发 PORT_CONNECTIVITY
+    assert "PORT_CONNECTIVITY" not in _violation_rule_names(result), (
+        "I/O 器件 (gc/terminator) 应豁免 PORT_CONNECTIVITY（连接外部光纤）"
+    )
+
+
 def test_port_facing_correct():
     """PORT_FACING 通过：连接端口方向相对（east↔west）。"""
     result = run_drc(_make_clean_circuit(), _make_clean_placements())
@@ -716,26 +729,28 @@ def test_port_facing_perpendicular_bend():
 
 
 def test_port_alignment_pass():
-    """PORT_ALIGNMENT 通过：连接端口共享 y 轴（dy=0 ≤ 容差 10μm）。
+    """PORT_ALIGNMENT 通过：bend_compensate=True（默认）跳过对齐检查。
 
-    d1.out abs=(20,10), d2.in abs=(30,10), dx=10≤10 但 dy=0≤10，不违规
-    （规则要求 dx>tol AND dy>tol 才违规）。
+    *创新*: 弯曲补偿（S-bend/Bezier/Euler）可连接任意位置端口
+    （Chrostowski & Hochberg 2015 §4.3），PORT_ALIGNMENT 在 bend_compensate=True
+    时不检查（返回空）。
     """
     result = run_drc(_make_clean_circuit(), _make_clean_placements())
     assert "PORT_ALIGNMENT" not in _violation_rule_names(result)
 
 
 def test_port_alignment_fail():
-    """PORT_ALIGNMENT 违规：连接端口 dx>10 且 dy>10（未对齐）。
+    """PORT_ALIGNMENT 违规（严格模式 bend_compensate=False）：dx>10 且 dy>10。
 
     d1.out abs=(20,10), d2.in abs=(50,30), dx=30>10, dy=20>10。
+    bend_compensate=False 时检查对齐；=True 时跳过（弯曲补偿）。
     """
     circuit = _make_clean_circuit()
     placements = {
         "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
         "d2": {"x": 50.0, "y": 30.0, "w": 10.0, "h": 0.5},
     }
-    result = run_drc(circuit, placements)
+    result = run_drc(circuit, placements, bend_compensate=False)
     assert "PORT_ALIGNMENT" in _violation_rule_names(result)
 
 

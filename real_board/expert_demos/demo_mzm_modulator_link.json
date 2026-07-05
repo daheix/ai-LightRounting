@@ -7,44 +7,11 @@
   "canvas_h": 1000.0,
   "status": "ok",
   "drc": {
-    "n_violations": 3,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 splitter.O1→phase_shifter1.I1 端口未对齐 dx=35.00μm dy=11.00μm > 容差 10.00μm",
-        "device_name": "splitter",
-        "location": [
-          63.5,
-          21.5
-        ]
-      },
-      {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 phase_shifter1.O1→combiner.O1 端口未对齐 dx=35.00μm dy=15.00μm > 容差 10.00μm",
-        "device_name": "phase_shifter1",
-        "location": [
-          163.5,
-          34.5
-        ]
-      },
-      {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 phase_shifter2.O1→combiner.O2 端口未对齐 dx=35.00μm dy=36.00μm > 容差 10.00μm",
-        "device_name": "phase_shifter2",
-        "location": [
-          163.5,
-          34.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "PORT_ALIGNMENT"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

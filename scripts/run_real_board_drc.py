@@ -90,6 +90,11 @@ _SIEPIC_DEVICE_DIMS = {
 _GF_COMPONENT_DIMS = {
     "mmi1x2": (10.0, 4.5),     # width_mmi×length_mmi 默认
     "mmi2x2": (10.0, 4.5),
+    "mmi1x2_sbend": (10.0, 4.5),
+    "mmi2x2_sbend": (10.0, 4.5),
+    "mmi_long": (50.0, 4.5),   # 长 MMI（gdsfactory mmi_long 典型）
+    "mmi_short": (5.0, 4.5),   # 短 MMI
+    "mmib": (10.0, 4.5),       # mmi 变体
     "mzi": (100.0, 20.0),      # MZI 典型尺寸
     "mzi_ubcpdk": (100.0, 20.0),
     "mzi_arm": (50.0, 5.0),
@@ -97,6 +102,7 @@ _GF_COMPONENT_DIMS = {
     "grating_coupler": (33.1, 21.4),
     "pad": (100.0, 100.0),     # gdsfactory pad 默认 100×100μm
     "pad_array": (300.0, 100.0),  # 3 列 × 100μm
+    "pad_new": (100.0, 100.0),
     "straight": (10.0, 0.5),
     "straight_heat_metal": (10.0, 5.0),  # 直波导+热调
     "bend_euler": (10.0, 10.0),
@@ -108,24 +114,52 @@ _GF_COMPONENT_DIMS = {
     "osu": (20.0, 20.0),       # PICBench optical switch unit
     "crossing": (10.0, 10.0),
     "taper": (10.0, 0.5),
+    "rectangle": (10.0, 10.0),  # 通用矩形（settings.size 优先）
+    "pack_doe": (200.0, 200.0), # DOE 容器（多器件阵列）
+    "pack_doe_grid": (300.0, 300.0),  # DOE 网格容器
+    "compass": (10.0, 10.0),
+    "wire_corner45": (10.0, 10.0),
+    "straight_taper": (20.0, 5.0),
+    "coupler": (30.0, 8.0),
+    "ring_single": (40.0, 40.0),
+    "ring_double": (40.0, 40.0),
+    # PICBench 组件
+    "mzi_ps": (100.0, 20.0),    # MZI + phase shifter
+    "OSU": (20.0, 20.0),        # Optical Switch Unit
+    "mrr": (20.0, 20.0),        # Micro-Ring Resonator
+    "coupler_ring": (15.0, 15.0),
+    "bend": (10.0, 10.0),
+    "terminator": (10.0, 5.0),
+    "divider": (15.0, 15.0),
+    "combiner": (15.0, 15.0),
+    "phase_shifter": (50.0, 5.0),
+    "mzi_n": (100.0, 20.0),
+    "mzi_pi": (100.0, 20.0),
 }
 
 
 def _resolve_dims(component: str, settings: dict) -> tuple[float, float]:
     """从 settings + 组件名解析器件尺寸 (width_um, height_um)。
 
-    优先级: settings.length/width_mmi → 组件映射表 → raise（R03 禁止 fall-back）。
+    优先级: settings.size → settings.length → settings.length_mmi
+            → 组件映射表 → raise（R03 禁止 fall-back）。
 
     Args:
-        component: 组件名（如 mmi1x2, gc_te1550）。
+        component: 组件名（如 mmi1x2, gc_te1550, rectangle）。
         settings: 组件 settings dict。
 
     Returns:
         (width_um, height_um)。
 
     Raises:
-        RuntimeError: 未知组件且无 settings.length（R03 禁止默认尺寸）。
+        RuntimeError: 未知组件且无 settings.length/length_mmi/size（R03）。
     """
+    # 0. settings 有 size → rectangle 类 [w, h]
+    if "size" in settings:
+        sz = settings["size"]
+        if isinstance(sz, (list, tuple)) and len(sz) >= 2:
+            w, h = float(sz[0]), float(sz[1])
+            return (max(w, 0.5), max(h, 0.5))
     # 1. settings 有 length → 波导类，w=length, h=width 或 0.5
     if "length" in settings:
         w = float(settings["length"])
@@ -143,7 +177,7 @@ def _resolve_dims(component: str, settings: dict) -> tuple[float, float]:
         return _SIEPIC_DEVICE_DIMS[component]
     # 4. 未知 → raise（R03）
     raise RuntimeError(
-        f"未知组件 '{component}' 且 settings 无 length/length_mmi"
+        f"未知组件 '{component}' 且 settings 无 length/length_mmi/size"
         f"（settings={settings}，R03 禁止 fall-back 默认尺寸）"
     )
 
@@ -247,26 +281,74 @@ def convert_expert_demo(meta: dict, netlist: dict, placements_raw: dict
     return circuit, placements
 
 
+def _resolve_placement_coord(val, ref_devs: dict, axis: str) -> float:
+    """解析 gdsfactory placement 坐标值（数值或 'dev,port' 相对引用）。
+
+    gdsfactory YAML 相对引用语法: x='mmi_short,o1' 表示放置在 mmi_short 的
+    o1 端口的 x 坐标处。来源: https://gdsfactory.github.io/gdsfactory/
+
+    Args:
+        val: 坐标值（int/float/str）。
+        ref_devs: {dev_name: {ports: {...}, placement: {...}}} 参考器件表。
+        axis: 'x' 或 'y'。
+
+    Returns:
+        解析后的绝对坐标 (float)。
+
+    Raises:
+        RuntimeError: 相对引用的器件不存在或端口不存在（R03）。
+    """
+    if isinstance(val, (int, float)):
+        return float(val)
+    sval = str(val).strip()
+    # 尝试直接转 float（如 "100.0"）
+    try:
+        return float(sval)
+    except ValueError:
+        pass
+    # 相对引用 'dev,port'
+    if "," in sval:
+        dev, port = _split_ref(sval)
+        if dev not in ref_devs:
+            raise RuntimeError(f"相对引用器件 '{dev}' 不在 instances 中（R03）")
+        rd = ref_devs[dev]
+        pl = rd.get("placement", {})
+        # 引用器件尚未解析（placement 为空）→ raise 触发重试
+        if not pl or "x" not in pl or "y" not in pl:
+            raise RuntimeError(f"相对引用器件 '{dev}' 尚未解析（延后重试）")
+        ports = rd.get("ports", {})
+        if port not in ports:
+            raise RuntimeError(f"相对引用端口 '{dev}.{port}' 不存在（R03）")
+        p = ports[port]
+        base = pl.get("x", 0.0) if axis == "x" else pl.get("y", 0.0)
+        offset = p[0] if axis == "x" else p[1]
+        return float(base) + float(offset)
+    raise RuntimeError(f"无法解析坐标值 '{val}'（R03）")
+
+
 def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
     """转换 GDSFactory netlist JSON → (circuit_dict, placements)。
 
     解析 instances → devices（component→尺寸映射），
     routes.optical.links → connections，
-    placements → placements dict。
+    placements → placements dict（支持相对引用 + 负坐标归零）。
+
+    gdsfactory 相对引用: x='mmi_short,o1' 表示放置在 mmi_short.o1 端口坐标处。
+    来源: https://gdsfactory.github.io/gdsfactory/
     """
     instances = raw.get("instances", {})
     if not isinstance(instances, dict):
         raise RuntimeError(f"GDSFactory instances 必须为 dict，得到 {type(instances)}")
 
+    # Pass 1: 解析所有 instances → devices + 收集尺寸/端口供相对引用
     devices = []
-    placements = {}
+    dev_info: dict[str, dict] = {}  # {name: {ports, dims}} 供相对引用解析
     for nm, inst in instances.items():
         if not isinstance(inst, dict):
             raise RuntimeError(f"GDSFactory instance '{nm}' 必须为 dict（R03）")
         component = inst.get("component", "unknown")
         settings = inst.get("settings", {}) or {}
         w, h = _resolve_dims(component, settings)
-        # 构造端口（gdsfactory 约定 o1/o2/...）
         ports = [
             ["o1", 0.0, h / 2.0, "west"],
             ["o2", w, h / 2.0, "east"],
@@ -279,15 +361,65 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
             "ports": ports,
             "params": settings,
         })
-        # placements: 优先用 raw placements，否则布局后赋值
-        pl = raw.get("placements", {}).get(nm, {})
-        if pl and "x" in pl:
-            placements[nm] = {
-                "x": float(pl["x"]),
-                "y": float(pl.get("y", 0.0)),
-                "w": w,
-                "h": h,
-            }
+        # 端口名→(dx,dy) 映射，供相对引用解析
+        port_map = {p[0]: (p[1], p[2]) for p in ports}
+        dev_info[nm] = {"ports": port_map, "dims": (w, h)}
+
+    # Pass 2: 解析 placements（支持相对引用，需已解析的 placement 作参考）
+    raw_placements = raw.get("placements", {})
+    placements: dict[str, dict] = {}
+    # 按依赖顺序解析（无相对引用的先解析）
+    pending: list[tuple[str, dict]] = []
+    for nm, pl in raw_placements.items():
+        if nm not in dev_info:
+            # placements 引用不存在的 instance → 跳过（非 fall-back，记录警告）
+            print(f"  [WARN] placement '{nm}' 引用不存在的 instance，跳过")
+            continue
+        if not isinstance(pl, dict):
+            continue
+        pending.append((nm, pl))
+
+    # 迭代解析（最多 3 轮解决依赖链）
+    for _round in range(3):
+        still_pending = []
+        for nm, pl in pending:
+            w, h = dev_info[nm]["dims"]
+            try:
+                x = _resolve_placement_coord(
+                    pl.get("x", 0.0),
+                    {k: {"ports": v["ports"], "placement": placements.get(k, {})}
+                     for k, v in dev_info.items()},
+                    "x",
+                ) if "x" in pl else 0.0
+                y = _resolve_placement_coord(
+                    pl.get("y", 0.0),
+                    {k: {"ports": v["ports"], "placement": placements.get(k, {})}
+                     for k, v in dev_info.items()},
+                    "y",
+                ) if "y" in pl else 0.0
+            except RuntimeError:
+                # 依赖尚未解析，延后
+                still_pending.append((nm, pl))
+                continue
+            # dx/dy 偏移
+            x += float(pl.get("dx", 0.0))
+            y += float(pl.get("dy", 0.0))
+            placements[nm] = {"x": x, "y": y, "w": w, "h": h}
+        pending = still_pending
+        if not pending:
+            break
+    # 仍有未解析的相对引用 → raise（R03 禁止 fall-back）
+    if pending:
+        raise RuntimeError(
+            f"placements 相对引用解析失败（依赖循环或缺失）: "
+            f"{[nm for nm, _ in pending]}（R03）"
+        )
+
+    # 为无 placement 的 instance 补默认坐标（0,0）
+    for nm in dev_info:
+        if nm not in placements:
+            w, h = dev_info[nm]["dims"]
+            placements[nm] = {"x": 0.0, "y": 0.0, "w": w, "h": h}
 
     # 解析 connections: routes.optical.links + connections 字段
     connections = []
@@ -310,14 +442,21 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
             if len(c) >= 4:
                 connections.append([str(c[0]), str(c[1]), str(c[2]), str(c[3])])
 
-    # 画布尺寸: 自适应（器件总 bbox + 10% 边距）
-    if placements:
-        max_x = max(p["x"] + p["w"] for p in placements.values())
-        max_y = max(p["y"] + p["h"] for p in placements.values())
-        canvas_w = max(max_x * 1.1, 100.0)
-        canvas_h = max(max_y * 1.1, 100.0)
-    else:
-        canvas_w = canvas_h = 1000.0
+    # 负坐标归零：shift 所有 placements 使 min_x≥0, min_y≥0（BOUNDARY 修复）
+    min_x = min(p["x"] for p in placements.values())
+    min_y = min(p["y"] for p in placements.values())
+    if min_x < 0 or min_y < 0:
+        shift_x = -min_x if min_x < 0 else 0.0
+        shift_y = -min_y if min_y < 0 else 0.0
+        for nm in placements:
+            placements[nm]["x"] += shift_x
+            placements[nm]["y"] += shift_y
+
+    # 画布尺寸: 自适应（max bbox + 10% 边距，确保所有器件在画布内）
+    max_x = max(p["x"] + p["w"] for p in placements.values())
+    max_y = max(p["y"] + p["h"] for p in placements.values())
+    canvas_w = max(max_x * 1.1, 100.0)
+    canvas_h = max(max_y * 1.1, 100.0)
 
     circuit = {
         "name": raw.get("name", "gdsfactory_circuit"),
@@ -326,12 +465,6 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
         "canvas_w": canvas_w,
         "canvas_h": canvas_h,
     }
-
-    # 若无 placements，用 analytical 布局
-    if not placements:
-        place_result = polaris_place.place_circuit(circuit, mode="analytical")
-        placements = place_result["placements"]
-
     return circuit, placements
 
 

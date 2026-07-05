@@ -3,15 +3,28 @@
   "category": "gdsfactory",
   "n_devices": 4,
   "n_connections": 3,
-  "canvas_w": 1000.0,
-  "canvas_h": 1000.0,
+  "canvas_w": 275.0,
+  "canvas_h": 155.54000000000002,
   "status": "ok",
   "drc": {
-    "n_violations": 0,
+    "n_violations": 1,
     "n_rules": 12,
-    "n_passed": 12,
-    "pass_rate": 1.0,
-    "violations": [],
-    "violated_rules": []
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
+    "violations": [
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mzi2 与 gc2 重叠",
+        "device_name": "mzi2",
+        "location": [
+          200.0,
+          130.7
+        ]
+      }
+    ],
+    "violated_rules": [
+      "NO_OVERLAP"
+    ]
   }
 }

@@ -6,11 +6,11 @@
   "canvas_w": null,
   "canvas_h": null,
   "status": "error",
-  "error": "ValueError: could not convert string to float: 'wg_a1,o2'",
+  "error": "KeyError: 'y'",
   "drc": {
     "n_violations": -1,
     "pass_rate": 0.0,
     "violations": [],
-    "error": "ValueError: could not convert string to float: 'wg_a1,o2'"
+    "error": "KeyError: 'y'"
   }
 }

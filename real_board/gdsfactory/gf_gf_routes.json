@@ -1,16 +1,17 @@
 {
   "name": "gf_gf_routes",
   "category": "gdsfactory",
-  "n_devices": 0,
-  "n_connections": 0,
-  "canvas_w": null,
-  "canvas_h": null,
-  "status": "error",
-  "error": "KeyError: 'mmi_short'",
+  "n_devices": 2,
+  "n_connections": 1,
+  "canvas_w": 121.00000000000001,
+  "canvas_h": 114.95,
+  "status": "ok",
   "drc": {
-    "n_violations": -1,
-    "pass_rate": 0.0,
+    "n_violations": 0,
+    "n_rules": 12,
+    "n_passed": 12,
+    "pass_rate": 1.0,
     "violations": [],
-    "error": "KeyError: 'mmi_short'"
+    "violated_rules": []
   }
 }

@@ -1,0 +1,51 @@
+{
+  "name": "demo_photonic_neuron_4",
+  "category": "expert_demos",
+  "n_devices": 4,
+  "n_connections": 4,
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "status": "ok",
+  "drc": {
+    "n_violations": 3,
+    "n_rules": 12,
+    "n_passed": 10,
+    "pass_rate": 0.8333333333333334,
+    "violations": [
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 coupler2 与 phase_shifter 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "coupler2",
+        "location": [
+          86.0,
+          24.75
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 coupler1 与 phase_shifter 重叠",
+        "device_name": "coupler1",
+        "location": [
+          106.0,
+          24.75
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 coupler2 与 phase_shifter 重叠",
+        "device_name": "coupler2",
+        "location": [
+          86.0,
+          24.75
+        ]
+      }
+    ],
+    "violated_rules": [
+      "MIN_SPACING",
+      "NO_OVERLAP"
+    ]
+  }
+}

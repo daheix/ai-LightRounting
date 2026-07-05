@@ -7,7 +7,7 @@
   "canvas_h": 187.70000000000002,
   "status": "ok",
   "drc": {
-    "n_violations": 4,
+    "n_violations": 2,
     "n_rules": 12,
     "n_passed": 11,
     "pass_rate": 0.9166666666666666,
@@ -20,26 +20,6 @@
         "location": [
           8.5,
           37.31
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_gc_te1550 无任何连接（孤立器件）",
-        "device_name": "ebeam_gc_te1550",
-        "location": [
-          17.55,
-          11.77
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_terminator_te1550 无任何连接（孤立器件）",
-        "device_name": "ebeam_terminator_te1550",
-        "location": [
-          6.5,
-          43.260000000000005
         ]
       },
       {
