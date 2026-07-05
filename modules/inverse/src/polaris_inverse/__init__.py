@@ -58,6 +58,19 @@ from polaris_inverse.adjoint import (
     run_adjoint_optimization,
 )
 from polaris_inverse.fdtd_jax import DifferentiableFDTD, GedneyPML, YeeGrid3D
+from polaris_inverse.showcase import (
+    N_GROUP_SI,
+    N_SI,
+    N_SIO2,
+    WAVELENGTH_UM,
+    mmi_fom,
+    optimize_mmi,
+    optimize_wdm,
+    optimize_ybranch,
+    run_showcase,
+    wdm_fom,
+    ybranch_fom,
+)
 
 __version__ = "5.0.0"
 
@@ -123,5 +136,17 @@ __all__ = [
     "MOMENTUM",
     "INITIAL_WIDTH_PIXELS",
     "TARGET_WAVELENGTH_UM",
+    # D12 showcase (R36)
+    "mmi_fom",
+    "wdm_fom",
+    "ybranch_fom",
+    "optimize_mmi",
+    "optimize_wdm",
+    "optimize_ybranch",
+    "run_showcase",
+    "N_SI",
+    "N_SIO2",
+    "N_GROUP_SI",
+    "WAVELENGTH_UM",
     "__version__",
 ]

@@ -70,6 +70,23 @@ from polaris_trainer.checkpoint import (
     PLATFORM_SIN,
     PLATFORM_SOI,
 )
+from polaris_trainer.pretrain import (
+    BCPretrainConfig,
+    BehaviorCloningModel,
+    DEVICE_FEATURE_DIM,
+    EXPERT_DEMOS_DEFAULT_DIR,
+    ExpertDemoLoader,
+    PLACEMENT_TARGET_DIM,
+    load_bc_checkpoint,
+    pretrain,
+)
+from polaris_trainer.transfer_learning import (
+    ROUTING_OUTPUT_DIM,
+    RoutingPolicyModel,
+    TransferConfig,
+    extract_routing_targets,
+    transfer_learn,
+)
 from polaris_trainer.distributed_rollout import (
     ENV_FACTORIES,
     ParallelRolloutCollector,
@@ -176,5 +193,19 @@ __all__ = [
     "PLATFORM_SIN",
     "PLATFORM_INP",
     "PLATFORM_LNOI",
+    # R36 BC 预训练 + 迁移学习
+    "BCPretrainConfig",
+    "BehaviorCloningModel",
+    "ExpertDemoLoader",
+    "DEVICE_FEATURE_DIM",
+    "PLACEMENT_TARGET_DIM",
+    "EXPERT_DEMOS_DEFAULT_DIR",
+    "pretrain",
+    "load_bc_checkpoint",
+    "TransferConfig",
+    "RoutingPolicyModel",
+    "ROUTING_OUTPUT_DIM",
+    "transfer_learn",
+    "extract_routing_targets",
     "__version__",
 ]
