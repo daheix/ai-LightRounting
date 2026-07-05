@@ -53,6 +53,65 @@ _ALIGN_MIN_SPACING = 1.0
 _ALIGN_PORT_TOL_UM = 10.0
 
 
+def _ffdh_pack_one_device(
+    i: int,
+    names: list[str],
+    widths: np.ndarray,
+    heights: np.ndarray,
+    depth: np.ndarray,
+    upstream_indices: list[list[int]],
+    placements: dict[str, tuple[float, float]],
+    rows: list[list[float]],
+    canvas_w: float,
+    spacing: float,
+) -> None:
+    """FFDH 装箱单个器件（含拓扑约束 + 信号流方向起始 x，*创新*）。
+
+    候选行需满足: 行高≥器件高×1.1 AND 起始x+宽≤画布宽 AND 行内最大depth<当前depth。
+    无候选行则开新行。下游器件起始 x ≥ 上游右边界 + spacing。
+    """
+    w = float(widths[i])
+    h = float(heights[i])
+    d = depth[i]
+    upstream_right = 0.0
+    for up_idx in upstream_indices[i]:
+        up_name = names[up_idx]
+        if up_name in placements:
+            up_cx, _ = placements[up_name]
+            up_right = up_cx + float(widths[up_idx]) / 2.0
+            if up_right > upstream_right:
+                upstream_right = up_right
+    min_x = upstream_right + spacing
+    candidates = [
+        r for r in range(len(rows))
+        if rows[r][1] >= h * 1.1
+        and max(rows[r][2] + spacing if rows[r][2] > 0.0 else 0.0, min_x) + w <= canvas_w
+        and rows[r][3] < d
+    ]
+    if candidates:
+        r = candidates[0]
+        ys, rh, xc, _ = rows[r]
+        if xc > 0.0:
+            x_lo = max(xc + spacing, min_x)
+        else:
+            x_lo = max(0.0, min_x)
+        cx = x_lo + w / 2.0
+        rows[r][2] = x_lo + w
+        cy = ys + rh / 2.0
+        rows[r][3] = d
+        placements[names[i]] = (cx, cy)
+    else:
+        new_h = h * 1.1
+        ys = (rows[-1][0] + rows[-1][1] + spacing) if rows else 0.0
+        x_start = min_x
+        if x_start + w > canvas_w:
+            x_start = max(0.0, canvas_w - w)
+        cx = x_start + w / 2.0
+        cy = ys + new_h / 2.0
+        rows.append([ys, new_h, x_start + w, d])
+        placements[names[i]] = (cx, cy)
+
+
 def _legalize(
     pos: np.ndarray,
     widths: np.ndarray,
@@ -76,11 +135,9 @@ def _legalize(
     *创新点 1（拓扑深度排序）*: 经典 FFDH 仅按高度降序装箱，不考虑信号流
     拓扑，会导致后端器件被塞到前端行的剩余空间，破坏信号流方向。
 
-    *创新点 2（信号流方向起始 x）*: 经典 FFDH 新行从 x=0 开始，导致下游
-    器件（depth 大）被放到 x=0，与上游器件形成"背对背"（端口方向相对但
-    位置反向），dx 很大，PORT_ALIGNMENT 误报。本实现让新行起始 x =
-    max(0, upstream_right + SPACING)，下游器件在上游右侧，端口 dx ≤
-    SPACING ≤ tol，PORT_ALIGNMENT 自然通过。
+    *创新点 2（信号流方向起始 x）*: 经典 FFDH 新行从 x=0 开始，下游器件与
+    上游器件形成"背对背"导致 dx 大、PORT_ALIGNMENT 误报。本实现让新行起始
+    x = max(0, upstream_right + SPACING)，下游在上游右侧，端口 dx ≤ tol。
 
     Args:
         pos: 连续坐标 ``(n, 2)``。
@@ -130,54 +187,76 @@ def _legalize(
     rows: list[list[float]] = []  # [y_start, row_height, x_cursor, max_depth]
     placements: dict[str, tuple[float, float]] = {}
     for i in order:
-        w = float(widths[i])
-        h = float(heights[i])
-        d = depth[i]
-
-        # *创新*: 计算上游器件的最大右边界（已放置的上游器件）。
-        # 下游器件起始 x ≥ upstream_right + SPACING，保证信号流方向 x 递增
-        # 且 east↔west 连接端口 dx ≤ SPACING ≤ tol（PORT_ALIGNMENT 自然通过）。
-        upstream_right = 0.0
-        for up_idx in upstream_indices[i]:
-            up_name = names[up_idx]
-            if up_name in placements:
-                up_cx, _ = placements[up_name]
-                up_right = up_cx + float(widths[up_idx]) / 2.0
-                if up_right > upstream_right:
-                    upstream_right = up_right
-        min_x = upstream_right + SPACING
-
-        candidates = [
-            r for r in range(len(rows))
-            if rows[r][1] >= h * 1.1
-            # *创新*: d2 左边界 = max(xc + SPACING, min_x)，需在画布内
-            and max(rows[r][2] + SPACING if rows[r][2] > 0.0 else 0.0, min_x) + w <= canvas_w
-            and rows[r][3] < d  # 拓扑序: 行内最大 depth < 当前 depth
-        ]
-        if candidates:
-            r = candidates[0]  # FFDH: 第一个满足拓扑约束的候选行
-            ys, rh, xc, _ = rows[r]
-            # *创新*: d2 左边界 = max(行内 x_cursor + SPACING, 上游最小 x)
-            if xc > 0.0:
-                x_lo = max(xc + SPACING, min_x)
-            else:
-                x_lo = max(0.0, min_x)
-            cx = x_lo + w / 2.0
-            rows[r][2] = x_lo + w
-            cy = ys + rh / 2.0
-            rows[r][3] = d  # 更新行内最大拓扑深度
-            placements[names[i]] = (cx, cy)
-        else:
-            new_h = h * 1.1
-            ys = (rows[-1][0] + rows[-1][1] + SPACING) if rows else 0.0
-            x_start = min_x
-            if x_start + w > canvas_w:
-                x_start = max(0.0, canvas_w - w)
-            cx = x_start + w / 2.0
-            cy = ys + new_h / 2.0
-            rows.append([ys, new_h, x_start + w, d])
-            placements[names[i]] = (cx, cy)
+        _ffdh_pack_one_device(
+            i, names, widths, heights, depth, upstream_indices,
+            placements, rows, canvas_w, SPACING,
+        )
     return placements
+
+
+def _collect_merged_forbidden_intervals(
+    placements: dict[str, dict[str, float]],
+    exclude_name: str,
+    fixed_lo: float,
+    fixed_hi: float,
+    size: float,
+    axis: str,
+    connected_names: set[str],
+) -> list[list[float]]:
+    """收集并合并禁止区间（Berg Computational Geometry §2.1 区间合并）。
+
+    R05 Bug 修复: 垂直方向判定需考虑 MIN_SPACING（非连接邻居）。
+    """
+    forbidden: list[tuple[float, float]] = []
+    for nm, pl in placements.items():
+        if nm == exclude_name:
+            continue
+        ox1, oy1 = float(pl["x"]), float(pl["y"])
+        ox2, oy2 = ox1 + float(pl["w"]), oy1 + float(pl["h"])
+        spacing = 0.0 if nm in connected_names else _ALIGN_MIN_SPACING
+        if axis == "y":
+            if fixed_hi <= ox1 - spacing or fixed_lo >= ox2 + spacing:
+                continue
+            other_lo, other_hi = oy1, oy2
+        else:  # axis == "x"
+            if fixed_hi <= oy1 - spacing or fixed_lo >= oy2 + spacing:
+                continue
+            other_lo, other_hi = ox1, ox2
+        f_min = other_lo - size - spacing
+        f_max = other_hi + spacing
+        forbidden.append((f_min, f_max))
+    forbidden.sort()
+    merged: list[list[float]] = []
+    for f in forbidden:
+        if merged and f[0] <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], f[1])
+        else:
+            merged.append([f[0], f[1]])
+    return merged
+
+
+def _select_nearest_legal_candidate(
+    merged: list[list[float]], lo: float, hi: float, target: float
+) -> float | None:
+    """在合法区间内选最接近 target 的点（边界 touching 合法）。"""
+    candidates = [lo, hi]
+    for f in merged:
+        if f[1] >= lo:
+            candidates.append(max(lo, f[1]))
+        if f[0] <= hi:
+            candidates.append(min(hi, f[0]))
+    best: float | None = None
+    best_dist = float("inf")
+    for c in candidates:
+        if c < lo or c > hi:
+            continue
+        if any(f[0] < c < f[1] for f in merged):
+            continue
+        dist = abs(c - target)
+        if dist < best_dist:
+            best_dist = dist
+            best = c
+    return best
 
 
 def _find_nearest_legal_pos_1d(
@@ -240,67 +319,14 @@ def _find_nearest_legal_pos_1d(
         fixed_lo = fixed_y
         fixed_hi = fixed_y + h
 
-    # 收集禁止区间（axis 方向）
-    # R05 Bug 修复: 垂直方向判定需考虑 MIN_SPACING（非连接邻居）。
-    # 原代码仅检查 strict overlap，导致两器件在垂直方向"几乎接触但不重叠"
-    # 时，沿 axis 方向放置会违反 MIN_SPACING。修复: 对非连接邻居，垂直
-    # 方向影响范围扩展 MIN_SPACING 距离。
-    forbidden: list[tuple[float, float]] = []
-    for nm, pl in placements.items():
-        if nm == exclude_name:
-            continue
-        ox1, oy1 = float(pl["x"]), float(pl["y"])
-        ox2, oy2 = ox1 + float(pl["w"]), oy1 + float(pl["h"])
-        spacing = 0.0 if nm in connected_names else _ALIGN_MIN_SPACING
-        if axis == "y":
-            # x 方向（垂直方向）影响范围: 重叠 OR 间距 < MIN_SPACING
-            if fixed_hi <= ox1 - spacing or fixed_lo >= ox2 + spacing:
-                continue
-            other_lo, other_hi = oy1, oy2
-        else:  # axis == "x"
-            if fixed_hi <= oy1 - spacing or fixed_lo >= oy2 + spacing:
-                continue
-            other_lo, other_hi = ox1, ox2
-        # 沿 axis 方向也需 MIN_SPACING 间距（touching + spacing 合法）
-        f_min = other_lo - size - spacing
-        f_max = other_hi + spacing
-        forbidden.append((f_min, f_max))
-
-    # 合并禁止区间（Berg Computational Geometry §2.1）
-    forbidden.sort()
-    merged: list[list[float]] = []
-    for f in forbidden:
-        if merged and f[0] <= merged[-1][1]:
-            merged[-1][1] = max(merged[-1][1], f[1])
-        else:
-            merged.append([f[0], f[1]])
-
+    merged = _collect_merged_forbidden_intervals(
+        placements, exclude_name, fixed_lo, fixed_hi, size, axis, connected_names
+    )
     lo = 0.0
     hi = canvas_limit - size
     if hi < lo:
         # 合法：画布太小放不下该器件，调用方据此跳过该候选位置
-        # （align.py:296 / residual.py:175 均判 None 后保留原位置）。
+        # （align.py / residual.py 均判 None 后保留原位置）。
         # 非 fall-back：返回 None 是契约内的合法信号，不替代真实布局。
         return None
-
-    # 候选点: 边界 lo/hi + 每个禁止区间的边界（touching 合法）
-    candidates = [lo, hi]
-    for f in merged:
-        if f[1] >= lo:
-            candidates.append(max(lo, f[1]))
-        if f[0] <= hi:
-            candidates.append(min(hi, f[0]))
-
-    best: float | None = None
-    best_dist = float("inf")
-    for c in candidates:
-        if c < lo or c > hi:
-            continue
-        # 检查 c 是否在禁止区间内（开区间，边界 touching 合法）
-        if any(f[0] < c < f[1] for f in merged):
-            continue
-        dist = abs(c - target)
-        if dist < best_dist:
-            best_dist = dist
-            best = c
-    return best
+    return _select_nearest_legal_candidate(merged, lo, hi, target)
