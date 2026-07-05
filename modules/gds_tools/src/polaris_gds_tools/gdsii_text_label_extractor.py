@@ -88,6 +88,19 @@ def _import_klayout_db():
     return db
 
 
+def _read_gdsii_layout(db, gds_path):
+    """读取 GDSII 文件为 KLayout Layout（失败 raise RuntimeError，R03）。"""
+    ly = db.Layout()
+    try:
+        ly.read(str(gds_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return ly
+
+
 # =============================================================================
 # 数据类
 # =============================================================================
@@ -173,91 +186,35 @@ def extract_text_labels(
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not path.is_file():
         raise ValueError(f"路径不是文件: {gds_path}")
-
-    ly = db.Layout()
-    try:
-        ly.read(str(path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    ly = _read_gdsii_layout(db, path)
     dbu = float(ly.dbu)
     if layer_map is None:
         layer_map = _get_default_layer_map()
-
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
-    # 若指定 layers_to_extract，构造允许的 (layer, datatype) 集合
-    allowed_layer_keys: set[tuple[int, int]] | None = None
-    if layers_to_extract is not None:
-        allowed_layer_keys = set()
-        for (g, d), name in layer_map.items():
-            if name in layers_to_extract:
-                allowed_layer_keys.add((g, d))
-
+    allowed_layer_keys = _build_allowed_layer_keys(
+        layer_map, layers_to_extract,
+    )
     labels: list[TextLabel] = []
     for li in ly.layer_indices():
         info = ly.get_info(li)
         gds_layer = int(info.layer)
         gds_datatype = int(info.datatype)
         layer_key = (gds_layer, gds_datatype)
-
-        # 层名映射
         layer_name = layer_map.get(
             layer_key, f"LAYER_{gds_layer}_{gds_datatype}"
         )
-
-        # 若指定 layers_to_extract，跳过不在允许集合的层
         if allowed_layer_keys is not None and layer_key not in allowed_layer_keys:
             continue
-
-        # 递归遍历该层的所有 shapes
-        # RecursiveShapeIterator: at_end() / next() / shape() / cell()
-        # 来源: https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
-        it = top_cell.begin_shapes_rec(li)
-        while not it.at_end():
-            shape = it.shape()
-            if shape.is_text():
-                # 提取文本内容
-                # Shape.text_string 返回 str（属性，非方法）
-                # 来源: https://www.klayout.org/doc-qt4/code/class_Shape.html
-                text_str = str(shape.text_string)
-                # 提取位置（dbu → μm）
-                # Shape.text_pos 返回 Vector，pos.x/pos.y 为 dbu 整数
-                pos = shape.text_pos
-                x_um = float(pos.x) * dbu
-                y_um = float(pos.y) * dbu
-                # 获取 shape 所在的 cell 名
-                # RecursiveShapeIterator.cell() 返回当前 cell 对象（稳定 API）
-                cell_obj = it.cell()
-                cell_name = str(cell_obj.name)
-
-                labels.append(
-                    TextLabel(
-                        text=text_str,
-                        layer_name=layer_name,
-                        gds_layer=gds_layer,
-                        gds_datatype=gds_datatype,
-                        x_um=x_um,
-                        y_um=y_um,
-                        cell_name=cell_name,
-                    )
-                )
-            it.next()
-
-    # 排序: gds_layer → gds_datatype → y_um → x_um
+        labels.extend(_collect_text_labels_from_layer(
+            top_cell, li, dbu, layer_name, gds_layer, gds_datatype,
+        ))
     labels.sort(
         key=lambda lbl: (
             lbl.gds_layer, lbl.gds_datatype, lbl.y_um, lbl.x_um,
         )
     )
-
-    # 分组统计
     layer_counts = dict(Counter(lbl.layer_name for lbl in labels))
     cell_counts = dict(Counter(lbl.cell_name for lbl in labels))
-
     return TextLabelReport(
         file_path=str(gds_path),
         dbu=dbu,
@@ -267,6 +224,52 @@ def extract_text_labels(
         layer_counts=layer_counts,
         cell_counts=cell_counts,
     )
+
+
+def _build_allowed_layer_keys(
+    layer_map: dict, layers_to_extract: list[str] | None,
+) -> set[tuple[int, int]] | None:
+    """构造允许的 (layer, datatype) 集合（R323 内部函数）。"""
+    if layers_to_extract is None:
+        return None
+    allowed: set[tuple[int, int]] = set()
+    for (g, d), name in layer_map.items():
+        if name in layers_to_extract:
+            allowed.add((g, d))
+    return allowed
+
+
+def _collect_text_labels_from_layer(
+    top_cell, li, dbu, layer_name, gds_layer, gds_datatype,
+) -> list[TextLabel]:
+    """从单层递归提取所有文本标签（R323 内部函数）。
+
+    遍历 RecursiveShapeIterator，对 is_text() 的 shape 提取
+    text_string / text_pos / cell 名。
+    """
+    labels: list[TextLabel] = []
+    it = top_cell.begin_shapes_rec(li)
+    while not it.at_end():
+        shape = it.shape()
+        if shape.is_text():
+            text_str = str(shape.text_string)
+            pos = shape.text_pos
+            x_um = float(pos.x) * dbu
+            y_um = float(pos.y) * dbu
+            cell_name = str(it.cell().name)
+            labels.append(
+                TextLabel(
+                    text=text_str,
+                    layer_name=layer_name,
+                    gds_layer=gds_layer,
+                    gds_datatype=gds_datatype,
+                    x_um=x_um,
+                    y_um=y_um,
+                    cell_name=cell_name,
+                )
+            )
+        it.next()
+    return labels
 
 
 def generate_text_label_report(
