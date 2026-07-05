@@ -1,0 +1,228 @@
+{
+  "name": "ring_filter_2",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "gc_in",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    },
+    {
+      "name": "wg_in",
+      "device_type": "waveguide",
+      "width_um": 100.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          0.25,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          0.25,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 100.0
+      }
+    },
+    {
+      "name": "ring1",
+      "device_type": "ring_resonator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "O1",
+          60.0,
+          45.0,
+          "W"
+        ],
+        [
+          "O2",
+          60.0,
+          15.0,
+          "W"
+        ],
+        [
+          "O3",
+          0.0,
+          15.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "radius": 10.0,
+        "gap": 0.2
+      }
+    },
+    {
+      "name": "wg_mid",
+      "device_type": "waveguide",
+      "width_um": 100.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          0.25,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          0.25,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 100.0
+      }
+    },
+    {
+      "name": "ring2",
+      "device_type": "ring_resonator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "O1",
+          60.0,
+          45.0,
+          "W"
+        ],
+        [
+          "O2",
+          60.0,
+          15.0,
+          "W"
+        ],
+        [
+          "O3",
+          0.0,
+          15.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "radius": 12.0,
+        "gap": 0.2
+      }
+    },
+    {
+      "name": "wg_out",
+      "device_type": "waveguide",
+      "width_um": 100.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          0.25,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          0.25,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 100.0
+      }
+    },
+    {
+      "name": "gc_out",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {}
+    }
+  ],
+  "connections": [
+    [
+      "gc_in",
+      "o2",
+      "wg_in",
+      "I1"
+    ],
+    [
+      "wg_in",
+      "O1",
+      "ring1",
+      "I1"
+    ],
+    [
+      "ring1",
+      "O1",
+      "wg_mid",
+      "I1"
+    ],
+    [
+      "wg_mid",
+      "O1",
+      "ring2",
+      "I1"
+    ],
+    [
+      "ring2",
+      "O1",
+      "wg_out",
+      "I1"
+    ],
+    [
+      "wg_out",
+      "O1",
+      "gc_out",
+      "o2"
+    ]
+  ]
+}

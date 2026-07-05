@@ -1,0 +1,91 @@
+{
+  "name": "gf_gf_aar_step_definitions",
+  "category": "gdsfactory",
+  "n_devices": 6,
+  "n_connections": 3,
+  "canvas_w": 7711.000000000001,
+  "canvas_h": 100.0,
+  "status": "ok",
+  "drc": {
+    "n_violations": 7,
+    "n_rules": 12,
+    "n_passed": 10,
+    "pass_rate": 0.8333333333333334,
+    "violations": [
+      {
+        "rule_name": "BOUNDARY",
+        "severity": 1.0,
+        "message": "BOUNDARY: 器件 wg_a2 超出画布边界 (2000.00,-1000.00)-(2010.00,-999.50) canvas=(7711.000000000001,100.0)",
+        "device_name": "wg_a2",
+        "location": [
+          2005.0,
+          -999.75
+        ]
+      },
+      {
+        "rule_name": "BOUNDARY",
+        "severity": 1.0,
+        "message": "BOUNDARY: 器件 wg_b2 超出画布边界 (7000.00,-1000.00)-(7010.00,-999.50) canvas=(7711.000000000001,100.0)",
+        "device_name": "wg_b2",
+        "location": [
+          7005.0,
+          -999.75
+        ]
+      },
+      {
+        "rule_name": "BOUNDARY",
+        "severity": 1.0,
+        "message": "BOUNDARY: 器件 wg_c1 超出画布边界 (0.00,-5000.00)-(10.00,-4999.50) canvas=(7711.000000000001,100.0)",
+        "device_name": "wg_c1",
+        "location": [
+          5.0,
+          -4999.75
+        ]
+      },
+      {
+        "rule_name": "BOUNDARY",
+        "severity": 1.0,
+        "message": "BOUNDARY: 器件 wg_c2 超出画布边界 (2000.00,-6000.00)-(2010.00,-5999.50) canvas=(7711.000000000001,100.0)",
+        "device_name": "wg_c2",
+        "location": [
+          2005.0,
+          -5999.75
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "device_name": "wg_a1",
+        "location": [
+          1005.0,
+          -499.75
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "device_name": "wg_b1",
+        "location": [
+          6005.0,
+          -499.75
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "device_name": "wg_c1",
+        "location": [
+          1005.0,
+          -5499.75
+        ]
+      }
+    ],
+    "violated_rules": [
+      "BOUNDARY",
+      "PORT_ALIGNMENT"
+    ]
+  }
+}

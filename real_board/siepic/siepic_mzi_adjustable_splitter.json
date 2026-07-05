@@ -1,0 +1,70 @@
+{
+  "name": "siepic_mzi_adjustable_splitter",
+  "category": "siepic",
+  "n_devices": 5,
+  "n_connections": 0,
+  "canvas_w": 258.8,
+  "canvas_h": 314.7,
+  "status": "ok",
+  "drc": {
+    "n_violations": 5,
+    "n_rules": 12,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
+    "violations": [
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 waveguide_bump$1 无任何连接（孤立器件）",
+        "device_name": "waveguide_bump$1",
+        "location": [
+          11.1,
+          44.39904999999999
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 ebeam_bdc_te1550 无任何连接（孤立器件）",
+        "device_name": "ebeam_bdc_te1550",
+        "location": [
+          36.47500000000001,
+          37.41999999999999
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 ebeam_bdc_te1550_1 无任何连接（孤立器件）",
+        "device_name": "ebeam_bdc_te1550_1",
+        "location": [
+          36.475,
+          28.499999999999982
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 ebeam_gc_te1550 无任何连接（孤立器件）",
+        "device_name": "ebeam_gc_te1550",
+        "location": [
+          17.549999999999997,
+          11.769999999999989
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 ebeam_terminator_te1550 无任何连接（孤立器件）",
+        "device_name": "ebeam_terminator_te1550",
+        "location": [
+          6.5,
+          48.51809999999999
+        ]
+      }
+    ],
+    "violated_rules": [
+      "PORT_CONNECTIVITY"
+    ]
+  }
+}

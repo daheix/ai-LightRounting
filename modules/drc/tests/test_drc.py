@@ -267,11 +267,7 @@ def test_default_rules_thresholds():
     assert rules_by_name["MIN_AREA"].threshold == 0.1      # WG_MIN_AREA
     assert rules_by_name["BOUNDARY"].threshold == 0.0
     assert rules_by_name["NO_OVERLAP"].threshold == 0.0
-<<<<<<< Updated upstream
-    assert rules_by_name["PORT_ALIGNMENT"].threshold == 10.0  # 5.0→10.0 SiEPIC EBeam PDK 实际波导弯曲容差
-=======
     assert rules_by_name["PORT_ALIGNMENT"].threshold == 10.0  # SiEPIC 弯曲容差 10-20μm（engine _PORT_ALIGN_TOL_UM）
->>>>>>> Stashed changes
     assert rules_by_name["PORT_DIRECTION"].threshold == 0.0
     assert rules_by_name["PORT_CONNECTIVITY"].threshold == 0.0
     assert rules_by_name["PORT_FACING"].threshold == 0.0

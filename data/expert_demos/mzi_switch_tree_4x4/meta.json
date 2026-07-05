@@ -1,0 +1,29 @@
+{
+  "source_gds": "data/benchmarks/picbench_Crossbar_4x4.json",
+  "source_url": "https://github.com/JeppeKlitgaard/PicBench",
+  "source_pdk": {
+    "name": "PICBench",
+    "publisher": "Jeppe Klitgaard et al.",
+    "author": "Klitgaard et al.",
+    "license": "MIT",
+    "url": "https://github.com/JeppeKlitgaard/PicBench",
+    "examples_url": "https://github.com/JeppeKlitgaard/PicBench",
+    "year": "2015-2025"
+  },
+  "extract_time": "2026-07-05T06:14:04.161404",
+  "circuit_name": "mzi_switch_tree_4x4",
+  "n_devices": 16,
+  "n_connections": 24,
+  "n_placements": 16,
+  "n_routes": 24,
+  "canvas_w_um": 1000.0,
+  "canvas_h_um": 1000.0,
+  "demo_name": "mzi_switch_tree_4x4",
+  "generator": "expand_expert_demos.py v1",
+  "generator_pipeline": [
+    "parse_benchmark_netlist",
+    "place_analytical (DREAMPlace TCAD 2020)",
+    "CurvyRouter (LiDAR ISPD'25 S-bend)"
+  ],
+  "description": "4x4 开关树（Crossbar 4x4 = 16 OSU）"
+}

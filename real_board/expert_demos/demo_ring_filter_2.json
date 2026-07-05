@@ -1,0 +1,81 @@
+{
+  "name": "demo_ring_filter_2",
+  "category": "expert_demos",
+  "n_devices": 7,
+  "n_connections": 6,
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "status": "ok",
+  "drc": {
+    "n_violations": 6,
+    "n_rules": 12,
+    "n_passed": 10,
+    "pass_rate": 0.8333333333333334,
+    "violations": [
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 wg_mid 与 ring2 重叠",
+        "device_name": "wg_mid",
+        "location": [
+          281.0,
+          60.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 wg_out 与 gc_out 重叠",
+        "device_name": "wg_out",
+        "location": [
+          421.0,
+          55.0
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 wg_in.O1→ring1.I1 端口未对齐 dx=20.00μm dy=53.50μm > 容差 10.00μm",
+        "device_name": "wg_in",
+        "location": [
+          141.0,
+          48.25
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 ring1.O1→wg_mid.I1 端口未对齐 dx=20.00μm dy=29.75μm > 容差 10.00μm",
+        "device_name": "ring1",
+        "location": [
+          201.0,
+          60.125
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 wg_mid.O1→ring2.I1 端口未对齐 dx=20.00μm dy=29.75μm > 容差 10.00μm",
+        "device_name": "wg_mid",
+        "location": [
+          301.0,
+          60.125
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 ring2.O1→wg_out.I1 端口未对齐 dx=20.00μm dy=29.75μm > 容差 10.00μm",
+        "device_name": "ring2",
+        "location": [
+          361.0,
+          60.125
+        ]
+      }
+    ],
+    "violated_rules": [
+      "NO_OVERLAP",
+      "PORT_ALIGNMENT"
+    ]
+  }
+}

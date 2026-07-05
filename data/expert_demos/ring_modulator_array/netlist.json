@@ -1,0 +1,1234 @@
+{
+  "name": "ring_modulator_array",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "gc_array_in_gc_0",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "gc_array_in_gc_1",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "gc_array_in_gc_2",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "gc_array_in_gc_3",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "mod_array_in_mrr_0",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 80.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o3",
+          0.0,
+          20.0,
+          "E"
+        ],
+        [
+          "o4",
+          60.0,
+          20.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "macro_type": "m_ring_double_pn_1"
+      }
+    },
+    {
+      "name": "mod_array_in_mrr_1",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 80.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o3",
+          0.0,
+          20.0,
+          "E"
+        ],
+        [
+          "o4",
+          60.0,
+          20.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "macro_type": "m_ring_double_pn_1"
+      }
+    },
+    {
+      "name": "mod_array_in_mrr_2",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 80.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o3",
+          0.0,
+          20.0,
+          "E"
+        ],
+        [
+          "o4",
+          60.0,
+          20.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "macro_type": "m_ring_double_pn_1"
+      }
+    },
+    {
+      "name": "mod_array_in_mrr_3",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 80.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o3",
+          0.0,
+          20.0,
+          "E"
+        ],
+        [
+          "o4",
+          60.0,
+          20.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "macro_type": "m_ring_double_pn_1"
+      }
+    },
+    {
+      "name": "fanout_yb_0_0",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "cross_section": "xs_sc",
+        "macro_type": "m_mmi1x2_2"
+      }
+    },
+    {
+      "name": "fanout_yb_1_0",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "cross_section": "xs_sc",
+        "macro_type": "m_mmi1x2_2"
+      }
+    },
+    {
+      "name": "fanout_yb_1_1",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "cross_section": "xs_sc",
+        "macro_type": "m_mmi1x2_2"
+      }
+    },
+    {
+      "name": "mrr_array_0_mrr_0",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_0_mrr_1",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_0_mrr_2",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_0_mrr_3",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_1_mrr_0",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_1_mrr_1",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_1_mrr_2",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_1_mrr_3",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_2_mrr_0",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_2_mrr_1",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_2_mrr_2",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_2_mrr_3",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_3_mrr_0",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_3_mrr_1",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_3_mrr_2",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "mrr_array_3_mrr_3",
+      "device_type": "ring_modulator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o2",
+          60.0,
+          30.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "radius": 5.0,
+        "gap": 0.3,
+        "doping_angle": 85,
+        "doped_heater": true,
+        "doped_heater_angle_buffer": 10,
+        "doped_heater_layer": "NPP",
+        "doped_heater_width": 0.5,
+        "doped_heater_waveguide_offset": 2.175,
+        "add_gap": 0.3,
+        "drop_gap": 0.3,
+        "macro_type": "m_ring_single_pn_43ee7534_3"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_0",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_1",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_2",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_3",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer": "WG",
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "macro_type": "m_grating_coupler_elliptical_lumerical_0"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fanout_yb_0_0",
+      "o2",
+      "fanout_yb_1_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_0_0",
+      "o3",
+      "fanout_yb_1_1",
+      "o1"
+    ],
+    [
+      "gc_array_in_gc_0",
+      "o1",
+      "mod_array_in_mrr_0",
+      "o4"
+    ],
+    [
+      "gc_array_in_gc_1",
+      "o1",
+      "mod_array_in_mrr_1",
+      "o4"
+    ],
+    [
+      "gc_array_in_gc_2",
+      "o1",
+      "mod_array_in_mrr_2",
+      "o4"
+    ],
+    [
+      "gc_array_in_gc_3",
+      "o1",
+      "mod_array_in_mrr_3",
+      "o4"
+    ],
+    [
+      "mod_array_in_mrr_0",
+      "o2",
+      "mod_array_in_mrr_1",
+      "o1"
+    ],
+    [
+      "mod_array_in_mrr_1",
+      "o2",
+      "mod_array_in_mrr_2",
+      "o1"
+    ],
+    [
+      "mod_array_in_mrr_2",
+      "o2",
+      "mod_array_in_mrr_3",
+      "o1"
+    ],
+    [
+      "mod_array_in_mrr_0",
+      "o1",
+      "fanout_yb_0_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_0",
+      "o2",
+      "mrr_array_0_mrr_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_0",
+      "o3",
+      "mrr_array_0_mrr_1",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_1",
+      "o2",
+      "mrr_array_0_mrr_2",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_1",
+      "o3",
+      "mrr_array_0_mrr_3",
+      "o1"
+    ],
+    [
+      "mrr_array_0_mrr_0",
+      "o2",
+      "mrr_array_1_mrr_0",
+      "o1"
+    ],
+    [
+      "mrr_array_0_mrr_1",
+      "o2",
+      "mrr_array_1_mrr_1",
+      "o1"
+    ],
+    [
+      "mrr_array_0_mrr_2",
+      "o2",
+      "mrr_array_1_mrr_2",
+      "o1"
+    ],
+    [
+      "mrr_array_0_mrr_3",
+      "o2",
+      "mrr_array_1_mrr_3",
+      "o1"
+    ],
+    [
+      "mrr_array_1_mrr_0",
+      "o2",
+      "mrr_array_2_mrr_0",
+      "o1"
+    ],
+    [
+      "mrr_array_1_mrr_1",
+      "o2",
+      "mrr_array_2_mrr_1",
+      "o1"
+    ],
+    [
+      "mrr_array_1_mrr_2",
+      "o2",
+      "mrr_array_2_mrr_2",
+      "o1"
+    ],
+    [
+      "mrr_array_1_mrr_3",
+      "o2",
+      "mrr_array_2_mrr_3",
+      "o1"
+    ],
+    [
+      "mrr_array_2_mrr_0",
+      "o2",
+      "mrr_array_3_mrr_0",
+      "o1"
+    ],
+    [
+      "mrr_array_2_mrr_1",
+      "o2",
+      "mrr_array_3_mrr_1",
+      "o1"
+    ],
+    [
+      "mrr_array_2_mrr_2",
+      "o2",
+      "mrr_array_3_mrr_2",
+      "o1"
+    ],
+    [
+      "mrr_array_2_mrr_3",
+      "o2",
+      "mrr_array_3_mrr_3",
+      "o1"
+    ],
+    [
+      "mrr_array_3_mrr_0",
+      "o2",
+      "gc_array_out_gc_0",
+      "o1"
+    ],
+    [
+      "mrr_array_3_mrr_1",
+      "o2",
+      "gc_array_out_gc_1",
+      "o1"
+    ],
+    [
+      "mrr_array_3_mrr_2",
+      "o2",
+      "gc_array_out_gc_2",
+      "o1"
+    ],
+    [
+      "mrr_array_3_mrr_3",
+      "o2",
+      "gc_array_out_gc_3",
+      "o1"
+    ]
+  ]
+}

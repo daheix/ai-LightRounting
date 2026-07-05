@@ -1,0 +1,50 @@
+{
+  "name": "demo_cyclic_mzi_mesh_3x3",
+  "category": "expert_demos",
+  "n_devices": 24,
+  "n_connections": 32,
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "status": "ok",
+  "drc": {
+    "n_violations": 3,
+    "n_rules": 12,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
+    "violations": [
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm",
+        "device_name": "mmi12r",
+        "location": [
+          61.0,
+          156.0
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 mmi33r.I1→mmi31r.O2 端口未对齐 dx=30.00μm dy=39.00μm > 容差 10.00μm",
+        "device_name": "mmi33r",
+        "location": [
+          124.0,
+          105.5
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 mmi43l.O2→mmi43r.O2 端口未对齐 dx=31.00μm dy=47.00μm > 容差 10.00μm",
+        "device_name": "mmi43l",
+        "location": [
+          154.5,
+          77.5
+        ]
+      }
+    ],
+    "violated_rules": [
+      "PORT_ALIGNMENT"
+    ]
+  }
+}

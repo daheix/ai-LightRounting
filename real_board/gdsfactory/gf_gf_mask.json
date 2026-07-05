@@ -1,0 +1,16 @@
+{
+  "name": "gf_gf_mask",
+  "category": "gdsfactory",
+  "n_devices": 0,
+  "n_connections": 0,
+  "canvas_w": null,
+  "canvas_h": null,
+  "status": "error",
+  "error": "RuntimeError: 未知组件 'pack_doe' 且 settings 无 length/length_mmi（settings={'doe': 'ring_single', 'settings': {'radius': [5, 10, 20], 'length_x': [1, 2, 3]}, 'do_permutations': True, 'function': {'function': 'add_fiber_array', 'settings': {'fanout_length': 200}}}，R03 禁止 fall-back 默认尺寸）",
+  "drc": {
+    "n_violations": -1,
+    "pass_rate": 0.0,
+    "violations": [],
+    "error": "RuntimeError: 未知组件 'pack_doe' 且 settings 无 length/length_mmi（settings={'doe': 'ring_single', 'settings': {'radius': [5, 10, 20], 'length_x': [1, 2, 3]}, 'do_permutations': True, 'function': {'function': 'add_fiber_array', 'settings': {'fanout_length': 200}}}，R03 禁止 fall-back 默认尺寸）"
+  }
+}

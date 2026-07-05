@@ -1,0 +1,166 @@
+{
+  "name": "qpsk_modulator",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "mzm_I",
+      "device_type": "mzm_modulator",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "O1",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0
+      }
+    },
+    {
+      "name": "mzm_Q",
+      "device_type": "mzm_modulator",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "O1",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0
+      }
+    },
+    {
+      "name": "splitter",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "combiner",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "phase_shifter",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "phase": 90
+      }
+    }
+  ],
+  "connections": [
+    [
+      "splitter",
+      "O1",
+      "mzm_I",
+      "I1"
+    ],
+    [
+      "splitter",
+      "O2",
+      "mzm_Q",
+      "I1"
+    ],
+    [
+      "mzm_I",
+      "O1",
+      "combiner",
+      "O1"
+    ],
+    [
+      "mzm_Q",
+      "O1",
+      "phase_shifter",
+      "I1"
+    ],
+    [
+      "phase_shifter",
+      "O1",
+      "combiner",
+      "O2"
+    ]
+  ]
+}

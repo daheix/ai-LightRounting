@@ -1,0 +1,16 @@
+{
+  "name": "pb_picbench_U-matrix_block",
+  "category": "picbench",
+  "n_devices": 0,
+  "n_connections": 0,
+  "canvas_w": null,
+  "canvas_h": null,
+  "status": "error",
+  "error": "RuntimeError: 未知组件 'coupler' 且 settings 无 length/length_mmi（settings={}，R03 禁止 fall-back 默认尺寸）",
+  "drc": {
+    "n_violations": -1,
+    "pass_rate": 0.0,
+    "violations": [],
+    "error": "RuntimeError: 未知组件 'coupler' 且 settings 无 length/length_mmi（settings={}，R03 禁止 fall-back 默认尺寸）"
+  }
+}

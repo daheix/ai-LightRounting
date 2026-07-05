@@ -1,0 +1,30 @@
+{
+  "name": "gf_gf_routes_waypoints",
+  "category": "gdsfactory",
+  "n_devices": 2,
+  "n_connections": 2,
+  "canvas_w": 100.0,
+  "canvas_h": 770.0000000000001,
+  "status": "ok",
+  "drc": {
+    "n_violations": 1,
+    "n_rules": 12,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
+    "violations": [
+      {
+        "rule_name": "BOUNDARY",
+        "severity": 1.0,
+        "message": "BOUNDARY: 器件 t 超出画布边界 (-250.00,600.00)-(50.00,700.00) canvas=(100.0,770.0000000000001)",
+        "device_name": "t",
+        "location": [
+          -100.0,
+          650.0
+        ]
+      }
+    ],
+    "violated_rules": [
+      "BOUNDARY"
+    ]
+  }
+}

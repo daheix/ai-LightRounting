@@ -1,0 +1,137 @@
+{
+  "name": "mzm_modulator_link",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "splitter",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "combiner",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "phase_shifter1",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 10.0
+      }
+    },
+    {
+      "name": "phase_shifter2",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 10.0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "splitter",
+      "O1",
+      "phase_shifter1",
+      "I1"
+    ],
+    [
+      "splitter",
+      "O2",
+      "phase_shifter2",
+      "I1"
+    ],
+    [
+      "phase_shifter1",
+      "O1",
+      "combiner",
+      "O1"
+    ],
+    [
+      "phase_shifter2",
+      "O1",
+      "combiner",
+      "O2"
+    ]
+  ]
+}

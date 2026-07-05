@@ -1,0 +1,29 @@
+{
+  "source_gds": "synth:synth_ring_filter_1",
+  "source_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+  "source_pdk": {
+    "name": "SiEPIC",
+    "publisher": "UBC SiEPIC (Lukas Chrostowski)",
+    "author": "Chrostowski et al.",
+    "license": "MIT",
+    "url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+    "examples_url": "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+    "year": "2015-2025"
+  },
+  "extract_time": "2026-07-05T06:14:04.114666",
+  "circuit_name": "ring_filter_1",
+  "n_devices": 5,
+  "n_connections": 4,
+  "n_placements": 5,
+  "n_routes": 4,
+  "canvas_w_um": 1000.0,
+  "canvas_h_um": 1000.0,
+  "demo_name": "ring_filter_1",
+  "generator": "expand_expert_demos.py v1",
+  "generator_pipeline": [
+    "parse_benchmark_netlist",
+    "place_analytical (DREAMPlace TCAD 2020)",
+    "CurvyRouter (LiDAR ISPD'25 S-bend)"
+  ],
+  "description": "单环滤波器（1 ring + 2 gc + 2 wg）"
+}

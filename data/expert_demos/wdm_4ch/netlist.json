@@ -1,0 +1,262 @@
+{
+  "name": "wdm_4ch",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "ring1",
+      "device_type": "ring_resonator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "O1",
+          60.0,
+          45.0,
+          "W"
+        ],
+        [
+          "O2",
+          60.0,
+          15.0,
+          "W"
+        ],
+        [
+          "O3",
+          0.0,
+          15.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "radius": 10.0,
+        "gap": 0.2,
+        "cwl": 1.543
+      }
+    },
+    {
+      "name": "ring2",
+      "device_type": "ring_resonator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "O1",
+          60.0,
+          45.0,
+          "W"
+        ],
+        [
+          "O2",
+          60.0,
+          15.0,
+          "W"
+        ],
+        [
+          "O3",
+          0.0,
+          15.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "radius": 10.0,
+        "gap": 0.2,
+        "cwl": 1.55
+      }
+    },
+    {
+      "name": "ring3",
+      "device_type": "ring_resonator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "O1",
+          60.0,
+          45.0,
+          "W"
+        ],
+        [
+          "O2",
+          60.0,
+          15.0,
+          "W"
+        ],
+        [
+          "O3",
+          0.0,
+          15.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "radius": 10.0,
+        "gap": 0.2,
+        "cwl": 1.554
+      }
+    },
+    {
+      "name": "ring4",
+      "device_type": "ring_resonator",
+      "width_um": 60.0,
+      "height_um": 60.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "O1",
+          60.0,
+          45.0,
+          "W"
+        ],
+        [
+          "O2",
+          60.0,
+          15.0,
+          "W"
+        ],
+        [
+          "O3",
+          0.0,
+          15.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "radius": 10.0,
+        "gap": 0.2,
+        "cwl": 1.556
+      }
+    },
+    {
+      "name": "waveguide1",
+      "device_type": "waveguide",
+      "width_um": 100.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          0.25,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          0.25,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "straight"
+      }
+    },
+    {
+      "name": "waveguide2",
+      "device_type": "waveguide",
+      "width_um": 100.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          0.25,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          0.25,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "straight"
+      }
+    },
+    {
+      "name": "waveguide3",
+      "device_type": "waveguide",
+      "width_um": 100.0,
+      "height_um": 0.5,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          0.25,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          0.25,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "straight"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "ring1",
+      "O2",
+      "waveguide1",
+      "I1"
+    ],
+    [
+      "waveguide1",
+      "O1",
+      "ring2",
+      "O3"
+    ],
+    [
+      "ring2",
+      "O2",
+      "waveguide2",
+      "I1"
+    ],
+    [
+      "waveguide2",
+      "O1",
+      "ring3",
+      "O3"
+    ],
+    [
+      "ring3",
+      "O2",
+      "waveguide3",
+      "I1"
+    ],
+    [
+      "waveguide3",
+      "O1",
+      "ring4",
+      "O3"
+    ]
+  ]
+}

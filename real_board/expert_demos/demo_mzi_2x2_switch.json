@@ -1,0 +1,92 @@
+{
+  "name": "demo_mzi_2x2_switch",
+  "category": "expert_demos",
+  "n_devices": 8,
+  "n_connections": 8,
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "status": "ok",
+  "drc": {
+    "n_violations": 7,
+    "n_rules": 12,
+    "n_passed": 9,
+    "pass_rate": 0.75,
+    "violations": [
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 mmi_rgt_1 与 phase_shifter4 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "mmi_rgt_1",
+        "location": [
+          131.0,
+          40.5
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi_rgt_1 与 phase_shifter1 重叠",
+        "device_name": "mmi_rgt_1",
+        "location": [
+          132.0,
+          34.5
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi_rgt_1 与 phase_shifter3 重叠",
+        "device_name": "mmi_rgt_1",
+        "location": [
+          131.0,
+          37.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi_rgt_1 与 phase_shifter4 重叠",
+        "device_name": "mmi_rgt_1",
+        "location": [
+          131.0,
+          40.5
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 mmi_lft_1.O1→phase_shifter1.I1 端口未对齐 dx=36.00μm dy=11.00μm > 容差 10.00μm",
+        "device_name": "mmi_lft_1",
+        "location": [
+          64.0,
+          21.5
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 phase_shifter2.O1→mmi_rgt_2.O1 端口未对齐 dx=35.00μm dy=48.00μm > 容差 10.00μm",
+        "device_name": "phase_shifter2",
+        "location": [
+          163.5,
+          40.0
+        ]
+      },
+      {
+        "rule_name": "PORT_ALIGNMENT",
+        "severity": 0.5,
+        "message": "PORT_ALIGNMENT: 连接 phase_shifter4.O1→mmi_rgt_2.O2 端口未对齐 dx=35.00μm dy=25.00μm > 容差 10.00μm",
+        "device_name": "phase_shifter4",
+        "location": [
+          163.5,
+          61.5
+        ]
+      }
+    ],
+    "violated_rules": [
+      "MIN_SPACING",
+      "NO_OVERLAP",
+      "PORT_ALIGNMENT"
+    ]
+  }
+}

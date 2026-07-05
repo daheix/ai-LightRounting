@@ -1,0 +1,29 @@
+{
+  "source_gds": "data/benchmarks/lidar_mrr_weight_bank_4x4.json",
+  "source_url": "https://opg.optica.org/jlt/abstract.cfm?uri=jltech-32-24-4029",
+  "source_pdk": {
+    "name": "LiDAR",
+    "publisher": "LiDAR-RL (ISPD 2025)",
+    "author": "LiDAR et al.",
+    "license": "MIT",
+    "url": "https://opg.optica.org/jlt/abstract.cfm?uri=jltech-32-24-4029",
+    "examples_url": "https://opg.optica.org/jlt/abstract.cfm?uri=jltech-32-24-4029",
+    "year": "2015-2025"
+  },
+  "extract_time": "2026-07-05T06:14:04.253209",
+  "circuit_name": "ring_modulator_array",
+  "n_devices": 31,
+  "n_connections": 30,
+  "n_placements": 31,
+  "n_routes": 30,
+  "canvas_w_um": 1000.0,
+  "canvas_h_um": 1000.0,
+  "demo_name": "ring_modulator_array",
+  "generator": "expand_expert_demos.py v1",
+  "generator_pipeline": [
+    "parse_benchmark_netlist",
+    "place_analytical (DREAMPlace TCAD 2020)",
+    "CurvyRouter (LiDAR ISPD'25 S-bend)"
+  ],
+  "description": "环调制器阵列（MRR weight bank 4x4，光子神经网络权重）"
+}

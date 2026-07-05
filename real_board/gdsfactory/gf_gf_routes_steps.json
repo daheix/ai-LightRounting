@@ -1,0 +1,16 @@
+{
+  "name": "gf_gf_routes_steps",
+  "category": "gdsfactory",
+  "n_devices": 0,
+  "n_connections": 0,
+  "canvas_w": null,
+  "canvas_h": null,
+  "status": "error",
+  "error": "RuntimeError: 未知组件 'rectangle' 且 settings 无 length/length_mmi（settings={'size': [200, 200], 'layer': 'M3'}，R03 禁止 fall-back 默认尺寸）",
+  "drc": {
+    "n_violations": -1,
+    "pass_rate": 0.0,
+    "violations": [],
+    "error": "RuntimeError: 未知组件 'rectangle' 且 settings 无 length/length_mmi（settings={'size': [200, 200], 'layer': 'M3'}，R03 禁止 fall-back 默认尺寸）"
+  }
+}

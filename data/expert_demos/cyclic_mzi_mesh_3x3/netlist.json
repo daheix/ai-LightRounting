@@ -1,0 +1,897 @@
+{
+  "name": "cyclic_mzi_mesh_3x3",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "mmi11l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi12l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi13l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi21l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi22l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi23l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi31l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi32l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi33l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi41l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi42l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi43l",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi11r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi12r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi13r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi21r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi22r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi23r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi31r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi32r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi33r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi41r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi42r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    },
+    {
+      "name": "mmi43r",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "O1",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "_sim_model": "mmi1x2"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "mmi11l",
+      "O1",
+      "mmi12l",
+      "I1"
+    ],
+    [
+      "mmi11l",
+      "O2",
+      "mmi13l",
+      "I1"
+    ],
+    [
+      "mmi21l",
+      "O1",
+      "mmi22l",
+      "I1"
+    ],
+    [
+      "mmi21l",
+      "O2",
+      "mmi23l",
+      "I1"
+    ],
+    [
+      "mmi31l",
+      "O1",
+      "mmi32l",
+      "I1"
+    ],
+    [
+      "mmi31l",
+      "O2",
+      "mmi33l",
+      "I1"
+    ],
+    [
+      "mmi41l",
+      "O1",
+      "mmi42l",
+      "I1"
+    ],
+    [
+      "mmi41l",
+      "O2",
+      "mmi43l",
+      "I1"
+    ],
+    [
+      "mmi12r",
+      "I1",
+      "mmi11r",
+      "O1"
+    ],
+    [
+      "mmi13r",
+      "I1",
+      "mmi11r",
+      "O2"
+    ],
+    [
+      "mmi22r",
+      "I1",
+      "mmi21r",
+      "O1"
+    ],
+    [
+      "mmi23r",
+      "I1",
+      "mmi21r",
+      "O2"
+    ],
+    [
+      "mmi32r",
+      "I1",
+      "mmi31r",
+      "O1"
+    ],
+    [
+      "mmi33r",
+      "I1",
+      "mmi31r",
+      "O2"
+    ],
+    [
+      "mmi42r",
+      "I1",
+      "mmi41r",
+      "O1"
+    ],
+    [
+      "mmi43r",
+      "I1",
+      "mmi41r",
+      "O2"
+    ],
+    [
+      "mmi12l",
+      "O1",
+      "mmi12r",
+      "O1"
+    ],
+    [
+      "mmi12l",
+      "O2",
+      "mmi22r",
+      "O1"
+    ],
+    [
+      "mmi22l",
+      "O1",
+      "mmi12r",
+      "O2"
+    ],
+    [
+      "mmi22l",
+      "O2",
+      "mmi22r",
+      "O2"
+    ],
+    [
+      "mmi13l",
+      "O1",
+      "mmi32r",
+      "O1"
+    ],
+    [
+      "mmi13l",
+      "O2",
+      "mmi42r",
+      "O1"
+    ],
+    [
+      "mmi23l",
+      "O1",
+      "mmi32r",
+      "O2"
+    ],
+    [
+      "mmi23l",
+      "O2",
+      "mmi42r",
+      "O2"
+    ],
+    [
+      "mmi32l",
+      "O1",
+      "mmi13r",
+      "O1"
+    ],
+    [
+      "mmi32l",
+      "O2",
+      "mmi23r",
+      "O1"
+    ],
+    [
+      "mmi42l",
+      "O1",
+      "mmi13r",
+      "O2"
+    ],
+    [
+      "mmi42l",
+      "O2",
+      "mmi23r",
+      "O2"
+    ],
+    [
+      "mmi33l",
+      "O1",
+      "mmi33r",
+      "O1"
+    ],
+    [
+      "mmi33l",
+      "O2",
+      "mmi43r",
+      "O1"
+    ],
+    [
+      "mmi43l",
+      "O1",
+      "mmi33r",
+      "O2"
+    ],
+    [
+      "mmi43l",
+      "O2",
+      "mmi43r",
+      "O2"
+    ]
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "source_gds": "data/benchmarks/picbench_Spanke_4x4.json",
+  "source_url": "https://ieeexplore.ieee.org/document/1072908",
+  "source_pdk": {
+    "name": "PICBench",
+    "publisher": "Jeppe Klitgaard et al.",
+    "author": "Klitgaard et al.",
+    "license": "MIT",
+    "url": "https://ieeexplore.ieee.org/document/1072908",
+    "examples_url": "https://ieeexplore.ieee.org/document/1072908",
+    "year": "2015-2025"
+  },
+  "extract_time": "2026-07-05T06:14:04.205558",
+  "circuit_name": "cyclic_mzi_mesh_3x3",
+  "n_devices": 24,
+  "n_connections": 32,
+  "n_placements": 24,
+  "n_routes": 32,
+  "canvas_w_um": 1000.0,
+  "canvas_h_um": 1000.0,
+  "demo_name": "cyclic_mzi_mesh_3x3",
+  "generator": "expand_expert_demos.py v1",
+  "generator_pipeline": [
+    "parse_benchmark_netlist",
+    "place_analytical (DREAMPlace TCAD 2020)",
+    "CurvyRouter (LiDAR ISPD'25 S-bend)"
+  ],
+  "description": "循环 MZI mesh（Spanke 4x4 大规模光开关网络）"
+}

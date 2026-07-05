@@ -1,0 +1,164 @@
+{
+  "name": "photonic_neuron_4",
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "devices": [
+    {
+      "name": "coupler1",
+      "device_type": "directional_coupler",
+      "width_um": 40.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "I2",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "O1",
+          40.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          40.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "gap": 0.2,
+        "length": 10.0
+      }
+    },
+    {
+      "name": "coupler2",
+      "device_type": "directional_coupler",
+      "width_um": 40.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "I2",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "O1",
+          40.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          40.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "gap": 0.2,
+        "length": 10.0
+      }
+    },
+    {
+      "name": "coupler3",
+      "device_type": "directional_coupler",
+      "width_um": 40.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "I2",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "O1",
+          40.0,
+          5.0,
+          "W"
+        ],
+        [
+          "O2",
+          40.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "gap": 0.2,
+        "length": 10.0
+      }
+    },
+    {
+      "name": "phase_shifter",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "I1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "O1",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "phase": 180
+      }
+    }
+  ],
+  "connections": [
+    [
+      "phase_shifter",
+      "O1",
+      "coupler1",
+      "I1"
+    ],
+    [
+      "coupler2",
+      "O1",
+      "coupler1",
+      "I2"
+    ],
+    [
+      "coupler1",
+      "O2",
+      "coupler3",
+      "I1"
+    ],
+    [
+      "coupler2",
+      "O2",
+      "coupler3",
+      "I2"
+    ]
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "name": "siepic_Ring_series",
+  "category": "siepic",
+  "n_devices": 4,
+  "n_connections": 0,
+  "canvas_w": 142.75,
+  "canvas_h": 441.7,
+  "status": "ok",
+  "drc": {
+    "n_violations": 4,
+    "n_rules": 12,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
+    "violations": [
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 DirectionalCoupler_SeriesRings$1 无任何连接（孤立器件）",
+        "device_name": "DirectionalCoupler_SeriesRings$1",
+        "location": [
+          11.75,
+          83.73999999999998
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 DirectionalCoupler_SeriesRings$1_1 无任何连接（孤立器件）",
+        "device_name": "DirectionalCoupler_SeriesRings$1_1",
+        "location": [
+          11.75,
+          59.859999999999985
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 ebeam_gc_te1550 无任何连接（孤立器件）",
+        "device_name": "ebeam_gc_te1550",
+        "location": [
+          17.549999999999997,
+          11.769999999999989
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 DirectionalCoupler_SeriesRings$1_2 无任何连接（孤立器件）",
+        "device_name": "DirectionalCoupler_SeriesRings$1_2",
+        "location": [
+          11.75,
+          35.97999999999998
+        ]
+      }
+    ],
+    "violated_rules": [
+      "PORT_CONNECTIVITY"
+    ]
+  }
+}
