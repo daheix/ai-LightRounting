@@ -28,6 +28,113 @@ from .analytical_optimizer import topological_depth
 __all__ = ["legalize"]
 
 
+def _legalize_setup(
+    n: int, connections: list[tuple[int, int]],
+) -> tuple[list[int], list[list[int]]]:
+    """计算拓扑深度 + 上游器件索引映射。
+
+    *创新*: upstream_indices 用于信号流方向起始 x 计算，downstream 的 x
+    应 ≥ upstream 的右边界 + SPACING，保证 east↔west 连接的端口
+    dx ≤ SPACING ≤ PORT_ALIGNMENT 容差（10μm）。
+    """
+    depth = topological_depth(n, connections)
+    upstream_indices: list[list[int]] = [[] for _ in range(n)]
+    for src, dst in connections:
+        upstream_indices[dst].append(src)
+    return depth, upstream_indices
+
+
+def _legalize_compute_min_x(
+    i: int, upstream_indices: list[list[int]],
+    names: list[str], placements: dict, widths: np.ndarray,
+    spacing: float,
+) -> float:
+    """计算器件 i 的最小起始 x（左边界）。
+
+    *创新*: 下游器件起始 x ≥ upstream_right + SPACING，保证信号流方向
+    x 递增，且 east↔west 连接端口 dx ≤ SPACING ≤ tol（PORT_ALIGNMENT
+    自然通过）。底层逻辑: 光电子布局中 east↔west 连接要求 d2 在 d1 右侧
+    （d2.x ≥ d1.x + d1.w），VLSI FFDH 无此问题因为金属层任意布线，
+    光电子波导需端口对齐。
+    """
+    upstream_right = 0.0
+    for up_idx in upstream_indices[i]:
+        up_name = names[up_idx]
+        if up_name in placements:
+            up_cx, _ = placements[up_name]
+            up_right = up_cx + float(widths[up_idx]) / 2.0
+            if up_right > upstream_right:
+                upstream_right = up_right
+    return upstream_right + spacing
+
+
+def _legalize_find_candidate_rows(
+    rows: list[list[float]], h: float, d: int,
+    min_x: float, w: float, canvas_w: float, spacing: float,
+) -> list[int]:
+    """查找满足高度/画布/拓扑约束的候选行索引。
+
+    约束: 行高 ≥ h*1.1；d2 左边界 = max(xc+SPACING, min_x) + w ≤ canvas_w；
+    行内最大 depth < 当前 d（拓扑序保证信号流 x 递增）。
+    """
+    candidates = []
+    for r in range(len(rows)):
+        if rows[r][1] < h * 1.1:
+            continue
+        # *创新*: d2 左边界 = max(xc + SPACING, min_x)，需在画布内
+        x_lo = max(rows[r][2] + spacing if rows[r][2] > 0.0 else 0.0, min_x)
+        if x_lo + w > canvas_w:
+            continue
+        if rows[r][3] >= d:  # 拓扑序: 行内最大 depth < 当前 depth
+            continue
+        candidates.append(r)
+    return candidates
+
+
+def _legalize_place_in_existing_row(
+    rows: list[list[float]], r: int, w: float, min_x: float,
+    spacing: float, name: str, d: int,
+    placements: dict[str, tuple[float, float]],
+) -> None:
+    """在已有行 r 放置器件（FFDH: 第一个满足拓扑约束的候选行）。
+
+    *创新*: d2 左边界 = max(行内 x_cursor + SPACING, 上游最小 x)，
+    保证与行内前一个器件保持 SPACING 间距，且在上游右侧（信号流方向）。
+    """
+    ys, rh, xc, _ = rows[r]
+    if xc > 0.0:
+        x_lo = max(xc + spacing, min_x)
+    else:
+        x_lo = max(0.0, min_x)  # 行内首个器件
+    cx = x_lo + w / 2.0
+    rows[r][2] = x_lo + w
+    cy = ys + rh / 2.0
+    rows[r][3] = d  # 更新行内最大拓扑深度
+    placements[name] = (cx, cy)
+
+
+def _legalize_place_in_new_row(
+    rows: list[list[float]], h: float, w: float, min_x: float,
+    name: str, d: int, canvas_w: float, spacing: float,
+    placements: dict[str, tuple[float, float]],
+) -> None:
+    """在新行放置器件（无候选行可用时）。
+
+    *创新*: 新行起始 x 考虑上游右边界，下游器件在上游右侧；边界裁剪
+    防止超出画布。
+    """
+    new_h = h * 1.1
+    # 行间也需 SPACING 间距（垂直方向 MIN_SPACING）
+    ys = (rows[-1][0] + rows[-1][1] + spacing) if rows else 0.0
+    x_start = min_x
+    if x_start + w > canvas_w:  # 边界裁剪
+        x_start = max(0.0, canvas_w - w)
+    cx = x_start + w / 2.0
+    cy = ys + new_h / 2.0
+    rows.append([ys, new_h, x_start + w, d])
+    placements[name] = (cx, cy)
+
+
 def legalize(
     pos: np.ndarray,
     widths: np.ndarray,
@@ -79,15 +186,7 @@ def legalize(
     n = len(names)
     if n == 0:
         return {}
-    depth = topological_depth(n, connections)
-
-    # *创新*: 构建上游器件索引映射，用于信号流方向起始 x 计算。
-    # downstream 的 x 应 ≥ upstream 的右边界 + SPACING，保证 east↔west
-    # 连接的端口 dx ≤ SPACING ≤ PORT_ALIGNMENT 容差（10μm）。
-    upstream_indices: list[list[int]] = [[] for _ in range(n)]
-    for src, dst in connections:
-        upstream_indices[dst].append(src)
-
+    depth, upstream_indices = _legalize_setup(n, connections)
     order = sorted(
         range(n),
         key=lambda i: (depth[i], -float(heights[i]), pos[i, 1]),
@@ -98,54 +197,20 @@ def legalize(
         w = float(widths[i])
         h = float(heights[i])
         d = depth[i]
-
-        # *创新*: 计算上游器件的最大右边界（已放置的上游器件）。
-        # 下游器件起始 x ≥ upstream_right + SPACING，保证信号流方向 x 递增
-        # 且 east↔west 连接端口 dx ≤ SPACING ≤ tol（PORT_ALIGNMENT 自然通过）。
-        upstream_right = 0.0
-        for up_idx in upstream_indices[i]:
-            up_name = names[up_idx]
-            if up_name in placements:
-                up_cx, _ = placements[up_name]
-                up_right = up_cx + float(widths[up_idx]) / 2.0
-                if up_right > upstream_right:
-                    upstream_right = up_right
-        # 下游器件最小起始 x（左边界）
-        min_x = upstream_right + SPACING
-
-        candidates = [
-            r for r in range(len(rows))
-            if rows[r][1] >= h * 1.1
-            # *创新*: d2 左边界 = max(xc + SPACING, min_x)，需在画布内
-            and max(rows[r][2] + SPACING if rows[r][2] > 0.0 else 0.0, min_x) + w <= canvas_w
-            and rows[r][3] < d  # 拓扑序: 行内最大 depth < 当前 depth
-        ]
+        min_x = _legalize_compute_min_x(
+            i, upstream_indices, names, placements, widths, SPACING,
+        )
+        candidates = _legalize_find_candidate_rows(
+            rows, h, d, min_x, w, canvas_w, SPACING,
+        )
         if candidates:
-            r = candidates[0]  # FFDH: 第一个满足拓扑约束的候选行
-            ys, rh, xc, _ = rows[r]
-            # *创新*: d2 左边界 = max(行内 x_cursor + SPACING, 上游最小 x)
-            # 保证与行内前一个器件保持 SPACING 间距，且在上游右侧（信号流方向）
-            if xc > 0.0:
-                x_lo = max(xc + SPACING, min_x)
-            else:
-                # 行内首个器件：从 max(0, min_x) 开始
-                x_lo = max(0.0, min_x)
-            cx = x_lo + w / 2.0
-            rows[r][2] = x_lo + w
-            cy = ys + rh / 2.0
-            rows[r][3] = d  # 更新行内最大拓扑深度
-            placements[names[i]] = (cx, cy)
+            _legalize_place_in_existing_row(
+                rows, candidates[0], w, min_x, SPACING, names[i], d,
+                placements,
+            )
         else:
-            new_h = h * 1.1
-            # 行间也需 SPACING 间距（垂直方向 MIN_SPACING）
-            ys = (rows[-1][0] + rows[-1][1] + SPACING) if rows else 0.0
-            # *创新*: 新行起始 x 考虑上游右边界，下游器件在上游右侧
-            x_start = min_x
-            # 边界裁剪：x_start + w 不能超出画布
-            if x_start + w > canvas_w:
-                x_start = max(0.0, canvas_w - w)
-            cx = x_start + w / 2.0
-            cy = ys + new_h / 2.0
-            rows.append([ys, new_h, x_start + w, d])
-            placements[names[i]] = (cx, cy)
+            _legalize_place_in_new_row(
+                rows, h, w, min_x, names[i], d, canvas_w, SPACING,
+                placements,
+            )
     return placements
