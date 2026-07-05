@@ -432,6 +432,120 @@ def allocate_tolerance_by_sensitivity(
     )
 
 
+def _validate_yield_shift_params(
+    base_params: np.ndarray,
+    param_sigmas: np.ndarray,
+    direction: str,
+    max_iter: int,
+    learning_rate: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """校验 optimize_yield_via_nominal_shift 参数（R03 禁止 fall-back）。"""
+    base_params = np.asarray(base_params, dtype=float).copy()
+    param_sigmas = np.asarray(param_sigmas, dtype=float)
+    if base_params.ndim != 1:
+        raise ValueError(
+            f"base_params 必须为 1D，得到 shape {base_params.shape}"
+        )
+    if param_sigmas.shape != base_params.shape:
+        raise ValueError("param_sigmas shape 与 base_params 不匹配")
+    if np.any(param_sigmas <= 0):
+        raise ValueError(f"param_sigmas 必须 > 0，得到 {param_sigmas}")
+    if direction not in ("lower", "upper"):
+        raise ValueError(
+            f"direction 必须为 'lower' 或 'upper'，得到 '{direction}'"
+        )
+    if max_iter < 1:
+        raise ValueError(f"max_iter 必须 >= 1，得到 {max_iter}")
+    if not 0 < learning_rate <= 1.0:
+        raise ValueError(
+            f"learning_rate 应在 (0, 1]，得到 {learning_rate}"
+        )
+    return base_params, param_sigmas
+
+
+def _run_yield_shift_iter_loop(
+    func: Callable[[np.ndarray], float],
+    x: np.ndarray,
+    param_sigmas: np.ndarray,
+    spec_threshold: float,
+    direction: str,
+    max_iter: int,
+    learning_rate: float,
+    tol: float,
+    sensitivity_delta: float,
+    sign: float,
+    wcd_history: list[float],
+    n_eval_total: int,
+) -> tuple[np.ndarray, list[float], int, bool, int]:
+    """标称值优化主循环（WCD 梯度上升）。
+
+    返回 (x, wcd_history, n_eval_total, converged, actual_iter)。
+    """
+    converged = False
+    actual_iter = 0
+    for k in range(max_iter):
+        actual_iter = k + 1
+        sens, n_sens = _compute_unnormalized_sensitivity(
+            func, x, delta=sensitivity_delta
+        )
+        n_eval_total += n_sens
+        sigma_f = float(np.sqrt(np.sum((sens * param_sigmas) ** 2)))
+        if sigma_f == 0.0:
+            raise RuntimeError(
+                f"迭代 {k}: σ_f = 0，无法计算梯度。禁止 fall-back。"
+            )
+        grad = sign * sens / sigma_f
+        step = learning_rate * param_sigmas * grad
+        x_new = x + step
+        new_wcd_result = compute_worst_case_distance(
+            func, x_new, param_sigmas, spec_threshold, direction,
+            sensitivity_delta=sensitivity_delta,
+        )
+        n_eval_total += new_wcd_result.n_evaluations
+        wcd_improvement = new_wcd_result.wcd - wcd_history[-1]
+        if new_wcd_result.wcd > wcd_history[-1]:
+            x = x_new
+            wcd_history.append(new_wcd_result.wcd)
+        else:
+            wcd_history.append(wcd_history[-1])
+            converged = True
+            break
+        if abs(wcd_improvement) < tol:
+            converged = True
+            break
+    return x, wcd_history, n_eval_total, converged, actual_iter
+
+
+def _finalize_yield_shift(
+    func: Callable[[np.ndarray], float],
+    x: np.ndarray,
+    param_sigmas: np.ndarray,
+    spec_threshold: float,
+    direction: str,
+    sensitivity_delta: float,
+    original: YieldOptimizationResult,
+    wcd_history: list[float],
+    n_eval_total: int,
+    actual_iter: int,
+    converged: bool,
+    base_params: np.ndarray,
+) -> YieldOptimizationResult:
+    """最终 WCD 评估并组装 YieldOptimizationResult。"""
+    final = compute_worst_case_distance(
+        func, x, param_sigmas, spec_threshold, direction,
+        sensitivity_delta=sensitivity_delta,
+    )
+    n_eval_total += final.n_evaluations
+    return YieldOptimizationResult(
+        original_yield=original.yield_estimate,
+        optimized_yield=final.yield_estimate,
+        original_wcd=original.wcd, optimized_wcd=final.wcd,
+        optimal_params=x, original_params=base_params,
+        iterations=actual_iter, converged=converged,
+        wcd_history=wcd_history, n_evaluations=n_eval_total,
+    )
+
+
 def optimize_yield_via_nominal_shift(
     func: Callable[[np.ndarray], float],
     base_params: np.ndarray,
@@ -473,88 +587,25 @@ def optimize_yield_via_nominal_shift(
     - Parkinson 1993, DOI: 10.1080/03052159308940948
     - Madkour et al. 2015, DOI: 10.1109/TCSI.2015.2495251
     """
-    base_params = np.asarray(base_params, dtype=float).copy()
-    param_sigmas = np.asarray(param_sigmas, dtype=float)
-    if base_params.ndim != 1:
-        raise ValueError(
-            f"base_params 必须为 1D，得到 shape {base_params.shape}"
-        )
-    if param_sigmas.shape != base_params.shape:
-        raise ValueError("param_sigmas shape 与 base_params 不匹配")
-    if np.any(param_sigmas <= 0):
-        raise ValueError(f"param_sigmas 必须 > 0，得到 {param_sigmas}")
-    if direction not in ("lower", "upper"):
-        raise ValueError(
-            f"direction 必须为 'lower' 或 'upper'，得到 '{direction}'"
-        )
-    if max_iter < 1:
-        raise ValueError(f"max_iter 必须 >= 1，得到 {max_iter}")
-    if not 0 < learning_rate <= 1.0:
-        raise ValueError(
-            f"learning_rate 应在 (0, 1]，得到 {learning_rate}"
-        )
-
+    base_params, param_sigmas = _validate_yield_shift_params(
+        base_params, param_sigmas, direction, max_iter, learning_rate
+    )
     original = compute_worst_case_distance(
         func, base_params, param_sigmas, spec_threshold, direction,
         sensitivity_delta=sensitivity_delta,
     )
     wcd_history: list[float] = [original.wcd]
     n_eval_total = original.n_evaluations
-
     x = base_params.copy()
     sign = 1.0 if direction == "lower" else -1.0
-
-    converged = False
-    actual_iter = 0
-    for k in range(max_iter):
-        actual_iter = k + 1
-        sens, n_sens = _compute_unnormalized_sensitivity(
-            func, x, delta=sensitivity_delta
-        )
-        n_eval_total += n_sens
-
-        sigma_f = float(np.sqrt(np.sum((sens * param_sigmas) ** 2)))
-        if sigma_f == 0.0:
-            raise RuntimeError(
-                f"迭代 {k}: σ_f = 0，无法计算梯度。禁止 fall-back。"
-            )
-
-        grad = sign * sens / sigma_f
-        step = learning_rate * param_sigmas * grad
-        x_new = x + step
-
-        new_wcd_result = compute_worst_case_distance(
-            func, x_new, param_sigmas, spec_threshold, direction,
-            sensitivity_delta=sensitivity_delta,
-        )
-        n_eval_total += new_wcd_result.n_evaluations
-        wcd_improvement = new_wcd_result.wcd - wcd_history[-1]
-
-        if new_wcd_result.wcd > wcd_history[-1]:
-            x = x_new
-            wcd_history.append(new_wcd_result.wcd)
-        else:
-            wcd_history.append(wcd_history[-1])
-            converged = True
-            break
-
-        if abs(wcd_improvement) < tol:
-            converged = True
-            break
-
-    final = compute_worst_case_distance(
-        func, x, param_sigmas, spec_threshold, direction,
-        sensitivity_delta=sensitivity_delta,
+    x, wcd_history, n_eval_total, converged, actual_iter = _run_yield_shift_iter_loop(
+        func, x, param_sigmas, spec_threshold, direction, max_iter,
+        learning_rate, tol, sensitivity_delta, sign, wcd_history, n_eval_total,
     )
-    n_eval_total += final.n_evaluations
-
-    return YieldOptimizationResult(
-        original_yield=original.yield_estimate,
-        optimized_yield=final.yield_estimate,
-        original_wcd=original.wcd, optimized_wcd=final.wcd,
-        optimal_params=x, original_params=base_params,
-        iterations=actual_iter, converged=converged,
-        wcd_history=wcd_history, n_evaluations=n_eval_total,
+    return _finalize_yield_shift(
+        func, x, param_sigmas, spec_threshold, direction,
+        sensitivity_delta, original, wcd_history, n_eval_total,
+        actual_iter, converged, base_params,
     )
 
 
