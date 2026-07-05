@@ -276,6 +276,130 @@ def _count_path_crossings(
     return counts
 
 
+def _route_resolve_connection(
+    conn, device_map: dict, placements: dict, router: CurvyRouter,
+) -> tuple[dict, list[tuple[float, float]]]:
+    """解析单条连接 (dev1.port1 → dev2.port2) 生成路径点。
+
+    Args:
+        conn: [dev1, port1, dev2, port2] 长度 4。
+        device_map: 器件名 → 器件 dict 映射。
+        placements: 布局结果 {name: {x, y, w, h}}。
+        router: CurvyRouter 实例。
+
+    Returns:
+        (raw_path_dict, points_list)。
+
+    Raises:
+        RuntimeError: conn 格式非法 / 器件不存在 / 端口未找到
+            （R03 禁止 fall-back）。
+    """
+    if not isinstance(conn, (list, tuple)) or len(conn) != 4:
+        raise RuntimeError(
+            f"connection 必须是长度 4 的 list/tuple "
+            f"[dev1, port1, dev2, port2]，得到: {conn}"
+            f"（R03 禁止 fall-back）"
+        )
+    dev1_name, port1_name, dev2_name, port2_name = conn
+
+    # 查找器件
+    for name in (dev1_name, dev2_name):
+        if name not in device_map:
+            raise RuntimeError(
+                f"连接 {conn} 引用了不存在的器件: {name}"
+                f"（R03 禁止 fall-back）"
+            )
+        if name not in placements:
+            raise RuntimeError(
+                f"连接 {conn} 的器件 {name} 不在 placements 中"
+                f"（R03 禁止 fall-back）"
+            )
+
+    # 查找端口 + 计算端口绝对坐标
+    dev1 = device_map[dev1_name]
+    dev2 = device_map[dev2_name]
+    port1_dx, port1_dy, _ = _find_port(dev1, port1_name)
+    port2_dx, port2_dy, _ = _find_port(dev2, port2_name)
+    start = _port_absolute_position(placements[dev1_name], port1_dx, port1_dy)
+    end = _port_absolute_position(placements[dev2_name], port2_dx, port2_dy)
+
+    # 生成曲线波导路径
+    points = router.route(start, end)
+    raw_path = {
+        "dev1": dev1_name, "port1": port1_name,
+        "dev2": dev2_name, "port2": port2_name,
+        "points": points,
+    }
+    return raw_path, points
+
+
+def _route_compute_losses(
+    raw_paths: list[dict],
+    crossing_counts: list[int],
+    device_map: dict,
+) -> tuple[list[dict], float, int, int]:
+    """计算每条路径损耗与弯曲数（第三遍）。
+
+    损耗模型（R02 学术诚信，参数可溯源）:
+    - 路径级 loss_db = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
+    - 电路级 total_loss_db = sum(所有波导损耗) + sum(所有器件插入损耗去重)
+
+    来源: Soref 1993; SiEPIC EBeam PDK; Chrostowski & Hochberg 2015 §3.3
+    """
+    paths_out: list[dict] = []
+    total_waveguide_loss = 0.0
+    total_bends = 0
+    total_crossing_pairs = 0
+    for idx, raw in enumerate(raw_paths):
+        points = raw["points"]
+        n_bends = count_bends(points)
+        propagation_bend = _compute_path_loss(points, PROPAGATION_LOSS_DB_CM)
+        crossing_loss = crossing_counts[idx] * CROSSING_LOSS_DB
+        waveguide_loss = propagation_bend + crossing_loss
+        dev2 = device_map[raw["dev2"]]
+        dev2_insertion_loss = _get_device_insertion_loss(dev2)
+        loss_db = waveguide_loss + dev2_insertion_loss
+        paths_out.append({
+            "dev1": raw["dev1"], "port1": raw["port1"],
+            "dev2": raw["dev2"], "port2": raw["port2"],
+            "points": [[float(p[0]), float(p[1])] for p in points],
+            "loss_db": float(loss_db),
+            "n_bends": int(n_bends),
+            "n_crossings": int(crossing_counts[idx]),
+        })
+        total_waveguide_loss += waveguide_loss
+        total_bends += n_bends
+        total_crossing_pairs += crossing_counts[idx]
+    total_crossing_pairs //= 2
+    # 电路级器件插入损耗（device_map 已按器件名去重，含起始器件如 gc1）
+    total_device_insertion_loss = sum(
+        _get_device_insertion_loss(dev) for dev in device_map.values()
+    )
+    total_loss_db = total_waveguide_loss + total_device_insertion_loss
+    return paths_out, total_loss_db, total_bends, total_crossing_pairs
+
+
+def _route_first_pass(
+    circuit: dict, device_map: dict, placements: dict, router: CurvyRouter,
+) -> tuple[list[dict], list[list[tuple[float, float]]]]:
+    """第一遍: 解析所有连接生成路径点。
+
+    对每条 connection 调用 _route_resolve_connection 得到 raw_path 与 points。
+
+    Returns:
+        (raw_paths, path_points)
+    """
+    raw_paths: list[dict] = []
+    path_points: list[list[tuple[float, float]]] = []
+    for conn in circuit["connections"]:
+        raw_path, points = _route_resolve_connection(
+            conn, device_map, placements, router,
+        )
+        raw_paths.append(raw_path)
+        path_points.append(points)
+    return raw_paths, path_points
+
+
 def route_circuit(
     circuit: dict,
     placements: dict,
@@ -291,163 +415,35 @@ def route_circuit(
 
     损耗模型（R02 学术诚信，参数可溯源）:
     - 路径级 ``loss_db`` = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
-      （从 ``dev2.params.insertion_loss_db`` 提取，光经波导进入 dev2 的损耗）
     - 电路级 ``total_loss_db`` = sum(所有波导损耗) + sum(所有器件插入损耗去重)
-      （device_map 按器件名去重，含起始器件如 gc1，反映全电路光功率预算）
-    - 传播损耗 3.0 dB/cm（Soref 1993 SOI 上界），单弯 0.05 dB，
-      单次交叉 0.3 dB（SiEPIC EBeam PDK）
+    - 传播损耗 3.0 dB/cm（Soref 1993），单弯 0.05 dB，单次交叉 0.3 dB（SiEPIC）
 
     Args:
-        circuit: polaris-core 风格 circuit dict（含 name/devices/connections/
-            canvas_w/canvas_h）。每个 device 含 ports 列表
-            [(name, dx, dy, direction), ...]，params dict 可含
-            ``insertion_loss_db``（器件插入损耗 dB，无则视为 0）。
-        placements: polaris-place 输出的布局结果 {name: {x, y, w, h}}，
-            x/y 为器件左下角坐标 (μm)。
-        mode: 布线模式，目前支持 ``"curvy"``（曲线波导布线）。
+        circuit: polaris-core 风格 circuit dict。
+        placements: polaris-place 输出 {name: {x, y, w, h}}。
+        mode: 布线模式（"curvy"）。
 
     Returns:
-        布线结果 dict::
-
-            {
-                "paths": [
-                    {
-                        "dev1": str, "port1": str,
-                        "dev2": str, "port2": str,
-                        "points": list[[x, y], ...],  # 画布绝对坐标 (μm)
-                        "loss_db": float,             # 波导损耗+dev2插入损耗 (dB)
-                        "n_bends": int,               # 弯曲数
-                        "n_crossings": int,           # 该路径与其他路径的交叉数
-                    },
-                    ...
-                ],
-                "total_loss_db": float,  # 所有波导损耗+所有器件插入损耗(去重) (dB)
-                "n_crossings": int,      # 总交叉对数（去重）
-                "n_bends": int,          # 所有路径弯曲数之和
-                "router_type": str,      # 布线器类型（"curvy"）
-            }
+        布线结果 dict: {paths, total_loss_db, n_crossings, n_bends, router_type}
 
     Raises:
-        RuntimeError: mode 非法 / circuit 结构非法 / placements 结构非法 /
-            端口未找到 / 连接引用的器件不在 placements 中
-            （R03 禁止 fall-back）。
+        RuntimeError: mode 非法 / 结构非法 / 端口未找到（R03 禁止 fall-back）。
     """
     _validate_circuit(circuit)
     _validate_placements(placements)
-
     if mode not in _SUPPORTED_MODES:
         raise RuntimeError(
             f"不支持的布线模式: {mode}（可选: {_SUPPORTED_MODES}）"
         )
-
     device_map = _build_device_map(circuit)
     router = CurvyRouter()
-
-    # 第一遍: 生成所有路径点
-    raw_paths: list[dict] = []
-    path_points: list[list[tuple[float, float]]] = []
-    for conn in circuit["connections"]:
-        if not isinstance(conn, (list, tuple)) or len(conn) != 4:
-            raise RuntimeError(
-                f"connection 必须是长度 4 的 list/tuple "
-                f"[dev1, port1, dev2, port2]，得到: {conn}"
-                f"（R03 禁止 fall-back）"
-            )
-        dev1_name, port1_name, dev2_name, port2_name = conn
-
-        # 查找器件
-        if dev1_name not in device_map:
-            raise RuntimeError(
-                f"连接 {conn} 引用了不存在的器件: {dev1_name}"
-                f"（R03 禁止 fall-back）"
-            )
-        if dev2_name not in device_map:
-            raise RuntimeError(
-                f"连接 {conn} 引用了不存在的器件: {dev2_name}"
-                f"（R03 禁止 fall-back）"
-            )
-        if dev1_name not in placements:
-            raise RuntimeError(
-                f"连接 {conn} 的器件 {dev1_name} 不在 placements 中"
-                f"（R03 禁止 fall-back）"
-            )
-        if dev2_name not in placements:
-            raise RuntimeError(
-                f"连接 {conn} 的器件 {dev2_name} 不在 placements 中"
-                f"（R03 禁止 fall-back）"
-            )
-
-        # 查找端口
-        dev1 = device_map[dev1_name]
-        dev2 = device_map[dev2_name]
-        port1_dx, port1_dy, _dir1 = _find_port(dev1, port1_name)
-        port2_dx, port2_dy, _dir2 = _find_port(dev2, port2_name)
-
-        # 计算端口绝对坐标
-        start = _port_absolute_position(placements[dev1_name], port1_dx, port1_dy)
-        end = _port_absolute_position(placements[dev2_name], port2_dx, port2_dy)
-
-        # 生成曲线波导路径
-        points = router.route(start, end)
-        path_points.append(points)
-        raw_paths.append({
-            "dev1": dev1_name,
-            "port1": port1_name,
-            "dev2": dev2_name,
-            "port2": port2_name,
-            "points": points,
-        })
-
-    # 第二遍: 统计交叉数（每条路径与其他路径的交叉数）
-    crossing_counts = _count_path_crossings(path_points)
-
-    # 第三遍: 计算每条路径的损耗与弯曲数
-    # 损耗模型（R02 学术诚信，参数可溯源）:
-    # - 路径级 loss_db = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
-    #   光经波导进入 dev2 时的损耗归到该路径（dev2.params.insertion_loss_db）
-    # - 电路级 total_loss_db = sum(所有波导损耗) + sum(所有器件插入损耗去重)
-    #   device_map 已按器件名去重，故每个器件(含起始器件如 gc1)只算一次，
-    #   反映全电路光功率预算（Chrostowski & Hochberg 2015 §3.3 链路预算）
-    paths_out: list[dict] = []
-    total_waveguide_loss = 0.0
-    total_bends = 0
-    total_crossing_pairs = 0
-    for idx, raw in enumerate(raw_paths):
-        points = raw["points"]
-        n_bends = count_bends(points)
-        # 波导损耗 = 传播 + 弯曲 + 交叉（交叉损耗 0.3 dB/crossing）
-        propagation_bend = _compute_path_loss(points, PROPAGATION_LOSS_DB_CM)
-        crossing_loss = crossing_counts[idx] * CROSSING_LOSS_DB
-        waveguide_loss = propagation_bend + crossing_loss
-        # 终点器件插入损耗（光进入 dev2 时的损耗，从 params.insertion_loss_db 提取）
-        dev2 = device_map[raw["dev2"]]
-        dev2_insertion_loss = _get_device_insertion_loss(dev2)
-        # 路径级损耗 = 波导损耗 + 终点器件插入损耗
-        loss_db = waveguide_loss + dev2_insertion_loss
-
-        paths_out.append({
-            "dev1": raw["dev1"],
-            "port1": raw["port1"],
-            "dev2": raw["dev2"],
-            "port2": raw["port2"],
-            "points": [[float(p[0]), float(p[1])] for p in points],
-            "loss_db": float(loss_db),
-            "n_bends": int(n_bends),
-            "n_crossings": int(crossing_counts[idx]),
-        })
-        total_waveguide_loss += waveguide_loss
-        total_bends += n_bends
-        # 交叉对去重: 每对路径的交叉在 crossing_counts 中被两条路径各计一次
-        total_crossing_pairs += crossing_counts[idx]
-    total_crossing_pairs //= 2
-
-    # 电路级器件插入损耗（device_map 已按器件名去重，含起始器件如 gc1）
-    total_device_insertion_loss = sum(
-        _get_device_insertion_loss(dev) for dev in device_map.values()
+    raw_paths, path_points = _route_first_pass(
+        circuit, device_map, placements, router,
     )
-    # 电路级总损耗 = 所有波导损耗 + 所有器件插入损耗(去重)
-    total_loss_db = total_waveguide_loss + total_device_insertion_loss
-
+    crossing_counts = _count_path_crossings(path_points)
+    paths_out, total_loss_db, total_bends, total_crossing_pairs = (
+        _route_compute_losses(raw_paths, crossing_counts, device_map)
+    )
     return {
         "paths": paths_out,
         "total_loss_db": float(total_loss_db),
