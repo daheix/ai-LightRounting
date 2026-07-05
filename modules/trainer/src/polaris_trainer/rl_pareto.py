@@ -236,7 +236,9 @@ class MultiObjectiveParetoReward:
         delay = self.compute_delay(placement, circuit)
         loss = self.compute_loss(placement, circuit)
         xtalk = self.compute_xtalk(placement, circuit)
-        area_norm = area / (_CANVAS_SIZE_UM ** 2)
+        # canvas 尺寸动态读取（替代原硬编码 _CANVAS_SIZE_UM=3200.0，R05 Bug 必修）
+        canvas_size = _get_canvas_size(circuit)
+        area_norm = area / (canvas_size ** 2)
         w = self.config
         reward = -(
             w.w_area * area_norm + w.w_delay * delay + w.w_loss * loss + w.w_xtalk * xtalk
