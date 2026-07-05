@@ -465,6 +465,85 @@ def _detect_matrix_topology(placements: dict, circuit: dict) -> bool:
     return matched >= 4
 
 
+def _extract_matrix_grid_geometry(
+    placements: dict[str, dict[str, float]],
+    canvas_w: float,
+    canvas_h: float,
+) -> tuple | None:
+    """提取矩阵器件行列索引 + 计算网格几何。
+
+    返回 (rc_map, row_to_idx, col_to_idx, base_x, base_y, row_spacing, col_spacing)，
+    非矩阵拓扑（rc_map < 4）返回 None。
+    """
+    rc_map: dict[str, tuple[int, int]] = {}
+    for nm in placements.keys():
+        m = _MATRIX_NAME_PATTERN.search(str(nm))
+        if m:
+            rc_map[nm] = (int(m.group(1)), int(m.group(2)))
+    if len(rc_map) < 4:
+        return None
+    rows = sorted({r for r, _ in rc_map.values()})
+    cols = sorted({c for _, c in rc_map.values()})
+    row_to_idx = {r: i for i, r in enumerate(rows)}
+    col_to_idx = {c: i for i, c in enumerate(cols)}
+    max_w = max(float(pl["w"]) for pl in placements.values())
+    max_h = max(float(pl["h"]) for pl in placements.values())
+    row_spacing = max_h + _ALIGN_MIN_SPACING
+    col_spacing = max_w + _ALIGN_MIN_SPACING
+    grid_w = len(cols) * col_spacing
+    grid_h = len(rows) * row_spacing
+    base_x = max(0.0, (canvas_w - grid_w) / 2.0)
+    base_y = max(0.0, (canvas_h - grid_h) / 2.0)
+    return rc_map, row_to_idx, col_to_idx, base_x, base_y, row_spacing, col_spacing
+
+
+def _collect_connected_neighbors(circuit: dict) -> dict[str, set[str]]:
+    """收集直接连接的邻居（MIN_SPACING 跳过，与 DRC engine 一致）。"""
+    connected_neighbors: dict[str, set[str]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d1, d2 = str(conn[0]), str(conn[2])
+        connected_neighbors.setdefault(d1, set()).add(d2)
+        connected_neighbors.setdefault(d2, set()).add(d1)
+    return connected_neighbors
+
+
+def _place_matrix_devices(
+    placements: dict[str, dict[str, float]],
+    rc_map: dict[str, tuple[int, int]],
+    row_to_idx: dict, col_to_idx: dict,
+    base_x: float, base_y: float,
+    row_spacing: float, col_spacing: float,
+    canvas_w: float, canvas_h: float,
+    connected_neighbors: dict[str, set[str]],
+) -> None:
+    """按行列索引顺序放置矩阵器件（冲突跳过，保持原位由后续 zigzag 处理）。"""
+    sorted_names = sorted(
+        rc_map.keys(),
+        key=lambda nm: (row_to_idx[rc_map[nm][0]], col_to_idx[rc_map[nm][1]])
+    )
+    for nm in sorted_names:
+        r, c = rc_map[nm]
+        ri = row_to_idx[r]
+        ci = col_to_idx[c]
+        target_x = base_x + ci * col_spacing
+        target_y = base_y + ri * row_spacing
+        w = float(placements[nm]["w"])
+        h = float(placements[nm]["h"])
+        if target_x < 0.0 or target_x + w > canvas_w:
+            continue
+        if target_y < 0.0 or target_y + h > canvas_h:
+            continue
+        if not _no_overlap_at(
+            placements, nm, target_x, target_y, w, h,
+            connected_neighbors.get(nm, set()),
+        ):
+            continue
+        placements[nm]["x"] = target_x
+        placements[nm]["y"] = target_y
+
+
 def _align_matrix_grid(
     placements: dict[str, dict[str, float]],
     circuit: dict,
@@ -515,68 +594,15 @@ def _align_matrix_grid(
         - Kahng & Lienig "VLSI Placement" IEEE TCAD 2009
           https://ieeexplore.ieee.org/document/4685534
     """
-    # 提取每个器件的 (row, col)
-    rc_map: dict[str, tuple[int, int]] = {}
-    for nm in placements.keys():
-        m = _MATRIX_NAME_PATTERN.search(str(nm))
-        if m:
-            rc_map[nm] = (int(m.group(1)), int(m.group(2)))
-    if len(rc_map) < 4:
+    geometry = _extract_matrix_grid_geometry(placements, canvas_w, canvas_h)
+    if geometry is None:
         return  # 非矩阵型拓扑，跳过
-
-    rows = sorted({r for r, _ in rc_map.values()})
-    cols = sorted({c for _, c in rc_map.values()})
-    # 行列重映射为密集索引（避免稀疏索引导致网格过大）
-    row_to_idx = {r: i for i, r in enumerate(rows)}
-    col_to_idx = {c: i for i, c in enumerate(cols)}
-
-    # 计算行列间距（取最大器件尺寸 + MIN_SPACING，确保无重叠）
-    max_w = max(float(pl["w"]) for pl in placements.values())
-    max_h = max(float(pl["h"]) for pl in placements.values())
-    row_spacing = max_h + _ALIGN_MIN_SPACING
-    col_spacing = max_w + _ALIGN_MIN_SPACING
-
-    # 网格总尺寸与基准位置（居中，确保不超边界）
-    grid_w = len(cols) * col_spacing
-    grid_h = len(rows) * row_spacing
-    base_x = max(0.0, (canvas_w - grid_w) / 2.0)
-    base_y = max(0.0, (canvas_h - grid_h) / 2.0)
-
-    # 收集直接连接的邻居（MIN_SPACING 跳过，与 DRC engine 一致）
-    connected_neighbors: dict[str, set[str]] = {}
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d1, d2 = str(conn[0]), str(conn[2])
-        connected_neighbors.setdefault(d1, set()).add(d2)
-        connected_neighbors.setdefault(d2, set()).add(d1)
-
-    # 按行列索引顺序放置（避免后续器件与已放置器件冲突）
-    sorted_names = sorted(
-        rc_map.keys(),
-        key=lambda nm: (row_to_idx[rc_map[nm][0]], col_to_idx[rc_map[nm][1]])
+    rc_map, row_to_idx, col_to_idx, base_x, base_y, row_spacing, col_spacing = geometry
+    connected_neighbors = _collect_connected_neighbors(circuit)
+    _place_matrix_devices(
+        placements, rc_map, row_to_idx, col_to_idx, base_x, base_y,
+        row_spacing, col_spacing, canvas_w, canvas_h, connected_neighbors,
     )
-    for nm in sorted_names:
-        r, c = rc_map[nm]
-        ri = row_to_idx[r]
-        ci = col_to_idx[c]
-        target_x = base_x + ci * col_spacing
-        target_y = base_y + ri * row_spacing
-        w = float(placements[nm]["w"])
-        h = float(placements[nm]["h"])
-        # 边界检查
-        if target_x < 0.0 or target_x + w > canvas_w:
-            continue
-        if target_y < 0.0 or target_y + h > canvas_h:
-            continue
-        # 重叠/间距检查（冲突则跳过，保持原位由后续 zigzag 处理）
-        if not _no_overlap_at(
-            placements, nm, target_x, target_y, w, h,
-            connected_neighbors.get(nm, set()),
-        ):
-            continue
-        placements[nm]["x"] = target_x
-        placements[nm]["y"] = target_y
 
 
 def _align_ports(
