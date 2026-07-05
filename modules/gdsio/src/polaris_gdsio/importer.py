@@ -59,6 +59,41 @@ _DEFAULT_LAYER_MAP: dict[tuple[int, int], str] = {
 }
 
 
+def _collect_layer_info(ly: Any) -> list[dict[str, Any]]:
+    """收集 GDSII 所有层的形状计数 + polaris 名称映射（Extract Method，R11）。
+
+    Args:
+        ly: klayout.db.Layout 对象。
+
+    Returns:
+        list[dict]，每项含 gds_layer/gds_datatype/polaris_name/n_shapes。
+    """
+    layer_shape_count: dict[tuple[int, int], int] = {}
+    for ci in range(ly.cells()):
+        cell = ly.cell(ci)
+        for li in ly.layer_indices():
+            info = ly.get_info(li)
+            key = (int(info.layer), int(info.datatype))
+            cnt = 0
+            for _shape in cell.shapes(li).each():
+                cnt += 1
+            if cnt > 0:
+                layer_shape_count[key] = layer_shape_count.get(key, 0) + cnt
+
+    layers: list[dict[str, Any]] = []
+    for (gl, gd), n_shapes in sorted(layer_shape_count.items()):
+        polaris_name = _DEFAULT_LAYER_MAP.get(
+            (gl, gd), f"LAYER_{gl}_{gd}"
+        )
+        layers.append({
+            "gds_layer": gl,
+            "gds_datatype": gd,
+            "polaris_name": polaris_name,
+            "n_shapes": n_shapes,
+        })
+    return layers
+
+
 def import_gds(gds_path: str) -> dict[str, Any]:
     """从 GDSII 文件导入，返回结构化信息（兼容 gdsfactory 输出格式）。
 
@@ -100,30 +135,7 @@ def import_gds(gds_path: str) -> dict[str, Any]:
         raise RuntimeError(f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空")
     top_cell = top_cells[0]
 
-    # 收集所有层的形状计数
-    layer_shape_count: dict[tuple[int, int], int] = {}
-    for ci in range(ly.cells()):
-        cell = ly.cell(ci)
-        for li in ly.layer_indices():
-            info = ly.get_info(li)
-            key = (int(info.layer), int(info.datatype))
-            cnt = 0
-            for _shape in cell.shapes(li).each():
-                cnt += 1
-            if cnt > 0:
-                layer_shape_count[key] = layer_shape_count.get(key, 0) + cnt
-
-    layers = []
-    for (gl, gd), n_shapes in sorted(layer_shape_count.items()):
-        polaris_name = _DEFAULT_LAYER_MAP.get(
-            (gl, gd), f"LAYER_{gl}_{gd}"
-        )
-        layers.append({
-            "gds_layer": gl,
-            "gds_datatype": gd,
-            "polaris_name": polaris_name,
-            "n_shapes": n_shapes,
-        })
+    layers = _collect_layer_info(ly)
 
     # 顶层 cell bbox（dbu → μm）
     bbox = top_cell.bbox()
