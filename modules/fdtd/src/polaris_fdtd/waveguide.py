@@ -81,6 +81,85 @@ def _build_waveguide_eps(
     return eps
 
 
+def _simulate_waveguide_validate(
+    dx_um: float, n_steps: int, wavelength_um: float,
+    nx: int, ny: int, nz: int, pml_layers: int,
+) -> tuple[int, int, int, int]:
+    """校验 simulate_waveguide_fdtd 输入并计算波导芯边界（R03/R05）。
+
+    Returns:
+        (wg_y0, wg_y1, wg_z0, wg_z1) 波导芯 y/z 边界。
+    """
+    if dx_um <= 0:
+        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
+    if n_steps <= 0:
+        raise ValueError(f"n_steps 须 > 0，得到 {n_steps}")
+    if wavelength_um <= 0:
+        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
+    if pml_layers * 2 >= min(nx, ny, nz):
+        raise ValueError(
+            f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
+        )
+    # R05: 波导芯居中，距 PML 至少 4 格（Taflove 2005 §7.6.2）
+    wg_y0, wg_y1 = ny // 2 - 2, ny // 2 + 2  # 4 格宽
+    wg_z0, wg_z1 = nz // 2 - 1, nz // 2 + 1  # 2 格厚
+    if wg_y0 - pml_layers < 2 or (ny - pml_layers) - wg_y1 < 2:
+        raise ValueError(
+            f"波导芯 y=[{wg_y0},{wg_y1}] 距 PML(y=[0,{pml_layers}]/"
+            f"[{ny-pml_layers},{ny}]) 不足 2 格（R05）"
+        )
+    if wg_z0 - pml_layers < 2 or (nz - pml_layers) - wg_z1 < 2:
+        raise ValueError(
+            f"波导芯 z=[{wg_z0},{wg_z1}] 距 PML(z=[0,{pml_layers}]/"
+            f"[{nz-pml_layers},{nz}]) 不足 2 格（R05）"
+        )
+    return wg_y0, wg_y1, wg_z0, wg_z1
+
+
+def _simulate_waveguide_setup_source_monitor(
+    nx: int, ny: int, nz: int, pml_layers: int,
+) -> tuple[tuple[int, int, int], tuple[int, int, int]]:
+    """计算源/监视器位置（距 PML 至少 2 格，置于波导芯中心）。
+
+    Returns:
+        (source_pos, monitor_pos)。
+
+    Raises:
+        ValueError: monitor x <= source x。
+    """
+    source_pos = (pml_layers + 2, ny // 2, nz // 2)
+    monitor_pos = (nx - pml_layers - 3, ny // 2, nz // 2)
+    if monitor_pos[0] <= source_pos[0]:
+        raise ValueError(
+            f"监视器 x={monitor_pos[0]} 须 > 源 x={source_pos[0]}（R05）"
+        )
+    return source_pos, monitor_pos
+
+
+def _simulate_waveguide_compute_transmission(
+    mon_sig: np.ndarray, src_wave: np.ndarray,
+) -> tuple[float, float]:
+    """计算传输率（双监视器比值法，Taflove 2005 §5.3）。
+
+    Returns:
+        (t_fdtd, transmission_db)。
+    """
+    # R03: NaN 校验
+    if np.any(np.isnan(mon_sig)):
+        raise RuntimeError(
+            "FDTD 监视器信号含 NaN（R03 禁止 fall-back）"
+        )
+    p_monitor = float(np.max(np.abs(mon_sig) ** 2))
+    p_source = float(np.max(np.abs(src_wave) ** 2))
+    if p_source <= 0:
+        raise RuntimeError(
+            f"源功率 {p_source} <= 0，传输率无法计算（R03 禁止 fall-back）"
+        )
+    t_fdtd = p_monitor / p_source
+    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
+    return t_fdtd, transmission_db
+
+
 def simulate_waveguide_fdtd(
     dx_um: float = 0.05,
     n_steps: int = 2000,
@@ -115,51 +194,22 @@ def simulate_waveguide_fdtd(
         ValueError: 参数非法（R03 禁止 fall-back）。
         RuntimeError: 仿真结果含 NaN（R03 禁止 fall-back）。
     """
-    if dx_um <= 0:
-        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
-    if n_steps <= 0:
-        raise ValueError(f"n_steps 须 > 0，得到 {n_steps}")
-    if wavelength_um <= 0:
-        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
-    if pml_layers * 2 >= min(nx, ny, nz):
-        raise ValueError(
-            f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
-        )
-
-    # R05: 波导芯居中，距 PML 至少 4 格（Taflove 2005 §7.6.2）
-    wg_y0, wg_y1 = ny // 2 - 2, ny // 2 + 2  # 4 格宽
-    wg_z0, wg_z1 = nz // 2 - 1, nz // 2 + 1  # 2 格厚
-    if wg_y0 - pml_layers < 2 or (ny - pml_layers) - wg_y1 < 2:
-        raise ValueError(
-            f"波导芯 y=[{wg_y0},{wg_y1}] 距 PML(y=[0,{pml_layers}]/"
-            f"[{ny-pml_layers},{ny}]) 不足 2 格（R05）"
-        )
-    if wg_z0 - pml_layers < 2 or (nz - pml_layers) - wg_z1 < 2:
-        raise ValueError(
-            f"波导芯 z=[{wg_z0},{wg_z1}] 距 PML(z=[0,{pml_layers}]/"
-            f"[{nz-pml_layers},{nz}]) 不足 2 格（R05）"
-        )
-
+    wg_y0, wg_y1, wg_z0, wg_z1 = _simulate_waveguide_validate(
+        dx_um, n_steps, wavelength_um, nx, ny, nz, pml_layers,
+    )
     dx_m = dx_um * 1e-6
     eps_r = _build_waveguide_eps(
         nx, ny, nz, (wg_y0, wg_y1), (wg_z0, wg_z1),
         SOI_EPS_R_SI, SOI_EPS_R_SIO2,
     )
-
     grid = YeeGrid3D(nx, ny, nz, dx_m, dx_m, dx_m, epsilon_r=eps_r)
     pml = GedneyPML(grid, n_layers=pml_layers, eps_r_bg=SOI_EPS_R_SIO2)
     fdtd = DifferentiableFDTD(grid, pml=pml, eps_r_bg=SOI_EPS_R_SIO2)
-
     # 源频率: f = c/λ（1550nm → 193.4 THz）
     source_freq = C0 / (wavelength_um * 1e-6)
-    # R05: 源/监视器距 PML 至少 2 格，置于波导芯中心
-    source_pos = (pml_layers + 2, ny // 2, nz // 2)
-    monitor_pos = (nx - pml_layers - 3, ny // 2, nz // 2)
-    if monitor_pos[0] <= source_pos[0]:
-        raise ValueError(
-            f"监视器 x={monitor_pos[0]} 须 > 源 x={source_pos[0]}（R05）"
-        )
-
+    source_pos, monitor_pos = _simulate_waveguide_setup_source_monitor(
+        nx, ny, nz, pml_layers,
+    )
     t0 = time.time()
     # R05: 注入/监视 Ey（准 TE 横向分量），避免注入 Ex（纵向）形成驻波
     # 来源: Taflove 2005 §5.3（模式激发需用横向分量）
@@ -168,26 +218,11 @@ def simulate_waveguide_fdtd(
         source_component="Ey", monitor_component="Ey",
     )
     duration = float(time.time() - t0)
-
     mon_sig = np.asarray(result["monitor_signal"])
     src_wave = np.asarray(fdtd._build_source_waveform(n_steps, source_freq))
-
-    # R03: NaN 校验
-    if np.any(np.isnan(mon_sig)):
-        raise RuntimeError(
-            f"FDTD 监视器信号含 NaN（R03 禁止 fall-back）"
-        )
-
-    # 传输率: 双监视器比值法（Taflove 2005 §5.3）
-    p_monitor = float(np.max(np.abs(mon_sig) ** 2))
-    p_source = float(np.max(np.abs(src_wave) ** 2))
-    if p_source <= 0:
-        raise RuntimeError(
-            f"源功率 {p_source} <= 0，传输率无法计算（R03 禁止 fall-back）"
-        )
-    t_fdtd = p_monitor / p_source
-    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
-
+    t_fdtd, transmission_db = _simulate_waveguide_compute_transmission(
+        mon_sig, src_wave,
+    )
     return {
         "transmission_db": transmission_db,
         "T_fdtd": float(t_fdtd),
