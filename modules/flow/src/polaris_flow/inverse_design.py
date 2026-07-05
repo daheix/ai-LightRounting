@@ -343,49 +343,78 @@ class GANInverseDesigner:
         lam = 10.0  # GP 权重（Gulrajani 2017 默认 λ=10）
         # ===== 判别器训练（WGAN: 5 次 critic 更新，Arjovsky 2017）=====
         for _ in range(5):
-            z = rng.standard_normal((bs, self.config.latent_dim))
-            # G 前向（detach 等价：仅用 fake_f 数值，不传梯度到 G）
-            hg = np.maximum(0, z @ self.G_W1 + self.G_b1)
-            fake = 1.0 / (1.0 + np.exp(-(hg @ self.G_W2 + self.G_b2)))
-            fake_f = fake.reshape(bs, -1)  # [bs, n]
-            # D 前向（real + fake，缓存中间值供反向）
-            hr = np.maximum(0, real @ self.D_W1 + self.D_b1)
-            d_real = hr @ self.D_W2 + self.D_b2  # [bs, 1]
-            hf = np.maximum(0, fake_f @ self.D_W1 + self.D_b1)
-            d_fake = hf @ self.D_W2 + self.D_b2
-            d_loss = float(np.mean(d_fake) - np.mean(d_real))
-            # D 主损失反向: ∂(mean(D(fake))-mean(D(real)))/∂D_params
-            gf = np.ones_like(d_fake) / bs
-            gr = -np.ones_like(d_real) / bs
-            gW2 = hf.T @ gf + hr.T @ gr
-            gb2 = gf.sum(0) + gr.sum(0)
-            gp_f = gf @ self.D_W2.T * (hf > 0)  # [bs, hidden]
-            gp_r = gr @ self.D_W2.T * (hr > 0)
-            gW1 = fake_f.T @ gp_f + real.T @ gp_r  # [n, hidden]
-            gb1 = gp_f.sum(0) + gp_r.sum(0)
-            # 梯度惩罚 GP（解析梯度，Gulrajani 2017 Eq.(3)）
-            eps_ = rng.uniform(0, 1, (bs, 1))
-            interp = eps_ * real + (1 - eps_) * fake_f
-            hi = np.maximum(0, interp @ self.D_W1 + self.D_b1)
-            mask_i = (hi > 0).astype(np.float64)
-            w2_col = self.D_W2[:, 0]  # [hidden]
-            gw = mask_i * w2_col  # [bs, hidden]
-            g_all = gw @ self.D_W1.T  # [bs, n] = ∇_interp D per sample
-            g_norm = np.linalg.norm(g_all, axis=1)  # [bs]
-            gp_val = float(np.mean((g_norm - 1.0) ** 2))
-            gn_safe = np.where(g_norm > 1e-12, g_norm, 1e-12)
-            beta = 2.0 * (g_norm - 1.0) / gn_safe  # [bs]
-            gp_gW1 = (beta[:, None] * g_all).T @ gw / bs  # ∂GP/∂D_W1 [n, hidden]
-            w1_g = g_all @ self.D_W1  # [bs, hidden]
-            gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs  # ∂GP/∂D_W2
-            # D 参数 step（主损失 + λ·GP，Adam 更新）
-            self._adam_update({
-                "D_W1": gW1 + lam * gp_gW1, "D_b1": gb1,
-                "D_W2": gW2 + lam * gp_gW2, "D_b2": gb2,
-            })
-            d_loss_sum += d_loss + lam * gp_val
+            d_loss, gp_val = self._train_discriminator_one_step(
+                real, rng, bs, lam,
+            )
+            d_loss_sum += d_loss
             gp_sum += gp_val
         # ===== 生成器训练: g_loss = -mean(D(G(z))) =====
+        g_loss = self._train_generator_one_step(rng, bs)
+        return {"d_loss": d_loss_sum / 5.0, "g_loss": g_loss, "gp": gp_sum / 5.0}
+
+    def _train_discriminator_one_step(
+        self,
+        real: np.ndarray,
+        rng: np.random.Generator,
+        bs: int,
+        lam: float,
+    ) -> tuple[float, float]:
+        """单步判别器训练（WGAN critic + GP，Extract Method，R11 质量门禁）。
+
+        来源: Gulrajani et al. 2017 NeurIPS, arXiv:1704.00028。
+        Returns: (d_loss_with_gp, gp_val)。
+        """
+        z = rng.standard_normal((bs, self.config.latent_dim))
+        # G 前向（detach 等价：仅用 fake_f 数值，不传梯度到 G）
+        hg = np.maximum(0, z @ self.G_W1 + self.G_b1)
+        fake = 1.0 / (1.0 + np.exp(-(hg @ self.G_W2 + self.G_b2)))
+        fake_f = fake.reshape(bs, -1)  # [bs, n]
+        # D 前向（real + fake，缓存中间值供反向）
+        hr = np.maximum(0, real @ self.D_W1 + self.D_b1)
+        d_real = hr @ self.D_W2 + self.D_b2  # [bs, 1]
+        hf = np.maximum(0, fake_f @ self.D_W1 + self.D_b1)
+        d_fake = hf @ self.D_W2 + self.D_b2
+        d_loss = float(np.mean(d_fake) - np.mean(d_real))
+        # D 主损失反向: ∂(mean(D(fake))-mean(D(real)))/∂D_params
+        gf = np.ones_like(d_fake) / bs
+        gr = -np.ones_like(d_real) / bs
+        gW2 = hf.T @ gf + hr.T @ gr
+        gb2 = gf.sum(0) + gr.sum(0)
+        gp_f = gf @ self.D_W2.T * (hf > 0)  # [bs, hidden]
+        gp_r = gr @ self.D_W2.T * (hr > 0)
+        gW1 = fake_f.T @ gp_f + real.T @ gp_r  # [n, hidden]
+        gb1 = gp_f.sum(0) + gp_r.sum(0)
+        # 梯度惩罚 GP（解析梯度，Gulrajani 2017 Eq.(3)）
+        eps_ = rng.uniform(0, 1, (bs, 1))
+        interp = eps_ * real + (1 - eps_) * fake_f
+        hi = np.maximum(0, interp @ self.D_W1 + self.D_b1)
+        mask_i = (hi > 0).astype(np.float64)
+        w2_col = self.D_W2[:, 0]  # [hidden]
+        gw = mask_i * w2_col  # [bs, hidden]
+        g_all = gw @ self.D_W1.T  # [bs, n] = ∇_interp D per sample
+        g_norm = np.linalg.norm(g_all, axis=1)  # [bs]
+        gp_val = float(np.mean((g_norm - 1.0) ** 2))
+        gn_safe = np.where(g_norm > 1e-12, g_norm, 1e-12)
+        beta = 2.0 * (g_norm - 1.0) / gn_safe  # [bs]
+        gp_gW1 = (beta[:, None] * g_all).T @ gw / bs  # ∂GP/∂D_W1 [n, hidden]
+        w1_g = g_all @ self.D_W1  # [bs, hidden]
+        gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs  # ∂GP/∂D_W2
+        # D 参数 step（主损失 + λ·GP，Adam 更新）
+        self._adam_update({
+            "D_W1": gW1 + lam * gp_gW1, "D_b1": gb1,
+            "D_W2": gW2 + lam * gp_gW2, "D_b2": gb2,
+        })
+        return d_loss + lam * gp_val, gp_val
+
+    def _train_generator_one_step(
+        self,
+        rng: np.random.Generator,
+        bs: int,
+    ) -> float:
+        """单步生成器训练: g_loss = -mean(D(G(z)))（Extract Method，R11 质量门禁）。
+
+        来源: Gulrajani et al. 2017 NeurIPS, arXiv:1704.00028。
+        """
         z = rng.standard_normal((bs, self.config.latent_dim))
         hg = np.maximum(0, z @ self.G_W1 + self.G_b1)
         sig = 1.0 / (1.0 + np.exp(-(hg @ self.G_W2 + self.G_b2)))
@@ -406,7 +435,7 @@ class GANInverseDesigner:
         self._adam_update({
             "G_W1": gG_W1, "G_b1": gG_b1, "G_W2": gG_W2, "G_b2": gG_b2,
         })
-        return {"d_loss": d_loss_sum / 5.0, "g_loss": g_loss, "gp": gp_sum / 5.0}
+        return g_loss
 
     def design(self, target_spec: dict) -> dict:
         """执行 GAN 逆向设计。Returns: {shape, performance, history}。
