@@ -235,6 +235,56 @@ def _adam_step(
     return new_pos, new_m, new_v
 
 
+def _adaptive_canvas_density(
+    circuit: dict, canvas_w: float, canvas_h: float,
+    widths: np.ndarray, heights: np.ndarray,
+) -> tuple[float, float]:
+    """*创新* DENSITY_MIN 自适应画布（R02 学术诚信，参数可溯源）。
+
+    根据器件总面积动态调整画布尺寸，保证密度在 20%-80% 合理范围。
+    in-place 更新 circuit["canvas_w"]/["canvas_h"]。
+
+    来源:
+      - DREAMPlace TCAD 2020 密度惩罚自适应 https://arxiv.org/abs/2004.10746
+      - SiEPIC EBeam PDK DENSITY_MAX 80% 工艺上限
+        https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+      - Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度 30%-70%）
+      - Chrostowski & Hochberg 2015 §10 多模块集成大画布器件密度天然低
+    """
+    total_area = float(np.sum(widths * heights))
+    canvas_area = canvas_w * canvas_h
+    if canvas_area <= 0 or total_area <= 0:
+        return canvas_w, canvas_h
+    density = total_area / canvas_area
+    # DENSITY_MAX 80% 阈值，安全余量 0.5（50%）触发扩大
+    if density > 0.5:
+        target_area = total_area * 3.0  # 密度 ≈ 33%
+        scale = (target_area / canvas_area) ** 0.5
+        canvas_w = canvas_w * scale
+        canvas_h = canvas_h * scale
+        circuit["canvas_w"] = float(canvas_w)
+        circuit["canvas_h"] = float(canvas_h)
+    return canvas_w, canvas_h
+
+
+def _centers_to_placements(
+    centers: dict, names: list, widths: np.ndarray, heights: np.ndarray,
+    canvas_w: float, canvas_h: float,
+) -> dict[str, dict[str, float]]:
+    """中心坐标 → 左下角坐标（与 polaris_placement_t 一致），含边界裁剪。"""
+    placements: dict[str, dict[str, float]] = {}
+    for i, nm in enumerate(names):
+        cx, cy = centers[nm]
+        w = float(widths[i])
+        h = float(heights[i])
+        x = cx - w / 2.0
+        y = cy - h / 2.0
+        x = max(0.0, min(x, canvas_w - w))
+        y = max(0.0, min(y, canvas_h - h))
+        placements[nm] = {"x": x, "y": y, "w": w, "h": h}
+    return placements
+
+
 def place_analytical(
     circuit: dict,
     config: AnalyticalConfig | None = None,
@@ -245,9 +295,7 @@ def place_analytical(
     → 中心坐标转左下角坐标 → 端口对齐后处理（*创新*）。
 
     *创新*（DENSITY_MIN 自适应画布）: 根据器件总面积动态调整画布尺寸，
-    保证密度在合理范围（20%-80%），避免 DENSITY_MAX 违规（lidar 大电路）
-    和 DENSITY_MIN 违规（小器件大画布）。底层逻辑: DREAMPlace 密度惩罚
-    自适应（TCAD 2020），SiEPIC EBeam PDK DENSITY_MAX 80% 工艺上限。
+    保证密度在合理范围（20%-80%），避免 DENSITY_MAX 违规和 DENSITY_MIN 违规。
 
     Args:
         circuit: polaris-core 风格 circuit dict（canvas_w/canvas_h 可能被
@@ -255,8 +303,7 @@ def place_analytical(
         config: 布局器配置（None 用默认）。
 
     Returns:
-        布局字典 ``{name: {x, y, w, h}}``，``x, y`` 为左下角坐标（μm），
-        ``w, h`` 为器件宽高。保证无重叠且在画布内。
+        布局字典 ``{name: {x, y, w, h}}``，``x, y`` 为左下角坐标（μm）。
 
     Raises:
         RuntimeError: circuit 结构非法或优化发散（R03 禁止 fall-back）。
@@ -266,42 +313,14 @@ def place_analytical(
     n = len(names)
     if n == 0:
         return {}
-
-    # *创新* DENSITY_MIN 自适应画布（R02 学术诚信，参数可溯源）
-    # 根据器件总面积动态调整画布尺寸，保证密度在 20%-80% 合理范围。
-    # 来源:
-    #   - DREAMPlace TCAD 2020 密度惩罚自适应
-    #     https://arxiv.org/abs/2004.10746
-    #   - SiEPIC EBeam PDK DENSITY_MAX 80% 工艺上限
-    #     https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-    #   - Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度 30%-70%）
-    #   - Chrostowski & Hochberg 2015 §10 多模块集成大画布器件密度天然低
-    # 算法:
-    #   1. 计算器件总面积 total_area = Σ(width_i × height_i)
-    #   2. 当前密度 density = total_area / canvas_area
-    #   3. 若 density > 0.5（接近 DENSITY_MAX 80% 安全余量），
-    #      扩大画布使 density ≈ 0.33（target_area = total_area × 3）
-    #   4. in-place 更新 circuit["canvas_w"]/["canvas_h"]，供 route/drc 使用
-    total_area = float(np.sum(widths * heights))
-    canvas_area = canvas_w * canvas_h
-    if canvas_area > 0 and total_area > 0:
-        density = total_area / canvas_area
-        # DENSITY_MAX 80% 阈值，安全余量 0.5（50%）触发扩大
-        if density > 0.5:
-            target_area = total_area * 3.0  # 密度 ≈ 33%
-            scale = (target_area / canvas_area) ** 0.5
-            canvas_w = canvas_w * scale
-            canvas_h = canvas_h * scale
-            # in-place 更新 circuit 画布尺寸，供后续 stage (route/drc) 使用
-            circuit["canvas_w"] = float(canvas_w)
-            circuit["canvas_h"] = float(canvas_h)
-
+    canvas_w, canvas_h = _adaptive_canvas_density(
+        circuit, canvas_w, canvas_h, widths, heights
+    )
     # 1. 初始布局
     pos = _initial_placement(n, connections, canvas_w, canvas_h, cfg.seed)
     m = np.zeros_like(pos)
     v = np.zeros_like(pos)
     prev_hpwl = float("inf")
-
     # 2. 梯度下降主循环
     for t in range(1, cfg.max_iterations + 1):
         hpwl_grad = _smooth_hpwl_gradient(pos, connections, cfg.gamma)
@@ -315,25 +334,12 @@ def place_analytical(
             if abs(prev_hpwl - cur_hpwl) < cfg.convergence_threshold:
                 break
             prev_hpwl = cur_hpwl
-
-    # 3. FFDH 合法化（消除重叠 + 保证信号流方向 x 递增）
+    # 3. FFDH 合法化
     centers = _legalize(pos, widths, heights, names, canvas_w, connections)
-
-    # 4. 中心坐标 → 左下角坐标（与 polaris_placement_t 一致）
-    placements: dict[str, dict[str, float]] = {}
-    for i, nm in enumerate(names):
-        cx, cy = centers[nm]
-        w = float(widths[i])
-        h = float(heights[i])
-        x = cx - w / 2.0
-        y = cy - h / 2.0
-        # 边界裁剪（保证在画布内）
-        x = max(0.0, min(x, canvas_w - w))
-        y = max(0.0, min(y, canvas_h - h))
-        placements[nm] = {"x": x, "y": y, "w": w, "h": h}
-
+    # 4. 中心坐标 → 左下角坐标
+    placements = _centers_to_placements(
+        centers, names, widths, heights, canvas_w, canvas_h
+    )
     # 5. 端口对齐后处理（*创新*，减少 PORT_ALIGNMENT DRC 违规）
-    # FFDH 只保证无重叠和拓扑序，不考虑端口对齐；本步骤对每个连接调整
-    # 下游器件位置使端口对齐，重叠冲突时保持原位置（不破坏 FFDH 保证）
     placements = _align_ports(placements, circuit, canvas_w, canvas_h)
     return placements
