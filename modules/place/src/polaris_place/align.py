@@ -137,77 +137,11 @@ def _no_overlap_at(
     return True
 
 
-def _align_d2_global(
-    placements: dict[str, dict[str, float]],
-    d2_name: str,
-    d2_dev: dict,
-    incoming_conns: list[tuple],
-    device_map: dict[str, dict],
-    d2_connected: set[str],
-    canvas_w: float,
-    canvas_h: float,
-) -> None:
-    """对 d2 设备，考虑所有入向连接，全局搜索最优位置（*创新* + R05 修复）。
-
-    ## 核心问题（R05 Bug）
-
-    原算法（_align_ports 贪心逐连接对齐）的根因缺陷:
-    - dc3 有 2 个入向连接 ps1→dc3.in1 (dy=6.7, 通过) 和
-      ps2→dc3.in2 (dy=13, 失败)
-    - 处理 ps2→dc3.in2 时移动 dc3 使 dy=0，但破坏了 ps1→dc3.in1
-      (dy 变成 25.7 > tol)
-    - 贪心策略无法处理多端口器件的多连接同时对齐
-
-    ## 新算法（全局候选评估，*创新*）
-
-    1. 收集 d2 的所有入向连接，计算当前 dx/dy 和通过状态
-    2. 生成候选位置:
-       a. 当前位置（baseline，保证不劣化）
-       b. 每个连接的 x 完全对齐位置（保持 cur_y）
-       c. 每个连接的 y 完全对齐位置（保持 cur_x）
-       d. x 对齐 + 可行 y 范围交点（同时满足多连接的 dy ≤ tol）
-       e. y 对齐 + 可行 x 范围交点
-       f. 对每个候选，若重叠，用 _find_nearest_legal_pos_1d 找最近合法
-    3. 评估每个候选: 边界检查、NO_OVERLAP/MIN_SPACING、不破坏检查
-    4. 选择评分最高（同分选总偏差最小）的位置
-
-    ## 不破坏原则（R03 合规）
-
-    移动 d2 前验证所有当前通过的入向连接在新位置仍通过。若移动会破坏
-    任何已通过的连接，则拒绝该候选（保持原位是合法策略，非 fall-back）。
-
-    Args:
-        placements: 当前所有器件布局。
-        d2_name: 待对齐器件名。
-        d2_dev: d2 器件规格（含 ports）。
-        incoming_conns: d2 的所有入向连接列表。
-        device_map: 器件名 → 器件规格映射。
-        d2_connected: 与 d2 直接连接的器件名集合（MIN_SPACING 跳过）。
-        canvas_w, canvas_h: 画布尺寸。
-
-    来源（R02 学术诚信）:
-        - PORT_ALIGNMENT 规则: SiEPIC EBeam PDK DRC runset
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - 约束优化投影: Boyd & Vandenberghe "Convex Optimization" §4
-          https://web.stanford.edu/~boyd/cvxbook/
-        - AABB 碰撞检测: Ericson "Real-Time Collision Detection" §5.1.3
-          https://realtimecollisiondetection.net/
-        - DREAMPlace TCAD 2020（合法化在约束域内优化）
-          https://arxiv.org/abs/2004.10746
-        - 多端口器件对齐: Chrostowski & Hochberg "Silicon Photonics Design"
-          CUP 2015 §4.3 https://www.cambridge.org/core/books/silicon-photonics-design/
-        - Berg "Computational Geometry" Springer（区间合并求可行域）
-          https://doi.org/10.1007/978-3-540-77974-2
-    """
-    if not incoming_conns:
-        return
-
-    pl2 = placements[d2_name]
-    cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
-    w2, h2 = float(pl2["w"]), float(pl2["h"])
-    TOL = _ALIGN_PORT_TOL_UM
-
-    # 收集每个入向连接的端口信息
+def _collect_d2_conn_infos(
+    placements: dict, d2_name: str, d2_dev: dict,
+    incoming_conns: list, device_map: dict,
+) -> list:
+    """收集 d2 所有入向连接的端口绝对位置信息。"""
     conn_infos: list[dict] = []
     for conn in incoming_conns:
         d1_name = str(conn[0])
@@ -227,26 +161,18 @@ def _align_d2_global(
             "abs1_x": float(pl1["x"]) + port1[0],
             "abs1_y": float(pl1["y"]) + port1[1],
         })
+    return conn_infos
 
-    if not conn_infos:
-        return
 
-    def compute_devs(x: float, y: float) -> list[tuple[float, float]]:
-        return [
-            (abs(ci["abs1_x"] - (x + ci["port2_x"])),
-             abs(ci["abs1_y"] - (y + ci["port2_y"])))
-            for ci in conn_infos
-        ]
+def _gen_align_candidates(
+    conn_infos: list, cur_x: float, cur_y: float,
+    w2: float, h2: float, canvas_w: float, canvas_h: float, TOL: float,
+) -> list:
+    """生成对齐候选位置: 当前/x 对齐/y 对齐/x 对齐+y 可行域/y 对齐+x 可行域。
 
-    def is_pass(dx: float, dy: float) -> bool:
-        return dx <= TOL or dy <= TOL
-
-    cur_devs = compute_devs(cur_x, cur_y)
-    cur_passes = [is_pass(dx, dy) for dx, dy in cur_devs]
-    cur_score = sum(cur_passes)
-    cur_total_dev = sum(dx + dy for dx, dy in cur_devs)
-
-    # 生成候选位置
+    *创新*: x 对齐 + y 可行域交点，同时满足多连接 dy ≤ tol
+    （Boyd & Vandenberghe §4 区间投影 + Berg 区间合并）。
+    """
     raw_candidates: list[tuple[float, float]] = [(cur_x, cur_y)]
     for ci in conn_infos:
         # x 完全对齐（保持 cur_y）
@@ -255,8 +181,7 @@ def _align_d2_global(
         # y 完全对齐（保持 cur_x）
         ty = max(0.0, min(ci["abs1_y"] - ci["port2_y"], canvas_h - h2))
         raw_candidates.append((cur_x, ty))
-
-    # x 对齐 + 可行 y 范围交点（*创新*，同时满足多连接的 dy ≤ tol）
+    # x 对齐 + 可行 y 范围交点（*创新*，同时满足多连接 dy ≤ tol）
     for ci in conn_infos:
         tx = max(0.0, min(ci["abs1_x"] - ci["port2_x"], canvas_w - w2))
         y_lo, y_hi = -float("inf"), float("inf")
@@ -271,7 +196,6 @@ def _align_d2_global(
             if y_lo_c <= y_hi_c:
                 ty = max(y_lo_c, min(cur_y, y_hi_c))
                 raw_candidates.append((tx, ty))
-
     # y 对齐 + 可行 x 范围交点
     for ci in conn_infos:
         ty = max(0.0, min(ci["abs1_y"] - ci["port2_y"], canvas_h - h2))
@@ -287,8 +211,14 @@ def _align_d2_global(
             if x_lo_c <= x_hi_c:
                 tx = max(x_lo_c, min(cur_x, x_hi_c))
                 raw_candidates.append((tx, ty))
+    return raw_candidates
 
-    # 对每个候选，若重叠，尝试最近合法位置（扩展候选集）
+
+def _expand_candidates(
+    raw_candidates: list, placements: dict, d2_name: str,
+    w2: float, h2: float, canvas_w: float, canvas_h: float, d2_connected: set,
+) -> set:
+    """对每个候选，若重叠则尝试最近合法位置（扩展候选集）。"""
     expanded: set[tuple[float, float]] = set()
     for x, y in raw_candidates:
         expanded.add((round(x, 6), round(y, 6)))
@@ -302,11 +232,27 @@ def _align_d2_global(
         )
         if nx is not None:
             expanded.add((round(nx, 6), round(y, 6)))
+    return expanded
 
+
+def _select_best_d2_pos(
+    expanded: set, placements: dict, d2_name: str, w2: float, h2: float,
+    canvas_w: float, canvas_h: float, d2_connected: set, conn_infos: list,
+    cur_passes: list, cur_score: int, cur_total_dev: float, TOL: float,
+    cur_x: float, cur_y: float,
+) -> tuple:
+    """评估候选: 边界/重叠/不破坏原则，选评分最高且总偏差最小。"""
+    def compute_devs(x: float, y: float) -> list:
+        return [
+            (abs(ci["abs1_x"] - (x + ci["port2_x"])),
+             abs(ci["abs1_y"] - (y + ci["port2_y"])))
+            for ci in conn_infos
+        ]
+    def is_pass(dx: float, dy: float) -> bool:
+        return dx <= TOL or dy <= TOL
     best_pos = (cur_x, cur_y)
     best_score = cur_score
     best_total_dev = cur_total_dev
-
     for x, y in expanded:
         if x < 0.0 or x + w2 > canvas_w or y < 0.0 or y + h2 > canvas_h:
             continue
@@ -327,9 +273,149 @@ def _align_d2_global(
             best_score = score
             best_total_dev = total_dev
             best_pos = (x, y)
+    return best_pos
 
+
+def _align_d2_global(
+    placements: dict[str, dict[str, float]],
+    d2_name: str,
+    d2_dev: dict,
+    incoming_conns: list[tuple],
+    device_map: dict[str, dict],
+    d2_connected: set[str],
+    canvas_w: float,
+    canvas_h: float,
+) -> None:
+    """对 d2 设备全局搜索最优位置（*创新* + R05 修复多连接对齐）。
+
+    原 _align_ports 贪心逐连接对齐的根因缺陷: 多端口器件的多入向连接
+    （如 dc3.in1 已通过、dc3.in2 失败）逐个对齐时，对齐 dc3.in2 会破坏
+    dc3.in1（dy 变 25.7 > tol）。本函数用全局候选评估: 收集所有入向连接，
+    生成 5 类候选（当前/x 对齐/y 对齐/x 对齐+y 可行域/y 对齐+x 可行域），
+    对每个候选若重叠则用 _find_nearest_legal_pos_1d 找最近合法（扩展候选集），
+    评估时验证不破坏原则（当前通过的连接在新位置仍需通过），选评分最高
+    （同分选总偏差最小）位置。保持原位是合法策略，非 R03 fall-back。
+
+    子函数:
+        - _collect_d2_conn_infos: 收集入向连接端口绝对位置
+        - _gen_align_candidates: 5 类候选生成（含 *创新* x+y 可行域交点）
+        - _expand_candidates: 重叠时找最近合法位置扩展候选集
+        - _select_best_d2_pos: 评估候选（边界/重叠/不破坏），选最优
+
+    来源（R02）: SiEPIC EBeam PDK DRC runset PORT_ALIGNMENT
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK；
+    Boyd & Vandenberghe "Convex Optimization" §4
+    https://web.stanford.edu/~boyd/cvxbook/；
+    Ericson "Real-Time Collision Detection" §5.1.3
+    https://realtimecollisiondetection.net/；
+    DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746；
+    Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
+    https://www.cambridge.org/core/books/silicon-photonics-design/；
+    Berg "Computational Geometry" Springer（区间合并）
+    https://doi.org/10.1007/978-3-540-77974-2
+    """
+    if not incoming_conns:
+        return
+    pl2 = placements[d2_name]
+    cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
+    w2, h2 = float(pl2["w"]), float(pl2["h"])
+    TOL = _ALIGN_PORT_TOL_UM
+    conn_infos = _collect_d2_conn_infos(
+        placements, d2_name, d2_dev, incoming_conns, device_map
+    )
+    if not conn_infos:
+        return
+    # 当前通过状态与评分（baseline，保证不劣化）
+    cur_devs = [
+        (abs(ci["abs1_x"] - (cur_x + ci["port2_x"])),
+         abs(ci["abs1_y"] - (cur_y + ci["port2_y"])))
+        for ci in conn_infos
+    ]
+    cur_passes = [dx <= TOL or dy <= TOL for dx, dy in cur_devs]
+    cur_score = sum(cur_passes)
+    cur_total_dev = sum(dx + dy for dx, dy in cur_devs)
+    raw_candidates = _gen_align_candidates(
+        conn_infos, cur_x, cur_y, w2, h2, canvas_w, canvas_h, TOL
+    )
+    expanded = _expand_candidates(
+        raw_candidates, placements, d2_name, w2, h2, canvas_w, canvas_h,
+        d2_connected,
+    )
+    best_pos = _select_best_d2_pos(
+        expanded, placements, d2_name, w2, h2, canvas_w, canvas_h,
+        d2_connected, conn_infos, cur_passes, cur_score, cur_total_dev, TOL,
+        cur_x, cur_y,
+    )
     placements[d2_name]["x"] = best_pos[0]
     placements[d2_name]["y"] = best_pos[1]
+
+
+def _build_align_topology(placements: dict, circuit: dict) -> tuple:
+    """构建端口对齐所需的拓扑上下文: device_map / 拓扑序 / 邻居 / 入向连接。
+
+    - device_map: 器件名 → 器件规格（含 ports）
+    - depth: Tarjan SCC + Kahn 拓扑深度（含环安全，参考 _topological_depth）
+    - order / order_rev: 正/反向拓扑序（解决"下游阻挡上游"问题）
+    - connected_neighbors: 直接连接邻居（MIN_SPACING 跳过，与 DRC engine 一致）
+    - incoming_per_d2: 每个下游器件 d2 的入向连接列表
+    """
+    device_map: dict[str, dict] = {}
+    for dev in circuit.get("devices", []):
+        nm = dev.get("name")
+        if nm is not None:
+            device_map[nm] = dev
+    names = list(placements.keys())
+    name_to_idx = {nm: i for i, nm in enumerate(names)}
+    idx_conns: list[tuple[int, int]] = []
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d1, _p1, d2, _p2 = str(conn[0]), conn[1], str(conn[2]), conn[3]
+        if d1 in name_to_idx and d2 in name_to_idx:
+            idx_conns.append((name_to_idx[d1], name_to_idx[d2]))
+    depth = _topological_depth(len(names), idx_conns)
+    order = sorted(range(len(names)), key=lambda i: depth[i])
+    order_rev = list(reversed(order))  # 反向拓扑序（下游先处理，移开阻挡器件）
+    connected_neighbors: dict[str, set[str]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d1_name, d2_name_conn = str(conn[0]), str(conn[2])
+        connected_neighbors.setdefault(d1_name, set()).add(d2_name_conn)
+        connected_neighbors.setdefault(d2_name_conn, set()).add(d1_name)
+    incoming_per_d2: dict[str, list[tuple]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d2_name_conn = str(conn[2])
+        if d2_name_conn in placements:
+            incoming_per_d2.setdefault(d2_name_conn, []).append(tuple(conn))
+    return (names, device_map, order, order_rev,
+            connected_neighbors, incoming_per_d2)
+
+
+def _run_align_zigzag_pass(
+    placements: dict, names: list, pass_order: list, device_map: dict,
+    connected_neighbors: dict, incoming_per_d2: dict,
+    canvas_w: float, canvas_h: float,
+) -> None:
+    """单趟 zigzag 对齐: 按 pass_order 遍历器件，逐个调用 _align_d2_global。
+
+    不破坏原则保证每趟不劣化（score 单调非减）。
+    """
+    for i in pass_order:
+        d2_name = names[i]
+        if d2_name not in placements:
+            continue
+        d2_dev = device_map.get(d2_name, {})
+        d2_connected = connected_neighbors.get(d2_name, set())
+        incoming = incoming_per_d2.get(d2_name, [])
+        if not incoming:
+            continue
+        _align_d2_global(
+            placements, d2_name, d2_dev, incoming, device_map,
+            d2_connected, canvas_w, canvas_h,
+        )
 
 
 def _align_ports(
@@ -350,10 +436,6 @@ def _align_ports(
     2. 对每个 d2 设备，收集所有入向连接，调用 _align_d2_global
     3. 多趟 zigzag（正向→反向→正向），解决"下游阻挡上游"问题
     4. 第 4 趟残余违规成对双向修复（_residual_pair_fix）
-
-    ## 不破坏原则（R03 合规）
-
-    移动 d2 前验证所有当前通过的入向连接在新位置仍通过，否则拒绝该候选。
 
     ## *创新点*
 
@@ -386,70 +468,20 @@ def _align_ports(
     """
     if not placements:
         return placements
-
     # 延迟导入避免与 residual.py 形成循环导入
     from polaris_place.residual import _residual_pair_fix
-
-    # 构建器件名 → 器件规格映射（含 ports）
-    device_map: dict[str, dict] = {}
-    for dev in circuit.get("devices", []):
-        nm = dev.get("name")
-        if nm is not None:
-            device_map[nm] = dev
-
-    # 拓扑顺序（保证上游先固定，下游对齐到上游）
-    names = list(placements.keys())
-    name_to_idx = {nm: i for i, nm in enumerate(names)}
-    idx_conns: list[tuple[int, int]] = []
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d1, _p1, d2, _p2 = str(conn[0]), conn[1], str(conn[2]), conn[3]
-        if d1 in name_to_idx and d2 in name_to_idx:
-            idx_conns.append((name_to_idx[d1], name_to_idx[d2]))
-
-    # 拓扑深度（Tarjan SCC + Kahn，含环安全）
-    depth = _topological_depth(len(names), idx_conns)
-
-    order = sorted(range(len(names)), key=lambda i: depth[i])
-    order_rev = list(reversed(order))  # 反向拓扑序（下游先处理，移开阻挡器件）
-
-    # 构建每个器件的直接连接邻居集合（MIN_SPACING 跳过，与 DRC engine 一致）
-    connected_neighbors: dict[str, set[str]] = {}
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d1_name, d2_name_conn = str(conn[0]), str(conn[2])
-        connected_neighbors.setdefault(d1_name, set()).add(d2_name_conn)
-        connected_neighbors.setdefault(d2_name_conn, set()).add(d1_name)
-
-    # 预收集每个 d2 设备的入向连接
-    incoming_per_d2: dict[str, list[tuple]] = {}
-    for conn in circuit.get("connections", []):
-        if len(conn) < 4:
-            continue
-        d2_name_conn = str(conn[2])
-        if d2_name_conn in placements:
-            incoming_per_d2.setdefault(d2_name_conn, []).append(tuple(conn))
-
+    (names, device_map, order, order_rev,
+     connected_neighbors, incoming_per_d2) = _build_align_topology(
+        placements, circuit
+    )
     # *创新*: 多趟对齐（3 趟 zigzag）
     # 第 1 趟正向拓扑序（上游先对齐），第 2 趟反向（下游先移开阻挡），
     # 第 3 趟正向收尾。不破坏原则保证每趟不劣化（score 单调非减）。
     for pass_order in (order, order_rev, order):
-        for i in pass_order:
-            d2_name = names[i]
-            if d2_name not in placements:
-                continue
-            d2_dev = device_map.get(d2_name, {})
-            d2_connected = connected_neighbors.get(d2_name, set())
-            incoming = incoming_per_d2.get(d2_name, [])
-            if not incoming:
-                continue
-            _align_d2_global(
-                placements, d2_name, d2_dev, incoming, device_map,
-                d2_connected, canvas_w, canvas_h,
-            )
-
+        _run_align_zigzag_pass(
+            placements, names, pass_order, device_map,
+            connected_neighbors, incoming_per_d2, canvas_w, canvas_h,
+        )
     # *创新*: 第 4 趟残余违规成对双向修复
     # 3 趟 zigzag 仅移动下游 d2，当 d1 与 d2 都被其他已通过连接锁住时，
     # 残余 PORT_ALIGNMENT 违规无法消除。本趟允许双向移动 d1 或 d2，
@@ -458,5 +490,4 @@ def _align_ports(
         placements, circuit, device_map, connected_neighbors,
         canvas_w, canvas_h,
     )
-
     return placements
