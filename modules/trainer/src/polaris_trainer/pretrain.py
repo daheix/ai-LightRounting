@@ -289,59 +289,17 @@ class BehaviorCloningModel(Module):
         return self.net(x)
 
 
-def pretrain(
-    demos_dir: str | Path = EXPERT_DEMOS_DEFAULT_DIR,
-    config: BCPretrainConfig | None = None,
-    output_ckpt: str | Path | None = None,
-) -> dict:
-    """BC 预训练主入口（Behavioral Cloning）。
+def _run_bc_training_loop(
+    model: BehaviorCloningModel, optimizer: Adam,
+    X: np.ndarray, Y: np.ndarray, cfg: BCPretrainConfig,
+) -> list[float]:
+    """BC 训练循环（小批量 SGD + MSE），返回 loss_history。
 
-    加载 expert_demos 三元组 → 提取 (device_features, placement_targets) →
-    训练 BehaviorCloningModel（MSE 损失 + Adam）→ 保存 checkpoint。
-
-    *创新*: 用专家示范的 (device 特征 → 布局坐标) 直接监督学习，替代 RL 从零
-    探索，收敛速度 10×（Pomerleau 1989 BC 经典结论；Ross 2011 DAgger 理论保证）。
-    底层逻辑: BC 等价于在专家策略的支撑集上做极大似然估计，当策略族包含专家
-    策略时收敛到专家策略（Bain & Sammut 1995）。
-
-    Args:
-        demos_dir: expert_demos 目录（默认 real_board/expert_demos）。
-        config: BC 预训练配置（None 用默认 BCPretrainConfig）。
-        output_ckpt: checkpoint 输出路径（None 用 checkpoint_dir/bc_pretrain.json）。
-
-    Returns:
-        训练结果 dict::
-
-            {
-                "checkpoint_path": str,    # checkpoint 文件路径
-                "final_loss": float,       # 最终 epoch 的 MSE loss
-                "loss_history": list[float],  # 每 epoch 的 loss（长度=epochs）
-                "n_samples": int,          # 训练样本数
-                "n_demos": int,            # 器件 demo 数
-            }
-
-    Raises:
-        FileNotFoundError: demos_dir 或数据文件不存在（R03 无 fall-back）。
-        RuntimeError: 训练出现 NaN（R03 无 fall-back）。
+    *创新*: 用专家示范的 (device 特征 → 布局坐标) 直接监督学习。
+    来源: Pomerleau 1989 BC; Ross 2011 DAgger; Bain & Sammut 1995。
     """
-    cfg = config or BCPretrainConfig()
-    np.random.seed(cfg.seed)
-
-    # 1. 加载专家示范三元组
-    loader = ExpertDemoLoader(demos_dir)
-    X, Y, stats = loader.extract_training_pairs()
-    n_samples = X.shape[0]
-    n_demos = len(loader.list_demos())
-    logger.info("BC 预训练: %d 样本 / %d 器件", n_samples, n_demos)
-
-    # 2. 构建模型 + 优化器
-    model = BehaviorCloningModel(
-        input_dim=DEVICE_FEATURE_DIM, hidden_dim=cfg.hidden_dim
-    )
-    optimizer = Adam(model.parameters(), lr=cfg.lr, config=AdamConfig())
-
-    # 3. 训练循环（小批量 SGD + MSE）
     loss_history: list[float] = []
+    n_samples = X.shape[0]
     indices = np.arange(n_samples)
     for epoch in range(cfg.epochs):
         np.random.shuffle(indices)
@@ -367,9 +325,50 @@ def pretrain(
         loss_history.append(avg_loss)
         if (epoch + 1) % 10 == 0 or epoch == 0:
             logger.info("epoch %d/%d loss=%.6f", epoch + 1, cfg.epochs, avg_loss)
+    return loss_history
 
+
+def pretrain(
+    demos_dir: str | Path = EXPERT_DEMOS_DEFAULT_DIR,
+    config: BCPretrainConfig | None = None,
+    output_ckpt: str | Path | None = None,
+) -> dict:
+    """BC 预训练主入口（Behavioral Cloning）。
+
+    加载 expert_demos 三元组 → 提取 (device_features, placement_targets) →
+    训练 BehaviorCloningModel（MSE 损失 + Adam）→ 保存 checkpoint。
+
+    *创新*: 用专家示范的 (device 特征 → 布局坐标) 直接监督学习，替代 RL 从零
+    探索，收敛速度 10×（Pomerleau 1989 BC 经典结论；Ross 2011 DAgger 理论保证）。
+
+    Args:
+        demos_dir: expert_demos 目录（默认 real_board/expert_demos）。
+        config: BC 预训练配置（None 用默认 BCPretrainConfig）。
+        output_ckpt: checkpoint 输出路径（None 用 checkpoint_dir/bc_pretrain.json）。
+
+    Returns:
+        训练结果 dict: checkpoint_path / final_loss / loss_history / n_samples / n_demos
+
+    Raises:
+        FileNotFoundError: demos_dir 或数据文件不存在（R03 无 fall-back）。
+        RuntimeError: 训练出现 NaN（R03 无 fall-back）。
+    """
+    cfg = config or BCPretrainConfig()
+    np.random.seed(cfg.seed)
+    # 1. 加载专家示范三元组
+    loader = ExpertDemoLoader(demos_dir)
+    X, Y, stats = loader.extract_training_pairs()
+    n_samples = X.shape[0]
+    n_demos = len(loader.list_demos())
+    logger.info("BC 预训练: %d 样本 / %d 器件", n_samples, n_demos)
+    # 2. 构建模型 + 优化器
+    model = BehaviorCloningModel(
+        input_dim=DEVICE_FEATURE_DIM, hidden_dim=cfg.hidden_dim
+    )
+    optimizer = Adam(model.parameters(), lr=cfg.lr, config=AdamConfig())
+    # 3. 训练循环
+    loss_history = _run_bc_training_loop(model, optimizer, X, Y, cfg)
     final_loss = loss_history[-1] if loss_history else float("inf")
-
     # 4. 保存 checkpoint（兼容 transfer_learning + PPOAgent load）
     ckpt_path = (
         Path(output_ckpt)
@@ -380,7 +379,6 @@ def pretrain(
         ckpt_path, model, cfg, stats, loss_history, final_loss, n_samples, n_demos
     )
     logger.info("BC checkpoint 已保存: %s (final_loss=%.6f)", ckpt_path, final_loss)
-
     return {
         "checkpoint_path": str(ckpt_path),
         "final_loss": final_loss,
