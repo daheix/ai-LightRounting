@@ -232,6 +232,51 @@ def _prefix_instance_ports(inst_name: str, sdict: SDict) -> SDict:
     return prefixed
 
 
+def _process_one_cascade_connection(
+    conn: tuple[str, str],
+    subnetworks: dict[str, SDict],
+    inst_to_subnet: dict[str, str],
+) -> None:
+    """处理单条连接：消去内部端口，合并子网络（Extract Method，R11 质量门禁）。
+
+    支持反馈环（同子网络内连接）与两子网络合并两种路径。
+    就地修改 ``subnetworks`` 与 ``inst_to_subnet``。
+
+    Raises:
+        RuntimeError: 连接指向不存在的实例或子网络（R03 禁止 fall-back）。
+    """
+    inst1_name = conn[0].split(".", 1)[0]
+    inst2_name = conn[1].split(".", 1)[0]
+    if inst1_name not in inst_to_subnet or inst2_name not in inst_to_subnet:
+        raise RuntimeError(
+            f"连接 {conn} 指向不存在的实例 '{inst1_name}' 或 "
+            f"'{inst2_name}'，当前实例: {sorted(inst_to_subnet.keys())}。"
+            f"可能原因: 连接关系有误或实例未定义（R03 禁止 fall-back）。"
+        )
+    subnet1 = inst_to_subnet[inst1_name]
+    subnet2 = inst_to_subnet[inst2_name]
+    if subnet1 not in subnetworks or subnet2 not in subnetworks:
+        raise RuntimeError(
+            f"子网络 '{subnet1}' 或 '{subnet2}' 不存在（R03 内部状态错误）"
+        )
+    s1 = subnetworks[subnet1]
+    is_feedback = subnet1 == subnet2
+    if is_feedback:
+        merged = _connect_feedback_loop(s1, conn[0], conn[1])
+        subnetworks[subnet1] = merged
+        return
+    s2 = subnetworks[subnet2]
+    merged = _connect_two_subnetworks(s1, s2, conn[0], conn[1])
+    new_name = f"{subnet1}+{subnet2}"
+    subnetworks[new_name] = merged
+    del subnetworks[subnet1]
+    del subnetworks[subnet2]
+    # 更新实例 → 子网络映射
+    for inst, sn in inst_to_subnet.items():
+        if sn == subnet1 or sn == subnet2:
+            inst_to_subnet[inst] = new_name
+
+
 def cascade_circuit(
     instances: dict[str, SDict],
     connections: list[tuple[str, str]],
@@ -244,7 +289,7 @@ def cascade_circuit(
     避免合并后重命名导致的端口名冲突。
 
     来源 (R02):
-    - SAX circuit 级联: https://flaport.github.io/sax/
+    - SAX circuit 级联: https://flapport.github.io/sax/
     - Filipsson 1978 Eur. Microw. Conf.
     - Pozar §4.3 两网络级联
 
@@ -267,40 +312,8 @@ def cascade_circuit(
     # 实例名 → 当前所属子网络名（合并后更新）
     inst_to_subnet: dict[str, str] = {name: name for name in instances}
 
-    remaining = list(connections)
-    while remaining:
-        conn = remaining[0]
-        inst1_name = conn[0].split(".", 1)[0]
-        inst2_name = conn[1].split(".", 1)[0]
-        if inst1_name not in inst_to_subnet or inst2_name not in inst_to_subnet:
-            raise RuntimeError(
-                f"连接 {conn} 指向不存在的实例 '{inst1_name}' 或 "
-                f"'{inst2_name}'，当前实例: {sorted(inst_to_subnet.keys())}。"
-                f"可能原因: 连接关系有误或实例未定义（R03 禁止 fall-back）。"
-            )
-        subnet1 = inst_to_subnet[inst1_name]
-        subnet2 = inst_to_subnet[inst2_name]
-        if subnet1 not in subnetworks or subnet2 not in subnetworks:
-            raise RuntimeError(
-                f"子网络 '{subnet1}' 或 '{subnet2}' 不存在（R03 内部状态错误）"
-            )
-        s1 = subnetworks[subnet1]
-        is_feedback = subnet1 == subnet2
-        if is_feedback:
-            merged = _connect_feedback_loop(s1, conn[0], conn[1])
-            subnetworks[subnet1] = merged
-        else:
-            s2 = subnetworks[subnet2]
-            merged = _connect_two_subnetworks(s1, s2, conn[0], conn[1])
-            new_name = f"{subnet1}+{subnet2}"
-            subnetworks[new_name] = merged
-            del subnetworks[subnet1]
-            del subnetworks[subnet2]
-            # 更新实例 → 子网络映射
-            for inst, sn in inst_to_subnet.items():
-                if sn == subnet1 or sn == subnet2:
-                    inst_to_subnet[inst] = new_name
-        remaining = remaining[1:]
+    for conn in connections:
+        _process_one_cascade_connection(conn, subnetworks, inst_to_subnet)
 
     if not subnetworks:
         return {}
