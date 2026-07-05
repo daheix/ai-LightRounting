@@ -97,6 +97,7 @@ def _make_simple_layout() -> FormatLayout:
                         top_cell="TOP", unit="um")
 
 
+@pytest.fixture
 def klayout_db():
     """klayout.db 模块 fixture（未安装则跳过本模块所有 klayout 依赖测试）。
 
@@ -105,6 +106,7 @@ def klayout_db():
     return pytest.importorskip("klayout.db")
 
 
+@pytest.fixture
 def test_gds(tmp_path, klayout_db):
     """创建测试 GDSII 文件（顶层 cell + 1 子 cell + WG 层 box）。
 
@@ -125,6 +127,7 @@ def test_gds(tmp_path, klayout_db):
     return out
 
 
+@pytest.fixture
 def two_layer_gds(tmp_path, klayout_db):
     """创建两层 GDSII（WG (1,0) + SLAB150 (2,0) 重叠 box），用于布尔/连通性测试。"""
     db = klayout_db

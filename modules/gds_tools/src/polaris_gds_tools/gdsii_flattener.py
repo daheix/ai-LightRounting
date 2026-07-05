@@ -130,6 +130,87 @@ class FlattenReport:
 # =============================================================================
 # 扁平化
 # =============================================================================
+def _validate_flatten_params(
+    gds_path: str | Path, output_path: str | Path, levels: int,
+) -> tuple:
+    """校验 flatten_gdsii 参数，返回 (db, in_path, out_path)。"""
+    db = _import_klayout_db()
+    in_path = Path(gds_path)
+    out_path = Path(output_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {gds_path}")
+    if levels < -1:
+        raise ValueError(
+            f"levels 必须 >= -1，得到 {levels}。"
+            f"禁止 fall-back（R03）。"
+        )
+    return db, in_path, out_path
+
+
+def _load_and_flatten_gdsii(
+    db, in_path, out_path, levels, prune, top_cell_name, gds_path,
+) -> tuple:
+    """读取GDSII+扁平化+写出，返回 (dbu, top_cell_name, stats_before, stats_after)。
+
+    stats = (cells, instances, shapes)。prune=True 时手动删除孤儿 cell。
+    注: top_cell_name 以 str 返回（top_cell Cell 对象在 ly GC 后失效，R05 回归修复）。
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    # 提前提取 top_cell.name 为 str：ly GC 后 Cell 对象失效（R05 回归修复）
+    top_cell_name_str = str(top_cell.name)
+    cells_before = len(list(ly.each_cell()))
+    instances_before = int(top_cell.child_instances())
+    shapes_before = _count_shapes_rec(top_cell, ly)
+    top_cell.flatten(levels, prune)
+    if prune:
+        _delete_orphan_cells(ly)
+    cells_after = len(list(ly.each_cell()))
+    instances_after = int(top_cell.child_instances())
+    shapes_after = _count_shapes_rec(top_cell, ly)
+    try:
+        ly.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return (dbu, top_cell_name_str,
+            (cells_before, instances_before, shapes_before),
+            (cells_after, instances_after, shapes_after))
+
+
+def _assemble_flatten_report(
+    gds_path, output_path, dbu, top_cell_name, levels, prune,
+    in_path, out_path, stats_before, stats_after,
+) -> FlattenReport:
+    """日志 + 组装 FlattenReport。"""
+    cells_before, instances_before, shapes_before = stats_before
+    cells_after, instances_after, shapes_after = stats_after
+    logger.info(
+        "GDSII 扁平化: %s → %s (cells %d→%d, instances %d→%d, shapes %d→%d)",
+        in_path, out_path, cells_before, cells_after,
+        instances_before, instances_after, shapes_before, shapes_after,
+    )
+    return FlattenReport(
+        input_path=str(gds_path), output_path=str(output_path),
+        dbu=dbu, top_cell_name=top_cell_name, levels=levels, prune=prune,
+        cells_before=cells_before, cells_after=cells_after,
+        instances_before=instances_before, instances_after=instances_after,
+        shapes_before=shapes_before, shapes_after=shapes_after,
+    )
+
+
 def flatten_gdsii(
     gds_path: str | Path,
     output_path: str | Path,
@@ -164,83 +245,13 @@ def flatten_gdsii(
     - KLayout Flatten 手册:
       https://klayout.org/downloads/master/doc-qt5/manual/flatten.html
     """
-    db = _import_klayout_db()
-    in_path = Path(gds_path)
-    out_path = Path(output_path)
-    if not in_path.exists():
-        raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {gds_path}")
-    if levels < -1:
-        raise ValueError(
-            f"levels 必须 >= -1，得到 {levels}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
-    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
-    # 扁平化前统计
-    # 注: ly.cells() 返回缓存值不可靠，用 len(list(ly.each_cell())) 获取实际值
-    # 来源: R326 冒烟测试，ly.cells()=2 vs len(list(ly.each_cell()))=1
-    cells_before = len(list(ly.each_cell()))
-    instances_before = int(top_cell.child_instances())
-    shapes_before = _count_shapes_rec(top_cell, ly)
-
-    # 扁平化
-    # KLayout 0.30.9: Cell.flatten(levels, prune)
-    # 来源: https://klayout.org/downloads/master/doc-qt5/code/class_Cell.html
-    top_cell.flatten(levels, prune)
-
-    # prune=True 时手动删除孤儿 cell（KLayout prune 实测可能不删除）
-    if prune:
-        _delete_orphan_cells(ly)
-
-    # 扁平化后统计
-    # 注: ly.cells() 返回缓存值不可靠，用 len(list(ly.each_cell())) 获取实际值
-    cells_after = len(list(ly.each_cell()))
-    instances_after = int(top_cell.child_instances())
-    shapes_after = _count_shapes_rec(top_cell, ly)
-
-    # 写出
-    try:
-        ly.write(str(out_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    logger.info(
-        "GDSII 扁平化: %s → %s (cells %d→%d, instances %d→%d, shapes %d→%d)",
-        in_path, out_path,
-        cells_before, cells_after,
-        instances_before, instances_after,
-        shapes_before, shapes_after,
+    db, in_path, out_path = _validate_flatten_params(gds_path, output_path, levels)
+    dbu, top_cell, stats_before, stats_after = _load_and_flatten_gdsii(
+        db, in_path, out_path, levels, prune, top_cell_name, gds_path
     )
-
-    return FlattenReport(
-        input_path=str(gds_path),
-        output_path=str(output_path),
-        dbu=dbu,
-        top_cell_name=str(top_cell.name),
-        levels=levels,
-        prune=prune,
-        cells_before=cells_before,
-        cells_after=cells_after,
-        instances_before=instances_before,
-        instances_after=instances_after,
-        shapes_before=shapes_before,
-        shapes_after=shapes_after,
+    return _assemble_flatten_report(
+        gds_path, output_path, dbu, top_cell, levels, prune,
+        in_path, out_path, stats_before, stats_after,
     )
 
 
