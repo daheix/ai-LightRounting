@@ -205,6 +205,81 @@ def _to_jsonable(obj: Any) -> Any:
         return str(obj)
 
 
+def _run_eda_flow_validate(circuit: dict, output_dir: str) -> None:
+    """校验 run_eda_flow 输入（R03 禁止 fall-back）。
+
+    Args:
+        circuit: polaris-core 风格 circuit dict。
+        output_dir: 输出目录路径。
+
+    Raises:
+        RuntimeError: circuit 不是 dict / output_dir 不是非空 str。
+    """
+    if not isinstance(circuit, dict):
+        raise RuntimeError(
+            f"circuit 必须是 dict，得到 {type(circuit).__name__}"
+            f"（R03 禁止 fall-back）"
+        )
+    if not isinstance(output_dir, str) or not output_dir:
+        raise RuntimeError(
+            f"output_dir 必须是非空 str，得到 {output_dir!r}"
+            f"（R03 禁止 fall-back）"
+        )
+
+
+def _run_eda_flow_make_skip_entry(stage_id: int, name: str) -> dict:
+    """构造 skipped stage 条目。"""
+    return {
+        "stage_id": stage_id, "name": name, "status": "skipped",
+        "duration": 0.0, "result": None, "error": None,
+    }
+
+
+def _run_eda_flow_exec_stage(
+    stage_id: int, name: str, stage_fn, circuit: dict,
+    ctx: dict, strict: bool,
+) -> dict:
+    """执行单个 stage 并返回 entry dict。
+
+    strict=True 且失败时 raise RuntimeError（编排策略，非 R03 fall-back）。
+    strict=False 且失败时返回 failed entry（含 traceback）。
+
+    Args:
+        stage_id: stage 编号。
+        name: stage 名称。
+        stage_fn: stage 执行函数 (circuit, ctx) -> Any。
+        circuit: 电路 dict。
+        ctx: 编排上下文（跨 stage 共享 placements/hpwl）。
+        strict: 严格模式（True 失败即 raise）。
+
+    Returns:
+        stage entry dict（status=success/failed）。
+    """
+    stage_start = time.perf_counter()
+    try:
+        result = stage_fn(circuit, ctx)
+        duration = time.perf_counter() - stage_start
+        return {
+            "stage_id": stage_id, "name": name, "status": "success",
+            "duration": float(duration), "result": _to_jsonable(result),
+            "error": None,
+        }
+    except Exception as exc:
+        duration = time.perf_counter() - stage_start
+        err_msg = f"{type(exc).__name__}: {exc}"
+        tb = traceback.format_exc()
+        if strict:
+            # strict 模式：首个失败立即 raise（编排策略，非 R03 fall-back）
+            raise RuntimeError(
+                f"stage {stage_id} ({name}) 失败 [{strict=}]: {err_msg}"
+            ) from exc
+        return {
+            "stage_id": stage_id, "name": name, "status": "failed",
+            "duration": float(duration), "result": None,
+            "error": err_msg, "traceback": tb,
+        }
+
+
 def run_eda_flow(
     circuit: dict,
     output_dir: str,
@@ -251,17 +326,7 @@ def run_eda_flow(
         RuntimeError: ``strict=True`` 且某 stage 失败时，立即 raise 该 stage
             的异常（含 stage_id 与 traceback）。
     """
-    if not isinstance(circuit, dict):
-        raise RuntimeError(
-            f"circuit 必须是 dict，得到 {type(circuit).__name__}"
-            f"（R03 禁止 fall-back）"
-        )
-    if not isinstance(output_dir, str) or not output_dir:
-        raise RuntimeError(
-            f"output_dir 必须是非空 str，得到 {output_dir!r}"
-            f"（R03 禁止 fall-back）"
-        )
-
+    _run_eda_flow_validate(circuit, output_dir)
     skip_set = set(skip_stages) if skip_stages else set()
     # 编排上下文：跨 stage 共享 placements / hpwl / output_dir
     ctx: dict[str, Any] = {
@@ -269,60 +334,24 @@ def run_eda_flow(
         "placements": None,
         "hpwl": None,
     }
-
     stages: list[dict] = []
     n_success = 0
     n_failed = 0
     n_skipped = 0
     flow_start = time.perf_counter()
-
     for stage_id, name, stage_fn in _STAGE_LIST:
-        # 跳过指定 stage
         if stage_id in skip_set:
-            stages.append({
-                "stage_id": stage_id,
-                "name": name,
-                "status": "skipped",
-                "duration": 0.0,
-                "result": None,
-                "error": None,
-            })
+            stages.append(_run_eda_flow_make_skip_entry(stage_id, name))
             n_skipped += 1
             continue
-
-        stage_start = time.perf_counter()
-        try:
-            result = stage_fn(circuit, ctx)
-            duration = time.perf_counter() - stage_start
-            stages.append({
-                "stage_id": stage_id,
-                "name": name,
-                "status": "success",
-                "duration": float(duration),
-                "result": _to_jsonable(result),
-                "error": None,
-            })
+        entry = _run_eda_flow_exec_stage(
+            stage_id, name, stage_fn, circuit, ctx, strict,
+        )
+        stages.append(entry)
+        if entry["status"] == "success":
             n_success += 1
-        except Exception as exc:
-            duration = time.perf_counter() - stage_start
-            err_msg = f"{type(exc).__name__}: {exc}"
-            tb = traceback.format_exc()
-            stages.append({
-                "stage_id": stage_id,
-                "name": name,
-                "status": "failed",
-                "duration": float(duration),
-                "result": None,
-                "error": err_msg,
-                "traceback": tb,
-            })
+        else:
             n_failed += 1
-            if strict:
-                # strict 模式：首个失败立即 raise（编排策略，非 R03 fall-back）
-                raise RuntimeError(
-                    f"stage {stage_id} ({name}) 失败 [{strict=}]: {err_msg}"
-                ) from exc
-
     total_duration = time.perf_counter() - flow_start
     return {
         "stages": stages,
