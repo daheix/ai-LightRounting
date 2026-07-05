@@ -494,6 +494,212 @@ def _no_overlap_at(
     return True
 
 
+def _validate_bend_compensate_params(
+    circuit: dict,
+    placements: dict,
+    route_result: dict,
+    min_bend_radius_um: float,
+) -> None:
+    """校验 bend_compensate 输入参数（R03 禁止 fall-back）。"""
+    _validate_circuit(circuit)
+    _validate_placements(placements)
+    if not isinstance(route_result, dict):
+        raise RuntimeError(
+            f"route_result 必须是 dict，得到 {type(route_result).__name__}"
+            f"（R03 禁止 fall-back）"
+        )
+    if min_bend_radius_um <= 0:
+        raise RuntimeError(
+            f"min_bend_radius_um 必须为正: {min_bend_radius_um}"
+            f"（R03 禁止 fall-back）"
+        )
+
+
+def _build_incoming_per_d2(
+    circuit: dict,
+    placements: dict,
+) -> dict[str, list[tuple]]:
+    """构建每个 d2 设备的入向连接列表（用于评估候选位置总偏差）。"""
+    incoming_per_d2: dict[str, list[tuple]] = {}
+    for conn in circuit["connections"]:
+        if not isinstance(conn, (list, tuple)) or len(conn) != 4:
+            raise RuntimeError(
+                f"connection 必须是长度 4 的 list/tuple，得到: {conn}"
+                f"（R03 禁止 fall-back）"
+            )
+        d2_name = str(conn[2])
+        if d2_name in placements:
+            incoming_per_d2.setdefault(d2_name, []).append(tuple(conn))
+    return incoming_per_d2
+
+
+def _compute_total_deviation(
+    placements: dict,
+    device_map: dict,
+    dev2: dict,
+    dev2_name: str,
+    incoming_per_d2: dict,
+    x: float,
+    y: float,
+) -> float:
+    """计算指定候选位置 (x, y) 下 dev2 所有入向连接的端口总偏差。"""
+    total = 0.0
+    for ic in incoming_per_d2.get(dev2_name, []):
+        i_d1, i_p1, _i_d2, i_p2 = ic
+        if i_d1 not in placements or i_d1 not in device_map:
+            continue
+        try:
+            ip1_dx, ip1_dy, _ = _find_port(device_map[i_d1], i_p1)
+            ip2_dx, ip2_dy, _ = _find_port(dev2, i_p2)
+        except RuntimeError:
+            continue
+        ia1_x = placements[i_d1]["x"] + ip1_dx
+        ia1_y = placements[i_d1]["y"] + ip1_dy
+        ia2_x = x + ip2_dx
+        ia2_y = y + ip2_dy
+        total += abs(ia1_x - ia2_x) + abs(ia1_y - ia2_y)
+    return total
+
+
+def _try_compensate_one_conn(
+    conn,
+    placements: dict,
+    device_map: dict,
+    incoming_per_d2: dict,
+    canvas_w: float,
+    canvas_h: float,
+    align_tol_um: float,
+) -> int:
+    """尝试补偿单个连接：评估 x/y 对齐候选并应用最佳位置。
+
+    Returns:
+        1 若成功补偿（器件已移动），0 否则。
+    """
+    dev1_name, port1_name, dev2_name, port2_name = conn
+    if dev1_name not in device_map or dev2_name not in device_map:
+        return 0
+    if dev1_name not in placements or dev2_name not in placements:
+        return 0
+    dev1 = device_map[dev1_name]
+    dev2 = device_map[dev2_name]
+    try:
+        port1_dx, port1_dy, _ = _find_port(dev1, port1_name)
+        port2_dx, port2_dy, _ = _find_port(dev2, port2_name)
+    except RuntimeError:
+        return 0
+    abs1_x = placements[dev1_name]["x"] + port1_dx
+    abs1_y = placements[dev1_name]["y"] + port1_dy
+    abs2_x = placements[dev2_name]["x"] + port2_dx
+    abs2_y = placements[dev2_name]["y"] + port2_dy
+    dx = abs(abs1_x - abs2_x)
+    dy = abs(abs1_y - abs2_y)
+    if dx <= align_tol_um or dy <= align_tol_um:
+        return 0
+    pl2 = placements[dev2_name]
+    w2, h2 = float(pl2["w"]), float(pl2["h"])
+    cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
+    # 候选 A: x 对齐（d2.x = abs1_x - port2_dx），保持 cur_y
+    cand_a_x = max(0.0, min(abs1_x - port2_dx, canvas_w - w2))
+    cand_a = (cand_a_x, cur_y)
+    # 候选 B: y 对齐（d2.y = abs1_y - port2_dy），保持 cur_x
+    cand_b_y = max(0.0, min(abs1_y - port2_dy, canvas_h - h2))
+    cand_b = (cur_x, cand_b_y)
+    best_pos = None
+    best_dev = float("inf")
+    for cand in (cand_a, cand_b):
+        cx, cy = cand
+        if cx < 0.0 or cx + w2 > canvas_w or cy < 0.0 or cy + h2 > canvas_h:
+            continue
+        if not _no_overlap_at(placements, dev2_name, cx, cy, w2, h2):
+            continue
+        dev = _compute_total_deviation(
+            placements, device_map, dev2, dev2_name, incoming_per_d2, cx, cy
+        )
+        if dev < best_dev:
+            best_dev = dev
+            best_pos = cand
+    if best_pos is None:
+        return 0
+    placements[dev2_name]["x"] = best_pos[0]
+    placements[dev2_name]["y"] = best_pos[1]
+    return 1
+
+
+def _regenerate_paths_after_compensate(
+    circuit: dict,
+    placements: dict,
+    route_result: dict,
+    device_map: dict,
+    router: "CurvyRouter",
+    n_compensated: int,
+) -> dict:
+    """若有器件移动，重新生成所有路径并统计交叉数与损耗。"""
+    if n_compensated == 0:
+        return route_result
+    new_paths: list[dict] = []
+    path_points_list: list[list[tuple[float, float]]] = []
+    for conn in circuit["connections"]:
+        dev1_name, port1_name, dev2_name, port2_name = conn
+        if dev1_name not in placements or dev2_name not in placements:
+            continue
+        dev1 = device_map[dev1_name]
+        dev2 = device_map[dev2_name]
+        try:
+            p1_dx, p1_dy, _ = _find_port(dev1, port1_name)
+            p2_dx, p2_dy, _ = _find_port(dev2, port2_name)
+        except RuntimeError:
+            continue
+        start = (placements[dev1_name]["x"] + p1_dx,
+                 placements[dev1_name]["y"] + p1_dy)
+        end = (placements[dev2_name]["x"] + p2_dx,
+               placements[dev2_name]["y"] + p2_dy)
+        points = router.route(start, end)
+        path_points_list.append(points)
+        new_paths.append({
+            "dev1": dev1_name, "port1": port1_name,
+            "dev2": dev2_name, "port2": port2_name,
+            "points": points,
+        })
+    crossing_counts = _count_path_crossings(path_points_list)
+    paths_out: list[dict] = []
+    total_waveguide_loss = 0.0
+    total_bends = 0
+    total_crossing_pairs = 0
+    for idx, raw in enumerate(new_paths):
+        points = raw["points"]
+        n_bends = count_bends(points)
+        propagation_bend = _compute_path_loss(points, PROPAGATION_LOSS_DB_CM)
+        crossing_loss = crossing_counts[idx] * CROSSING_LOSS_DB
+        waveguide_loss = propagation_bend + crossing_loss
+        dev2 = device_map[raw["dev2"]]
+        dev2_insertion_loss = _get_device_insertion_loss(dev2)
+        loss_db = waveguide_loss + dev2_insertion_loss
+        paths_out.append({
+            "dev1": raw["dev1"], "port1": raw["port1"],
+            "dev2": raw["dev2"], "port2": raw["port2"],
+            "points": [[float(p[0]), float(p[1])] for p in points],
+            "loss_db": float(loss_db),
+            "n_bends": int(n_bends),
+            "n_crossings": int(crossing_counts[idx]),
+        })
+        total_waveguide_loss += waveguide_loss
+        total_bends += n_bends
+        total_crossing_pairs += crossing_counts[idx]
+    total_crossing_pairs //= 2
+    total_device_insertion_loss = sum(
+        _get_device_insertion_loss(dev) for dev in device_map.values()
+    )
+    total_loss_db = total_waveguide_loss + total_device_insertion_loss
+    return {
+        "paths": paths_out,
+        "total_loss_db": float(total_loss_db),
+        "n_crossings": int(total_crossing_pairs),
+        "n_bends": int(total_bends),
+        "router_type": "curvy",
+        "bend_compensated": n_compensated,
+    }
+
+
 def bend_compensate(
     circuit: dict,
     placements: dict,
@@ -544,214 +750,30 @@ def bend_compensate(
         RuntimeError: circuit/placements 结构非法（R03 禁止 fall-back）。
 
     来源（R02 学术诚信）:
-        - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design
-          波导弯曲半径 ≥5μm，弯曲损耗 0.05 dB/bend
-          https://www.cambridge.org/core/books/silicon-photonics-design/
-        - SiEPIC EBeam PDK bend_euler radius=5μm
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - Klauss et al. 2018 "Euler spiral waveguide bends" Opt Express
-          https://doi.org/10.1364/OE.26.029637
-        - LiDAR ISPD'25 §3.2 curvy waveguide detailed routing
-          https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
-        - Berg "Computational Geometry" Springer（AABB 相交判定）
-          https://doi.org/10.1007/978-3-540-77974-2
+        - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design, 弯曲半径 ≥5μm, 0.05 dB/bend, https://www.cambridge.org/core/books/silicon-photonics-design/
+        - SiEPIC EBeam PDK bend_euler radius=5μm, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Klauss et al. 2018 "Euler spiral waveguide bends" Opt Express, https://doi.org/10.1364/OE.26.029637
+        - LiDAR ISPD'25 §3.2 curvy waveguide detailed routing, https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
+        - Berg "Computational Geometry" Springer（AABB 相交判定）, https://doi.org/10.1007/978-3-540-77974-2
     """
-    _validate_circuit(circuit)
-    _validate_placements(placements)
-    if not isinstance(route_result, dict):
-        raise RuntimeError(
-            f"route_result 必须是 dict，得到 {type(route_result).__name__}"
-            f"（R03 禁止 fall-back）"
-        )
-
-    if min_bend_radius_um <= 0:
-        raise RuntimeError(
-            f"min_bend_radius_um 必须为正: {min_bend_radius_um}"
-            f"（R03 禁止 fall-back）"
-        )
-
+    _validate_bend_compensate_params(
+        circuit, placements, route_result, min_bend_radius_um
+    )
     device_map = _build_device_map(circuit)
     canvas_w = float(circuit["canvas_w"])
     canvas_h = float(circuit["canvas_h"])
     router = CurvyRouter()
-
-    # 构建每个 d2 设备的入向连接列表
-    incoming_per_d2: dict[str, list[tuple]] = {}
-    for conn in circuit["connections"]:
-        if not isinstance(conn, (list, tuple)) or len(conn) != 4:
-            raise RuntimeError(
-                f"connection 必须是长度 4 的 list/tuple，得到: {conn}"
-                f"（R03 禁止 fall-back）"
-            )
-        d2_name = str(conn[2])
-        if d2_name in placements:
-            incoming_per_d2.setdefault(d2_name, []).append(tuple(conn))
-
-    # 按拓扑顺序处理（上游先固定，下游对齐到上游）
-    # 简化: 按连接顺序处理（d1 通常先于 d2 出现）
-    processed_d2: set[str] = set()
+    incoming_per_d2 = _build_incoming_per_d2(circuit, placements)
+    # 按拓扑顺序处理（上游先固定，下游对齐到上游；按连接顺序处理）
     n_compensated = 0
-
     for conn in circuit["connections"]:
-        dev1_name, port1_name, dev2_name, port2_name = conn
-
-        if dev1_name not in device_map or dev2_name not in device_map:
-            continue
-        if dev1_name not in placements or dev2_name not in placements:
-            continue
-
-        dev1 = device_map[dev1_name]
-        dev2 = device_map[dev2_name]
-        try:
-            port1_dx, port1_dy, _ = _find_port(dev1, port1_name)
-            port2_dx, port2_dy, _ = _find_port(dev2, port2_name)
-        except RuntimeError:
-            continue
-
-        # 计算当前端口绝对坐标
-        abs1_x = placements[dev1_name]["x"] + port1_dx
-        abs1_y = placements[dev1_name]["y"] + port1_dy
-        abs2_x = placements[dev2_name]["x"] + port2_dx
-        abs2_y = placements[dev2_name]["y"] + port2_dy
-
-        dx = abs(abs1_x - abs2_x)
-        dy = abs(abs1_y - abs2_y)
-
-        # 仅当 PORT_ALIGNMENT 违规（dx>tol 且 dy>tol）时补偿
-        if dx <= align_tol_um or dy <= align_tol_um:
-            continue
-
-        # 候选位置: x 对齐（使 abs2_x == abs1_x）或 y 对齐（使 abs2_y == abs1_y）
-        pl2 = placements[dev2_name]
-        w2, h2 = float(pl2["w"]), float(pl2["h"])
-        cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
-
-        # 候选 A: x 对齐（d2.x = abs1_x - port2_dx），保持 cur_y
-        cand_a_x = abs1_x - port2_dx
-        cand_a_x = max(0.0, min(cand_a_x, canvas_w - w2))
-        cand_a = (cand_a_x, cur_y)
-        # 候选 B: y 对齐（d2.y = abs1_y - port2_dy），保持 cur_x
-        cand_b_y = abs1_y - port2_dy
-        cand_b_y = max(0.0, min(cand_b_y, canvas_h - h2))
-        cand_b = (cur_x, cand_b_y)
-
-        # 评估候选: 计算新位置下所有入向连接的总偏差
-        def _total_dev(x: float, y: float) -> float:
-            total = 0.0
-            for ic in incoming_per_d2.get(dev2_name, []):
-                i_d1, i_p1, _i_d2, i_p2 = ic
-                if i_d1 not in placements or i_d1 not in device_map:
-                    continue
-                try:
-                    ip1_dx, ip1_dy, _ = _find_port(device_map[i_d1], i_p1)
-                    ip2_dx, ip2_dy, _ = _find_port(dev2, i_p2)
-                except RuntimeError:
-                    continue
-                ia1_x = placements[i_d1]["x"] + ip1_dx
-                ia1_y = placements[i_d1]["y"] + ip1_dy
-                ia2_x = x + ip2_dx
-                ia2_y = y + ip2_dy
-                total += abs(ia1_x - ia2_x) + abs(ia1_y - ia2_y)
-            return total
-
-        best_pos = None
-        best_dev = float("inf")
-        for cand in (cand_a, cand_b):
-            cx, cy = cand
-            if cx < 0.0 or cx + w2 > canvas_w or cy < 0.0 or cy + h2 > canvas_h:
-                continue
-            if not _no_overlap_at(placements, dev2_name, cx, cy, w2, h2):
-                continue
-            dev = _total_dev(cx, cy)
-            if dev < best_dev:
-                best_dev = dev
-                best_pos = cand
-
-        if best_pos is None:
-            continue
-
-        # 应用最佳位置
-        placements[dev2_name]["x"] = best_pos[0]
-        placements[dev2_name]["y"] = best_pos[1]
-        processed_d2.add(dev2_name)
-        n_compensated += 1
-
-    # 若有器件移动，重新生成所有路径（确保路径与新位置一致）
-    if n_compensated > 0:
-        new_paths: list[dict] = []
-        path_points_list: list[list[tuple[float, float]]] = []
-        for conn in circuit["connections"]:
-            dev1_name, port1_name, dev2_name, port2_name = conn
-            if dev1_name not in placements or dev2_name not in placements:
-                continue
-            dev1 = device_map[dev1_name]
-            dev2 = device_map[dev2_name]
-            try:
-                p1_dx, p1_dy, _ = _find_port(dev1, port1_name)
-                p2_dx, p2_dy, _ = _find_port(dev2, port2_name)
-            except RuntimeError:
-                continue
-            start = (placements[dev1_name]["x"] + p1_dx,
-                     placements[dev1_name]["y"] + p1_dy)
-            end = (placements[dev2_name]["x"] + p2_dx,
-                   placements[dev2_name]["y"] + p2_dy)
-            points = router.route(start, end)
-            path_points_list.append(points)
-            new_paths.append({
-                "dev1": dev1_name,
-                "port1": port1_name,
-                "dev2": dev2_name,
-                "port2": port2_name,
-                "points": points,
-            })
-
-        # 重新统计交叉数
-        crossing_counts = _count_path_crossings(path_points_list)
-
-        # 重新计算损耗
-        paths_out: list[dict] = []
-        total_waveguide_loss = 0.0
-        total_bends = 0
-        total_crossing_pairs = 0
-        for idx, raw in enumerate(new_paths):
-            points = raw["points"]
-            n_bends = count_bends(points)
-            propagation_bend = _compute_path_loss(points, PROPAGATION_LOSS_DB_CM)
-            crossing_loss = crossing_counts[idx] * CROSSING_LOSS_DB
-            waveguide_loss = propagation_bend + crossing_loss
-            dev2 = device_map[raw["dev2"]]
-            dev2_insertion_loss = _get_device_insertion_loss(dev2)
-            loss_db = waveguide_loss + dev2_insertion_loss
-
-            paths_out.append({
-                "dev1": raw["dev1"],
-                "port1": raw["port1"],
-                "dev2": raw["dev2"],
-                "port2": raw["port2"],
-                "points": [[float(p[0]), float(p[1])] for p in points],
-                "loss_db": float(loss_db),
-                "n_bends": int(n_bends),
-                "n_crossings": int(crossing_counts[idx]),
-            })
-            total_waveguide_loss += waveguide_loss
-            total_bends += n_bends
-            total_crossing_pairs += crossing_counts[idx]
-        total_crossing_pairs //= 2
-
-        total_device_insertion_loss = sum(
-            _get_device_insertion_loss(dev) for dev in device_map.values()
+        n_compensated += _try_compensate_one_conn(
+            conn, placements, device_map, incoming_per_d2,
+            canvas_w, canvas_h, align_tol_um,
         )
-        total_loss_db = total_waveguide_loss + total_device_insertion_loss
-
-        route_result = {
-            "paths": paths_out,
-            "total_loss_db": float(total_loss_db),
-            "n_crossings": int(total_crossing_pairs),
-            "n_bends": int(total_bends),
-            "router_type": "curvy",
-            "bend_compensated": n_compensated,
-        }
-
+    route_result = _regenerate_paths_after_compensate(
+        circuit, placements, route_result, device_map, router, n_compensated
+    )
     return placements, route_result
 
 
