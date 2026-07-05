@@ -549,26 +549,29 @@ def _infer_matrix_grid_from_topology(
     Returns:
         与 _extract_matrix_grid_geometry 相同格式的元组，或 None（非 mesh 拓扑）。
 
-    来源（R02 学术诚信，≥5 个文献 URL）:
-        - Clements et al. Optica 3(12) 1460 (2016)（三角形 mesh 布局）
-          https://doi.org/10.1364/OPTICA.3.001460
-        - Reck et al. PRL 73, 58 (1994)（量子光学 mesh 拓扑）
-          https://doi.org/10.1103/PhysRevLett.73.58
-        - Tarjan 1972 Union-Find https://doi.org/10.1145/321694.321697
-        - Spanke IEEE JQE 22, 961 (1986)（Clos 网络拓扑）
-          https://ieeexplore.ieee.org/document/1072908
-        - SiEPIC EBeam PDK DRC PORT_ALIGNMENT
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - Chrostowski & Hochberg 2015 §4.3（波导连接与端口对齐）
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+    文献来源见模块顶部 docstring（R02 学术诚信）。
     """
     names = list(placements.keys())
     if len(names) < 4:
         return None
-    name_set = set(names)
+    same_col_edges = _extract_same_col_chain_edges(circuit, names)
+    if len(same_col_edges) < 2:
+        return None  # 无足够的同列链，非 Reck/Clements mesh
+    col_list = _group_devices_into_columns(names, same_col_edges)
+    if len(col_list) < 2:
+        return None  # 只有一列，非 mesh
+    rc_map = _assign_row_col_indices(col_list, same_col_edges, placements)
+    return _compute_grid_geometry_from_rc(rc_map, placements)
 
-    # 1. 提取 O2→I1 同列链连接（Reck/Clements mesh 垂直链）
-    #    端口名约定: O2=上输出, I1=下输入（PICBench/SiEPIC 标准）
+
+def _extract_same_col_chain_edges(
+    circuit: dict, names: list[str]
+) -> list[tuple[str, str]]:
+    """提取 O2→I1 同列链连接（Reck/Clements mesh 垂直链）。
+
+    端口名约定: O2=上输出, I1=下输入（PICBench/SiEPIC 标准）。
+    """
+    name_set = set(names)
     same_col_edges: list[tuple[str, str]] = []
     for conn in circuit.get("connections", []):
         if len(conn) < 4:
@@ -580,11 +583,13 @@ def _infer_matrix_grid_from_topology(
         # O2→I1 = 同列垂直链（Reck/Clements mesh 约定）
         if p1u in ("O2", "OUT2", "O2_1") and p2u in ("I1", "IN1", "I1_1"):
             same_col_edges.append((d1, d2))
+    return same_col_edges
 
-    if len(same_col_edges) < 2:
-        return None  # 无足够的同列链，非 Reck/Clements mesh
 
-    # 2. Union-Find 连通分量 = 列
+def _group_devices_into_columns(
+    names: list[str], same_col_edges: list[tuple[str, str]]
+) -> list[list[str]]:
+    """Union-Find 连通分量 = 列（Tarjan 1972 Union-Find）。"""
     parent: dict[str, str] = {nm: nm for nm in names}
 
     def _find(x: str) -> str:
@@ -601,21 +606,23 @@ def _infer_matrix_grid_from_topology(
     for d1, d2 in same_col_edges:
         _union(d1, d2)
 
-    # 3. 分组为列
     col_groups: dict[str, list[str]] = {}
     for nm in names:
         root = _find(nm)
         col_groups.setdefault(root, []).append(nm)
-    col_list = list(col_groups.values())
-    if len(col_list) < 2:
-        return None  # 只有一列，非 mesh
+    return list(col_groups.values())
 
-    # 4. 列间按平均 x 排序（左到右）
+
+def _assign_row_col_indices(
+    col_list: list[list[str]],
+    same_col_edges: list[tuple[str, str]],
+    placements: dict[str, dict[str, float]],
+) -> dict[str, tuple[int, int]]:
+    """列间按平均 x 排序（左到右），列内按链式拓扑序排序（行索引）。"""
+    # 列间按平均 x 排序（左到右）
     col_list.sort(
         key=lambda col: sum(float(placements[nm]["x"]) for nm in col) / len(col)
     )
-
-    # 5. 列内按链式拓扑序排序（行索引）
     rc_map: dict[str, tuple[int, int]] = {}
     for col_idx, col in enumerate(col_list):
         col_set = set(col)
@@ -629,22 +636,36 @@ def _infer_matrix_grid_from_topology(
         # 找链头（入度=0）
         heads = [nm for nm in col if in_degree[nm] == 0]
         if len(heads) == 1:
-            # 沿链遍历
-            col_sorted: list[str] = []
-            cur = heads[0]
-            while cur is not None:
-                col_sorted.append(cur)
-                cur = next_in_chain.get(cur)
-            # 处理可能的孤立器件（不在链中）
-            for nm in col:
-                if nm not in col_sorted:
-                    col_sorted.append(nm)
+            col_sorted = _traverse_col_chain(heads[0], next_in_chain, col)
         else:
             # 回退: 按 y 坐标排序
             col_sorted = sorted(col, key=lambda nm: float(placements[nm]["y"]))
         for row_idx, nm in enumerate(col_sorted):
             rc_map[nm] = (row_idx, col_idx)
+    return rc_map
 
+
+def _traverse_col_chain(
+    head: str, next_in_chain: dict[str, str], col: list[str]
+) -> list[str]:
+    """沿链遍历并附加孤立器件（不在链中）。"""
+    col_sorted: list[str] = []
+    cur: str | None = head
+    while cur is not None:
+        col_sorted.append(cur)
+        cur = next_in_chain.get(cur)
+    # 处理可能的孤立器件（不在链中）
+    for nm in col:
+        if nm not in col_sorted:
+            col_sorted.append(nm)
+    return col_sorted
+
+
+def _compute_grid_geometry_from_rc(
+    rc_map: dict[str, tuple[int, int]],
+    placements: dict[str, dict[str, float]],
+) -> tuple:
+    """计算行列间距并返回网格几何元组。"""
     rows = sorted({r for r, _ in rc_map.values()})
     cols = sorted({c for _, c in rc_map.values()})
     row_to_idx = {r: i for i, r in enumerate(rows)}
@@ -726,36 +747,17 @@ def _align_matrix_grid(
     需对齐以减少 PORT_ALIGNMENT 违规。本函数按器件名提取行列索引，
     将器件重新排列到规则网格位置，使同行器件 y 对齐、同列器件 x 等距。
 
-    ## 算法
+    算法:
+    1. 从器件名提取 (row, col) 索引；若器件名不含行列索引（如 PICBench
+       的 mzi1/mzi2/...），从连接拓扑推断（``_infer_matrix_grid_from_
+       topology``）
+    2. 行列重映射为密集索引（0..n-1）
+    3. 计算行列间距: ``row_spacing = max(h) + MIN_SPACING``
+    4. 画布自适应: 网格超出当前画布则扩大画布（R03 合规，非 fall-back）
+    5. 基准位置居中，按行列顺序放置器件
 
-    1. 从器件名提取 (row, col) 索引（``_MATRIX_NAME_PATTERN``）；
-       若器件名不含行列索引（如 PICBench 的 mzi1/mzi2/...），
-       从连接拓扑推断: 列=拓扑深度，行=同深度内 y 坐标排序
-    2. 行列重映射为密集索引（0..n-1），避免稀疏索引导致网格过大
-    3. 计算行列间距: ``row_spacing = max(h) + MIN_SPACING``，
-       ``col_spacing = max(w) + MIN_SPACING``
-    4. 画布自适应: 若网格超出当前画布，扩大画布（与 DRC DENSITY_MIN
-       自适应一致，R03 合规——非 fall-back，是合理的设计调整）
-    5. 基准位置居中: ``base_x = (canvas_w - grid_w) / 2``
-    6. 每个器件目标位置: ``x = base_x + col_idx * col_spacing``，
-       ``y = base_y + row_idx * row_spacing``
-    7. 按行列顺序放置，逐个检查无重叠、不超边界；冲突则跳过该器件
-       （保持原位，由后续 zigzag 对齐处理）
-
-    ## *创新点*
-
-    经典 FFDH/DREAMPlace 不识别矩阵拓扑，器件按 FFDH 行排列后端口
-    y 坐标散乱，导致 mesh 内相邻行列 MZI/DC 端口偏差巨大
-    （dy 可达数十 μm，远超 PORT_ALIGNMENT 10μm 容差）。本函数利用
-    器件名中的行列索引（Clements/Reck 约定）直接重建规则网格，
-    从源头消除 PORT_ALIGNMENT 违规。
-
-    ## R05 Bug 修复（PICBench mesh 器件名不带行列索引）
-
-    PICBench Reck_8x8/Spanke_8x8/Clements_8x8 器件名为 mzi1, mzi2, ...,
-    mziN（按拓扑序编号），原 ``_MATRIX_NAME_PATTERN`` 无法匹配 → 网格
-    对齐未执行 → PORT_ALIGNMENT 大量违规。新增 ``_infer_matrix_grid_
-    from_topology`` 从拓扑深度推断行列索引，修复此 Bug。
+    *创新点*: 经典 FFDH/DREAMPlace 不识别矩阵拓扑，端口 y 坐标散乱
+    导致 PORT_ALIGNMENT 违规。本函数利用行列索引直接重建规则网格。
 
     Args:
         placements: 布局（in-place 修改）。
@@ -764,19 +766,7 @@ def _align_matrix_grid(
         canvas_w: 画布宽 (μm)。
         canvas_h: 画布高 (μm)。
 
-    来源（R02 学术诚信）:
-        - Clements et al. Optica 2016（mesh 网格布局）
-          https://doi.org/10.1364/OPTICA.3.001460
-        - Reck et al. PRL 1994
-          https://doi.org/10.1103/PhysRevLett.73.58
-        - SiEPIC EBeam PDK DRC PORT_ALIGNMENT
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - Chrostowski & Hochberg 2015 §4.3
-          https://www.cambridge.org/core/books/silicon-photonics-design/
-        - Kahng & Lienig "VLSI Placement" IEEE TCAD 2009
-          https://ieeexplore.ieee.org/document/4685534
-        - Spanke IEEE JQE 22, 961 (1986)（Clos 网络拓扑）
-          https://ieeexplore.ieee.org/document/1072908
+    文献来源见模块顶部 docstring（R02 学术诚信）。
     """
     # 优先用器件名行列索引，其次从拓扑推断
     geometry = _extract_matrix_grid_geometry(placements, canvas_w, canvas_h)
@@ -821,19 +811,15 @@ def _align_ports(
     对每个下游器件 d2 调整位置，使其所有入向连接的端口坐标对齐（dx 或
     dy ≤ 容差），减少 PORT_ALIGNMENT DRC 违规和波导弯曲损耗。
 
-    ## 算法（全局多连接对齐 + 3 趟 zigzag + 残余修复，*创新* + R05 修复）
-
+    算法（全局多连接对齐 + 3 趟 zigzag + 残余修复，*创新* + R05 修复）:
     1. 按拓扑顺序遍历器件（depth 从小到大，保证上游先固定）
     2. 对每个 d2 设备，收集所有入向连接，调用 _align_d2_global
     3. 多趟 zigzag（正向→反向→正向），解决"下游阻挡上游"问题
     4. 第 4 趟残余违规成对双向修复（_residual_pair_fix）
 
-    ## *创新点*
-
-    经典 FFDH/DREAMPlace（VLSI 布局）无端口概念，器件间通过金属层
-    任意布线。但光电子布局中，器件通过波导物理连接，端口对齐能显著
-    减少波导弯曲（每增加一个弯曲 ≈ 0.05dB 损耗，Chrostowski & Hochberg
-    "Silicon Photonics Design" CUP 2015 §4.3）。
+    *创新点*: 经典 FFDH/DREAMPlace（VLSI 布局）无端口概念，器件间通过
+    金属层任意布线。但光电子布局中器件通过波导物理连接，端口对齐能显著
+    减少波导弯曲（每增加一个弯曲 ≈ 0.05dB 损耗）。
 
     Args:
         placements: FFDH 合法化后的布局 {name: {x, y, w, h}}（左下角坐标）。
@@ -844,18 +830,7 @@ def _align_ports(
     Returns:
         端口对齐后的布局（可能部分连接因重叠冲突未对齐，保持原位置）。
 
-    来源（R02 学术诚信）:
-        - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
-        - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-          https://www.cambridge.org/core/books/silicon-photonics-design/
-        - SiEPIC EBeam PDK DRC runset PORT_ALIGNMENT 规则
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - Kahng & Lienig "VLSI Placement" IEEE TCAD 2009
-          https://ieeexplore.ieee.org/document/4685534
-        - Berg "Computational Geometry" Springer（AABB 相交判定）
-          https://doi.org/10.1007/978-3-540-77974-2
-        - Boyd & Vandenberghe "Convex Optimization" §4（约束优化投影）
-          https://web.stanford.edu/~boyd/cvxbook/
+    文献来源见模块顶部 docstring（R02 学术诚信）。
     """
     if not placements:
         return placements
