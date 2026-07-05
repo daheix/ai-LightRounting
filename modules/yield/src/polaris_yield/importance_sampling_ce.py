@@ -191,6 +191,88 @@ def _run_ce_iterations(
     return q_means, q_stds, total_evals, converged
 
 
+def _ce_build_final_specs(
+    q_means: np.ndarray, q_stds: np.ndarray, d: int,
+) -> list[dict]:
+    """构造最终偏置分布 q* 的 spec 列表（高斯）。"""
+    return [
+        {"type": "norm", "loc": float(q_means[j]), "scale": float(q_stds[j])}
+        for j in range(d)
+    ]
+
+
+def _ce_run_final_is(
+    failure_region: Callable[[np.ndarray], bool],
+    f_dists, q_means: np.ndarray, q_stds: np.ndarray,
+    d: int, n_samples: int, rng,
+) -> tuple:
+    """用最终 q* 跑大批量 IS 估计并计算加权良率统计。
+
+    包含: 构造 q_dists → 采样 → 计算 log 权重 → 支撑检查 → 失效评估
+    → 加权统计。支撑不足或质量退化时 raise（R03 禁止 fall-back）。
+
+    Returns:
+        (samples, log_w, weighted, n_failures, n_samples_added,
+         y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup)
+    """
+    final_specs = _ce_build_final_specs(q_means, q_stds, d)
+    q_dists = _build_univariate_distributions(final_specs)
+    samples = _sample_from_distributions(q_dists, n_samples, rng)
+    log_f = _logpdf_distributions(f_dists, samples)
+    log_q = _logpdf_distributions(q_dists, samples)
+    log_w = log_f - log_q
+    # 绝对连续条件检查：q.pdf=0 但 f.pdf>0 即违反（R03）
+    bad_mask = np.isinf(log_w) & (log_w < 0) & np.isfinite(log_f)
+    if np.any(bad_mask):
+        n_bad = int(np.sum(bad_mask))
+        raise RuntimeError(
+            f"CE 最终 q 分布支撑不足: {n_bad} 个样本 q.pdf=0 但 f.pdf>0。"
+            f"绝对连续条件违反。禁止 fall-back（R03）。"
+        )
+    weights = np.exp(log_w)
+    flags = _evaluate_failure_flags(
+        failure_region, samples, "最终 IS 估计 failure_region"
+    )
+    n_failures = int(np.sum(flags))
+    weighted = flags.astype(float) * weights
+    (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
+        _compute_weighted_yield_stats(weighted, n_samples, n_failures)
+    )
+    return (samples, log_w, weighted, n_failures, n_samples,
+            y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup)
+
+
+def _ce_check_final_quality(
+    n_failures: int, ess_ratio: float, re: float, min_ess_ratio: float,
+) -> None:
+    """CE 最终 IS 估计质量诊断（退化即 raise，R03 禁止 fall-back）。
+
+    来源: Kroese, Taimre & Botev 2011 Ch.13 ESS/RE 准则
+        https://doi.org/10.1002/9781118014967
+    """
+    if n_failures < 30:
+        raise RuntimeError(
+            f"CE 最终失效样本数 {n_failures} < 30，统计意义不足。"
+            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < min_ess_ratio:
+        raise RuntimeError(
+            f"CE 最终 IS 估计 ESS 退化: ESS/n_failures = {ess_ratio:.4f} "
+            f"< 阈值 {min_ess_ratio}。禁止 fall-back（R03）。"
+        )
+    if re > 0.5:
+        raise RuntimeError(
+            f"CE 最终 IS 估计 RE = {re:.4f} > 0.5，不可靠。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < 0.3 or re > 0.1:
+        logger.warning(
+            "CE 最终 ESS/n_failures = %.4f, RE = %.4f 边缘区间。",
+            ess_ratio, re,
+        )
+
+
 def cross_entropy_importance_sampling(
     failure_region: Callable[[np.ndarray], bool],
     nominal_dist: list[dict],
@@ -240,73 +322,23 @@ def cross_entropy_importance_sampling(
         nominal_dist, n_samples, n_iterations, elite_ratio, smoothing_alpha
     )
     d = len(nominal_dist)
-
     rng = np.random.default_rng(seed)
     f_dists = _build_univariate_distributions(nominal_dist)
     q_means, q_stds = _init_ce_distribution(nominal_dist, initial_mean_shift)
     n_elite = max(1, int(n_samples * elite_ratio))
-
     q_means, q_stds, total_evals, converged = _run_ce_iterations(
         failure_region, rng, q_means, q_stds, n_samples, n_iterations,
         n_elite, smoothing_alpha, d,
     )
-
-    # 用最终 q 跑大批量 IS 估计
-    final_specs = [
-        {"type": "norm", "loc": float(q_means[j]), "scale": float(q_stds[j])}
-        for j in range(d)
-    ]
-    q_dists = _build_univariate_distributions(final_specs)
-    samples = _sample_from_distributions(q_dists, n_samples, rng)
-
-    log_f = _logpdf_distributions(f_dists, samples)
-    log_q = _logpdf_distributions(q_dists, samples)
-    log_w = log_f - log_q
-
-    bad_mask = np.isinf(log_w) & (log_w < 0) & np.isfinite(log_f)
-    if np.any(bad_mask):
-        n_bad = int(np.sum(bad_mask))
-        raise RuntimeError(
-            f"CE 最终 q 分布支撑不足: {n_bad} 个样本 q.pdf=0 但 f.pdf>0。"
-            f"绝对连续条件违反。禁止 fall-back（R03）。"
+    # 用最终 q* 跑大批量 IS 估计
+    (samples, log_w, weighted, n_failures, n_added,
+     y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
+        _ce_run_final_is(
+            failure_region, f_dists, q_means, q_stds, d, n_samples, rng,
         )
-
-    weights = np.exp(log_w)
-    flags = _evaluate_failure_flags(
-        failure_region, samples, "最终 IS 估计 failure_region"
     )
-    total_evals += n_samples
-    n_failures = int(np.sum(flags))
-    weighted = flags.astype(float) * weights
-
-    (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
-        _compute_weighted_yield_stats(weighted, n_samples, n_failures)
-    )
-
-    # CE 最终质量诊断（退化即 raise，R03）
-    if n_failures < 30:
-        raise RuntimeError(
-            f"CE 最终失效样本数 {n_failures} < 30，统计意义不足。"
-            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
-            f"禁止 fall-back（R03）。"
-        )
-    if ess_ratio < min_ess_ratio:
-        raise RuntimeError(
-            f"CE 最终 IS 估计 ESS 退化: ESS/n_failures = {ess_ratio:.4f} "
-            f"< 阈值 {min_ess_ratio}。禁止 fall-back（R03）。"
-        )
-    if re > 0.5:
-        raise RuntimeError(
-            f"CE 最终 IS 估计 RE = {re:.4f} > 0.5，不可靠。"
-            f"禁止 fall-back（R03）。"
-        )
-    if ess_ratio < 0.3 or re > 0.1:
-        logger.warning(
-            "CE 最终 ESS/n_failures = %.4f, RE = %.4f 边缘区间。",
-            ess_ratio,
-            re,
-        )
-
+    total_evals += n_added
+    _ce_check_final_quality(n_failures, ess_ratio, re, min_ess_ratio)
     return ImportanceSamplingResult(
         yield_estimate=y_hat, std_error=se, relative_error=re,
         ci_lower=ci_lower, ci_upper=ci_upper,
