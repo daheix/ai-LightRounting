@@ -373,13 +373,10 @@ def route_circuit(
 ) -> dict:
     """对已布局电路执行智能布线，返回布线结果 dict。
 
-    对电路的每条连接 (dev1.port1 → dev2.port2):
-    1. 从 placements 查找 dev1/dev2 的左下角坐标
-    2. 从 circuit.devices 查找端口相对偏移，计算端口绝对坐标
-    3. 用 CurvyRouter 生成 S-bend 曲线波导路径
-    4. 统计弯曲数、交叉数，计算路径损耗（波导损耗 + 器件插入损耗）
+    对电路每条连接 (dev1.port1 → dev2.port2): 查找器件/端口坐标 → CurvyRouter
+    生成 S-bend 曲线波导 → 统计弯曲/交叉/损耗（波导损耗 + 器件插入损耗）。
 
-    损耗模型（R02 学术诚信，参数可溯源）:
+    损耗模型（R02）:
     - 路径级 ``loss_db`` = 波导损耗(传播+弯曲+交叉) + 终点器件(dev2)插入损耗
       （从 ``dev2.params.insertion_loss_db`` 提取，光经波导进入 dev2 的损耗）
     - 电路级 ``total_loss_db`` = sum(所有波导损耗) + sum(所有器件插入损耗去重)
@@ -392,35 +389,16 @@ def route_circuit(
             canvas_w/canvas_h）。每个 device 含 ports 列表
             [(name, dx, dy, direction), ...]，params dict 可含
             ``insertion_loss_db``（器件插入损耗 dB，无则视为 0）。
-        placements: polaris-place 输出的布局结果 {name: {x, y, w, h}}，
-            x/y 为器件左下角坐标 (μm)。
-        mode: 布线模式，目前支持 ``"curvy"``（曲线波导布线）。
+        placements: polaris-place 输出 {name: {x, y, w, h}}，左下角坐标 (μm)。
+        mode: 布线模式，目前支持 ``"curvy"``。
 
     Returns:
-        布线结果 dict::
-
-            {
-                "paths": [
-                    {
-                        "dev1": str, "port1": str,
-                        "dev2": str, "port2": str,
-                        "points": list[[x, y], ...],  # 画布绝对坐标 (μm)
-                        "loss_db": float,             # 波导损耗+dev2插入损耗 (dB)
-                        "n_bends": int,               # 弯曲数
-                        "n_crossings": int,           # 该路径与其他路径的交叉数
-                    },
-                    ...
-                ],
-                "total_loss_db": float,  # 所有波导损耗+所有器件插入损耗(去重) (dB)
-                "n_crossings": int,      # 总交叉对数（去重）
-                "n_bends": int,          # 所有路径弯曲数之和
-                "router_type": str,      # 布线器类型（"curvy"）
-            }
+        dict: {paths: [{dev1,port1,dev2,port2,points,loss_db,n_bends,
+        n_crossings}], total_loss_db, n_crossings, n_bends, router_type}
 
     Raises:
-        RuntimeError: mode 非法 / circuit 结构非法 / placements 结构非法 /
-            端口未找到 / 连接引用的器件不在 placements 中
-            （R03 禁止 fall-back）。
+        RuntimeError: mode 非法 / circuit/placements 结构非法 / 端口未找到 /
+            连接引用的器件不在 placements 中（R03 禁止 fall-back）。
     """
     _validate_circuit(circuit)
     _validate_placements(placements)

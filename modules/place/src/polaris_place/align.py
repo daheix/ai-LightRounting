@@ -29,6 +29,7 @@
 from __future__ import annotations
 
 import math
+import re
 
 from polaris_place.legalize import (
     _ALIGN_MIN_SPACING,
@@ -42,6 +43,8 @@ __all__ = [
     "_no_overlap_at",
     "_align_d2_global",
     "_align_ports",
+    "_detect_matrix_topology",
+    "_align_matrix_grid",
 ]
 
 # 端口方向缩写→全称映射（与 polaris-drc engine.py 一致）
@@ -49,6 +52,14 @@ _DIR_MAP = {
     "n": "north", "s": "south", "e": "east", "w": "west",
     "north": "north", "south": "south", "east": "east", "west": "west",
 }
+
+# 矩阵型拓扑检测关键词（Clements/Reck/SVD mesh 等）
+# 来源: Clements et al. Optica 2016, Reck et al. PRL 1994
+#   https://doi.org/10.1364/OPTICA.3.001460
+#   https://doi.org/10.1103/PhysRevLett.73.58
+_MATRIX_NAME_KEYWORDS = ("clements", "reck", "spanke", "mesh", "matrix", "svd")
+# 器件名行列模式（如 mzi_1_1, dc_2_3, mzij_0_1）
+_MATRIX_NAME_PATTERN = re.compile(r"[_\-](\d+)[_\-](\d+)$")
 
 
 def _normalize_dir(direction: str) -> str:
@@ -418,6 +429,156 @@ def _run_align_zigzag_pass(
         )
 
 
+def _detect_matrix_topology(placements: dict, circuit: dict) -> bool:
+    """检测电路是否为矩阵型拓扑（Clements/Reck/Spanke mesh 等）。
+
+    检测条件（任一满足即判定为矩阵拓扑）:
+        1. 电路名含矩阵关键词（clements/reck/spanke/mesh/matrix/svd）
+        2. ≥4 个器件名匹配行列模式（如 ``mzi_1_1``、``dc_2_3``）
+
+    Args:
+        placements: 布局 {name: {x, y, w, h}}。
+        circuit: polaris-core 风格 circuit dict。
+
+    Returns:
+        True 表示是矩阵型拓扑，应启用网格对齐策略。
+
+    来源（R02 学术诚信）:
+        - Clements et al. Optica 2016（N×N MZI mesh 拓扑）
+          https://doi.org/10.1364/OPTICA.3.001460
+        - Reck et al. PRL 1994（量子光学 mesh）
+          https://doi.org/10.1103/PhysRevLett.73.58
+        - Spanke & Sahni 1987（Clos 网络 mesh 拓扑）
+        - SiEPIC EBeam PDK DRC PORT_ALIGNMENT
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    # 条件1: 电路名含矩阵关键词
+    circ_name = str(circuit.get("name", "")).lower()
+    for kw in _MATRIX_NAME_KEYWORDS:
+        if kw in circ_name:
+            return True
+    # 条件2: ≥4 个器件名匹配行列模式（2x2 矩阵最小规模）
+    matched = 0
+    for nm in placements.keys():
+        if _MATRIX_NAME_PATTERN.search(str(nm)):
+            matched += 1
+    return matched >= 4
+
+
+def _align_matrix_grid(
+    placements: dict[str, dict[str, float]],
+    circuit: dict,
+    canvas_w: float,
+    canvas_h: float,
+) -> None:
+    """矩阵型拓扑器件按行列网格对齐（*创新*）。
+
+    Clements/Reck mesh 中器件以行列网格排列，相邻行列器件端口 y 坐标
+    需对齐以减少 PORT_ALIGNMENT 违规。本函数按器件名提取行列索引，
+    将器件重新排列到规则网格位置，使同行器件 y 对齐、同列器件 x 等距。
+
+    ## 算法
+
+    1. 从器件名提取 (row, col) 索引（``_MATRIX_NAME_PATTERN``）
+    2. 行列重映射为密集索引（0..n-1），避免稀疏索引导致网格过大
+    3. 计算行列间距: ``row_spacing = max(h) + MIN_SPACING``，
+       ``col_spacing = max(w) + MIN_SPACING``
+    4. 基准位置居中: ``base_x = (canvas_w - grid_w) / 2``
+    5. 每个器件目标位置: ``x = base_x + col_idx * col_spacing``，
+       ``y = base_y + row_idx * row_spacing``
+    6. 按行列顺序放置，逐个检查无重叠、不超边界；冲突则跳过该器件
+       （保持原位，由后续 zigzag 对齐处理）
+
+    ## *创新点*
+
+    经典 FFDH/DREAMPlace 不识别矩阵拓扑，器件按 FFDH 行排列后端口
+    y 坐标散乱，导致 mesh 内相邻行列 MZI/DC 端口偏差巨大
+    （dy 可达数十 μm，远超 PORT_ALIGNMENT 10μm 容差）。本函数利用
+    器件名中的行列索引（Clements/Reck 约定）直接重建规则网格，
+    从源头消除 PORT_ALIGNMENT 违规。
+
+    Args:
+        placements: 布局（in-place 修改）。
+        circuit: polaris-core 风格 circuit dict。
+        canvas_w: 画布宽 (μm)。
+        canvas_h: 画布高 (μm)。
+
+    来源（R02 学术诚信）:
+        - Clements et al. Optica 2016（mesh 网格布局）
+          https://doi.org/10.1364/OPTICA.3.001460
+        - Reck et al. PRL 1994
+          https://doi.org/10.1103/PhysRevLett.73.58
+        - SiEPIC EBeam PDK DRC PORT_ALIGNMENT
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - Chrostowski & Hochberg 2015 §4.3
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+        - Kahng & Lienig "VLSI Placement" IEEE TCAD 2009
+          https://ieeexplore.ieee.org/document/4685534
+    """
+    # 提取每个器件的 (row, col)
+    rc_map: dict[str, tuple[int, int]] = {}
+    for nm in placements.keys():
+        m = _MATRIX_NAME_PATTERN.search(str(nm))
+        if m:
+            rc_map[nm] = (int(m.group(1)), int(m.group(2)))
+    if len(rc_map) < 4:
+        return  # 非矩阵型拓扑，跳过
+
+    rows = sorted({r for r, _ in rc_map.values()})
+    cols = sorted({c for _, c in rc_map.values()})
+    # 行列重映射为密集索引（避免稀疏索引导致网格过大）
+    row_to_idx = {r: i for i, r in enumerate(rows)}
+    col_to_idx = {c: i for i, c in enumerate(cols)}
+
+    # 计算行列间距（取最大器件尺寸 + MIN_SPACING，确保无重叠）
+    max_w = max(float(pl["w"]) for pl in placements.values())
+    max_h = max(float(pl["h"]) for pl in placements.values())
+    row_spacing = max_h + _ALIGN_MIN_SPACING
+    col_spacing = max_w + _ALIGN_MIN_SPACING
+
+    # 网格总尺寸与基准位置（居中，确保不超边界）
+    grid_w = len(cols) * col_spacing
+    grid_h = len(rows) * row_spacing
+    base_x = max(0.0, (canvas_w - grid_w) / 2.0)
+    base_y = max(0.0, (canvas_h - grid_h) / 2.0)
+
+    # 收集直接连接的邻居（MIN_SPACING 跳过，与 DRC engine 一致）
+    connected_neighbors: dict[str, set[str]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) < 4:
+            continue
+        d1, d2 = str(conn[0]), str(conn[2])
+        connected_neighbors.setdefault(d1, set()).add(d2)
+        connected_neighbors.setdefault(d2, set()).add(d1)
+
+    # 按行列索引顺序放置（避免后续器件与已放置器件冲突）
+    sorted_names = sorted(
+        rc_map.keys(),
+        key=lambda nm: (row_to_idx[rc_map[nm][0]], col_to_idx[rc_map[nm][1]])
+    )
+    for nm in sorted_names:
+        r, c = rc_map[nm]
+        ri = row_to_idx[r]
+        ci = col_to_idx[c]
+        target_x = base_x + ci * col_spacing
+        target_y = base_y + ri * row_spacing
+        w = float(placements[nm]["w"])
+        h = float(placements[nm]["h"])
+        # 边界检查
+        if target_x < 0.0 or target_x + w > canvas_w:
+            continue
+        if target_y < 0.0 or target_y + h > canvas_h:
+            continue
+        # 重叠/间距检查（冲突则跳过，保持原位由后续 zigzag 处理）
+        if not _no_overlap_at(
+            placements, nm, target_x, target_y, w, h,
+            connected_neighbors.get(nm, set()),
+        ):
+            continue
+        placements[nm]["x"] = target_x
+        placements[nm]["y"] = target_y
+
+
 def _align_ports(
     placements: dict[str, dict[str, float]],
     circuit: dict,
@@ -470,6 +631,11 @@ def _align_ports(
         return placements
     # 延迟导入避免与 residual.py 形成循环导入
     from polaris_place.residual import _residual_pair_fix
+    # *创新*: 矩阵型拓扑先做网格对齐（在 zigzag 前）
+    # Clements/Reck mesh 器件按行列网格排列，先重建规则网格使
+    # 相邻行列端口 y 坐标对齐，再由 zigzag 微调残余偏差
+    if _detect_matrix_topology(placements, circuit):
+        _align_matrix_grid(placements, circuit, canvas_w, canvas_h)
     (names, device_map, order, order_rev,
      connected_neighbors, incoming_per_d2) = _build_align_topology(
         placements, circuit

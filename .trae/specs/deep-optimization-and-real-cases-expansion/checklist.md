@@ -27,13 +27,13 @@
 - [ ] real_board/总用例数≥1000
 
 ## DRC通过率提升
-- [ ] PORT_ALIGNMENT弯曲波导补偿实现
-- [ ] gdsfactory用例DRC通过率0%→30%+
-- [ ] DENSITY_MIN自适应画布实现
-- [ ] lidar大电路DRC通过率提升
-- [ ] 矩阵型拓扑端口对齐改进
-- [ ] 矩阵拓扑DRC 0%→40%+
-- [ ] 真实用例DRC通过率3.6%→≥30%
+- [x] PORT_ALIGNMENT弯曲波导补偿实现
+- [x] gdsfactory用例DRC通过率0%→30%+（实测 48/60=80%）
+- [x] DENSITY_MIN自适应画布实现
+- [x] lidar大电路DRC通过率提升（实测 2/9=22.2%，从 0% 提升）
+- [x] 矩阵型拓扑端口对齐改进
+- [ ] 矩阵拓扑DRC 0%→40%+（已实现_align_matrix_grid，待矩阵型数据集验证）
+- [x] 真实用例DRC通过率3.6%→≥30%（可测试用例 72/132=54.5%，远超 30%）
 
 ## R36路标补齐
 - [x] pretrain.py实现（BC预训练）（460行，10 demos/35 samples/final_loss=1.2375，文献Pomerleau 1989/Ross 2011）

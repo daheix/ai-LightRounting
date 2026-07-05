@@ -97,13 +97,45 @@ def _stage_place(circuit: dict, ctx: dict) -> Any:
 
 
 def _stage_route(circuit: dict, ctx: dict) -> Any:
-    """Stage 4: 智能布线 - 使用 stage 3 的 placements 执行曲线波导布线。
+    """Stage 4: 智能布线 - 使用 stage 3 的 placements 执行曲线波导布线 + 弯曲补偿。
+
+    流程:
+        1. ``route_circuit`` 生成初始曲线波导路径
+        2. ``bend_compensate`` 后处理: 检测 PORT_ALIGNMENT 端口偏差
+           (dx>10μm 且 dy>10μm) 的连接，自动调整下游器件位置使端口对齐
+           （S 弯曲波导补偿，半径 ≥5μm，SiEPIC EBeam PDK 标准），
+           重新生成受影响路径
 
     若上游 stage 3 失败导致 ctx["placements"] 缺失，则传 None 给
     route_circuit，由子模块自身 raise RuntimeError（R03: 不假数据 fall-back）。
+
+    *创新*（弯曲波导补偿）: 在布线后自动调整下游器件位置使端口对齐，
+    消除 PORT_ALIGNMENT DRC 违规。底层逻辑: SiEPIC EBeam PDK 波导弯曲
+    容差 10μm，超过此容差需 S-bend 补偿；本步骤移动器件使偏差归零，
+    路径变为直线（0 弯曲）或单轴偏移（S-bend，2 弯曲），弯曲半径由
+    CurvyRouter 保证 ≥5μm。
+
+    来源（R02 学术诚信）:
+        - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design
+          波导弯曲半径 ≥5μm，弯曲损耗 0.05 dB/bend
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+        - SiEPIC EBeam PDK bend_euler radius=5μm
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - LiDAR ISPD'25 §3.2 curvy waveguide detailed routing
+          https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
     """
     placements = ctx.get("placements")
-    return polaris_route.route_circuit(circuit, placements, mode="curvy")
+    route_result = polaris_route.route_circuit(circuit, placements, mode="curvy")
+    # 弯曲波导补偿后处理: 检测 PORT_ALIGNMENT 违规并调整下游器件位置
+    # 仅当有 placements 和 paths 时执行（缺一则跳过，非 fall-back）
+    if placements is not None and isinstance(route_result, dict) \
+            and route_result.get("paths"):
+        new_placements, new_route = polaris_route.bend_compensate(
+            circuit, placements, route_result
+        )
+        ctx["placements"] = new_placements
+        return new_route
+    return route_result
 
 
 def _stage_simulate(_circuit: dict, _ctx: dict) -> Any:
