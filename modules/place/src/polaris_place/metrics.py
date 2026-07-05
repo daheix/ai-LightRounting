@@ -211,6 +211,24 @@ def _tarjan_scc(
     lowlink = [0] * n
     on_stack = [False] * n
     stack: list[int] = []
+    return _tarjan_dfs_pass(
+        n, adj, indices, lowlink, on_stack, stack, index_counter,
+    )
+
+
+def _tarjan_dfs_pass(
+    n: int,
+    adj: list[list[int]],
+    indices: list[int],
+    lowlink: list[int],
+    on_stack: list[bool],
+    stack: list[int],
+    index_counter: list[int],
+) -> list[list[int]]:
+    """Tarjan DFS 主循环（迭代版，Extract Method，R11 质量门禁）。
+
+    一次 DFS + low-link + 显式栈在 O(V+E) 时间内找出所有 SCC。
+    """
     sccs: list[list[int]] = []
     dfs_stack: list[tuple[int, int]] = []
 
