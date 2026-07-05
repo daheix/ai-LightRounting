@@ -147,6 +147,98 @@ class AreaDRCReport:
 # =============================================================================
 # area 检查主入口
 # =============================================================================
+def _check_area_validate_inputs(
+    gds_path: str | Path, layer, min_area_um2: float, max_violations: int,
+) -> tuple[Path, int, int]:
+    """校验 check_area 输入（R03 禁止 fall-back）。
+
+    Returns:
+        (in_path, src_layer, src_dt)。
+    """
+    in_path = Path(gds_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {gds_path}")
+    src_layer, src_dt = _validate_layer(layer, "layer")
+    if min_area_um2 <= 0:
+        raise ValueError(
+            f"min_area_um2 必须 > 0，得到 {min_area_um2}。"
+            f"禁止 fall-back（R03）。"
+        )
+    if max_violations <= 0:
+        raise ValueError(
+            f"max_violations 必须 > 0，得到 {max_violations}。"
+            f"禁止 fall-back（R03）。"
+        )
+    return in_path, src_layer, src_dt
+
+
+def _check_area_load_and_extract(
+    db, in_path: Path, gds_path, top_cell_name, src_layer: int, src_dt: int,
+):
+    """加载 GDSII 并提取待检查 Region（递归遍历所有子 cell）。
+
+    Returns:
+        (ly, dbu, top_cell, region)。
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
+    r = db.Region(top_cell.begin_shapes_rec(li_src))
+    return ly, dbu, top_cell, r
+
+
+def _check_area_find_violations(
+    r, dbu: float, min_area_um2: float, max_violations: int,
+) -> tuple[list, int]:
+    """迭代多边形，找出面积 < min_area_um2 的违规。
+
+    Returns:
+        (violations 列表, violation_count 总数)。
+        violations 长度不超过 max_violations，violation_count 为实际违规总数。
+    """
+    violations: list[AreaDRCViolation] = []
+    violation_count = 0
+    for poly in r.each():
+        poly_area_dbu2 = float(poly.area())
+        poly_area_um2 = poly_area_dbu2 * dbu * dbu
+        if poly_area_um2 < min_area_um2:
+            violation_count += 1
+            if len(violations) < max_violations:
+                bbox_db = poly.bbox()
+                violations.append(AreaDRCViolation(
+                    bbox_xmin_um=float(bbox_db.left) * dbu,
+                    bbox_ymin_um=float(bbox_db.bottom) * dbu,
+                    bbox_xmax_um=float(bbox_db.right) * dbu,
+                    bbox_ymax_um=float(bbox_db.top) * dbu,
+                    area_um2=poly_area_um2,
+                    min_area_um2=min_area_um2,
+                ))
+    return violations, violation_count
+
+
+def _check_area_compute_bbox(
+    violations: list, violation_count: int,
+) -> tuple[tuple[float, float], tuple[float, float]] | None:
+    """计算所有违规多边形的包围盒（μm）。无违规返回 None。"""
+    if violation_count == 0 or not violations:
+        return None
+    xmin = min(v.bbox_xmin_um for v in violations)
+    ymin = min(v.bbox_ymin_um for v in violations)
+    xmax = max(v.bbox_xmax_um for v in violations)
+    ymax = max(v.bbox_ymax_um for v in violations)
+    return ((xmin, ymin), (xmax, ymax))
+
+
 def check_area(
     gds_path: str | Path,
     layer: tuple[int, int],
@@ -177,77 +269,19 @@ def check_area(
     - KLayout Region area: https://www.klayout.de/doc-qt5/code/class_Region.html
     """
     db = _import_klayout_db()
-    in_path = Path(gds_path)
-
-    if not in_path.exists():
-        raise FileNotFoundError(f"输入 GDSII 文件不存在: {gds_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {gds_path}")
-
-    src_layer, src_dt = _validate_layer(layer, "layer")
-
-    if min_area_um2 <= 0:
-        raise ValueError(
-            f"min_area_um2 必须 > 0，得到 {min_area_um2}。"
-            f"禁止 fall-back（R03）。"
-        )
-    if max_violations <= 0:
-        raise ValueError(
-            f"max_violations 必须 > 0，得到 {max_violations}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    # 读取 GDSII
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
-    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-    li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
-
-    # 提取 Region（递归遍历所有子 cell）
-    r = db.Region(top_cell.begin_shapes_rec(li_src))
-
+    in_path, src_layer, src_dt = _check_area_validate_inputs(
+        gds_path, layer, min_area_um2, max_violations,
+    )
+    ly, dbu, top_cell, r = _check_area_load_and_extract(
+        db, in_path, gds_path, top_cell_name, src_layer, src_dt,
+    )
     total_polygons = int(r.count())
     total_area_dbu2 = float(r.area())
     total_area_um2 = total_area_dbu2 * dbu * dbu
-
-    violations: list[AreaDRCViolation] = []
-    violation_count = 0
-
-    # 迭代每个独立多边形
-    for poly in r.each():
-        poly_area_dbu2 = float(poly.area())
-        poly_area_um2 = poly_area_dbu2 * dbu * dbu
-
-        if poly_area_um2 < min_area_um2:
-            violation_count += 1
-            if len(violations) < max_violations:
-                bbox_db = poly.bbox()
-                violations.append(AreaDRCViolation(
-                    bbox_xmin_um=float(bbox_db.left) * dbu,
-                    bbox_ymin_um=float(bbox_db.bottom) * dbu,
-                    bbox_xmax_um=float(bbox_db.right) * dbu,
-                    bbox_ymax_um=float(bbox_db.top) * dbu,
-                    area_um2=poly_area_um2,
-                    min_area_um2=min_area_um2,
-                ))
-
-    # 计算所有违规的包围盒
-    bbox_um: tuple[tuple[float, float], tuple[float, float]] | None = None
-    if violation_count > 0 and violations:
-        xmin = min(v.bbox_xmin_um for v in violations)
-        ymin = min(v.bbox_ymin_um for v in violations)
-        xmax = max(v.bbox_xmax_um for v in violations)
-        ymax = max(v.bbox_ymax_um for v in violations)
-        bbox_um = ((xmin, ymin), (xmax, ymax))
-
+    violations, violation_count = _check_area_find_violations(
+        r, dbu, min_area_um2, max_violations,
+    )
+    bbox_um = _check_area_compute_bbox(violations, violation_count)
     logger.info(
         "GDSII area 检查: %s layer=(%d,%d), min_area=%.6fμm², "
         "polygons=%d, violations=%d (返回 %d), total_area=%.6fμm²",
@@ -255,7 +289,6 @@ def check_area(
         total_polygons, violation_count, len(violations),
         total_area_um2,
     )
-
     return AreaDRCReport(
         input_path=str(gds_path),
         layer=(src_layer, src_dt),
