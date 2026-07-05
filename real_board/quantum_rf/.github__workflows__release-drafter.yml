@@ -1,0 +1,9 @@
+name: Release Drafter
+permissions:
+  contents: read
+on:
+  push:
+    branches: [main]
+jobs:
+  draft:
+    uses: doplaydo/pdk-ci-workflow-public/.github/workflows/release-drafter.yml@main # zizmor: ignore[unpinned-uses]

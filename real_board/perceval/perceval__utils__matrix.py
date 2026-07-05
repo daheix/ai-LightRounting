@@ -1,0 +1,361 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+from __future__ import annotations  # Python 3.11 : Replace using Self typing
+
+import io
+import re
+
+from abc import ABC, abstractmethod
+from scipy.linalg import block_diag, svd
+from collections.abc import Iterator
+import numpy as np
+import sympy as sp
+
+class Matrix(ABC):
+    """
+        This parent class is the gateway :class:`MatrixN` or :class:`MatrixS` - based on ``use_symbolic``,
+        and checking if input contains any parameter, it will create an instance of one or the other class.
+
+        * :class:`MatrixS` is a subclass of :class:`sympy.Matrix` with slight API augmentations for compatibility with numpy
+        * :class:`MatrixN` is a subclass of :class:`numpy.ndarray`
+
+        Both classes have additional utility functions - while Matrix class is also presenting
+        additional static utility functions
+    """
+
+    @staticmethod
+    def __new__(cls, source, use_symbolic=None):
+        """Constructor for Matrix class
+
+        :param source: can be a string, a file, a list, a ndarray, another Matrix, or a integer
+        :param use_symbolic: True to force use of symbolic, False to force use of numeric,
+                             None to select based on source
+        """
+        if isinstance(source, str):
+            source = Matrix._read(source.split("\n"))
+        elif isinstance(source, io.TextIOWrapper):
+            source = Matrix._read(source)
+        elif isinstance(source, tuple):
+            assert len(source) == 1 or len(source) == 2, "Matrix only supports 1/2D-Matrices"
+            if len(source) == 1:
+                source = np.ndarray((source[0], 1))
+            else:
+                source = np.ndarray(source)
+        elif isinstance(source, sp.Matrix) or isinstance(source, np.ndarray):
+            pass
+        elif isinstance(source, list):
+            if use_symbolic:
+                source = sp.Matrix(source)
+            else:
+                source = np.asarray(source)
+        elif isinstance(source, int):
+            source = np.ndarray((source, source))
+        else:
+            raise NotImplementedError("no implemented input parser")
+        if use_symbolic is None and isinstance(source, sp.Matrix) and len(source.free_symbols):
+            use_symbolic = True
+        if use_symbolic:
+            return MatrixS(source)
+        else:
+            if isinstance(source, sp.Matrix):
+                if len(source.free_symbols):
+                    raise ValueError("cannot use MatrixN for matrix with parameters")
+                source = np.array(source, dtype=complex)
+            return MatrixN(source)
+
+    @staticmethod
+    def eye(n: int, use_symbolic: bool = False) -> Matrix:
+        """Returns an identity matrix
+
+        :param n: size of the matrix
+        :param use_symbolic: defines if matrix will be symbolic or numeric
+        :return: an identity matrix
+        """
+        if use_symbolic:
+            return MatrixS(sp.eye(n))
+        return MatrixN(np.eye(n, dtype=complex))
+
+    @staticmethod
+    def zeros(shape: tuple[int, int], use_symbolic: bool = False) -> Matrix:
+        """Generate an empty matrix
+
+        :param shape: 2D shape of the matrix
+        :param use_symbolic: defines if matrix will be symbolic or numeric
+        :return: an empty matrix
+        """
+        if use_symbolic:
+            return MatrixS(sp.zeros(rows=shape[0], cols=shape[1]))
+        return MatrixN(np.zeros(shape))
+
+    def is_square(self) -> bool:
+        return len(self.shape) == 2 and self.shape[0] == self.shape[1]
+
+    @abstractmethod
+    def is_unitary(self) -> bool:
+        """check if matrix is unitary"""
+
+    @abstractmethod
+    def is_symbolic(self) -> bool:
+        """check if matrix is symbolic or numeric"""
+
+    @property
+    @abstractmethod
+    def defined(self):
+        pass
+
+    @abstractmethod
+    def tonp(self):
+        pass
+
+    @abstractmethod
+    def tosp(self):
+        pass
+
+    @staticmethod
+    def random_unitary(n: int) -> MatrixN:
+        r"""static method generating a random unitary matrix
+
+        :param n: size of the Matrix
+        :return: a numeric Matrix
+        """
+        u = np.random.randn(n, n) + 1j*np.random.randn(n, n)
+        return Matrix._unitarize_matrix(n, u)
+
+    @staticmethod
+    def parametrized_unitary(n: int, parameters: np.ndarray | list) -> MatrixN:
+        r"""static method generating a parametrized unitary matrix
+
+        :param n: size of the Matrix
+        :param parameters: :math:`2n^2` parameters to use as generator
+        :return: a numeric Matrix
+        """
+        assert len(parameters) == 2*n**2, "parameters do not have the right size: should be %d, and is %d" % (
+            2*n**2, len(parameters))
+        a = np.reshape(parameters[:n**2], (n, n))
+        b = np.reshape(parameters[n**2:], (n, n))
+        u = a + 1j * b
+        return Matrix._unitarize_matrix(n, u)
+
+    @staticmethod
+    def _unitarize_matrix(n: int, u: np.ndarray) -> MatrixN:
+        # makes an 'n x n' matrix 'u' unitary
+        (q, r) = np.linalg.qr(u)
+        r_diag = np.sign(np.diagonal(np.real(r)))
+        n_u = np.zeros((n, n))
+        np.fill_diagonal(n_u, val=r_diag)
+        return MatrixN(np.matmul(q, n_u))
+
+    @staticmethod
+    def get_unitary_extension(M: np.ndarray) -> MatrixN:
+        r"""Embed the input matrix M into a unitary matrix  U
+
+        U = | M/σ * |
+            | *   * |
+
+        .. math::
+
+            U = \begin{matrix}
+                    M/σ & * \\
+                    * & *
+                \end{matrix}
+
+        :param M: np.ndarray describing a row x col complex matrix
+        :return: numeric matrix describing a (row + col) x (row + col) complex unitary matrix
+        """
+
+        row, col = M.shape
+
+        flag_transpose = row > col
+        if flag_transpose:
+            M = M.T
+            row, col = M.shape
+
+        # Singular value decomposition and normalisation
+        v1, s, v2h = svd(M)
+        svs = s / np.max(s)
+        d = np.diag(svs)
+        dd = np.diag([np.sqrt(1. - f ** 2) for f in svs])
+
+        # # Unitary extension
+        V1 = block_diag(v1, v2h.T.conj())
+        V2h = block_diag(v2h, v1.T.conj())
+        D = np.block([[d, np.zeros((row, col - row)), dd],
+                    [np.zeros((col - row, row)), np.eye(col - row),
+                    np.zeros((col - row, row))],
+                    [dd, np.zeros((row, col - row)), -d]])
+
+        U = V1 @ D @ V2h
+
+        if flag_transpose:
+            U = U.T
+        return MatrixN(U)
+
+    def simp(self):
+        """Simplify the matrix - only implemented for symbolic matrix"""
+        return self
+
+    @staticmethod
+    def _read(seqline: Iterator[str]) -> Matrix:
+        """read a matrix from file or a string sequence"""
+        rows = []
+        n = None
+        for line in seqline:
+            line = line.strip("\n ⎡⎤⎥⎢⎣⎦|[]")
+            if not line or line.startswith("#"):
+                continue
+            row = [sp.S(s) for s in re.split(r"[\t ]+", line) if s]
+            if n:
+                if len(row) != n:
+                    raise ValueError("invalid matrix")
+            else:
+                n = len(row)
+            rows.append(row)
+
+        return sp.Matrix(rows)
+
+    @abstractmethod
+    def fill(self, _: float):
+        pass
+
+    @abstractmethod
+    def __getitem__(self, k):
+        pass
+
+
+class MatrixS(Matrix, sp.Matrix):
+
+    def __new__(cls, obj):
+        return sp.Matrix.__new__(cls, obj)
+
+    def is_symbolic(self):
+        return True
+
+    @property
+    def defined(self):
+        return not self.free_symbols
+
+    def tonp(self):
+        return MatrixN(np.array(self, dtype=complex))
+
+    def tosp(self):
+        return self
+
+    @property
+    def T(self):
+        """
+            use numpy language
+        """
+        return self.transpose()
+
+    def fill(self, f):
+        return sp.Matrix.fill(self, f)
+
+    def __getitem__(self, k):
+        return sp.Matrix.__getitem__(self, k)
+
+    def conj(self):
+        """
+            use numpy language
+        """
+        return self.conjugate()
+
+    def simp(self):
+        for i in range(self.shape[0]):
+            for j in range(self.shape[1]):
+                self[i, j] = self[i, j].simplify()
+        return self
+
+    @property
+    def ndim(self):
+        return 2
+
+    def is_unitary(self):
+        """check if a matrix is squary and unitary"""
+        if not self.is_square():
+            return False
+        if self.free_symbols:
+            # use sympy only if we really have to...
+            p_trans = self * self.T.conj()-sp.eye(self.shape[0])
+            if p_trans.free_symbols:
+                # cannot decide
+                return None
+            return np.allclose(np.array(p_trans).astype(complex), np.zeros(self.shape))
+        else:
+            return np.allclose(self.tonp().dot(self.tonp().T.conj()), np.eye(self.shape[0]))
+
+class MatrixN(np.ndarray, Matrix):
+
+    def __new__(cls, obj):
+        array = super().__new__(cls, shape=obj.shape, dtype=complex)
+        np.copyto(array, obj, casting='safe')
+        return array
+
+    @property
+    def defined(self):
+        return True
+
+    def is_symbolic(self):
+        return False
+
+    def tonp(self):
+        return self
+
+    def tosp(self):
+        return MatrixS(self)
+
+    def fill(self, f):
+        return np.ndarray.fill(self, f)
+
+    def __getitem__(self, k):
+        return np.ndarray.__getitem__(self, k)
+
+    def is_unitary(self):
+        """check if a matrix is square and unitary"""
+        if not self.is_square():
+            return False
+        return np.allclose(self.dot(self.T.conj()), np.eye(self.shape[0]))
+
+    def inv(self) -> MatrixN:
+        """returns inverse of the Matrix
+
+        :return:
+        """
+        return np.linalg.inv(self)
+
+
+def matrix_double(u: Matrix):
+    m = u.shape[0]
+    pu = Matrix(m * 2, u.is_symbolic())
+    pu.fill(0)
+    for k1 in range(0, m):
+        for k2 in range(0, m):
+            pu[2 * k1, 2 * k2] = u[k1, k2]
+            pu[2 * k1 + 1, 2 * k2 + 1] = u[k1, k2]
+    return pu

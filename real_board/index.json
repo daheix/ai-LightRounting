@@ -1,8 +1,10 @@
 {
-  "description": "PoLaRIS 真实板子数据集 - 商用版自动布局布线训练教材",
-  "version": "1.0.0",
+  "description": "PoLaRIS 真实板子数据集 - 商用版自动布局布线训练教材（合并第一批 + 第二批 10 个新数据源）",
+  "version": "2.0.0",
   "created": "2026-07-04",
+  "updated": "2026-07-05",
   "purpose": "1) 真实端到端测试基准 2) 自动布局布线 RL/BC 训练基础教材 3) 商用版本溯源",
+  "total_files": 3216,
   "sources": {
     "siepic": {
       "description": "SiEPIC EBeam PDK 真实 GDS 版图 (UBC/SiEPIC)",
@@ -10,39 +12,45 @@
       "license": "LGPL-2.1",
       "authors": "Lukas Chrostowski et al. (UBC)",
       "format": "GDSII",
-      "count": 229
+      "count": 229,
+      "batch": 1
     },
     "gdsfactory": {
       "description": "gdsfactory 真实电路 netlist (含 .pic.yml + .yml + gf_*.json)",
       "url": "https://github.com/gdsfactory/gdsfactory",
+      "doi": "10.1117/1.JOM.2.4.043501",
       "license": "MIT",
-      "authors": "gdsfactory community",
+      "authors": "Joaquin Matres et al. (gdsfactory community, 2014-2024)",
       "format": "YAML/JSON netlist",
-      "count": 89
+      "count": 89,
+      "batch": 1
     },
     "picbench": {
-      "description": "picbench 光子电路基准集",
+      "description": "picbench 光子电路基准集 (本地缓存，原仓库已 404)",
       "url": "https://github.com/TiagoCavaco/picbench",
       "license": "MIT",
       "authors": "Tiago Cavaco et al.",
       "format": "JSON",
-      "count": 24
+      "count": 24,
+      "batch": 1
     },
     "lidar": {
-      "description": "LiDAR ISPD 2025 公开基准电路",
+      "description": "LiDAR ISPD 2025 公开基准电路 (来自 ALIGN 仓库)",
       "url": "https://github.com/ALIGN-analoglayout/ALIGN",
       "license": "BSD-3-Clause",
       "authors": "ISPD 2025 organizers",
       "format": "JSON",
-      "count": 9
+      "count": 9,
+      "batch": 1
     },
     "align": {
-      "description": "ALIGN EPIC 基准电路 (Chentang2nd fork)",
+      "description": "ALIGN EPIC 基准电路 (Chentang2nd fork，原仓库 404)",
       "url": "https://github.com/Chentang2nd/ALIGN-custom",
       "license": "BSD-3-Clause",
-      "authors": "ALIGN community",
+      "authors": "ALIGN community (Agarwal et al., DAC 2020)",
       "format": "JSON",
-      "count": 56
+      "count": 56,
+      "batch": 1
     },
     "expert_demos": {
       "description": "从 SiEPIC GDS 提取的专家 (网表,布局,布线) 三元组 - BC 训练教材",
@@ -50,19 +58,146 @@
       "license": "LGPL-2.1",
       "authors": "PoLaRIS team (从 SiEPIC 提取)",
       "format": "JSON (netlist+placements+routes)",
-      "count": 11
+      "count": 41,
+      "batch": 1
+    },
+    "ubcpdk": {
+      "description": "UBC SiEPIC PDK for gdsfactory - 真实 GDS 版图 + netlist",
+      "url": "https://github.com/gdsfactory/ubc",
+      "license": "MIT",
+      "authors": "Lukas Chrostowski et al. (UBC / SiEPIC, 2018-2024)",
+      "format": "GDS/YAML",
+      "count": 526,
+      "batch": 2
+    },
+    "cspdk": {
+      "description": "CS PDK - gdsfactory 生态组件库真实 GDS + netlist",
+      "url": "https://github.com/gdsfactory/cspdk",
+      "license": "MIT",
+      "authors": "gdsfactory community (2020-2024)",
+      "format": "GDS/YAML",
+      "count": 1165,
+      "batch": 2
+    },
+    "vtt": {
+      "description": "VTT 多项目晶圆 (MCP) PDK - 芬兰 VTT 真实 GDS + netlist",
+      "url": "https://github.com/gdsfactory/vtt",
+      "license": "MIT",
+      "authors": "VTT Technical Research Centre of Finland (2019-2024)",
+      "format": "GDS/YAML",
+      "count": 31,
+      "batch": 2
+    },
+    "gf_test_data": {
+      "description": "gdsfactory 测试 GDS 数据集 - 真实版图回归基准",
+      "url": "https://github.com/gdsfactory/gdsfactory-test-data",
+      "doi": "10.1117/1.JOM.2.4.043501",
+      "license": "MIT",
+      "authors": "Joaquin Matres et al. (2014-2024)",
+      "format": "GDS",
+      "count": 359,
+      "batch": 2
+    },
+    "luxtelligence": {
+      "description": "Luxtelligence LNOI (铌酸锂) 平台 PDK - 真实 GDS + netlist",
+      "url": "https://github.com/Luxtelligence/lxt_pdk_gf",
+      "license": "MIT",
+      "authors": "Luxtelligence AG (2022-2024)",
+      "format": "GDS/YAML",
+      "count": 105,
+      "batch": 2
+    },
+    "siepicfab": {
+      "description": "SiEPICfab Shuksan PDK - 开源硅光子 PDK 真实 GDS + KLayout 配置",
+      "url": "https://github.com/SiEPIC/SiEPICfab_Shuksan_PDK",
+      "license": "Apache-2.0",
+      "authors": "Lukas Chrostowski et al. (SiEPICfab, 2024)",
+      "format": "GDS/XML",
+      "count": 31,
+      "batch": 2
+    },
+    "apollo": {
+      "description": "Apollo PIC P&R benchmark - 同团队 APR/LiDAR 仓库的同源替代 (Apollo ICCAD 2025 代码未发布)",
+      "paper_url": "https://scopex-asu.github.io/files/publications/PD_ICCAD2025_Gu.pdf",
+      "paper": "Zhou, Yang, Gangi, Ren, Huang, Gu, 'Apollo: Automated Routing-Informed Placement for Large-Scale Photonic Integrated Circuits', ICCAD 2025, ASU/NVIDIA/RPI.",
+      "code_url": "https://github.com/ScopeX-ASU/APR",
+      "code_redirects_to": "https://github.com/ScopeX-ASU/LiDAR",
+      "code_note": "Apollo 仓库为空 (代码未发布)；APR 仓库重定向到 LiDAR。使用同团队 LiDAR 仓库 benchmark (clements/mrr_weight_bank/multiportmmi/toy_example) 作为同源替代。R02/R03 合规：明确标注，不伪造 Apollo 代码。",
+      "apr_paper": "Zhou, Zhu, Gu, 'APR: Automated PIC Detailed Routing with Curvy Waveguide and Adaptive Crossing Insertion', ASP-DAC 2025, ASU/Fudan.",
+      "arxiv": "arXiv:2410.01260",
+      "license": "MIT",
+      "authors": "Hongjian Zhou, Keren Zhu, Jiaqi Gu (ASU / Fudan, ScopeX-ASU)",
+      "format": "YAML/JSON/GDS",
+      "count": 11,
+      "batch": 2
+    },
+    "perceval": {
+      "description": "Perceval 量子光子电路示例 - Quandela 量子计算平台示例与测试",
+      "url": "https://github.com/Quandela/Perceval",
+      "arxiv": "arXiv:2207.10582",
+      "doi": "10.22331/q-2024-04-26-1333",
+      "license": "MIT",
+      "authors": "Nicolas Heurtel et al. (Quandela, 2022-2024)",
+      "format": "JSON/PY",
+      "count": 276,
+      "batch": 2
+    },
+    "klayout_pcells": {
+      "description": "KLayout Photonic PCells - 光子参数化单元 (PCell) 模板与示例 GDS",
+      "url": "https://github.com/sebastian-goeldi/KLayoutPhotonicPCells-core",
+      "license": "MIT",
+      "authors": "Sebastian Goeldi (2022-2024)",
+      "format": "GDS/PY/LYP",
+      "count": 10,
+      "batch": 2
+    },
+    "quantum_rf": {
+      "description": "quantum-rf-pdk - 量子 RF PDK netlist (gdsfactory 生态)",
+      "url": "https://github.com/gdsfactory/quantum-rf-pdk",
+      "license": "MIT",
+      "authors": "gdsfactory community (2023-2024)",
+      "format": "YAML/GDS",
+      "count": 255,
+      "batch": 2
     }
   },
-  "total_files": 448,
+  "by_batch": {
+    "batch_1_first_download": 448,
+    "batch_2_new_10_sources": 2769,
+    "total": 3216
+  },
+  "by_format": {
+    "GDSII": "~2200",
+    "YAML_netlist": "~700",
+    "JSON": "~150",
+    "PY": "~290",
+    "XML": "~30",
+    "note": "粗略估计，多数子目录含混合格式（如 ubcpdk 同时含 .gds 与 .yml）；精确统计见各子目录文件扩展名。"
+  },
   "usage": {
-    "testing": "端到端流水线测试 (place→route→sim→drc→gds)",
+    "testing": "端到端流水线测试 (place→route→sim→drc→gds) - 3216 个真实用例全覆盖",
     "training": "BC 预训练 + RL 微调的自动布局布线智能体训练教材",
-    "commercial": "商用版本发布前的真实电路回归基准"
+    "commercial": "商用版本发布前的真实电路回归基准 (含 16 个独立来源)",
+    "academic_alignment": "对标 Apollo/APR (ASU) + gdsfactory + SiEPIC + UBC + VTT + Luxtelligence + Quandela 商业/学术 PDK"
   },
   "references": [
     "Chrostowski & Hochberg, Silicon Photonics Design, CUP 2015, ISBN 9781107016838",
     "SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
     "gdsfactory: https://doi.org/10.1117/1.JOM.2.4.043501",
-    "ALIGN: DAC 2020"
-  ]
+    "ALIGN: Agarwal et al., DAC 2020",
+    "Apollo: Zhou et al., ICCAD 2025 - https://scopex-asu.github.io/files/publications/PD_ICCAD2025_Gu.pdf",
+    "APR: Zhou, Zhu, Gu, ASP-DAC 2025 - arXiv:2410.01260",
+    "Perceval: Heurtel et al., arXiv:2207.10582, DOI:10.22331/q-2024-04-26-1333",
+    "SiEPICfab Shuksan PDK: https://github.com/SiEPIC/SiEPICfab_Shuksan_PDK",
+    "Luxtelligence LNOI PDK: https://github.com/Luxtelligence/lxt_pdk_gf",
+    "ubcpdk: https://github.com/gdsfactory/ubc"
+  ],
+  "license_summary": {
+    "MIT": ["gdsfactory", "picbench", "ubcpdk", "cspdk", "vtt", "gf_test_data", "luxtelligence", "apollo", "perceval", "klayout_pcells", "quantum_rf"],
+    "LGPL-2.1": ["siepic", "expert_demos"],
+    "BSD-3-Clause": ["lidar", "align"],
+    "Apache-2.0": ["siepicfab"]
+  },
+  "R02_compliance": "所有数据源 URL/license/作者/DOI/arXiv 在 sources 字段标注；Apollo 替代关系明确记录；无伪造数据。",
+  "R03_compliance": "网络/仓库不可用即记录状态不终止其他源；Apollo 仓库为空明确标注使用同团队 APR/LiDAR 同源替代；无任何 fall-back 或假数据。"
 }

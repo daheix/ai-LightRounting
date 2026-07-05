@@ -1,0 +1,141 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+import numpy as np
+import scipy as sp
+
+from perceval.utils import BasicState, StateVector, Parameter
+from perceval.components.abstract_component import AParametrizedComponent
+
+
+class TD(AParametrizedComponent):
+    """
+    Time Delay is a special component corresponding to a roll of optical fiber making as an effect to delay a photon.
+
+    Parameter of the Time Delay is the number of period the delay should be.
+    For instance ``TD(2)`` will create a delay on the mode corresponding to two periods.
+    A time delay is not expressed as a unitary matrix and can only be used in processors.
+
+    :param dt: Number of periods
+    """
+    DEFAULT_NAME = "TD"
+
+    def __init__(self, dt: int | Parameter):
+        super().__init__(1)
+        self._dt = self._set_parameter("t", dt, 0, None, False)
+
+    def get_variables(self):
+        parameters = {}
+        self._populate_parameters(parameters, "t")
+        return parameters
+
+    def describe(self):
+        if self._dt.fixed:
+            value = float(self._dt)
+        else:
+            value = f'P("{self._dt.spv}")'
+        return f"TD(t={value})"
+
+
+class LC(AParametrizedComponent):
+    """
+    Loss channels are non-unitary components applying a fixed loss on a given mode. A loss channel is equivalent to a
+    beam splitter with a reflectivity equal to the loss, being connected to a virtual mode containing lost photons.
+    A loss channel is not expressed as a unitary matrix and can only be used in processors.
+
+    :param loss: Loss rate expressed as a floating point number between 0 and 1.
+    """
+    DEFAULT_NAME = "LC"
+
+    def __init__(self, loss: float | Parameter):
+        super().__init__(1)
+        self._loss = self._set_parameter("loss", loss, 0, 1, False)
+
+    def get_variables(self):
+        out = {}
+        self._populate_parameters(out, "loss")
+        return out
+
+    def describe(self):
+        if self._loss.fixed:
+            value = float(self._loss)
+        else:
+            value = f'P("{self._loss.spv}")'
+        return f"LC(loss={value})"
+
+    def apply(self, r, sv):
+        """
+        Applies a channel loss to r-th mode on an input StateVector sv
+        Channel loss is treated as a beam splitter with a reflectivity equal to the loss. This beam splitter
+        being connected to a "virtual" mode containing lost photons
+
+        The output state vector contains BasicStates which are 1 mode bigger than the ones in input:
+        (input modes count + the virtual mode)
+
+        Warning: this method loses annotations! However, it is not currently used in LC simulation (see: LossSimulator)
+        """
+        # Assumes r of size 1
+        # Returns a stateVector of size m + 1. Stepper backend should support this
+        if isinstance(sv, BasicState):
+            sv = StateVector(sv)
+
+        r = r[0]
+        loss = self.get_variables()["loss"]
+
+        n_max = max(state[r] for state in sv)
+        N = np.arange(n_max + 1)
+        k = np.arange(n_max + 1)
+        k = np.tile(k, (n_max+1, 1)).transpose()
+
+        prob = sp.special.comb(np.tile(N, (n_max+1, 1)), k)
+        prob *= loss ** (sp.sparse.diags([(n_max + 1 - i) * [i] for i in range(n_max + 1)],
+                                         list(range(n_max + 1))).toarray())
+        prob *= (1 - loss) ** k
+        prob = np.sqrt(prob)
+
+        nsv = StateVector()
+        nsv.m = sv.m + 1
+        # Equivalent to the nsv.update below:
+        # for state, prob_ampli in sv.items():
+        #     n = state[r]
+        #     for i in range(n + 1):
+        #         nsv[BasicState(state.set_slice(slice(r, r+1), BasicState([i]))) * BasicState([n - i])] += prob_ampli \
+        #                                                                             * (loss ** (n - i)
+        #                                                                                * (1 - loss) ** i
+        #                                                                                * comb(n, i)) ** 0.5
+
+        # Dict comprehension is possible here as two different basic states can't give the same resulting state
+        nsv.update(
+            {
+                BasicState(state.set_slice(slice(r, r + 1), BasicState([i]))) * BasicState([state[r] - i]):
+                    prob_ampli * prob[i, state[r]]
+                for state, prob_ampli in sv.items()
+                for i in range(state[r] + 1)
+            }
+        )
+        return nsv

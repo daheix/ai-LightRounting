@@ -1,0 +1,25 @@
+name: Auto-label PDK issues
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - deleted
+      - pinned
+      - unpinned
+      - closed
+      - reopened
+      - assigned
+      - unassigned
+      - unlabeled
+      - locked
+      - unlocked
+      - transferred
+      - milestoned
+      - demilestoned
+jobs:
+  label:
+    permissions:
+      contents: read
+      issues: write
+    uses: doplaydo/pdk-ci-workflow-public/.github/workflows/issue.yml@main # zizmor: ignore[unpinned-uses]

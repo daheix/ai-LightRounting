@@ -1,0 +1,219 @@
+# MIT License
+#
+# Copyright (c) 2022 Quandela
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# As a special exception, the copyright holders of exqalibur library give you
+# permission to combine exqalibur with code included in the standard release of
+# Perceval under the MIT license (or modified versions of such code). You may
+# copy and distribute such a combined system following the terms of the MIT
+# license for both exqalibur and Perceval. This exception for the usage of
+# exqalibur is limited to the python bindings used by Perceval.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+import random
+from abc import ABC
+from collections.abc import Iterable
+import sympy as sp
+import copy
+
+from perceval.utils.parameter import Parameter, Expression
+
+
+class AComponent(ABC):
+    DEFAULT_NAME = None
+
+    def __init__(self, m: int, name: str = None):
+        self._m = m
+        self._name = name
+
+    @property
+    def m(self) -> int:
+        return self._m
+
+    @property
+    def name(self) -> str:
+        """Returns component name"""
+        if self._name is None:
+            return self.DEFAULT_NAME
+        return self._name
+
+    @name.setter
+    def name(self, new_name: str = None) -> None:
+        """Sets new component name"""
+        self._name = new_name
+
+    def is_composite(self) -> bool:
+        """
+        :return: True if the component is itself composed of subcomponents
+        """
+        return False
+
+    def apply_phase_noise(self, phase_error = 0, phase_imprecision = 0, rng: random.Random = None):
+        """Applies a noise on phases. Acts in-place"""
+        pass
+
+
+class AParametrizedComponent(AComponent):
+    def __init__(self, m: int, name: str = None):
+        super().__init__(m, name)
+        self._params = {}
+        self._vars = {}
+
+    @property
+    def vars(self) -> dict[str, Parameter]:
+        """
+        :return: A dictionary mapping parameter names to parameters for all variable parameters of the circuit
+        """
+        return {p.name: p for p in self._params.values() if not p.fixed}
+
+    def assign(self,
+               assign: dict[str, float | int] = None):
+        """
+        Assign values to parameters referenced in assign
+
+        :param assign: A dictionary mapping parameter_name -> value.
+         Set the value to the parameter whose name is parameter_name for each key of the dictionary.
+        :raise KeyError: If parameter_name is not an existing variable parameter name of the circuit.
+        """
+        if assign is None:
+            return
+        vs = self.vars
+        if isinstance(assign, dict):
+            for k, v in assign.items():
+                vs[k].set_value(v)
+
+    @property
+    def defined(self) -> bool:
+        """
+        check if all parameters of the circuit are fully defined
+        """
+        for _, p in self._params.items():
+            if not p.defined:
+                return False
+        return True
+
+    @property
+    def params(self) -> Iterable[str]:
+        """
+        :return: a list of all variable parameter names in the component
+        """
+        return self._params.keys()
+
+    def param(self, param_name: str) -> Parameter:
+        """Extract a `Parameter` object from its name
+        :param param_name: The name of the parameter
+        :return: A `Parameter` object
+        """
+        if param_name not in self._params:
+            raise KeyError(f"Parameter {param_name} is not defined in this circuit")
+        return self._params[param_name]
+
+    def get_parameters(self, all_params: bool = False, expressions = False) -> list[Parameter]:
+        """Return the parameters of the component
+
+        :param all_params: if False, only returns the variable parameters
+        :param expressions: if True, returns Expressions and parameters embedded in circuit components.
+            If False, returns the raw parameters that make up the expressions only. Default False.
+
+        :return: the list of parameters
+        """
+        param_list = []
+        for param in self._params.values():
+            if all_params or not param.fixed:
+                if isinstance(param, Expression):
+                    if expressions:
+                        if param not in param_list:
+                            param_list.append(param)
+                    else:
+                        for p in param.parameters:
+                            if p not in param_list:
+                                param_list.append(p)
+
+                elif param not in param_list:
+                    param_list.append(param)
+        return param_list
+
+    def reset_parameters(self) -> None:
+        for v in self._params.values():
+            v.reset()
+
+    def _set_parameter(self,
+                       name: str,
+                       p: Parameter | float,
+                       min_v: float | None,
+                       max_v: float | None,
+                       periodic: bool = True) -> Parameter:
+        """
+        Define a parameter for the circuit, it can be an existing parameter that we recycle updating
+        min/max value or a parameter defined by a value that we create on the fly
+
+        :param name: parameter name
+        :param p: parameter instance or numerical value
+        :param min_v: minimum numerical value (can be None)
+        :param max_v: maximum numerical value (can be None)
+        :param periodic: True if the value is periodic (e.g. for an angle)
+        :return: The corresponding `Parameter` object
+        """
+        if isinstance(p, Parameter):
+            if min_v is not None:
+                if p.min is None or min_v > p.min:
+                    p.min = float(min_v)
+            if max_v is not None:
+                if p.max is None or max_v < p.max:
+                    p.max = float(max_v)
+            if p.name in self._vars:
+                if p is not self._vars[p.name]:
+                    raise RuntimeError("two parameters with the same name in the circuit")
+            if periodic is not None:
+                p.set_periodic(periodic)
+            self._vars[p.name] = p
+        else:
+            p = Parameter(value=p, name=name, min_v=min_v, max_v=max_v, periodic=periodic)
+        self._params[name] = p
+        return p
+
+    def _populate_parameters(self, out_parameters: dict, pname: str, default_value: float = None):
+        """
+        Populate an in/out dictionary with a {parameter name: best value for display} couple, if needed.
+        A value equal to the optional default value will not be injected in the dictionary.
+
+        :param out_parameters: out dictionary, where key/value pairs are added.
+        :param pname: parameter name to consider, in the component definition.
+            e.g. to retrieve "phi0" from PS(phi=P("phi0")), ask for pname="phi", as it's the parameter name for a PS.
+        :param default_value: optional default numerical value. None means no default value.
+        """
+        p = self._params[pname]
+        if p.defined:
+            if default_value is None or p._value != default_value:
+                v = p._value
+                if isinstance(v, sp.Expr):
+                    out_parameters[pname] = str(v)
+                else:
+                    if p._is_expression:
+                        v = float(p)  # Re-evaluate the expression value
+                    if default_value is None or abs(v - float(default_value)) > 1e-6:
+                        out_parameters[pname] = v
+        else:
+            out_parameters[pname] = self._params[pname].name
+
+    def get_variables(self):
+        return {}
+
+    def copy(self):
+        return copy.deepcopy(self)
