@@ -328,56 +328,23 @@ def multi_clip_gdsii(
     if not in_path.is_file():
         raise ValueError(f"输入路径不是文件: {gds_path}")
     if not clip_boxes_um:
-        raise ValueError(
-            "clip_boxes_um 不能为空。禁止 fall-back（R03）。"
-        )
-
-    # 验证所有裁剪框
-    validated_boxes: list[tuple[float, float, float, float]] = []
-    for i, box in enumerate(clip_boxes_um):
-        validated_boxes.append(_validate_clip_box(box, context=f"clip_boxes[{i}]"))
-
+        raise ValueError("clip_boxes_um 不能为空。禁止 fall-back（R03）。")
+    validated_boxes = [
+        _validate_clip_box(box, context=f"clip_boxes[{i}]")
+        for i, box in enumerate(clip_boxes_um)
+    ]
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    ly = _read_gdsii_layout(db, in_path)
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
     original_name = str(top_cell.name)
     prefix = name_prefix if name_prefix is not None else original_name
-
-    # 裁剪前统计（共享）
     shapes_before = _count_shapes_rec(top_cell, ly)
-    bbox_before = top_cell.bbox()
-    bbox_before_um = (
-        float(bbox_before.left) * dbu,
-        float(bbox_before.bottom) * dbu,
-        float(bbox_before.right) * dbu,
-        float(bbox_before.top) * dbu,
-    )
-
-    # 构造 dbu 裁剪框列表
-    box_dbu_list = []
-    for (left, bottom, right, top) in validated_boxes:
-        box_dbu_list.append(
-            db.Box(
-                int(round(left / dbu)),
-                int(round(bottom / dbu)),
-                int(round(right / dbu)),
-                int(round(top / dbu)),
-            )
-        )
-
-    # 多区域裁剪
-    # KLayout 0.30.9: Layout.multi_clip(cell_index, [box1, box2, ...]) -> [ci1, ci2, ...]
-    # 来源: https://klayout.org/doc-qt5/code/class_Layout.html#method98
+    bbox_before_um = _bbox_to_um(top_cell.bbox(), dbu)
+    box_dbu_list = [
+        _build_box_dbu(db, l, b, r, t, dbu)
+        for (l, b, r, t) in validated_boxes
+    ]
     new_cis = ly.multi_clip(top_cell.cell_index(), box_dbu_list)
     new_cis = [int(ci) for ci in new_cis]
     if len(new_cis) != len(validated_boxes):
@@ -385,58 +352,16 @@ def multi_clip_gdsii(
             f"multi_clip 返回 {len(new_cis)} 个 cell，"
             f"预期 {len(validated_boxes)}。禁止 fall-back（R03）。"
         )
-
-    # 注: 不删除原 top cell，因为用 Cell.write 只写出裁剪 cell 层次，
-    # 原 layout 中的其他 cell 不会被写入输出文件。
-
-    # 为每个裁剪结果生成独立文件
     reports: list[ClipReport] = []
     for idx, (ci, box_um) in enumerate(zip(new_cis, validated_boxes)):
-        new_cell = ly.cell(ci)
-        final_name = f"{prefix}_clip{idx}"
-        new_cell.name = final_name
-        left, bottom, right, top = box_um
-
-        shapes_after = _count_shapes_rec(new_cell, ly)
-        bbox_after = new_cell.bbox()
-        bbox_after_um = (
-            float(bbox_after.left) * dbu,
-            float(bbox_after.bottom) * dbu,
-            float(bbox_after.right) * dbu,
-            float(bbox_after.top) * dbu,
-        )
-
-        out_file = out_dir / f"{final_name}.gds"
-        # 单独写出此 cell
-        # 注: Cell.write 只写该 cell 及其子 cell 的层次
-        try:
-            new_cell.write(str(out_file))
-        except Exception as e:
-            raise RuntimeError(
-                f"klayout 写出文件 {out_file} 失败: {type(e).__name__}: {e}。"
-                f"禁止 fall-back（R03）。"
-            ) from e
-
-        reports.append(
-            ClipReport(
-                input_path=str(gds_path),
-                output_path=str(out_file),
-                dbu=dbu,
-                top_cell_name=original_name,
-                clip_box_um=(left, bottom, right, top),
-                clipped_cell_name=final_name,
-                shapes_before=shapes_before,
-                shapes_after=shapes_after,
-                bbox_before_um=bbox_before_um,
-                bbox_after_um=bbox_after_um,
-            )
-        )
-
+        reports.append(_do_multi_clip_one_region(
+            ly, ci, box_um, dbu, out_dir, prefix, idx,
+            original_name, shapes_before, bbox_before_um, gds_path,
+        ))
     logger.info(
         "GDSII 多区域裁剪: %s → %s (%d 个区域)",
         in_path, out_dir, len(reports),
     )
-
     return reports
 
 
