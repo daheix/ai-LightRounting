@@ -27,7 +27,7 @@ PoLaRIS v5.0 把原 polaris-verify 拆分为 polaris-drc + polaris-lvs 两个独
 4. ``MIN_AREA`` 0.1μm²（确保工艺可识别，WG_MIN_AREA）
 5. ``BOUNDARY``（器件不超出画布边界）
 6. ``NO_OVERLAP``（器件之间不能重叠，touching 允许）
-7. ``PORT_ALIGNMENT`` 5μm（连接端口坐标对齐容差）
+7. ``PORT_ALIGNMENT`` 10μm（连接端口坐标对齐容差，SiEPIC 弯曲容差 10-20μm）
 8. ``PORT_DIRECTION``（端口方向合法 north/south/east/west）
 9. ``PORT_CONNECTIVITY``（每个器件至少有一个端口被连接）
 10. ``PORT_FACING``（连接端口方向相对 east↔west / north↔south）

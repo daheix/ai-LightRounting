@@ -91,7 +91,7 @@ def _make_clean_circuit() -> dict:
     """构造 DRC clean 电路（2 器件 + 1 连接，所有规则通过）。
 
     d1.out (east) ↔ d2.in (west)，端口方向相对；
-    端口 y 坐标对齐（共享 y 轴），dx=10μm 但 dy=0 ≤ 容差 5μm，PORT_ALIGNMENT 通过。
+    端口 y 坐标对齐（共享 y 轴），dx=10μm 但 dy=0 ≤ 容差 10μm，PORT_ALIGNMENT 通过。
     """
     return {
         "name": "clean",
@@ -267,7 +267,11 @@ def test_default_rules_thresholds():
     assert rules_by_name["MIN_AREA"].threshold == 0.1      # WG_MIN_AREA
     assert rules_by_name["BOUNDARY"].threshold == 0.0
     assert rules_by_name["NO_OVERLAP"].threshold == 0.0
+<<<<<<< Updated upstream
     assert rules_by_name["PORT_ALIGNMENT"].threshold == 10.0  # 5.0→10.0 SiEPIC EBeam PDK 实际波导弯曲容差
+=======
+    assert rules_by_name["PORT_ALIGNMENT"].threshold == 10.0  # SiEPIC 弯曲容差 10-20μm（engine _PORT_ALIGN_TOL_UM）
+>>>>>>> Stashed changes
     assert rules_by_name["PORT_DIRECTION"].threshold == 0.0
     assert rules_by_name["PORT_CONNECTIVITY"].threshold == 0.0
     assert rules_by_name["PORT_FACING"].threshold == 0.0
@@ -413,11 +417,12 @@ def test_min_spacing_pass():
 
 
 def test_min_spacing_fail():
-    """MIN_SPACING 违规：两器件间距 0.5μm < 阈值 1.0μm。
+    """MIN_SPACING 违规：两器件间距 0.5μm < 阈值 1.0μm（非直接连接对）。
 
     d1 AABB=(10,10,20,10.5), d2 AABB=(20.5,10,30.5,10.5),
     dx=max(20.5-20,10-30.5,0)=0.5, dy=0, dist=0.5 < 1.0。
 
+<<<<<<< Updated upstream
     注: d1 和 d2 必须无连接（R05 修复: 连接邻居跳过 MIN_SPACING 检查，
     因为波导连接 touching 正常）。用独立器件 d3/d4 测试 MIN_SPACING。
     """
@@ -432,6 +437,21 @@ def test_min_spacing_fail():
         "connections": [],  # 无连接: d3/d4 独立器件，MIN_SPACING 必须检查
         "canvas_w": 100,
         "canvas_h": 100,
+=======
+    注意: d1 与 d2 无直接连接（connections=[]），否则 MIN_SPACING 跳过
+    直接连接对（波导连接器件 touching 正常，commit 753e95e0）。
+    """
+    circuit = {
+        "name": "spacing_fail",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [],  # 无直接连接 → MIN_SPACING 检查 d1-d2 对
+        "canvas_w": 100, "canvas_h": 100,
+>>>>>>> Stashed changes
     }
     placements = {
         "d3": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
@@ -700,9 +720,9 @@ def test_port_facing_perpendicular_bend():
 
 
 def test_port_alignment_pass():
-    """PORT_ALIGNMENT 通过：连接端口共享 y 轴（dy=0 ≤ 容差 5μm）。
+    """PORT_ALIGNMENT 通过：连接端口共享 y 轴（dy=0 ≤ 容差 10μm）。
 
-    d1.out abs=(20,10), d2.in abs=(30,10), dx=10>5 但 dy=0≤5，不违规
+    d1.out abs=(20,10), d2.in abs=(30,10), dx=10≤10 但 dy=0≤10，不违规
     （规则要求 dx>tol AND dy>tol 才违规）。
     """
     result = run_drc(_make_clean_circuit(), _make_clean_placements())
@@ -710,9 +730,9 @@ def test_port_alignment_pass():
 
 
 def test_port_alignment_fail():
-    """PORT_ALIGNMENT 违规：连接端口 dx>5 且 dy>5（未对齐）。
+    """PORT_ALIGNMENT 违规：连接端口 dx>10 且 dy>10（未对齐）。
 
-    d1.out abs=(20,10), d2.in abs=(50,30), dx=30>5, dy=20>5。
+    d1.out abs=(20,10), d2.in abs=(50,30), dx=30>10, dy=20>10。
     """
     circuit = _make_clean_circuit()
     placements = {

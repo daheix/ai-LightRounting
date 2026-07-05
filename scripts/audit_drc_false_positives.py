@@ -91,7 +91,7 @@ REPORT_PATH = os.path.join(OUTPUT_DIR, "drc_false_positive_report.md")
 DATA_PATH = os.path.join(OUTPUT_DIR, "drc_audit_data.json")
 
 # PORT_ALIGNMENT 容差（与 polaris_drc/engine.py _PORT_ALIGN_TOL_UM 一致）
-PORT_ALIGN_TOL_UM = 5.0
+PORT_ALIGN_TOL_UM = 10.0
 # 抽样数量
 PORT_ALIGN_SAMPLE_SIZE = 50
 # 误报判定阈值：PORT_ALIGNMENT 偏差在此范围内视为布局算法局限（误报）
@@ -133,7 +133,7 @@ def parse_dx_dy_from_message(msg: str) -> tuple[float, float]:
     """从 PORT_ALIGNMENT 违规 message 中解析 dx/dy。
 
     message 格式: "PORT_ALIGNMENT: 连接 d1.p1→d2.p2 端口未对齐
-                   dx=12.34μm dy=56.78μm > 容差 5.00μm"
+                   dx=12.34μm dy=56.78μm > 容差 10.00μm"
 
     R03: 解析失败 raise。
     """
@@ -776,7 +776,7 @@ def generate_report(audit_data: dict, sample: list[dict],
     )
     lines.append(
         "- 规则阈值与 polaris_drc/engine.py `DEFAULT_DRC_RULES` 一致，"
-        "PORT_ALIGNMENT 容差 5μm 来自 SiEPIC EBeam PDK。"
+        "PORT_ALIGNMENT 容差 10μm 来自 SiEPIC EBeam PDK 实际波导弯曲容差 10-20μm。"
     )
     lines.append(
         "- 波导弯曲损耗 0.05dB/弯曲来自 Chrostowski & Hochberg, "
