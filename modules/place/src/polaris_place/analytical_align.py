@@ -134,6 +134,109 @@ def _no_overlap_at(
     return True
 
 
+def _find_nearest_legal_setup(axis: str, w: float, h: float,
+                              fixed_x: float, fixed_y: float):
+    """根据搜索轴解析 size 与固定轴的 [lo, hi] 范围。"""
+    if axis == "y":
+        return h, fixed_x, fixed_x + w
+    return w, fixed_y, fixed_y + h
+
+
+def _find_nearest_collect_forbidden(
+    placements: dict[str, dict[str, float]],
+    exclude_name: str,
+    axis: str,
+    size: float,
+    fixed_lo: float,
+    fixed_hi: float,
+    connected_names: set[str],
+) -> list[tuple[float, float]]:
+    """收集其他器件在 axis 方向产生的禁止区间（重叠/间距不足）。
+
+    R05 Bug 修复: 垂直方向判定需考虑 MIN_SPACING（非连接邻居）。
+    原代码仅检查 strict overlap，导致两器件在垂直方向"几乎接触但不重叠"
+    （如 fixed_hi = ox1 - 0.5）时，沿 axis 方向放置会违反 MIN_SPACING
+    （真实 DRC 用 L∞ 距离判定：dx < spacing AND dy < spacing 即违规）。
+    修复: 对非连接邻居，垂直方向影响范围扩展 MIN_SPACING 距离。
+
+    来源: Ericson "Real-Time Collision Detection" MK 2005 §5.1.3 AABB
+        https://realtimecollisiondetection.net/
+    """
+    forbidden: list[tuple[float, float]] = []
+    for nm, pl in placements.items():
+        if nm == exclude_name:
+            continue
+        ox1, oy1 = float(pl["x"]), float(pl["y"])
+        ox2, oy2 = ox1 + float(pl["w"]), oy1 + float(pl["h"])
+        spacing = 0.0 if nm in connected_names else _ALIGN_MIN_SPACING
+        if axis == "y":
+            # x 方向（垂直方向）影响范围: 重叠 OR 间距 < MIN_SPACING
+            if fixed_hi <= ox1 - spacing or fixed_lo >= ox2 + spacing:
+                continue
+            other_lo, other_hi = oy1, oy2
+        else:
+            if fixed_hi <= oy1 - spacing or fixed_lo >= oy2 + spacing:
+                continue
+            other_lo, other_hi = ox1, ox2
+        # 沿 axis 方向也需 MIN_SPACING 间距（touching + spacing 合法）
+        forbidden.append((other_lo - size - spacing, other_hi + spacing))
+    return forbidden
+
+
+def _find_nearest_merge_intervals(
+    forbidden: list[tuple[float, float]],
+) -> list[list[float]]:
+    """合并禁止区间（Berg Computational Geometry §2.1）。
+
+    来源: Berg "Computational Geometry" Springer §2.1
+        https://doi.org/10.1007/978-3-540-77974-2
+    """
+    forbidden.sort()
+    merged: list[list[float]] = []
+    for f in forbidden:
+        if merged and f[0] <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], f[1])
+        else:
+            merged.append([f[0], f[1]])
+    return merged
+
+
+def _find_nearest_pick_best(
+    merged: list[list[float]],
+    target: float,
+    canvas_limit: float,
+    size: float,
+) -> float | None:
+    """在 [0, canvas_limit-size] 内找最接近 target 的合法点。
+
+    候选点 = 边界 lo/hi + 每个禁止区间边界（touching 合法）。
+    在可行域内最小化端口偏差（Boyd & Vandenberghe §4 投影优化）。
+    """
+    lo = 0.0
+    hi = canvas_limit - size
+    if hi < lo:
+        return None  # 画布太小
+    candidates = [lo, hi]
+    for f in merged:
+        if f[1] >= lo:
+            candidates.append(max(lo, f[1]))
+        if f[0] <= hi:
+            candidates.append(min(hi, f[0]))
+    best: float | None = None
+    best_dist = float("inf")
+    for c in candidates:
+        if c < lo or c > hi:
+            continue
+        # 开区间判定，边界 touching 合法
+        if any(f[0] < c < f[1] for f in merged):
+            continue
+        dist = abs(c - target)
+        if dist < best_dist:
+            best_dist = dist
+            best = c
+    return best
+
+
 def _find_nearest_legal_pos_1d(
     placements: dict[str, dict[str, float]],
     exclude_name: str,
@@ -185,81 +288,15 @@ def _find_nearest_legal_pos_1d(
         - SiEPIC EBeam PDK DRC runset（NO_OVERLAP/MIN_SPACING 约束）
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
-    if axis == "y":
-        size = h
-        fixed_lo = fixed_x
-        fixed_hi = fixed_x + w
-    else:  # axis == "x"
-        size = w
-        fixed_lo = fixed_y
-        fixed_hi = fixed_y + h
-
-    # 收集禁止区间（axis 方向）
-    # R05 Bug 修复: 垂直方向判定需考虑 MIN_SPACING（非连接邻居）。
-    # 原代码仅检查 strict overlap，导致两器件在垂直方向"几乎接触但不重叠"
-    # （如 fixed_hi = ox1 - 0.5）时，沿 axis 方向放置会违反 MIN_SPACING
-    # （真实 DRC 用 L∞ 距离判定：dx < spacing AND dy < spacing 即违规）。
-    # 修复: 对非连接邻居，垂直方向影响范围扩展 MIN_SPACING 距离。
-    forbidden: list[tuple[float, float]] = []
-    for nm, pl in placements.items():
-        if nm == exclude_name:
-            continue
-        ox1, oy1 = float(pl["x"]), float(pl["y"])
-        ox2, oy2 = ox1 + float(pl["w"]), oy1 + float(pl["h"])
-        # MIN_SPACING 间距（非连接邻居需保持，与 DRC engine 一致）
-        spacing = 0.0 if nm in connected_names else _ALIGN_MIN_SPACING
-        if axis == "y":
-            # x 方向（垂直方向）影响范围: 重叠 OR 间距 < MIN_SPACING
-            # 当 fixed 与 other 在 x 方向的距离 < spacing 时，y 方向需保持间距
-            if fixed_hi <= ox1 - spacing or fixed_lo >= ox2 + spacing:
-                continue
-            other_lo, other_hi = oy1, oy2
-        else:  # axis == "x"
-            # y 方向（垂直方向）影响范围: 重叠 OR 间距 < MIN_SPACING
-            if fixed_hi <= oy1 - spacing or fixed_lo >= oy2 + spacing:
-                continue
-            other_lo, other_hi = ox1, ox2
-        # 沿 axis 方向也需 MIN_SPACING 间距（touching + spacing 合法）
-        f_min = other_lo - size - spacing
-        f_max = other_hi + spacing
-        forbidden.append((f_min, f_max))
-
-    # 合并禁止区间（Berg Computational Geometry §2.1）
-    forbidden.sort()
-    merged: list[list[float]] = []
-    for f in forbidden:
-        if merged and f[0] <= merged[-1][1]:
-            merged[-1][1] = max(merged[-1][1], f[1])
-        else:
-            merged.append([f[0], f[1]])
-
-    # 在 [0, canvas_limit - size] 内找最接近 target 的合法点
-    lo = 0.0
-    hi = canvas_limit - size
-    if hi < lo:
-        return None  # 画布太小
-
-    # 候选点: 边界 lo/hi + 每个禁止区间的边界（touching 合法）
-    candidates = [lo, hi]
-    for f in merged:
-        if f[1] >= lo:
-            candidates.append(max(lo, f[1]))
-        if f[0] <= hi:
-            candidates.append(min(hi, f[0]))
-
-    best: float | None = None
-    best_dist = float("inf")
-    for c in candidates:
-        if c < lo or c > hi:
-            continue
-        # 检查 c 是否在禁止区间内（开区间，边界 touching 合法）
-        if any(f[0] < c < f[1] for f in merged):
-            continue
-        dist = abs(c - target)
-        if dist < best_dist:
-            best_dist = dist
-            best = c
-    return best
+    size, fixed_lo, fixed_hi = _find_nearest_legal_setup(
+        axis, w, h, fixed_x, fixed_y,
+    )
+    forbidden = _find_nearest_collect_forbidden(
+        placements, exclude_name, axis, size, fixed_lo, fixed_hi,
+        connected_names,
+    )
+    merged = _find_nearest_merge_intervals(forbidden)
+    return _find_nearest_pick_best(merged, target, canvas_limit, size)
 
 
 def _align_d2_global_collect_conn_infos(
