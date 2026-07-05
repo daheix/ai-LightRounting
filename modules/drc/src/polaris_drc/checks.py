@@ -255,6 +255,133 @@ def check_density_range(rule: DRCRule, circuit: dict, placements: dict,
     )]
 
 
+# =========================================================================
+# P0 波导级规则辅助函数（6 条 P0 规则专用，2026-07-05 新增）
+# =========================================================================
+
+# 波导器件类型关键词（小写匹配，覆盖 SiEPIC/gdsfactory/通用命名）
+_WAVEGUIDE_TYPE_KEYWORDS: tuple[str, ...] = (
+    "waveguide", "wg", "bend", "taper", "straight",
+    "strip", "rib", "slot", "curve",
+)
+
+
+def is_waveguide_device(device_type: str) -> bool:
+    """判断器件类型是否为波导类（用于 WAVEGUIDE_MANHATTAN 等波导级规则）。
+
+    匹配关键词: waveguide/wg/bend/taper/straight/strip/rib/slot/curve
+    来源: SiEPIC EBeam PDK device_type 命名约定
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    dt = str(device_type).lower()
+    return any(kw in dt for kw in _WAVEGUIDE_TYPE_KEYWORDS)
+
+
+def device_waveguide_width(device: dict, placement: dict) -> float | None:
+    """提取波导宽度（μm），用于 WAVEGUIDE_WIDTH_MATCH 检查。
+
+    优先级: device.params.width_um → device.width_um → placement.h
+    （水平波导宽度 = h，与 SiEPIC strip_waveguide AABB 一致）。
+    未声明返回 None（调用方跳过，非 fall-back）。
+
+    来源: SiEPIC EBeam PDK strip_waveguide AABB 约定
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    params = device.get("params", {}) or {}
+    if "width_um" in params:
+        return float(params["width_um"])
+    if "width_um" in device:
+        return float(device["width_um"])
+    if "width" in placement:
+        # 通用 placement.width（部分数据集用 width 而非 w）
+        return None  # width 是器件长度，非波导宽度
+    if "h" in placement:
+        return float(placement["h"])
+    return None
+
+
+def aabb_orientation(placement: dict) -> str:
+    """判断 AABB 方向（水平/垂直），用于 CROSSING_ANGULAR 检查。
+
+    Returns:
+        "h"（水平，w >= h）或 "v"（垂直，h > w）。
+
+    来源: Berg "Computational Geometry" Springer 2014 AABB 几何
+          https://doi.org/10.1007/978-3-540-77974-2
+    """
+    w = float(placement["w"])
+    h = float(placement["h"])
+    return "h" if w >= h else "v"
+
+
+def detect_connection_cycles(circuit: dict,
+                             max_cycle_len: int = 4) -> list[list[str]]:
+    """检测连接图中的最小环（用于 ENCLOSED_AREA_MIN 检查）。
+
+    使用 DFS 搜索长度 ≤ max_cycle_len 的简单环（默认 4，覆盖矩形环）。
+    返回去重后的环列表（每个环为器件名列表，按发现顺序）。
+
+    来源（R02）:
+        - Cormen et al. "Introduction to Algorithms" MIT 2022（DFS 环检测 §22.3）
+        - Berg "Computational Geometry" Springer 2014（多边形面积）
+          https://doi.org/10.1007/978-3-540-77974-2
+        - KLayout area_check（内孔检测）
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+
+    Args:
+        circuit: circuit dict（含 connections）。
+        max_cycle_len: 最大环长度（默认 4，矩形环）。
+
+    Returns:
+        环列表 list[list[str]]，每环为有序器件名列表。
+    """
+    # 构建无向图: device → set(neighbors)
+    graph: dict[str, set[str]] = {}
+    for conn in circuit.get("connections", []):
+        if len(conn) >= 4:
+            d1, d2 = str(conn[0]), str(conn[2])
+            graph.setdefault(d1, set()).add(d2)
+            graph.setdefault(d2, set()).add(d1)
+    cycles: list[list[str]] = []
+    seen_cycle_sets: list[frozenset[str]] = []
+    nodes = sorted(graph.keys())
+    for start in nodes:
+        _dfs_find_cycles(start, start, [start], set([start]),
+                         graph, max_cycle_len, cycles, seen_cycle_sets)
+    return cycles
+
+
+def _dfs_find_cycles(start: str, current: str, path: list[str],
+                     visited: set[str], graph: dict[str, set[str]],
+                     max_depth: int, cycles: list[list[str]],
+                     seen_sets: list[frozenset[str]]) -> None:
+    """DFS 递归搜索环（detect_connection_cycles 辅助，不直接对外暴露）。
+
+    从 start 出发，沿 graph 深度优先搜索回到 start 的环。
+    避免重复: 用 frozenset 去重（同环不同起点只记一次）。
+    """
+    if len(path) > max_depth:
+        return
+    for neighbor in graph.get(current, ()):
+        if neighbor == start and len(path) >= 3:
+            # 找到环（长度 ≥3 才算环，避免 2-器件往返）
+            cycle_set = frozenset(path)
+            if cycle_set not in seen_sets:
+                seen_sets.append(cycle_set)
+                cycles.append(list(path))
+            continue
+        if neighbor in visited:
+            continue
+        if neighbor < start:
+            continue  # 强制起点为最小节点，避免同环重复遍历
+        visited.add(neighbor)
+        path.append(neighbor)
+        _dfs_find_cycles(start, neighbor, path, visited, graph,
+                         max_depth, cycles, seen_sets)
+        path.pop()
+        visited.discard(neighbor)
+
+
 __all__ = [
     "aabb",
     "aabb_center",
@@ -266,4 +393,8 @@ __all__ = [
     "port_abs",
     "density_min_threshold_by_canvas",
     "check_density_range",
+    "is_waveguide_device",
+    "device_waveguide_width",
+    "aabb_orientation",
+    "detect_connection_cycles",
 ]

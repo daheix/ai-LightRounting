@@ -1,6 +1,6 @@
 """polaris-drc 子模块深度测试（覆盖全 API，R05 回归防护）。
 
-测试覆盖（48 个 pytest）:
+测试覆盖（66 个 pytest = 48 旧 + 18 新 P0 规则）:
 - 模块导出与版本（3）
 - CheckType 枚举完整性（2）
 - DRCRule dataclass（3）
@@ -8,18 +8,23 @@
 - DRCViolation dataclass（1）
 - DRCEngine 初始化（3）
 - run_drc / run_drc_rules 入口与校验（5）
-- 12 条 SiEPIC EBeam PDK DRC 规则逐一验证（21）:
+- 12 条 SiEPIC EBeam PDK 基础 DRC 规则逐一验证（21）:
   MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/BOUNDARY/NO_OVERLAP/
   PORT_ALIGNMENT/PORT_DIRECTION/PORT_CONNECTIVITY/PORT_FACING/DENSITY_MAX/
   DENSITY_MIN（每规则 pass + fail，NO_OVERLAP 额外 touching 用例）
+- 6 条 P0 波导级规则逐一验证（18）:
+  BEND_RADIUS_MIN/WAVEGUIDE_WIDTH_MATCH/MIN_NOTCH/WAVEGUIDE_MANHATTAN/
+  ENCLOSED_AREA_MIN/CROSSING_ANGULAR（每规则 pass + fail + edge case）
 - 综合布局与边界情况（4）
 
 学术依据（R02 学术诚信，≥5 个文献 URL）:
 - SiEPIC EBeam PDK DRC runset（WG_MIN_WIDTH=0.4μm, WG_MIN_SPACE=1.0μm 等真实
   工艺规则源码）URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- SiEPIC-Tools Verification（Mismatched pin widths / Manhattan / Radius）
+  URL: https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
   URL: https://www.cambridge.org/core/books/silicon-photonics-design/
-- KLayout DRC 文档（width_check/space_check/area_check 算子语义）
+- KLayout DRC 文档（width_check/space_check/area_check/notch 算子语义）
   URL: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
   URL: https://doi.org/10.1109/DAC56929.2023.10247734
@@ -27,6 +32,11 @@
   URL: https://doi.org/10.1007/978-3-540-77974-2
 - Ericson, "Real-Time Collision Detection", MK 2005（AABB 距离公式 §5.1.3）
   URL: https://realtimecollisiondetection.net/
+- LiDAR 2.0: Zhou et al. arXiv:2505.17239v1, ISPD 2025（Bend/Crossing）
+  URL: https://arxiv.org/html/2505.17239v1
+- FluxCore DRC 文档（MIN_NOTCH=100nm, MIN_BEND_RADIUS=5-10μm）
+  URL: https://www.fluxcoredynamics.com/docs/design-rules
+- Cormen et al. "Introduction to Algorithms" MIT 2022（DFS 环检测 §22.3）
 - pytest 文档: URL: https://docs.pytest.org/
 
 合规: R02 学术诚信 / R03 禁止 fall-back（测试用真实几何数据）/ R04 不参与 GPU
@@ -145,18 +155,19 @@ def test_drc_module_imports():
     assert callable(run_drc_rules)
 
 
-def test_drc_n_rules_12():
-    """验证默认 DRC 规则数为 12（SiEPIC EBeam PDK 完整规则集）。
+def test_drc_n_rules_18():
+    """验证默认 DRC 规则数为 18（12 SiEPIC 基础 + 6 P0 波导级）。
 
-    12 条规则: MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/BOUNDARY/NO_OVERLAP/
+    18 条规则: MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/BOUNDARY/NO_OVERLAP/
     PORT_ALIGNMENT/PORT_DIRECTION/PORT_CONNECTIVITY/PORT_FACING/DENSITY_MAX/
-    DENSITY_MIN。
+    DENSITY_MIN/BEND_RADIUS_MIN/WAVEGUIDE_WIDTH_MATCH/MIN_NOTCH/
+    WAVEGUIDE_MANHATTAN/ENCLOSED_AREA_MIN/CROSSING_ANGULAR。
     """
     circuit = _make_simple_circuit()
     placements = _make_simple_placements()
     result = run_drc(circuit, placements)
-    assert result["n_rules"] == 12, (
-        f"n_rules 应为 12（SiEPIC 完整规则集），实际 {result['n_rules']}"
+    assert result["n_rules"] == 18, (
+        f"n_rules 应为 18（12 基础 + 6 P0 波导级），实际 {result['n_rules']}"
     )
 
 
@@ -166,10 +177,12 @@ def test_drc_n_rules_12():
 
 
 def test_check_type_enum_values():
-    """验证 CheckType 枚举 12 个值与 KLayout DRC 规则类别对应。
+    """验证 CheckType 枚举 18 个值与 KLayout DRC 规则类别对应。
 
     来源: KLayout DRC 规则类别
     https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    SiEPIC-Tools Verification https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+    LiDAR 2.0 II-B3 https://arxiv.org/html/2505.17239v1
     """
     assert CheckType.MIN_SPACING.value == "min_spacing"
     assert CheckType.MIN_WIDTH.value == "min_width"
@@ -183,15 +196,22 @@ def test_check_type_enum_values():
     assert CheckType.PORT_FACING.value == "port_facing"
     assert CheckType.DENSITY_MAX.value == "density_max"
     assert CheckType.DENSITY_MIN.value == "density_min"
+    # P0 波导级（6 条）
+    assert CheckType.BEND_RADIUS_MIN.value == "bend_radius_min"
+    assert CheckType.WAVEGUIDE_WIDTH_MATCH.value == "waveguide_width_match"
+    assert CheckType.MIN_NOTCH.value == "min_notch"
+    assert CheckType.WAVEGUIDE_MANHATTAN.value == "waveguide_manhattan"
+    assert CheckType.ENCLOSED_AREA_MIN.value == "enclosed_area_min"
+    assert CheckType.CROSSING_ANGULAR.value == "crossing_angular"
 
 
 def test_check_type_enum_count():
-    """验证 CheckType 枚举数量为 12（与 DEFAULT_DRC_RULES 一一对应）。"""
+    """验证 CheckType 枚举数量为 18（与 DEFAULT_DRC_RULES 一一对应）。"""
     members = list(CheckType)
-    assert len(members) == 12, f"CheckType 应有 12 个成员，实际 {len(members)}"
+    assert len(members) == 18, f"CheckType 应有 18 个成员，实际 {len(members)}"
     # 枚举值唯一
     values = [m.value for m in members]
-    assert len(set(values)) == 12, "CheckType 枚举值应唯一"
+    assert len(set(values)) == 18, "CheckType 枚举值应唯一"
 
 
 # =============================================================================
@@ -248,9 +268,9 @@ def test_drc_rule_default_severity():
 
 
 def test_default_rules_count():
-    """验证 DEFAULT_DRC_RULES 包含 12 条规则。"""
-    assert len(DEFAULT_DRC_RULES) == 12, (
-        f"DEFAULT_DRC_RULES 应有 12 条，实际 {len(DEFAULT_DRC_RULES)}"
+    """验证 DEFAULT_DRC_RULES 包含 18 条规则（12 基础 + 6 P0 波导级）。"""
+    assert len(DEFAULT_DRC_RULES) == 18, (
+        f"DEFAULT_DRC_RULES 应有 18 条，实际 {len(DEFAULT_DRC_RULES)}"
     )
 
 
@@ -259,6 +279,7 @@ def test_default_rules_thresholds():
 
     阈值来源: SiEPIC EBeam PDK DRC runset 源码
     https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    P0 波导级阈值: SiEPIC-Tools Verification / LiDAR 2.0 / FluxCore
     """
     rules_by_name = {r.name: r for r in DEFAULT_DRC_RULES}
     assert rules_by_name["MIN_SPACING"].threshold == 1.0   # WG_MIN_SPACE
@@ -273,12 +294,19 @@ def test_default_rules_thresholds():
     assert rules_by_name["PORT_FACING"].threshold == 0.0
     assert rules_by_name["DENSITY_MAX"].threshold == 80.0
     assert rules_by_name["DENSITY_MIN"].threshold == 0.01
+    # P0 波导级（6 条）
+    assert rules_by_name["BEND_RADIUS_MIN"].threshold == 5.0      # SiEPIC/IMEC 5μm
+    assert rules_by_name["WAVEGUIDE_WIDTH_MATCH"].threshold == 0.0  # 完全匹配
+    assert rules_by_name["MIN_NOTCH"].threshold == 0.1            # KLayout/FluxCore 100nm
+    assert rules_by_name["WAVEGUIDE_MANHATTAN"].threshold == 0.0
+    assert rules_by_name["ENCLOSED_AREA_MIN"].threshold == 0.01   # 0.01μm²
+    assert rules_by_name["CROSSING_ANGULAR"].threshold == 90.0    # LiDAR 2.0 II-B3
 
 
 def test_default_rules_unique_names():
     """验证 DEFAULT_DRC_RULES 规则名唯一（无重复）。"""
     names = [r.name for r in DEFAULT_DRC_RULES]
-    assert len(set(names)) == 12, f"规则名有重复: {names}"
+    assert len(set(names)) == 18, f"规则名有重复: {names}"
 
 
 def test_default_rules_severity_range():
@@ -328,7 +356,7 @@ def test_engine_init_default_rules():
     """验证 DRCEngine 默认使用 DEFAULT_DRC_RULES。"""
     engine = DRCEngine()
     assert engine.rules is DEFAULT_DRC_RULES
-    assert len(engine.rules) == 12
+    assert len(engine.rules) == 18
 
 
 def test_engine_init_custom_rules():
@@ -951,13 +979,15 @@ def test_density_min_xxxl_threshold():
 
 
 def test_drc_clean_layout():
-    """DRC clean 布局：所有 12 条规则通过，n_violations=0，pass_rate=1.0。
+    """DRC clean 布局：所有 18 条规则通过，n_violations=0，pass_rate=1.0。
 
     构造 2 器件 + 1 连接的合法布局：
     - 几何规则：间距 10μm ≥ 1.0，宽 10 ≥ 0.5，高 0.5 ≥ 0.4，面积 5 ≥ 0.1
     - 边界：都在 100×100 画布内
     - 端口：方向合法、已连接、east↔west 相对、y 轴对齐
     - 密度：0.1% ∈ [0.01%, 80%]
+    - P0 波导级：无 bend_radius 声明（跳过）、宽度匹配（h=0.5）、
+      无窄颈（间距 10μm > 0.1）、Manhattan（east/west）、无环、无交叉
     """
     result = run_drc(_make_clean_circuit(), _make_clean_placements())
     assert result["n_violations"] == 0, (
@@ -965,7 +995,7 @@ def test_drc_clean_layout():
         f"violations={result['violations']}"
     )
     assert result["pass_rate"] == 1.0
-    assert result["n_passed"] == 12
+    assert result["n_passed"] == 18
 
 
 def test_drc_pass_rate_range():
@@ -1008,12 +1038,12 @@ def test_drc_simple_waveguide():
     """简单波导布局验证（与任务验证脚本一致）。
 
     单个 strip_waveguide 10μm × 0.5μm，画布 100×100μm。
-    验证: 返回 dict 含全部必要字段，n_rules=12，pass_rate > 0。
+    验证: 返回 dict 含全部必要字段，n_rules=18，pass_rate > 0。
     """
     circuit = _make_simple_circuit()
     placements = _make_simple_placements()
     result = run_drc(circuit, placements)
-    assert result["n_rules"] == 12
+    assert result["n_rules"] == 18
     assert result["pass_rate"] > 0.0, (
         f"合法布局至少部分规则会通过，pass_rate={result['pass_rate']}"
     )

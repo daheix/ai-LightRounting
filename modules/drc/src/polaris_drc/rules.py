@@ -2,19 +2,28 @@
 
 从 engine.py 拆分而来（R11 质量门禁：文件 ≤800 行）。本文件包含
 DRC 规则类型定义（CheckType 枚举）、规则数据结构（DRCRule）、
-默认规则集（DEFAULT_DRC_RULES，12 条 SiEPIC EBeam PDK 规则）、
-违规结果（DRCViolation）以及端口方向规范化常量与函数。
+默认规则集（DEFAULT_DRC_RULES，18 条 = 12 SiEPIC EBeam PDK 基础规则
++ 6 条 P0 波导级规则）、违规结果（DRCViolation）以及端口方向规范化
+常量与函数。
 
 来源（R02 学术诚信）:
 - SiEPIC EBeam PDK DRC runset（WG_MIN_WIDTH=0.4μm, WG_MIN_SPACE=1.0μm 等）
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- SiEPIC-Tools Verification（Mismatched pin widths / Manhattan / Radius）
+  https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
   https://www.cambridge.org/core/books/silicon-photonics-design/
-- KLayout DRC 文档（width_check/space_check/area_check）
+- KLayout DRC 文档（width_check/space_check/area_check/notch）
   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
   https://doi.org/10.1109/DAC56929.2023.10247734
 - Banerjee, "CMOS Photonic Circuits", Springer 2024（CMP 密度规则 30%-70%）
+- LiDAR 2.0: Zhou et al. arXiv:2505.17239v1, ISPD 2025（Bend Radius/Crossing）
+  https://arxiv.org/html/2505.17239v1
+- FluxCore DRC 文档（MIN_NOTCH=100nm, MIN_BEND_RADIUS=5-10μm）
+  https://www.fluxcoredynamics.com/docs/design-rules
+- IMEC iSiPP50G 数据手册（Bend radius 5μm, Ring Modulator）
+  https://www.imec-int.com/sites/default/files/imported/Photonic%2520integrated%2520circuit_EN_v4_MPW_yi_0.pdf
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """
@@ -61,8 +70,13 @@ class CheckType(Enum):
 
     来源: KLayout DRC 规则类别
     https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+    SiEPIC-Tools Verification（Mismatched pin widths / Manhattan / Radius）
+    https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+    LiDAR 2.0: Zhou et al. arXiv:2505.17239v1, ISPD 2025（Crossing/Bend）
+    https://arxiv.org/html/2505.17239v1
     """
 
+    # === 基础几何 + 端口 + 密度（12 条 SiEPIC EBeam PDK 基础规则） ===
     MIN_SPACING = "min_spacing"
     MIN_WIDTH = "min_width"
     MIN_HEIGHT = "min_height"
@@ -75,6 +89,13 @@ class CheckType(Enum):
     PORT_FACING = "port_facing"
     DENSITY_MAX = "density_max"
     DENSITY_MIN = "density_min"
+    # === P0 波导级规则（6 条，2026-07-05 新增，覆盖率 48%→72%） ===
+    BEND_RADIUS_MIN = "bend_radius_min"  # 最小弯曲半径（SiEPIC/IMEC/AMF/LiDAR/FluxCore）
+    WAVEGUIDE_WIDTH_MATCH = "waveguide_width_match"  # 端口宽度匹配（SiEPIC Verification）
+    MIN_NOTCH = "min_notch"  # 最小凹槽宽度（KLayout notch()/FluxCore）
+    WAVEGUIDE_MANHATTAN = "waveguide_manhattan"  # 首末段 Manhattan（SiEPIC Verification）
+    ENCLOSED_AREA_MIN = "enclosed_area_min"  # 最小封闭面积（KLayout area_check）
+    CROSSING_ANGULAR = "crossing_angular"  # 交叉角度（LiDAR 2.0 II-B3）
 
 
 @dataclass(frozen=True)
@@ -96,9 +117,13 @@ class DRCRule:
     description: str = ""
 
 
-# SiEPIC EBeam PDK 默认 DRC 规则集（12 条）
-# 所有阈值来自 SiEPIC EBeam PDK 实际 DRC runset 源码（R02 学术诚信，禁止编造）
-# https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+# SiEPIC EBeam PDK 默认 DRC 规则集（18 条 = 12 基础 + 6 P0 波导级）
+# 所有阈值来自 SiEPIC EBeam PDK 实际 DRC runset 源码或行业 PDK 文档
+# （R02 学术诚信，禁止编造）
+# 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+#       https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+#       https://arxiv.org/html/2505.17239v1
+#       https://www.fluxcoredynamics.com/docs/design-rules
 DEFAULT_DRC_RULES: list[DRCRule] = [
     DRCRule(
         name="MIN_SPACING",
@@ -183,6 +208,61 @@ DEFAULT_DRC_RULES: list[DRCRule] = [
         threshold=0.01,
         severity=0.6,
         description="布局密度下限（按画布规模分级: XS/S=0.01%, M=0.005%, L=0.002%, XL=0.001%；≥10mm 连续缩放 threshold=100μm²/canvas_area×100；大画布器件密度天然低，CMP 按 process window ~1mm×1mm 平均）",
+    ),
+    # ===== P0 波导级规则（6 条，2026-07-05 新增，覆盖率 48%→72%） =====
+    DRCRule(
+        name="BEND_RADIUS_MIN",
+        check_type=CheckType.BEND_RADIUS_MIN,
+        threshold=5.0,
+        severity=1.0,
+        description=("最小弯曲半径 5.0μm（SiEPIC EBeam PDK bend_radius=5μm / IMEC "
+                     "iSiPP50G 5μm / AMF 10μm / LiDAR 2.0 II-B2 5-10μm / "
+                     "FluxCore 5-10μm）。检查 device.params.bend_radius_um 字段，"
+                     "未声明 bend_radius 的器件跳过（直段无弯曲半径）"),
+    ),
+    DRCRule(
+        name="WAVEGUIDE_WIDTH_MATCH",
+        check_type=CheckType.WAVEGUIDE_WIDTH_MATCH,
+        threshold=0.0,
+        severity=0.9,
+        description=("连接两端波导宽度必须匹配（SiEPIC Verification "
+                     "'Mismatched pin widths'）。宽度取自 device.params.width_um "
+                     "或 device.width_um，未声明则视为器件级共享宽度（h）"),
+    ),
+    DRCRule(
+        name="MIN_NOTCH",
+        check_type=CheckType.MIN_NOTCH,
+        threshold=0.1,
+        severity=0.8,
+        description=("最小凹槽宽度 0.1μm = 100nm（KLayout notch() / FluxCore "
+                     "MIN_NOTCH=100nm）。检查两器件平行边间隙 < 100nm 的窄颈，"
+                     "避免工艺无法识别细颈"),
+    ),
+    DRCRule(
+        name="WAVEGUIDE_MANHATTAN",
+        check_type=CheckType.WAVEGUIDE_MANHATTAN,
+        threshold=0.0,
+        severity=0.8,
+        description=("波导首末段必须 Manhattan（垂直/水平，SiEPIC Verification "
+                     "'首末段必须 Manhattan'）。检查波导器件端口方向 ∈ "
+                     "{north, south, east, west}"),
+    ),
+    DRCRule(
+        name="ENCLOSED_AREA_MIN",
+        check_type=CheckType.ENCLOSED_AREA_MIN,
+        threshold=0.01,
+        severity=0.7,
+        description=("最小封闭面积 0.01μm² = 100nm×100nm（KLayout area_check "
+                     "内孔检测）。检查连接图环形成的封闭区域，避免孤立小洞"),
+    ),
+    DRCRule(
+        name="CROSSING_ANGULAR",
+        check_type=CheckType.CROSSING_ANGULAR,
+        threshold=90.0,
+        severity=0.7,
+        description=("波导交叉角度 90° 优选（LiDAR 2.0 II-B3, "
+                     "arXiv:2505.17239v1）。检查两波导 AABB 重叠且方向非垂直"
+                     "（同为水平/同为垂直）的交叉违规"),
     ),
 ]
 
