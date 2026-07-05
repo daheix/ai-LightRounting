@@ -91,22 +91,14 @@ def parse_routing_warnings(log_path: Path) -> dict:
     return info
 
 
-def main() -> int:
-    """主入口。"""
-    results, updated, source = load_results()
-    n_total = len(results)
-    if n_total == 0:
-        logger.error("无测试结果")
-        return 1
-
-    # 总体统计
+def _compute_overall_stats(results: list[dict], n_total: int) -> dict:
+    """计算总体统计指标。"""
     n_success = sum(1 for r in results if r["success"])
     n_drc = sum(1 for r in results if r["drc_passed"])
     losses = [r["total_loss_db"] for r in results if r["success"] and r["total_loss_db"] > 0]
     times = [r["elapsed_sec"] for r in results if r["success"]]
     crossings = [r["n_crossings"] for r in results if r["success"]]
-
-    overall = {
+    return {
         "total": n_total,
         "success": n_success,
         "success_rate": n_success / n_total,
@@ -123,75 +115,38 @@ def main() -> int:
         "avg_crossings": statistics.mean(crossings) if crossings else 0,
     }
 
-    # 分拓扑统计
-    by_topology: dict[str, list] = defaultdict(list)
+
+def _compute_group_stats(items: list[dict]) -> dict:
+    """计算分组统计（拓扑/规模/平台通用）。"""
+    n = len(items)
+    if n == 0:
+        return {}
+    n_success = sum(1 for r in items if r["success"])
+    n_drc = sum(1 for r in items if r["drc_passed"])
+    losses = [r["total_loss_db"] for r in items if r["success"] and r["total_loss_db"] > 0]
+    times = [r["elapsed_sec"] for r in items if r["success"]]
+    return {
+        "total": n,
+        "success": n_success,
+        "success_rate": n_success / n,
+        "drc_passed": n_drc,
+        "drc_rate": n_drc / n,
+        "avg_loss_db": statistics.mean(losses) if losses else 0,
+        "avg_elapsed_sec": statistics.mean(times) if times else 0,
+    }
+
+
+def _group_results_by(results: list[dict], key: str) -> dict[str, list[dict]]:
+    """按 key 字段分组 results。"""
+    by_group: dict[str, list] = defaultdict(list)
     for r in results:
-        by_topology[r["topology"]].append(r)
+        by_group[r[key]].append(r)
+    return by_group
 
-    topo_stats = {}
-    for topo, items in sorted(by_topology.items()):
-        t_success = sum(1 for r in items if r["success"])
-        t_drc = sum(1 for r in items if r["drc_passed"])
-        t_losses = [r["total_loss_db"] for r in items if r["success"] and r["total_loss_db"] > 0]
-        t_times = [r["elapsed_sec"] for r in items if r["success"]]
-        topo_stats[topo] = {
-            "total": len(items),
-            "success": t_success,
-            "success_rate": t_success / len(items),
-            "drc_passed": t_drc,
-            "drc_rate": t_drc / len(items),
-            "avg_loss_db": statistics.mean(t_losses) if t_losses else 0,
-            "avg_elapsed_sec": statistics.mean(t_times) if t_times else 0,
-        }
 
-    # 分规模统计
-    by_scale: dict[str, list] = defaultdict(list)
-    for r in results:
-        by_scale[r["scale"]].append(r)
-
-    scale_stats = {}
-    for scale in ["XS", "S", "M", "L", "XL"]:
-        items = by_scale.get(scale, [])
-        if not items:
-            continue
-        s_success = sum(1 for r in items if r["success"])
-        s_drc = sum(1 for r in items if r["drc_passed"])
-        s_losses = [r["total_loss_db"] for r in items if r["success"] and r["total_loss_db"] > 0]
-        s_times = [r["elapsed_sec"] for r in items if r["success"]]
-        scale_stats[scale] = {
-            "total": len(items),
-            "success": s_success,
-            "success_rate": s_success / len(items),
-            "drc_passed": s_drc,
-            "drc_rate": s_drc / len(items),
-            "avg_loss_db": statistics.mean(s_losses) if s_losses else 0,
-            "avg_elapsed_sec": statistics.mean(s_times) if s_times else 0,
-        }
-
-    # 分平台统计
-    by_platform: dict[str, list] = defaultdict(list)
-    for r in results:
-        by_platform[r["platform"]].append(r)
-
-    platform_stats = {}
-    for plat, items in sorted(by_platform.items()):
-        p_success = sum(1 for r in items if r["success"])
-        p_drc = sum(1 for r in items if r["drc_passed"])
-        p_losses = [r["total_loss_db"] for r in items if r["success"] and r["total_loss_db"] > 0]
-        p_times = [r["elapsed_sec"] for r in items if r["success"]]
-        platform_stats[plat] = {
-            "total": len(items),
-            "success": p_success,
-            "success_rate": p_success / len(items),
-            "drc_passed": p_drc,
-            "drc_rate": p_drc / len(items),
-            "avg_loss_db": statistics.mean(p_losses) if p_losses else 0,
-            "avg_elapsed_sec": statistics.mean(p_times) if p_times else 0,
-        }
-
-    # 失败分析
-    failures = [r for r in results if not r["success"]]
-    failure_categories = defaultdict(list)
+def _categorize_failures(failures: list[dict]) -> dict[str, list[str]]:
+    """按错误类型分类失败电路。"""
+    cats: dict[str, list[str]] = defaultdict(list)
     for f in failures:
         err = f.get("error", "")
         if "不在损耗表中" in err:
@@ -208,13 +163,17 @@ def main() -> int:
             cat = "布局失败"
         else:
             cat = "其他"
-        failure_categories[cat].append(f["name"])
+        cats[cat].append(f["name"])
+    return cats
 
-    # 已知布线问题统计（从日志提取）
-    routing_info = parse_routing_warnings(LOG_FILE)
 
-    # 保存 stats.json
-    stats = {
+def _build_stats_dict(
+    source: str, updated: str, overall: dict,
+    topo_stats: dict, scale_stats: dict, platform_stats: dict,
+    failures: list[dict], failure_categories: dict, routing_info: dict,
+) -> dict:
+    """构建 stats.json 字典。"""
+    return {
         "source": source,
         "updated": updated,
         "overall": overall,
@@ -232,15 +191,33 @@ def main() -> int:
             "note": "第一轮布线失败但经重试/回退后最终成功，不影响总体成功率",
         },
     }
+
+
+def _save_stats_json(stats: dict) -> None:
+    """保存 stats.json。"""
     STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATS_FILE.write_text(json.dumps(stats, indent=2, ensure_ascii=False), encoding="utf-8")
     logger.info("统计: %s", STATS_FILE)
 
-    # 生成 Markdown 报告
-    n_topo = len(topo_stats)
-    n_scale = len(scale_stats)
-    n_plat = len(platform_stats)
-    lines = [
+
+def _group_table_rows(stats: dict) -> list[str]:
+    """生成分组统计表格行。"""
+    rows = []
+    for name, s in stats.items():
+        rows.append(
+            f"| {name} | {s['total']} | {s['success']} | {s['success_rate']:.1%} | "
+            f"{s['drc_passed']} | {s['drc_rate']:.1%} | {s['avg_loss_db']:.3f} | "
+            f"{s['avg_elapsed_sec']:.3f} |"
+        )
+    return rows
+
+
+def _build_report_header(
+    updated: str, source: str, n_total: int, overall: dict,
+    n_topo: int, n_scale: int, n_plat: int,
+) -> list[str]:
+    """报告标题与总体统计表。"""
+    return [
         "# PoLaRIS 批量测试报告",
         "",
         f"> 测试时间: {updated}",
@@ -253,8 +230,8 @@ def main() -> int:
         "| 指标 | 值 |",
         "|------|-----|",
         f"| 电路总数 | {n_total} |",
-        f"| 成功数 | {n_success} ({overall['success_rate']:.1%}) |",
-        f"| DRC 通过数 | {n_drc} ({overall['drc_rate']:.1%}) |",
+        f"| 成功数 | {overall['success']} ({overall['success_rate']:.1%}) |",
+        f"| DRC 通过数 | {overall['drc_passed']} ({overall['drc_rate']:.1%}) |",
         f"| 平均损耗 | {overall['avg_loss_db']:.3f} dB |",
         f"| P50 损耗 | {overall['p50_loss_db']:.3f} dB |",
         f"| P95 损耗 | {overall['p95_loss_db']:.3f} dB |",
@@ -264,53 +241,12 @@ def main() -> int:
         f"| P95 耗时 | {overall['p95_elapsed_sec']:.3f} s |",
         f"| P99 耗时 | {overall['p99_elapsed_sec']:.3f} s |",
         f"| 平均交叉数 | {overall['avg_crossings']:.2f} |",
-        "",
-        "## 2. 分拓扑统计",
-        "",
-        f"> 实际拓扑数: {n_topo}",
-        "",
-        "| 拓扑 | 总数 | 成功 | 成功率 | DRC通过 | DRC率 | 平均损耗(dB) | 平均耗时(s) |",
-        "|------|------|------|--------|---------|-------|--------------|-------------|",
     ]
-    for topo, s in sorted(topo_stats.items()):
-        lines.append(
-            f"| {topo} | {s['total']} | {s['success']} | {s['success_rate']:.1%} | "
-            f"{s['drc_passed']} | {s['drc_rate']:.1%} | {s['avg_loss_db']:.3f} | "
-            f"{s['avg_elapsed_sec']:.3f} |"
-        )
 
-    lines += [
-        "",
-        "## 3. 分规模统计",
-        "",
-        "| 规模 | 总数 | 成功 | 成功率 | DRC通过 | DRC率 | 平均损耗(dB) | 平均耗时(s) |",
-        "|------|------|------|--------|---------|-------|--------------|-------------|",
-    ]
-    for scale in ["XS", "S", "M", "L", "XL"]:
-        s = scale_stats.get(scale)
-        if s:
-            lines.append(
-                f"| {scale} | {s['total']} | {s['success']} | {s['success_rate']:.1%} | "
-                f"{s['drc_passed']} | {s['drc_rate']:.1%} | {s['avg_loss_db']:.3f} | "
-                f"{s['avg_elapsed_sec']:.3f} |"
-            )
 
-    lines += [
-        "",
-        "## 4. 分平台统计",
-        "",
-        "| 平台 | 总数 | 成功 | 成功率 | DRC通过 | DRC率 | 平均损耗(dB) | 平均耗时(s) |",
-        "|------|------|------|--------|---------|-------|--------------|-------------|",
-    ]
-    for plat, s in sorted(platform_stats.items()):
-        lines.append(
-            f"| {plat} | {s['total']} | {s['success']} | {s['success_rate']:.1%} | "
-            f"{s['drc_passed']} | {s['drc_rate']:.1%} | {s['avg_loss_db']:.3f} | "
-            f"{s['avg_elapsed_sec']:.3f} |"
-        )
-
-    # 失败电路清单
-    lines += [
+def _build_failures_section(failures: list[dict], routing_info: dict) -> list[str]:
+    """失败电路清单 + 已知布线问题。"""
+    lines = [
         "",
         "## 5. 失败电路清单",
         "",
@@ -341,9 +277,12 @@ def main() -> int:
         lines.append("- 主要集中在 `clements_matrix` 大规模（M/L）电路，因器件密度高、"
                      "曼哈顿通道冲突导致首轮部分连接失败。")
         lines.append("- 改进方向：增强布线器通道预留与多轮退避策略，降低首轮失败率。")
+    return lines
 
-    # 目标达成
-    lines += [
+
+def _build_goals_section(overall: dict, n_total: int) -> list[str]:
+    """目标达成表。"""
+    return [
         "",
         "## 6. 目标达成",
         "",
@@ -358,13 +297,61 @@ def main() -> int:
         "",
     ]
 
-    REPORT_FILE.write_text("\n".join(lines), encoding="utf-8")
-    logger.info("报告: %s", REPORT_FILE)
 
-    # 打印摘要
+def _build_markdown_report(
+    updated: str, source: str, n_total: int, overall: dict,
+    topo_stats: dict, scale_stats: dict, platform_stats: dict,
+    failures: list[dict], routing_info: dict,
+) -> list[str]:
+    """生成 Markdown 报告行列表。"""
+    n_topo, n_scale, n_plat = len(topo_stats), len(scale_stats), len(platform_stats)
+    lines = _build_report_header(updated, source, n_total, overall, n_topo, n_scale, n_plat)
+    lines += [
+        "",
+        "## 2. 分拓扑统计",
+        "",
+        f"> 实际拓扑数: {n_topo}",
+        "",
+        "| 拓扑 | 总数 | 成功 | 成功率 | DRC通过 | DRC率 | 平均损耗(dB) | 平均耗时(s) |",
+        "|------|------|------|--------|---------|-------|--------------|-------------|",
+    ]
+    lines += _group_table_rows(dict(sorted(topo_stats.items())))
+    lines += [
+        "",
+        "## 3. 分规模统计",
+        "",
+        "| 规模 | 总数 | 成功 | 成功率 | DRC通过 | DRC率 | 平均损耗(dB) | 平均耗时(s) |",
+        "|------|------|------|--------|---------|-------|--------------|-------------|",
+    ]
+    for scale in ["XS", "S", "M", "L", "XL"]:
+        s = scale_stats.get(scale)
+        if s:
+            lines.append(
+                f"| {scale} | {s['total']} | {s['success']} | {s['success_rate']:.1%} | "
+                f"{s['drc_passed']} | {s['drc_rate']:.1%} | {s['avg_loss_db']:.3f} | "
+                f"{s['avg_elapsed_sec']:.3f} |"
+            )
+    lines += [
+        "",
+        "## 4. 分平台统计",
+        "",
+        "| 平台 | 总数 | 成功 | 成功率 | DRC通过 | DRC率 | 平均损耗(dB) | 平均耗时(s) |",
+        "|------|------|------|--------|---------|-------|--------------|-------------|",
+    ]
+    lines += _group_table_rows(dict(sorted(platform_stats.items())))
+    lines += _build_failures_section(failures, routing_info)
+    lines += _build_goals_section(overall, n_total)
+    return lines
+
+
+def _print_report_summary(
+    overall: dict, n_total: int, failures: list[dict], routing_info: dict,
+    n_topo: int, n_scale: int, n_plat: int,
+) -> None:
+    """打印报告摘要到 stdout。"""
     print(f"\n{'='*60}")
-    print(f"总体: {n_total} 电路, 成功 {n_success} ({overall['success_rate']:.1%}), "
-          f"DRC {n_drc} ({overall['drc_rate']:.1%})")
+    print(f"总体: {n_total} 电路, 成功 {overall['success']} ({overall['success_rate']:.1%}), "
+          f"DRC {overall['drc_passed']} ({overall['drc_rate']:.1%})")
     print(f"平均损耗: {overall['avg_loss_db']:.3f} dB, "
           f"平均耗时: {overall['avg_elapsed_sec']:.3f} s")
     print(f"P50/P95/P99 损耗: {overall['p50_loss_db']:.3f}/"
@@ -378,6 +365,41 @@ def main() -> int:
     print(f"统计: {STATS_FILE}")
     print(f"{'='*60}")
 
+
+def main() -> int:
+    """主入口。"""
+    results, updated, source = load_results()
+    n_total = len(results)
+    if n_total == 0:
+        logger.error("无测试结果")
+        return 1
+
+    overall = _compute_overall_stats(results, n_total)
+    by_topology = _group_results_by(results, "topology")
+    topo_stats = {t: _compute_group_stats(items) for t, items in sorted(by_topology.items())}
+    by_scale = _group_results_by(results, "scale")
+    scale_stats = {s: _compute_group_stats(by_scale.get(s, []))
+                   for s in ["XS", "S", "M", "L", "XL"] if by_scale.get(s)}
+    by_platform = _group_results_by(results, "platform")
+    platform_stats = {p: _compute_group_stats(items) for p, items in sorted(by_platform.items())}
+    failures = [r for r in results if not r["success"]]
+    failure_categories = _categorize_failures(failures)
+    routing_info = parse_routing_warnings(LOG_FILE)
+    stats = _build_stats_dict(
+        source, updated, overall, topo_stats, scale_stats, platform_stats,
+        failures, failure_categories, routing_info,
+    )
+    _save_stats_json(stats)
+    report_lines = _build_markdown_report(
+        updated, source, n_total, overall, topo_stats, scale_stats,
+        platform_stats, failures, routing_info,
+    )
+    REPORT_FILE.write_text("\n".join(report_lines), encoding="utf-8")
+    logger.info("报告: %s", REPORT_FILE)
+    _print_report_summary(
+        overall, n_total, failures, routing_info,
+        len(topo_stats), len(scale_stats), len(platform_stats),
+    )
     return 0
 
 
