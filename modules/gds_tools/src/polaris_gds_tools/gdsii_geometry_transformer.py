@@ -151,6 +151,74 @@ class TransformReport:
 # =============================================================================
 # 几何变换
 # =============================================================================
+def _transform_validate_inputs(
+    input_path: str | Path, output_path: str | Path, params,
+) -> tuple[Path, Path, TransformParams]:
+    """校验 transform_gdsii_geometry 输入（R03 禁止 fall-back）。
+
+    Returns:
+        (in_path, out_path, params)（params 为 None 时返回默认 TransformParams）。
+    """
+    in_path = Path(input_path)
+    out_path = Path(output_path)
+    if not in_path.exists():
+        raise FileNotFoundError(f"输入 GDSII 文件不存在: {input_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {input_path}")
+    if params is None:
+        params = TransformParams()
+    if params.scale <= 0:
+        raise ValueError(
+            f"scale 必须 > 0，得到 {params.scale}。"
+            f"禁止 fall-back（R03）。"
+        )
+    return in_path, out_path, params
+
+
+def _transform_load_layout(db, in_path: Path):
+    """加载 GDSII layout（R03 禁止 fall-back）。
+
+    Returns:
+        (ly, dbu)。
+    """
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取输入文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    return ly, dbu
+
+
+def _transform_build_trans(db, params: TransformParams):
+    """构造 DCplxTrans 变换对象。
+
+    db.DCplxTrans(mag, rot, mirr, x, y) - μm 单位。
+    来源: https://www.klayout.de/doc-qt5/code/class_DCplxTrans.html
+    """
+    return db.DCplxTrans(
+        params.scale,
+        params.rotate_deg,
+        params.mirror_x,
+        params.translate_x_um,
+        params.translate_y_um,
+    )
+
+
+def _transform_write_layout(ly, out_path: Path) -> None:
+    """写出 GDSII（R03 禁止 fall-back）。"""
+    try:
+        ly.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出输出文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+
+
 def transform_gdsii_geometry(
     input_path: str | Path,
     output_path: str | Path,
@@ -183,72 +251,27 @@ def transform_gdsii_geometry(
       https://www.klayout.de/doc-qt5/code/class_DCplxTrans.html
     """
     db = _import_klayout_db()
-    in_path = Path(input_path)
-    out_path = Path(output_path)
-    if not in_path.exists():
-        raise FileNotFoundError(f"输入 GDSII 文件不存在: {input_path}")
-    if not in_path.is_file():
-        raise ValueError(f"输入路径不是文件: {input_path}")
-    if params is None:
-        params = TransformParams()
-    if params.scale <= 0:
-        raise ValueError(
-            f"scale 必须 > 0，得到 {params.scale}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    # 读取输入文件
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取输入文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    dbu = float(ly.dbu)
+    in_path, out_path, params = _transform_validate_inputs(
+        input_path, output_path, params,
+    )
+    ly, dbu = _transform_load_layout(db, in_path)
     top_cell = _get_top_cell(ly, top_cell_name, input_path)
-
     # 计算原 bbox（含所有递归子 cell 实例的 bbox）
     # 注意: Cell.bbox() 只返回 cell 自身 shapes 的 bbox，不含子实例。
     # 必须用 begin_shapes_rec 遍历所有 shapes（含递归子实例）计算完整 bbox。
     # 来源: https://www.klayout.org/doc-qt4/code/class_Cell.html
     orig_bbox = _compute_full_bbox(top_cell, ly, dbu)
-
-    # 构造 DCplxTrans 变换对象
-    # db.DCplxTrans(mag, rot, mirr, x, y) - μm 单位
-    # 来源: https://www.klayout.de/doc-qt5/code/class_DCplxTrans.html
-    trans = db.DCplxTrans(
-        params.scale,
-        params.rotate_deg,
-        params.mirror_x,
-        params.translate_x_um,
-        params.translate_y_um,
-    )
-
+    trans = _transform_build_trans(db, params)
     # 应用变换到顶层 cell（原地修改）
     # Cell.transform 递归传播到子 cell 实例的 placement
     # 同时变换 cell 自己的 shapes（polygons + texts）
     top_cell.transform(trans)
-
-    # 计算变换后 bbox（含所有递归子 cell 实例）
     new_bbox = _compute_full_bbox(top_cell, ly, dbu)
-
-    # 写出新的 GDSII 文件
-    try:
-        ly.write(str(out_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 写出输出文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    _transform_write_layout(ly, out_path)
     logger.info(
         "GDSII 几何变换: %s → %s (transform=%s)",
         in_path, out_path, str(trans),
     )
-
     return TransformReport(
         input_path=str(input_path),
         output_path=str(output_path),
