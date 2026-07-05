@@ -7,7 +7,7 @@
 - Ho, Ruehli, Brennan, "The Modified Nodal Approach to Network Analysis",
   IEEE ISCAS 1974, https://ieeexplore.ieee.org/document/1084079
 - Pillage, "Electronic Circuit & System Simulation Methods",
-  McGraw-Hill, 1995, §4-5
+  McGraw-Hill, 1995, §4-5, https://www.mheducation.com/highered/product/0070504910.html
 - Nagel, "SPICE2: A Computer Program to Simulate Semiconductor Circuits",
   UC Berkeley ERL-M520, 1975, https://www.eecs.berkeley.edu/Pubs/TechRpts/1975/ERL-520.pdf
 - Galetzka, Loukrezis, De Gersem, "Data-driven model-free modified nodal

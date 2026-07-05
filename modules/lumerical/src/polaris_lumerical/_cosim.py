@@ -3,11 +3,15 @@
 从 v4 旧包 sim/photoelectric_cosim.py 迁移 MZM + PD + Laser 光电协同 API。
 
 学术依据（R02 ≥5 文献 URL）:
-- Chrostowski 2015 Silicon Photonics Design Cambridge §8 §9
-- Coldren & Corzine 1995 Diode Lasers and Photonic Integrated Circuits §5
-- VLSIR SPICE https://github.com/dan-fritchman/vlsir
-- cocotb https://docs.cocotb.org/
-- ngspice https://ngspice.sourceforge.io/
+- Chrostowski 2015 Silicon Photonics Design Cambridge §8 §9,
+  https://www.cambridge.org/core/books/photonic-electronics/
+- Coldren & Corzine 1995 Diode Lasers and Photonic Integrated Circuits §5,
+  https://www.wiley.com/en-us/Diode+Lasers+and+Photonic+Integrated+Circuits
+- VLSIR SPICE, https://github.com/dan-fritchman/vlsir
+- cocotb, https://docs.cocotb.org/
+- ngspice, https://ngspice.sourceforge.io/
+- Ansys Lumerical INTERCONNECT (光电协同仿真),
+  https://optics.ansys.com/hc/en-us
 
 设计原则: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy /
 R05 无 TODO / R13 不保留 v4 兼容 / 函数≤80行 / 文件≤800行。

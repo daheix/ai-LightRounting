@@ -2,14 +2,18 @@
 
 对光子电路网表执行频率扫描，计算传输谱（S 参数 vs 频率/波长）。
 
-来源:
+来源（R02 学术诚信，≥5 个文献 URL）:
 - Simphony 仿真器: https://simphonyphotonics.readthedocs.io/
 - SAX 仿真器: https://flaport.github.io/sax/
 - Pflüger et al. 2021, "Simphony", IEEE CiSE 23(4):74-85,
   https://arxiv.org/abs/2009.05146
-- Filipsson 1978, Eur. Microw. Conf.,
+- Filipsson 1978, "A New General Computer Algorithm for S-Parameter
+  Cascade of Multiport Networks", Eur. Microw. Conf.,
   https://doi.org/10.1109/EUMA.1978.332681
-- Agrawal, "Fiber-Optic Communication Systems", §2.4 (群延迟)
+- Pozar, "Microwave Engineering", 4th ed., §4.3 (S 参数级联/群延迟),
+  https://www.wiley.com/en-us/Microwave+Engineering
+- Agrawal, "Fiber-Optic Communication Systems", §2.4 (群延迟),
+  https://www.wiley.com/en-us/Fiber-Optic+Communication+Systems
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO /
 R13 不保留 v4 兼容（去掉 jax backend 简化为单 numpy 后端）。

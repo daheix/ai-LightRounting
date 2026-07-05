@@ -13,9 +13,11 @@ GDS 加载/Region 检查函数时才 import klayout.db。这使得子模块在�
 - KLayout DRC API: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - SiEPIC EBeam PDK DRC 规则: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg, "Silicon Photonics Design",
-  Cambridge University Press 2015, p.353
+  Cambridge University Press 2015, p.353,
+  https://www.cambridge.org/core/books/photonic-electronics/
 - Calibre nmDRC: https://eda.sw.siemens.com/en-US/calibre/
 - Synopsys IC Validator: https://www.synopsys.com/implementation-and-signoff/signoff/ic-validator.html
+- OpenDRC: He et al., DAC 2023, https://doi.org/10.1109/DAC56929.2023.10247734
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R13 不保留 v4 兼容。
 """

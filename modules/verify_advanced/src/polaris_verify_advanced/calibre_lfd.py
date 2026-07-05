@@ -9,6 +9,16 @@
   https://www.spiedigitallibrary.org/conference-proceedings-of-spie/6349/63492Z/
 - Design Variation Index (DVI): Wang 2006 SPIE，量化工艺敏感度
 
+文献来源（R02 学术诚信，≥5 个 URL）:
+1. Siemens Calibre LFD (Litho-Friendly Design), https://eda.sw.siemens.com/en-US/calibre/lfd/
+2. Wang et al., SPIE 6349, 63492Z (2006), PV-band / DVI,
+   https://www.spiedigitallibrary.org/conference-proceedings-of-spie/6349/63492Z/
+3. OpenDRC: He et al., DAC 2023, https://doi.org/10.1109/DAC56929.2023.10247734
+4. KLayout DRC API (PV-band 热点检测), https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+5. SiEPIC EBeam PDK DRC runset, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+6. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 §10 (DRC),
+   https://www.cambridge.org/core/books/photonic-electronics/
+
 *创新* 光刻友好度评分: 基于 PV-band 概念（Wang SPIE 2006），
 用违规数与严重度加权计算 0-100 分。底层逻辑：
 - 每条 ERROR 热点扣 (100/total_checks)×1.0

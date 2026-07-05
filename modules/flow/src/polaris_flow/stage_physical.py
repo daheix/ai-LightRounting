@@ -18,6 +18,8 @@
   https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - SiEPIC EBeam PDK 设计规则
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Google DeepMind AlphaChip (强化学习布局预训练),
+  https://www.nature.com/articles/s41586-021-03544-w
 
 ## 设计约束
 

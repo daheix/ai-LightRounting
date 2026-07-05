@@ -4,7 +4,20 @@
 4 平台 36 器件的纯数据结构（list[dict]），不含查询逻辑。
 
 详细文献溯源与平台 foundry 来源标注见 ``catalog.py`` 模块 docstring
-（R02 学术诚信）。合规: R02 / R03 / R04（纯数据结构，不参与 GPU）。
+（R02 学术诚信）。
+
+文献来源（R02 学术诚信，≥5 个 URL）:
+1. SiEPIC EBeam PDK (UBC, Lukas Chrostowski), 220nm SOI 工艺,
+   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+2. Ligentec ANR PDK, SiN TriPleX 平台, https://www.ligentec.com/
+3. JePPIX / Pattern Project InP generic 平台, https://www.jeppix.eu/
+4. HyperLight LNOI X-cut 平台, https://hyperlightphotonics.com/
+5. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015,
+   https://www.cambridge.org/core/books/photonic-electronics/
+6. gdsfactory (open-source photonics PDK framework),
+   https://github.com/gdsfactory/gdsfactory
+
+合规: R02 / R03 / R04（纯数据结构，不参与 GPU）。
 """
 
 from __future__ import annotations

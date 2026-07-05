@@ -9,6 +9,15 @@
 - 查询返回深拷贝，避免调用方修改内部数据
 - 纯数据结构（R04 不参与 GPU）
 
+文献来源（R02 学术诚信，≥5 个 URL）:
+1. SiEPIC EBeam PDK, 220nm SOI, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+2. Ligentec ANR PDK, SiN TriPleX, https://www.ligentec.com/
+3. JePPIX / Pattern Project InP, https://www.jeppix.eu/
+4. HyperLight LNOI X-cut, https://hyperlightphotonics.com/
+5. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015,
+   https://www.cambridge.org/core/books/photonic-electronics/
+6. gdsfactory PDK 框架, https://github.com/gdsfactory/gdsfactory
+
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """
 

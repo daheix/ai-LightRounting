@@ -3,13 +3,16 @@
 支持 8 方向移动（含 45° 对角线），生成更平滑的波导路径，
 减少不必要的直角转弯，提升布线质量。
 
-方法参考（方案检索，见项目规则 1.1）：
+方法参考（方案检索，见项目规则 1.1）:
 - LiDAR (ISPD 2025) curvy-aware A*（8 方向 + 弯曲半径约束）
   来源: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - LiDAR 2.0 分层曲线波导布线（非 Manhattan 状态）
   来源: https://arxiv.org/html/2505.17239v2
 - A* 搜索算法（Hart, Nilsson & Raphael 1968）
   https://en.wikipedia.org/wiki/A*_search_algorithm
+- DREAMPlace (8方向布线代价参考), https://arxiv.org/abs/2004.10746
+- SiEPIC EBeam PDK (波导宽度规则),
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
 8 方向移动代价：
 - 直行（E/W/N/S）：代价 1.0

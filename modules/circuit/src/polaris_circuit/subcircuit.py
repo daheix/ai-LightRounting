@@ -4,10 +4,18 @@
 光子电路构建接口。用户可通过 add_component/connect/add_terminal 方法
 声明式构建电路，再转换为网表格式进行仿真。
 
-来源:
+来源（R02 学术诚信，≥5 个文献 URL）:
 - simphony API: https://simphonyphotonics.readthedocs.io/en/stable/api/simphony.core.html
-- simphony Subcircuit: https://github.com/BYUCamachoLab/simphony
-- Ploeg et al., "Simphony", IEEE CiSE 2021, §2
+- simphony Subcircuit (源码仓库): https://github.com/BYUCamachoLab/simphony
+- Pflüger et al., "Simphony: An Open-Source Photonic Circuit Simulation
+  Framework", IEEE CiSE 2021, §2, https://arxiv.org/abs/2009.05146
+- Filipsson 1978, "A New General Computer Algorithm for S-Parameter
+  Cascade of Multiport Networks", Eur. Microw. Conf.,
+  https://doi.org/10.1109/EUMA.1978.332681
+- Pozar, "Microwave Engineering", 4th ed., §4.3 (S 参数级联),
+  https://www.wiley.com/en-us/Microwave+Engineering
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015,
+  https://www.cambridge.org/core/books/photonic-electronics/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO /
 R13 不保留 v4 兼容。

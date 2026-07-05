@@ -16,6 +16,8 @@
   URL: https://arxiv.org/abs/2004.10746
 - A* 搜索算法（Hart, Nilsson & Raphael 1968）
   URL: https://en.wikipedia.org/wiki/A*_search_algorithm
+- SiEPIC EBeam PDK (波导宽度规则),
+  URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
 ## 合规性
 

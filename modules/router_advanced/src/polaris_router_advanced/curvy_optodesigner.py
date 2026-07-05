@@ -15,7 +15,10 @@
   URL: https://arxiv.org/abs/2004.10746
 - Synopsys OptoDesigner Autorouting
   URL: https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner.html
-- Pathak & Hu TCAD 2014（Rip-up & Reroute 收敛性）
+- Pathak & Hu TCAD 2014（Rip-up & Reroute 收敛性）,
+  URL: https://doi.org/10.1109/TCAD.2014.2366731
+- SiEPIC EBeam PDK (波导宽度规则),
+  URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
 ## 合规性
 

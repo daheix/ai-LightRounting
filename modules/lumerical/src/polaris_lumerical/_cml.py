@@ -3,11 +3,16 @@
 从 v4 旧包 sim/cml_compiler_full.py 迁移 S 参数编译 + 无源性/互易性诊断。
 
 学术依据（R02 ≥5 文献 URL）:
-- Pozar Microwave Engineering §4.3 (S 参数无源性/互易性)
-- Lumerical CML Compiler https://optics.ansys.com/hc/en-us/articles/360057929454
-- IEEE Std 100-2000 (dB → Np 转换)
-- Ansys Lumerical INTERCONNECT CML https://optics.ansys.com/hc/en-us
-- Chrostowski 2015 Silicon Photonics Design Cambridge §6
+- Pozar Microwave Engineering §4.3 (S 参数无源性/互易性),
+  https://www.wiley.com/en-us/Microwave+Engineering
+- Lumerical CML Compiler, https://optics.ansys.com/hc/en-us/articles/360057929454
+- IEEE Std 100-2000 (dB → Np 转换),
+  https://standards.ieee.org/ieee/100/1089/
+- Ansys Lumerical INTERCONNECT CML, https://optics.ansys.com/hc/en-us
+- Chrostowski 2015 Silicon Photonics Design Cambridge §6,
+  https://www.cambridge.org/core/books/photonic-electronics/
+- IEEE P1597.1 (验证方法学标准),
+  https://standards.ieee.org/ieee/1597.1/3535/
 
 设计原则: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy SVD /
 R05 无 TODO / R13 不保留 v4 兼容 / 函数≤80行 / 文件≤800行。

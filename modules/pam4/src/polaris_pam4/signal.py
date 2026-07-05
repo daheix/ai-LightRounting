@@ -42,7 +42,8 @@ dict::
 - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
 - Ansys Lumerical CML Compiler
   https://optics.ansys.com/hc/en-us/sections/360005039133-CML-Compiler
-- Proakis, "Digital Communications", McGraw-Hill 2007, §5（PAM BER 公式）
+- Proakis, "Digital Communications", McGraw-Hill 2007, §5（PAM BER 公式）,
+  https://www.mheducation.com/highered/product/M9780072957167
 """
 
 from __future__ import annotations

@@ -5,10 +5,12 @@ LEF/DEF 语法实现遵循下列权威来源（规则 18 学术诚信）：
   https://github.com/The-OpenROAD-Project/OpenDB
 - OpenROAD Project, "OpenROAD"（LEF/DEF 解析）,
   https://github.com/The-OpenROAD-Project/OpenROAD
-- Cadence, "LEF/DEF Language Reference", 5.8
+- Cadence, "LEF/DEF Language Reference", 5.8,
+  https://www.ispd.cc/contests/18/lefdefref.pdf
 - Wikipedia, "Library Exchange Format",
   https://en.wikipedia.org/wiki/Library_Exchange_Format
-- Mead & Conway, "Introduction to VLSI Systems", Addison-Wesley 1980
+- Mead & Conway, "Introduction to VLSI Systems", Addison-Wesley 1980,
+  https://en.wikipedia.org/wiki/Introduction_to_VLSI_Systems
 - Rubin, "Computer Aids for VLSI Design" Appendix B,
   https://iue.tuwien.ac.at/phd/minixhofer/node51.html
 

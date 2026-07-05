@@ -3,13 +3,16 @@
 支持多层光子芯片的布线，通过层间耦合器（光学通孔 OTV）实现
 垂直层间连接，提升集成密度。
 
-方法参考（方案检索，见项目规则 1.1）：
+方法参考（方案检索，见项目规则 1.1）:
 - Xu et al., Laser & Photonics Reviews 2024: 多层可重构 3D PIC
   来源: https://onlinelibrary.wiley.com/doi/10.1002/lpor.202400827
 - Sarad JSTQE 2025: CMOS 兼容低损耗光学通孔（OTV）
   来源: https://www.techrxiv.org/users/961414/articles/1330406
 - LiDAR 2.0 分层曲线波导布线
   来源: https://arxiv.org/html/2505.17239v2
+- DREAMPlace (层间布线参考), https://arxiv.org/abs/2004.10746
+- SiEPIC EBeam PDK (多层波导规则),
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
 架构: 每层独立 A* 布线 + 层间 OTV 连接
 - Layer 0: SOI 器件层（有源/无源）

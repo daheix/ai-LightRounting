@@ -14,6 +14,8 @@
 - 模仿学习理论: Pomerleau 1989, "ALVINN: An Autonomous Land Vehicle in a Neural Network"
 - 模仿学习综述: Gavenski et al., "A Survey of Imitation Learning Methods",
   ACM PACMMECS 2024, https://arxiv.org/abs/2404.19456
+- Pomerleau 1989, "ALVINN: An Autonomous Land Vehicle in a Neural Network",
+  NeurIPS 1989, https://papers.nips.cc/paper/95-alvinn-an-autonomous-land-vehicle-in-a-neural-network
 """
 
 from __future__ import annotations

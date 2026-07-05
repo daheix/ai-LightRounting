@@ -5,12 +5,17 @@
 
 从 `waveguide_router.py` 拆分而来（规则 7.1：单文件有效行数上限 500）。
 
-来源:
+来源（R02 学术诚信，≥5 个文献 URL）:
 - 欧拉弯曲（clothoid）平滑过渡，曲率线性变化降低弯曲损耗
   来源: Fujisawa et al., Opt. Express 25, 9150 (2017)
   https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 - Rizzo et al., Optics Letters 48(2), 215 (2023) 欧拉曲线提升 SOI 器件制造鲁棒性
   https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
+- SiEPIC EBeam PDK (波导弯曲规则), https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- gdsfactory euler_bend 实现, https://github.com/gdsfactory/gdsfactory
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 §5 (弯曲波导),
+  https://www.cambridge.org/core/books/photonic-electronics/
+- 贝塞尔曲线波导路径, https://en.wikipedia.org/wiki/B%C3%A9zier_curve
 """
 
 from __future__ import annotations

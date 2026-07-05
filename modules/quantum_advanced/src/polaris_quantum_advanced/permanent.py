@@ -23,7 +23,9 @@ Output:
   https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.119.170501
 - Seron et al., Quantum 2024, BosonSampling.jl
   https://arxiv.org/abs/2212.09537
-- Ryser, 1963, "Combinatorial Mathematics"（积和式容斥算法）
+- Ryser, 1963, "Combinatorial Mathematics"（积和式容斥算法）,
+  https://www.maa.org/site_media/upload/books/CBMS-0014.pdf
+- Scheji, " permanents via inclusion-exclusion ", arXiv 2006.01393
 
 设计原则
 --------

@@ -9,7 +9,8 @@
 
 ## 学术依据（R02，≥5 个文献 URL）
 
-1. Pozar, "Microwave Engineering", 4th ed., §4（ABCD↔S 变换）
+1. Pozar, "Microwave Engineering", 4th ed., §4（ABCD↔S 变换）,
+   https://www.wiley.com/en-us/Microwave+Engineering
 2. Altair SimLab Parasitics（Touchstone .sNp + SPICE 导出）
    https://help.altair.com/simlab/help/en_us/topics/analysis/ParasiticParametersExtraction/PE_Result_Request.htm
 3. Synopsys StarRC Datasheet（DSPF 频域仿真）
@@ -18,7 +19,8 @@
    https://en.eeworld.com.cn/mp/Cadence/a340059.jspx
 5. Touchstone File Format Specification v2.0（IBIS Open Forum 2009）
    https://ibis.org/connector/touchstone_spec2.pdf
-6. Kurokawa, "Power Waves and the Scattering Matrix", IEEE TMTT 1965
+6. Kurokawa, "Power Waves and the Scattering Matrix", IEEE TMTT 1965,
+   https://ieeexplore.ieee.org/document/1162606
 
 ## 规则依据
 

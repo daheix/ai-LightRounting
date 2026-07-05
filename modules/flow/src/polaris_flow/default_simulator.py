@@ -4,10 +4,17 @@
 1. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator
 2. 查表估算：基于器件类型损耗查表的快速估算（独立接口，用于快速可行性筛查）
 
-仿真来源:
+仿真来源（R02 学术诚信，≥5 个文献 URL）:
 - simphony: https://simphonyphotonics.readthedocs.io/
-- sax: https://flapport.github.io/sax/
-- 查表损耗值来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
+- SAX 仿真器: https://flapport.github.io/sax/
+- 查表损耗值来源: SiEPIC EBeam PDK,
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Pozar, "Microwave Engineering", 4th ed., §4 (S 参数理论),
+  https://www.wiley.com/en-us/Microwave+Engineering
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015,
+  https://www.cambridge.org/core/books/photonic-electronics/
+- Pflüger et al. 2021, "Simphony", IEEE CiSE,
+  https://arxiv.org/abs/2009.05146
 """
 
 from __future__ import annotations

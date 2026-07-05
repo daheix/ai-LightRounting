@@ -16,7 +16,9 @@ AABB 包围盒几何运算、端口查找/绝对坐标计算、密度阈值分�
   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
   （光子集成芯片多模块集成，大画布器件密度天然低）
-- OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+  https://www.cambridge.org/core/books/photonic-electronics/
+- OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734,
+  https://doi.org/10.1109/DAC56929.2023.10247734
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

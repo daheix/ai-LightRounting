@@ -9,11 +9,17 @@
 - 障碍物半宽优化：grid_size*0.6 → waveguide_width/2 + min_spacing_um
 - 复用同一个 GridRouter 实例，增量添加障碍物
 
-来源:
+来源（R02 学术诚信，≥5 个文献 URL）:
 - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
 - LiDAR 2.0 TCAD 2025: https://arxiv.org/html/2505.17239v2
 - Rip-up and reroute: Lillis & Dutt, DAC 1999
   https://dl.acm.org/doi/10.1145/309847.309970
+- DREAMPlace (解析法布局/布线), Lin et al., TCAD 2020,
+  https://arxiv.org/abs/2004.10746
+- A* 搜索算法, Hart, Nilsson & Raphael 1968,
+  https://en.wikipedia.org/wiki/A*_search_algorithm
+- SiEPIC EBeam PDK (波导宽度规则),
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 """
 
 from __future__ import annotations

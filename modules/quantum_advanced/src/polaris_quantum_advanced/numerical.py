@@ -19,13 +19,17 @@ Output:
 学术诚信（R02，≥5 文献 URL 溯源）:
 - Hong, Ou, Mandel, PRL 1987, HOM 干涉
   https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
-- Bouwmeester et al., "The Physics of Quantum Information", Springer 2000, §3.1
+- Bouwmeester et al., "The Physics of Quantum Information",
+  Springer 2000, §3.1, https://link.springer.com/book/10.1007/978-3-662-04209-0
 - Aaronson & Arkhipov, STOC 2011, 玻色采样
   https://arxiv.org/abs/0910.4698
 - Seron et al., Quantum 2024, BosonSampling.jl
   https://arxiv.org/abs/2212.09537
 - Pearson, "On the criterion that a given system of deviations...",
-  Philosophical Magazine 1900（卡方检验原始论文）
+  Philosophical Magazine 1900（卡方检验原始论文）,
+  https://www.tandfonline.com/doi/abs/10.1080/14786440009463897
+- SciPy chi2 分布文档（p 值计算）,
+  https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.chi2.html
 
 设计原则
 --------
