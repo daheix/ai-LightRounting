@@ -1,6 +1,6 @@
 """polaris-drc 子模块深度测试（覆盖全 API，R05 回归防护）。
 
-测试覆盖（47 个 pytest）:
+测试覆盖（48 个 pytest）:
 - 模块导出与版本（3）
 - CheckType 枚举完整性（2）
 - DRCRule dataclass（3）
@@ -604,9 +604,40 @@ def test_port_connectivity_connected():
 
 
 def test_port_connectivity_isolated():
-    """PORT_CONNECTIVITY 违规：器件无任何连接（孤立器件）。"""
-    result = run_drc(_make_simple_circuit(), _make_simple_placements())
+    """PORT_CONNECTIVITY 违规：器件无任何连接（孤立器件）。
+
+    注意：单器件电路豁免 PORT_CONNECTIVITY（展示用例，无连接对象），
+    所以测试需用 2 个非 I/O 器件无 connections 来验证违规检测。
+    """
+    circuit = {
+        "name": "isolated",
+        "devices": [
+            {"name": "d1", "device_type": "strip_waveguide",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "strip_waveguide",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [],  # 无连接 → 两个非 I/O 器件均孤立
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
     assert "PORT_CONNECTIVITY" in _violation_rule_names(result)
+
+
+def test_port_connectivity_single_device_exempt():
+    """PORT_CONNECTIVITY 单器件电路豁免：展示用例无连接对象，不报违规。
+
+    物理依据: 单器件电路（如 gf_mirror_demo/gf_ports_demo 单 MMI 展示）
+    无需内部连接，SiEPIC EBeam PDK DRC runset 不要求单器件电路有内部连接。
+    """
+    result = run_drc(_make_simple_circuit(), _make_simple_placements())
+    assert "PORT_CONNECTIVITY" not in _violation_rule_names(result), (
+        "单器件电路应豁免 PORT_CONNECTIVITY（无连接对象）"
+    )
 
 
 def test_port_connectivity_io_exempt():

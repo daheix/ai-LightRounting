@@ -455,11 +455,20 @@ class DRCEngine:
                                  placements: dict) -> list[DRCViolation]:
         """PORT_CONNECTIVITY: 每个器件至少有一个端口被连接。
 
-        例外（非 fall-back，物理正确）: I/O 器件类型（grating_coupler /
-        edge_coupler / terminator / pad）豁免——它们连接外部光纤/探针/线键，
-        不要求内部连接。SiEPIC EBeam PDK DRC runset 同样不要求 gc/terminator
-        内部连接（Chrostowski & Hochberg 2015 §5.2，I/O 端点器件）。
+        例外（非 fall-back，物理正确）:
+        1. I/O 器件类型（grating_coupler / edge_coupler / terminator / pad）
+           豁免——它们连接外部光纤/探针/线键，不要求内部连接。SiEPIC EBeam PDK
+           DRC runset 同样不要求 gc/terminator 内部连接
+           （Chrostowski & Hochberg 2015 §5.2，I/O 端点器件）。
+        2. 单器件电路豁免——展示用例/特性测试用例只有一个器件，无需内部连接
+           （如 gf_mirror_demo/gf_ports_demo 单 MMI 展示）。SiEPIC EBeam PDK
+           DRC runset 不要求单器件电路有内部连接（物理正确：单器件无连接对象）。
         """
+        # 单器件电路豁免（展示用例，无连接对象）
+        non_io_devs = [d for d in circuit.get("devices", [])
+                       if d.get("device_type", "") not in _IO_DEVICE_TYPES]
+        if len(non_io_devs) <= 1:
+            return []
         connected: set[str] = set()
         for conn in circuit.get("connections", []):
             d1, _p1, d2, _p2 = conn
