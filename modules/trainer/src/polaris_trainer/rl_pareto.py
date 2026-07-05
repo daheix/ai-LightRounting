@@ -51,11 +51,28 @@ import numpy as np
 # 默认光学常量（与 rl_advanced.py 同源：SiEPIC EBeam PDK + R34 alpha_chip_config）
 _MIN_BEND_RADIUS_UM: float = 20.0
 _GRID_CELL_SIZE_UM: float = 100.0
-_CANVAS_SIZE_UM: float = 3200.0
+# 注：原 _CANVAS_SIZE_UM=3200.0 硬编码与 specs.py CircuitSpec.canvas_w=1000.0 不一致，
+# 已删除（R05 Bug 必修）。canvas 尺寸改为动态读取 circuit["canvas_w"]，
+# 缺失即 raise KeyError（R03 禁止 fall-back）。见 _get_canvas_size()。
 _WAVEGUIDE_NG: float = 4.2          # 群速度折射率（Reed 2010 Nat. Photonics）
 _WG_LOSS_DB_CM: float = 3.0         # 传播损耗 dB/cm（Bogaerts 2013 JLT）
 _CROSSING_LOSS_DB: float = 0.1      # 交叉损耗 dB/交叉（Bogaerts 2013 JLT）
 _CROSSING_XTALK_DB: float = -40.0   # 串扰 dB/交叉（Liu 2019 Opt. Express）
+
+
+def _get_canvas_size(circuit: dict) -> float:
+    """动态读取电路画布尺寸（μm）。
+
+    R03 禁止 fall-back：circuit 缺 canvas_w 字段即 raise KeyError。
+    与 specs.py CircuitSpec.canvas_w（默认 1000.0μm）对齐，替代原硬编码
+    _CANVAS_SIZE_UM=3200.0（与 specs.py 不一致，R05 Bug 必修）。
+    """
+    if "canvas_w" not in circuit:
+        raise KeyError(
+            "circuit 缺 canvas_w 字段（μm，与 specs.py CircuitSpec.canvas_w 对齐）"
+            "（R03 禁止 fall-back）"
+        )
+    return float(circuit["canvas_w"])
 
 
 # ===========================================================================
@@ -81,8 +98,19 @@ def _port_positions(placement: dict, circuit: dict) -> dict:
             continue
         p = placement[dev["id"]]
         x, y = float(p["x"]), float(p["y"])
-        w = float(dev.get("width", 50.0))
-        h = float(dev.get("height", 30.0))
+        # R03 禁止 fall-back：width_um/height_um 缺失即 raise（与 specs.py DeviceSpec 对齐）
+        if "width_um" not in dev:
+            raise KeyError(
+                f"器件 {dev.get('id')} 缺 width_um 字段（μm，与 specs.py DeviceSpec 对齐）"
+                f"（R03 禁止 fall-back）"
+            )
+        if "height_um" not in dev:
+            raise KeyError(
+                f"器件 {dev.get('id')} 缺 height_um 字段（μm，与 specs.py DeviceSpec 对齐）"
+                f"（R03 禁止 fall-back）"
+            )
+        w = float(dev["width_um"])
+        h = float(dev["height_um"])
         for port_name in dev.get("ports", []):
             positions[(dev["id"], port_name)] = (x + w / 2, y + h / 2)
     return positions
@@ -161,7 +189,16 @@ class MultiObjectiveParetoReward:
         for dev in circuit["devices"]:
             if dev["id"] not in placement:
                 continue
-            total += float(dev.get("width", 50.0)) * float(dev.get("height", 30.0))
+            # R03 禁止 fall-back：width_um/height_um 缺失即 raise（与 specs.py DeviceSpec 对齐）
+            if "width_um" not in dev:
+                raise KeyError(
+                    f"器件 {dev.get('id')} 缺 width_um 字段（μm）（R03 禁止 fall-back）"
+                )
+            if "height_um" not in dev:
+                raise KeyError(
+                    f"器件 {dev.get('id')} 缺 height_um 字段（μm）（R03 禁止 fall-back）"
+                )
+            total += float(dev["width_um"]) * float(dev["height_um"])
         return float(total)
 
     def compute_delay(self, placement: dict, circuit: dict) -> float:
