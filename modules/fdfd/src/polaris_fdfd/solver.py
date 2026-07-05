@@ -171,41 +171,16 @@ def _poynting_z(F: np.ndarray, j: int, dz: float) -> float:
     return float(np.sum(sz))
 
 
-def build_helmholtz_operator(
+def _validate_helmholtz_params(
     n_profile: np.ndarray,
-    dx: float, dz: float,
+    dx: float,
+    dz: float,
     k0: float,
-    pml_n: int = 0,
-    sigma_max: float = 0.0,
-) -> sparse.csr_matrix:
-    """构建 2D Helmholtz 稀疏算子 A = L_5pt(s) + diag(k₀²n²)。
-
-    数组布局: shape=(nx, nz)，C-order，flatten 后 index = i*nz + j
-    - x 方向邻居 (i±1, j): 偏移 ±nz，系数 1/(s_x²·dx²)
-    - z 方向邻居 (i, j±1): 偏移 ±1，系数 1/(s_z²·dz²)
-
-    当 pml_n > 0 时启用 PML 复坐标拉伸（Berenger 1994 / Shin & Fan 2012），
-    s_x(i) 与 s_z(j) 由 _pml_stretch 计算；矩阵转为复数。pml_n=0 时
-    退化为 Dirichlet 边界实数矩阵（向后兼容）。
-
-    Args:
-        n_profile: 2D 折射率分布 (nx, nz)。
-        dx, dz: 网格步长（μm）。
-        k0: 真空波数（μm⁻¹）。
-        pml_n: 每侧 PML 层数（0=禁用 PML）。
-        sigma_max: PML 最大 σ/(ωε)（pml_n=0 时忽略）。
-
-    Returns:
-        scipy.sparse.csr_matrix (nx*nz, nx*nz): Helmholtz 算子
-        （pml_n>0 时为 complex128，否则 float64）。
-
-    Raises:
-        ValueError: 参数非法。
-
-    来源:
-        Shin & Fan 2012 J. Comput. Phys. (SC-PML)
-        https://doi.org/10.1016/j.jcp.2012.01.015
-    """
+    pml_n: int,
+) -> tuple[int, int]:
+    """校验 build_helmholtz_operator 输入参数（R03 禁止 fall-back）。"""
+    if n_profile.ndim != 2:
+        raise ValueError(f"n_profile 须为 2D，得到 {n_profile.ndim}D")
     nx, nz = n_profile.shape
     if nx < 3 or nz < 3:
         raise ValueError(f"网格过小 {nx}×{nz}，须 >= 3×3")
@@ -215,7 +190,39 @@ def build_helmholtz_operator(
         raise ValueError(f"k0 须 > 0，得到 {k0}")
     if pml_n < 0:
         raise ValueError(f"pml_n 须 >= 0，得到 {pml_n}")
+    return nx, nz
 
+
+def build_helmholtz_operator(
+    n_profile: np.ndarray,
+    dx: float, dz: float,
+    k0: float,
+    pml_n: int = 0,
+    sigma_max: float = 0.0,
+) -> sparse.csr_matrix:
+    """构建 2D Helmholtz 稀疏算子 A = L_5pt(s) + diag(k₀²n²)。
+
+    数组布局: shape=(nx, nz)，C-order，flatten 后 index = i*nz + j。
+    当 pml_n > 0 时启用 PML 复坐标拉伸（Berenger 1994 / Shin & Fan 2012），
+    pml_n=0 时退化为 Dirichlet 边界实数矩阵（向后兼容）。
+
+    Args:
+        n_profile: 2D 折射率分布 (nx, nz)。
+        dx, dz: 网格步长（μm）。
+        k0: 真空波数（μm⁻¹）。
+        pml_n: 每侧 PML 层数（0=禁用 PML）。
+        sigma_max: PML 最大 σ/(ωε)（pml_n=0 时忽略）。
+
+    Returns:
+        scipy.sparse.csr_matrix (nx*nz, nx*nz)。
+
+    Raises:
+        ValueError: 参数非法。
+
+    来源: Shin & Fan 2012 J. Comput. Phys. (SC-PML)
+        https://doi.org/10.1016/j.jcp.2012.01.015
+    """
+    nx, nz = _validate_helmholtz_params(n_profile, dx, dz, k0, pml_n)
     n = nx * nz
     use_pml = pml_n > 0
     dtype = np.complex128 if use_pml else np.float64
@@ -304,6 +311,123 @@ def build_line_source(
     return b
 
 
+def _validate_fdfd_params(
+    width_um: float,
+    length_um: float,
+    wavelength_um: float,
+    n_core: float,
+    n_clad: float,
+    dx_um: float,
+    pad_um: float,
+) -> None:
+    """校验 solve_fdfd 输入参数（R03 禁止 fall-back）。"""
+    if width_um <= 0:
+        raise ValueError(f"width_um 须 > 0，得到 {width_um}")
+    if length_um <= 0:
+        raise ValueError(f"length_um 须 > 0，得到 {length_um}")
+    if wavelength_um <= 0:
+        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
+    if n_core <= 0 or n_clad <= 0:
+        raise ValueError(f"折射率须 > 0: n_core={n_core} n_clad={n_clad}")
+    if n_core <= n_clad:
+        raise ValueError(f"n_core ({n_core}) 须 > n_clad ({n_clad})")
+    if dx_um <= 0:
+        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
+    if dx_um >= width_um:
+        raise ValueError(f"dx_um ({dx_um}) 须 < width_um ({width_um})")
+    if pad_um <= 0:
+        raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
+
+
+def _build_fdfd_grid_and_source(
+    width_um: float,
+    length_um: float,
+    dx_um: float,
+    pad_um: float,
+    n_core: float,
+    n_clad: float,
+    wavelength_um: float,
+) -> tuple:
+    """构建 FDFD 网格、折射率分布、Helmholtz 算子与高斯线源。
+
+    R05 修复: 网格点数 = 间隔数 + 1（N = int(W/dx) + 1），
+    保证 (N-1)*dx 精确等于窗口物理尺寸。
+    """
+    window_x_um = width_um + 2.0 * pad_um
+    nx = int(window_x_um / dx_um) + 1
+    nz = int(length_um / dx_um) + 1
+    if nx < 5 or nz < 5:
+        raise ValueError(f"网格过小 {nx}×{nz}，请减小 dx_um 或增大尺寸")
+    dx = float(dx_um)
+    dz = float(dx_um)
+    core_x0 = int(round(pad_um / dx))
+    core_x1 = core_x0 + int(round(width_um / dx))
+    if core_x0 < 1 or core_x1 > nx - 1:
+        raise ValueError(
+            f"芯区索引越界: x=[{core_x0},{core_x1}) 网格 {nx}×{nz}"
+        )
+    n_profile = np.full((nx, nz), n_clad, dtype=np.float64)
+    n_profile[core_x0:core_x1, :] = n_core
+    k0 = 2.0 * np.pi / wavelength_um
+    # PML 参数（Taflove 2005 §5.8）: 4~10 层，σ_max 用 Taflove 公式 R=1e-6
+    pml_n = max(4, min(10, (min(nx, nz) - 1) // 4))
+    sigma_max = _taflove_sigma_max(pml_n, dx, wavelength_um, n_clad)
+    A = build_helmholtz_operator(
+        n_profile, dx, dz, k0, pml_n=pml_n, sigma_max=sigma_max,
+    )
+    source_z_idx = pml_n
+    center_x_um = window_x_um / 2.0
+    waist_um = max(width_um, wavelength_um)
+    b = build_line_source(nx, nz, dx, source_z_idx, center_x_um, waist_um)
+    return (nx, nz, dx, dz, core_x0, core_x1, window_x_um,
+            k0, pml_n, sigma_max, A, b, source_z_idx)
+
+
+def _solve_fdfd_extract_transmission(
+    A: sparse.csr_matrix,
+    b: np.ndarray,
+    nx: int,
+    nz: int,
+    dz: float,
+    dx: float,
+    pml_n: int,
+    source_z_idx: int,
+) -> tuple:
+    """求解 A·E = b 并提取场分布与传输率（Poynting 流）。
+
+    T = P_out/P_in, P = ∫ S_z dx, S_z = (1/(2ωμ)) Im[E* ∂E/∂z]。
+    常数因子在比值中约掉，故只算 Σ Im[E* ∂E/∂z]·dx。
+    """
+    try:
+        E_flat = spsolve(A.tocsc(), b)
+    except Exception as e:
+        raise RuntimeError(
+            f"spsolve 求解失败: {e}（R03 禁止 fall-back）"
+        ) from e
+    if np.any(np.isnan(E_flat)) or np.any(np.isinf(E_flat)):
+        raise RuntimeError("FDFD 求解结果含 NaN/Inf（R03 禁止 fall-back）")
+    field_2d = E_flat.reshape(nx, nz)
+    input_z_idx = source_z_idx + 2
+    output_z_idx = nz - 1 - pml_n
+    if output_z_idx <= input_z_idx:
+        raise RuntimeError(
+            f"监视器位置异常 input={input_z_idx} >= output={output_z_idx}"
+            f"（网格或 PML 过大，R03）"
+        )
+    p_source = _poynting_z(field_2d, input_z_idx, dz) * dx
+    p_output = _poynting_z(field_2d, output_z_idx, dz) * dx
+    if p_source <= 0:
+        raise RuntimeError(
+            f"输入 Poynting 流 {p_source} <= 0（R03 禁止 fall-back）"
+        )
+    transmission = p_output / p_source
+    if transmission < 0:
+        raise RuntimeError(f"transmission={transmission} < 0，物理异常（R03）")
+    transmission_db = 10.0 * float(np.log10(max(transmission, 1e-30)))
+    return (field_2d, transmission, transmission_db, p_output, p_source,
+            input_z_idx, output_z_idx)
+
+
 def solve_fdfd(
     width_um: float = 0.5,
     length_um: float = 10.0,
@@ -342,116 +466,17 @@ def solve_fdfd(
         - Shin & Fan 2014 Opt. Express
         - scipy.sparse.linalg.spsolve
     """
-    # ---- 参数校验（R03） ----
-    if width_um <= 0:
-        raise ValueError(f"width_um 须 > 0，得到 {width_um}")
-    if length_um <= 0:
-        raise ValueError(f"length_um 须 > 0，得到 {length_um}")
-    if wavelength_um <= 0:
-        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
-    if n_core <= 0 or n_clad <= 0:
-        raise ValueError(f"折射率须 > 0: n_core={n_core} n_clad={n_clad}")
-    if n_core <= n_clad:
-        raise ValueError(
-            f"n_core ({n_core}) 须 > n_clad ({n_clad})"
-        )
-    if dx_um <= 0:
-        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
-    if dx_um >= width_um:
-        raise ValueError(f"dx_um ({dx_um}) 须 < width_um ({width_um})")
-    if pad_um <= 0:
-        raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
-
-    # ---- 构建网格（R05 修复：网格点数 = 间隔数 + 1） ----
-    # 物理尺寸 W 对应 (N-1) 个间隔，故 N = int(W/dx) + 1。
-    # 旧实现用 int(round(W/dx)) 且按 N 重算步长，导致网格点数少 1、
-    # 物理尺寸被压缩，length_um 方向波导被截断，transmission 失真
-    # （BUG: width=0.5/length=10/dx=0.05/pad=1.0 → n_grid=10000, T=-49.7dB）。
-    # 正确: nx=51, nz=201, n_grid=10251, 物理尺寸 2.5×10μm 精确覆盖。
-    window_x_um = width_um + 2.0 * pad_um
-    nx = int(window_x_um / dx_um) + 1
-    nz = int(length_um / dx_um) + 1
-    if nx < 5 or nz < 5:
-        raise ValueError(
-            f"网格过小 {nx}×{nz}，请减小 dx_um 或增大尺寸"
-        )
-    # 步长 = 输入 dx_um（不重算），保证 (N-1)*dx 精确等于窗口尺寸
-    dx = float(dx_um)
-    dz = float(dx_um)
-
-    # 芯区索引（横向居中，z 方向全覆盖）
-    core_x0 = int(round(pad_um / dx))
-    core_x1 = core_x0 + int(round(width_um / dx))
-    if core_x0 < 1 or core_x1 > nx - 1:
-        raise ValueError(
-            f"芯区索引越界: x=[{core_x0},{core_x1}) 网格 {nx}×{nz}"
-        )
-
-    # ---- 折射率分布 ----
-    n_profile = np.full((nx, nz), n_clad, dtype=np.float64)
-    n_profile[core_x0:core_x1, :] = n_core
-
-    # ---- 物理参数 ----
-    k0 = 2.0 * np.pi / wavelength_um
-
-    # ---- PML 参数（Taflove 2005 §5.8）----
-    # pml_n 自适应: 4~10 层，且不超过最短方向的 1/4
-    # σ_max 用 Taflove 公式以目标反射率 R=1e-6 求解
-    pml_n = max(4, min(10, (min(nx, nz) - 1) // 4))
-    sigma_max = _taflove_sigma_max(pml_n, dx, wavelength_um, n_clad)
-
-    # ---- 构建 Helmholtz 算子（含 PML 复坐标拉伸）----
-    A = build_helmholtz_operator(
-        n_profile, dx, dz, k0, pml_n=pml_n, sigma_max=sigma_max,
+    _validate_fdfd_params(
+        width_um, length_um, wavelength_um, n_core, n_clad, dx_um, pad_um
     )
-
-    # ---- 构建源（高斯线源在 PML 后 z=pml_n 处，避免被 PML 吸收）----
-    source_z_idx = pml_n
-    center_x_um = window_x_um / 2.0  # 波导中心
-    waist_um = max(width_um, wavelength_um)
-    b = build_line_source(
-        nx, nz, dx, source_z_idx, center_x_um, waist_um,
+    (nx, nz, dx, dz, core_x0, core_x1, window_x_um, k0, pml_n, sigma_max,
+     A, b, source_z_idx) = _build_fdfd_grid_and_source(
+        width_um, length_um, dx_um, pad_um, n_core, n_clad, wavelength_um
     )
-
-    # ---- 求解 A·E = b ----
-    try:
-        E_flat = spsolve(A.tocsc(), b)
-    except Exception as e:
-        raise RuntimeError(
-            f"spsolve 求解失败: {e}（R03 禁止 fall-back）"
-        ) from e
-
-    # NaN 校验（R03）
-    if np.any(np.isnan(E_flat)) or np.any(np.isinf(E_flat)):
-        raise RuntimeError("FDFD 求解结果含 NaN/Inf（R03 禁止 fall-back）")
-
-    # ---- 重塑为 2D 场 ----
-    field_2d = E_flat.reshape(nx, nz)
-
-    # ---- 提取传输率（Poynting 流）----
-    # 输入监视器: 源后 2 点（避开源奇点）；输出监视器: 输出端 PML 前
-    # T = P_out/P_in, P = ∫ S_z dx, S_z = (1/(2ωμ)) Im[E* ∂E/∂z]
-    # 常数因子 1/(2ωμ) 在比值中约掉，故只算 Σ Im[E* ∂E/∂z]·dx
-    input_z_idx = source_z_idx + 2
-    output_z_idx = nz - 1 - pml_n
-    if output_z_idx <= input_z_idx:
-        raise RuntimeError(
-            f"监视器位置异常 input={input_z_idx} >= output={output_z_idx}"
-            f"（网格或 PML 过大，R03）"
-        )
-    p_source = _poynting_z(field_2d, input_z_idx, dz) * dx
-    p_output = _poynting_z(field_2d, output_z_idx, dz) * dx
-    if p_source <= 0:
-        raise RuntimeError(
-            f"输入 Poynting 流 {p_source} <= 0（R03 禁止 fall-back）"
-        )
-    transmission = p_output / p_source
-    if transmission < 0:
-        raise RuntimeError(
-            f"transmission={transmission} < 0，物理异常（R03）"
-        )
-    transmission_db = 10.0 * float(np.log10(max(transmission, 1e-30)))
-
+    (field_2d, transmission, transmission_db, p_output, p_source,
+     input_z_idx, output_z_idx) = _solve_fdfd_extract_transmission(
+        A, b, nx, nz, dz, dx, pml_n, source_z_idx
+    )
     return {
         "field_2d": field_2d.tolist(),
         "transmission": float(transmission),
