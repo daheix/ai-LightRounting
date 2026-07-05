@@ -34,6 +34,94 @@ from .lvs_advanced_helpers import (
 from .lvs_advanced_types import LocatedError, StructuredErrorReport
 
 
+def _generate_ser_extract_devices(
+    layout, cell, dbu: float,
+) -> tuple[list[tuple[str, tuple[float, float, float, float]]], bool]:
+    """从 DEVREC 层提取版图器件及其包围盒（R187 内部函数）。
+
+    Returns:
+        (extracted_devices, devrec_present)。devrec_present=False 表示无 DEVREC 层。
+    """
+    import klayout.db as db  # 延迟导入：仅在处理 GDS Region 时需要
+    extracted_devices: list[tuple[str, tuple[float, float, float, float]]] = []
+    devrec_present = True
+    try:
+        devrec_region = _get_region(layout, cell, "DEVREC")
+    except RuntimeError:
+        devrec_present = False
+        devrec_region = db.Region()
+
+    if devrec_present and not devrec_region.is_empty():
+        for i, shape in enumerate(devrec_region.each()):
+            extracted_devices.append((f"device_{i}", _bbox_um(shape, dbu)))
+    return extracted_devices, devrec_present
+
+
+def _generate_ser_device_errors(
+    report: StructuredErrorReport,
+    ref_names: set, ext_names: set,
+    ext_dict: dict,
+) -> None:
+    """填充器件错误（缺失/多余器件，R187 内部函数）。"""
+    for dev in sorted(ref_names - ext_names):
+        report.device_errors.append(
+            LocatedError(
+                mtype=LVSMismatchType.MISSING_DEVICE,
+                message=f"参考网表有器件 '{dev}' 但版图未提取到",
+                device_name=dev,
+            )
+        )
+    for dev in sorted(ext_names - ref_names):
+        bbox = ext_dict.get(dev, (0.0, 0.0, 0.0, 0.0))
+        report.device_errors.append(
+            LocatedError(
+                mtype=LVSMismatchType.EXTRA_DEVICE,
+                message=f"版图提取到器件 '{dev}' 但参考网表无",
+                bbox_um=bbox,
+                device_name=dev,
+            )
+        )
+
+
+def _generate_ser_connection_errors(
+    report: StructuredErrorReport,
+    reference: ExtractedNetlist, ext_names: set,
+) -> None:
+    """填充连接错误（缺失连接，R187 内部函数）。"""
+    for conn in set(reference.connections) - set():
+        d1, d2 = conn[0], conn[1]
+        if d1 not in ext_names or d2 not in ext_names:
+            report.connection_errors.append(
+                LocatedError(
+                    mtype=LVSMismatchType.MISSING_CONNECTION,
+                    message=f"参考网表有连接 {conn} 但版图未提取到",
+                    net_name=f"{d1}-{d2}",
+                )
+            )
+
+
+def _generate_ser_short_open_errors(
+    report: StructuredErrorReport,
+    extracted_devices, devrec_present: bool,
+    gds_path, ext_dict: dict,
+) -> None:
+    """填充短路/开路错误（R187 内部函数）。"""
+    if not devrec_present:
+        return
+    report.short_errors = _detect_shorts(extracted_devices)
+    conn_report = extract_connectivity(gds_path)
+    for floating_dev in conn_report.floating_devices:
+        bbox = ext_dict.get(floating_dev, (0.0, 0.0, 0.0, 0.0))
+        report.open_errors.append(
+            LocatedError(
+                mtype=LVSMismatchType.MISSING_CONNECTION,
+                message=f"悬浮器件 '{floating_dev}'（无任何连接，疑似开路）",
+                bbox_um=bbox,
+                device_name=floating_dev,
+            )
+        )
+
+
 def generate_structured_error_report(
     gds_path: str | Path,
     reference: ExtractedNetlist,
@@ -61,70 +149,19 @@ def generate_structured_error_report(
         RuntimeError: GDS 无 top cell。
         ImportError: klayout 未安装。
     """
-    import klayout.db as db  # 延迟导入：仅在处理 GDS Region 时需要
     layout, cell, dbu = _load_layout(gds_path)
-
-    extracted_devices: list[tuple[str, tuple[float, float, float, float]]] = []
-    devrec_present = True
-    try:
-        devrec_region = _get_region(layout, cell, "DEVREC")
-    except RuntimeError:
-        devrec_present = False
-        devrec_region = db.Region()
-
-    if devrec_present and not devrec_region.is_empty():
-        for i, shape in enumerate(devrec_region.each()):
-            extracted_devices.append((f"device_{i}", _bbox_um(shape, dbu)))
+    extracted_devices, devrec_present = _generate_ser_extract_devices(
+        layout, cell, dbu,
+    )
     ext_names = {d[0] for d in extracted_devices}
     ext_dict = {d[0]: d[1] for d in extracted_devices}
-
     ref_names = set(reference.devices)
     report = StructuredErrorReport(gds_path=str(gds_path))
-
-    for dev in sorted(ref_names - ext_names):
-        report.device_errors.append(
-            LocatedError(
-                mtype=LVSMismatchType.MISSING_DEVICE,
-                message=f"参考网表有器件 '{dev}' 但版图未提取到",
-                device_name=dev,
-            )
-        )
-    for dev in sorted(ext_names - ref_names):
-        bbox = ext_dict.get(dev, (0.0, 0.0, 0.0, 0.0))
-        report.device_errors.append(
-            LocatedError(
-                mtype=LVSMismatchType.EXTRA_DEVICE,
-                message=f"版图提取到器件 '{dev}' 但参考网表无",
-                bbox_um=bbox,
-                device_name=dev,
-            )
-        )
-
-    for conn in set(reference.connections) - set():
-        d1, d2 = conn[0], conn[1]
-        if d1 not in ext_names or d2 not in ext_names:
-            report.connection_errors.append(
-                LocatedError(
-                    mtype=LVSMismatchType.MISSING_CONNECTION,
-                    message=f"参考网表有连接 {conn} 但版图未提取到",
-                    net_name=f"{d1}-{d2}",
-                )
-            )
-
-    if devrec_present:
-        report.short_errors = _detect_shorts(extracted_devices)
-        conn_report = extract_connectivity(gds_path)
-        for floating_dev in conn_report.floating_devices:
-            bbox = ext_dict.get(floating_dev, (0.0, 0.0, 0.0, 0.0))
-            report.open_errors.append(
-                LocatedError(
-                    mtype=LVSMismatchType.MISSING_CONNECTION,
-                    message=f"悬浮器件 '{floating_dev}'（无任何连接，疑似开路）",
-                    bbox_um=bbox,
-                    device_name=floating_dev,
-                )
-            )
-
+    _generate_ser_device_errors(report, ref_names, ext_names, ext_dict)
+    _generate_ser_connection_errors(report, reference, ext_names)
+    _generate_ser_short_open_errors(
+        report, extracted_devices, devrec_present, gds_path, ext_dict,
+    )
     report.total_error_count = (
         len(report.short_errors)
         + len(report.open_errors)
