@@ -196,6 +196,34 @@ def _compute_unnormalized_sensitivity(
 # ============================================================================
 
 
+def _compute_wcd_validate(
+    base_params: np.ndarray, param_sigmas: np.ndarray, direction: str,
+) -> tuple[np.ndarray, np.ndarray]:
+    """校验 compute_worst_case_distance 输入（R03 禁止 fall-back）。
+
+    Returns:
+        (base_params, param_sigmas) 转换为 float ndarray。
+    """
+    base_params = np.asarray(base_params, dtype=float)
+    param_sigmas = np.asarray(param_sigmas, dtype=float)
+    if base_params.ndim != 1:
+        raise ValueError(
+            f"base_params 必须为 1D，得到 shape {base_params.shape}"
+        )
+    if param_sigmas.shape != base_params.shape:
+        raise ValueError(
+            f"param_sigmas shape {param_sigmas.shape} 与 "
+            f"base_params {base_params.shape} 不匹配"
+        )
+    if np.any(param_sigmas <= 0):
+        raise ValueError(f"param_sigmas 必须 > 0，得到 {param_sigmas}")
+    if direction not in ("lower", "upper"):
+        raise ValueError(
+            f"direction 必须为 'lower' 或 'upper'，得到 '{direction}'"
+        )
+    return base_params, param_sigmas
+
+
 def compute_worst_case_distance(
     func: Callable[[np.ndarray], float],
     base_params: np.ndarray,
@@ -226,24 +254,9 @@ def compute_worst_case_distance(
     - Spence & Soin 1988
     - 一阶方差传播: σ_f² ≈ Σ S_i² σ_i²
     """
-    base_params = np.asarray(base_params, dtype=float)
-    param_sigmas = np.asarray(param_sigmas, dtype=float)
-    if base_params.ndim != 1:
-        raise ValueError(
-            f"base_params 必须为 1D，得到 shape {base_params.shape}"
-        )
-    if param_sigmas.shape != base_params.shape:
-        raise ValueError(
-            f"param_sigmas shape {param_sigmas.shape} 与 "
-            f"base_params {base_params.shape} 不匹配"
-        )
-    if np.any(param_sigmas <= 0):
-        raise ValueError(f"param_sigmas 必须 > 0，得到 {param_sigmas}")
-    if direction not in ("lower", "upper"):
-        raise ValueError(
-            f"direction 必须为 'lower' 或 'upper'，得到 '{direction}'"
-        )
-
+    base_params, param_sigmas = _compute_wcd_validate(
+        base_params, param_sigmas, direction,
+    )
     try:
         f_nominal = float(func(base_params))
     except Exception as e:
@@ -251,12 +264,10 @@ def compute_worst_case_distance(
             f"func 标称评估失败: {type(e).__name__}: {e}。禁止 fall-back。"
         ) from e
     n_eval = 1
-
     sensitivities, n_sens = _compute_unnormalized_sensitivity(
         func, base_params, delta=sensitivity_delta
     )
     n_eval += n_sens
-
     sigma_output = float(
         np.sqrt(np.sum((sensitivities * param_sigmas) ** 2))
     )
@@ -265,14 +276,11 @@ def compute_worst_case_distance(
             "σ_f = 0: 输出对参数完全不敏感或 σ_i 全为 0，WCD 无定义。"
             "禁止 fall-back（R03）。"
         )
-
     if direction == "lower":
         wcd = (f_nominal - spec_threshold) / sigma_output
     else:
         wcd = (spec_threshold - f_nominal) / sigma_output
-
     yield_estimate = float(norm.cdf(wcd))
-
     return WorstCaseDistanceResult(
         wcd=wcd, yield_estimate=yield_estimate, f_nominal=f_nominal,
         sigma_output=sigma_output, spec_threshold=spec_threshold,
