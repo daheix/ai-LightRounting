@@ -76,6 +76,19 @@ def _import_klayout_db():
     return db
 
 
+def _read_gdsii_layout(db, gds_path):
+    """读取 GDSII 文件为 KLayout Layout（失败 raise RuntimeError，R03）。"""
+    ly = db.Layout()
+    try:
+        ly.read(str(gds_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return ly
+
+
 # =============================================================================
 # 数据类
 # =============================================================================
@@ -209,89 +222,33 @@ def compute_layer_density(
         raise ValueError(f"路径不是文件: {gds_path}")
     if layer_map is None:
         layer_map = _get_default_layer_map()
-
-    ly = db.Layout()
-    try:
-        ly.read(str(path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    ly = _read_gdsii_layout(db, path)
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
     layer_densities: list[LayerDensity] = []
     overall_xmin = float("inf")
     overall_ymin = float("inf")
     overall_xmax = float("-inf")
     overall_ymax = float("-inf")
-
     for li in ly.layer_indices():
-        info = ly.get_info(li)
-        gds_layer = int(info.layer)
-        gds_datatype = int(info.datatype)
-        layer_name = layer_map.get(
-            (gds_layer, gds_datatype),
-            f"LAYER_{gds_layer}_{gds_datatype}",
+        ld = _compute_one_layer_density(
+            db, top_cell, ly, li, layer_map, dbu, layers_to_analyze,
         )
-        if layers_to_analyze is not None and layer_name not in layers_to_analyze:
+        if ld is None:
             continue
-
-        # 用 Region 收集多边形
-        region = db.Region(top_cell.begin_shapes_rec(li))
-        area_dbu2 = int(region.area())
-        if area_dbu2 == 0:
-            continue  # 空层跳过
-
-        area_um2 = area_dbu2 * dbu * dbu
-
-        # 计算包围盒
-        bbox_dbu = region.bbox()
-        bbox = (
-            float(bbox_dbu.left) * dbu,
-            float(bbox_dbu.bottom) * dbu,
-            float(bbox_dbu.right) * dbu,
-            float(bbox_dbu.top) * dbu,
-        )
-        bbox_w = bbox[2] - bbox[0]
-        bbox_h = bbox[3] - bbox[1]
-        bbox_area_um2 = bbox_w * bbox_h
-
-        # 密度 = 多边形面积 / 包围盒面积
-        # 注意：当包围盒面积为 0（退化情况）时密度为 0
-        if bbox_area_um2 > 0:
-            density = area_um2 / bbox_area_um2
-        else:
-            density = 0.0
-
-        layer_densities.append(
-            LayerDensity(
-                layer_name=layer_name,
-                gds_layer=gds_layer,
-                gds_datatype=gds_datatype,
-                polygon_area_um2=area_um2,
-                bbox_area_um2=bbox_area_um2,
-                density=density,
-                bbox=bbox,
-            )
-        )
-
-        if bbox[0] < overall_xmin:
-            overall_xmin = bbox[0]
-        if bbox[1] < overall_ymin:
-            overall_ymin = bbox[1]
-        if bbox[2] > overall_xmax:
-            overall_xmax = bbox[2]
-        if bbox[3] > overall_ymax:
-            overall_ymax = bbox[3]
-
+        layer_densities.append(ld)
+        if ld.bbox[0] < overall_xmin:
+            overall_xmin = ld.bbox[0]
+        if ld.bbox[1] < overall_ymin:
+            overall_ymin = ld.bbox[1]
+        if ld.bbox[2] > overall_xmax:
+            overall_xmax = ld.bbox[2]
+        if ld.bbox[3] > overall_ymax:
+            overall_ymax = ld.bbox[3]
     if overall_xmin == float("inf"):
         overall_bbox = (0.0, 0.0, 0.0, 0.0)
     else:
         overall_bbox = (overall_xmin, overall_ymin, overall_xmax, overall_ymax)
-
     return DensityReport(
         file_path=str(gds_path),
         top_cell_name=top_cell.name,
@@ -299,6 +256,48 @@ def compute_layer_density(
         layer_densities=layer_densities,
         violations=[],
         overall_bbox=overall_bbox,
+    )
+
+
+def _compute_one_layer_density(
+    db, top_cell, ly, li, layer_map, dbu, layers_to_analyze,
+) -> LayerDensity | None:
+    """计算单层密度（R320 内部函数）。
+
+    Returns:
+        LayerDensity 或 None（空层/跳过层）。
+    """
+    info = ly.get_info(li)
+    gds_layer = int(info.layer)
+    gds_datatype = int(info.datatype)
+    layer_name = layer_map.get(
+        (gds_layer, gds_datatype),
+        f"LAYER_{gds_layer}_{gds_datatype}",
+    )
+    if layers_to_analyze is not None and layer_name not in layers_to_analyze:
+        return None
+    region = db.Region(top_cell.begin_shapes_rec(li))
+    area_dbu2 = int(region.area())
+    if area_dbu2 == 0:
+        return None
+    area_um2 = area_dbu2 * dbu * dbu
+    bbox_dbu = region.bbox()
+    bbox = (
+        float(bbox_dbu.left) * dbu,
+        float(bbox_dbu.bottom) * dbu,
+        float(bbox_dbu.right) * dbu,
+        float(bbox_dbu.top) * dbu,
+    )
+    bbox_area_um2 = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
+    density = area_um2 / bbox_area_um2 if bbox_area_um2 > 0 else 0.0
+    return LayerDensity(
+        layer_name=layer_name,
+        gds_layer=gds_layer,
+        gds_datatype=gds_datatype,
+        polygon_area_um2=area_um2,
+        bbox_area_um2=bbox_area_um2,
+        density=density,
+        bbox=bbox,
     )
 
 
@@ -402,7 +401,6 @@ def compute_density_map(
     """
     if cell_size_um <= 0:
         raise ValueError(f"cell_size_um 必须 > 0，得到 {cell_size_um}")
-
     db = _import_klayout_db()
     path = Path(gds_path)
     if not path.exists():
@@ -411,65 +409,49 @@ def compute_density_map(
         raise ValueError(f"路径不是文件: {gds_path}")
     if layer_map is None:
         layer_map = _get_default_layer_map()
-
-    ly = db.Layout()
-    try:
-        ly.read(str(path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取 GDSII 失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    ly = _read_gdsii_layout(db, path)
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
-
     target_li = _find_target_layer(ly, layer_name, layer_map)
-
-    # 收集该层所有多边形
     region = db.Region(top_cell.begin_shapes_rec(target_li))
+    return _build_density_map_from_region(
+        db, region, dbu, layer_name, cell_size_um,
+    )
 
-    # 计算整体包围盒
+
+def _build_density_map_from_region(
+    db, region, dbu, layer_name, cell_size_um,
+) -> DensityMap:
+    """从 Region 构建 DensityMap（R320 内部函数）。
+
+    处理空层、退化包围盒，并调用 _compute_density_grid 计算网格密度。
+    """
     bbox_dbu = region.bbox()
     if bbox_dbu.empty():
-        # 空层返回空网格
         return DensityMap(
-            layer_name=layer_name,
-            rows=0,
-            cols=0,
-            cell_size_um=cell_size_um,
-            grid=np.zeros((0, 0)),
+            layer_name=layer_name, rows=0, cols=0,
+            cell_size_um=cell_size_um, grid=np.zeros((0, 0)),
             bbox=(0.0, 0.0, 0.0, 0.0),
         )
-
     x_min = float(bbox_dbu.left) * dbu
     y_min = float(bbox_dbu.bottom) * dbu
     x_max = float(bbox_dbu.right) * dbu
     y_max = float(bbox_dbu.top) * dbu
     bbox = (x_min, y_min, x_max, y_max)
-
     width = x_max - x_min
     height = y_max - y_min
     if width <= 0 or height <= 0:
         raise ValueError(
-            f"层 '{layer_name}' 包围盒退化: {bbox}。"
-            f"无法计算密度网格。"
+            f"层 '{layer_name}' 包围盒退化: {bbox}。无法计算密度网格。"
         )
-
     cols = max(1, int(np.ceil(width / cell_size_um)))
     rows = max(1, int(np.ceil(height / cell_size_um)))
-
     grid = _compute_density_grid(
         region, db, x_min, y_min, cell_size_um, dbu, rows, cols
     )
-
     return DensityMap(
-        layer_name=layer_name,
-        rows=rows,
-        cols=cols,
-        cell_size_um=cell_size_um,
-        grid=grid,
-        bbox=bbox,
+        layer_name=layer_name, rows=rows, cols=cols,
+        cell_size_um=cell_size_um, grid=grid, bbox=bbox,
     )
 
 
@@ -504,10 +486,33 @@ def check_density_rules(
     - KLayout DRC density check: https://www.klayout.org/doc-qt5/manual/drc.html
     - Synopsys OptoDesigner density rule: https://www.synopsys.com/photonic-solutions/optocompiler/optodesigner/design-rule-checking-module.html
     """
+    _validate_density_rules(rules)
+    layers_to_check = list({r[0] for r in rules})
+    report = compute_layer_density(
+        gds_path, layer_map=layer_map, top_cell_name=top_cell_name,
+        layers_to_analyze=layers_to_check,
+    )
+    available_layers = {ld.layer_name for ld in report.layer_densities}
+    violations: list[DensityViolation] = []
+    for layer_name, rule_type, limit in rules:
+        if layer_name not in available_layers:
+            raise ValueError(
+                f"规则引用的层 '{layer_name}' 不在 GDSII 文件中。"
+                f"可用层: {available_layers}"
+            )
+        ld = next(
+            d for d in report.layer_densities if d.layer_name == layer_name
+        )
+        v = _check_one_density_rule(ld, rule_type, limit)
+        if v is not None:
+            violations.append(v)
+    return violations
+
+
+def _validate_density_rules(rules) -> None:
+    """校验密度规则格式（R320 内部函数，R03 无 fall-back）。"""
     if not rules:
         raise ValueError("rules 不能为空")
-
-    # 校验规则格式
     for layer_name, rule_type, limit in rules:
         if rule_type not in ("min_density", "max_density"):
             raise ValueError(
@@ -519,59 +524,37 @@ def check_density_rules(
                 f"limit_density 必须在 [0.0, 1.0]，得到 {limit}"
             )
 
-    # 计算各层密度
-    layers_to_check = list({r[0] for r in rules})
-    report = compute_layer_density(
-        gds_path, layer_map=layer_map, top_cell_name=top_cell_name,
-        layers_to_analyze=layers_to_check,
-    )
 
-    # 检查每条规则
-    available_layers = {ld.layer_name for ld in report.layer_densities}
-    violations: list[DensityViolation] = []
-    for layer_name, rule_type, limit in rules:
-        if layer_name not in available_layers:
-            raise ValueError(
-                f"规则引用的层 '{layer_name}' 不在 GDSII 文件中。"
-                f"可用层: {available_layers}"
-            )
-
-        ld = next(
-            d for d in report.layer_densities if d.layer_name == layer_name
+def _check_one_density_rule(
+    ld: LayerDensity, rule_type: str, limit: float,
+) -> DensityViolation | None:
+    """检查单条密度规则，返回违规或 None（R320 内部函数）。"""
+    if rule_type == "min_density" and ld.density < limit:
+        return DensityViolation(
+            layer_name=ld.layer_name,
+            rule_type=rule_type,
+            region=ld.bbox,
+            measured_density=ld.density,
+            limit_density=limit,
+            message=(
+                f"层 {ld.layer_name} 全局密度 {ld.density:.4f} "
+                f"< 最小密度 {limit:.4f}，"
+                f"工艺均匀性不足（CMP 抛光风险）"
+            ),
         )
-
-        if rule_type == "min_density" and ld.density < limit:
-            violations.append(
-                DensityViolation(
-                    layer_name=layer_name,
-                    rule_type=rule_type,
-                    region=ld.bbox,
-                    measured_density=ld.density,
-                    limit_density=limit,
-                    message=(
-                        f"层 {layer_name} 全局密度 {ld.density:.4f} "
-                        f"< 最小密度 {limit:.4f}，"
-                        f"工艺均匀性不足（CMP 抛光风险）"
-                    ),
-                )
-            )
-        elif rule_type == "max_density" and ld.density > limit:
-            violations.append(
-                DensityViolation(
-                    layer_name=layer_name,
-                    rule_type=rule_type,
-                    region=ld.bbox,
-                    measured_density=ld.density,
-                    limit_density=limit,
-                    message=(
-                        f"层 {layer_name} 全局密度 {ld.density:.4f} "
-                        f"> 最大密度 {limit:.4f}，"
-                        f"过密可能导致工艺问题"
-                    ),
-                )
-            )
-
-    return violations
+    if rule_type == "max_density" and ld.density > limit:
+        return DensityViolation(
+            layer_name=ld.layer_name,
+            rule_type=rule_type,
+            region=ld.bbox,
+            measured_density=ld.density,
+            limit_density=limit,
+            message=(
+                f"层 {ld.layer_name} 全局密度 {ld.density:.4f} "
+                f"> 最大密度 {limit:.4f}，过密可能导致工艺问题"
+            ),
+        )
+    return None
 
 
 # =============================================================================
