@@ -110,6 +110,84 @@ class ScaledDotProductAttention(Module):
         return attn_weights @ value
 
 
+def _mha_validate_dtype(q: Tensor, k: Tensor, v: Tensor) -> None:
+    """校验 q/k/v.data dtype 是否为 DEFAULT_DTYPE（Bug #v3.3-NN-3）。
+
+    URL: https://numpy.org/doc/stable/reference/arrays/promotion.html
+
+    Raises:
+        TypeError: dtype 不为 float64。
+    """
+    for name, t in (("q", q), ("k", k), ("v", v)):
+        if t.data.dtype != DEFAULT_DTYPE:
+            raise TypeError(
+                f"{name}.data dtype 须为 {DEFAULT_DTYPE}，实际 {t.data.dtype}（Bug #v3.3-NN-3）"
+            )
+
+
+def _mha_forward(
+    q: Tensor, k: Tensor, v: Tensor,
+    num_heads: int, head_dim: int, embed_dim: int,
+):
+    """多头注意力前向（R02: Vaswani 2017 https://arxiv.org/abs/1706.03762）。
+
+    Returns:
+        (out_data, q3d, k3d, v3d, attn, seq_len, d_k)。
+    """
+    seq_len = q.data.shape[0]
+    q3d = q.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)  # [h,s,d]
+    k3d = k.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
+    v3d = v.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
+    d_k = head_dim
+    scores = q3d @ k3d.swapaxes(-2, -1) / math.sqrt(d_k)  # [h,s,s]
+    scores_max = scores.max(axis=-1, keepdims=True)
+    exp_scores = np.exp(scores - scores_max)
+    attn = exp_scores / exp_scores.sum(axis=-1, keepdims=True)
+    out_3d = attn @ v3d  # [h,s,d]
+    out_data = out_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)  # [s,embed]
+    return out_data, q3d, k3d, v3d, attn, seq_len, d_k
+
+
+def _make_mha_backward(
+    q: Tensor, k: Tensor, v: Tensor,
+    q3d: np.ndarray, k3d: np.ndarray, v3d: np.ndarray,
+    attn: np.ndarray, seq_len: int, num_heads: int,
+    head_dim: int, embed_dim: int, d_k: int,
+):
+    """构造多头注意力反向闭包（R02: Goodfellow 2016 §6.2.2 softmax 反向）。
+
+    返回 ``_back(g)``，捕获前向中间量，计算 d_q/d_k/d_v 累积到参数 .grad。
+    """
+    def _back(g: np.ndarray) -> None:
+        # Bug #v3.3-NN-3: 强制统一反向梯度 dtype，避免 float32 输入累积误差
+        # URL: https://theneuralbase.com/numpy-for-ml/learn/advanced/float32-vs-float64-trade-offs/
+        g = np.asarray(g, dtype=DEFAULT_DTYPE)
+        g3d = g.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
+        # d_out = attn @ v → d_attn, d_v
+        grad_attn = g3d @ v3d.swapaxes(-2, -1)  # [h,s,s]
+        grad_v_3d = attn.swapaxes(-2, -1) @ g3d  # [h,s,d]
+        # softmax 反向: d_scores = attn ⊙ (d_attn - Σ(d_attn⊙attn))
+        grad_scores = attn * (
+            grad_attn - (grad_attn * attn).sum(axis=-1, keepdims=True)
+        )
+        grad_scores = grad_scores / math.sqrt(d_k)
+        # d_scores = Q·K^T / sqrt(d_k) → d_q, d_k
+        grad_q_3d = grad_scores @ k3d  # [h,s,d]
+        grad_k_3d = grad_scores.swapaxes(-2, -1) @ q3d  # [h,s,d]
+        # 还原为 [seq, embed] 并累积梯度
+        if q.requires_grad:
+            q._ensure_grad()
+            q.grad = q.grad + grad_q_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)
+        if k.requires_grad:
+            k._ensure_grad()
+            k.grad = k.grad + grad_k_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)
+        if v.requires_grad:
+            v._ensure_grad()
+            v.grad = v.grad + grad_v_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)
+
+    return _back
+
+
 def _multi_head_attention_op(
     q: Tensor,
     k: Tensor,
@@ -123,12 +201,13 @@ def _multi_head_attention_op(
     将 q/k/v 投影、分头、attention、拼头、输出投影表达为自定义可微 op，
     手动实现反向传播，梯度可流回 w_q/w_k/w_v 参数。
 
-    数学（来源: Vaswani et al. 2017 NeurIPS）:
+    数学（来源: Vaswani et al. 2017 NeurIPS https://arxiv.org/abs/1706.03762）:
     - scores = Q·K^T / sqrt(d_k)
     - attn = softmax(scores)
     - out = attn · V
 
-    反向（来源: Goodfellow 2016 §6.2.2 softmax 反向）:
+    反向（来源: Goodfellow 2016 §6.2.2 softmax 反向
+    https://www.deeplearningbook.org/）:
     - d_attn = d_out · V^T
     - d_v = attn^T · d_out
     - d_scores = attn ⊙ (d_attn - Σ(d_attn ⊙ attn, axis=-1))
@@ -139,7 +218,7 @@ def _multi_head_attention_op(
     （float64），反向梯度 ``g`` 显式 ``astype(DEFAULT_DTYPE)``，确保
     前向/反向/梯度累积全程 dtype 一致，避免 float32/float64 混合
     触发 NumPy 隐式提升导致的精度问题。
-    URL: https://numpy.org/doc/stable/reference/arrays.promotion.html
+    URL: https://numpy.org/doc/stable/reference/arrays/promotion.html
 
     Args:
         q: 查询 Tensor [seq, embed]（来自 w_q 投影，requires_grad=True）。
@@ -155,57 +234,16 @@ def _multi_head_attention_op(
     Raises:
         TypeError: q/k/v dtype 不为 float64（Bug #v3.3-NN-3）。
     """
-    # Bug #v3.3-NN-3: dtype 一致性校验（防御性，Tensor 类已强制 float64）
-    # URL: https://numpy.org/doc/stable/reference/arrays.promotion.html
-    for name, t in (("q", q), ("k", k), ("v", v)):
-        if t.data.dtype != DEFAULT_DTYPE:
-            raise TypeError(
-                f"{name}.data dtype 须为 {DEFAULT_DTYPE}，实际 {t.data.dtype}（Bug #v3.3-NN-3）"
-            )
-    seq_len = q.data.shape[0]
-    # 前向（用 .data 计算，但记录 parents 供反向）
-    q3d = q.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)  # [h,s,d]
-    k3d = k.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
-    v3d = v.data.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
-    d_k = head_dim
-    scores = q3d @ k3d.swapaxes(-2, -1) / math.sqrt(d_k)  # [h,s,s]
-    scores_max = scores.max(axis=-1, keepdims=True)
-    exp_scores = np.exp(scores - scores_max)
-    attn = exp_scores / exp_scores.sum(axis=-1, keepdims=True)
-    out_3d = attn @ v3d  # [h,s,d]
-    out_data = out_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)  # [s,embed]
+    _mha_validate_dtype(q, k, v)
+    out_data, q3d, k3d, v3d, attn, seq_len, d_k = _mha_forward(
+        q, k, v, num_heads, head_dim, embed_dim,
+    )
     rg = q.requires_grad or k.requires_grad or v.requires_grad
     out = Tensor(out_data, rg, (q, k, v))
-
-    def _back(g: np.ndarray) -> None:
-        # Bug #v3.3-NN-3: 强制统一反向梯度 dtype，避免 float32 输入累积误差
-        # URL: https://theneuralbase.com/numpy-for-ml/learn/advanced/float32-vs-float64-trade-offs/
-        g = np.asarray(g, dtype=DEFAULT_DTYPE)
-        # g: [seq, embed] → [h, s, d]
-        g3d = g.reshape(seq_len, num_heads, head_dim).transpose(1, 0, 2)
-        # d_out = attn @ v → d_attn, d_v
-        grad_attn = g3d @ v3d.swapaxes(-2, -1)  # [h,s,s]
-        grad_v_3d = attn.swapaxes(-2, -1) @ g3d  # [h,s,d]
-        # softmax 反向: d_scores = attn ⊙ (d_attn - Σ(d_attn⊙attn))
-        grad_scores = attn * (
-            grad_attn - (grad_attn * attn).sum(axis=-1, keepdims=True)
-        )
-        grad_scores = grad_scores / math.sqrt(d_k)
-        # d_scores = Q·K^T / sqrt(d_k) → d_q, d_k
-        grad_q_3d = grad_scores @ k3d  # [h,s,d]
-        grad_k_3d = grad_scores.swapaxes(-2, -1) @ q3d  # [h,s,d]
-        # 还原为 [seq, embed]
-        if q.requires_grad:
-            q._ensure_grad()
-            q.grad = q.grad + grad_q_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)
-        if k.requires_grad:
-            k._ensure_grad()
-            k.grad = k.grad + grad_k_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)
-        if v.requires_grad:
-            v._ensure_grad()
-            v.grad = v.grad + grad_v_3d.transpose(1, 0, 2).reshape(seq_len, embed_dim)
-
-    out._backward = _back
+    out._backward = _make_mha_backward(
+        q, k, v, q3d, k3d, v3d, attn,
+        seq_len, num_heads, head_dim, embed_dim, d_k,
+    )
     return out
 
 
