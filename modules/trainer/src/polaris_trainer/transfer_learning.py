@@ -213,8 +213,19 @@ def extract_routing_targets(loader: ExpertDemoLoader) -> tuple[np.ndarray, np.nd
             seg_len = np.sqrt(np.sum(diffs**2, axis=1))
             route_lengths.append(float(np.sum(seg_len)))
         avg_route_len = float(np.mean(route_lengths)) if route_lengths else 0.0
-        canvas_w = float(netlist.get("canvas_w", 1.0))
-        canvas_h = float(netlist.get("canvas_h", 1.0))
+        # R03 禁止 fall-back：canvas_w/canvas_h 缺失即 raise（specs.py 单位 μm，默认 1000.0）
+        if "canvas_w" not in netlist:
+            raise KeyError(
+                "netlist 缺 canvas_w 字段（μm，与 specs.py CircuitSpec.canvas_w 对齐）"
+                "（R03 禁止 fall-back）"
+            )
+        if "canvas_h" not in netlist:
+            raise KeyError(
+                "netlist 缺 canvas_h 字段（μm，与 specs.py CircuitSpec.canvas_h 对齐）"
+                "（R03 禁止 fall-back）"
+            )
+        canvas_w = float(netlist["canvas_w"])
+        canvas_h = float(netlist["canvas_h"])
         devices = netlist.get("devices", [])
         n_devices = len(devices)
         for dev in devices:
