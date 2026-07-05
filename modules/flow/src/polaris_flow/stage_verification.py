@@ -131,6 +131,25 @@ def stage5_simulation(recipe: Recipe, workspace: Workspace, prev_outputs: dict) 
 # =============================================================================
 
 
+def _serialize_drc_violations(violations: list) -> list[dict]:
+    """将 ConstraintViolation 对象列表序列化为 JSON 可序列化字典列表。
+
+    Extract Method，R11 质量门禁。每项含 type/severity/message/device_name/
+    net_id/location。
+    """
+    return [
+        {
+            "type": v.vtype.value,
+            "severity": float(v.severity),
+            "message": v.message,
+            "device_name": v.device_name,
+            "net_id": v.net_id,
+            "location": list(v.location) if v.location else None,
+        }
+        for v in violations
+    ]
+
+
 def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 6: DRC/LVS 约束检查。
 
@@ -179,18 +198,7 @@ def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
     )
 
     violations = checker.check(placements=placements, paths=routes, context=ctx)
-    # 序列化违规列表
-    violation_list = [
-        {
-            "type": v.vtype.value,
-            "severity": float(v.severity),
-            "message": v.message,
-            "device_name": v.device_name,
-            "net_id": v.net_id,
-            "location": list(v.location) if v.location else None,
-        }
-        for v in violations
-    ]
+    violation_list = _serialize_drc_violations(violations)
     n_violations = len(violation_list)
     drc_passed = n_violations == 0
 
