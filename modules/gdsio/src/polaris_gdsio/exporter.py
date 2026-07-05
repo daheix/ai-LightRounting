@@ -99,25 +99,7 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
 
     dbu = _GDSFACTORY_DEFAULT_DBU_UM
     # 为每个器件创建子 cell + 在顶层放置实例
-    x_offset = 0.0
-    for dev in circuit["devices"]:
-        w_um = float(dev["width_um"])
-        h_um = float(dev["height_um"])
-        dev_name = str(dev["name"])
-        child = ly.create_cell(dev_name)
-        # box 在 WG 层（dbu 单位），尺寸为器件 footprint
-        w_dbu = int(round(w_um / dbu))
-        h_dbu = int(round(h_um / dbu))
-        if w_dbu < 1:
-            w_dbu = 1
-        if h_dbu < 1:
-            h_dbu = 1
-        child.shapes(wg_li).insert(db.Box(0, 0, w_dbu, h_dbu))
-        # 在顶层放置实例（沿 x 轴顺序排列，y=0 居中）
-        x_dbu = int(round(x_offset / dbu))
-        trans = db.Trans(x_dbu, 0)
-        top_cell.insert(db.CellInstArray(child.cell_index(), trans))
-        x_offset += w_um + _DEVICE_SPACING_UM
+    _place_device_instances(db, ly, top_cell, wg_li, circuit["devices"], dbu)
 
     if ly.cells() == 0:
         raise RuntimeError(
@@ -146,6 +128,39 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
         "n_layers": n_layers,
         "loadable": loadable,
     }
+
+
+def _place_device_instances(
+    db: Any,
+    ly: Any,
+    top_cell: Any,
+    wg_li: Any,
+    devices: list,
+    dbu: float,
+) -> None:
+    """为每个器件创建子 cell + 在顶层放置实例（Extract Method，R11 质量门禁）。
+
+    沿 x 轴顺序排列，y=0 居中，器件间间距 _DEVICE_SPACING_UM。
+    """
+    x_offset = 0.0
+    for dev in devices:
+        w_um = float(dev["width_um"])
+        h_um = float(dev["height_um"])
+        dev_name = str(dev["name"])
+        child = ly.create_cell(dev_name)
+        # box 在 WG 层（dbu 单位），尺寸为器件 footprint
+        w_dbu = int(round(w_um / dbu))
+        h_dbu = int(round(h_um / dbu))
+        if w_dbu < 1:
+            w_dbu = 1
+        if h_dbu < 1:
+            h_dbu = 1
+        child.shapes(wg_li).insert(db.Box(0, 0, w_dbu, h_dbu))
+        # 在顶层放置实例（沿 x 轴顺序排列，y=0 居中）
+        x_dbu = int(round(x_offset / dbu))
+        trans = db.Trans(x_dbu, 0)
+        top_cell.insert(db.CellInstArray(child.cell_index(), trans))
+        x_offset += w_um + _DEVICE_SPACING_UM
 
 
 # ---------------------------------------------------------------------------
