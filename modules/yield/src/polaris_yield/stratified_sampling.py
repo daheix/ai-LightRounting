@@ -586,42 +586,12 @@ def compare_stratified_convergence(
     stratified_errors: list[float] = []
 
     for n in sample_sizes:
-        mc_samples = np.empty((n, d))
-        for j in range(d):
-            spec = nominal_dist[j]
-            if spec.get("type") == "norm":
-                mc_samples[:, j] = rng.normal(
-                    loc=spec.get("loc", 0.0),
-                    scale=spec.get("scale", 1.0),
-                    size=n,
-                )
-            else:
-                mc_samples[:, j] = rng.uniform(
-                    low=spec.get("loc", 0.0),
-                    high=spec.get("loc", 0.0) + spec.get("scale", 1.0),
-                    size=n,
-                )
-        mc_outputs = np.array(
-            [float(func(mc_samples[i])) for i in range(n)]
-        )
-        mc_mean = float(np.mean(mc_outputs))
-        mc_err = (
-            abs(mc_mean - true_value) / abs(true_value)
-            if true_value != 0
-            else abs(mc_mean - true_value)
-        )
-        mc_errors.append(mc_err)
-
-        strat_result = stratified_monte_carlo(
-            func=func, nominal_dist=nominal_dist, n_strata=n_strata,
-            n_samples=n, strategy=strategy, seed=seed,
-        )
-        strat_err = (
-            abs(strat_result.estimate - true_value) / abs(true_value)
-            if true_value != 0
-            else abs(strat_result.estimate - true_value)
-        )
-        stratified_errors.append(strat_err)
+        mc_errors.append(_compute_mc_convergence_error(
+            func, nominal_dist, n, rng, true_value,
+        ))
+        stratified_errors.append(_compute_stratified_convergence_error(
+            func, nominal_dist, n_strata, n, strategy, seed, true_value,
+        ))
 
     mc_final = mc_errors[-1]
     strat_final = stratified_errors[-1]
@@ -635,6 +605,62 @@ def compare_stratified_convergence(
         "stratified_final_error": strat_final,
         "speedup_factor": speedup,
     }
+
+
+def _compute_mc_convergence_error(
+    func: Callable[[np.ndarray], float],
+    nominal_dist: list[dict],
+    n: int,
+    rng: np.random.Generator,
+    true_value: float,
+) -> float:
+    """单样本规模下朴素 MC 的相对误差（Extract Method，R11 质量门禁）。
+
+    学术依据: Glasserman 2003, Ch.4。
+    """
+    d = len(nominal_dist)
+    mc_samples = np.empty((n, d))
+    for j in range(d):
+        spec = nominal_dist[j]
+        if spec.get("type") == "norm":
+            mc_samples[:, j] = rng.normal(
+                loc=spec.get("loc", 0.0),
+                scale=spec.get("scale", 1.0),
+                size=n,
+            )
+        else:
+            mc_samples[:, j] = rng.uniform(
+                low=spec.get("loc", 0.0),
+                high=spec.get("loc", 0.0) + spec.get("scale", 1.0),
+                size=n,
+            )
+    mc_outputs = np.array([float(func(mc_samples[i])) for i in range(n)])
+    mc_mean = float(np.mean(mc_outputs))
+    if true_value != 0:
+        return abs(mc_mean - true_value) / abs(true_value)
+    return abs(mc_mean - true_value)
+
+
+def _compute_stratified_convergence_error(
+    func: Callable[[np.ndarray], float],
+    nominal_dist: list[dict],
+    n_strata: int,
+    n: int,
+    strategy: AllocationStrategy,
+    seed: int | None,
+    true_value: float,
+) -> float:
+    """单样本规模下分层采样的相对误差（Extract Method，R11 质量门禁）。
+
+    学术依据: Glasserman 2003, Ch.4。
+    """
+    strat_result = stratified_monte_carlo(
+        func=func, nominal_dist=nominal_dist, n_strata=n_strata,
+        n_samples=n, strategy=strategy, seed=seed,
+    )
+    if true_value != 0:
+        return abs(strat_result.estimate - true_value) / abs(true_value)
+    return abs(strat_result.estimate - true_value)
 
 
 __all__ = [
