@@ -42,7 +42,10 @@ polaris-extras.tar.gz
 checkpoints/
 
 # 测试产物与输出目录（运行时生成，不入库）
-out/
+# 用 out/* 而非 out/，以便为 out/audit/ 开例外
+out/*
+!out/audit/
+!out/audit/**
 demo_output/
 /tmp/polaris_batch_test/
 

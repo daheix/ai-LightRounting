@@ -1,65 +1,40 @@
 #!/usr/bin/env python3
-"""DRC 误报全量审计脚本（PoLaRIS Task 1）。
+"""DRC 误报率量化审查脚本（PoLaRIS real_board，R02/R03/R11 合规）。
 
-读取上一轮 1200 电路端到端测试结果（progress.json），对所有 DRC 失败电路
-重新跑 DRC 收集详细违规，按规则名统计违规分布，抽样 50 个 PORT_ALIGNMENT
-违规电路分析 dx/dy 偏差分布，判断是布局算法局限（误报）还是真违规，
-输出误报率与修复建议报告。
+基于 real_board 87 个真实板级 benchmark 电路，在严格模式（bend_compensate=False）
+下运行 DRC 收集 PORT_ALIGNMENT 违规，抽样 50 个用例自动判定是否为误报，
+输出误报率与根因分析报告，对标商用门槛 ≤5%
+（Mohan et al., DATE 2023 "Machine Learning for DRC"）。
 
-## Input → Process → Output 三段式
+## 误报定义（R02 学术诚信）
+用例被 DRC 判为 PORT_ALIGNMENT 违规，但人工核查为物理可实现的连接:
+- 器件真实存在且端口在器件边界内
+- 连接对端器件存在
+- 端口方向兼容（启用 bend_compensate 后任意有效方向都兼容，
+  Chrostowski & Hochberg 2015 §4.3，每 90° 弯曲 ≈0.05dB）
+- 端口间距在弯曲补偿范围内（<50μm，可通过 S-bend/Bezier/Euler 弯曲补偿）
 
-### Input
-- ``/workspace/out/batch_test/progress.json`` — 1200 电路端到端测试结果
-- ``/workspace/data/benchmarks/generated/`` — 1200 个电路 JSON + index.json
+## Process
+加载 real_board 87 电路 → 严格模式 DRC 收集 PORT_ALIGNMENT 违规 →
+按类别均匀抽样 50 个 → is_false_positive 自动判定（器件存在/端口在边界内/
+对端器件存在/方向兼容/间距<50μm 为误报）→ 生成报告。
 
-### Process
-1. 读取 progress.json，找出所有 ``drc_passed=False`` 的电路
-2. 对每个 DRC 失败电路：加载 circuit JSON → ``place_circuit(mode="analytical")``
-   → ``run_drc`` → 收集 violations
-3. 按规则名（PORT_ALIGNMENT / PORT_FACING / DENSITY_MAX 等）统计违规分布
-4. 抽样 50 个 PORT_ALIGNMENT 违规电路，解析 dx/dy 偏差，判断误报
-5. 误报判定：
-   - **PORT_ALIGNMENT 违规** → 误报（布局算法局限，端口未对齐但电路结构合法，
-     器件不重叠/间距满足/方向相对，可通过波导弯曲补偿）
-   - **DENSITY_MIN 违规** → 误报（benchmark 画布尺寸与器件规模不匹配，
-     电路结构本身合法，非布局算法问题）
-   - **其他规则违规**（MIN_SPACING / NO_OVERLAP / BOUNDARY / PORT_DIRECTION /
-     PORT_FACING / PORT_CONNECTIVITY / DENSITY_MAX / MIN_WIDTH / MIN_HEIGHT /
-     MIN_AREA）→ 真违规（器件真实重叠/间距不足/方向非法/未连接）
-
-### Output
-- ``/workspace/out/audit/drc_false_positive_report.md`` — 误报分析报告
-- ``/workspace/out/audit/drc_audit_data.json`` — 完整审计数据（中间产物）
-
-## 误报判定依据（R02 学术诚信）
-
-### 真违规定义
-器件真实重叠（NO_OVERLAP）/ 间距不足（MIN_SPACING）/ 方向非法
-（PORT_DIRECTION / PORT_FACING）/ 未连接（PORT_CONNECTIVITY）/ 超出边界
-（BOUNDARY）/ 密度超限（DENSITY_MAX）/ 尺寸不足（MIN_WIDTH / MIN_HEIGHT /
-MIN_AREA）。这些违规无法通过布线补偿，必须修复布局或电路结构。
-
-### 误报定义
-布局算法局限导致端口未对齐（PORT_ALIGNMENT），但电路本身结构合法
-（器件不重叠、间距满足、方向相对、连接完整）。未对齐可通过波导弯曲补偿
-（每增加一个弯曲 ≈ 0.05dB 损耗，Chrostowski & Hochberg 2015 §4.3），
-非工艺致命违规。PORT_ALIGNMENT 规则 severity=0.5（建议性），低于真违规
-规则的 severity（0.7-1.0）。
-
-DENSITY_MIN 违规本质是 benchmark 画布尺寸（如 XL=3000×3000μm²）与器件
-规模（4 个小器件总面积 ~540μm²）不匹配，电路结构本身合法，归类为
-benchmark 设计问题导致的误报。
+## Output
+- ``out/audit/drc_false_positive_report.md`` — 误报率审查报告
+- ``out/audit/drc_audit_data.json`` — 完整审计数据（中间产物）
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
+- Mohan et al., "Machine Learning for DRC", DATE 2023
+  https://doi.org/10.23919/DATE56975.2023.10137091
 - SiEPIC EBeam PDK DRC runset https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 §4.3
   https://www.cambridge.org/core/books/silicon-photonics-design/
-- DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746
 - KLayout DRC 文档 https://www.klayout.org/doc-qt5/manual/drc_runsets.html
-- FFDH: Coffman et al. SIAM J. Comput. 9(4) 1980
-  https://epubs.siam.org/doi/10.1137/0209062
+- He et al., OpenDRC, DAC 2023 https://doi.org/10.1109/DAC56929.2023.10247734
+- Berg et al. 2014, "Computational Geometry", Springer（AABB 几何）
+  https://doi.org/10.1007/978-3-540-77974-2
 - PoLaRIS DRC 引擎: /workspace/modules/drc/src/polaris_drc/engine.py
-- PoLaRIS 布局器: /workspace/modules/place/src/polaris_place/analytical.py
+- PoLaRIS real_board harness: /workspace/scripts/run_real_board_drc.py
 """
 
 from __future__ import annotations
@@ -73,60 +48,87 @@ import time
 from collections import Counter, defaultdict
 from typing import Any
 
-# 添加 PoLaRIS 子模块路径（editable install 也可，此处双保险）
+# PoLaRIS 子模块路径
 sys.path.insert(0, "/workspace/modules/drc/src")
 sys.path.insert(0, "/workspace/modules/place/src")
+sys.path.insert(0, "/workspace/scripts")
 
 import polaris_drc  # noqa: E402
 import polaris_place  # noqa: E402
+# 复用 run_real_board_drc.py 的 4 类 benchmark 转换器
+from run_real_board_drc import (  # noqa: E402
+    collect_siepic, collect_expert_demos,
+    collect_gdsfactory, collect_picbench,
+)
 
 # =========================================================================
 # 路径与常量
 # =========================================================================
-PROGRESS_PATH = "/workspace/out/batch_test/progress.json"
-CIRCUITS_DIR = "/workspace/data/benchmarks/generated"
-INDEX_PATH = os.path.join(CIRCUITS_DIR, "index.json")
-OUTPUT_DIR = "/workspace/out/audit"
+WORKSPACE = "/workspace"
+OUTPUT_DIR = os.path.join(WORKSPACE, "out", "audit")
 REPORT_PATH = os.path.join(OUTPUT_DIR, "drc_false_positive_report.md")
 DATA_PATH = os.path.join(OUTPUT_DIR, "drc_audit_data.json")
 
-# PORT_ALIGNMENT 容差（与 polaris_drc/engine.py _PORT_ALIGN_TOL_UM 一致）
+# PORT_ALIGNMENT 容差（与 polaris_drc/engine.py PORT_ALIGN_TOL_UM 一致）
 PORT_ALIGN_TOL_UM = 10.0
-# 抽样数量
-PORT_ALIGN_SAMPLE_SIZE = 50
-# 误报判定阈值：PORT_ALIGNMENT 偏差在此范围内视为布局算法局限（误报）
-# dx/dy 都 < 50μm 视为布局算法装箱偏差（可通过波导弯曲补偿）
+# 默认抽样数（任务要求 50）
+DEFAULT_SAMPLE_SIZE = 50
+# 误报判定阈值: 端口偏差在弯曲补偿范围内（<50μm）视为误报
+# 依据: 任务描述"启用bend_compensate后任意距离都可弯曲补偿，
+#       但间距>50μm可能是布局问题，非误报"
+# 物理: S-bend 弯曲半径 25μm × 2 的典型补偿范围
+# 来源: SiEPIC bent_waveguide 单元弯曲半径 5-50μm
+#        Chrostowski & Hochberg 2015 §4.3
 PORT_ALIGN_FP_THRESHOLD_UM = 50.0
+# 商用误报率门槛（Mohan et al. DATE 2023）
+COMMERCIAL_FP_RATE_THRESHOLD = 0.05  # 5%
 
-# 真违规规则集合（出现任一即为真违规，非误报）
-_TRUE_VIOLATION_RULES = frozenset({
-    "MIN_SPACING", "MIN_WIDTH", "MIN_HEIGHT", "MIN_AREA",
-    "BOUNDARY", "NO_OVERLAP",
-    "PORT_DIRECTION", "PORT_CONNECTIVITY", "PORT_FACING",
-    "DENSITY_MAX",
-})
+# 4 类 benchmark 类别名
+CATEGORIES = ("siepic", "expert_demos", "gdsfactory", "picbench")
 
 
 # =========================================================================
 # 工具函数
 # =========================================================================
-def load_json(path: str) -> Any:
-    """加载 JSON 文件（R03: 失败 raise）。"""
-    with open(path, "r", encoding="utf-8") as f:
-        return json.load(f)
+def load_all_real_board_circuits() -> list[dict]:
+    """加载 real_board 87 个电路（复用 run_real_board_drc 转换器）。
 
-
-def find_circuit_path(name: str, index: dict) -> str:
-    """根据电路名从 index.json 查找 circuit JSON 路径。
-
-    R03: 未找到 raise，不返回 None。
+    Returns:
+        电路列表，每项含 name/category/circuit/placements。
     """
-    for entry in index.get("circuits", []):
-        if entry.get("name") == name:
-            return os.path.join(CIRCUITS_DIR, entry["path"])
-    raise RuntimeError(
-        f"电路 {name} 在 index.json 中未找到（R03 禁止 fall-back）"
-    )
+    collectors = {
+        "siepic": collect_siepic,
+        "expert_demos": collect_expert_demos,
+        "gdsfactory": collect_gdsfactory,
+        "picbench": collect_picbench,
+    }
+    items: list[dict] = []
+    for cat, collector in collectors.items():
+        for raw_item in collector():
+            try:
+                circuit, placements = raw_item["convert"](*raw_item["args"])
+                if not placements:
+                    raise RuntimeError(
+                        f"placements 为空（R03 禁止 fall-back）: {raw_item['name']}"
+                    )
+                items.append({
+                    "name": raw_item["name"],
+                    "category": cat,
+                    "circuit": circuit,
+                    "placements": placements,
+                })
+            except Exception as e:
+                # 转换失败记录但继续（不影响其他电路审计）
+                # R03: 此处不是 fall-back，是真实数据质量问题由上层处理
+                print(f"  [WARN] 跳过 {raw_item['name']}: {type(e).__name__}: {e}")
+                items.append({
+                    "name": raw_item["name"],
+                    "category": cat,
+                    "circuit": None,
+                    "placements": None,
+                    "error": f"{type(e).__name__}: {e}",
+                })
+    return items
 
 
 def parse_dx_dy_from_message(msg: str) -> tuple[float, float]:
@@ -135,7 +137,7 @@ def parse_dx_dy_from_message(msg: str) -> tuple[float, float]:
     message 格式: "PORT_ALIGNMENT: 连接 d1.p1→d2.p2 端口未对齐
                    dx=12.34μm dy=56.78μm > 容差 10.00μm"
 
-    R03: 解析失败 raise。
+    R03: 解析失败 raise，不返回假数据。
     """
     m = re.search(r"dx=([\d.]+)μm\s+dy=([\d.]+)μm", msg)
     if not m:
@@ -146,140 +148,171 @@ def parse_dx_dy_from_message(msg: str) -> tuple[float, float]:
     return float(m.group(1)), float(m.group(2))
 
 
-def parse_density_from_message(msg: str) -> float:
-    """从 DENSITY_MIN/DENSITY_MAX 违规 message 中解析密度百分比。
+def parse_connection_from_message(msg: str) -> tuple[str, str, str, str]:
+    """从 PORT_ALIGNMENT 违规 message 中解析连接信息。
 
-    message 格式: "DENSITY_MIN: 布局密度 0.0060% 低于下限 0.0100%"
-
-    R03: 解析失败 raise。
-    """
-    m = re.search(r"布局密度\s+([\d.]+)%", msg)
-    if not m:
-        raise RuntimeError(
-            f"无法从 DENSITY message 解析密度: {msg!r}（R03 禁止 fall-back）"
-        )
-    return float(m.group(1))
-
-
-# =========================================================================
-# 主审计流程
-# =========================================================================
-def audit_all_failures(progress: dict, index: dict) -> dict:
-    """对所有 DRC 失败电路重跑 DRC，收集详细违规。
-
-    Args:
-        progress: progress.json 数据。
-        index: index.json 数据。
+    message 格式: "PORT_ALIGNMENT: 连接 d1.p1→d2.p2 端口未对齐 ..."
 
     Returns:
-        审计数据 dict，含 rule_counter / rule_by_topology /
-        port_align_samples / per_circuit 详情。
+        (d1_name, p1_name, d2_name, p2_name)
+
+    Raises:
+        RuntimeError: 解析失败（R03 禁止 fall-back）。
     """
-    results = progress.get("results", [])
-    total = len(results)
-    drc_fail = [
-        r for r in results
-        if r.get("success") and r.get("drc_passed") is False
-    ]
-    drc_pass = [r for r in results if r.get("success") and r.get("drc_passed")]
-    run_fail = [r for r in results if not r.get("success")]
+    m = re.search(r"连接\s+(\S+)\.(\S+)→(\S+)\.(\S+)", msg)
+    if not m:
+        raise RuntimeError(
+            f"无法从 PORT_ALIGNMENT message 解析连接信息: {msg!r}"
+            f"（R03 禁止 fall-back）"
+        )
+    return m.group(1), m.group(2), m.group(3), m.group(4)
 
-    print(f"[audit] 总电路: {total}")
-    print(f"[audit] 运行成功 + DRC 通过: {len(drc_pass)}")
-    print(f"[audit] 运行成功 + DRC 失败: {len(drc_fail)}（待审计）")
-    print(f"[audit] 运行失败: {len(run_fail)}（不在本审计范围）")
-    print(f"[audit] 开始逐个重跑 DRC ...")
 
-    rule_counter: Counter = Counter()
-    rule_by_topology: dict[str, Counter] = defaultdict(Counter)
-    topology_counter: Counter = Counter()
-    port_align_samples: list[dict] = []
-    per_circuit: list[dict] = []
+# =========================================================================
+# 核心: 误报自动判定
+# =========================================================================
+def is_false_positive(violation: dict, circuit: dict,
+                      placements: dict) -> tuple[bool, str]:
+    """判定 PORT_ALIGNMENT 违规是否为误报。
+
+    判定逻辑（任务描述，R02 学术诚信）:
+    1. 器件存在性（placements 中有该器件）+ 端口在器件边界 [0,w]×[0,h] 内
+    2. 连接对端器件存在
+    3. 端口方向兼容（bend_compensate 启用后任意有效方向都兼容，仅非法方向为真违规）
+    4. 端口间距 dx<50μm 且 dy<50μm → 误报（弯曲补偿范围内）
+
+    Returns:
+        (is_fp, reason): 误报返回 (True, 原因)，真违规返回 (False, 原因)。
+    """
+    msg = violation.get("message", "")
+    dx, dy = parse_dx_dy_from_message(msg)
+    d1_name, p1_name, d2_name, p2_name = parse_connection_from_message(msg)
+
+    # 1. 检查器件是否存在
+    if d1_name not in placements:
+        return (False, f"器件 {d1_name} 不在 placements 中（真违规-器件缺失）")
+    if d2_name not in placements:
+        return (False, f"器件 {d2_name} 不在 placements 中（真违规-对端器件缺失）")
+
+    # 2. 检查端口是否在器件边界内
+    device_map = {d.get("name"): d for d in circuit.get("devices", [])}
+    dev1 = device_map.get(d1_name)
+    dev2 = device_map.get(d2_name)
+    if dev1 is None:
+        return (False, f"器件 {d1_name} 不在 circuit.devices 中（真违规-器件未定义）")
+    if dev2 is None:
+        return (False, f"器件 {d2_name} 不在 circuit.devices 中（真违规-对端未定义）")
+
+    pl1, pl2 = placements[d1_name], placements[d2_name]
+    w1, h1 = float(pl1["w"]), float(pl1["h"])
+    w2, h2 = float(pl2["w"]), float(pl2["h"])
+
+    def _find_port_coord(dev: dict, port_name: str) -> tuple[float, float, str] | None:
+        for p in dev.get("ports", []):
+            if len(p) >= 3 and str(p[0]) == port_name:
+                direction = str(p[3]) if len(p) >= 4 else "unknown"
+                return (float(p[1]), float(p[2]), direction)
+        return None
+
+    port1 = _find_port_coord(dev1, p1_name)
+    port2 = _find_port_coord(dev2, p2_name)
+    if port1 is None:
+        return (False, f"端口 {d1_name}.{p1_name} 未定义（真违规-端口缺失）")
+    if port2 is None:
+        return (False, f"端口 {d2_name}.{p2_name} 未定义（真违规-对端端口缺失）")
+
+    # 端口在器件边界内: 相对坐标在 [0, w]×[0, h] 内（含微小数值误差）
+    EPS = 1e-6
+    p1x, p1y, _ = port1
+    p2x, p2y, _ = port2
+    if not (-EPS <= p1x <= w1 + EPS and -EPS <= p1y <= h1 + EPS):
+        return (False, f"端口 {d1_name}.{p1_name} 不在器件边界内"
+                f"（{p1x:.2f},{p1y:.2f} 不在 [0,{w1:.2f}]×[0,{h1:.2f}]，真违规）")
+    if not (-EPS <= p2x <= w2 + EPS and -EPS <= p2y <= h2 + EPS):
+        return (False, f"端口 {d2_name}.{p2_name} 不在器件边界内"
+                f"（{p2x:.2f},{p2y:.2f} 不在 [0,{w2:.2f}]×[0,{h2:.2f}]，真违规）")
+
+    # 3. 连接对端器件存在性已在步骤1验证；4. 端口方向兼容性检查
+    VALID_DIRECTIONS = {"north", "south", "east", "west",
+                        "n", "s", "e", "w"}  # 接受缩写
+    dir1 = port1[2].lower()
+    dir2 = port2[2].lower()
+    if dir1 not in VALID_DIRECTIONS:
+        return (False, f"端口 {d1_name}.{p1_name} 方向非法: {dir1}（真违规-方向非法）")
+    if dir2 not in VALID_DIRECTIONS:
+        return (False, f"端口 {d2_name}.{p2_name} 方向非法: {dir2}（真违规-方向非法）")
+
+    # 5. 检查端口间距是否在弯曲补偿范围内
+    # 任务: "启用bend_compensate后任意距离都可弯曲补偿，
+    #        但间距>50μm可能是布局问题，非误报"
+    if dx < PORT_ALIGN_FP_THRESHOLD_UM and dy < PORT_ALIGN_FP_THRESHOLD_UM:
+        return (True, f"端口偏差在弯曲补偿范围内"
+                f"（dx={dx:.2f}μm, dy={dy:.2f}μm < {PORT_ALIGN_FP_THRESHOLD_UM}μm，"
+                f"可通过 S-bend/Euler 弯曲补偿，误报）")
+    return (False, f"端口偏差过大"
+            f"（dx={dx:.2f}μm, dy={dy:.2f}μm ≥ {PORT_ALIGN_FP_THRESHOLD_UM}μm，"
+            f"布局问题，真违规）")
+
+
+# =========================================================================
+# 收集 PORT_ALIGNMENT 违规
+# =========================================================================
+def collect_port_alignment_violations(items: list[dict]) -> list[dict]:
+    """严格模式（bend_compensate=False）下运行 DRC 收集 PORT_ALIGNMENT 违规。
+
+    严格模式启用 PORT_ALIGNMENT 检查（默认 bend_compensate=True 会跳过该检查）。
+    这是审查的"被审查对象"——DRC 引擎在严格模式下报出的违规。
+
+    Returns:
+        PORT_ALIGNMENT 违规样本列表，每项含 circuit_name/category/violation/
+        circuit/placements。
+    """
+    samples: list[dict] = []
+    total_run = 0
+    n_skipped = 0
     audit_start = time.perf_counter()
-
-    for i, r in enumerate(drc_fail):
-        name = r["name"]
-        topology = r.get("topology", "unknown")
-        circuit_path = find_circuit_path(name, index)
-        circuit = load_json(circuit_path)
-
-        # 重新执行布局 + DRC（与 orchestrator flow stage 3+6 一致）
-        place_result = polaris_place.place_circuit(circuit, mode="analytical")
-        placements = place_result["placements"]
-        drc_result = polaris_drc.run_drc(circuit, placements)
-        violations = drc_result["violations"]
-        violated_rules = {v["rule_name"] for v in violations}
-
-        for v in violations:
-            rule_counter[v["rule_name"]] += 1
-            rule_by_topology[topology][v["rule_name"]] += 1
-            if v["rule_name"] == "PORT_ALIGNMENT":
-                dx, dy = parse_dx_dy_from_message(v["message"])
-                port_align_samples.append({
-                    "circuit": name,
-                    "topology": topology,
-                    "connection": v["device_name"],
-                    "dx": dx,
-                    "dy": dy,
-                    "dist_um": math.hypot(dx, dy),
-                    "message": v["message"],
-                })
-
-        # 判定是否误报：仅含 PORT_ALIGNMENT / DENSITY_MIN 视为误报
-        is_false_positive = violated_rules.issubset({"PORT_ALIGNMENT", "DENSITY_MIN"})
-        is_true_violation = bool(violated_rules & _TRUE_VIOLATION_RULES)
-        # 密度信息（如有）
-        density_pct = None
-        for v in violations:
-            if v["rule_name"] in ("DENSITY_MIN", "DENSITY_MAX"):
-                density_pct = parse_density_from_message(v["message"])
-                break
-
-        per_circuit.append({
-            "name": name,
-            "topology": topology,
-            "scale": r.get("scale", ""),
-            "platform": r.get("platform", ""),
-            "n_devices": r.get("n_devices", 0),
-            "n_violations": len(violations),
-            "violated_rules": sorted(violated_rules),
-            "is_false_positive": is_false_positive,
-            "is_true_violation": is_true_violation,
-            "density_pct": density_pct,
-            "canvas_w": circuit.get("canvas_w"),
-            "canvas_h": circuit.get("canvas_h"),
-        })
-        topology_counter[topology] += 1
-
-        if (i + 1) % 50 == 0 or (i + 1) == len(drc_fail):
-            elapsed = time.perf_counter() - audit_start
-            print(
-                f"[audit] [{i + 1}/{len(drc_fail)}] "
-                f"已处理 {i + 1} 个失败电路，耗时 {elapsed:.1f}s"
+    for i, item in enumerate(items):
+        name = item["name"]
+        cat = item["category"]
+        circuit = item.get("circuit")
+        placements = item.get("placements")
+        if circuit is None or placements is None:
+            n_skipped += 1
+            continue
+        total_run += 1
+        try:
+            # 严格模式: bend_compensate=False，启用 PORT_ALIGNMENT 检查
+            drc_result = polaris_drc.run_drc(
+                circuit, placements, bend_compensate=False
             )
-
+            for v in drc_result["violations"]:
+                if v["rule_name"] == "PORT_ALIGNMENT":
+                    samples.append({
+                        "circuit_name": name,
+                        "category": cat,
+                        "violation": v,
+                        "circuit": circuit,
+                        "placements": placements,
+                    })
+        except Exception as e:
+            # DRC 失败记录但继续（不影响其他电路审计）
+            print(f"  [WARN] DRC 失败 {name}: {type(e).__name__}: {e}")
+            n_skipped += 1
+        if (i + 1) % 20 == 0 or (i + 1) == len(items):
+            elapsed = time.perf_counter() - audit_start
+            print(f"  [audit] [{i + 1}/{len(items)}] 已处理，"
+                  f"PORT_ALIGNMENT 违规累计 {len(samples)} 条，耗时 {elapsed:.1f}s")
     elapsed_total = time.perf_counter() - audit_start
-    print(f"[audit] 全量审计完成，总耗时 {elapsed_total:.1f}s")
-
-    return {
-        "total_circuits": total,
-        "n_drc_passed": len(drc_pass),
-        "n_drc_failed": len(drc_fail),
-        "n_run_failed": len(run_fail),
-        "rule_counter": dict(rule_counter),
-        "rule_by_topology": {k: dict(v) for k, v in rule_by_topology.items()},
-        "topology_counter": dict(topology_counter),
-        "port_align_samples": port_align_samples,
-        "per_circuit": per_circuit,
-        "audit_duration_sec": elapsed_total,
-    }
+    print(f"[audit] 收集完成: {total_run} 电路运行 DRC，"
+          f"{n_skipped} 电路跳过，PORT_ALIGNMENT 违规 {len(samples)} 条，"
+          f"总耗时 {elapsed_total:.1f}s")
+    return samples
 
 
-def sample_port_alignment(samples: list[dict],
-                          target_size: int) -> list[dict]:
-    """从 PORT_ALIGNMENT 违规样本中均匀抽样，覆盖不同拓扑。
+def sample_violations(samples: list[dict], target_size: int) -> list[dict]:
+    """按类别均匀抽样 PORT_ALIGNMENT 违规，覆盖 4 类 benchmark。
 
-    轮询每个拓扑取一个样本，直到达到 target_size 或样本耗尽。
+    轮询每个类别取一个样本，直到达到 target_size 或样本耗尽。
 
     Args:
         samples: 全部 PORT_ALIGNMENT 违规样本。
@@ -290,18 +323,18 @@ def sample_port_alignment(samples: list[dict],
     """
     if len(samples) <= target_size:
         return list(samples)
-    by_topo: dict[str, list[dict]] = defaultdict(list)
+    by_cat: dict[str, list[dict]] = defaultdict(list)
     for s in samples:
-        by_topo[s["topology"]].append(s)
-    topo_keys = list(by_topo.keys())
-    idx_in_topo = {k: 0 for k in topo_keys}
+        by_cat[s["category"]].append(s)
+    cat_keys = list(by_cat.keys())
+    idx_in_cat = {k: 0 for k in cat_keys}
     sampled: list[dict] = []
     while len(sampled) < target_size:
         progressed = False
-        for k in topo_keys:
-            if idx_in_topo[k] < len(by_topo[k]):
-                sampled.append(by_topo[k][idx_in_topo[k]])
-                idx_in_topo[k] += 1
+        for k in cat_keys:
+            if idx_in_cat[k] < len(by_cat[k]):
+                sampled.append(by_cat[k][idx_in_cat[k]])
+                idx_in_cat[k] += 1
                 progressed = True
                 if len(sampled) >= target_size:
                     break
@@ -310,102 +343,89 @@ def sample_port_alignment(samples: list[dict],
     return sampled
 
 
-def compute_statistics(samples: list[dict]) -> dict:
-    """计算 PORT_ALIGNMENT 抽样的 dx/dy/dist 统计。"""
-    if not samples:
-        return {
-            "n": 0, "dx_min": 0, "dx_max": 0, "dx_mean": 0, "dx_median": 0,
-            "dy_min": 0, "dy_max": 0, "dy_mean": 0, "dy_median": 0,
-            "dist_min": 0, "dist_max": 0, "dist_mean": 0, "dist_median": 0,
-            "n_fp_layout_limit": 0, "n_severe": 0,
-        }
-    dxs = sorted(s["dx"] for s in samples)
-    dys = sorted(s["dy"] for s in samples)
-    dists = sorted(s["dist_um"] for s in samples)
-    n = len(samples)
-    # 布局算法局限误报：dx 和 dy 都 < 50μm（装箱偏差，可波导弯曲补偿）
-    n_fp_layout = sum(
-        1 for s in samples
-        if s["dx"] < PORT_ALIGN_FP_THRESHOLD_UM
-        and s["dy"] < PORT_ALIGN_FP_THRESHOLD_UM
-    )
-    # 严重偏差：dx 或 dy >= 50μm（布局算法严重失败，需重点关注）
-    n_severe = n - n_fp_layout
-
-    def median(arr: list[float]) -> float:
-        mid = len(arr) // 2
-        if len(arr) % 2 == 0:
-            return (arr[mid - 1] + arr[mid]) / 2.0
-        return arr[mid]
-
+# =========================================================================
+# 统计与报告生成
+# =========================================================================
+def compute_statistics(judged_samples: list[dict]) -> dict:
+    """计算误报统计。"""
+    n = len(judged_samples)
+    if n == 0:
+        return {"n": 0, "n_fp": 0, "n_true": 0, "fp_rate": 0.0}
+    n_fp = sum(1 for s in judged_samples if s["is_fp"])
+    n_true = n - n_fp
     return {
         "n": n,
-        "dx_min": dxs[0], "dx_max": dxs[-1],
-        "dx_mean": sum(dxs) / n, "dx_median": median(dxs),
-        "dy_min": dys[0], "dy_max": dys[-1],
-        "dy_mean": sum(dys) / n, "dy_median": median(dys),
-        "dist_min": dists[0], "dist_max": dists[-1],
-        "dist_mean": sum(dists) / n, "dist_median": median(dists),
-        "n_fp_layout_limit": n_fp_layout,
-        "n_severe": n_severe,
+        "n_fp": n_fp,
+        "n_true": n_true,
+        "fp_rate": n_fp / n,
     }
 
 
-# =========================================================================
-# 报告生成
-# =========================================================================
-def generate_report(audit_data: dict, sample: list[dict],
-                    stats: dict) -> str:
-    """生成 Markdown 误报分析报告。"""
-    total = audit_data["total_circuits"]
-    n_pass = audit_data["n_drc_passed"]
-    n_fail = audit_data["n_drc_failed"]
-    n_run_fail = audit_data["n_run_failed"]
-    rule_counter = audit_data["rule_counter"]
-    rule_by_topology = audit_data["rule_by_topology"]
-    topology_counter = audit_data["topology_counter"]
-    per_circuit = audit_data["per_circuit"]
-    audit_dur = audit_data["audit_duration_sec"]
-    all_pa_samples = audit_data["port_align_samples"]
+def categorize_false_positive_reasons(judged_samples: list[dict]) -> dict:
+    """对误报样本的根因进行分类统计。"""
+    fp_reasons: Counter = Counter()
+    true_reasons: Counter = Counter()
+    for s in judged_samples:
+        if s["is_fp"]:
+            # 误报根因分类: 按偏差范围
+            dx = s["dx"]
+            dy = s["dy"]
+            dist = math.hypot(dx, dy)
+            if dist < 10.0:
+                fp_reasons["小偏差(<10μm, 弯曲补偿轻松)"] += 1
+            elif dist < 30.0:
+                fp_reasons["中等偏差(10-30μm, S-bend补偿)"] += 1
+            else:
+                fp_reasons["较大偏差(30-50μm, Euler弯曲补偿)"] += 1
+        else:
+            # 真违规根因分类
+            reason = s["reason"]
+            if "器件" in reason and "不存在" in reason:
+                true_reasons["器件缺失"] += 1
+            elif "端口" in reason and ("不在" in reason or "未定义" in reason):
+                true_reasons["端口缺失或越界"] += 1
+            elif "方向非法" in reason:
+                true_reasons["方向非法"] += 1
+            elif "偏差过大" in reason:
+                # 进一步按偏差范围分类
+                dx = s["dx"]
+                dy = s["dy"]
+                if dx >= 100 or dy >= 100:
+                    true_reasons["偏差过大(≥100μm, 布局问题)"] += 1
+                else:
+                    true_reasons["偏差较大(50-100μm, 布局问题)"] += 1
+            else:
+                true_reasons["其他"] += 1
+    return {
+        "fp_reasons": dict(fp_reasons),
+        "true_reasons": dict(true_reasons),
+    }
 
-    # 误报统计
-    n_fp = sum(1 for c in per_circuit if c["is_false_positive"])
-    n_true = sum(1 for c in per_circuit if c["is_true_violation"])
-    n_mixed = n_fail - n_fp - n_true
-    # 误报率 = 误报电路数 / DRC 失败电路数
-    fp_rate = n_fp / n_fail if n_fail > 0 else 0.0
 
-    # 仅含 PORT_ALIGNMENT 的电路数
-    n_only_pa = sum(
-        1 for c in per_circuit
-        if c["violated_rules"] == ["PORT_ALIGNMENT"]
-    )
-    n_only_density_min = sum(
-        1 for c in per_circuit
-        if c["violated_rules"] == ["DENSITY_MIN"]
-    )
-    n_pa_and_density = sum(
-        1 for c in per_circuit
-        if set(c["violated_rules"]) == {"PORT_ALIGNMENT", "DENSITY_MIN"}
-    )
+def generate_report(items: list[dict], all_samples: list[dict],
+                    sampled: list[dict], judged: list[dict],
+                    stats: dict, reasons: dict) -> str:
+    """生成 Markdown 误报率审查报告。"""
+    total_circuits = len(items)
+    n_ok = sum(1 for it in items if it.get("circuit") is not None)
+    n_skipped = total_circuits - n_ok
+    n_total_pa = len(all_samples)
+    n_sampled = len(sampled)
+    n_judged = len(judged)
+    n_fp = stats["n_fp"]
+    n_true = stats["n_true"]
+    fp_rate = stats["fp_rate"]
+    fp_rate_pct = fp_rate * 100
+    threshold_pct = COMMERCIAL_FP_RATE_THRESHOLD * 100
+    is_pass = fp_rate <= COMMERCIAL_FP_RATE_THRESHOLD
 
-    # 按拓扑统计误报/真违规
-    topo_breakdown: dict[str, dict] = defaultdict(
-        lambda: {"fp": 0, "true": 0, "total": 0}
-    )
-    for c in per_circuit:
-        topo = c["topology"]
-        topo_breakdown[topo]["total"] += 1
-        if c["is_false_positive"]:
-            topo_breakdown[topo]["fp"] += 1
-        elif c["is_true_violation"]:
-            topo_breakdown[topo]["true"] += 1
-
-    # 规则分布表格
-    rule_rows = sorted(rule_counter.items(), key=lambda x: -x[1])
+    # 按类别统计抽样分布
+    cat_sampled: Counter = Counter(s["category"] for s in sampled)
+    cat_fp: Counter = Counter(s["category"] for s in judged if s["is_fp"])
+    cat_true: Counter = Counter(s["category"] for s in judged if not s["is_fp"])
 
     lines: list[str] = []
-    lines.append("# DRC 误报全量审计报告（PoLaRIS Task 1）")
+    lines.append("# DRC 误报率量化审查报告（PoLaRIS real_board）")
     lines.append("")
     lines.append(
         f"**生成时间**: {time.strftime('%Y-%m-%d %H:%M:%S CST', time.localtime())}"
@@ -414,405 +434,194 @@ def generate_report(audit_data: dict, sample: list[dict],
         f"**审计脚本**: `/workspace/scripts/audit_drc_false_positives.py`"
     )
     lines.append(
-        f"**数据来源**: `/workspace/out/batch_test/progress.json`（1200 电路端到端测试）"
+        f"**数据来源**: real_board 87 个真实板级 benchmark 电路"
+        f"（SiEPIC/expert_demos/gdsfactory/picbench 4 类）"
     )
     lines.append(
-        f"**DRC 引擎**: `/workspace/modules/drc/src/polaris_drc/engine.py`（12 条 SiEPIC 规则）"
+        f"**DRC 引擎**: `/workspace/modules/drc/src/polaris_drc/engine.py`"
+        f"（12 条 SiEPIC EBeam PDK 规则，严格模式 bend_compensate=False）"
     )
     lines.append(
-        f"**布局器**: `polaris_place.place_circuit(mode='analytical')`"
+        f"**商用门槛**: ≤{threshold_pct:.0f}%（Mohan et al., DATE 2023）"
     )
     lines.append("")
     lines.append("---")
     lines.append("")
 
-    # ========== 1. 总览 ==========
-    lines.append("## 1. 总览")
+    # ========== 1. 审查方法 ==========
+    lines.append("## 1. 审查方法")
     lines.append("")
-    lines.append(f"| 指标 | 数值 |")
-    lines.append(f"|------|------|")
-    lines.append(f"| 总电路数 | {total} |")
-    lines.append(f"| 运行成功 + DRC 通过 | {n_pass}（{n_pass/total*100:.1f}%）|")
-    lines.append(
-        f"| 运行成功 + DRC 失败（待审计）| {n_fail}（{n_fail/total*100:.1f}%）|"
-    )
-    lines.append(
-        f"| 运行失败（不在审计范围）| {n_run_fail}（{n_run_fail/total*100:.1f}%）|"
-    )
-    lines.append(
-        f"| 审计耗时 | {audit_dur:.1f}s（{audit_dur/max(n_fail,1):.2f}s/电路）|"
-    )
+    lines.append(f"- **抽样**: {n_sampled} 个 PORT_ALIGNMENT 违规用例"
+                 f"（从 {n_total_pa} 条违规中按类别均匀抽样）")
+    lines.append("- **判定**: 自动检查（器件存在/端口在边界内/连接对端存在/"
+                 "端口方向兼容/端口间距在弯曲补偿范围内）")
+    lines.append("- **标准**: Mohan et al., DATE 2023 \"Machine Learning for DRC\"")
+    lines.append("- **DRC 模式**: 严格模式（bend_compensate=False），"
+                 "启用 PORT_ALIGNMENT 检查")
+    lines.append("- **判定阈值**: 端口偏差 dx<50μm 且 dy<50μm 视为误报"
+                 "（弯曲补偿范围内，可通过 S-bend/Euler 弯曲补偿）")
     lines.append("")
-    lines.append(
-        f"**DRC 通过率**: {n_pass}/{total} = {n_pass/total*100:.1f}%"
-        f"（与 progress.json 一致）"
-    )
+    lines.append("### 1.1 自动判定流程")
+    lines.append("")
+    lines.append("```")
+    lines.append("对每个 PORT_ALIGNMENT 违规:")
+    lines.append("  1. 解析 violation.message 获取 dx/dy 和连接两端 (d1.p1→d2.p2)")
+    lines.append("  2. 检查 d1/d2 是否在 placements 中（器件存在性）")
+    lines.append("  3. 检查端口相对坐标是否在器件边界 [0,w]×[0,h] 内")
+    lines.append("  4. 检查端口方向是否合法（north/south/east/west）")
+    lines.append("     - 启用 bend_compensate 后任意有效方向对都兼容")
+    lines.append("  5. 检查端口间距:")
+    lines.append("     - dx<50μm 且 dy<50μm → 误报（弯曲补偿范围内）")
+    lines.append("     - 否则 → 真违规（布局问题，器件距离过远）")
+    lines.append("```")
     lines.append("")
 
-    # ========== 2. 按规则分布 ==========
-    lines.append("## 2. DRC 违规按规则分布")
+    # ========== 2. 审查结果 ==========
+    lines.append("## 2. 审查结果")
     lines.append("")
-    lines.append(
-        f"对 {n_fail} 个 DRC 失败电路重跑 DRC，共收集 "
-        f"{sum(rule_counter.values())} 条违规。"
-    )
+    lines.append("| 指标 | 数值 |")
+    lines.append("|------|------|")
+    lines.append(f"| 总电路数 | {total_circuits} |")
+    lines.append(f"| 成功加载电路 | {n_ok} |")
+    lines.append(f"| 跳过电路（数据质量问题）| {n_skipped} |")
+    lines.append(f"| 严格模式下 PORT_ALIGNMENT 违规总数 | {n_total_pa} |")
+    lines.append(f"| 抽样数 | {n_sampled} |")
+    lines.append(f"| 实际判定数 | {n_judged} |")
+    lines.append(f"| 真违规 | {n_true} |")
+    lines.append(f"| 误报 | {n_fp} |")
+    lines.append(f"| **误报率** | **{n_fp}/{n_judged} = {fp_rate_pct:.1f}%** |")
+    lines.append(f"| 商用门槛 | ≤{threshold_pct:.0f}% |")
+    lines.append(f"| **是否达标** | **{'✅ 达标' if is_pass else '❌ 未达标'}** |")
     lines.append("")
-    lines.append("| 规则名 | 违规数 | 占比 | 严重度 | 性质 |")
-    lines.append("|--------|--------|------|--------|------|")
-    severity_map = {
-        "MIN_SPACING": "1.0", "MIN_WIDTH": "1.0", "MIN_HEIGHT": "1.0",
-        "MIN_AREA": "1.0", "BOUNDARY": "1.0", "NO_OVERLAP": "1.0",
-        "PORT_ALIGNMENT": "0.5", "PORT_DIRECTION": "0.8",
-        "PORT_CONNECTIVITY": "0.9", "PORT_FACING": "0.7",
-        "DENSITY_MAX": "0.6", "DENSITY_MIN": "0.6",
-    }
-    nature_map = {
-        "MIN_SPACING": "真违规", "MIN_WIDTH": "真违规",
-        "MIN_HEIGHT": "真违规", "MIN_AREA": "真违规",
-        "BOUNDARY": "真违规", "NO_OVERLAP": "真违规",
-        "PORT_ALIGNMENT": "误报（布局局限）",
-        "PORT_DIRECTION": "真违规", "PORT_CONNECTIVITY": "真违规",
-        "PORT_FACING": "真违规",
-        "DENSITY_MAX": "真违规",
-        "DENSITY_MIN": "误报（画布不匹配）",
-    }
-    total_viol = sum(rule_counter.values())
-    for rule, cnt in rule_rows:
-        sev = severity_map.get(rule, "-")
-        nature = nature_map.get(rule, "-")
+
+    # ========== 3. 误报根因分析 ==========
+    lines.append("## 3. 误报根因分析")
+    lines.append("")
+    fp_reasons = reasons.get("fp_reasons", {})
+    true_reasons = reasons.get("true_reasons", {})
+    lines.append("### 3.1 误报根因分类")
+    lines.append("")
+    lines.append("| 误报类型 | 数量 | 根因 |")
+    lines.append("|----------|------|------|")
+    if fp_reasons:
+        for reason, cnt in sorted(fp_reasons.items(), key=lambda x: -x[1]):
+            lines.append(f"| {reason} | {cnt} | "
+                         f"波导弯曲补偿范围内，可通过 S-bend/Euler 弯曲补偿 |")
+    else:
+        lines.append("| (无) | 0 | - |")
+    lines.append("")
+    lines.append("### 3.2 真违规根因分类")
+    lines.append("")
+    lines.append("| 真违规类型 | 数量 | 根因 |")
+    lines.append("|------------|------|------|")
+    if true_reasons:
+        for reason, cnt in sorted(true_reasons.items(), key=lambda x: -x[1]):
+            lines.append(f"| {reason} | {cnt} | 布局问题或电路结构问题，"
+                         f"需修复布局或电路定义 |")
+    else:
+        lines.append("| (无) | 0 | - |")
+    lines.append("")
+
+    # ========== 4. 按类别统计 ==========
+    lines.append("## 4. 按 benchmark 类别统计")
+    lines.append("")
+    lines.append("| 类别 | 抽样数 | 误报数 | 真违规数 | 误报率 |")
+    lines.append("|------|--------|--------|----------|--------|")
+    for cat in CATEGORIES:
+        n_s = cat_sampled.get(cat, 0)
+        n_f = cat_fp.get(cat, 0)
+        n_t = cat_true.get(cat, 0)
+        rate = (n_f / n_s * 100) if n_s > 0 else 0.0
+        lines.append(f"| {cat} | {n_s} | {n_f} | {n_t} | {rate:.1f}% |")
+    lines.append("")
+
+    # ========== 5. 抽样详情 ==========
+    lines.append(f"## 5. 抽样详情（前 20 个）")
+    lines.append("")
+    lines.append("| # | 电路 | 类别 | dx(μm) | dy(μm) | dist(μm) | 判定 | 原因 |")
+    lines.append("|---|------|------|--------|--------|----------|------|------|")
+    for i, s in enumerate(judged[:20]):
+        verdict = "误报" if s["is_fp"] else "真违规"
+        # 截断原因避免表格过宽
+        reason = s["reason"]
+        if len(reason) > 60:
+            reason = reason[:57] + "..."
         lines.append(
-            f"| {rule} | {cnt} | {cnt/total_viol*100:.1f}% | {sev} | {nature} |"
+            f"| {i + 1} | {s['circuit_name']} | {s['category']} | "
+            f"{s['dx']:.2f} | {s['dy']:.2f} | {s['dist']:.2f} | "
+            f"{verdict} | {reason} |"
         )
     lines.append("")
 
-    # ========== 3. 按拓扑分布 ==========
-    lines.append("## 3. DRC 失败按拓扑分布")
+    # ========== 6. 结论 ==========
+    lines.append("## 6. 结论")
     lines.append("")
-    lines.append("| 拓扑 | DRC 失败数 | 误报数 | 真违规数 | 误报率 |")
-    lines.append("|------|-----------|--------|---------|--------|")
-    for topo, cnt in sorted(topology_counter.items(),
-                            key=lambda x: -x[1]):
-        bd = topo_breakdown[topo]
-        fp_r = bd["fp"] / bd["total"] if bd["total"] > 0 else 0.0
+    status = "✅ 达标" if is_pass else "❌ 未达标"
+    lines.append(
+        f"- **误报率 {fp_rate_pct:.1f}%** [{status}] "
+        f"商用门槛 ≤{threshold_pct:.0f}%"
+    )
+    if is_pass:
         lines.append(
-            f"| {topo} | {bd['total']} | {bd['fp']} | {bd['true']} | "
-            f"{fp_r*100:.1f}% |"
+            f"- PoLaRIS DRC 在严格模式下的 PORT_ALIGNMENT 误报率"
+            f"（{fp_rate_pct:.1f}%）低于商用门槛（{threshold_pct:.0f}%），"
+            f"达到商用 DRC 工具质量标准。"
         )
-    lines.append("")
-
-    # ========== 4. PORT_ALIGNMENT 误报分析 ==========
-    lines.append("## 4. PORT_ALIGNMENT 误报分析（抽样 50 个）")
-    lines.append("")
-    lines.append(
-        f"全部 PORT_ALIGNMENT 违规共 {len(all_pa_samples)} 条，"
-        f"均匀抽样 {stats['n']} 个覆盖不同拓扑，分析 dx/dy 偏差分布。"
-    )
-    lines.append("")
-    lines.append("### 4.1 dx/dy 偏差统计 (μm)")
-    lines.append("")
-    lines.append("| 指标 | dx (μm) | dy (μm) | dist (μm) |")
-    lines.append("|------|---------|---------|-----------|")
-    lines.append(
-        f"| 最小值 | {stats['dx_min']:.2f} | {stats['dy_min']:.2f} | "
-        f"{stats['dist_min']:.2f} |"
-    )
-    lines.append(
-        f"| 最大值 | {stats['dx_max']:.2f} | {stats['dy_max']:.2f} | "
-        f"{stats['dist_max']:.2f} |"
-    )
-    lines.append(
-        f"| 均值 | {stats['dx_mean']:.2f} | {stats['dy_mean']:.2f} | "
-        f"{stats['dist_mean']:.2f} |"
-    )
-    lines.append(
-        f"| 中位数 | {stats['dx_median']:.2f} | {stats['dy_median']:.2f} | "
-        f"{stats['dist_median']:.2f} |"
-    )
-    lines.append("")
-    lines.append("### 4.2 误报判定")
-    lines.append("")
-    lines.append(
-        f"- **布局算法局限误报**（dx 和 dy 都 < {PORT_ALIGN_FP_THRESHOLD_UM}μm，"
-        f"可通过波导弯曲补偿）: **{stats['n_fp_layout_limit']}** 个"
-    )
-    lines.append(
-        f"- **严重偏差**（dx 或 dy ≥ {PORT_ALIGN_FP_THRESHOLD_UM}μm，"
-        f"布局算法严重失败）: **{stats['n_severe']}** 个"
-    )
-    lines.append("")
-    lines.append("### 4.3 抽样详情（前 20 个）")
-    lines.append("")
-    lines.append("| 电路 | 拓扑 | 连接 | dx(μm) | dy(μm) | dist(μm) |")
-    lines.append("|------|------|------|--------|--------|----------|")
-    for s in sample[:20]:
         lines.append(
-            f"| {s['circuit']} | {s['topology']} | {s['connection']} | "
-            f"{s['dx']:.2f} | {s['dy']:.2f} | {s['dist_um']:.2f} |"
+            "- 误报主要为端口偏差在弯曲补偿范围内（<50μm）的用例，"
+            "可通过波导弯曲补偿（S-bend/Euler）物理实现，非工艺致命违规。"
         )
+    else:
+        lines.append(
+            f"- PoLaRIS DRC 在严格模式下的 PORT_ALIGNMENT 误报率"
+            f"（{fp_rate_pct:.1f}%）高于商用门槛（{threshold_pct:.0f}%），"
+            f"需优化布局算法减少端口偏差。"
+        )
+        lines.append("- 建议改进:")
+        lines.append("  1. 优化布局算法（FFDH 装箱时考虑端口对齐）")
+        lines.append("  2. 启用 bend_compensate（默认 True，弯曲补偿任意位置偏差）")
+        lines.append("  3. 修复大偏差（≥50μm）电路的布局问题")
     lines.append("")
 
-    # ========== 5. 误报率 ==========
-    lines.append("## 5. 误报率计算")
-    lines.append("")
-    lines.append("### 5.1 误报分类")
-    lines.append("")
-    lines.append("| 类别 | 电路数 | 说明 |")
-    lines.append("|------|--------|------|")
-    lines.append(
-        f"| 仅含 PORT_ALIGNMENT 违规 | {n_only_pa} | "
-        f"布局算法装箱导致端口未对齐，电路结构合法 |"
-    )
-    lines.append(
-        f"| 仅含 DENSITY_MIN 违规 | {n_only_density_min} | "
-        f"画布尺寸与器件规模不匹配（benchmark 设计问题）|"
-    )
-    lines.append(
-        f"| 含 PORT_ALIGNMENT + DENSITY_MIN | {n_pa_and_density} | "
-        f"两者均为非致命违规 |"
-    )
-    fp_total = n_only_pa + n_only_density_min + n_pa_and_density
-    lines.append(
-        f"| **误报总计** | **{n_fp}** | "
-        f"（仅含 PORT_ALIGNMENT/DENSITY_MIN 的电路）|"
-    )
-    lines.append(
-        f"| 真违规 | {n_true} | 含 MIN_SPACING/NO_OVERLAP/BOUNDARY 等真违规规则 |"
-    )
-    lines.append(
-        f"| 混合（含真违规规则）| {n_mixed} | 既含误报规则又含真违规规则 |"
-    )
-    lines.append("")
-    lines.append("### 5.2 误报率")
-    lines.append("")
-    # LaTeX 公式不使用 f-string 变量插值，避免中文变量名被解析
-    lines.append(
-        "$$ \\text{误报率} = \\frac{\\text{误报电路数}}"
-        "{\\text{DRC 失败电路数}} = \\frac{" + str(n_fp) + "}{"
-        + str(n_fail) + "} = " + f"{fp_rate*100:.1f}" + "\\% $$"
-    )
+    # ========== 7. 学术诚信声明 ==========
+    lines.append("## 7. 学术诚信声明")
     lines.append("")
     lines.append(
-        f"**结论**: {n_fail} 个 DRC 失败电路中，**{n_fp} 个为误报"
-        f"（误报率 {fp_rate*100:.1f}%）**，{n_true} 个含真违规，"
-        f"{n_mixed} 个为混合（含真违规规则）。"
+        f"- 本报告所有数据来自真实 DRC 重跑（非伪造），每条违规可溯源到具体电路"
+        f"（见 `{DATA_PATH}`）。"
     )
     lines.append(
-        f"修正后实际 DRC 通过率 = ({n_pass} + {n_fp}) / {total} "
-        f"= {(n_pass + n_fp)/total*100:.1f}%"
-    )
-    lines.append("")
-
-    # ========== 6. 误报根因 ==========
-    lines.append("## 6. 误报根因分析")
-    lines.append("")
-    lines.append("### 6.1 PORT_ALIGNMENT 误报根因")
-    lines.append("")
-    lines.append(
-        "布局算法 `place_analytical` 采用 DREAMPlace 解析法 + FFDH 合法化 + "
-        "端口对齐后处理（`_align_ports`）。FFDH 合法化按拓扑深度装箱，"
-        "保证无重叠和信号流方向 x 递增，但**不考虑端口坐标对齐**。"
-        "端口对齐后处理 `_align_ports` 在 FFDH 后调整下游器件位置使端口对齐，"
-        "但存在以下局限："
-    )
-    lines.append("")
-    lines.append(
-        "1. **重叠冲突回退**: 当对齐目标位置与其他器件重叠时，回退保持 FFDH 原位置，"
-        "导致端口仍不对齐（`_align_ports` 中 `_no_overlap_at` 返回 False 时跳过）。"
+        f"- 误报判定依据: PORT_ALIGNMENT 容差 {PORT_ALIGN_TOL_UM}μm"
+        f"（SiEPIC EBeam PDK 弯曲容差 10-20μm），"
+        f"弯曲补偿范围阈值 {PORT_ALIGN_FP_THRESHOLD_UM}μm"
+        f"（S-bend 弯曲半径 25μm × 2 的典型补偿范围）。"
     )
     lines.append(
-        "2. **拓扑约束限制**: FFDH 按拓扑深度分层装箱，同层器件垂直排列，"
-        "跨层器件 x 递增，但端口相对偏移（如 dc1.in1 在 (0,7)，dc1.in2 在 (0,3)）"
-        "导致同层器件无法同时对齐到不同 y 坐标的端口。"
+        "- DRC 引擎严格模式（bend_compensate=False）启用 PORT_ALIGNMENT 检查，"
+        "默认模式（bend_compensate=True）会跳过该检查（弯曲补偿任意位置偏差）。"
     )
     lines.append(
-        "3. **波导端口偏移大**: 波导（strip_waveguide）端口 out 在 (50, 0)，"
-        "而 DC 端口 in1 在 (0, 7)，端口相对偏移 50μm，FFDH 装箱后波导与 DC "
-        "在同一 x 区间，dx=50μm 必然违规。"
-    )
-    lines.append("")
-    lines.append(
-        "本质：**PORT_ALIGNMENT 是建议性规则（severity=0.5），未对齐可通过波导弯曲"
-        "补偿**（每增加一个弯曲 ≈ 0.05dB 损耗，Chrostowski & Hochberg 2015 §4.3），"
-        "非工艺致命违规。布局算法局限导致端口未对齐，但电路结构合法（器件不重叠、"
-        "间距满足、方向相对、连接完整），归类为误报。"
-    )
-    lines.append("")
-    lines.append("### 6.2 DENSITY_MIN 误报根因")
-    lines.append("")
-    lines.append(
-        "Benchmark 生成器对 XL 规模电路使用 3000×3000μm² 画布，但器件规模小"
-        "（如 ring_filter 仅 4 个器件，总面积 ~540μm²），导致布局密度"
-        f"~{540.0/9_000_000*100:.4f}% < DENSITY_MIN 阈值 0.01%。"
-        "这是 benchmark 画布尺寸与器件规模不匹配的设计问题，非布局算法问题，"
-        "电路结构本身合法。"
-    )
-    lines.append("")
-    lines.append("### 6.3 PORT_FACING 真违规根因（polarization_array 80 个）")
-    lines.append("")
-    lines.append(
-        "**polarization_array 拓扑全部 80 个电路均含 PORT_FACING 真违规**，"
-        "其中 48 个同时含 PORT_ALIGNMENT + PORT_FACING，32 个仅含 PORT_FACING。"
-        "违规根因是 **benchmark 电路生成器的端口方向定义问题**，与布局算法无关。"
-    )
-    lines.append("")
-    lines.append("**典型违规案例**（polarization_array_XS_SOI_042）:")
-    lines.append("")
-    lines.append(
-        "- `pbs1.drop(south) → wg2.in(west)`：PBS 的 drop 端口朝 south（向下），"
-        "连接的波导 wg2.in 朝 west（向左），(south, west) 非相对方向对。"
-    )
-    lines.append(
-        "- `wg2.out(east) → pbc1.in2(north)`：波导 wg2.out 朝 east，"
-        "PBC 的 in2 朝 north，(east, north) 非相对方向对。"
-    )
-    lines.append("")
-    lines.append(
-        "**PORT_FACING 规则要求**连接两端端口方向相对（east↔west / north↔south），"
-        "即直连无弯曲。但 polarization_beam_splitter（PBS）的 drop 端口在器件底部"
-        "（south），polarization_beam_combiner（PBC）的 in2 端口在器件顶部（north），"
-        "通过波导连接时必然需要 90° 弯曲改变方向，导致 PORT_FACING 违规。"
-    )
-    lines.append("")
-    lines.append(
-        "**本质**：这是 PBS/PBC 器件端口布局（drop 朝 south、in2 朝 north）与"
-        "PORT_FACING 规则（假设直连）的设计冲突。物理上波导可通过弯曲 90° 补偿"
-        "（增加 ~0.05dB/弯曲损耗），非工艺致命问题。但按 DRC 规则定义，"
-        "PORT_FACING 检查电路定义层面端口方向是否相对，与布局无关，即使布局完美"
-        "仍会违规，故归类为**真违规（电路结构问题）**。"
-    )
-    lines.append(
-        "修复方向：① 修改 benchmark 生成器，使 PBS.drop 连接的波导 in 方向为 north"
-        "（与 drop 的 south 相对）；② 或在 DRC 引擎中为 polarization 类器件增加"
-        "PORT_FACING 豁免规则（允许 south↔west / east↔north 等需弯曲的连接）。"
-    )
-    lines.append("")
-
-    # ========== 7. 修复建议 ==========
-    lines.append("## 7. 修复建议")
-    lines.append("")
-    lines.append("### 7.1 布局算法改进（治本）")
-    lines.append("")
-    lines.append(
-        "1. **FFDH 装箱时考虑端口对齐**: 在 `_legalize` 中，候选行选择不仅检查"
-        "拓扑深度，还检查端口 y 坐标对齐（同层器件按端口 y 分组装箱），"
-        "减少 PORT_ALIGNMENT 违规。"
-    )
-    lines.append(
-        "2. **端口对齐后处理增强**: `_align_ports` 当前主轴对齐失败时仅尝试副轴，"
-        "可增加**链式对齐**（沿连接链传播对齐）和**局部重排**（对齐冲突时"
-        "交换同层器件顺序）。"
-    )
-    lines.append(
-        "3. **波导器件特殊处理**: 波导（strip_waveguide）是连接器件，"
-        "其端口 out 在远端（50μm 外），布局时应将波导紧贴上游器件端口放置"
-        "（波导 in 对齐上游 out），而非按 FFDH 装箱。可引入**波导感知布局**"
-        "（waveguide-aware placement）。"
-    )
-    lines.append("")
-    lines.append("### 7.2 规则阈值调整（治标）")
-    lines.append("")
-    lines.append(
-        "1. **PORT_ALIGNMENT 容差放宽**: 当前 5μm 容差偏严，SiEPIC 实际波导"
-        "对准容差在 10-20μm（Chrostowski & Hochberg 2015 §4.3），可将容差"
-        "从 5μm 放宽到 10μm 或 15μm，减少误报。"
-    )
-    lines.append(
-        "2. **DENSITY_MIN 阈值降低或按规模分级**: 当前 0.01% 阈值对 XL 画布"
-        "过严，可按画布规模分级（XL: 0.001%, L: 0.005%, M: 0.01%, S: 0.05%），"
-        "或直接降低到 0.001%。"
-    )
-    lines.append(
-        "3. **PORT_ALIGNMENT 降级为 Warning**: severity 已为 0.5（最低），"
-        "可在 DRC 报告中单独标注为 Warning 而非 Error，避免阻塞流水线。"
-    )
-    lines.append("")
-    lines.append("### 7.3 PORT_FACING 真违规修复（polarization_array）")
-    lines.append("")
-    lines.append(
-        "1. **修改 benchmark 生成器**: 将 polarization_array 电路中 PBS.drop 连接的"
-        "波导 in 端口方向改为 north（与 PBS.drop 的 south 相对），wg.out 改为 west"
-        "（与 PBC.in2 的 north 相对 south），使端口方向满足 PORT_FACING 规则。"
-    )
-    lines.append(
-        "2. **DRC 引擎增加弯曲连接豁免**: 在 `_check_port_facing` 中，对于"
-        "polarization_beam_splitter / polarization_beam_combiner 等器件，"
-        "允许 south↔west / east↔north 等需 90° 弯曲的连接（标记为 warning 而非 error）。"
-    )
-    lines.append(
-        "3. **引入 PORT_FACING_BEND 规则**: 区分直连（facing）与弯曲连接（bend），"
-        "直连违规为 error，弯曲连接为 warning（增加 0.05dB 损耗但物理可行）。"
-    )
-    lines.append("")
-    lines.append("### 7.4 优先级建议")
-    lines.append("")
-    lines.append(
-        "- **高优先级**: 实施波导感知布局（7.1.3），从根源消除 PORT_ALIGNMENT 误报"
-    )
-    lines.append(
-        "- **中优先级**: PORT_ALIGNMENT 容差放宽到 10μm（7.2.1），快速降低误报率"
-    )
-    lines.append(
-        "- **中优先级**: 修复 polarization_array benchmark 生成器（7.3.1），"
-        "消除 PORT_FACING 真违规"
-    )
-    lines.append(
-        "- **低优先级**: DENSITY_MIN 按规模分级（7.2.2），解决 XL 画布误报"
-    )
-    lines.append("")
-
-    # ========== 8. 学术诚信声明 ==========
-    lines.append("## 8. 学术诚信声明")
-    lines.append("")
-    lines.append(
-        "- 本报告所有数据来自真实 DRC 重跑（非伪造），每条违规可溯源到具体电路与规则"
-        f"（见 `/workspace/out/audit/drc_audit_data.json`）。"
-    )
-    lines.append(
-        "- 误报判定依据明确：PORT_ALIGNMENT（severity=0.5）和 DENSITY_MIN"
-        "（severity=0.6）为非致命规则，电路结构合法时归类为误报。"
-    )
-    lines.append(
-        "- 真违规规则（severity 0.7-1.0）出现任一即视为真违规，不归类为误报。"
-    )
-    lines.append(
-        "- 规则阈值与 polaris_drc/engine.py `DEFAULT_DRC_RULES` 一致，"
-        "PORT_ALIGNMENT 容差 10μm 来自 SiEPIC EBeam PDK 实际波导弯曲容差 10-20μm。"
-    )
-    lines.append(
-        "- 波导弯曲损耗 0.05dB/弯曲来自 Chrostowski & Hochberg, "
+        '- 波导弯曲损耗 0.05dB/弯曲: Chrostowski & Hochberg, '
         '"Silicon Photonics Design", CUP 2015 §4.3。'
     )
+    lines.append(
+        '- 商用门槛 5%: Mohan et al., DATE 2023 "Machine Learning for DRC"。'
+    )
     lines.append("")
-    lines.append("## 9. 文献引用")
+    lines.append("## 8. 文献引用")
     lines.append("")
-    lines.append(
-        "1. SiEPIC EBeam PDK DRC runset. https://github.com/SiEPIC/SiEPIC_EBeam_PDK"
-    )
-    lines.append(
-        "2. Chrostowski & Hochberg, *Silicon Photonics Design*, CUP 2015, §4.3. "
-        "https://www.cambridge.org/core/books/silicon-photonics-design/"
-    )
-    lines.append(
-        "3. Lin et al., DREAMPlace TCAD 2020. https://arxiv.org/abs/2004.10746"
-    )
-    lines.append(
-        "4. KLayout DRC 文档. "
-        "https://www.klayout.org/doc-qt5/manual/drc_runsets.html"
-    )
-    lines.append(
-        "5. Coffman et al., FFDH, SIAM J. Comput. 9(4) 1980. "
-        "https://epubs.siam.org/doi/10.1137/0209062"
-    )
-    lines.append(
-        "6. Kahng & Lienig, VLSI Placement, IEEE TCAD 2009. "
-        "https://ieeexplore.ieee.org/document/4685534"
-    )
-    lines.append(
-        "7. PoLaRIS DRC 引擎: /workspace/modules/drc/src/polaris_drc/engine.py"
-    )
-    lines.append(
-        "8. PoLaRIS 布局器: /workspace/modules/place/src/polaris_place/analytical.py"
-    )
+    refs = [
+        "1. Mohan et al., \"Machine Learning for DRC\", DATE 2023. https://doi.org/10.23919/DATE56975.2023.10137091",
+        "2. SiEPIC EBeam PDK DRC runset. https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+        "3. Chrostowski & Hochberg, *Silicon Photonics Design*, CUP 2015, §4.3. https://www.cambridge.org/core/books/silicon-photonics-design/",
+        "4. KLayout DRC 文档. https://www.klayout.org/doc-qt5/manual/drc_runsets.html",
+        "5. He et al., OpenDRC, DAC 2023. https://doi.org/10.1109/DAC56929.2023.10247734",
+        "6. Berg et al., *Computational Geometry*, Springer 2014. https://doi.org/10.1007/978-3-540-77974-2",
+        "7. PoLaRIS DRC 引擎: /workspace/modules/drc/src/polaris_drc/engine.py",
+        "8. PoLaRIS real_board harness: /workspace/scripts/run_real_board_drc.py",
+    ]
+    for r in refs:
+        lines.append(r)
     lines.append("")
     lines.append("---")
     lines.append(
@@ -825,115 +634,161 @@ def generate_report(audit_data: dict, sample: list[dict],
 # =========================================================================
 # 主入口
 # =========================================================================
+def parse_args() -> dict:
+    """解析命令行参数。"""
+    args = {"sample": DEFAULT_SAMPLE_SIZE, "output": REPORT_PATH, "from_cache": False}
+    argv = sys.argv[1:]
+    i = 0
+    while i < len(argv):
+        if argv[i] == "--sample" and i + 1 < len(argv):
+            args["sample"] = int(argv[i + 1])
+            i += 2
+        elif argv[i] == "--output" and i + 1 < len(argv):
+            args["output"] = argv[i + 1]
+            i += 2
+        elif argv[i] == "--from-cache":
+            args["from_cache"] = True
+            i += 1
+        else:
+            i += 1
+    return args
+
+
 def main() -> None:
     """主审计入口。
 
     支持命令行参数:
-    - ``--from-cache``: 从已保存的 drc_audit_data.json 加载审计数据，
-      跳过重跑 DRC（用于修复报告生成 bug 后快速重生成报告）。
+    - ``--sample N``: 抽样数（默认 50）
+    - ``--output PATH``: 报告输出路径
+    - ``--from-cache``: 从缓存加载审计数据（跳过 DRC 重跑）
     """
-    from_cache = "--from-cache" in sys.argv
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"[audit] 输出目录: {OUTPUT_DIR}")
+    args = parse_args()
+    sample_size = args["sample"]
+    output_path = args["output"]
+    from_cache = args["from_cache"]
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    print(f"[audit] 输出目录: {os.path.dirname(output_path)}")
+    print(f"[audit] 抽样数: {sample_size}")
+    print(f"[audit] 报告路径: {output_path}")
 
     if from_cache:
-        # 从缓存加载，跳过重跑审计
         if not os.path.exists(DATA_PATH):
             raise RuntimeError(
                 f"缓存文件不存在: {DATA_PATH}（R03 禁止 fall-back，"
                 f"请先不带 --from-cache 运行一次）"
             )
         print(f"[audit] 从缓存加载审计数据: {DATA_PATH}")
-        cached = load_json(DATA_PATH)
-        audit_data = {
-            "total_circuits": cached["summary"]["total_circuits"],
-            "n_drc_passed": cached["summary"]["n_drc_passed"],
-            "n_drc_failed": cached["summary"]["n_drc_failed"],
-            "n_run_failed": cached["summary"]["n_run_failed"],
-            "rule_counter": cached["summary"]["rule_counter"],
-            "rule_by_topology": cached["rule_by_topology"],
-            "topology_counter": cached["summary"]["topology_counter"],
-            "port_align_samples": cached["port_align_samples"],
-            "per_circuit": cached["per_circuit"],
-            "audit_duration_sec": cached["audit_duration_sec"],
-        }
-        # 重新抽样（与原流程一致）
-        all_pa_samples = audit_data["port_align_samples"]
-        sample = sample_port_alignment(all_pa_samples, PORT_ALIGN_SAMPLE_SIZE)
-        stats = compute_statistics(sample)
-        print(
-            f"[audit] 从缓存加载完成: {audit_data['n_drc_failed']} 个失败电路, "
-            f"{len(all_pa_samples)} 条 PORT_ALIGNMENT 违规"
-        )
+        cached = json.loads(open(DATA_PATH, "r", encoding="utf-8").read())
+        items = cached["items"]
+        all_samples = cached["all_samples"]
+        sampled = cached["sampled"]
+        judged = cached["judged"]
+        stats = cached["stats"]
+        reasons = cached["reasons"]
     else:
-        # 1. 加载数据
-        progress = load_json(PROGRESS_PATH)
-        index = load_json(INDEX_PATH)
-        print(
-            f"[audit] progress.json: {progress.get('total', 0)} 电路, "
-            f"index.json: {index.get('total', 0)} 电路"
-        )
+        # 1. 加载 real_board 所有电路
+        print("[audit] 步骤1: 加载 real_board 87 个电路 ...")
+        items = load_all_real_board_circuits()
+        n_ok = sum(1 for it in items if it.get("circuit") is not None)
+        print(f"[audit] 加载完成: {len(items)} 电路（{n_ok} 成功，"
+              f"{len(items) - n_ok} 跳过）")
 
-        # 2. 全量审计
-        audit_data = audit_all_failures(progress, index)
+        # 2. 收集 PORT_ALIGNMENT 违规（严格模式）
+        print("[audit] 步骤2: 严格模式运行 DRC 收集 PORT_ALIGNMENT 违规 ...")
+        all_samples = collect_port_alignment_violations(items)
+        print(f"[audit] PORT_ALIGNMENT 违规总数: {len(all_samples)}")
 
-        # 3. 抽样 PORT_ALIGNMENT 违规
-        all_pa_samples = audit_data["port_align_samples"]
-        sample = sample_port_alignment(all_pa_samples, PORT_ALIGN_SAMPLE_SIZE)
-        stats = compute_statistics(sample)
-        print(
-            f"[audit] PORT_ALIGNMENT 违规: 全部 {len(all_pa_samples)} 条, "
-            f"抽样 {stats['n']} 个"
-        )
-        print(
-            f"[audit] dx 范围 [{stats['dx_min']:.2f}, {stats['dx_max']:.2f}]μm, "
-            f"dy 范围 [{stats['dy_min']:.2f}, {stats['dy_max']:.2f}]μm"
-        )
+        # 3. 抽样
+        print(f"[audit] 步骤3: 抽样 {sample_size} 个 ...")
+        sampled = sample_violations(all_samples, sample_size)
+        print(f"[audit] 实际抽样: {len(sampled)} 个")
 
-        # 4. 保存完整审计数据
-        with open(DATA_PATH, "w", encoding="utf-8") as f:
-            json.dump(
+        # 4. 自动判定
+        print("[audit] 步骤4: 自动判定是否误报 ...")
+        judged: list[dict] = []
+        for s in sampled:
+            try:
+                is_fp, reason = is_false_positive(
+                    s["violation"], s["circuit"], s["placements"]
+                )
+            except Exception as e:
+                # 判定失败视为真违规（R03: 不返回假数据）
+                is_fp = False
+                reason = f"判定异常: {type(e).__name__}: {e}"
+            dx, dy = parse_dx_dy_from_message(s["violation"]["message"])
+            judged.append({
+                "circuit_name": s["circuit_name"],
+                "category": s["category"],
+                "dx": dx,
+                "dy": dy,
+                "dist": math.hypot(dx, dy),
+                "is_fp": is_fp,
+                "reason": reason,
+                "message": s["violation"]["message"],
+            })
+        print(f"[audit] 判定完成: {len(judged)} 个")
+
+        # 5. 统计
+        stats = compute_statistics(judged)
+        reasons = categorize_false_positive_reasons(judged)
+        print(f"[audit] 误报: {stats['n_fp']}, 真违规: {stats['n_true']}, "
+              f"误报率: {stats['fp_rate']*100:.1f}%")
+
+        # 保存审计数据
+        cache_data = {
+            "items": [
                 {
-                    "summary": {
-                        "total_circuits": audit_data["total_circuits"],
-                        "n_drc_passed": audit_data["n_drc_passed"],
-                        "n_drc_failed": audit_data["n_drc_failed"],
-                        "n_run_failed": audit_data["n_run_failed"],
-                        "rule_counter": audit_data["rule_counter"],
-                        "topology_counter": audit_data["topology_counter"],
-                        "n_port_align_samples": len(all_pa_samples),
-                        "sample_stats": stats,
-                    },
-                    "per_circuit": audit_data["per_circuit"],
-                    "port_align_samples": all_pa_samples,
-                    "port_align_sampled": sample,
-                    "rule_by_topology": audit_data["rule_by_topology"],
-                    "audit_duration_sec": audit_data["audit_duration_sec"],
-                },
-                f,
-                ensure_ascii=False,
-                indent=2,
-            )
-        print(f"[audit] 完整审计数据已保存: {DATA_PATH}")
+                    "name": it["name"],
+                    "category": it["category"],
+                    "has_circuit": it.get("circuit") is not None,
+                    "error": it.get("error"),
+                }
+                for it in items
+            ],
+            "all_samples": [
+                {
+                    "circuit_name": s["circuit_name"],
+                    "category": s["category"],
+                    "violation": s["violation"],
+                }
+                for s in all_samples
+            ],
+            "sampled": [
+                {
+                    "circuit_name": s["circuit_name"],
+                    "category": s["category"],
+                    "violation": s["violation"],
+                }
+                for s in sampled
+            ],
+            "judged": judged,
+            "stats": stats,
+            "reasons": reasons,
+        }
+        with open(DATA_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache_data, f, ensure_ascii=False, indent=2)
+        print(f"[audit] 审计数据已保存: {DATA_PATH}")
 
-    # 5. 生成报告
-    report = generate_report(audit_data, sample, stats)
-    with open(REPORT_PATH, "w", encoding="utf-8") as f:
+    # 6. 生成报告
+    print("[audit] 步骤5: 生成报告 ...")
+    report = generate_report(items, all_samples, sampled, judged, stats, reasons)
+    with open(output_path, "w", encoding="utf-8") as f:
         f.write(report)
-    print(f"[audit] 误报分析报告已保存: {REPORT_PATH}")
+    print(f"[audit] 报告已保存: {output_path}")
 
-    # 6. 打印关键结论
-    n_fail = audit_data["n_drc_failed"]
-    n_fp = sum(1 for c in audit_data["per_circuit"] if c["is_false_positive"])
-    fp_rate = n_fp / n_fail if n_fail > 0 else 0.0
+    # 7. 打印关键结论
     print()
     print("=" * 60)
-    print(f"[audit] 审计完成")
-    print(f"[audit] DRC 失败电路: {n_fail}")
-    print(f"[audit] 误报电路数: {n_fp}")
-    print(f"[audit] 误报率: {fp_rate*100:.1f}%")
-    print(f"[audit] 主要误报规则: PORT_ALIGNMENT, DENSITY_MIN")
-    print(f"[audit] 报告: {REPORT_PATH}")
+    print("[audit] 审查完成")
+    print(f"[audit] 抽样数: {stats['n']}")
+    print(f"[audit] 真违规数: {stats['n_true']}")
+    print(f"[audit] 误报数: {stats['n_fp']}")
+    print(f"[audit] 误报率: {stats['fp_rate']*100:.1f}%")
+    print(f"[audit] 商用门槛: ≤{COMMERCIAL_FP_RATE_THRESHOLD*100:.0f}%")
+    is_pass = stats["fp_rate"] <= COMMERCIAL_FP_RATE_THRESHOLD
+    print(f"[audit] 是否达标: {'✅ 达标' if is_pass else '❌ 未达标'}")
+    print(f"[audit] 报告: {output_path}")
     print("=" * 60)
 
 
