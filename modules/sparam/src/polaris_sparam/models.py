@@ -415,6 +415,18 @@ def directional_coupler_s(
     kappa_L = np.arcsin(np.sqrt(coupling))
     tau_amp = np.cos(kappa_L)            # 直通振幅（0 相位）
     kappa_amp = np.sin(kappa_L) * 1j     # 交叉振幅（π/2 相位差，CMT 标准）
+    return _assemble_dc_s_matrix(wl, tau_amp, kappa_amp)
+
+
+def _assemble_dc_s_matrix(
+    wl: np.ndarray,
+    tau_amp: float,
+    kappa_amp: complex,
+) -> dict:
+    """组装定向耦合器 S 参数字典（Extract Method，R11 质量门禁）。
+
+    端口: in1, in2, out1, out2（交叉耦合 out2←in1, out1←in2）。
+    """
     tau_arr = np.full_like(wl, tau_amp, dtype=complex)
     kappa_arr = np.full_like(wl, kappa_amp, dtype=complex)
     zero = np.zeros_like(wl, dtype=complex)
