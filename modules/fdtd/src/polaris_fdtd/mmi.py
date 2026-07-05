@@ -99,6 +99,89 @@ def _build_mmi_eps(
     return eps
 
 
+def _validate_mmi_fdtd_params(
+    dx_um: float, n_steps: int, wavelength_um: float,
+    nx: int, ny: int, nz: int, pml_layers: int,
+) -> None:
+    """校验 simulate_mmi_fdtd 参数（R03 失败即 raise）。"""
+    if dx_um <= 0:
+        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
+    if n_steps <= 0:
+        raise ValueError(f"n_steps 须 > 0，得到 {n_steps}")
+    if wavelength_um <= 0:
+        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
+    if pml_layers * 2 >= min(nx, ny, nz):
+        raise ValueError(
+            f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
+        )
+    # R05: 校验波导芯距 PML 至少 2 格
+    if ny // 3 - 1 - pml_layers < 2:
+        raise ValueError(
+            f"输出 1 波导 y={ny//3-1} 距 PML(y={pml_layers}) 不足 2 格（R05）"
+        )
+    if nz // 2 - 1 - pml_layers < 2:
+        raise ValueError(
+            f"波导芯 z={nz//2-1} 距 PML(z={pml_layers}) 不足 2 格（R05）"
+        )
+
+
+def _build_mmi_fdtd_setup(
+    dx_um: float, nx: int, ny: int, nz: int, pml_layers: int, wavelength_um: float,
+) -> tuple:
+    """构建 MMI FDTD 仿真环境，返回 (fdtd, eps_r, source_pos, source_freq, mon1_pos, mon2_pos)。"""
+    dx_m = dx_um * 1e-6
+    eps_r = _build_mmi_eps(nx, ny, nz, SOI_EPS_R_SI, SOI_EPS_R_SIO2)
+    grid = YeeGrid3D(nx, ny, nz, dx_m, dx_m, dx_m, epsilon_r=eps_r)
+    pml = GedneyPML(grid, n_layers=pml_layers, eps_r_bg=SOI_EPS_R_SIO2)
+    fdtd = DifferentiableFDTD(grid, pml=pml, eps_r_bg=SOI_EPS_R_SIO2)
+    source_freq = C0 / (wavelength_um * 1e-6)
+    # R05: 源/监视器距 PML 至少 2 格，置于波导芯中心
+    source_pos = (pml_layers + 2, ny // 2, nz // 2)
+    # 双输出监视器（在输出波导芯中心）
+    mon1_pos = (nx - pml_layers - 3, ny // 3, nz // 2)
+    mon2_pos = (nx - pml_layers - 3, 2 * ny // 3, nz // 2)
+    return fdtd, eps_r, source_pos, source_freq, mon1_pos, mon2_pos
+
+
+def _run_mmi_fdtd_and_compute(
+    fdtd, eps_r, source_pos, source_freq, n_steps, mon1_pos, mon2_pos,
+) -> dict:
+    """运行 MMI FDTD 双监视器仿真并计算分束比，返回结果 dict。"""
+    t0 = time.time()
+    # R05: 注入/监视 Ey（准 TE 横向分量）
+    res1 = fdtd.run(
+        eps_r, source_pos, source_freq, n_steps, mon1_pos,
+        source_component="Ey", monitor_component="Ey",
+    )
+    res2 = fdtd.run(
+        eps_r, source_pos, source_freq, n_steps, mon2_pos,
+        source_component="Ey", monitor_component="Ey",
+    )
+    duration = float(time.time() - t0)
+    mon1 = np.asarray(res1["monitor_signal"])
+    mon2 = np.asarray(res2["monitor_signal"])
+    src_wave = np.asarray(fdtd._build_source_waveform(n_steps, source_freq))
+    # R03: NaN 校验
+    if np.any(np.isnan(mon1)) or np.any(np.isnan(mon2)):
+        raise RuntimeError("FDTD 监视器信号含 NaN（R03 禁止 fall-back）")
+    p1 = float(np.max(np.abs(mon1) ** 2))
+    p2 = float(np.max(np.abs(mon2) ** 2))
+    p_src = float(np.max(np.abs(src_wave) ** 2))
+    if p_src <= 0:
+        raise RuntimeError(f"源功率 {p_src} <= 0（R03 禁止 fall-back）")
+    p_total = p1 + p2
+    split_ratio = p1 / p_total if p_total > 0 else 0.5
+    t_fdtd = p_total / p_src
+    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
+    return {
+        "split_ratio": float(split_ratio),
+        "T_fdtd": float(t_fdtd),
+        "transmission_db": transmission_db,
+        "fdtd_duration_s": duration,
+        "n_steps": int(n_steps),
+    }
+
+
 def simulate_mmi_fdtd(
     dx_um: float = 0.05,
     n_steps: int = 2000,
@@ -133,77 +216,13 @@ def simulate_mmi_fdtd(
         ValueError: 参数非法（R03 禁止 fall-back）。
         RuntimeError: 仿真结果含 NaN（R03 禁止 fall-back）。
     """
-    if dx_um <= 0:
-        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
-    if n_steps <= 0:
-        raise ValueError(f"n_steps 须 > 0，得到 {n_steps}")
-    if wavelength_um <= 0:
-        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
-    if pml_layers * 2 >= min(nx, ny, nz):
-        raise ValueError(
-            f"pml_layers*2 ({pml_layers*2}) 须 < min(nx,ny,nz) ({min(nx,ny,nz)})"
-        )
-    # R05: 校验波导芯距 PML 至少 2 格
-    if ny // 3 - 1 - pml_layers < 2:
-        raise ValueError(
-            f"输出 1 波导 y={ny//3-1} 距 PML(y={pml_layers}) 不足 2 格（R05）"
-        )
-    if nz // 2 - 1 - pml_layers < 2:
-        raise ValueError(
-            f"波导芯 z={nz//2-1} 距 PML(z={pml_layers}) 不足 2 格（R05）"
-        )
-
-    dx_m = dx_um * 1e-6
-    eps_r = _build_mmi_eps(nx, ny, nz, SOI_EPS_R_SI, SOI_EPS_R_SIO2)
-
-    grid = YeeGrid3D(nx, ny, nz, dx_m, dx_m, dx_m, epsilon_r=eps_r)
-    pml = GedneyPML(grid, n_layers=pml_layers, eps_r_bg=SOI_EPS_R_SIO2)
-    fdtd = DifferentiableFDTD(grid, pml=pml, eps_r_bg=SOI_EPS_R_SIO2)
-
-    source_freq = C0 / (wavelength_um * 1e-6)
-    # R05: 源/监视器距 PML 至少 2 格，置于波导芯中心
-    source_pos = (pml_layers + 2, ny // 2, nz // 2)
-    # 双输出监视器（在输出波导芯中心）
-    mon1_pos = (nx - pml_layers - 3, ny // 3, nz // 2)
-    mon2_pos = (nx - pml_layers - 3, 2 * ny // 3, nz // 2)
-
-    t0 = time.time()
-    # R05: 注入/监视 Ey（准 TE 横向分量）
-    res1 = fdtd.run(
-        eps_r, source_pos, source_freq, n_steps, mon1_pos,
-        source_component="Ey", monitor_component="Ey",
+    _validate_mmi_fdtd_params(dx_um, n_steps, wavelength_um, nx, ny, nz, pml_layers)
+    fdtd, eps_r, source_pos, source_freq, mon1_pos, mon2_pos = _build_mmi_fdtd_setup(
+        dx_um, nx, ny, nz, pml_layers, wavelength_um
     )
-    res2 = fdtd.run(
-        eps_r, source_pos, source_freq, n_steps, mon2_pos,
-        source_component="Ey", monitor_component="Ey",
+    result = _run_mmi_fdtd_and_compute(
+        fdtd, eps_r, source_pos, source_freq, n_steps, mon1_pos, mon2_pos
     )
-    duration = float(time.time() - t0)
-
-    mon1 = np.asarray(res1["monitor_signal"])
-    mon2 = np.asarray(res2["monitor_signal"])
-    src_wave = np.asarray(fdtd._build_source_waveform(n_steps, source_freq))
-
-    # R03: NaN 校验
-    if np.any(np.isnan(mon1)) or np.any(np.isnan(mon2)):
-        raise RuntimeError("FDTD 监视器信号含 NaN（R03 禁止 fall-back）")
-
-    p1 = float(np.max(np.abs(mon1) ** 2))
-    p2 = float(np.max(np.abs(mon2) ** 2))
-    p_src = float(np.max(np.abs(src_wave) ** 2))
-    if p_src <= 0:
-        raise RuntimeError(f"源功率 {p_src} <= 0（R03 禁止 fall-back）")
-
-    p_total = p1 + p2
-    split_ratio = p1 / p_total if p_total > 0 else 0.5
-    t_fdtd = p_total / p_src
-    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
-
-    return {
-        "split_ratio": float(split_ratio),
-        "T_fdtd": float(t_fdtd),
-        "transmission_db": transmission_db,
-        "fdtd_duration_s": duration,
-        "n_steps": int(n_steps),
-        "dx_um": float(dx_um),
-        "pml_enabled": True,
-    }
+    result["dx_um"] = float(dx_um)
+    result["pml_enabled"] = True
+    return result
