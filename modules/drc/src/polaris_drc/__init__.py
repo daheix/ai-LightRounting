@@ -91,7 +91,8 @@ from polaris_drc.engine import (
 __version__ = "5.0.0"
 
 
-def run_drc(circuit: dict, placements: dict) -> dict:
+def run_drc(circuit: dict, placements: dict,
+            bend_compensate: bool = True) -> dict:
     """对已布局电路执行 DRC 设计规则检查，返回结果 dict（Input→Process→Output）。
 
     Input:
@@ -100,6 +101,11 @@ def run_drc(circuit: dict, placements: dict) -> dict:
             ``[(name, dx, dy, direction), ...]``。
         placements: polaris-place 输出的布局结果 ``{name: {x, y, w, h}}``，
             x/y 为器件左下角坐标 (μm)。
+        bend_compensate: 是否启用波导弯曲补偿（默认 True）。详见 DRCEngine。
+            *创新*（光电子 EDA 专用）: SiEPIC PDK PORT_FACING 规则假设直连，
+            但光子电路实际可通过波导弯曲补偿任意方向组合
+            （Chrostowski & Hochberg 2015 §4.3，每 90° 弯曲 ≈ 0.05dB）。
+            非 fall-back: 弯曲补偿是物理可实现的真实连接方式。
 
     Process:
         运行 12 条 SiEPIC EBeam PDK DRC 规则（min_spacing / min_width /
@@ -124,7 +130,7 @@ def run_drc(circuit: dict, placements: dict) -> dict:
         RuntimeError: circuit/placements 结构非法（R03 禁止 fall-back）。
     """
     rules = DEFAULT_DRC_RULES
-    engine = DRCEngine(rules)
+    engine = DRCEngine(rules, bend_compensate=bend_compensate)
     violations = engine.run(circuit, placements)
     # 统计通过的规则数（某规则无违规即视为通过）
     violated_rules = {v.rule_name for v in violations}

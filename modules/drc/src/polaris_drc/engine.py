@@ -37,7 +37,7 @@ v5.2 拆分（R11 质量门禁：文件 ≤800 行）:
 | PORT_CONNECTIVITY | - | 每个器件至少有一个端口被连接 |
 | PORT_FACING | - | 连接端口方向相对（east↔west / north↔south）|
 | DENSITY_MAX | 80% | 布局密度上限（CMP 工艺均匀性）|
-| DENSITY_MIN | 分级 | 布局密度下限（XS/S=0.01%, M=0.005%, L=0.002%, XL=0.001%）|
+| DENSITY_MIN | 分级 | 布局密度下限（XS/S=0.01%, M=0.005%, L=0.002%, XL=0.001%, ≥10mm 连续缩放 100μm²/canvas_area×100）|
 
 ## 几何约定
 
