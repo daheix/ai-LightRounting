@@ -236,9 +236,32 @@ def collect_rollout(
         )
 
     rng = np.random.default_rng(global_step * 100 + worker_id)
+    (obs_list, next_obs_list, action_list, reward_list,
+     log_prob_list, done_list, total_reward) = _run_rollout_episodes(
+        n_episodes, policy, config, real_env, use_synthetic, rng,
+    )
+    return _assemble_rollout_result(
+        obs_list, next_obs_list, action_list, reward_list,
+        log_prob_list, done_list, total_reward, n_episodes,
+    )
+
+
+def _run_rollout_episodes(
+    n_episodes: int,
+    policy: Any,
+    config: Any,
+    real_env: Any,
+    use_synthetic: bool,
+    rng: np.random.Generator,
+) -> tuple[list, list, list, list, list, list, float]:
+    """运行 n_episodes 个回合采集 rollout 数据（Extract Method，R11 质量门禁）。
+
+    Returns:
+        (obs_list, next_obs_list, action_list, reward_list, log_prob_list,
+         done_list, total_reward)。
+    """
     obs_list, next_obs_list = [], []
     action_list, reward_list, log_prob_list, done_list = [], [], [], []
-
     total_reward = 0.0
     for _ep in range(n_episodes):
         if use_synthetic:
@@ -273,7 +296,21 @@ def collect_rollout(
             if done:
                 break
         total_reward += ep_reward
+    return (obs_list, next_obs_list, action_list, reward_list,
+            log_prob_list, done_list, total_reward)
 
+
+def _assemble_rollout_result(
+    obs_list: list,
+    next_obs_list: list,
+    action_list: list,
+    reward_list: list,
+    log_prob_list: list,
+    done_list: list,
+    total_reward: float,
+    n_episodes: int,
+) -> dict[str, Any]:
+    """组装 rollout 结果字典（Extract Method，R11 质量门禁）。"""
     return {
         "obs": np.array(obs_list, dtype=np.float64),
         "next_obs": np.array(next_obs_list, dtype=np.float64),
