@@ -3,28 +3,15 @@
   "category": "expert_demos",
   "n_devices": 1,
   "n_connections": 0,
-  "canvas_w": 100.0,
+  "canvas_w": 3054.5499999999997,
   "canvas_h": 127060.7,
   "status": "ok",
   "drc": {
-    "n_violations": 1,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 ebeam_gc_te1550 超出画布边界 (3016.45,14000.00)-(3049.55,14021.40) canvas=(100.0,127060.7)",
-        "device_name": "ebeam_gc_te1550",
-        "location": [
-          3033.0,
-          14010.7
-        ]
-      }
-    ],
-    "violated_rules": [
-      "BOUNDARY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

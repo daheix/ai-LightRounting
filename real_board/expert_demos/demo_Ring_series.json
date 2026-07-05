@@ -7,39 +7,19 @@
   "canvas_h": 381060.7,
   "status": "ok",
   "drc": {
-    "n_violations": 5,
+    "n_violations": 3,
     "n_rules": 12,
-    "n_passed": 10,
-    "pass_rate": 0.8333333333333334,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
     "violations": [
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 DirectionalCoupler_SeriesRings$1_1 超出画布边界 (0.00,-4189.70)-(21.50,-4168.90) canvas=(81960.85,381060.7)",
-        "device_name": "DirectionalCoupler_SeriesRings$1_1",
-        "location": [
-          10.75,
-          -4179.299999999999
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 ebeam_gc_te1550 超出画布边界 (-81883.55,220900.00)-(-81850.45,220921.40) canvas=(81960.85,381060.7)",
-        "device_name": "ebeam_gc_te1550",
-        "location": [
-          -81867.0,
-          220910.7
-        ]
-      },
       {
         "rule_name": "PORT_CONNECTIVITY",
         "severity": 0.9,
         "message": "PORT_CONNECTIVITY: 器件 DirectionalCoupler_SeriesRings$1 无任何连接（孤立器件）",
         "device_name": "DirectionalCoupler_SeriesRings$1",
         "location": [
-          10.75,
-          16420.699999999997
+          81894.3,
+          20610.4
         ]
       },
       {
@@ -48,8 +28,8 @@
         "message": "PORT_CONNECTIVITY: 器件 DirectionalCoupler_SeriesRings$1_1 无任何连接（孤立器件）",
         "device_name": "DirectionalCoupler_SeriesRings$1_1",
         "location": [
-          10.75,
-          -4179.299999999999
+          81894.3,
+          10.400000000000091
         ]
       },
       {
@@ -58,13 +38,12 @@
         "message": "PORT_CONNECTIVITY: 器件 DirectionalCoupler_SeriesRings$1_2 无任何连接（孤立器件）",
         "device_name": "DirectionalCoupler_SeriesRings$1_2",
         "location": [
-          10.75,
-          37020.7
+          81894.3,
+          41210.399999999994
         ]
       }
     ],
     "violated_rules": [
-      "BOUNDARY",
       "PORT_CONNECTIVITY"
     ]
   }

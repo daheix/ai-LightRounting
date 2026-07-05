@@ -6,11 +6,11 @@
   "canvas_w": null,
   "canvas_h": null,
   "status": "error",
-  "error": "KeyError: 'y'",
+  "error": "RuntimeError: placements 相对引用解析失败（依赖循环或缺失）: ['wg_a2']（R03）",
   "drc": {
     "n_violations": -1,
     "pass_rate": 0.0,
     "violations": [],
-    "error": "KeyError: 'y'"
+    "error": "RuntimeError: placements 相对引用解析失败（依赖循环或缺失）: ['wg_a2']（R03）"
   }
 }

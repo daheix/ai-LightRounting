@@ -7,59 +7,19 @@
   "canvas_h": 127060.7,
   "status": "ok",
   "drc": {
-    "n_violations": 6,
+    "n_violations": 2,
     "n_rules": 12,
-    "n_passed": 10,
-    "pass_rate": 0.8333333333333334,
+    "n_passed": 11,
+    "pass_rate": 0.9166666666666666,
     "violations": [
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 ebeam_y_1550 超出画布边界 (5700.00,-2400.00)-(5715.00,-2393.00) canvas=(62632.6,127060.7)",
-        "device_name": "ebeam_y_1550",
-        "location": [
-          5707.5,
-          -2396.5
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 ebeam_gc_te1550 超出画布边界 (-27683.55,-29400.00)-(-27650.45,-29378.60) canvas=(62632.6,127060.7)",
-        "device_name": "ebeam_gc_te1550",
-        "location": [
-          -27667.0,
-          -29389.3
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 ebeam_terminator_te1550 超出画布边界 (-56869.60,15250.00)-(-56858.60,15252.00) canvas=(62632.6,127060.7)",
-        "device_name": "ebeam_terminator_te1550",
-        "location": [
-          -56864.1,
-          15251.0
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 ebeam_bdc_te1550 超出画布边界 (-21424.92,17600.00)-(-21353.97,17607.20) canvas=(62632.6,127060.7)",
-        "device_name": "ebeam_bdc_te1550",
-        "location": [
-          -21389.449999999997,
-          17603.6
-        ]
-      },
       {
         "rule_name": "PORT_CONNECTIVITY",
         "severity": 0.9,
         "message": "PORT_CONNECTIVITY: 器件 ebeam_y_1550 无任何连接（孤立器件）",
         "device_name": "ebeam_y_1550",
         "location": [
-          5707.5,
-          -2396.5
+          62577.1,
+          27003.5
         ]
       },
       {
@@ -68,13 +28,12 @@
         "message": "PORT_CONNECTIVITY: 器件 ebeam_bdc_te1550 无任何连接（孤立器件）",
         "device_name": "ebeam_bdc_te1550",
         "location": [
-          -21389.449999999997,
-          17603.6
+          35480.15,
+          47003.6
         ]
       }
     ],
     "violated_rules": [
-      "BOUNDARY",
       "PORT_CONNECTIVITY"
     ]
   }

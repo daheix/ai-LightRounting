@@ -1,16 +1,73 @@
 {
   "name": "gf_gf_mask",
   "category": "gdsfactory",
-  "n_devices": 0,
+  "n_devices": 2,
   "n_connections": 0,
-  "canvas_w": null,
-  "canvas_h": null,
-  "status": "error",
-  "error": "RuntimeError: 未知组件 'pack_doe_grid' 且 settings 无 length/length_mmi/size（settings={'doe': 'mzi', 'settings': {'delta_length': [10, 20, 30, 40]}, 'do_permutations': True, 'spacing': [10, 10], 'function': 'add_fiber_array'}，R03 禁止 fall-back 默认尺寸）",
+  "canvas_w": 405.0,
+  "canvas_h": 305.0,
+  "status": "ok",
   "drc": {
-    "n_violations": -1,
-    "pass_rate": 0.0,
-    "violations": [],
-    "error": "RuntimeError: 未知组件 'pack_doe_grid' 且 settings 无 length/length_mmi/size（settings={'doe': 'mzi', 'settings': {'delta_length': [10, 20, 30, 40]}, 'do_permutations': True, 'spacing': [10, 10], 'function': 'add_fiber_array'}，R03 禁止 fall-back 默认尺寸）"
+    "n_violations": 5,
+    "n_rules": 12,
+    "n_passed": 8,
+    "pass_rate": 0.6666666666666666,
+    "violations": [
+      {
+        "rule_name": "MIN_SPACING",
+        "severity": 1.0,
+        "message": "MIN_SPACING: 器件 rings 与 mzis 间距 0.0000μm < 阈值 1.0000μm",
+        "device_name": "rings",
+        "location": [
+          225.0,
+          150.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 rings 与 mzis 重叠",
+        "device_name": "rings",
+        "location": [
+          225.0,
+          150.0
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 rings 无任何连接（孤立器件）",
+        "device_name": "rings",
+        "location": [
+          150.0,
+          150.0
+        ]
+      },
+      {
+        "rule_name": "PORT_CONNECTIVITY",
+        "severity": 0.9,
+        "message": "PORT_CONNECTIVITY: 器件 mzis 无任何连接（孤立器件）",
+        "device_name": "mzis",
+        "location": [
+          250.0,
+          150.0
+        ]
+      },
+      {
+        "rule_name": "DENSITY_MAX",
+        "severity": 0.6,
+        "message": "DENSITY_MAX: 布局密度 105.2419% 超过上限 80.0000%",
+        "device_name": "canvas",
+        "location": [
+          202.5,
+          152.5
+        ]
+      }
+    ],
+    "violated_rules": [
+      "DENSITY_MAX",
+      "MIN_SPACING",
+      "NO_OVERLAP",
+      "PORT_CONNECTIVITY"
+    ]
   }
 }

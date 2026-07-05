@@ -3,8 +3,8 @@
   "category": "gdsfactory",
   "n_devices": 6,
   "n_connections": 3,
-  "canvas_w": 6072.000000000001,
-  "canvas_h": 1540.5500000000002,
+  "canvas_w": 5525.0,
+  "canvas_h": 1405.5,
   "status": "ok",
   "drc": {
     "n_violations": 1,
@@ -15,11 +15,11 @@
       {
         "rule_name": "DENSITY_MIN",
         "severity": 0.6,
-        "message": "DENSITY_MIN: 布局密度 0.0003% 低于下限 0.0010%",
+        "message": "DENSITY_MIN: 布局密度 0.0004% 低于下限 0.0010%",
         "device_name": "canvas",
         "location": [
-          3036.0000000000005,
-          770.2750000000001
+          2762.5,
+          702.75
         ]
       }
     ],

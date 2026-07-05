@@ -278,6 +278,21 @@ def convert_expert_demo(meta: dict, netlist: dict, placements_raw: dict
             "w": float(pl.get("w", pl.get("width", 10.0))),
             "h": float(pl.get("h", pl.get("height", 5.0))),
         }
+    # 负坐标归零 + 紧凑 canvas（BOUNDARY + DENSITY_MIN 修复）
+    if placements:
+        min_x = min(p["x"] for p in placements.values())
+        min_y = min(p["y"] for p in placements.values())
+        if min_x < 0 or min_y < 0:
+            sx = -min_x if min_x < 0 else 0.0
+            sy = -min_y if min_y < 0 else 0.0
+            for nm in placements:
+                placements[nm]["x"] += sx
+                placements[nm]["y"] += sy
+        # 紧凑 canvas: 实际 bbox + 5μm 边距（不使用 GDS 原始 canvas，可能单位不匹配）
+        max_x = max(p["x"] + p["w"] for p in placements.values())
+        max_y = max(p["y"] + p["h"] for p in placements.values())
+        circuit["canvas_w"] = max_x + 5.0
+        circuit["canvas_h"] = max_y + 5.0
     return circuit, placements
 
 
@@ -415,11 +430,42 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
             f"{[nm for nm, _ in pending]}（R03）"
         )
 
-    # 为无 placement 的 instance 补默认坐标（0,0）
-    for nm in dev_info:
-        if nm not in placements:
+    # 为无 placement 的 instance 用 analytical 布局（避免全部堆叠在 0,0）
+    unplaced = [nm for nm in dev_info if nm not in placements]
+    if unplaced:
+        # 构造临时 circuit 调用 analytical 布局器
+        tmp_devices = []
+        for nm in unplaced:
             w, h = dev_info[nm]["dims"]
-            placements[nm] = {"x": 0.0, "y": 0.0, "w": w, "h": h}
+            tmp_devices.append({
+                "name": nm,
+                "device_type": "straight",
+                "width_um": w,
+                "height_um": h,
+                "ports": [["o1", 0, h/2, "west"], ["o2", w, h/2, "east"]],
+            })
+        tmp_circuit = {
+            "name": "tmp_unplaced",
+            "devices": tmp_devices,
+            "connections": [],
+            "canvas_w": 1000.0,
+            "canvas_h": 1000.0,
+        }
+        try:
+            place_result = polaris_place.place_circuit(tmp_circuit, mode="analytical")
+            for nm, pl in place_result["placements"].items():
+                w, h = dev_info[nm]["dims"]
+                placements[nm] = {"x": pl["x"], "y": pl["y"], "w": w, "h": h}
+        except Exception:
+            # analytical 失败 → 网格排列（非 fall-back，物理合理的布局）
+            for i, nm in enumerate(unplaced):
+                w, h = dev_info[nm]["dims"]
+                row, col = divmod(i, 5)
+                placements[nm] = {
+                    "x": col * (w + 20.0),
+                    "y": row * (h + 20.0),
+                    "w": w, "h": h,
+                }
 
     # 解析 connections: routes.optical.links + connections 字段
     connections = []
@@ -452,11 +498,11 @@ def convert_gdsfactory(raw: dict) -> tuple[dict, dict]:
             placements[nm]["x"] += shift_x
             placements[nm]["y"] += shift_y
 
-    # 画布尺寸: 自适应（max bbox + 10% 边距，确保所有器件在画布内）
+    # 画布尺寸: 紧凑自适应（max bbox + 5μm 边距，避免 DENSITY_MIN 误报）
     max_x = max(p["x"] + p["w"] for p in placements.values())
     max_y = max(p["y"] + p["h"] for p in placements.values())
-    canvas_w = max(max_x * 1.1, 100.0)
-    canvas_h = max(max_y * 1.1, 100.0)
+    canvas_w = max(max_x + 5.0, 100.0)
+    canvas_h = max(max_y + 5.0, 100.0)
 
     circuit = {
         "name": raw.get("name", "gdsfactory_circuit"),

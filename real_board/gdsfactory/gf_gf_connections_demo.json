@@ -7,24 +7,11 @@
   "canvas_h": 100.0,
   "status": "ok",
   "drc": {
-    "n_violations": 1,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 b 与 mmi_long 重叠",
-        "device_name": "b",
-        "location": [
-          5.0,
-          5.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "NO_OVERLAP"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

@@ -3,14 +3,14 @@
   "category": "expert_demos",
   "n_devices": 82,
   "n_connections": 111,
-  "canvas_w": 1340.56438768812,
+  "canvas_w": 1379.0,
   "canvas_h": 1340.56438768812,
   "status": "ok",
   "drc": {
-    "n_violations": 43,
+    "n_violations": 35,
     "n_rules": 12,
-    "n_passed": 9,
-    "pass_rate": 0.75,
+    "n_passed": 10,
+    "pass_rate": 0.8333333333333334,
     "violations": [
       {
         "rule_name": "MIN_SPACING",
@@ -103,86 +103,6 @@
         ]
       },
       {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 mmi1_multiport_0_0 超出画布边界 (1273.00,460.50)-(1373.00,560.50) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "mmi1_multiport_0_0",
-        "location": [
-          1323.0,
-          510.5
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 mmi1_multiport_0_1 超出画布边界 (1272.00,314.00)-(1372.00,414.00) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "mmi1_multiport_0_1",
-        "location": [
-          1322.0,
-          364.0
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 mmi1_ps_array_1_heater_3 超出画布边界 (1274.00,369.00)-(1374.00,379.00) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "mmi1_ps_array_1_heater_3",
-        "location": [
-          1324.0,
-          374.0
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 mmi1_ps_array_1_heater_7 超出画布边界 (1274.00,259.00)-(1374.00,269.00) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "mmi1_ps_array_1_heater_7",
-        "location": [
-          1324.0,
-          264.0
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 mmi1_multiport_1_0 超出画布边界 (1273.00,561.50)-(1373.00,661.50) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "mmi1_multiport_1_0",
-        "location": [
-          1323.0,
-          611.5
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 mmi1_multiport_1_1 超出画布边界 (1273.00,204.00)-(1373.00,304.00) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "mmi1_multiport_1_1",
-        "location": [
-          1323.0,
-          254.0
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 gc_array_out_gc_0 超出画布边界 (1321.00,621.50)-(1341.00,641.50) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "gc_array_out_gc_0",
-        "location": [
-          1331.0,
-          631.5
-        ]
-      },
-      {
-        "rule_name": "BOUNDARY",
-        "severity": 1.0,
-        "message": "BOUNDARY: 器件 gc_array_out_gc_1 超出画布边界 (1323.00,642.50)-(1343.00,662.50) canvas=(1340.56438768812,1340.56438768812)",
-        "device_name": "gc_array_out_gc_1",
-        "location": [
-          1333.0,
-          652.5
-        ]
-      },
-      {
         "rule_name": "NO_OVERLAP",
         "severity": 1.0,
         "message": "NO_OVERLAP: 器件 mol_array_0_mzi_0 与 mmi0_ps_array_0_heater_1 重叠",
@@ -211,10 +131,89 @@
           338.0,
           118.0
         ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_4 与 mmi0_ps_array_0_heater_4 重叠",
+        "device_name": "mol_array_0_mzi_4",
+        "location": [
+          336.0,
+          240.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_5 与 mmi0_ps_array_0_heater_0 重叠",
+        "device_name": "mol_array_0_mzi_5",
+        "location": [
+          336.0,
+          169.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_5 与 mmi0_ps_array_0_heater_5 重叠",
+        "device_name": "mol_array_0_mzi_5",
+        "location": [
+          336.0,
+          169.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_6 与 mmi0_ps_array_0_heater_6 重叠",
+        "device_name": "mol_array_0_mzi_6",
+        "location": [
+          367.0,
+          399.5
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_7 与 mmi0_ps_array_0_heater_7 重叠",
+        "device_name": "mol_array_0_mzi_7",
+        "location": [
+          367.0,
+          291.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi0_ps_array_0_heater_7 与 mmi0_multiport_0_0 重叠",
+        "device_name": "mmi0_ps_array_0_heater_7",
+        "location": [
+          476.5,
+          240.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi0_multiport_0_1 与 mmi0_ps_array_1_heater_6 重叠",
+        "device_name": "mmi0_multiport_0_1",
+        "location": [
+          542.0,
+          341.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mmi0_multiport_1_1 与 mmi0_ps_array_2_heater_6 重叠",
+        "device_name": "mmi0_multiport_1_1",
+        "location": [
+          718.0,
+          432.0
+        ]
       }
     ],
     "violated_rules": [
-      "BOUNDARY",
       "MIN_SPACING",
       "NO_OVERLAP"
     ]
