@@ -191,6 +191,77 @@ def _run_ce_iterations(
     return q_means, q_stds, total_evals, converged
 
 
+def _run_ce_final_is_estimation(
+    failure_region: Callable[[np.ndarray], bool],
+    f_dists: list,
+    q_means: np.ndarray,
+    q_stds: np.ndarray,
+    n_samples: int,
+    rng: np.random.Generator,
+    d: int,
+) -> dict:
+    """运行 CE 最终 IS 估计，返回统计结果 dict（含 y_hat/se/re/ess 等）。"""
+    final_specs = [
+        {"type": "norm", "loc": float(q_means[j]), "scale": float(q_stds[j])}
+        for j in range(d)
+    ]
+    q_dists = _build_univariate_distributions(final_specs)
+    samples = _sample_from_distributions(q_dists, n_samples, rng)
+    log_f = _logpdf_distributions(f_dists, samples)
+    log_q = _logpdf_distributions(q_dists, samples)
+    log_w = log_f - log_q
+    bad_mask = np.isinf(log_w) & (log_w < 0) & np.isfinite(log_f)
+    if np.any(bad_mask):
+        n_bad = int(np.sum(bad_mask))
+        raise RuntimeError(
+            f"CE 最终 q 分布支撑不足: {n_bad} 个样本 q.pdf=0 但 f.pdf>0。"
+            f"绝对连续条件违反。禁止 fall-back（R03）。"
+        )
+    weights = np.exp(log_w)
+    flags = _evaluate_failure_flags(
+        failure_region, samples, "最终 IS 估计 failure_region"
+    )
+    n_failures = int(np.sum(flags))
+    weighted = flags.astype(float) * weights
+    (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
+        _compute_weighted_yield_stats(weighted, n_samples, n_failures)
+    )
+    return {
+        "samples": samples, "log_w": log_w, "n_failures": n_failures,
+        "y_hat": y_hat, "se": se, "re": re, "ci_lower": ci_lower,
+        "ci_upper": ci_upper, "ess": ess, "ess_ratio": ess_ratio,
+        "speedup": speedup,
+    }
+
+
+def _check_ce_final_quality(is_data: dict, min_ess_ratio: float) -> None:
+    """CE 最终质量诊断（退化即 raise，R03 禁止 fall-back）。"""
+    n_failures = is_data["n_failures"]
+    ess_ratio = is_data["ess_ratio"]
+    re = is_data["re"]
+    if n_failures < 30:
+        raise RuntimeError(
+            f"CE 最终失效样本数 {n_failures} < 30，统计意义不足。"
+            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < min_ess_ratio:
+        raise RuntimeError(
+            f"CE 最终 IS 估计 ESS 退化: ESS/n_failures = {ess_ratio:.4f} "
+            f"< 阈值 {min_ess_ratio}。禁止 fall-back（R03）。"
+        )
+    if re > 0.5:
+        raise RuntimeError(
+            f"CE 最终 IS 估计 RE = {re:.4f} > 0.5，不可靠。"
+            f"禁止 fall-back（R03）。"
+        )
+    if ess_ratio < 0.3 or re > 0.1:
+        logger.warning(
+            "CE 最终 ESS/n_failures = %.4f, RE = %.4f 边缘区间。",
+            ess_ratio, re,
+        )
+
+
 def cross_entropy_importance_sampling(
     failure_region: Callable[[np.ndarray], bool],
     nominal_dist: list[dict],
@@ -251,70 +322,20 @@ def cross_entropy_importance_sampling(
         n_elite, smoothing_alpha, d,
     )
 
-    # 用最终 q 跑大批量 IS 估计
-    final_specs = [
-        {"type": "norm", "loc": float(q_means[j]), "scale": float(q_stds[j])}
-        for j in range(d)
-    ]
-    q_dists = _build_univariate_distributions(final_specs)
-    samples = _sample_from_distributions(q_dists, n_samples, rng)
-
-    log_f = _logpdf_distributions(f_dists, samples)
-    log_q = _logpdf_distributions(q_dists, samples)
-    log_w = log_f - log_q
-
-    bad_mask = np.isinf(log_w) & (log_w < 0) & np.isfinite(log_f)
-    if np.any(bad_mask):
-        n_bad = int(np.sum(bad_mask))
-        raise RuntimeError(
-            f"CE 最终 q 分布支撑不足: {n_bad} 个样本 q.pdf=0 但 f.pdf>0。"
-            f"绝对连续条件违反。禁止 fall-back（R03）。"
-        )
-
-    weights = np.exp(log_w)
-    flags = _evaluate_failure_flags(
-        failure_region, samples, "最终 IS 估计 failure_region"
+    is_data = _run_ce_final_is_estimation(
+        failure_region, f_dists, q_means, q_stds, n_samples, rng, d
     )
     total_evals += n_samples
-    n_failures = int(np.sum(flags))
-    weighted = flags.astype(float) * weights
-
-    (y_hat, se, re, ci_lower, ci_upper, ess, ess_ratio, speedup) = (
-        _compute_weighted_yield_stats(weighted, n_samples, n_failures)
-    )
-
-    # CE 最终质量诊断（退化即 raise，R03）
-    if n_failures < 30:
-        raise RuntimeError(
-            f"CE 最终失效样本数 {n_failures} < 30，统计意义不足。"
-            f"建议: 增大 n_iterations、调整 elite_ratio、或改用 MIXTURE。"
-            f"禁止 fall-back（R03）。"
-        )
-    if ess_ratio < min_ess_ratio:
-        raise RuntimeError(
-            f"CE 最终 IS 估计 ESS 退化: ESS/n_failures = {ess_ratio:.4f} "
-            f"< 阈值 {min_ess_ratio}。禁止 fall-back（R03）。"
-        )
-    if re > 0.5:
-        raise RuntimeError(
-            f"CE 最终 IS 估计 RE = {re:.4f} > 0.5，不可靠。"
-            f"禁止 fall-back（R03）。"
-        )
-    if ess_ratio < 0.3 or re > 0.1:
-        logger.warning(
-            "CE 最终 ESS/n_failures = %.4f, RE = %.4f 边缘区间。",
-            ess_ratio,
-            re,
-        )
-
+    _check_ce_final_quality(is_data, min_ess_ratio)
     return ImportanceSamplingResult(
-        yield_estimate=y_hat, std_error=se, relative_error=re,
-        ci_lower=ci_lower, ci_upper=ci_upper,
-        effective_sample_size=ess, speedup_vs_mc=speedup,
-        n_samples=n_samples, n_failures=n_failures,
-        n_evaluations=total_evals,
+        yield_estimate=is_data["y_hat"], std_error=is_data["se"],
+        relative_error=is_data["re"], ci_lower=is_data["ci_lower"],
+        ci_upper=is_data["ci_upper"], effective_sample_size=is_data["ess"],
+        speedup_vs_mc=is_data["speedup"], n_samples=n_samples,
+        n_failures=is_data["n_failures"], n_evaluations=total_evals,
         biasing_method=BiasingMethod.CROSS_ENTROPY.value,
-        log_weights=log_w, samples=samples, converged=converged,
+        log_weights=is_data["log_w"], samples=is_data["samples"],
+        converged=converged,
     )
 
 
