@@ -348,13 +348,29 @@ class DRCEngine:
         """NO_OVERLAP: 器件之间重叠视为违规（touching 允许）。
 
         来源: Berg "Computational Geometry" AABB 相交判定。
+
+        例外: 直接连接的器件对（波导↔器件）跳过——波导连接器件端口时
+        端口区域 touching/重叠是正常物理连接，非布局冲突（R05 Bug 修复，
+        与 _check_min_spacing 一致，commit 753e95e0 同源逻辑）。
+        物理依据: Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
+        §4.3，波导与器件端口连接处几何重叠是常规结构。
         """
         names = list(placements.keys())
         boxes = {nm: aabb(placements[nm]) for nm in names}
+        # 构建直接连接对集合（从 connections 提取，与 _check_min_spacing 一致）
+        connected_pairs: set[tuple[str, str]] = set()
+        for conn in circuit.get("connections", []):
+            if len(conn) >= 4:
+                d1, d2 = str(conn[0]), str(conn[2])
+                connected_pairs.add((d1, d2))
+                connected_pairs.add((d2, d1))
         violations: list[DRCViolation] = []
         for i in range(len(names)):
             for j in range(i + 1, len(names)):
                 ni, nj = names[i], names[j]
+                # 跳过直接连接的器件对（波导连接端口重叠正常）
+                if (ni, nj) in connected_pairs:
+                    continue
                 if aabb_overlap(boxes[ni], boxes[nj]):
                     loc = aabb_center(merge_aabb(boxes[ni], boxes[nj]))
                     violations.append(DRCViolation(

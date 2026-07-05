@@ -2,59 +2,16 @@
   "name": "demo_Crossings",
   "category": "expert_demos",
   "n_devices": 5,
-  "n_connections": 0,
-  "canvas_w": 57154.95,
-  "canvas_h": 127060.7,
+  "n_connections": 4,
+  "canvas_w": 57098.25,
+  "canvas_h": 55614.7,
   "status": "ok",
   "drc": {
-    "n_violations": 4,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_crossing4 无任何连接（孤立器件）",
-        "device_name": "ebeam_crossing4",
-        "location": [
-          37888.4,
-          55604.85
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_crossing4_1 无任何连接（孤立器件）",
-        "device_name": "ebeam_crossing4_1",
-        "location": [
-          28288.4,
-          55604.85
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_crossing4_2 无任何连接（孤立器件）",
-        "device_name": "ebeam_crossing4_2",
-        "location": [
-          47488.4,
-          55604.85
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_crossing4_3 无任何连接（孤立器件）",
-        "device_name": "ebeam_crossing4_3",
-        "location": [
-          57088.4,
-          55604.85
-        ]
-      }
-    ],
-    "violated_rules": [
-      "PORT_CONNECTIVITY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

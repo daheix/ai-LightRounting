@@ -1,30 +1,17 @@
 {
   "name": "gf_gf_routes_steps",
   "category": "gdsfactory",
-  "n_devices": 3,
+  "n_devices": 2,
   "n_connections": 2,
   "canvas_w": 556.0,
   "canvas_h": 605.0,
   "status": "ok",
   "drc": {
-    "n_violations": 1,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 obstacle 无任何连接（孤立器件）",
-        "device_name": "obstacle",
-        "location": [
-          171.0,
-          300.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "PORT_CONNECTIVITY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

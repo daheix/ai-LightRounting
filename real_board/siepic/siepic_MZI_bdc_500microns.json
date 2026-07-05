@@ -2,39 +2,16 @@
   "name": "siepic_MZI_bdc_500microns",
   "category": "siepic",
   "n_devices": 4,
-  "n_connections": 0,
+  "n_connections": 1,
   "canvas_w": 121.10000000000001,
   "canvas_h": 187.70000000000002,
   "status": "ok",
   "drc": {
-    "n_violations": 2,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_y_1550 无任何连接（孤立器件）",
-        "device_name": "ebeam_y_1550",
-        "location": [
-          8.5,
-          37.31
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 ebeam_bdc_te1550 无任何连接（孤立器件）",
-        "device_name": "ebeam_bdc_te1550",
-        "location": [
-          36.475,
-          28.5
-        ]
-      }
-    ],
-    "violated_rules": [
-      "PORT_CONNECTIVITY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

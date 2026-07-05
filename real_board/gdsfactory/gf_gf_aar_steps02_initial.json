@@ -1,72 +1,17 @@
 {
   "name": "gf_gf_aar_steps02_initial",
   "category": "gdsfactory",
-  "n_devices": 3,
-  "n_connections": 0,
+  "n_devices": 2,
+  "n_connections": 2,
   "canvas_w": 135.0,
-  "canvas_h": 109.5,
+  "canvas_h": 100.0,
   "status": "ok",
   "drc": {
-    "n_violations": 5,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 9,
-    "pass_rate": 0.75,
-    "violations": [
-      {
-        "rule_name": "MIN_SPACING",
-        "severity": 1.0,
-        "message": "MIN_SPACING: 器件 mmi_long 与 obstacle1 间距 0.0000μm < 阈值 1.0000μm",
-        "device_name": "mmi_long",
-        "location": [
-          115.0,
-          89.5
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mmi_long 与 obstacle1 重叠",
-        "device_name": "mmi_long",
-        "location": [
-          115.0,
-          89.5
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 mmi_long 无任何连接（孤立器件）",
-        "device_name": "mmi_long",
-        "location": [
-          125.0,
-          84.5
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 mmi_short 无任何连接（孤立器件）",
-        "device_name": "mmi_short",
-        "location": [
-          2.5,
-          2.25
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 obstacle1 无任何连接（孤立器件）",
-        "device_name": "obstacle1",
-        "location": [
-          115.0,
-          89.5
-        ]
-      }
-    ],
-    "violated_rules": [
-      "MIN_SPACING",
-      "NO_OVERLAP",
-      "PORT_CONNECTIVITY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

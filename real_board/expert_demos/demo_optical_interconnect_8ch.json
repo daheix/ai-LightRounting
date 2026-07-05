@@ -4,10 +4,10 @@
   "n_devices": 82,
   "n_connections": 111,
   "canvas_w": 1379.0,
-  "canvas_h": 1340.56438768812,
+  "canvas_h": 713.5,
   "status": "ok",
   "drc": {
-    "n_violations": 35,
+    "n_violations": 17,
     "n_rules": 12,
     "n_passed": 10,
     "pass_rate": 0.8333333333333334,
@@ -125,61 +125,11 @@
       {
         "rule_name": "NO_OVERLAP",
         "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_3 与 mmi0_ps_array_0_heater_3 重叠",
-        "device_name": "mol_array_0_mzi_3",
-        "location": [
-          338.0,
-          118.0
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_4 与 mmi0_ps_array_0_heater_4 重叠",
-        "device_name": "mol_array_0_mzi_4",
-        "location": [
-          336.0,
-          240.0
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
         "message": "NO_OVERLAP: 器件 mol_array_0_mzi_5 与 mmi0_ps_array_0_heater_0 重叠",
         "device_name": "mol_array_0_mzi_5",
         "location": [
           336.0,
           169.0
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_5 与 mmi0_ps_array_0_heater_5 重叠",
-        "device_name": "mol_array_0_mzi_5",
-        "location": [
-          336.0,
-          169.0
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_6 与 mmi0_ps_array_0_heater_6 重叠",
-        "device_name": "mol_array_0_mzi_6",
-        "location": [
-          367.0,
-          399.5
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mol_array_0_mzi_7 与 mmi0_ps_array_0_heater_7 重叠",
-        "device_name": "mol_array_0_mzi_7",
-        "location": [
-          367.0,
-          291.0
         ]
       },
       {
@@ -195,21 +145,41 @@
       {
         "rule_name": "NO_OVERLAP",
         "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mmi0_multiport_0_1 与 mmi0_ps_array_1_heater_6 重叠",
-        "device_name": "mmi0_multiport_0_1",
+        "message": "NO_OVERLAP: 器件 mol_array_1_mzi_1 与 gc_array_out_gc_3 重叠",
+        "device_name": "mol_array_1_mzi_1",
         "location": [
-          542.0,
-          341.0
+          1118.0,
+          246.5
         ]
       },
       {
         "rule_name": "NO_OVERLAP",
         "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mmi0_multiport_1_1 与 mmi0_ps_array_2_heater_6 重叠",
-        "device_name": "mmi0_multiport_1_1",
+        "message": "NO_OVERLAP: 器件 mol_array_1_mzi_1 与 gc_array_out_gc_7 重叠",
+        "device_name": "mol_array_1_mzi_1",
         "location": [
-          718.0,
-          432.0
+          1118.0,
+          247.75
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_1_mzi_2 与 mmi1_ps_array_0_heater_7 重叠",
+        "device_name": "mol_array_1_mzi_2",
+        "location": [
+          1145.0,
+          534.0
+        ]
+      },
+      {
+        "rule_name": "NO_OVERLAP",
+        "severity": 1.0,
+        "message": "NO_OVERLAP: 器件 mol_array_1_mzi_2 与 mmi1_ps_array_1_heater_0 重叠",
+        "device_name": "mol_array_1_mzi_2",
+        "location": [
+          1145.5,
+          531.5
         ]
       }
     ],

@@ -3,38 +3,15 @@
   "category": "expert_demos",
   "n_devices": 5,
   "n_connections": 5,
-  "canvas_w": 1000.0,
-  "canvas_h": 1000.0,
+  "canvas_w": 386.0,
+  "canvas_h": 131.0,
   "status": "ok",
   "drc": {
-    "n_violations": 2,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mzm_I 与 combiner 重叠",
-        "device_name": "mzm_I",
-        "location": [
-          238.5,
-          50.0
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mzm_Q 与 phase_shifter 重叠",
-        "device_name": "mzm_Q",
-        "location": [
-          256.0,
-          101.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "NO_OVERLAP"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

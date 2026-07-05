@@ -7,24 +7,11 @@
   "canvas_h": 11005.5,
   "status": "ok",
   "drc": {
-    "n_violations": 1,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "DENSITY_MIN",
-        "severity": 0.6,
-        "message": "DENSITY_MIN: 布局密度 0.0001% 低于下限 0.0001%",
-        "device_name": "canvas",
-        "location": [
-          3507.5,
-          5502.75
-        ]
-      }
-    ],
-    "violated_rules": [
-      "DENSITY_MIN"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

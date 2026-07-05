@@ -2,61 +2,16 @@
   "name": "gf_gf_rectangles",
   "category": "gdsfactory",
   "n_devices": 2,
-  "n_connections": 0,
+  "n_connections": 1,
   "canvas_w": 100.0,
   "canvas_h": 100.0,
   "status": "ok",
   "drc": {
-    "n_violations": 4,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 9,
-    "pass_rate": 0.75,
-    "violations": [
-      {
-        "rule_name": "MIN_SPACING",
-        "severity": 1.0,
-        "message": "MIN_SPACING: 器件 r1 与 r2 间距 0.0000μm < 阈值 1.0000μm",
-        "device_name": "r1",
-        "location": [
-          2.0,
-          2.0
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 r1 与 r2 重叠",
-        "device_name": "r1",
-        "location": [
-          2.0,
-          2.0
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 r1 无任何连接（孤立器件）",
-        "device_name": "r1",
-        "location": [
-          2.0,
-          1.0
-        ]
-      },
-      {
-        "rule_name": "PORT_CONNECTIVITY",
-        "severity": 0.9,
-        "message": "PORT_CONNECTIVITY: 器件 r2 无任何连接（孤立器件）",
-        "device_name": "r2",
-        "location": [
-          1.0,
-          2.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "MIN_SPACING",
-      "NO_OVERLAP",
-      "PORT_CONNECTIVITY"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

@@ -3,28 +3,15 @@
   "category": "expert_demos",
   "n_devices": 5,
   "n_connections": 4,
-  "canvas_w": 1000.0,
-  "canvas_h": 1000.0,
+  "canvas_w": 316.0,
+  "canvas_h": 95.0,
   "status": "ok",
   "drc": {
-    "n_violations": 1,
+    "n_violations": 0,
     "n_rules": 12,
-    "n_passed": 11,
-    "pass_rate": 0.9166666666666666,
-    "violations": [
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 wg_out 与 gc_out 重叠",
-        "device_name": "wg_out",
-        "location": [
-          261.0,
-          55.0
-        ]
-      }
-    ],
-    "violated_rules": [
-      "NO_OVERLAP"
-    ]
+    "n_passed": 12,
+    "pass_rate": 1.0,
+    "violations": [],
+    "violated_rules": []
   }
 }

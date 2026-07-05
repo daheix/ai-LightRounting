@@ -3,11 +3,11 @@
   "category": "expert_demos",
   "n_devices": 8,
   "n_connections": 8,
-  "canvas_w": 1000.0,
-  "canvas_h": 1000.0,
+  "canvas_w": 187.0,
+  "canvas_h": 84.0,
   "status": "ok",
   "drc": {
-    "n_violations": 4,
+    "n_violations": 2,
     "n_rules": 12,
     "n_passed": 10,
     "pass_rate": 0.8333333333333334,
@@ -20,26 +20,6 @@
         "location": [
           131.0,
           40.5
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mmi_rgt_1 与 phase_shifter1 重叠",
-        "device_name": "mmi_rgt_1",
-        "location": [
-          132.0,
-          34.5
-        ]
-      },
-      {
-        "rule_name": "NO_OVERLAP",
-        "severity": 1.0,
-        "message": "NO_OVERLAP: 器件 mmi_rgt_1 与 phase_shifter3 重叠",
-        "device_name": "mmi_rgt_1",
-        "location": [
-          131.0,
-          37.0
         ]
       },
       {

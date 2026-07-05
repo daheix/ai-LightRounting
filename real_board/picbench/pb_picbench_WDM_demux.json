@@ -1,16 +1,17 @@
 {
   "name": "pb_picbench_WDM_demux",
   "category": "picbench",
-  "n_devices": 0,
-  "n_connections": 0,
-  "canvas_w": null,
-  "canvas_h": null,
-  "status": "error",
-  "error": "RuntimeError: 未知组件 'waveguide' 且 settings 无 length/length_mmi/size（settings={}，R03 禁止 fall-back 默认尺寸）",
+  "n_devices": 7,
+  "n_connections": 6,
+  "canvas_w": 1000.0,
+  "canvas_h": 1000.0,
+  "status": "ok",
   "drc": {
-    "n_violations": -1,
-    "pass_rate": 0.0,
+    "n_violations": 0,
+    "n_rules": 12,
+    "n_passed": 12,
+    "pass_rate": 1.0,
     "violations": [],
-    "error": "RuntimeError: 未知组件 'waveguide' 且 settings 无 length/length_mmi/size（settings={}，R03 禁止 fall-back 默认尺寸）"
+    "violated_rules": []
   }
 }

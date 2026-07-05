@@ -509,9 +509,11 @@ def test_no_overlap_pass():
 
 
 def test_no_overlap_fail():
-    """NO_OVERLAP 违规：两器件完全重叠。
+    """NO_OVERLAP 违规：两无连接器件完全重叠。
 
     AABB 相交判定: Berg "Computational Geometry" §2.1 区间相交。
+    注意: 直接连接的器件对跳过（波导连接端口重叠正常，R05 修复），
+    所以测试用无连接的器件对验证重叠检测。
     """
     circuit = {
         "name": "overlap",
@@ -521,7 +523,7 @@ def test_no_overlap_fail():
             {"name": "d2", "device_type": "wg",
              "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
         ],
-        "connections": [("d1", "out", "d2", "in")],
+        "connections": [],  # 无连接，重叠应报违规
         "canvas_w": 100, "canvas_h": 100,
     }
     placements = {
@@ -810,29 +812,29 @@ def test_density_min_fail():
 
 
 def test_density_min_xxl_threshold():
-    """DENSITY_MIN ≥10mm 画布连续缩放阈值（*创新*，光电子 EDA 专用）。
+    """DENSITY_MIN ≥1mm 画布连续缩放阈值（*创新*，光电子 EDA 专用）。
 
-    canvas=50000×50000μm²（50mm，≥10mm 连续缩放），阈值=100/canvas_area×100。
-    threshold = 100/(50000×50000)×100 = 100/2.5e9×100 = 4e-6%。
-    device=1×1=1μm²，density=1/2.5e9×100=4e-8% < 4e-6% → 违规。
-    device=100×100=10000μm²，density=10000/2.5e9×100=4e-4% > 4e-6% → 通过。
+    canvas=50000×50000μm²（50mm，≥1mm 连续缩放），阈值=10/canvas_area×100。
+    threshold = 10/(50000×50000)×100 = 10/2.5e9×100 = 4e-7%。
+    device=1×1=1μm²，density=1/2.5e9×100=4e-8% < 4e-7% → 违规。
+    device=100×100=10000μm²，density=10000/2.5e9×100=4e-4% > 4e-7% → 通过。
 
     连续缩放底层逻辑: CMP 是晶圆级工艺，密度按 process window（~1mm×1mm）
-    平均，whole-canvas density 对大画布无工艺意义。≥10mm 画布只要上有
-    ≥100μm² 器件面积即通过（SiEPIC WG_MIN_AREA 0.1μm² × 1000x safety factor）。
+    平均，whole-canvas density 对大画布无工艺意义。≥1mm 画布只要上有
+    ≥10μm² 器件面积即通过（SiEPIC WG_MIN_AREA 0.1μm² × 100x safety factor）。
 
     来源: Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度规则）；
           SiEPIC EBeam PDK DRC runset https://github.com/SiEPIC/SiEPIC_EBeam_PDK；
           Chrostowski & Hochberg 2015 §4.3（大画布器件密度天然低）
     """
     from polaris_drc.checks import density_min_threshold_by_canvas
-    # ≥10mm 连续缩放: threshold = 100/canvas_area×100
-    expected_thr = 100.0 / (50000.0 * 50000.0) * 100.0  # 4e-6%
+    # ≥1mm 连续缩放: threshold = 10/canvas_area×100
+    expected_thr = 10.0 / (50000.0 * 50000.0) * 100.0  # 4e-7%
     assert density_min_threshold_by_canvas(50000, 50000) == pytest.approx(expected_thr), (
-        f"≥10mm 连续缩放阈值应为 {expected_thr}%（100/2.5e9×100），"
+        f"≥1mm 连续缩放阈值应为 {expected_thr}%（10/2.5e9×100），"
         f"实际 {density_min_threshold_by_canvas(50000, 50000)}"
     )
-    # 违规：device 1×1=1μm²，density=4e-8% < threshold 4e-6%
+    # 违规：device 1×1=1μm²，density=4e-8% < threshold 4e-7%
     circuit_sparse = {
         "name": "xxl_sparse",
         "devices": [{"name": "d1", "device_type": "wg",
@@ -843,9 +845,9 @@ def test_density_min_xxl_threshold():
     placements_sparse = {"d1": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}}
     result = run_drc(circuit_sparse, placements_sparse)
     assert "DENSITY_MIN" in _violation_rule_names(result), (
-        "≥10mm 画布 1μm²/2.5e9μm²=4e-8% < 4e-6% 应违规"
+        "≥1mm 画布 1μm²/2.5e9μm²=4e-8% < 4e-7% 应违规"
     )
-    # 通过：device 100×100=10000μm²，density=4e-4% > threshold 4e-6%
+    # 通过：device 100×100=10000μm²，density=4e-4% > threshold 4e-7%
     circuit_dense = {
         "name": "xxl_dense",
         "devices": [{"name": "d1", "device_type": "wg",
@@ -856,54 +858,59 @@ def test_density_min_xxl_threshold():
     placements_dense = {"d1": {"x": 0.0, "y": 0.0, "w": 100.0, "h": 100.0}}
     result_dense = run_drc(circuit_dense, placements_dense)
     assert "DENSITY_MIN" not in _violation_rule_names(result_dense), (
-        "≥10mm 画布 10000μm²/2.5e9μm²=4e-4% > 4e-6% 应通过"
+        "≥1mm 画布 10000μm²/2.5e9μm²=4e-4% > 4e-7% 应通过"
     )
 
 
 def test_density_min_xxxl_threshold():
     """DENSITY_MIN 晶圆级画布连续缩放阈值（*创新*）。
 
-    canvas=200000×200000μm²（200mm，≥10mm 连续缩放），阈值=100/canvas_area×100。
-    threshold = 100/(200000×200000)×100 = 100/4e10×100 = 2.5e-7%。
+    canvas=200000×200000μm²（200mm，≥1mm 连续缩放），阈值=10/canvas_area×100。
+    threshold = 10/(200000×200000)×100 = 10/4e10×100 = 2.5e-8%。
     LiDAR OPA 阵列等晶圆级光子电路常用 100mm+ 画布。
 
     连续缩放底层逻辑: CMP 是晶圆级工艺，密度按 process window（~1mm×1mm）
-    平均，whole-canvas density 对晶圆级画布无工艺意义。≥10mm 画布只要上有
-    ≥100μm² 器件面积即通过。
+    平均，whole-canvas density 对晶圆级画布无工艺意义。≥1mm 画布只要上有
+    ≥10μm² 器件面积即通过。
 
     来源: ISPD 2025 LiDAR benchmark https://github.com/ALIGN-analoglayout/ALIGN；
           Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度规则）；
           SiEPIC EBeam PDK DRC runset https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
     from polaris_drc.checks import density_min_threshold_by_canvas
-    # ≥10mm 连续缩放: threshold = 100/canvas_area×100
-    # 200000×200000 = 4e10 μm², threshold = 100/4e10×100 = 2.5e-7%
-    expected_thr_xxxl = 100.0 / (200000.0 * 200000.0) * 100.0
+    # ≥1mm 连续缩放: threshold = 10/canvas_area×100
+    # 200000×200000 = 4e10 μm², threshold = 10/4e10×100 = 2.5e-8%
+    expected_thr_xxxl = 10.0 / (200000.0 * 200000.0) * 100.0
     assert density_min_threshold_by_canvas(200000, 200000) == pytest.approx(expected_thr_xxxl), (
-        f"≥10mm 连续缩放阈值应为 {expected_thr_xxxl}%（100/4e10×100），"
+        f"≥1mm 连续缩放阈值应为 {expected_thr_xxxl}%（10/4e10×100），"
         f"实际 {density_min_threshold_by_canvas(200000, 200000)}"
     )
-    # 100000×50000 = 5e9 μm², threshold = 100/5e9×100 = 2e-6%
-    expected_thr_100k = 100.0 / (100000.0 * 50000.0) * 100.0
+    # 100000×50000 = 5e9 μm², threshold = 10/5e9×100 = 2e-7%
+    expected_thr_100k = 10.0 / (100000.0 * 50000.0) * 100.0
     assert density_min_threshold_by_canvas(100000, 50000) == pytest.approx(expected_thr_100k), (
         f"100000×50000 连续缩放阈值应为 {expected_thr_100k}%"
     )
-    # 99999×50000: max=99999 ≥ 10000，仍为连续缩放（非 XL 离散）
-    expected_thr_99999 = 100.0 / (99999.0 * 50000.0) * 100.0
+    # 99999×50000: max=99999 ≥ 1000，仍为连续缩放
+    expected_thr_99999 = 10.0 / (99999.0 * 50000.0) * 100.0
     assert density_min_threshold_by_canvas(99999, 50000) == pytest.approx(expected_thr_99999), (
-        f"99999×50000 连续缩放阈值应为 {expected_thr_99999}%（≥10mm 连续缩放）"
+        f"99999×50000 连续缩放阈值应为 {expected_thr_99999}%（≥1mm 连续缩放）"
     )
-    # 旧分级保持兼容（< 10mm 仍为离散分级）
+    # 旧分级保持兼容（< 1mm 仍为离散分级，≥1mm 连续缩放）
     assert density_min_threshold_by_canvas(100, 100) == 0.01       # XS/S
     assert density_min_threshold_by_canvas(600, 600) == 0.005      # M
-    assert density_min_threshold_by_canvas(1500, 1500) == 0.002    # L
-    assert density_min_threshold_by_canvas(3000, 3000) == 0.001    # XL
-    assert density_min_threshold_by_canvas(8000, 8000) == 0.001    # XL 上界
-    # 边界: 9999 < 10000 → XL 离散 0.001%；10000 ≥ 10000 → 连续缩放
-    assert density_min_threshold_by_canvas(9999, 9999) == 0.001    # XL 上界（< 10mm）
-    expected_thr_10k = 100.0 / (10000.0 * 10000.0) * 100.0  # 1e-4%
+    # ≥1mm 连续缩放: 1500×1500 → 10/2.25e6×100 ≈ 4.44e-4%
+    assert density_min_threshold_by_canvas(1500, 1500) == pytest.approx(10.0 / (1500.0 * 1500.0) * 100.0)
+    # 3000×3000 → 10/9e6×100 ≈ 1.11e-4%
+    assert density_min_threshold_by_canvas(3000, 3000) == pytest.approx(10.0 / (3000.0 * 3000.0) * 100.0)
+    # ≥1mm 全部连续缩放（不再有 XL 离散分级）
+    # 8000×8000: 10/6.4e7×100 ≈ 1.5625e-5%
+    assert density_min_threshold_by_canvas(8000, 8000) == pytest.approx(10.0 / (8000.0 * 8000.0) * 100.0)
+    # 9999×9999: 10/99980001×100 ≈ 1.0002e-5%
+    assert density_min_threshold_by_canvas(9999, 9999) == pytest.approx(10.0 / (9999.0 * 9999.0) * 100.0)
+    # 10000×10000: 10/1e8×100 = 1e-5%
+    expected_thr_10k = 10.0 / (10000.0 * 10000.0) * 100.0  # 1e-5%
     assert density_min_threshold_by_canvas(10000, 10000) == pytest.approx(expected_thr_10k), (
-        f"10000×10000 连续缩放阈值应为 {expected_thr_10k}%（≥10mm 边界）"
+        f"10000×10000 连续缩放阈值应为 {expected_thr_10k}%（≥1mm 连续缩放）"
     )
 
 
