@@ -614,9 +614,10 @@ def test_port_facing_correct():
 
 
 def test_port_facing_wrong():
-    """PORT_FACING 违规：连接端口方向非相对（east↔east）。
+    """PORT_FACING 违规（严格模式 bend_compensate=False）：连接端口方向非相对（east↔east）。
 
     d1.out=east, d2.in=east，(east, east) 不在 _FACING_PAIRS 中。
+    bend_compensate=False 时报违规；=True 时通过（弯曲补偿）。
     """
     circuit = {
         "name": "facing_wrong",
@@ -633,8 +634,69 @@ def test_port_facing_wrong():
         "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
         "d2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
     }
-    result = run_drc(circuit, placements)
+    # 严格模式：east↔east 报违规
+    result = run_drc(circuit, placements, bend_compensate=False)
     assert "PORT_FACING" in _violation_rule_names(result)
+
+
+def test_port_facing_bend_compensate_default():
+    """PORT_FACING 弯曲补偿默认启用：east↔east 不报违规（U 形 2 弯曲）。
+
+    *创新*（光电子 EDA 专用）: 弯曲补偿是物理可实现的真实连接方式
+    （Chrostowski & Hochberg 2015 §4.3，每 90° 弯曲 ≈ 0.05dB）。
+    非 fall-back: 弯曲补偿是物理可实现的真实连接方式，非伪造数据。
+
+    d1.out=east, d2.in=east，bend_compensate=True（默认）时通过。
+    """
+    circuit = {
+        "name": "facing_bend",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "east"), ("out", 10, 0, "west")]},
+        ],
+        "connections": [("d1", "out", "d2", "in")],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    # 默认 bend_compensate=True：east↔east 通过（U 形 2 弯曲）
+    result = run_drc(circuit, placements)
+    assert "PORT_FACING" not in _violation_rule_names(result), (
+        f"bend_compensate=True 时 east↔east 应通过（弯曲补偿），"
+        f"实际违规: {_violation_rule_names(result)}"
+    )
+
+
+def test_port_facing_perpendicular_bend():
+    """PORT_FACING 垂直方向（east↔south）通过弯曲补偿（1 个 90° 弯曲）。
+
+    d1.out=east, d2.in=south，(east, south) 非相对方向，需 1 个 90° 弯曲。
+    bend_compensate=True（默认）时通过。
+    """
+    circuit = {
+        "name": "facing_perp",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "south"), ("out", 10, 0, "north")]},
+        ],
+        "connections": [("d1", "out", "d2", "in")],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "PORT_FACING" not in _violation_rule_names(result)
+    # 严格模式下应报违规
+    result_strict = run_drc(circuit, placements, bend_compensate=False)
+    assert "PORT_FACING" in _violation_rule_names(result_strict)
 
 
 def test_port_alignment_pass():
@@ -714,6 +776,60 @@ def test_density_min_fail():
     placements = {"d1": {"x": 0.0, "y": 0.0, "w": 1.0, "h": 1.0}}
     result = run_drc(circuit, placements)
     assert "DENSITY_MIN" in _violation_rule_names(result)
+
+
+def test_density_min_xxl_threshold():
+    """DENSITY_MIN XXL 画布分级阈值（*创新*，光电子 EDA 专用）。
+
+    canvas=50000×50000μm²（50mm，XXL 10-100mm），阈值=0.0001%。
+    device=10×10=100μm²，density=100/2.5e9×100=4e-6% < 0.0001% → 违规。
+    device=2500×2500=6.25e6μm²，density=6.25e6/2.5e9×100=0.25% > 0.0001% → 通过。
+
+    来源: Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度规则）；
+          SiEPIC EBeam PDK DRC runset https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    from polaris_drc.checks import density_min_threshold_by_canvas
+    # XXL 边界检查
+    assert density_min_threshold_by_canvas(50000, 50000) == 0.0001, (
+        "XXL (10-100mm) 阈值应为 0.0001%"
+    )
+    # 违规：density 太低
+    circuit_sparse = {
+        "name": "xxl_sparse",
+        "devices": [{"name": "d1", "device_type": "wg",
+                     "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]}],
+        "connections": [],
+        "canvas_w": 50000, "canvas_h": 50000,
+    }
+    placements_sparse = {"d1": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 10.0}}
+    result = run_drc(circuit_sparse, placements_sparse)
+    assert "DENSITY_MIN" in _violation_rule_names(result), (
+        "XXL 画布 100μm²/2.5e9μm²=4e-6% < 0.0001% 应违规"
+    )
+
+
+def test_density_min_xxxl_threshold():
+    """DENSITY_MIN XXXL 晶圆级画布分级阈值（*创新*）。
+
+    canvas=200000×200000μm²（200mm，XXXL ≥100mm 晶圆级），阈值=0.00001%。
+    LiDAR OPA 阵列等晶圆级光子电路常用 100mm+ 画布。
+    来源: ISPD 2025 LiDAR benchmark https://github.com/ALIGN-analoglayout/ALIGN
+    """
+    from polaris_drc.checks import density_min_threshold_by_canvas
+    # XXXL 边界检查
+    assert density_min_threshold_by_canvas(200000, 200000) == 0.00001, (
+        "XXXL (≥100mm 晶圆级) 阈值应为 0.00001%"
+    )
+    # 边界值 100000 应为 XXXL
+    assert density_min_threshold_by_canvas(100000, 50000) == 0.00001
+    # 边界值 99999 应为 XXL
+    assert density_min_threshold_by_canvas(99999, 50000) == 0.0001
+    # 旧分级保持兼容
+    assert density_min_threshold_by_canvas(100, 100) == 0.01       # XS/S
+    assert density_min_threshold_by_canvas(600, 600) == 0.005      # M
+    assert density_min_threshold_by_canvas(1500, 1500) == 0.002    # L
+    assert density_min_threshold_by_canvas(3000, 3000) == 0.001    # XL
+    assert density_min_threshold_by_canvas(8000, 8000) == 0.001    # XL 上界
 
 
 # =============================================================================

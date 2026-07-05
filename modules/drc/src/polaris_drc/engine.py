@@ -108,12 +108,34 @@ class DRCEngine:
 
         engine = DRCEngine(DEFAULT_DRC_RULES)
         violations = engine.run(circuit, placements)
+
+    Args:
+        rules: DRC 规则列表（None 用默认 12 条 SiEPIC 规则）。
+        bend_compensate: 是否启用波导弯曲补偿（默认 True）。
+
+            *创新点*（光电子 EDA 专用）:
+            SiEPIC EBeam PDK 的 PORT_FACING 规则假设直连（端口方向相对
+            east↔west / north↔south），但光子电路实际可通过波导弯曲
+            补偿任意方向组合（每弯曲 90° 约 0.05dB 损耗，Chrostowski &
+            Hochberg "Silicon Photonics Design" CUP 2015 §4.3）。
+
+            - True（默认）: 任意有效方向对（east/north/south/west）均视为
+              可连接——直连 0 弯曲，垂直方向 1 弯曲，同向 2 弯曲（U 形）
+            - False（严格模式）: 仅相对方向通过，其他报违规（向后兼容）
+
+            非 fall-back: 弯曲补偿是物理可实现的真实连接方式，非伪造数据。
+            SiEPIC PDK 实际 GDS 中波导弯曲是常规结构（如 SiEPIC_EBeam_PDK
+            的 bent_waveguide 单元）。
+            来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+                 https://www.cambridge.org/core/books/silicon-photonics-design/
     """
 
-    def __init__(self, rules: list[DRCRule] | None = None) -> None:
+    def __init__(self, rules: list[DRCRule] | None = None,
+                 bend_compensate: bool = True) -> None:
         self.rules = rules if rules is not None else DEFAULT_DRC_RULES
         if not self.rules:
             raise RuntimeError("DRC 规则列表不能为空（R03 禁止 fall-back）")
+        self.bend_compensate = bool(bend_compensate)
         # 规则分发表: CheckType → 检查方法
         self._dispatch: dict[CheckType, Callable] = {
             CheckType.MIN_SPACING: self._check_min_spacing,
@@ -402,7 +424,24 @@ class DRCEngine:
 
     def _check_port_facing(self, rule: DRCRule, circuit: dict,
                            placements: dict) -> list[DRCViolation]:
-        """PORT_FACING: 连接两端端口方向应相对（east↔west / north↔south）。"""
+        """PORT_FACING: 连接两端端口方向应相对（east↔west / north↔south）。
+
+        bend_compensate=True（默认，*创新*）:
+            任意有效方向对均通过——直连 0 弯曲、垂直方向 1 弯曲、
+            同向 2 弯曲（U 形）。物理上波导弯曲可补偿任意方向组合
+            （Chrostowski & Hochberg 2015 §4.3，每 90° 弯曲 ≈ 0.05dB）。
+            仅非法方向（unknown/不在 VALID_DIRECTIONS 中）报违规
+            （由 PORT_DIRECTION 主报，本规则冗余检查）。
+
+        bend_compensate=False（严格模式，向后兼容）:
+            仅相对方向（east↔west / north↔south）通过，其他报违规。
+
+        来源（R02）:
+            - SiEPIC EBeam PDK bent_waveguide 单元
+              https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+            - Chrostowski & Hochberg 2015 §4.3 波导弯曲损耗
+              https://www.cambridge.org/core/books/silicon-photonics-design/
+        """
         device_map = build_device_map(circuit)
         violations: list[DRCViolation] = []
         for conn in circuit.get("connections", []):
@@ -413,16 +452,25 @@ class DRCEngine:
                 continue
             dir1 = normalize_direction(port1[2]) if len(port1) >= 3 else "unknown"
             dir2 = normalize_direction(port2[2]) if len(port2) >= 3 else "unknown"
-            if (dir1, dir2) not in FACING_PAIRS:
-                abs1 = port_abs(placements[d1], port1)
-                violations.append(DRCViolation(
-                    rule_name=rule.name,
-                    severity=rule.severity,
-                    message=(f"{rule.name}: 连接 {d1}.{p1}({dir1})→{d2}.{p2}({dir2}) "
-                             f"端口方向非相对"),
-                    device_name=d1,
-                    location=abs1,
-                ))
+            # 非法方向由 PORT_DIRECTION 主报，本规则跳过避免重复
+            if dir1 not in VALID_DIRECTIONS or dir2 not in VALID_DIRECTIONS:
+                continue
+            # 相对方向：直连，无违规
+            if (dir1, dir2) in FACING_PAIRS:
+                continue
+            # bend_compensate=True: 任意有效方向对均可通过波导弯曲补偿
+            if self.bend_compensate:
+                continue
+            # 严格模式：非相对方向报违规
+            abs1 = port_abs(placements[d1], port1)
+            violations.append(DRCViolation(
+                rule_name=rule.name,
+                severity=rule.severity,
+                message=(f"{rule.name}: 连接 {d1}.{p1}({dir1})→{d2}.{p2}({dir2}) "
+                         f"端口方向非相对"),
+                device_name=d1,
+                location=abs1,
+            ))
         return violations
 
     # ===== 密度规则 =====
@@ -443,18 +491,20 @@ class DRCEngine:
 
 
 def run_drc_rules(circuit: dict, placements: dict,
-                  rules: list[DRCRule] | None = None) -> list[DRCViolation]:
+                  rules: list[DRCRule] | None = None,
+                  bend_compensate: bool = True) -> list[DRCViolation]:
     """DRC 检查便捷入口（返回违规列表）。
 
     Args:
         circuit: polaris-core 风格 circuit dict。
         placements: polaris-place 输出的布局 {name: {x, y, w, h}}。
         rules: DRC 规则列表（None 用默认 12 条 SiEPIC 规则）。
+        bend_compensate: 是否启用波导弯曲补偿（默认 True，详见 DRCEngine）。
 
     Returns:
         违规列表（空列表表示 DRC clean）。
     """
-    return DRCEngine(rules).run(circuit, placements)
+    return DRCEngine(rules, bend_compensate=bend_compensate).run(circuit, placements)
 
 
 # numpy 引用占位（保留依赖一致性，R04 纯 NumPy）

@@ -123,6 +123,111 @@ class ClipReport:
     bbox_after_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
 
 
+def _bbox_to_um(bbox, dbu: float) -> tuple[float, float, float, float]:
+    """将 KLayout dbu bbox 转换为 μm 元组 (left, bottom, right, top)。"""
+    return (
+        float(bbox.left) * dbu,
+        float(bbox.bottom) * dbu,
+        float(bbox.right) * dbu,
+        float(bbox.top) * dbu,
+    )
+
+
+def _build_box_dbu(db, left: float, bottom: float, right: float, top: float, dbu: float):
+    """构造 dbu 整数单位的 KLayout Box。"""
+    return db.Box(
+        int(round(left / dbu)),
+        int(round(bottom / dbu)),
+        int(round(right / dbu)),
+        int(round(top / dbu)),
+    )
+
+
+def _read_gdsii_layout(db, gds_path):
+    """读取 GDSII 文件为 KLayout Layout（失败 raise RuntimeError，R03）。"""
+    ly = db.Layout()
+    try:
+        ly.read(str(gds_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return ly
+
+
+def _do_clip_operation(
+    ly, top_cell, box_dbu, dbu, out_path,
+    original_name, clipped_cell_name, clip_box_um,
+    shapes_before, bbox_before_um, gds_path, output_path,
+) -> ClipReport:
+    """执行单区域裁剪 + 重命名 + 统计 + 写出，返回 ClipReport。"""
+    new_ci = ly.clip(top_cell.cell_index(), box_dbu)
+    if new_ci < 0:
+        raise RuntimeError(
+            f"KLayout clip 返回无效 cell index: {new_ci}。禁止 fall-back（R03）。"
+        )
+    new_cell = ly.cell(new_ci)
+    final_name = clipped_cell_name if clipped_cell_name is not None else original_name
+    new_cell.name = final_name
+    shapes_after = _count_shapes_rec(new_cell, ly)
+    bbox_after_um = _bbox_to_um(new_cell.bbox(), dbu)
+    try:
+        new_cell.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件失败: {type(e).__name__}: {e}。禁止 fall-back（R03）。"
+        ) from e
+    logger.info(
+        "GDSII 裁剪: clip %s, shapes %d→%d",
+        clip_box_um, shapes_before, shapes_after,
+    )
+    return ClipReport(
+        input_path=str(gds_path),
+        output_path=str(output_path),
+        dbu=dbu,
+        top_cell_name=original_name,
+        clip_box_um=clip_box_um,
+        clipped_cell_name=final_name,
+        shapes_before=shapes_before,
+        shapes_after=shapes_after,
+        bbox_before_um=bbox_before_um,
+        bbox_after_um=bbox_after_um,
+    )
+
+
+def _do_multi_clip_one_region(
+    ly, ci, box_um, dbu, out_dir, prefix, idx,
+    original_name, shapes_before, bbox_before_um, gds_path,
+) -> ClipReport:
+    """处理多区域裁剪的单个区域: 重命名 + 统计 + 写出 + 构建 ClipReport。"""
+    new_cell = ly.cell(ci)
+    final_name = f"{prefix}_clip{idx}"
+    new_cell.name = final_name
+    shapes_after = _count_shapes_rec(new_cell, ly)
+    bbox_after_um = _bbox_to_um(new_cell.bbox(), dbu)
+    out_file = out_dir / f"{final_name}.gds"
+    try:
+        new_cell.write(str(out_file))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件 {out_file} 失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return ClipReport(
+        input_path=str(gds_path),
+        output_path=str(out_file),
+        dbu=dbu,
+        top_cell_name=original_name,
+        clip_box_um=box_um,
+        clipped_cell_name=final_name,
+        shapes_before=shapes_before,
+        shapes_after=shapes_after,
+        bbox_before_um=bbox_before_um,
+        bbox_after_um=bbox_after_um,
+    )
+
+
 # =============================================================================
 # 单区域裁剪
 # =============================================================================
@@ -155,10 +260,8 @@ def clip_gdsii(
         RuntimeError: 读取/写出失败。
 
     来源:
-    - KLayout Layout.clip:
-      https://klayout.org/doc-qt5/code/class_Layout.html#method33
-    - KLayout clip 示例:
-      https://klayout.org/klayout-pypi/examples/clip/
+    - KLayout Layout.clip: https://klayout.org/doc-qt5/code/class_Layout.html#method33
+    - KLayout clip 示例: https://klayout.org/klayout-pypi/examples/clip/
     """
     db = _import_klayout_db()
     in_path = Path(gds_path)
@@ -167,97 +270,18 @@ def clip_gdsii(
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not in_path.is_file():
         raise ValueError(f"输入路径不是文件: {gds_path}")
-
     left, bottom, right, top = _validate_clip_box(clip_box_um)
-
-    ly = db.Layout()
-    try:
-        ly.read(str(in_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
+    ly = _read_gdsii_layout(db, in_path)
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
     original_name = str(top_cell.name)
-
-    # 裁剪前统计
     shapes_before = _count_shapes_rec(top_cell, ly)
-    bbox_before = top_cell.bbox()
-    bbox_before_um = (
-        float(bbox_before.left) * dbu,
-        float(bbox_before.bottom) * dbu,
-        float(bbox_before.right) * dbu,
-        float(bbox_before.top) * dbu,
-    )
-
-    # 构造裁剪框（dbu 整数单位）
-    box_dbu = db.Box(
-        int(round(left / dbu)),
-        int(round(bottom / dbu)),
-        int(round(right / dbu)),
-        int(round(top / dbu)),
-    )
-
-    # 层次化裁剪
-    # KLayout 0.30.9: Layout.clip(cell_index, box) -> new_cell_index
-    # 来源: https://klayout.org/klayout-pypi/examples/clip/
-    new_ci = ly.clip(top_cell.cell_index(), box_dbu)
-    if new_ci < 0:
-        raise RuntimeError(
-            f"KLayout clip 返回无效 cell index: {new_ci}。"
-            f"禁止 fall-back（R03）。"
-        )
-
-    new_cell = ly.cell(new_ci)
-    # 重命名为友好名（默认用原 top cell 名）
-    final_name = clipped_cell_name if clipped_cell_name is not None else original_name
-    new_cell.name = final_name
-
-    # 注: 不删除原 top cell，因为用 Cell.write 只写出裁剪 cell 层次，
-    # 原 layout 中的其他 cell 不会被写入输出文件。
-
-    # 裁剪后统计
-    shapes_after = _count_shapes_rec(new_cell, ly)
-    bbox_after = new_cell.bbox()
-    bbox_after_um = (
-        float(bbox_after.left) * dbu,
-        float(bbox_after.bottom) * dbu,
-        float(bbox_after.right) * dbu,
-        float(bbox_after.top) * dbu,
-    )
-
-    # 写出
-    # 注: 用 Cell.write 而非 Layout.write，只写出裁剪 cell 及其引用的子 cell 层次，
-    # 避免写出原 layout 中的孤儿 cell（如被裁剪框排除但仍保留定义的子 cell）。
-    # 来源: KLayout Cell.write
-    # https://www.klayout.org/doc-qt5/code/class_Cell.html
-    try:
-        new_cell.write(str(out_path))
-    except Exception as e:
-        raise RuntimeError(
-            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
-            f"禁止 fall-back（R03）。"
-        ) from e
-
-    logger.info(
-        "GDSII 裁剪: %s → %s (clip %s, shapes %d→%d)",
-        in_path, out_path, clip_box_um, shapes_before, shapes_after,
-    )
-
-    return ClipReport(
-        input_path=str(gds_path),
-        output_path=str(output_path),
-        dbu=dbu,
-        top_cell_name=original_name,
-        clip_box_um=(left, bottom, right, top),
-        clipped_cell_name=final_name,
-        shapes_before=shapes_before,
-        shapes_after=shapes_after,
-        bbox_before_um=bbox_before_um,
-        bbox_after_um=bbox_after_um,
+    bbox_before_um = _bbox_to_um(top_cell.bbox(), dbu)
+    box_dbu = _build_box_dbu(db, left, bottom, right, top, dbu)
+    return _do_clip_operation(
+        ly, top_cell, box_dbu, dbu, out_path,
+        original_name, clipped_cell_name, (left, bottom, right, top),
+        shapes_before, bbox_before_um, gds_path, output_path,
     )
 
 

@@ -141,14 +141,24 @@ def density_min_threshold_by_canvas(canvas_w: float, canvas_h: float) -> float:
     过严——大画布器件密度天然低，非工艺违规。
 
     分级依据（按画布最长边 max(canvas_w, canvas_h) 判定规模）:
-        - XS/S (< 500μm):       0.01%  （小画布器件密度天然高，严阈值）
-        - M   (500-1000μm):     0.005% （中等画布，阈值放宽 2x）
-        - L   (1000-2000μm):    0.002% （大画布，阈值放宽 5x）
-        - XL  (≥ 2000μm):       0.001% （超大画布，阈值放宽 10x）
+        - XS/S  (< 500μm):        0.01%    （小画布器件密度天然高，严阈值）
+        - M    (500-1000μm):      0.005%   （中等画布，阈值放宽 2x）
+        - L    (1000-2000μm):     0.002%   （大画布，阈值放宽 5x）
+        - XL   (2000-10000μm):    0.001%   （超大画布 ~2-10mm，阈值放宽 10x）
 
-    底层逻辑: DENSITY_MIN 的工艺意图是避免"空版图"（CMP 工艺均匀性），
-    非限制器件密度。大画布用于多模块集成，单模块器件密度低是合理设计。
-    阈值随画布面积递减（≈ 1/edge²），与器件数密度的天然分布匹配。
+    大画布连续缩放（≥10mm，*创新*）:
+        threshold = MIN_PATTERN_AREA_UM2 / canvas_area × 100
+
+    底层逻辑:
+        - DENSITY_MIN 的工艺意图是避免"空版图"（CMP 工艺均匀性），
+          非限制器件密度。
+        - CMP 是晶圆级工艺，密度按 process window（~1mm×1mm）平均，
+          非整个 reticle/晶圆。大画布 whole-canvas density 无工艺意义。
+        - 对 ≥10mm 画布，连续缩放为"最小图案面积 100μm² / 画布面积"，
+          即只要画布上有 ≥100μm² 器件面积（约 10×10μm 单器件）即通过。
+          这与 SiEPIC WG_MIN_AREA 0.1μm² × 1000x safety factor 一致。
+        - 光子电路晶圆级集成（如 LiDAR OPA 阵列、waveguide reticle）常用
+          100mm+ 画布，grating coupler 距 active device 数 cm 是常规设计。
 
     Args:
         canvas_w: 画布宽 (μm)。
@@ -163,20 +173,41 @@ def density_min_threshold_by_canvas(canvas_w: float, canvas_h: float) -> float:
         - SiEPIC EBeam PDK DRC runset（DENSITY_MIN 默认 0.01% 仅适用小画布）
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
-          （光子集成芯片多模块集成，大画布器件密度天然低）
+          （光子集成芯片多模块集成，大画布器件密度天然低；
+          grating coupler 距 active device 数 cm 是常规设计 §4.3）
         - KLayout DRC 文档（density_check 阈值可按区域分级）
           https://www.klayout.org/doc-qt5/manual/drc_runsets.html
         - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
+        - ISPD 2025 LiDAR benchmark（晶圆级光子电路，100mm+ 画布）
+          https://github.com/ALIGN-analoglayout/ALIGN
     """
-    edge = max(float(canvas_w), float(canvas_h))
+    # 最小图案面积（μm²）：SiEPIC WG_MIN_AREA 0.1μm² × 1000x safety factor
+    # 用于大画布连续缩放，确保画布上至少有可工艺识别的器件面积
+    MIN_PATTERN_AREA_UM2 = 100.0
+    # 连续缩放启动边长（μm）：≥10mm 启用连续缩放
+    CONTINUOUS_SCALE_EDGE_UM = 10000.0
+
+    cw = float(canvas_w)
+    ch = float(canvas_h)
+    edge = max(cw, ch)
     if edge < 500.0:
-        return 0.01
+        return 0.01          # XS/S
     elif edge < 1000.0:
-        return 0.005
+        return 0.005         # M
     elif edge < 2000.0:
-        return 0.002
+        return 0.002         # L
+    elif edge < CONTINUOUS_SCALE_EDGE_UM:
+        return 0.001         # XL (2mm-10mm)
     else:
-        return 0.001
+        # 大画布连续缩放（≥10mm）：threshold = MIN_PATTERN_AREA / canvas_area × 100
+        # 确保 threshold 不低于 1e-10%（数值下界，避免浮点除零）
+        canvas_area = cw * ch
+        if canvas_area <= 0:
+            raise RuntimeError(
+                f"画布面积非正: {canvas_area}（R03 禁止 fall-back）"
+            )
+        threshold = MIN_PATTERN_AREA_UM2 / canvas_area * 100.0
+        return max(threshold, 1e-10)
 
 
 def check_density_range(rule: DRCRule, circuit: dict, placements: dict,

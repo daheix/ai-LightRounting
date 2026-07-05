@@ -182,7 +182,7 @@ DEFAULT_DRC_RULES: list[DRCRule] = [
         check_type=CheckType.DENSITY_MIN,
         threshold=0.01,
         severity=0.6,
-        description="布局密度下限（按画布规模分级: XS/S=0.01%, M=0.005%, L=0.002%, XL=0.001%；大画布器件密度天然低）",
+        description="布局密度下限（按画布规模分级: XS/S=0.01%, M=0.005%, L=0.002%, XL=0.001%, XXL=0.0001%, XXXL=0.00001%；大画布器件密度天然低）",
     ),
 ]
 
