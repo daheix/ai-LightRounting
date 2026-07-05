@@ -50,8 +50,25 @@ GPU_DISABLED_R04: bool = True
 
 # 默认光学常量（来源: SiEPIC EBeam PDK + R34 alpha_chip_config.py 同源值）
 _GRID_CELL_SIZE_UM: float = 100.0
-_CANVAS_SIZE_UM: float = 3200.0
+# 注：原 _CANVAS_SIZE_UM=3200.0 硬编码与 specs.py CircuitSpec.canvas_w=1000.0 不一致，
+# 已删除（R05 Bug 必修）。canvas 尺寸改为动态读取 self.circuit["canvas_w"]，
+# 缺失即 raise KeyError（R03 禁止 fall-back）。见 _node_features / build_occupancy。
 _TYPE_MAP = {"mzi": 0, "ring": 1, "mmi": 2, "coupler": 3}
+
+
+def _get_canvas_size(circuit: dict) -> float:
+    """动态读取电路画布尺寸（μm）。
+
+    R03 禁止 fall-back：circuit 缺 canvas_w 字段即 raise KeyError。
+    与 specs.py CircuitSpec.canvas_w（默认 1000.0μm）对齐，替代原硬编码
+    _CANVAS_SIZE_UM=3200.0（与 specs.py 不一致，R05 Bug 必修）。
+    """
+    if "canvas_w" not in circuit:
+        raise KeyError(
+            "circuit 缺 canvas_w 字段（μm，与 specs.py CircuitSpec.canvas_w 对齐）"
+            "（R03 禁止 fall-back）"
+        )
+    return float(circuit["canvas_w"])
 
 
 # ===========================================================================
@@ -109,8 +126,21 @@ class LargeScalePlacementEnv:
         type_idx = _TYPE_MAP.get(device.get("type", "mzi"), 0)
         type_oh = np.zeros(4, dtype=np.float64)
         type_oh[type_idx] = 1.0
-        w = float(device.get("width", 50.0)) / _CANVAS_SIZE_UM
-        h = float(device.get("height", 30.0)) / _CANVAS_SIZE_UM
+        # R03 禁止 fall-back：width_um/height_um 缺失即 raise（与 specs.py DeviceSpec 对齐）
+        if "width_um" not in device:
+            raise KeyError(
+                f"器件 {device.get('id')} 缺 width_um 字段（μm，与 specs.py DeviceSpec 对齐）"
+                f"（R03 禁止 fall-back）"
+            )
+        if "height_um" not in device:
+            raise KeyError(
+                f"器件 {device.get('id')} 缺 height_um 字段（μm，与 specs.py DeviceSpec 对齐）"
+                f"（R03 禁止 fall-back）"
+            )
+        # canvas 尺寸动态读取（替代原硬编码 _CANVAS_SIZE_UM=3200.0，R05 Bug 必修）
+        canvas_size = _get_canvas_size(self.circuit)
+        w = float(device["width_um"]) / canvas_size
+        h = float(device["height_um"]) / canvas_size
         n_ports = float(len(device.get("ports", []))) / 8.0
         placed = 1.0 if device["id"] in self.placement else 0.0
         rot = float(self.placement.get(device["id"], {}).get("rotation", 0)) / 360.0
@@ -130,8 +160,17 @@ class LargeScalePlacementEnv:
             if dev["id"] not in self.placement:
                 continue
             p = self.placement[dev["id"]]
-            w = float(dev.get("width", 50.0))
-            h = float(dev.get("height", 30.0))
+            # R03 禁止 fall-back：width_um/height_um 缺失即 raise（与 specs.py DeviceSpec 对齐）
+            if "width_um" not in dev:
+                raise KeyError(
+                    f"器件 {dev.get('id')} 缺 width_um 字段（μm）（R03 禁止 fall-back）"
+                )
+            if "height_um" not in dev:
+                raise KeyError(
+                    f"器件 {dev.get('id')} 缺 height_um 字段（μm）（R03 禁止 fall-back）"
+                )
+            w = float(dev["width_um"])
+            h = float(dev["height_um"])
             gi0 = max(0, int(p["x"] / _GRID_CELL_SIZE_UM))
             gi1 = min(grid_w, int(np.ceil((p["x"] + w) / _GRID_CELL_SIZE_UM)))
             gj0 = max(0, int(p["y"] / _GRID_CELL_SIZE_UM))
