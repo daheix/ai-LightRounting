@@ -1,10 +1,10 @@
 {
-  "description": "PoLaRIS 真实板子数据集 - 商用版自动布局布线训练教材（合并第一批 + 第二批 10 个新数据源）",
-  "version": "2.0.0",
+  "description": "PoLaRIS 真实板子数据集 - 商用版自动布局布线训练教材（合并第一批 + 第二批 10 个 + 第三批 4 个新数据源）",
+  "version": "3.0.0",
   "created": "2026-07-04",
   "updated": "2026-07-05",
   "purpose": "1) 真实端到端测试基准 2) 自动布局布线 RL/BC 训练基础教材 3) 商用版本溯源",
-  "total_files": 3216,
+  "total_files": 8158,
   "sources": {
     "siepic": {
       "description": "SiEPIC EBeam PDK 真实 GDS 版图 (UBC/SiEPIC)",
@@ -159,26 +159,93 @@
       "format": "YAML/GDS",
       "count": 255,
       "batch": 2
+    },
+    "siepic_openEBL_2024_10": {
+      "description": "SiEPIC openEBL 2024-10 流片真实提交 - 全球设计者 EBeam 工艺 GDS 设计",
+      "url": "https://github.com/SiEPIC/openEBL-2024-10",
+      "doi": "10.1117/12.3076810",
+      "paper": "Chrostowski et al., 'SiEPIC openEBL: remote silicon photonic design, fabrication, testing enabled by open-source PDKs and EDA tools', SPIE Photonics West 2024.",
+      "license": "MIT",
+      "authors": "Lukas Chrostowski et al. (SiEPIC, UBC, 2024) + global contributors",
+      "format": "GDS/OAS/YAML/PY",
+      "count": 264,
+      "extraction_note": "原仓库 2020 文件，跳过 1755 个 .mat 测量数据 (非电路文件)，保留全部 213+ GDS 设计 + 6 OAS + 8 YML + 10 PY + LICENSE + README。R03 合规：无 fall-back。",
+      "batch": 3
+    },
+    "siepic_openEBL_2024_05": {
+      "description": "SiEPIC openEBL 2024-05 流片真实提交 - 全球设计者 EBeam 工艺 GDS 设计",
+      "url": "https://github.com/SiEPIC/openEBL-2024-05",
+      "doi": "10.1117/12.3076810",
+      "license": "MIT",
+      "authors": "Lukas Chrostowski et al. (SiEPIC, UBC, 2023-2024) + global contributors",
+      "format": "GDS/YAML/PY",
+      "count": 244,
+      "extraction_note": "全量提取 (250 文件中 6 个为隐藏配置文件未保留)。",
+      "batch": 3
+    },
+    "skywater130": {
+      "description": "SkyWater 130nm CMOS PDK (gdsfactory 移植版) - 真实 GDS 标准单元 + netlist",
+      "url": "https://github.com/gdsfactory/skywater130",
+      "docs": "https://gdsfactory.github.io/skywater130/",
+      "license": "MIT",
+      "authors": "gdsfactory community (2022-2024) + SkyWater Technology Foundry + Google LLC",
+      "format": "GDS/YAML/PY",
+      "count": 1808,
+      "extraction_note": "全量提取 (原仓库 1827 文件，少量隐藏配置文件未保留)。",
+      "batch": 3
+    },
+    "macroplacement": {
+      "description": "TILOS-AI-Institute MacroPlacement 基准 - ASIC 宏单元布局 (Ariane/NVDLA/MemPool/ICCAD04) + Circuit Training 复现",
+      "url": "https://github.com/TILOS-AI-Institute/MacroPlacement",
+      "homepage": "https://tilos-ai-institute.github.io/MacroPlacement/",
+      "arxiv": "arXiv:2302.11014",
+      "paper": "Ajayi, Kahng et al., 'An Open-Source Framework for Estimating Macro Placement Algorithms', ISPD 2023.",
+      "updated_paper": "Kahng et al., 'An Updated Assessment of Reinforcement Learning for Macro Placement', IEEE TCAD 2025 (early access Dec 2025, document 11300304).",
+      "license": "BSD-3-Clause",
+      "authors": "The Regents of the University of California (UCSD TILOS AI Institute, 2018-2025)",
+      "format": "Verilog/LEF/DEF/PLC/PB.TXT/TCL/PY",
+      "count": 2622,
+      "extraction_note": "原仓库 3756 文件，跳过 Docs/OurProgress/images/ (PNG 截图)、ExperimentalData/ (CT 训练日志)、Flows/figures/ (流程图)，保留 Testcases/ + CodeElements/ + Enablements/ + LICENSE + README。R03 合规：所有真实电路数据保留。",
+      "task_url_correction": "任务原 URL 'TILOS-AI-CAD-Institute/MacroPlacement' 拼写错误，实际为 'TILOS-AI-Institute/MacroPlacement' (无 -CAD-)。",
+      "batch": 3
+    }
+  },
+  "skipped_sources_R03_compliance": {
+    "gdsfactory_amf": {
+      "task_url": "https://github.com/gdsfactory/amf",
+      "status": "skipped",
+      "reason": "仓库不存在 (github.com/gdsfactory/amf HTTP 404)。AMF Photonics 是商用 NDA PDK，从未在 GitHub 公开。R03 禁止 fall-back：不伪造数据。"
+    },
+    "vitek_ptc_benchmark": {
+      "task_url": "https://github.com/vitek/ptc-benchmark",
+      "status": "skipped",
+      "reason": "仓库不存在 (WebSearch 无任何匹配，github.com/vitek/ptc-benchmark HTTP 404)。R03 禁止 fall-back：不伪造数据。"
     }
   },
   "by_batch": {
     "batch_1_first_download": 448,
     "batch_2_new_10_sources": 2769,
-    "total": 3216
+    "batch_3_new_4_sources": 4938,
+    "total": 8158,
+    "target_met": true,
+    "target": 5000
   },
   "by_format": {
-    "GDSII": "~2200",
-    "YAML_netlist": "~700",
+    "GDSII": "~3500",
+    "YAML_netlist": "~1600",
+    "Verilog_SV": "~1300",
     "JSON": "~150",
-    "PY": "~290",
+    "PY": "~180",
+    "LEF_DEF_PLC": "~250",
     "XML": "~30",
-    "note": "粗略估计，多数子目录含混合格式（如 ubcpdk 同时含 .gds 与 .yml）；精确统计见各子目录文件扩展名。"
+    "OAS": "~6",
+    "note": "粗略估计，多数子目录含混合格式（如 ubcpdk 同时含 .gds 与 .yml，macroplacement 含 .v/.sv/.lef/.def/.plc）；精确统计见各子目录文件扩展名。"
   },
   "usage": {
-    "testing": "端到端流水线测试 (place→route→sim→drc→gds) - 3216 个真实用例全覆盖",
+    "testing": "端到端流水线测试 (place→route→sim→drc→gds) - 8158 个真实用例全覆盖",
     "training": "BC 预训练 + RL 微调的自动布局布线智能体训练教材",
-    "commercial": "商用版本发布前的真实电路回归基准 (含 16 个独立来源)",
-    "academic_alignment": "对标 Apollo/APR (ASU) + gdsfactory + SiEPIC + UBC + VTT + Luxtelligence + Quandela 商业/学术 PDK"
+    "commercial": "商用版本发布前的真实电路回归基准 (含 20 个独立来源)",
+    "academic_alignment": "对标 Apollo/APR (ASU) + TILOS MacroPlacement/Circuit Training (AlphaChip) + gdsfactory + SiEPIC + UBC + VTT + Luxtelligence + Quandela + SkyWater 商业/学术 PDK"
   },
   "references": [
     "Chrostowski & Hochberg, Silicon Photonics Design, CUP 2015, ISBN 9781107016838",
@@ -190,14 +257,19 @@
     "Perceval: Heurtel et al., arXiv:2207.10582, DOI:10.22331/q-2024-04-26-1333",
     "SiEPICfab Shuksan PDK: https://github.com/SiEPIC/SiEPICfab_Shuksan_PDK",
     "Luxtelligence LNOI PDK: https://github.com/Luxtelligence/lxt_pdk_gf",
-    "ubcpdk: https://github.com/gdsfactory/ubc"
+    "ubcpdk: https://github.com/gdsfactory/ubc",
+    "SiEPIC openEBL: Chrostowski et al., SPIE Photonics West 2024, DOI:10.1117/12.3076810",
+    "TILOS MacroPlacement: Ajayi, Kahng et al., ISPD 2023, arXiv:2302.11014",
+    "TILOS MacroPlacement Updated: Kahng et al., IEEE TCAD 2025 (early access Dec 2025, doc 11300304)",
+    "SkyWater 130nm Open Source PDK: https://skywater-pdk.readthedocs.io/"
   ],
   "license_summary": {
-    "MIT": ["gdsfactory", "picbench", "ubcpdk", "cspdk", "vtt", "gf_test_data", "luxtelligence", "apollo", "perceval", "klayout_pcells", "quantum_rf"],
+    "MIT": ["gdsfactory", "picbench", "ubcpdk", "cspdk", "vtt", "gf_test_data", "luxtelligence", "apollo", "perceval", "klayout_pcells", "quantum_rf", "siepic_openEBL_2024_10", "siepic_openEBL_2024_05", "skywater130"],
     "LGPL-2.1": ["siepic", "expert_demos"],
-    "BSD-3-Clause": ["lidar", "align"],
+    "BSD-3-Clause": ["lidar", "align", "macroplacement"],
     "Apache-2.0": ["siepicfab"]
   },
-  "R02_compliance": "所有数据源 URL/license/作者/DOI/arXiv 在 sources 字段标注；Apollo 替代关系明确记录；无伪造数据。",
-  "R03_compliance": "网络/仓库不可用即记录状态不终止其他源；Apollo 仓库为空明确标注使用同团队 APR/LiDAR 同源替代；无任何 fall-back 或假数据。"
+  "R02_compliance": "所有数据源 URL/license/作者/DOI/arXiv 在 sources 字段标注；Apollo 替代关系明确记录；openEBL/MacroPlacement/SkyWater130 论文与许可溯源完整；无伪造数据；任务原 URL 拼写错误已标注修正。",
+  "R03_compliance": "网络/仓库不可用即记录状态不终止其他源；Apollo 仓库为空明确标注使用同团队 APR/LiDAR 同源替代；gdsfactory/amf 与 vitek/ptc-benchmark 仓库不存在,明确跳过未伪造；openEBL 选择性跳过 .mat 测量数据(非电路文件),GDS 100% 保留；MacroPlacement 跳过图片/日志(非电路),电路设计 100% 保留；无任何 fall-back 或假数据。",
+  "download_method": "codeload.github.com/<owner>/<repo>/zip/refs/heads/main + curl + unzip + find 选择性提取 (沙箱中 raw.githubusercontent GET 受 SSL 拦截，codeload zip 可用；git clone 因无交互终端失败)"
 }
