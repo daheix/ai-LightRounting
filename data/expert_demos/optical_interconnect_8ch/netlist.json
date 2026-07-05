@@ -1,0 +1,4233 @@
+{
+  "name": "optical_interconnect_8ch",
+  "canvas_w": 1340.56438768812,
+  "canvas_h": 1340.56438768812,
+  "devices": [
+    {
+      "name": "gc1",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "fanout_yb_0_0",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "fanout_yb_1_0",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "fanout_yb_1_1",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "fanout_yb_2_0",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "fanout_yb_2_1",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "fanout_yb_2_2",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "fanout_yb_2_3",
+      "device_type": "mmi",
+      "width_um": 30.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          10.0,
+          "E"
+        ],
+        [
+          "o2",
+          30.0,
+          5.0,
+          "W"
+        ],
+        [
+          "o3",
+          30.0,
+          15.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 5.5,
+        "width_mmi": 2.5,
+        "gap_mmi": 0.25,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi1x2_WNone_WT1_LT10_L_4e0f7121_1"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_0",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_1",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_2",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_3",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_4",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_5",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_6",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_0_mzi_7",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_0",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_1",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_2",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_3",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_4",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_5",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_6",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_0_heater_7",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_multiport_0_0",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 6,
+        "outputs": 6,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 108.0,
+        "width_mmi": 30.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I6_O6_WNone_WT1_LT1_cc93867a_4"
+      }
+    },
+    {
+      "name": "mmi0_multiport_0_1",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 2,
+        "outputs": 2,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 36.0,
+        "width_mmi": 10.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I2_O2_WNone_WT1_LT1_d965ea1e_5"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_0",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_1",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_2",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_3",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_4",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_5",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_6",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_1_heater_7",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_multiport_1_0",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 4,
+        "outputs": 4,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 72.0,
+        "width_mmi": 20.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I4_O4_WNone_WT1_LT1_a5379678_6"
+      }
+    },
+    {
+      "name": "mmi0_multiport_1_1",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 4,
+        "outputs": 4,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 72.0,
+        "width_mmi": 20.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I4_O4_WNone_WT1_LT1_a5379678_6"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_0",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_1",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_2",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_3",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_4",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_5",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_6",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_ps_array_2_heater_7",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi0_multiport_2_0",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 4,
+        "outputs": 4,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 72.0,
+        "width_mmi": 20.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I4_O4_WNone_WT1_LT1_a5379678_6"
+      }
+    },
+    {
+      "name": "mmi0_multiport_2_1",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 4,
+        "outputs": 4,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 72.0,
+        "width_mmi": 20.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I4_O4_WNone_WT1_LT1_a5379678_6"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_0",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_1",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_2",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_3",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_4",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_5",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_6",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mol_array_1_mzi_7",
+      "device_type": "mzi",
+      "width_um": 200.0,
+      "height_um": 50.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          25.0,
+          "E"
+        ],
+        [
+          "o2",
+          200.0,
+          25.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "delta_length": 10.0,
+        "length_y": 2.0,
+        "length_x": 200,
+        "bend": "bend_euler",
+        "straight": "straight",
+        "straight_x_top": "straight_heater_metal",
+        "splitter": "mmi1x2",
+        "with_splitter": true,
+        "port_e1_splitter": "o2",
+        "port_e0_splitter": "o3",
+        "port_e1_combiner": "o2",
+        "port_e0_combiner": "o3",
+        "port1": "o1",
+        "port2": "o2",
+        "nbends": 2,
+        "cross_section": "strip",
+        "mirror_bot": false,
+        "add_optical_ports_arms": false,
+        "min_length": 0.01,
+        "auto_rename_ports": true,
+        "macro_type": "m_mzi_DL10_LY2_LX200_Bben_6e9f3e3b_2"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_0",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_1",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_2",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_3",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_4",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_5",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_6",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_0_heater_7",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_multiport_0_0",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 6,
+        "outputs": 6,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 108.0,
+        "width_mmi": 30.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I6_O6_WNone_WT1_LT1_cc93867a_4"
+      }
+    },
+    {
+      "name": "mmi1_multiport_0_1",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 2,
+        "outputs": 2,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 36.0,
+        "width_mmi": 10.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I2_O2_WNone_WT1_LT1_d965ea1e_5"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_0",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_1",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_2",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_3",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_4",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_5",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_6",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_ps_array_1_heater_7",
+      "device_type": "heater",
+      "width_um": 100.0,
+      "height_um": 10.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          5.0,
+          "E"
+        ],
+        [
+          "o2",
+          100.0,
+          5.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "length": 200,
+        "length_undercut_spacing": 6.0,
+        "length_undercut": 30.0,
+        "length_straight": 0.1,
+        "length_straight_input": 15.0,
+        "cross_section": "strip",
+        "cross_section_heater": "heater_metal",
+        "cross_section_waveguide_heater": "strip_heater_metal",
+        "cross_section_heater_undercut": "strip_heater_metal_undercut",
+        "with_undercut": false,
+        "via_stack": "via_stack_heater_mtop",
+        "heater_taper_length": 5.0,
+        "macro_type": "m_straight_heater_metal_u_9c931429_3"
+      }
+    },
+    {
+      "name": "mmi1_multiport_1_0",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 4,
+        "outputs": 4,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 72.0,
+        "width_mmi": 20.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I4_O4_WNone_WT1_LT1_a5379678_6"
+      }
+    },
+    {
+      "name": "mmi1_multiport_1_1",
+      "device_type": "multiport_mmi",
+      "width_um": 100.0,
+      "height_um": 100.0,
+      "ports": [
+        [
+          "o1",
+          0.0,
+          15.0,
+          "E"
+        ],
+        [
+          "o2",
+          0.0,
+          30.0,
+          "E"
+        ],
+        [
+          "o3",
+          0.0,
+          45.0,
+          "E"
+        ],
+        [
+          "o4",
+          0.0,
+          60.0,
+          "E"
+        ],
+        [
+          "o5",
+          0.0,
+          75.0,
+          "E"
+        ],
+        [
+          "o6",
+          0.0,
+          90.0,
+          "E"
+        ],
+        [
+          "o7",
+          100.0,
+          15.0,
+          "W"
+        ],
+        [
+          "o8",
+          100.0,
+          30.0,
+          "W"
+        ],
+        [
+          "o9",
+          100.0,
+          45.0,
+          "W"
+        ],
+        [
+          "o10",
+          100.0,
+          60.0,
+          "W"
+        ],
+        [
+          "o11",
+          100.0,
+          75.0,
+          "W"
+        ],
+        [
+          "o12",
+          100.0,
+          90.0,
+          "W"
+        ]
+      ],
+      "params": {
+        "n_ports": 12,
+        "inputs": 4,
+        "outputs": 4,
+        "width_taper": 1.0,
+        "length_taper": 10.0,
+        "length_mmi": 72.0,
+        "width_mmi": 20.0,
+        "gap_input_tapers": 4,
+        "gap_output_tapers": 4,
+        "taper": "taper",
+        "straight": "straight",
+        "cross_section": "strip",
+        "macro_type": "m_mmi_I4_O4_WNone_WT1_LT1_a5379678_6"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_0",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_1",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_2",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_3",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_4",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_5",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_6",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    },
+    {
+      "name": "gc_array_out_gc_7",
+      "device_type": "grating_coupler",
+      "width_um": 20.0,
+      "height_um": 20.0,
+      "ports": [
+        [
+          "o1",
+          10.0,
+          0.0,
+          "N"
+        ],
+        [
+          "o2",
+          0.0,
+          10.0,
+          "E"
+        ]
+      ],
+      "params": {
+        "layer_slab": "SLAB150",
+        "taper_angle": 55,
+        "taper_length": 12.6,
+        "fiber_angle": 5,
+        "bias_gap": 0,
+        "cross_section": "strip",
+        "macro_type": "m_grating_coupler_ellipti_4c46b398_0"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fanout_yb_0_0",
+      "o3",
+      "fanout_yb_1_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_0_0",
+      "o2",
+      "fanout_yb_1_1",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_0",
+      "o3",
+      "fanout_yb_2_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_0",
+      "o2",
+      "fanout_yb_2_1",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_1",
+      "o3",
+      "fanout_yb_2_2",
+      "o1"
+    ],
+    [
+      "fanout_yb_1_1",
+      "o2",
+      "fanout_yb_2_3",
+      "o1"
+    ],
+    [
+      "gc1",
+      "o1",
+      "fanout_yb_0_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_0",
+      "o3",
+      "mol_array_0_mzi_0",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_0",
+      "o2",
+      "mol_array_0_mzi_1",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_1",
+      "o3",
+      "mol_array_0_mzi_2",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_1",
+      "o2",
+      "mol_array_0_mzi_3",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_2",
+      "o3",
+      "mol_array_0_mzi_4",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_2",
+      "o2",
+      "mol_array_0_mzi_5",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_3",
+      "o3",
+      "mol_array_0_mzi_6",
+      "o1"
+    ],
+    [
+      "fanout_yb_2_3",
+      "o2",
+      "mol_array_0_mzi_7",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_0",
+      "o2",
+      "mmi0_ps_array_0_heater_0",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_1",
+      "o2",
+      "mmi0_ps_array_0_heater_1",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_2",
+      "o2",
+      "mmi0_ps_array_0_heater_2",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_3",
+      "o2",
+      "mmi0_ps_array_0_heater_3",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_4",
+      "o2",
+      "mmi0_ps_array_0_heater_4",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_5",
+      "o2",
+      "mmi0_ps_array_0_heater_5",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_6",
+      "o2",
+      "mmi0_ps_array_0_heater_6",
+      "o1"
+    ],
+    [
+      "mol_array_0_mzi_7",
+      "o2",
+      "mmi0_ps_array_0_heater_7",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_0_heater_0",
+      "o2",
+      "mmi0_multiport_0_0",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_0_heater_1",
+      "o2",
+      "mmi0_multiport_0_0",
+      "o2"
+    ],
+    [
+      "mmi0_ps_array_0_heater_2",
+      "o2",
+      "mmi0_multiport_0_0",
+      "o3"
+    ],
+    [
+      "mmi0_ps_array_0_heater_3",
+      "o2",
+      "mmi0_multiport_0_0",
+      "o4"
+    ],
+    [
+      "mmi0_ps_array_0_heater_4",
+      "o2",
+      "mmi0_multiport_0_0",
+      "o5"
+    ],
+    [
+      "mmi0_ps_array_0_heater_5",
+      "o2",
+      "mmi0_multiport_0_0",
+      "o6"
+    ],
+    [
+      "mmi0_ps_array_0_heater_6",
+      "o2",
+      "mmi0_multiport_0_1",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_0_heater_7",
+      "o2",
+      "mmi0_multiport_0_1",
+      "o2"
+    ],
+    [
+      "mmi0_multiport_0_0",
+      "o12",
+      "mmi0_ps_array_1_heater_4",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_0",
+      "o11",
+      "mmi0_ps_array_1_heater_1",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_0",
+      "o10",
+      "mmi0_ps_array_1_heater_2",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_0",
+      "o9",
+      "mmi0_ps_array_1_heater_3",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_0",
+      "o8",
+      "mmi0_ps_array_1_heater_0",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_0",
+      "o7",
+      "mmi0_ps_array_1_heater_5",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_1",
+      "o4",
+      "mmi0_ps_array_1_heater_6",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_0_1",
+      "o3",
+      "mmi0_ps_array_1_heater_7",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_1_heater_0",
+      "o2",
+      "mmi0_multiport_1_0",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_1_heater_1",
+      "o2",
+      "mmi0_multiport_1_0",
+      "o2"
+    ],
+    [
+      "mmi0_ps_array_1_heater_2",
+      "o2",
+      "mmi0_multiport_1_0",
+      "o3"
+    ],
+    [
+      "mmi0_ps_array_1_heater_3",
+      "o2",
+      "mmi0_multiport_1_0",
+      "o4"
+    ],
+    [
+      "mmi0_ps_array_1_heater_4",
+      "o2",
+      "mmi0_multiport_1_1",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_1_heater_5",
+      "o2",
+      "mmi0_multiport_1_1",
+      "o2"
+    ],
+    [
+      "mmi0_ps_array_1_heater_6",
+      "o2",
+      "mmi0_multiport_1_1",
+      "o3"
+    ],
+    [
+      "mmi0_ps_array_1_heater_7",
+      "o2",
+      "mmi0_multiport_1_1",
+      "o4"
+    ],
+    [
+      "mmi0_multiport_1_0",
+      "o8",
+      "mmi0_ps_array_2_heater_0",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_0",
+      "o7",
+      "mmi0_ps_array_2_heater_1",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_0",
+      "o6",
+      "mmi0_ps_array_2_heater_2",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_0",
+      "o5",
+      "mmi0_ps_array_2_heater_7",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_1",
+      "o8",
+      "mmi0_ps_array_2_heater_4",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_1",
+      "o7",
+      "mmi0_ps_array_2_heater_5",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_1",
+      "o6",
+      "mmi0_ps_array_2_heater_6",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_1_1",
+      "o5",
+      "mmi0_ps_array_2_heater_3",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_2_heater_0",
+      "o2",
+      "mmi0_multiport_2_0",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_2_heater_1",
+      "o2",
+      "mmi0_multiport_2_0",
+      "o2"
+    ],
+    [
+      "mmi0_ps_array_2_heater_2",
+      "o2",
+      "mmi0_multiport_2_0",
+      "o3"
+    ],
+    [
+      "mmi0_ps_array_2_heater_3",
+      "o2",
+      "mmi0_multiport_2_0",
+      "o4"
+    ],
+    [
+      "mmi0_ps_array_2_heater_4",
+      "o2",
+      "mmi0_multiport_2_1",
+      "o1"
+    ],
+    [
+      "mmi0_ps_array_2_heater_5",
+      "o2",
+      "mmi0_multiport_2_1",
+      "o2"
+    ],
+    [
+      "mmi0_ps_array_2_heater_6",
+      "o2",
+      "mmi0_multiport_2_1",
+      "o3"
+    ],
+    [
+      "mmi0_ps_array_2_heater_7",
+      "o2",
+      "mmi0_multiport_2_1",
+      "o4"
+    ],
+    [
+      "mmi0_multiport_2_0",
+      "o8",
+      "mol_array_1_mzi_0",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_0",
+      "o7",
+      "mol_array_1_mzi_1",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_0",
+      "o6",
+      "mol_array_1_mzi_5",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_0",
+      "o5",
+      "mol_array_1_mzi_6",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_1",
+      "o8",
+      "mol_array_1_mzi_2",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_1",
+      "o7",
+      "mol_array_1_mzi_3",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_1",
+      "o6",
+      "mol_array_1_mzi_4",
+      "o1"
+    ],
+    [
+      "mmi0_multiport_2_1",
+      "o5",
+      "mol_array_1_mzi_7",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_0",
+      "o2",
+      "mmi1_ps_array_0_heater_0",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_1",
+      "o2",
+      "mmi1_ps_array_0_heater_1",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_2",
+      "o2",
+      "mmi1_ps_array_0_heater_2",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_3",
+      "o2",
+      "mmi1_ps_array_0_heater_3",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_4",
+      "o2",
+      "mmi1_ps_array_0_heater_4",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_5",
+      "o2",
+      "mmi1_ps_array_0_heater_5",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_6",
+      "o2",
+      "mmi1_ps_array_0_heater_6",
+      "o1"
+    ],
+    [
+      "mol_array_1_mzi_7",
+      "o2",
+      "mmi1_ps_array_0_heater_7",
+      "o1"
+    ],
+    [
+      "mmi1_ps_array_0_heater_0",
+      "o2",
+      "mmi1_multiport_0_0",
+      "o1"
+    ],
+    [
+      "mmi1_ps_array_0_heater_1",
+      "o2",
+      "mmi1_multiport_0_0",
+      "o2"
+    ],
+    [
+      "mmi1_ps_array_0_heater_2",
+      "o2",
+      "mmi1_multiport_0_0",
+      "o3"
+    ],
+    [
+      "mmi1_ps_array_0_heater_3",
+      "o2",
+      "mmi1_multiport_0_0",
+      "o4"
+    ],
+    [
+      "mmi1_ps_array_0_heater_4",
+      "o2",
+      "mmi1_multiport_0_0",
+      "o5"
+    ],
+    [
+      "mmi1_ps_array_0_heater_5",
+      "o2",
+      "mmi1_multiport_0_0",
+      "o6"
+    ],
+    [
+      "mmi1_ps_array_0_heater_6",
+      "o2",
+      "mmi1_multiport_0_1",
+      "o1"
+    ],
+    [
+      "mmi1_ps_array_0_heater_7",
+      "o2",
+      "mmi1_multiport_0_1",
+      "o2"
+    ],
+    [
+      "mmi1_multiport_0_0",
+      "o12",
+      "mmi1_ps_array_1_heater_0",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_0",
+      "o11",
+      "mmi1_ps_array_1_heater_2",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_0",
+      "o10",
+      "mmi1_ps_array_1_heater_1",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_0",
+      "o9",
+      "mmi1_ps_array_1_heater_6",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_0",
+      "o8",
+      "mmi1_ps_array_1_heater_4",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_0",
+      "o7",
+      "mmi1_ps_array_1_heater_5",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_1",
+      "o4",
+      "mmi1_ps_array_1_heater_3",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_0_1",
+      "o3",
+      "mmi1_ps_array_1_heater_7",
+      "o1"
+    ],
+    [
+      "mmi1_ps_array_1_heater_0",
+      "o2",
+      "mmi1_multiport_1_0",
+      "o1"
+    ],
+    [
+      "mmi1_ps_array_1_heater_1",
+      "o2",
+      "mmi1_multiport_1_0",
+      "o2"
+    ],
+    [
+      "mmi1_ps_array_1_heater_2",
+      "o2",
+      "mmi1_multiport_1_0",
+      "o3"
+    ],
+    [
+      "mmi1_ps_array_1_heater_3",
+      "o2",
+      "mmi1_multiport_1_0",
+      "o4"
+    ],
+    [
+      "mmi1_ps_array_1_heater_4",
+      "o2",
+      "mmi1_multiport_1_1",
+      "o1"
+    ],
+    [
+      "mmi1_ps_array_1_heater_5",
+      "o2",
+      "mmi1_multiport_1_1",
+      "o2"
+    ],
+    [
+      "mmi1_ps_array_1_heater_6",
+      "o2",
+      "mmi1_multiport_1_1",
+      "o3"
+    ],
+    [
+      "mmi1_ps_array_1_heater_7",
+      "o2",
+      "mmi1_multiport_1_1",
+      "o4"
+    ],
+    [
+      "mmi1_multiport_1_0",
+      "o8",
+      "gc_array_out_gc_0",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_0",
+      "o7",
+      "gc_array_out_gc_1",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_0",
+      "o6",
+      "gc_array_out_gc_4",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_0",
+      "o5",
+      "gc_array_out_gc_6",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_1",
+      "o8",
+      "gc_array_out_gc_2",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_1",
+      "o7",
+      "gc_array_out_gc_5",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_1",
+      "o6",
+      "gc_array_out_gc_7",
+      "o1"
+    ],
+    [
+      "mmi1_multiport_1_1",
+      "o5",
+      "gc_array_out_gc_3",
+      "o1"
+    ]
+  ]
+}

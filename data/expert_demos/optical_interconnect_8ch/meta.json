@@ -1,0 +1,29 @@
+{
+  "source_gds": "data/benchmarks/lidar_multiportmmi_8x8.json",
+  "source_url": "https://opg.optica.org/oe/fulltext.cfm?uri=oe-21-1-282",
+  "source_pdk": {
+    "name": "LiDAR",
+    "publisher": "LiDAR-RL (ISPD 2025)",
+    "author": "LiDAR et al.",
+    "license": "MIT",
+    "url": "https://opg.optica.org/oe/fulltext.cfm?uri=oe-21-1-282",
+    "examples_url": "https://opg.optica.org/oe/fulltext.cfm?uri=oe-21-1-282",
+    "year": "2015-2025"
+  },
+  "extract_time": "2026-07-05T06:14:21.712817",
+  "circuit_name": "optical_interconnect_8ch",
+  "n_devices": 82,
+  "n_connections": 111,
+  "n_placements": 82,
+  "n_routes": 111,
+  "canvas_w_um": 1340.56438768812,
+  "canvas_h_um": 1340.56438768812,
+  "demo_name": "optical_interconnect_8ch",
+  "generator": "expand_expert_demos.py v1",
+  "generator_pipeline": [
+    "parse_benchmark_netlist",
+    "place_analytical (DREAMPlace TCAD 2020)",
+    "CurvyRouter (LiDAR ISPD'25 S-bend)"
+  ],
+  "description": "8通道光互连（MultiportMMI 8x8 光开关阵列）"
+}

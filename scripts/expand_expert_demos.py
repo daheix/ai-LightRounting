@@ -314,7 +314,7 @@ DEVICE_SPECS: dict[str, dict] = {
     # Heater with undercut (thermal phase shifter, LiDAR convention)
     # Source: LiDAR ISPD'25 benchmark
     #   https://arxiv.org/abs/2504.18813
-    "straight_heat_metal_undercut": {
+    "straight_heater_metal_undercut": {
         "device_type": "heater",
         "width_um": 100.0,
         "height_um": 10.0,
