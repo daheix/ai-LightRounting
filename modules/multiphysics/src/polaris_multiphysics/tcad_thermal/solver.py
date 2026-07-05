@@ -374,6 +374,24 @@ class ThermalSolver2D:
            半导体器件热特性（衬底热扩散）—
            https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
         """
+        k_si, r_ref_um, p_lin_w_m = self._resolve_thermal_substrate_params(
+            heater_power_mw, heater_length_um
+        )
+        return self._compute_thermal_coupling_matrix(
+            heater_positions_um, device_positions_um, p_lin_w_m, k_si, r_ref_um
+        )
+
+    def _resolve_thermal_substrate_params(
+        self,
+        heater_power_mw: float,
+        heater_length_um: float,
+    ) -> tuple[float, float, float]:
+        """识别 Si 衬底并计算镜像源法参数（Extract Method，R11 质量门禁）。
+
+        Returns:
+            (k_si, r_ref_um, p_lin_w_m) — Si 热导率、镜像源距离 r_ref=2h、
+            单位长度线热源功率 P'。
+        """
         k_si = 148.0  # Si 衬底热导率 [W/(m·K)] (Cocorullo 1999 / Incropera)
         # Si 衬底识别阈值：k_Si ≈ 148 W/(m·K)，阈值 100 W/(m·K) 排除 SiO2 (1.4)、
         # TiN (~28) 等低热导材料。阈值来源：Incropera §2.2 常用材料热导率表。
@@ -394,7 +412,20 @@ class ThermalSolver2D:
         if heater_length_um <= 0.0:
             raise ValueError(f"heater_length_um 须 > 0，实际 {heater_length_um}")
         p_lin_w_m = heater_power_mw * 1e-3 / (heater_length_um * 1e-6)
+        return k_si, r_ref_um, p_lin_w_m
 
+    def _compute_thermal_coupling_matrix(
+        self,
+        heater_positions_um: list[float],
+        device_positions_um: list[float],
+        p_lin_w_m: float,
+        k_si: float,
+        r_ref_um: float,
+    ) -> NDArray[np.float64]:
+        """计算热串扰耦合矩阵（Carslaw-Jaeger 镜像源法 Green's 函数）。
+
+        ΔT(r) = (P' / (2π·k)) · ln(r_ref / r)，r_ref = 2h（镜像源距离）。
+        """
         matrix = np.zeros(
             (len(heater_positions_um), len(device_positions_um)), dtype=float
         )
