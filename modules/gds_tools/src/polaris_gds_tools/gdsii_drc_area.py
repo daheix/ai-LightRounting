@@ -182,8 +182,12 @@ def _load_gdsii_and_extract_region(
     src_dt: int,
     top_cell_name: str | None,
     gds_path: str | Path,
-) -> tuple[Any, float, Any, int, float]:
-    """读取 GDSII 并提取 Region，返回 (top_cell, dbu, r, total_polygons, total_area_um2)。"""
+) -> tuple[Any, str, float, Any, int, float]:
+    """读取 GDSII 并提取 Region，返回 (ly, top_cell_name, dbu, r, total_polygons, total_area_um2)。
+
+    注: 返回 ly 以保持其存活——KLayout Region.each() 迭代器在 Layout GC 后失效（R05 回归修复）。
+    注: top_cell_name 以 str 返回（top_cell Cell 对象在 ly GC 后失效）。
+    """
     ly = db.Layout()
     try:
         ly.read(str(in_path))
@@ -194,12 +198,14 @@ def _load_gdsii_and_extract_region(
         ) from e
     dbu = float(ly.dbu)
     top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    # 提前提取 top_cell.name 为 str：ly GC 后 Cell 对象失效（R05 回归修复）
+    top_cell_name_str = str(top_cell.name)
     li_src = _find_or_raise_layer(ly, src_layer, src_dt, gds_path, "layer")
     r = db.Region(top_cell.begin_shapes_rec(li_src))
     total_polygons = int(r.count())
     total_area_dbu2 = float(r.area())
     total_area_um2 = total_area_dbu2 * dbu * dbu
-    return top_cell, dbu, r, total_polygons, total_area_um2
+    return ly, top_cell_name_str, dbu, r, total_polygons, total_area_um2
 
 
 def _check_polygons_area(
@@ -231,7 +237,7 @@ def _assemble_area_drc_report(
     src_layer: int,
     src_dt: int,
     dbu: float,
-    top_cell: Any,
+    top_cell_name: str,
     min_area_um2: float,
     total_polygons: int,
     violation_count: int,
@@ -257,7 +263,7 @@ def _assemble_area_drc_report(
         input_path=str(gds_path),
         layer=(src_layer, src_dt),
         dbu=dbu,
-        top_cell_name=top_cell.name,
+        top_cell_name=top_cell_name,
         min_area_um2=min_area_um2,
         check_type="area",
         total_polygons=total_polygons,
@@ -300,14 +306,15 @@ def check_area(
     db, in_path, src_layer, src_dt = _validate_check_area_params(
         gds_path, layer, min_area_um2, max_violations
     )
-    top_cell, dbu, r, total_polygons, total_area_um2 = _load_gdsii_and_extract_region(
+    # ly 必须保持存活：KLayout Region.each() 迭代器在 Layout GC 后失效（R05）
+    ly, top_cell_name_str, dbu, r, total_polygons, total_area_um2 = _load_gdsii_and_extract_region(
         db, in_path, src_layer, src_dt, top_cell_name, gds_path
     )
     violations, violation_count = _check_polygons_area(
         r, dbu, min_area_um2, max_violations
     )
     return _assemble_area_drc_report(
-        gds_path, src_layer, src_dt, dbu, top_cell, min_area_um2,
+        gds_path, src_layer, src_dt, dbu, top_cell_name_str, min_area_um2,
         total_polygons, violation_count, total_area_um2, violations,
     )
 
