@@ -9,6 +9,13 @@ dataclass，避免内部对象泄漏（稳定 API 原则）。
 - 对外 API 用 dict（JSON-serializable，可跨语言传递）
 - 禁止 fall-back（R03）：构造失败 raise
 
+单位制（与GDSFactory/SiEPIC/Apollo对齐）:
+- 尺寸: μm（width_um/height_um/canvas_w/canvas_h）
+- 波长: nm（optical_wavelength_nm，对外接口）；调用simphony时换算为μm
+- 损耗: dB（INSERTION_LOSS_DB）
+- 延迟: ps
+- 频率: Hz
+
 来源:
 - GDSFactory 组件库: https://gdsfactory.github.io/gdsfactory/
 - TILOS MacroPlacement benchmark: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
