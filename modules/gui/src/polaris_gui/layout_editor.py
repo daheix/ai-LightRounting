@@ -545,32 +545,9 @@ class LayoutEditor:
             "",
         ]
         for dev in self._devices.values():
-            corners = _device_corners(dev)
-            xmin = float(corners[:, 0].min())
-            ymin = float(corners[:, 1].min())
-            xmax = float(corners[:, 0].max())
-            ymax = float(corners[:, 1].max())
-            lines.append(
-                f"# device {dev.device_id}: type={dev.device_type} "
-                f"pos={dev.position} rot={dev.rotation}"
-            )
-            lines.append(
-                f"box = db.Box({_um_to_dbu(xmin, dbu)}, {_um_to_dbu(ymin, dbu)}, "
-                f"{_um_to_dbu(xmax, dbu)}, {_um_to_dbu(ymax, dbu)})"
-            )
-            lines.append("top.shapes(layer_wg).insert(box)")
-            lines.append("top.shapes(layer_devrec).insert(box)")
+            lines.extend(_emit_klayout_device_lines(dev, dbu))
         # 布线路径
-        for r in self._routes:
-            pts = r.get("points", [])
-            if len(pts) < 2:
-                continue
-            pts_str = ", ".join(
-                f"db.DPoint({_fmt_klayout_float(p[0])}, {_fmt_klayout_float(p[1])})"
-                for p in pts
-            )
-            lines.append(f"path = db.DPath([{pts_str}], 0.5)")
-            lines.append("top.shapes(layer_wg).insert(path)")
+        lines.extend(_emit_klayout_route_lines(self._routes))
         # DRC 高亮以文本注释输出（KLayout 脚本中可由 DRC 引擎再生成）
         if self._drc_highlights:
             lines.append(f"# DRC 高亮标记: {len(self._drc_highlights)} 处")
@@ -583,6 +560,39 @@ class LayoutEditor:
         lines.append(f'ly.write("{output_gds}")')
         lines.append(f'print("GDS written to {output_gds}")')
         return "\n".join(lines)
+
+
+def _emit_klayout_device_lines(dev: DeviceInstance, dbu: float) -> list[str]:
+    """生成器件的 KLayout 脚本行（Extract Method，R11 质量门禁）。"""
+    corners = _device_corners(dev)
+    xmin = float(corners[:, 0].min())
+    ymin = float(corners[:, 1].min())
+    xmax = float(corners[:, 0].max())
+    ymax = float(corners[:, 1].max())
+    return [
+        f"# device {dev.device_id}: type={dev.device_type} "
+        f"pos={dev.position} rot={dev.rotation}",
+        f"box = db.Box({_um_to_dbu(xmin, dbu)}, {_um_to_dbu(ymin, dbu)}, "
+        f"{_um_to_dbu(xmax, dbu)}, {_um_to_dbu(ymax, dbu)})",
+        "top.shapes(layer_wg).insert(box)",
+        "top.shapes(layer_devrec).insert(box)",
+    ]
+
+
+def _emit_klayout_route_lines(routes: list) -> list[str]:
+    """生成布线路径的 KLayout 脚本行（Extract Method，R11 质量门禁）。"""
+    lines: list[str] = []
+    for r in routes:
+        pts = r.get("points", [])
+        if len(pts) < 2:
+            continue
+        pts_str = ", ".join(
+            f"db.DPoint({_fmt_klayout_float(p[0])}, {_fmt_klayout_float(p[1])})"
+            for p in pts
+        )
+        lines.append(f"path = db.DPath([{pts_str}], 0.5)")
+        lines.append("top.shapes(layer_wg).insert(path)")
+    return lines
 
 
 def _copy_device(dev: DeviceInstance) -> DeviceInstance:
