@@ -171,8 +171,19 @@ class ExpertDemoLoader:
             demo = self.load_demo(name)
             netlist = demo["netlist"]
             placements = demo["placements"]
-            canvas_w = float(netlist.get("canvas_w", 1.0))
-            canvas_h = float(netlist.get("canvas_h", 1.0))
+            # R03 禁止 fall-back：canvas_w/canvas_h 缺失即 raise（specs.py 单位 μm，默认 1000.0）
+            if "canvas_w" not in netlist:
+                raise KeyError(
+                    "netlist 缺 canvas_w 字段（μm，与 specs.py CircuitSpec.canvas_w 对齐）"
+                    "（R03 禁止 fall-back）"
+                )
+            if "canvas_h" not in netlist:
+                raise KeyError(
+                    "netlist 缺 canvas_h 字段（μm，与 specs.py CircuitSpec.canvas_h 对齐）"
+                    "（R03 禁止 fall-back）"
+                )
+            canvas_w = float(netlist["canvas_w"])
+            canvas_h = float(netlist["canvas_h"])
             devices = netlist.get("devices", [])
             n_devices = len(devices)
             for dev in devices:
@@ -211,7 +222,15 @@ class ExpertDemoLoader:
 def _extract_device_features(
     dev: dict, canvas_w: float, canvas_h: float, n_devices: int
 ) -> list[float]:
-    """提取单个 device 的 7 维特征向量（归一化）。"""
+    """提取单个 device 的 7 维特征向量（归一化）。
+
+    归一化常数来源:
+    - width/height: 50.0μm（器件典型最大尺寸，SiEPIC EBeam PDK）
+    - canvas_w/canvas_h: 1000.0μm（与 specs.py CircuitSpec.canvas_w/canvas_h
+      默认值对齐；原 v4 用 1e5/2e5 旧归一化常数与 specs.py 1000.0 不一致，
+      导致 canvas 特征量级错误，R05 Bug 必修）
+    - n_ports/n_devices: 10.0（典型规模）
+    """
     width = float(dev.get("width_um", 0.0))
     height = float(dev.get("height_um", 0.0))
     ports = dev.get("ports", [])
@@ -223,8 +242,8 @@ def _extract_device_features(
         height / 50.0,
         n_ports / 10.0,
         type_code,
-        canvas_w / 1e5,
-        canvas_h / 2e5,
+        canvas_w / 1000.0,
+        canvas_h / 1000.0,
         n_devices / 10.0,
     ]
 
