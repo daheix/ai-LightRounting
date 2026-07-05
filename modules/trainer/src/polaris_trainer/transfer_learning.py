@@ -255,6 +255,87 @@ def extract_routing_targets(loader: ExpertDemoLoader) -> tuple[np.ndarray, np.nd
     return X_norm, Y_norm, stats
 
 
+def _setup_transfer_model(
+    pretrain_ckpt: str | Path,
+    cfg: TransferConfig,
+) -> tuple[RoutingPolicyModel, int, int, int, int]:
+    """加载预训练 ckpt + 构建模型 + 复制权重 + 冻结 + 统计参数。
+
+    Returns:
+        (model, n_loaded, n_skipped, n_frozen, n_trainable)
+    """
+    state = load_bc_checkpoint(pretrain_ckpt)
+    pretrain_params = state["params"]
+    logger.info(
+        "加载预训练 ckpt: %s (%d params)",
+        pretrain_ckpt, len(pretrain_params),
+    )
+    model = RoutingPolicyModel(hidden_dim=cfg.hidden_dim)
+    n_loaded, n_skipped = model.load_pretrained_layers(pretrain_params)
+    logger.info(
+        "迁移: 加载 %d 参数 (fc1+fc2), 跳过 %d (fc3 输出层)",
+        n_loaded, n_skipped,
+    )
+    n_frozen = 0
+    if cfg.freeze_feature_extractor:
+        model.freeze_feature_extractor()
+        n_frozen = 2  # fc1.weight + fc1.bias
+        logger.info("冻结 fc1 (%d 参数)", n_frozen)
+    n_trainable = len(model.parameters())
+    logger.info("可训练参数: %d", n_trainable)
+    return model, n_loaded, n_skipped, n_frozen, n_trainable
+
+
+def _run_finetune_loop(
+    model: RoutingPolicyModel,
+    X: np.ndarray,
+    Y: np.ndarray,
+    cfg: TransferConfig,
+) -> list[float]:
+    """微调训练循环（MSE + Adam，小学习率）。
+
+    Returns:
+        loss_history: 每个 epoch 的平均 loss 列表。
+
+    Raises:
+        RuntimeError: 训练出现 NaN（R03 无 fall-back）。
+    """
+    n_samples = X.shape[0]
+    optimizer = Adam(
+        model.parameters(), lr=cfg.finetune_lr, config=AdamConfig(),
+    )
+    loss_history: list[float] = []
+    indices = np.arange(n_samples)
+    for epoch in range(cfg.epochs):
+        np.random.shuffle(indices)
+        epoch_loss = 0.0
+        n_batches = 0
+        for start in range(0, n_samples, cfg.batch_size):
+            batch_idx = indices[start : start + cfg.batch_size]
+            Xb = X[batch_idx]
+            Yb = Y[batch_idx]
+            optimizer.zero_grad()
+            pred = model(Tensor(Xb))
+            diff = pred - Tensor(Yb)
+            loss = (diff * diff).mean()
+            loss.backward()
+            optimizer.step()
+            epoch_loss += float(loss.data)
+            n_batches += 1
+        avg_loss = epoch_loss / max(n_batches, 1)
+        if not math.isfinite(avg_loss):
+            raise RuntimeError(
+                f"epoch {epoch} loss NaN（R03 无 fall-back）"
+            )
+        loss_history.append(avg_loss)
+        if (epoch + 1) % 10 == 0 or epoch == 0:
+            logger.info(
+                "finetune epoch %d/%d loss=%.6f",
+                epoch + 1, cfg.epochs, avg_loss,
+            )
+    return loss_history
+
+
 def transfer_learn(
     pretrain_ckpt: str | Path,
     demos_dir: str | Path = "real_board/expert_demos",
@@ -300,72 +381,15 @@ def transfer_learn(
     """
     cfg = config or TransferConfig()
     np.random.seed(cfg.seed)
-
-    # 1. 加载预训练 checkpoint
-    state = load_bc_checkpoint(pretrain_ckpt)
-    pretrain_params = state["params"]
-    logger.info(
-        "加载预训练 ckpt: %s (%d params)",
-        pretrain_ckpt, len(pretrain_params),
+    model, n_loaded, _, n_frozen, n_trainable = _setup_transfer_model(
+        pretrain_ckpt, cfg,
     )
-
-    # 2. 构建 routing 模型 + 复制预训练权重
-    model = RoutingPolicyModel(hidden_dim=cfg.hidden_dim)
-    n_loaded, n_skipped = model.load_pretrained_layers(pretrain_params)
-    logger.info(
-        "迁移: 加载 %d 参数 (fc1+fc2), 跳过 %d (fc3 输出层)",
-        n_loaded, n_skipped,
-    )
-
-    # 3. 冻结 feature extractor
-    n_frozen = 0
-    if cfg.freeze_feature_extractor:
-        model.freeze_feature_extractor()
-        n_frozen = 2  # fc1.weight + fc1.bias
-        logger.info("冻结 fc1 (%d 参数)", n_frozen)
-
-    trainable_params = model.parameters()
-    n_trainable = len(trainable_params)
-    logger.info("可训练参数: %d", n_trainable)
-
-    # 4. 提取布线任务训练对
     loader = ExpertDemoLoader(demos_dir)
     X, Y, stats = extract_routing_targets(loader)
     n_samples = X.shape[0]
     logger.info("布线任务: %d 样本", n_samples)
-
-    # 5. 微调（MSE + Adam，小学习率）
-    optimizer = Adam(trainable_params, lr=cfg.finetune_lr, config=AdamConfig())
-    loss_history: list[float] = []
-    indices = np.arange(n_samples)
-    for epoch in range(cfg.epochs):
-        np.random.shuffle(indices)
-        epoch_loss = 0.0
-        n_batches = 0
-        for start in range(0, n_samples, cfg.batch_size):
-            batch_idx = indices[start : start + cfg.batch_size]
-            Xb = X[batch_idx]
-            Yb = Y[batch_idx]
-            optimizer.zero_grad()
-            pred = model(Tensor(Xb))
-            diff = pred - Tensor(Yb)
-            loss = (diff * diff).mean()
-            loss.backward()
-            optimizer.step()
-            epoch_loss += float(loss.data)
-            n_batches += 1
-        avg_loss = epoch_loss / max(n_batches, 1)
-        if not math.isfinite(avg_loss):
-            raise RuntimeError(
-                f"epoch {epoch} loss NaN（R03 无 fall-back）"
-            )
-        loss_history.append(avg_loss)
-        if (epoch + 1) % 10 == 0 or epoch == 0:
-            logger.info("finetune epoch %d/%d loss=%.6f", epoch + 1, cfg.epochs, avg_loss)
-
+    loss_history = _run_finetune_loop(model, X, Y, cfg)
     final_loss = loss_history[-1] if loss_history else float("inf")
-
-    # 6. 保存微调 checkpoint
     ckpt_path = (
         Path(output_ckpt)
         if output_ckpt
@@ -373,11 +397,9 @@ def transfer_learn(
     )
     _save_finetune_checkpoint(
         ckpt_path, model, cfg, stats, loss_history, final_loss,
-        n_samples, n_loaded, n_frozen, n_trainable,
-        pretrain_ckpt,
+        n_samples, n_loaded, n_frozen, n_trainable, pretrain_ckpt,
     )
     logger.info("迁移学习 ckpt 已保存: %s (final_loss=%.6f)", ckpt_path, final_loss)
-
     return {
         "checkpoint_path": str(ckpt_path),
         "final_loss": final_loss,
