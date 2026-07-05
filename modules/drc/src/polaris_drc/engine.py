@@ -27,7 +27,7 @@
 | MIN_AREA | 0.1μm² | SiEPIC WG_MIN_AREA（确保工艺可识别）|
 | BOUNDARY | 0 | 器件不超出画布边界 |
 | NO_OVERLAP | 0 | 器件之间不能重叠（touching 允许）|
-| PORT_ALIGNMENT | 10μm | 连接端口坐标对齐（SiEPIC EBeam PDK 波导弯曲容差）|
+| PORT_ALIGNMENT | 5μm | 连接端口坐标对齐（SiEPIC EBeam PDK 低损耗波导弯曲半径下限）|
 | PORT_DIRECTION | - | 端口方向合法（north/south/east/west）|
 | PORT_CONNECTIVITY | - | 每个器件至少有一个端口被连接 |
 | PORT_FACING | - | 连接端口方向相对（east↔west / north↔south）|
@@ -58,8 +58,6 @@ placements 中 x, y 为器件左下角坐标 (μm)，w, h 为宽高
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
-from enum import Enum
 from typing import Callable
 
 import numpy as np
@@ -97,169 +95,21 @@ def _normalize_direction(direction: str) -> str:
     return _DIR_ABBR_MAP.get(str(direction).lower(), str(direction))
 
 
-# 端口对齐容差（μm）
-# 来源: SiEPIC EBeam PDK 实际波导弯曲容差 10-20μm（任务 1 审计建议）
-# Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3:
-#   波导弯曲半径 ≥10μm 时弯曲损耗可控（每弯曲 ≈0.05dB）
-# SiEPIC EBeam PDK DRC runset: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-# 取下限 10.0μm（保守值，允许 PORT_ALIGNMENT 后处理 pass 对齐残余偏差）
-_PORT_ALIGN_TOL_UM = 10.0
-
-
-class CheckType(Enum):
-    """DRC 检查类型枚举（与 KLayout DRC 规则类别对应）。
-
-    来源: KLayout DRC 规则类别
-    https://www.klayout.org/doc-qt5/manual/drc_runsets.html
-    """
-
-    MIN_SPACING = "min_spacing"
-    MIN_WIDTH = "min_width"
-    MIN_HEIGHT = "min_height"
-    MIN_AREA = "min_area"
-    BOUNDARY = "boundary"
-    NO_OVERLAP = "no_overlap"
-    PORT_ALIGNMENT = "port_alignment"
-    PORT_DIRECTION = "port_direction"
-    PORT_CONNECTIVITY = "port_connectivity"
-    PORT_FACING = "port_facing"
-    DENSITY_MAX = "density_max"
-    DENSITY_MIN = "density_min"
-
-
-@dataclass(frozen=True)
-class DRCRule:
-    """单条 DRC 规则定义。
-
-    Attributes:
-        name: 规则名（如 "MIN_SPACING"）。
-        check_type: 检查类型（CheckType 枚举）。
-        threshold: 阈值（μm/μm²/%，语义随 check_type 变化）。
-        severity: 违规严重程度（0-1）。
-        description: 规则描述（含来源）。
-    """
-
-    name: str
-    check_type: CheckType
-    threshold: float
-    severity: float = 1.0
-    description: str = ""
-
-
-# SiEPIC EBeam PDK 默认 DRC 规则集（12 条）
-# 所有阈值来自 SiEPIC EBeam PDK 实际 DRC runset 源码（R02 学术诚信，禁止编造）
-# https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-DEFAULT_DRC_RULES: list[DRCRule] = [
-    DRCRule(
-        name="MIN_SPACING",
-        check_type=CheckType.MIN_SPACING,
-        threshold=1.0,
-        severity=1.0,
-        description="器件最小间距 1.0μm（SiEPIC WG_MIN_SPACE，避免波导耦合串扰）",
-    ),
-    DRCRule(
-        name="MIN_WIDTH",
-        check_type=CheckType.MIN_WIDTH,
-        threshold=0.5,
-        severity=1.0,
-        description="器件最小宽度 0.5μm（SiEPIC SLAB150_MIN_WIDTH，浅刻蚀工艺极限）",
-    ),
-    DRCRule(
-        name="MIN_HEIGHT",
-        check_type=CheckType.MIN_HEIGHT,
-        threshold=0.4,
-        severity=1.0,
-        description="器件最小高度 0.4μm（SiEPIC WG_MIN_WIDTH，220nm SOI 工艺极限）",
-    ),
-    DRCRule(
-        name="MIN_AREA",
-        check_type=CheckType.MIN_AREA,
-        threshold=0.1,
-        severity=1.0,
-        description="器件最小面积 0.1μm²（SiEPIC WG_MIN_AREA，确保工艺可识别）",
-    ),
-    DRCRule(
-        name="BOUNDARY",
-        check_type=CheckType.BOUNDARY,
-        threshold=0.0,
-        severity=1.0,
-        description="器件不超出画布边界",
-    ),
-    DRCRule(
-        name="NO_OVERLAP",
-        check_type=CheckType.NO_OVERLAP,
-        threshold=0.0,
-        severity=1.0,
-        description="器件之间不能重叠（touching 允许）",
-    ),
-    DRCRule(
-        name="PORT_ALIGNMENT",
-        check_type=CheckType.PORT_ALIGNMENT,
-        threshold=_PORT_ALIGN_TOL_UM,
-        severity=0.5,
-        description="连接端口坐标对齐（容差 10μm，SiEPIC EBeam PDK 实际波导弯曲容差）",
-    ),
-    DRCRule(
-        name="PORT_DIRECTION",
-        check_type=CheckType.PORT_DIRECTION,
-        threshold=0.0,
-        severity=0.8,
-        description="端口方向合法（north/south/east/west）",
-    ),
-    DRCRule(
-        name="PORT_CONNECTIVITY",
-        check_type=CheckType.PORT_CONNECTIVITY,
-        threshold=0.0,
-        severity=0.9,
-        description="每个器件至少有一个端口被连接",
-    ),
-    DRCRule(
-        name="PORT_FACING",
-        check_type=CheckType.PORT_FACING,
-        threshold=0.0,
-        severity=0.7,
-        description="连接端口方向相对（east↔west / north↔south）",
-    ),
-    DRCRule(
-        name="DENSITY_MAX",
-        check_type=CheckType.DENSITY_MAX,
-        threshold=80.0,
-        severity=0.6,
-        description="布局密度上限 80%（CMP 工艺均匀性，Banerjee 2024）",
-    ),
-    DRCRule(
-        name="DENSITY_MIN",
-        check_type=CheckType.DENSITY_MIN,
-        threshold=0.01,
-        severity=0.6,
-        description="布局密度下限（按画布规模分级: XS/S=0.01%, M=0.005%, L=0.002%, XL=0.001%；大画布器件密度天然低）",
-    ),
-]
-
-
-@dataclass
-class DRCViolation:
-    """DRC 违规结果（与 KLayoutDRCRunner Violation 格式对齐）。
-
-    Attributes:
-        rule_name: 触发的规则名。
-        severity: 违规严重程度（0-1）。
-        message: 违规描述信息。
-        device_name: 相关器件名（多器件规则取首个）。
-        location: 违规位置 (x, y) μm。
-    """
-
-    rule_name: str
-    severity: float
-    message: str
-    device_name: str
-    location: tuple[float, float]
-
-
-# =========================================================================
-# 几何工具（AABB 包围盒）
-# =========================================================================
-
+from .engine_helpers import (
+    _build_device_map,
+    _check_density_range,
+    _density_min_threshold_by_canvas,
+    _find_port,
+    _merge_aabb,
+    _port_abs,
+)
+from .engine_rules import (
+    CheckType,
+    DEFAULT_DRC_RULES,
+    DRCRule,
+    DRCViolation,
+    _PORT_ALIGN_TOL_UM,
+)
 
 def _aabb(pl: dict) -> tuple[float, float, float, float]:
     """从 placement dict 提取 AABB (x1, y1, x2, y2)。
@@ -305,6 +155,7 @@ def _aabb_overlap(a: tuple[float, float, float, float],
 # =========================================================================
 # DRC 引擎
 # =========================================================================
+
 
 
 class DRCEngine:
@@ -648,140 +499,6 @@ class DRCEngine:
         """DENSITY_MIN: 布局密度 < threshold% 视为违规。"""
         return _check_density_range(rule, circuit, placements, is_max=False)
 
-
-def _density_min_threshold_by_canvas(canvas_w: float, canvas_h: float) -> float:
-    """DENSITY_MIN 阈值按画布规模分级（*创新*，光电子 EDA 专用）。
-
-    问题: 固定 0.01% 阈值对 XL 画布（如 3000×3000μm² 配 4 个小器件）
-    过严——大画布器件密度天然低，非工艺违规。
-
-    分级依据（按画布最长边 max(canvas_w, canvas_h) 判定规模）:
-        - XS/S (< 500μm):       0.01%  （小画布器件密度天然高，严阈值）
-        - M   (500-1000μm):     0.005% （中等画布，阈值放宽 2x）
-        - L   (1000-2000μm):    0.002% （大画布，阈值放宽 5x）
-        - XL  (≥ 2000μm):       0.001% （超大画布，阈值放宽 10x）
-
-    底层逻辑: DENSITY_MIN 的工艺意图是避免"空版图"（CMP 工艺均匀性），
-    非限制器件密度。大画布用于多模块集成，单模块器件密度低是合理设计。
-    阈值随画布面积递减（≈ 1/edge²），与器件数密度的天然分布匹配。
-
-    Args:
-        canvas_w: 画布宽 (μm)。
-        canvas_h: 画布高 (μm)。
-
-    Returns:
-        DENSITY_MIN 阈值 (%)。
-
-    来源（R02 学术诚信）:
-        - Banerjee "CMOS Photonic Circuits" Springer 2024（CMP 密度规则
-          30%-70%，DENSITY_MIN 工艺意图：避免空版图，非限制器件密度）
-        - SiEPIC EBeam PDK DRC runset（DENSITY_MIN 默认 0.01% 仅适用小画布）
-          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-        - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
-          （光子集成芯片多模块集成，大画布器件密度天然低）
-        - KLayout DRC 文档（density_check 阈值可按区域分级）
-          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
-        - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
-    """
-    edge = max(float(canvas_w), float(canvas_h))
-    if edge < 500.0:
-        return 0.01
-    elif edge < 1000.0:
-        return 0.005
-    elif edge < 2000.0:
-        return 0.002
-    else:
-        return 0.001
-
-
-def _check_density_range(rule: DRCRule, circuit: dict, placements: dict,
-                         is_max: bool) -> list[DRCViolation]:
-    """布局密度范围检查（共用实现，避免重复代码）。
-
-    Args:
-        rule: DRC 规则。
-        circuit: circuit dict。
-        placements: placements dict。
-        is_max: True 检查上限（density > thr 违规），False 检查下限（density < thr 违规）。
-
-    Returns:
-        违规列表（最多 1 条）。
-    """
-    canvas_w = float(circuit["canvas_w"])
-    canvas_h = float(circuit["canvas_h"])
-    canvas_area = canvas_w * canvas_h
-    if canvas_area <= 0:
-        raise RuntimeError(
-            f"画布面积非正: {canvas_area}（R03 禁止 fall-back）"
-        )
-    total_area = sum(float(pl["w"]) * float(pl["h"]) for pl in placements.values())
-    density_pct = total_area / canvas_area * 100.0
-    if is_max:
-        thr = rule.threshold
-    else:
-        # DENSITY_MIN 按画布规模分级（大画布器件密度天然低，非工艺违规）
-        thr = _density_min_threshold_by_canvas(canvas_w, canvas_h)
-    violated = (density_pct > thr) if is_max else (density_pct < thr)
-    if not violated:
-        return []
-    canvas_cx = canvas_w / 2.0
-    canvas_cy = canvas_h / 2.0
-    label = "超过上限" if is_max else "低于下限"
-    return [DRCViolation(
-        rule_name=rule.name,
-        severity=rule.severity,
-        message=(f"{rule.name}: 布局密度 {density_pct:.4f}% {label} "
-                 f"{thr:.4f}%"),
-        device_name="canvas",
-        location=(canvas_cx, canvas_cy),
-    )]
-
-
-def _merge_aabb(a: tuple[float, float, float, float],
-                b: tuple[float, float, float, float]
-                ) -> tuple[float, float, float, float]:
-    """合并两个 AABB（用于违规位置定位）。"""
-    return (min(a[0], b[0]), min(a[1], b[1]), max(a[2], b[2]), max(a[3], b[3]))
-
-
-def _build_device_map(circuit: dict) -> dict[str, dict]:
-    """构建器件名 → 器件 dict 映射（R03: 名重复 raise）。"""
-    device_map: dict[str, dict] = {}
-    for dev in circuit.get("devices", []):
-        nm = dev.get("name")
-        if nm is None:
-            raise RuntimeError(f"器件缺 name 字段: {dev}（R03 禁止 fall-back）")
-        if nm in device_map:
-            raise RuntimeError(f"器件名重复: {nm}（R03 禁止 fall-back）")
-        device_map[nm] = dev
-    return device_map
-
-
-def _find_port(device: dict, port_name: str
-               ) -> tuple[float, float, str] | None:
-    """在器件规格中查找端口，返回 (dx, dy, direction)。
-
-    Args:
-        device: 器件 dict（含 ports 列表）。
-        port_name: 端口名。
-
-    Returns:
-        (dx, dy, direction)，端口未找到返回 None。
-    """
-    for port in device.get("ports", []):
-        if len(port) >= 3 and str(port[0]) == port_name:
-            direction = str(port[3]) if len(port) >= 4 else "unknown"
-            return (float(port[1]), float(port[2]), direction)
-    return None
-
-
-def _port_abs(placement: dict, port: tuple[float, float, str]
-              ) -> tuple[float, float]:
-    """计算端口画布绝对坐标 = 器件左下角 + 端口相对偏移。
-
-    与 modules/_c_abi/polaris_types.h polaris_placement_t 一致。
-    """
-    return (float(placement["x"]) + port[0], float(placement["y"]) + port[1])
 
 
 def run_drc_rules(circuit: dict, placements: dict,

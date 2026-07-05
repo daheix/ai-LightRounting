@@ -417,8 +417,22 @@ def test_min_spacing_fail():
 
     d1 AABB=(10,10,20,10.5), d2 AABB=(20.5,10,30.5,10.5),
     dx=max(20.5-20,10-30.5,0)=0.5, dy=0, dist=0.5 < 1.0。
+
+    R05 Bug 修复: 原测试复用 _make_clean_circuit（含 d1↔d2 直接连接），
+    但 engine 在 commit 753e95e0 后跳过直接连接对（波导连接器件 touching
+    是正常物理连接）。改为无连接的电路，使 MIN_SPACING 正确触发。
     """
-    circuit = _make_clean_circuit()
+    circuit = {
+        "name": "spacing_fail",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [],  # 无 d1↔d2 直接连接，MIN_SPACING 应触发
+        "canvas_w": 100, "canvas_h": 100,
+    }
     placements = {
         "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
         "d2": {"x": 20.5, "y": 10.0, "w": 10.0, "h": 0.5},
