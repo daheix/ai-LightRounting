@@ -55,6 +55,92 @@ __all__ = [
 # 1D Slab 波导本征模求解（EME 内部使用，不依赖 polaris_fde）
 # =========================================================================
 
+def _solve_slab_modes_validate(
+    width_um: float,
+    wavelength_um: float,
+    n_core: float,
+    n_clad: float,
+    n_modes: int,
+    dx_um: float,
+    pad_um: float,
+    window_um: float | None,
+) -> float:
+    """校验 slab 波导参数，返回仿真窗口宽度 win_um。"""
+    if width_um <= 0:
+        raise ValueError(f"width_um 须 > 0，得到 {width_um}")
+    if wavelength_um <= 0:
+        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
+    if n_core <= 0 or n_clad <= 0:
+        raise ValueError(f"折射率须 > 0: n_core={n_core} n_clad={n_clad}")
+    if n_core <= n_clad:
+        raise ValueError(f"n_core ({n_core}) 须 > n_clad ({n_clad})")
+    if n_modes < 1:
+        raise ValueError(f"n_modes 须 >= 1，得到 {n_modes}")
+    if dx_um <= 0:
+        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
+    if dx_um >= width_um:
+        raise ValueError(f"dx_um ({dx_um}) 须 < width_um ({width_um})")
+
+    if window_um is None:
+        if pad_um <= 0:
+            raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
+        return width_um + 2.0 * pad_um
+    if window_um <= width_um:
+        raise ValueError(f"window_um ({window_um}) 须 > width_um ({width_um})")
+    return float(window_um)
+
+
+def _solve_slab_modes_build_operator(
+    win_um: float, width_um: float, dx_um: float, n_clad: float, n_core: float,
+    wavelength_um: float,
+) -> tuple:
+    """构建网格、n_profile 和 Helmholtz 算子 M，返回 (M, nx, dx, core_x0, core_x1, k0)。"""
+    nx = int(round(win_um / dx_um))
+    if nx < 5:
+        raise ValueError(f"网格过小 nx={nx}，请减小 dx_um 或增大 pad_um")
+    dx = win_um / nx
+    core_x0 = int(round((win_um - width_um) / 2.0 / dx))
+    core_x1 = core_x0 + int(round(width_um / dx))
+    if core_x0 < 1 or core_x1 > nx - 1:
+        raise ValueError(f"芯区索引越界: x=[{core_x0},{core_x1}) 网格 {nx}")
+
+    n_profile = np.full(nx, n_clad, dtype=np.float64)
+    n_profile[core_x0:core_x1] = n_core
+    inv_dx2 = 1.0 / (dx * dx)
+    main_diag = -2.0 * inv_dx2 * np.ones(nx, dtype=np.float64)
+    off_diag = inv_dx2 * np.ones(nx - 1, dtype=np.float64)
+    L = sparse.diags([off_diag, main_diag, off_diag], [-1, 0, 1], format="csr", dtype=np.float64)
+    k0 = 2.0 * np.pi / wavelength_um
+    k0_sq = k0 * k0
+    M = L + sparse.diags(k0_sq * n_profile ** 2, 0, format="csr")
+    return M, nx, dx, core_x0, core_x1, k0
+
+
+def _solve_slab_modes_filter_guided(
+    beta_sq: np.ndarray, fields: np.ndarray, k0: float, n_clad: float,
+    n_core: float, dx: float, n_modes: int,
+) -> list[dict]:
+    """过滤导模（cladding_line < β² < core_line）并功率归一化 ∫|E|²dx=1。"""
+    beta_sq = np.real(beta_sq)
+    cladding_line = k0 * k0 * n_clad * n_clad
+    core_line = k0 * k0 * n_core * n_core
+    guided: list[dict[str, Any]] = []
+    for i in range(len(beta_sq)):
+        b2 = float(beta_sq[i])
+        if b2 > cladding_line and b2 < core_line:
+            beta = float(np.sqrt(b2))
+            neff = beta / k0
+            field = np.real(fields[:, i])
+            norm = float(np.sqrt(np.sum(np.abs(field) ** 2) * dx))
+            if norm > 0:
+                field = field / norm
+            guided.append({"neff": neff, "beta": beta, "field_1d": field.tolist()})
+    if not guided:
+        raise RuntimeError("未找到 slab 导模（R03 禁止 fall-back）")
+    guided.sort(key=lambda m: -m["neff"])
+    return guided[:n_modes]
+
+
 def solve_slab_modes(
     width_um: float,
     wavelength_um: float,
@@ -78,7 +164,6 @@ def solve_slab_modes(
         dx_um: 网格步长（μm）。
         pad_um: 包层 padding（μm，每侧）。当 window_um 给定时被忽略。
         window_um: 可选，显式指定仿真窗口宽度（μm）。
-            用于 EME 多段级联时保证各段网格一致。
 
     Returns:
         dict: {modes: [{neff, beta, field_1d}], n_modes, grid_info}
@@ -87,117 +172,30 @@ def solve_slab_modes(
         ValueError: 参数非法（R03）。
         RuntimeError: 求解失败（R03）。
     """
-    if width_um <= 0:
-        raise ValueError(f"width_um 须 > 0，得到 {width_um}")
-    if wavelength_um <= 0:
-        raise ValueError(f"wavelength_um 须 > 0，得到 {wavelength_um}")
-    if n_core <= 0 or n_clad <= 0:
-        raise ValueError(f"折射率须 > 0: n_core={n_core} n_clad={n_clad}")
-    if n_core <= n_clad:
-        raise ValueError(f"n_core ({n_core}) 须 > n_clad ({n_clad})")
-    if n_modes < 1:
-        raise ValueError(f"n_modes 须 >= 1，得到 {n_modes}")
-    if dx_um <= 0:
-        raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
-    if dx_um >= width_um:
-        raise ValueError(f"dx_um ({dx_um}) 须 < width_um ({width_um})")
-
-    if window_um is None:
-        if pad_um <= 0:
-            raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
-        win_um = width_um + 2.0 * pad_um
-    else:
-        if window_um <= width_um:
-            raise ValueError(
-                f"window_um ({window_um}) 须 > width_um ({width_um})"
-            )
-        win_um = float(window_um)
-
-    nx = int(round(win_um / dx_um))
-    if nx < 5:
-        raise ValueError(f"网格过小 nx={nx}，请减小 dx_um 或增大 pad_um")
-    dx = win_um / nx
-
-    # 芯区索引（居中放置）
-    core_x0 = int(round((win_um - width_um) / 2.0 / dx))
-    core_x1 = core_x0 + int(round(width_um / dx))
-    if core_x0 < 1 or core_x1 > nx - 1:
-        raise ValueError(
-            f"芯区索引越界: x=[{core_x0},{core_x1}) 网格 {nx}"
-        )
-
-    # 1D 折射率分布
-    n_profile = np.full(nx, n_clad, dtype=np.float64)
-    n_profile[core_x0:core_x1] = n_core
-
-    # 1D Laplacian（3 点差分，Dirichlet 边界）
-    inv_dx2 = 1.0 / (dx * dx)
-    main_diag = -2.0 * inv_dx2 * np.ones(nx, dtype=np.float64)
-    off_diag = inv_dx2 * np.ones(nx - 1, dtype=np.float64)
-    L = sparse.diags(
-        [off_diag, main_diag, off_diag],
-        [-1, 0, 1],
-        format="csr",
-        dtype=np.float64,
+    win_um = _solve_slab_modes_validate(
+        width_um, wavelength_um, n_core, n_clad, n_modes, dx_um, pad_um, window_um
     )
-
-    # Helmholtz 算子: M = L + diag(k₀² n²)
-    k0 = 2.0 * np.pi / wavelength_um
-    k0_sq = k0 * k0
-    M = L + sparse.diags(k0_sq * n_profile ** 2, 0, format="csr")
-
-    # 求最大代数特征值（导模 β²）
+    M, nx, dx, core_x0, core_x1, k0 = _solve_slab_modes_build_operator(
+        win_um, width_um, dx_um, n_clad, n_core, wavelength_um
+    )
     k_solve = min(n_modes + 2, nx - 2)
     if k_solve < 1:
         raise ValueError(f"网格点数 {nx} 过小，无法求解 {n_modes} 个模式")
-    sigma = k0_sq * n_core * n_core * 0.95
+    sigma = k0 * k0 * n_core * n_core * 0.95
     try:
         beta_sq, fields = eigsh(M, k=k_solve, sigma=sigma, which="LM")
     except Exception as e:
-        raise RuntimeError(
-            f"slab 模式 eigsh 求解失败: {e}（R03 禁止 fall-back）"
-        ) from e
-
+        raise RuntimeError(f"slab 模式 eigsh 求解失败: {e}（R03 禁止 fall-back）") from e
     if np.any(np.isnan(beta_sq)) or np.any(np.isnan(fields)):
         raise RuntimeError("特征值/特征向量含 NaN（R03）")
-
-    # 过滤导模 + 功率归一化
-    beta_sq = np.real(beta_sq)
-    cladding_line = k0_sq * n_clad * n_clad
-    core_line = k0_sq * n_core * n_core
-
-    guided: list[dict[str, Any]] = []
-    for i in range(len(beta_sq)):
-        b2 = float(beta_sq[i])
-        if b2 > cladding_line and b2 < core_line:
-            beta = float(np.sqrt(b2))
-            neff = beta / k0
-            field = np.real(fields[:, i])
-            # 功率归一化: ∫|E|² dx = 1
-            norm = float(np.sqrt(np.sum(np.abs(field) ** 2) * dx))
-            if norm > 0:
-                field = field / norm
-            guided.append({
-                "neff": neff,
-                "beta": beta,
-                "field_1d": field.tolist(),
-            })
-
-    if not guided:
-        raise RuntimeError(
-            f"未找到 slab 导模（R03 禁止 fall-back）"
-        )
-
-    guided.sort(key=lambda m: -m["neff"])
-    guided = guided[:n_modes]
-
+    guided = _solve_slab_modes_filter_guided(
+        beta_sq, fields, k0, n_clad, n_core, dx, n_modes
+    )
     return {
         "modes": guided,
         "n_modes": len(guided),
         "grid_info": {
-            "nx": nx,
-            "dx_um": float(dx),
-            "window_um": float(win_um),
+            "nx": nx, "dx_um": float(dx), "window_um": float(win_um),
             "core_x": [core_x0, core_x1],
         },
     }
@@ -315,37 +313,14 @@ def redheffer_star(
 # 主 EME 求解器
 # =========================================================================
 
-def solve_eme(
+def _solve_eme_validate_and_parse(
     sections: list[dict],
-    wavelength_um: float = 1.55,
-    n_modes_per_section: int = 2,
-    dx_um: float = 0.01,
-    pad_um: float = 1.0,
-) -> dict:
-    """EME 求解器: 多段均匀波导级联。
-
-    每段截面为 1D slab 波导（宽度可变），沿 z 传播。
-    段内相位传播，界面模式匹配，Redheffer 星积级联。
-
-    Args:
-        sections: 段列表，每段 dict{width_um, length_um, n_core, n_clad}。
-        wavelength_um: 波长（μm）。
-        n_modes_per_section: 每段求解的模式数（仅取基模做单模级联）。
-        dx_um: 横向网格步长（μm）。
-        pad_um: 包层 padding（μm）。
-
-    Returns:
-        dict: {transmission, transmission_db, reflection, s_matrix, sections_info}
-
-    Raises:
-        ValueError: 参数非法（R03）。
-        RuntimeError: 求解失败（R03）。
-
-    来源:
-        - Smit & van Dam 1996 IEEE/OSA JLT
-        - Bienstman 2001 PhD（Redheffer 星积）
-        - Lumerical EME 文档
-    """
+    wavelength_um: float,
+    n_modes_per_section: int,
+    dx_um: float,
+    pad_um: float,
+) -> list[dict]:
+    """校验参数并解析每段为 dict{width_um, length_um, n_core, n_clad}。"""
     if not sections:
         raise ValueError("sections 不能为空（R03 禁止 fall-back）")
     if wavelength_um <= 0:
@@ -357,7 +332,6 @@ def solve_eme(
     if pad_um <= 0:
         raise ValueError(f"pad_um 须 > 0，得到 {pad_um}")
 
-    # 解析每段参数
     parsed: list[dict[str, Any]] = []
     for idx, sec in enumerate(sections):
         if not isinstance(sec, dict):
@@ -373,9 +347,17 @@ def solve_eme(
             "n_core": float(sec["n_core"]),
             "n_clad": float(sec["n_clad"]),
         })
+    return parsed
 
-    # 1. 每段求解 slab 本征模（仅取基模做单模级联）
-    # 计算公共窗口宽度（取最大宽度 + 2*pad），保证各段网格一致
+
+def _solve_eme_compute_modes(
+    parsed: list[dict],
+    wavelength_um: float,
+    n_modes_per_section: int,
+    dx_um: float,
+    pad_um: float,
+) -> list[dict]:
+    """每段求解 slab 本征模（仅取基模做单模级联）。"""
     max_width_um = max(sec["width_um"] for sec in parsed)
     common_window_um = max_width_um + 2.0 * pad_um
 
@@ -388,38 +370,26 @@ def solve_eme(
             n_clad=sec["n_clad"],
             n_modes=n_modes_per_section,
             dx_um=dx_um,
-            window_um=common_window_um,  # 强制统一窗口
+            window_um=common_window_um,
         )
         if modes_result["n_modes"] < 1:
-            raise RuntimeError(
-                f"段 {idx} 无导模（R03 禁止 fall-back）"
-            )
+            raise RuntimeError(f"段 {idx} 无导模（R03 禁止 fall-back）")
         section_data.append({
             "width_um": sec["width_um"],
             "length_um": sec["length_um"],
             "n_core": sec["n_core"],
             "n_clad": sec["n_clad"],
-            "mode": modes_result["modes"][0],  # 基模
+            "mode": modes_result["modes"][0],
             "grid_info": modes_result["grid_info"],
         })
+    return section_data
 
-    # 2. 段内传播相位（单模）
-    for sd in section_data:
-        beta = sd["mode"]["beta"]
-        sd["propagation_phase"] = propagate_phase(beta, sd["length_um"])
 
-    # 3. 界面模式匹配（E/H 连续性 + 单模 Galerkin 投影）
-    # *创新*: 由 Maxwell 界面连续性方程严格推导单模反射/透射系数，
-    #   底层逻辑: E_y 与 H_x 在 z=0 连续，单模近似下分别投影到 E_a/E_b，
-    #   消去透射振幅后反射仅由 TE 导纳失配决定（场失配功率耦合到高阶模，不归反射）。
-    # 推导:
-    #   E 连续: (a_in+a_ref)·E_a = b_trans·E_b  →  投影 E_a: a_in+a_ref = b_trans·P
-    #   H 连续: β_a·(a_in-a_ref)·E_a = β_b·b_trans·E_b  →  投影 E_a: β_a·(a_in-a_ref)=β_b·b_trans·P
-    #   消去 b_trans·P: β_a·(a_in-a_ref) = β_b·(a_in+a_ref)
-    #   → r = a_ref/a_in = (β_a-β_b)/(β_a+β_b)  (TE 导纳 Y=β/ωμ 阻抗失配反射)
-    #   → t_ab = b_trans/a_in = 2·β_a/(β_a+β_b)·P  (含 β 匹配 + 场重叠)
-    # 旧实现 |r|²=1-|t|² 错误地把场失配全部归为反射 → |R| 高估（R05 Bug）。
-    # 参考: Collin 2001 §5.1 传输线反射 / Marcuse 1981 §8.5 波导模式匹配。
+def _solve_eme_compute_interfaces(section_data: list[dict]) -> list[np.ndarray]:
+    """界面模式匹配（E/H 连续性 + 单模 Galerkin 投影，*创新*）。
+
+    来源: Collin 2001 §5.1; Marcuse 1981 §8.5
+    """
     interfaces: list[np.ndarray] = []
     for i in range(len(section_data) - 1):
         mode_a = section_data[i]["mode"]
@@ -428,64 +398,50 @@ def solve_eme(
         fb = np.asarray(mode_b["field_1d"], dtype=np.float64)
         if fa.shape != fb.shape:
             raise RuntimeError(
-                f"段 {i}/{i+1} 模场形状不匹配 {fa.shape} vs {fb.shape} "
-                f"（请确保 dx_um/pad_um 一致，R03 禁止 fall-back）"
+                f"段 {i}/{i+1} 模场形状不匹配 {fa.shape} vs {fb.shape}"
             )
         dx = section_data[i]["grid_info"]["dx_um"]
-        # 场重叠积分 P = ∫E_a·E_b dx（∫|E|²dx=1 归一化）
         P_overlap = compute_overlap_1d(fa, fb, dx)
         beta_a = float(mode_a["beta"])
         beta_b = float(mode_b["beta"])
-        # 反射: TE 导纳 Y=β/ωμ，r=(Y_a-Y_b)/(Y_a+Y_b)=(β_a-β_b)/(β_a+β_b)
         r_left = (beta_a - beta_b) / (beta_a + beta_b)
         r_right = -r_left
-        # 透射: t = 2·Y_a/(Y_a+Y_b)·P（β 匹配 × 场重叠）
         t_ab = 2.0 * beta_a / (beta_a + beta_b) * P_overlap
         t_ba = 2.0 * beta_b / (beta_a + beta_b) * P_overlap
-        # 单模 S 矩阵: [[S11=左反射, S12=右→左透射],[S21=左→右透射, S22=右反射]]
-        S = np.array([
-            [r_left, t_ba],
-            [t_ab, r_right],
-        ], dtype=complex)
+        S = np.array([[r_left, t_ba], [t_ab, r_right]], dtype=complex)
         interfaces.append(S)
+    return interfaces
 
-    # 4. Redheffer 级联
-    # 总 S = S_interface_0 ⊗ P_1 ⊗ S_interface_1 ⊗ P_2 ⊗ ... ⊗ S_interface_{N-2}
-    # 其中 P_i 是段 i 的传播矩阵 [[0, exp(j*beta*L)], [exp(j*beta*L), 0]]（透射）
-    # 简化: 段内纯相位，等价于 S = [[0, P], [P, 0]]（无反射）
+
+def _solve_eme_cascade(
+    section_data: list[dict], interfaces: list[np.ndarray]
+) -> np.ndarray:
+    """Redheffer 星积级联所有段和界面 S 矩阵。"""
     if len(section_data) == 1:
-        # 单段: 只有传播，无界面
         P = section_data[0]["propagation_phase"]
-        S_total = np.array([
-            [0.0 + 0.0j, P],
-            [P, 0.0 + 0.0j],
-        ], dtype=complex)
-    else:
-        # 第一段传播矩阵
-        P0 = section_data[0]["propagation_phase"]
-        S_total = np.array([
-            [0.0 + 0.0j, P0],
-            [P0, 0.0 + 0.0j],
-        ], dtype=complex)
-        # 级联: S_total = S_total ⊗ S_interface_0 ⊗ P_1 ⊗ S_interface_1 ⊗ ...
-        for i in range(len(interfaces)):
-            # 级联界面 i
-            S_total = redheffer_star(S_total, interfaces[i])
-            # 级联段 i+1 的传播
-            if i + 1 < len(section_data):
-                P_next = section_data[i + 1]["propagation_phase"]
-                S_prop = np.array([
-                    [0.0 + 0.0j, P_next],
-                    [P_next, 0.0 + 0.0j],
-                ], dtype=complex)
-                S_total = redheffer_star(S_total, S_prop)
+        return np.array([[0j, P], [P, 0j]], dtype=complex)
 
-    # 5. 提取结果
-    transmission = complex(S_total[1, 0])  # S21: 左→右透射
-    reflection = complex(S_total[0, 0])    # S11: 左侧反射
+    P0 = section_data[0]["propagation_phase"]
+    S_total = np.array([[0j, P0], [P0, 0j]], dtype=complex)
+    for i in range(len(interfaces)):
+        S_total = redheffer_star(S_total, interfaces[i])
+        if i + 1 < len(section_data):
+            P_next = section_data[i + 1]["propagation_phase"]
+            S_prop = np.array([[0j, P_next], [P_next, 0j]], dtype=complex)
+            S_total = redheffer_star(S_total, S_prop)
+    return S_total
+
+
+def _solve_eme_build_result(
+    S_total: np.ndarray,
+    section_data: list[dict],
+    wavelength_um: float,
+) -> dict:
+    """从级联 S 矩阵提取传输/反射结果。"""
+    transmission = complex(S_total[1, 0])
+    reflection = complex(S_total[0, 0])
     t_abs = abs(transmission)
     transmission_db = 20.0 * float(np.log10(max(t_abs, 1e-30)))
-
     return {
         "transmission": transmission,
         "transmission_db": transmission_db,
@@ -507,3 +463,46 @@ def solve_eme(
             for i, sd in enumerate(section_data)
         ],
     }
+
+
+def solve_eme(
+    sections: list[dict],
+    wavelength_um: float = 1.55,
+    n_modes_per_section: int = 2,
+    dx_um: float = 0.01,
+    pad_um: float = 1.0,
+) -> dict:
+    """EME 求解器: 多段均匀波导级联。
+
+    每段截面为 1D slab 波导（宽度可变），沿 z 传播。
+    段内相位传播，界面模式匹配，Redheffer 星积级联。
+
+    Args:
+        sections: 段列表，每段 dict{width_um, length_um, n_core, n_clad}。
+        wavelength_um: 波长（μm）。
+        n_modes_per_section: 每段求解的模式数。
+        dx_um: 横向网格步长（μm）。
+        pad_um: 包层 padding（μm）。
+
+    Returns:
+        dict: {transmission, transmission_db, reflection, s_matrix, sections_info}
+
+    Raises:
+        ValueError: 参数非法（R03）。
+        RuntimeError: 求解失败（R03）。
+
+    来源: Smit & van Dam 1996 IEEE/OSA JLT; Bienstman 2001 PhD（Redheffer 星积）
+    """
+    parsed = _solve_eme_validate_and_parse(
+        sections, wavelength_um, n_modes_per_section, dx_um, pad_um
+    )
+    section_data = _solve_eme_compute_modes(
+        parsed, wavelength_um, n_modes_per_section, dx_um, pad_um
+    )
+    for sd in section_data:
+        sd["propagation_phase"] = propagate_phase(
+            sd["mode"]["beta"], sd["length_um"]
+        )
+    interfaces = _solve_eme_compute_interfaces(section_data)
+    S_total = _solve_eme_cascade(section_data, interfaces)
+    return _solve_eme_build_result(S_total, section_data, wavelength_um)
