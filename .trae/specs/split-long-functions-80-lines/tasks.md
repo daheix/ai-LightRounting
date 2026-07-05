@@ -170,25 +170,25 @@
   - [ ] SubTask 36.1: 拆出 `_validate_helmholtz_params` / `_assemble_helmholtz_banded`
   - [ ] SubTask 36.2: 验证 AST + fdfd 测试 + git commit
 
-- [ ] Task 37: flow/inverse_design.py::train_step (83L) → 拆分
-  - [ ] SubTask 37.1: 拆出 `_validate_train_step_params` / `_run_train_step_forward` / `_apply_grad_update`
-  - [ ] SubTask 37.2: 验证 AST + flow 测试 + git commit
+- [x] Task 37: flow/inverse_design.py::train_step (83L) → 拆分 ✅ f1139975
+  - [x] SubTask 37.1: 拆出 `_train_discriminator_one_step`(53L) / `_train_generator_one_step`(30L)（WGAN-GP 训练循环拆分）
+  - [x] SubTask 37.2: 验证 AST(0 violations) + flow 测试(45 passed) + git commit
 
-- [ ] Task 38: yield/yield_optimization.py::compute_worst_case_distance (82L) → 拆分
-  - [ ] SubTask 38.1: 拆出 `_validate_wcd_params` / `_compute_one_corner_distance` / `_select_worst_case`
-  - [ ] SubTask 38.2: 验证 AST + yield 模块测试 + git commit
+- [x] Task 38: yield/yield_optimization.py::compute_worst_case_distance (82L) → 拆分 ✅ fd31a0e4
+  - [x] SubTask 38.1: 拆出 `_validate_wcd_params`(36L)（参数校验提取）
+  - [x] SubTask 38.2: 验证 AST(0 violations) + yield 测试(49 passed) + git commit
 
-- [ ] Task 39: circuit/cascade.py::cascade_circuit (82L) → 拆分
-  - [ ] SubTask 39.1: 拆出 `_validate_cascade_params` / `_cascade_one_stage` / `_assemble_cascade_result`
-  - [ ] SubTask 39.2: 验证 AST + circuit 测试 + git commit
+- [x] Task 39: circuit/cascade.py::cascade_circuit (82L) → 拆分 ✅ 1a8269f1
+  - [x] SubTask 39.1: 拆出 `_process_one_cascade_connection`(43L)（连接处理循环体提取）
+  - [x] SubTask 39.2: 验证 AST(0 violations) + circuit 测试(79 passed) + git commit
 
-- [ ] Task 40: gdsio/importer.py::import_gds (81L) → 拆分
-  - [ ] SubTask 40.1: 拆出 `_validate_import_gds_params` / `_parse_gds_lib` / `_build_circuit_from_gds`
-  - [ ] SubTask 40.2: 验证 AST + gdsio 测试 + git commit
+- [x] Task 40: gdsio/importer.py::import_gds (81L) → 拆分 ✅ d426975d
+  - [x] SubTask 40.1: 拆出 `_collect_layer_info`(33L)（层形状计数+名称映射提取）
+  - [x] SubTask 40.2: 验证 AST(0 violations) + gdsio 测试(36 passed) + git commit
 
-- [ ] Task 41: flow/stage_verification.py::stage6_drc_lvs (81L) → 拆分
-  - [ ] SubTask 41.1: 拆出 `_validate_stage6_params` / `_run_drc_stage` / `_run_lvs_stage` / `_assemble_stage6_report`
-  - [ ] SubTask 41.2: 验证 AST + flow 测试 + git commit
+- [x] Task 41: flow/stage_verification.py::stage6_drc_lvs (81L) → 拆分 ✅ df55fba2
+  - [x] SubTask 41.1: 拆出 `_serialize_drc_violations`(17L)（违规列表序列化提取）
+  - [x] SubTask 41.2: 验证 AST(0 violations) + flow 测试(45 passed) + git commit
 
 ## 阶段 4: 最终验证与文档
 
