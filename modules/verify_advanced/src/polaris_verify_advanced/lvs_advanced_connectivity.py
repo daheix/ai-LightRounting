@@ -53,10 +53,9 @@ def extract_connectivity(gds_path: str | Path) -> ConnectivityReport:
 
     Raises:
         FileNotFoundError: GDS 不存在。
-        RuntimeError: GDS 无 top cell 或 DEVREC 层缺失。
+        RuntimeError: GDS 无 top cell、DEVREC 层缺失或 WG 层缺失（R03 禁止 fall-back）。
         ImportError: klayout 未安装。
     """
-    import klayout.db as db  # 延迟导入：仅在处理 GDS Region 时需要
     layout, cell, dbu = _load_layout(gds_path)
     devrec_region = _get_region(layout, cell, "DEVREC")
     if devrec_region.is_empty():
@@ -68,10 +67,8 @@ def extract_connectivity(gds_path: str | Path) -> ConnectivityReport:
         devices.append((f"device_{i}", bbox))
 
     connections: list[tuple[str, str]] = []
-    try:
-        wg_region = _get_region(layout, cell, "WG")
-    except RuntimeError:
-        wg_region = db.Region()
+    # WG 层缺失由 _get_region raise RuntimeError（R03 禁止 fall-back，不再兜底空 Region）
+    wg_region = _get_region(layout, cell, "WG")
 
     if not wg_region.is_empty() and len(devices) >= 2:
         seen: set[tuple[str, str]] = set()

@@ -36,7 +36,7 @@ from .lvs_advanced_types import LocatedError, StructuredErrorReport
 
 def _extract_devrec_devices(
     layout, cell, dbu
-) -> tuple[list[tuple[str, tuple[float, float, float, float]]], bool]:
+) -> list[tuple[str, tuple[float, float, float, float]]]:
     """从 DEVREC 层提取版图器件列表（R187 器件定位）。
 
     Args:
@@ -45,22 +45,18 @@ def _extract_devrec_devices(
         dbu: database unit。
 
     Returns:
-        (extracted_devices, devrec_present) 元组。devrec_present=False 表示
-        GDS 无 DEVREC 层（调用方据此决定是否执行短路/开路检测）。
-    """
-    import klayout.db as db  # 延迟导入：仅在处理 GDS Region 时需要
-    extracted_devices: list[tuple[str, tuple[float, float, float, float]]] = []
-    devrec_present = True
-    try:
-        devrec_region = _get_region(layout, cell, "DEVREC")
-    except RuntimeError:
-        devrec_present = False
-        devrec_region = db.Region()
+        extracted_devices 列表。
 
-    if devrec_present and not devrec_region.is_empty():
+    Raises:
+        RuntimeError: DEVREC 层缺失（R03 禁止 fall-back，由 _get_region 抛出）。
+    """
+    # DEVREC 层缺失由 _get_region raise RuntimeError（R03 禁止 fall-back，不再兜底空 Region）
+    devrec_region = _get_region(layout, cell, "DEVREC")
+    extracted_devices: list[tuple[str, tuple[float, float, float, float]]] = []
+    if not devrec_region.is_empty():
         for i, shape in enumerate(devrec_region.each()):
             extracted_devices.append((f"device_{i}", _bbox_um(shape, dbu)))
-    return extracted_devices, devrec_present
+    return extracted_devices
 
 
 def _collect_device_errors(
@@ -113,18 +109,13 @@ def _collect_connection_errors(
 
 
 def _collect_short_and_open_errors(
-    devrec_present: bool,
     extracted_devices: list[tuple[str, tuple[float, float, float, float]]],
     gds_path: str | Path,
 ) -> tuple[list[LocatedError], list[LocatedError]]:
     """收集短路错误（包围盒相交）与开路错误（悬浮器件）。
 
-    仅在 DEVREC 层存在时执行（无 DEVREC 则无法定位器件包围盒）。
+    DEVREC 层缺失已由 _extract_devrec_devices raise（R03），此处无需再判空。
     """
-    if not devrec_present:
-        # 合法：GDS 无 DEVREC 层 → 无法定位器件包围盒 → 无短路/开路错误可报告，
-        # 空输入产生空输出（调用方应据 devrec_present=False 知晓检测未执行）。
-        return [], []
     ext_dict = {d[0]: d[1] for d in extracted_devices}
     short_errors = _detect_shorts(extracted_devices)
     conn_report = extract_connectivity(gds_path)
@@ -166,18 +157,18 @@ def generate_structured_error_report(
 
     Raises:
         FileNotFoundError: GDS 不存在。
-        RuntimeError: GDS 无 top cell。
+        RuntimeError: GDS 无 top cell 或 DEVREC 层缺失（R03 禁止 fall-back）。
         ImportError: klayout 未安装。
     """
     layout, cell, dbu = _load_layout(gds_path)
-    extracted_devices, devrec_present = _extract_devrec_devices(layout, cell, dbu)
+    extracted_devices = _extract_devrec_devices(layout, cell, dbu)
     ext_names = {d[0] for d in extracted_devices}
 
     report = StructuredErrorReport(gds_path=str(gds_path))
     report.device_errors = _collect_device_errors(reference, extracted_devices)
     report.connection_errors = _collect_connection_errors(reference, ext_names)
     report.short_errors, report.open_errors = _collect_short_and_open_errors(
-        devrec_present, extracted_devices, gds_path,
+        extracted_devices, gds_path,
     )
     report.total_error_count = (
         len(report.short_errors)
