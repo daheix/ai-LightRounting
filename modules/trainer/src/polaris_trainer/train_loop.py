@@ -48,6 +48,7 @@ from typing import Callable
 import numpy as np
 
 from polaris_trainer.ppo import PPOAgent, PPOConfig, Transition
+from polaris_trainer.tensorboard_logger import TrainingLogger
 
 # 动作变换回调类型：将 PPO 连续动作映射为 env 可接受的（如离散网格）动作
 ActionTransform = Callable[[np.ndarray, object], np.ndarray]
@@ -155,24 +156,28 @@ def _collect_rollout(
     obs_dim: int,
     rollout_steps: int,
     action_transform: ActionTransform | None,
-) -> tuple[float, int]:
-    """采集 rollout，返回 (ep_reward, steps)。
+) -> tuple[float, int, dict]:
+    """采集 rollout，返回 (ep_reward, steps, last_info)。
 
     env.step 须返回 Gymnasium 5-tuple ``(obs, reward, terminated, truncated, info)``。
+    last_info 用于提取 HPWL 等布局指标（供 TrainingLogger 记录）。
     """
     ep_reward = 0.0
     steps = 0
+    last_info: dict = {}
     for _ in range(rollout_steps):
         obs_vec = pad_obs(obs_to_vector(obs), obs_dim)
         action, logprob, value = agent.get_action(obs_vec)
         env_action = action_transform(action, env) if action_transform else action
-        obs, reward, terminated, _truncated, _info = env.step(env_action)
+        obs, reward, terminated, _truncated, info = env.step(env_action)
         ep_reward += reward
         steps += 1
+        if isinstance(info, dict):
+            last_info = info
         agent.store(Transition(obs_vec, action, reward, logprob, value, terminated))
         if terminated:
             break
-    return ep_reward, steps
+    return ep_reward, steps, last_info
 
 
 def _check_early_stopping(
@@ -249,6 +254,7 @@ def train_ppo(
     action_transform: ActionTransform | None = None,
     prefix: str = "ppo",
     verbose: bool = True,
+    logger: TrainingLogger | None = None,
 ) -> tuple[PPOAgent, list[dict]]:
     """单 env PPO 训练循环（每轮 reset 同一 env）。
 
@@ -260,6 +266,7 @@ def train_ppo(
         action_transform: 连续→env 动作映射回调（None=连续动作直传）。
         prefix: checkpoint/log 文件前缀。
         verbose: 是否打印进度。
+        logger: 可选 TrainingLogger（记录 reward/HPWL/loss/lr 到 JSONL+TB）。
 
     Returns:
         (训练后的 agent, 训练日志列表)。
@@ -276,13 +283,19 @@ def train_ppo(
     no_improve = 0
     for ep in range(config.num_episodes):
         obs, _info = env.reset()
-        ep_reward, _steps = _collect_rollout(
+        ep_reward, _steps, last_info = _collect_rollout(
             agent, env, obs, obs_dim, config.rollout_steps, action_transform
         )
         metrics = agent.update(last_value=0.0)
+        hpwl = last_info.get("hpwl_um") if last_info else None
         log = {"episode": ep, "ep_reward": ep_reward, "lr": agent.optimizer.lr, **metrics}
+        if hpwl is not None:
+            log["hpwl_um"] = float(hpwl)
         logs.append(log)
         _log_progress(log, config.log_every, verbose, prefix)
+        if logger is not None:
+            logger.log_episode(ep, ep_reward, hpwl=hpwl, metrics=metrics,
+                               lr=agent.optimizer.lr)
         best_reward, no_improve, should_stop = _check_early_stopping(
             ep_reward, best_reward, no_improve, config.early_stop_patience, verbose
         )
@@ -291,6 +304,8 @@ def train_ppo(
         _save_checkpoint(agent, ckpt_dir, prefix, ep, config.checkpoint_every)
 
     _finalize_training(agent, logs, ckpt_dir, prefix)
+    if logger is not None:
+        logger.flush()
     return agent, logs
 
 
@@ -302,6 +317,7 @@ def train_with_env_factory(
     action_transform: ActionTransform | None = None,
     prefix: str = "ppo",
     verbose: bool = True,
+    logger: TrainingLogger | None = None,
 ) -> tuple[PPOAgent, list[dict]]:
     """多 env PPO 训练循环（每轮由 env_factory(ep) 创建新 env）。
 
@@ -316,6 +332,7 @@ def train_with_env_factory(
         action_transform: 连续→env 动作映射回调。
         prefix: checkpoint/log 文件前缀。
         verbose: 是否打印进度。
+        logger: 可选 TrainingLogger（记录 reward/HPWL/loss/lr 到 JSONL+TB）。
 
     Returns:
         (训练后的 agent, 训练日志列表)。
@@ -334,10 +351,11 @@ def train_with_env_factory(
     for ep in range(config.num_episodes):
         env = env_factory(ep)
         obs, _info = env.reset()
-        ep_reward, _steps = _collect_rollout(
+        ep_reward, _steps, last_info = _collect_rollout(
             agent, env, obs, obs_dim, config.rollout_steps, action_transform
         )
         metrics = agent.update(last_value=0.0)
+        hpwl = last_info.get("hpwl_um") if last_info else None
         log = {
             "episode": ep,
             "netlist": getattr(env, "name", f"env_{ep}"),
@@ -345,8 +363,13 @@ def train_with_env_factory(
             "lr": agent.optimizer.lr,
             **metrics,
         }
+        if hpwl is not None:
+            log["hpwl_um"] = float(hpwl)
         logs.append(log)
         _log_progress(log, config.log_every, verbose, prefix)
+        if logger is not None:
+            logger.log_episode(ep, ep_reward, hpwl=hpwl, metrics=metrics,
+                               lr=agent.optimizer.lr)
         best_reward, no_improve, should_stop = _check_early_stopping(
             ep_reward, best_reward, no_improve, config.early_stop_patience, verbose
         )
@@ -355,6 +378,8 @@ def train_with_env_factory(
         _save_checkpoint(agent, ckpt_dir, prefix, ep, config.checkpoint_every)
 
     _finalize_training(agent, logs, ckpt_dir, prefix)
+    if logger is not None:
+        logger.flush()
     return agent, logs
 
 

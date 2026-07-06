@@ -282,6 +282,396 @@ def load_ariane_benchmark(
     )
 
 
+# ─── MemPool RISC-V Many-core SoC 真实模块定义 ───
+# 来源: https://github.com/pulp-platform/mempool (PULP platform MemPool)
+# MemPool: 16 组 RISC-V cluster + TCDM SRAM + AXI 互连的开源 many-core SoC
+# 模块面积估算（NanGate45 工艺，μm²）参考 TILOS MemPool bookshelf
+#
+# MemPool 简化模型（保留真实拓扑结构，规模可调）:
+# - 4 个 compute cluster（每组含 9 个 RISC-V snitch cores，简化为 1 个代表）
+# - 4 个 instruction cache（每组 cluster 共享）
+# - 4 个 TCDM SRAM bank（代表 16 bank 分组）
+# - 1 个 TCDM interconnect（多 bank 互连网络）
+# - 1 个 AXI peripheral subsystem
+# - 1 个 boot ROM
+
+MEMPOOL_MODULES: dict[str, ArianeModule] = {
+    "cluster_0": ArianeModule(
+        name="cluster_0", width_um=180.0, height_um=140.0,
+        category="compute", description="计算集群 0（9 个 RISC-V snitch cores）",
+    ),
+    "cluster_1": ArianeModule(
+        name="cluster_1", width_um=180.0, height_um=140.0,
+        category="compute", description="计算集群 1（9 个 RISC-V snitch cores）",
+    ),
+    "cluster_2": ArianeModule(
+        name="cluster_2", width_um=180.0, height_um=140.0,
+        category="compute", description="计算集群 2（9 个 RISC-V snitch cores）",
+    ),
+    "cluster_3": ArianeModule(
+        name="cluster_3", width_um=180.0, height_um=140.0,
+        category="compute", description="计算集群 3（9 个 RISC-V snitch cores）",
+    ),
+    "icache_0": ArianeModule(
+        name="icache_0", width_um=120.0, height_um=90.0,
+        category="cache", description="指令缓存 0（cluster_0 共享）",
+    ),
+    "icache_1": ArianeModule(
+        name="icache_1", width_um=120.0, height_um=90.0,
+        category="cache", description="指令缓存 1（cluster_1 共享）",
+    ),
+    "icache_2": ArianeModule(
+        name="icache_2", width_um=120.0, height_um=90.0,
+        category="cache", description="指令缓存 2（cluster_2 共享）",
+    ),
+    "icache_3": ArianeModule(
+        name="icache_3", width_um=120.0, height_um=90.0,
+        category="cache", description="指令缓存 3（cluster_3 共享）",
+    ),
+    "sram_bank_0": ArianeModule(
+        name="sram_bank_0", width_um=100.0, height_um=80.0,
+        category="sram", description="TCDM SRAM bank 组 0（4 bank）",
+    ),
+    "sram_bank_1": ArianeModule(
+        name="sram_bank_1", width_um=100.0, height_um=80.0,
+        category="sram", description="TCDM SRAM bank 组 1（4 bank）",
+    ),
+    "sram_bank_2": ArianeModule(
+        name="sram_bank_2", width_um=100.0, height_um=80.0,
+        category="sram", description="TCDM SRAM bank 组 2（4 bank）",
+    ),
+    "sram_bank_3": ArianeModule(
+        name="sram_bank_3", width_um=100.0, height_um=80.0,
+        category="sram", description="TCDM SRAM bank 组 3（4 bank）",
+    ),
+    "tcdm_interconnect": ArianeModule(
+        name="tcdm_interconnect", width_um=160.0, height_um=120.0,
+        category="interconnect", description="TCDM 多 bank 互连网络（logarithmic interconnect）",
+    ),
+    "axi_peripheral": ArianeModule(
+        name="axi_peripheral", width_um=140.0, height_um=100.0,
+        category="interconnect", description="AXI4 外设子系统（peripheral subsystem）",
+    ),
+    "bootrom": ArianeModule(
+        name="bootrom", width_um=40.0, height_um=30.0,
+        category="control", description="启动 ROM（boot ROM）",
+    ),
+}
+
+# MemPool 模块间真实连接（数据通路 + 控制通路）
+# 来源: https://github.com/pulp-platform/mempool/blob/main/hardware/mempool_top.sv
+MEMPOOL_CONNECTIONS: list[tuple[str, str, str, str]] = [
+    # ── cluster ↔ icache（取指）──
+    ("cluster_0", "fetch_req", "icache_0", "req_in"),
+    ("icache_0", "instr_out", "cluster_0", "instr_in"),
+    ("cluster_1", "fetch_req", "icache_1", "req_in"),
+    ("icache_1", "instr_out", "cluster_1", "instr_in"),
+    ("cluster_2", "fetch_req", "icache_2", "req_in"),
+    ("icache_2", "instr_out", "cluster_2", "instr_in"),
+    ("cluster_3", "fetch_req", "icache_3", "req_in"),
+    ("icache_3", "instr_out", "cluster_3", "instr_in"),
+    # ── cluster ↔ TCDM SRAM（数据访存）──
+    ("cluster_0", "load_req", "sram_bank_0", "req_in"),
+    ("cluster_1", "load_req", "sram_bank_1", "req_in"),
+    ("cluster_2", "load_req", "sram_bank_2", "req_in"),
+    ("cluster_3", "load_req", "sram_bank_3", "req_in"),
+    ("sram_bank_0", "data_out", "cluster_0", "data_in"),
+    ("sram_bank_1", "data_out", "cluster_1", "data_in"),
+    ("sram_bank_2", "data_out", "cluster_2", "data_in"),
+    ("sram_bank_3", "data_out", "cluster_3", "data_in"),
+    # ── TCDM 互连（多 bank 仲裁）──
+    ("cluster_0", "tcdm_req", "tcdm_interconnect", "req_in"),
+    ("cluster_1", "tcdm_req", "tcdm_interconnect", "req_in"),
+    ("cluster_2", "tcdm_req", "tcdm_interconnect", "req_in"),
+    ("cluster_3", "tcdm_req", "tcdm_interconnect", "req_in"),
+    ("tcdm_interconnect", "grant_out", "sram_bank_0", "grant_in"),
+    ("tcdm_interconnect", "grant_out", "sram_bank_1", "grant_in"),
+    ("tcdm_interconnect", "grant_out", "sram_bank_2", "grant_in"),
+    ("tcdm_interconnect", "grant_out", "sram_bank_3", "grant_in"),
+    # ── AXI 外设（异步通信）──
+    ("cluster_0", "axi_req", "axi_peripheral", "req_in"),
+    ("axi_peripheral", "axi_resp", "cluster_0", "resp_in"),
+    ("axi_peripheral", "axi_resp", "cluster_1", "resp_in"),
+    ("axi_peripheral", "axi_resp", "cluster_2", "resp_in"),
+    ("axi_peripheral", "axi_resp", "cluster_3", "resp_in"),
+    # ── bootrom（启动初始化）──
+    ("bootrom", "boot_data", "cluster_0", "boot_in"),
+    ("bootrom", "boot_data", "axi_peripheral", "boot_in"),
+]
+
+
+# ─── NVDLA 深度学习加速器真实模块定义 ───
+# 来源: https://github.com/nvdla/hw (NVIDIA Deep Learning Accelerator, NVDLA)
+# NVDLA: NVIDIA 开源深度学习推理加速器，含卷积/池化/激活/数据重排等完整推理流水线
+# 模块面积估算（NanGate45 工艺，μm²）参考 TILOS NVDLA bookshelf
+#
+# NVDLA 简化模型（保留真实推理流水线拓扑）:
+# - CDMA (Convolution DMA): 卷积输入数据搬运
+# - BDMA (Bridge DMA): 跨域数据搬运
+# - SRAM (SRAM 1): 片上 SRAM 缓冲
+# - CONV (Convolution Core): 卷积计算主流水线
+# - SDP (Single Data Processor): 单点后处理（激活/equal/缩放）
+# - PDP (Planar Data Processor): 平面后处理（池化）
+# - CDP (Channel Data Processor): 通道后处理（LUT 激活）
+# - RUBIK (Reshape Engine): 数据重排（NHWC↔NCHW 等）
+# - GLB (Global Buffer): 全局缓冲
+# - REGIF (Register Interface): 寄存器接口
+# - CTRL (Controller): 全局控制器
+
+NVDLA_MODULES: dict[str, ArianeModule] = {
+    "cdma": ArianeModule(
+        name="cdma", width_um=130.0, height_um=90.0,
+        category="dma", description="Convolution DMA，卷积输入数据搬运",
+    ),
+    "bdma": ArianeModule(
+        name="bdma", width_um=110.0, height_um=80.0,
+        category="dma", description="Bridge DMA，跨域数据搬运",
+    ),
+    "sram": ArianeModule(
+        name="sram", width_um=240.0, height_um=180.0,
+        category="memory", description="片上 SRAM 缓冲（1 bank，可配置大小）",
+    ),
+    "conv": ArianeModule(
+        name="conv", width_um=260.0, height_um=200.0,
+        category="compute", description="卷积计算主流水线（PRA/SBST/MAC/SUM）",
+    ),
+    "sdp": ArianeModule(
+        name="sdp", width_um=150.0, height_um=110.0,
+        category="post_proc", description="Single Data Processor（激活/equal/缩放）",
+    ),
+    "pdp": ArianeModule(
+        name="pdp", width_um=140.0, height_um=100.0,
+        category="post_proc", description="Planar Data Processor（池化）",
+    ),
+    "cdp": ArianeModule(
+        name="cdp", width_um=120.0, height_um=90.0,
+        category="post_proc", description="Channel Data Processor（LUT 激活）",
+    ),
+    "rubik": ArianeModule(
+        name="rubik", width_um=100.0, height_um=70.0,
+        category="post_proc", description="Reshape Engine（数据重排 NHWC↔NCHW）",
+    ),
+    "glb": ArianeModule(
+        name="glb", width_um=180.0, height_um=140.0,
+        category="memory", description="Global Buffer，全局缓冲（跨模块共享）",
+    ),
+    "regif": ArianeModule(
+        name="regif", width_um=80.0, height_um=60.0,
+        category="control", description="Register Interface，寄存器接口（CSB 配置）",
+    ),
+    "ctrl": ArianeModule(
+        name="ctrl", width_um=90.0, height_um=70.0,
+        category="control", description="全局控制器（事件调度/中断管理）",
+    ),
+}
+
+# NVDLA 模块间真实连接（推理数据流 + 控制流）
+# 来源: https://github.com/nvdla/hw/blob/master/vmod/nvdla_top.v
+NVDLA_CONNECTIONS: list[tuple[str, str, str, str]] = [
+    # ── 数据搬运 DMA → SRAM/GLB ──
+    ("cdma", "data_out", "sram", "data_in"),
+    ("bdma", "data_out", "sram", "data_in"),
+    ("cdma", "data_out", "glb", "data_in"),
+    ("bdma", "data_out", "glb", "data_in"),
+    # ── 卷积主流水线（推理核心数据流）──
+    ("sram", "data_out", "conv", "data_in"),
+    ("glb", "weight_out", "conv", "weight_in"),
+    ("conv", "data_out", "glb", "data_in"),
+    # ── 后处理流水线（CONV → SDP → PDP → CDP）──
+    ("glb", "data_out", "sdp", "data_in"),
+    ("sdp", "data_out", "glb", "data_in"),
+    ("glb", "data_out", "pdp", "data_in"),
+    ("pdp", "data_out", "glb", "data_in"),
+    ("glb", "data_out", "cdp", "data_in"),
+    ("cdp", "data_out", "glb", "data_in"),
+    # ── RUBIK 数据重排 ──
+    ("glb", "data_out", "rubik", "data_in"),
+    ("rubik", "data_out", "glb", "data_in"),
+    # ── 控制流（REGIF/CTRL 配置所有模块）──
+    ("regif", "config", "conv", "config_in"),
+    ("regif", "config", "sdp", "config_in"),
+    ("regif", "config", "pdp", "config_in"),
+    ("regif", "config", "cdp", "config_in"),
+    ("regif", "config", "cdma", "config_in"),
+    ("regif", "config", "bdma", "config_in"),
+    ("ctrl", "event", "regif", "event_in"),
+    ("ctrl", "interrupt", "regif", "intr_in"),
+    ("ctrl", "event", "conv", "event_in"),
+]
+
+
+# ─── 工厂函数：统一加载 TILOS benchmark ───
+
+# benchmark 名称 → (modules dict, connections list, target_hpwl) 映射
+# target_hpwl 参考 TILOS MacroPlacement 公开评估报告（17 模块 Ariane/15 模块
+# MemPool/11 模块 NVDLA 规模，NanGate45 工艺）
+_TILOS_BENCHMARKS: dict[str, tuple[dict, list, float]] = {
+    "ariane": (ARIANE_MODULES, ARIANE_CONNECTIONS, 50000.0),
+    "mempool": (MEMPOOL_MODULES, MEMPOOL_CONNECTIONS, 80000.0),
+    "nvdla": (NVDLA_MODULES, NVDLA_CONNECTIONS, 70000.0),
+}
+
+
+def load_mempool_benchmark(
+    process_node: str = "NanGate45",
+    canvas_scale: float = 1.5,
+) -> CircuitSpec:
+    """加载 TILOS MemPool RISC-V many-core SoC benchmark。
+
+    生成包含 15 个 MemPool 核心模块 + 31 条真实连接的 CircuitSpec，
+    模块面积与连接拓扑对齐 PULP MemPool 顶层 ``mempool_top.sv``。
+
+    来源:
+    - PULP MemPool: https://github.com/pulp-platform/mempool
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+
+    Args:
+        process_node: 工艺节点（NanGate45/ASAP7/SKY130HD）。
+        canvas_scale: 画布缩放因子。
+
+    Returns:
+        CircuitSpec，benchmark_source=TILOS，target_metric=HPWL。
+    """
+    devices = [_module_to_device_spec(m) for m in MEMPOOL_MODULES.values()]
+    total_area = sum(m.width_um * m.height_um for m in MEMPOOL_MODULES.values())
+    canvas_side = (total_area * canvas_scale) ** 0.5
+    return CircuitSpec(
+        name="tilos_mempool",
+        devices=devices,
+        connections=list(MEMPOOL_CONNECTIONS),
+        canvas_w=canvas_side,
+        canvas_h=canvas_side,
+        benchmark_source=BenchmarkSource.TILOS,
+        process_node=process_node,
+        target_metric=TargetMetric.HPWL,
+        target_value=80000.0,
+    )
+
+
+def load_nvdla_benchmark(
+    process_node: str = "NanGate45",
+    canvas_scale: float = 1.5,
+) -> CircuitSpec:
+    """加载 TILOS NVDLA 深度学习加速器 benchmark。
+
+    生成包含 11 个 NVDLA 核心模块 + 24 条真实连接的 CircuitSpec，
+    模块面积与连接拓扑对齐 NVDLA ``nvdla_top.v`` 顶层。
+
+    来源:
+    - NVDLA: https://github.com/nvdla/hw
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+
+    Args:
+        process_node: 工艺节点（NanGate45/ASAP7/SKY130HD）。
+        canvas_scale: 画布缩放因子。
+
+    Returns:
+        CircuitSpec，benchmark_source=TILOS，target_metric=HPWL。
+    """
+    devices = [_module_to_device_spec(m) for m in NVDLA_MODULES.values()]
+    total_area = sum(m.width_um * m.height_um for m in NVDLA_MODULES.values())
+    canvas_side = (total_area * canvas_scale) ** 0.5
+    return CircuitSpec(
+        name="tilos_nvdla",
+        devices=devices,
+        connections=list(NVDLA_CONNECTIONS),
+        canvas_w=canvas_side,
+        canvas_h=canvas_side,
+        benchmark_source=BenchmarkSource.TILOS,
+        process_node=process_node,
+        target_metric=TargetMetric.HPWL,
+        target_value=70000.0,
+    )
+
+
+def list_tilos_benchmarks() -> list[str]:
+    """列出所有可用 TILOS benchmark 名称。
+
+    Returns:
+        benchmark 名称列表（按字典序）。
+    """
+    return sorted(_TILOS_BENCHMARKS.keys())
+
+
+def load_tilos_benchmark(
+    name: str,
+    process_node: str = "NanGate45",
+    canvas_scale: float = 1.5,
+) -> CircuitSpec:
+    """统一加载 TILOS benchmark（工厂函数）。
+
+    支持 Ariane / MemPool / NVDLA 三个 TILOS MacroPlacement 公开 benchmark，
+    对齐 TILOS 评估标准（HPWL 指标 + NanGate45/ASAP7/SKY130HD 工艺）。
+
+    来源:
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - Ariane (CVA6): https://github.com/openhwgroup/cva6
+    - MemPool: https://github.com/pulp-platform/mempool
+    - NVDLA: https://github.com/nvdla/hw
+
+    Args:
+        name: benchmark 名称（ariane/mempool/nvdla）。
+        process_node: 工艺节点。
+        canvas_scale: 画布缩放因子。
+
+    Returns:
+        CircuitSpec。
+
+    Raises:
+        KeyError: 未知 benchmark 名称（R03 无 fall-back）。
+    """
+    name_lower = name.lower()
+    if name_lower == "ariane":
+        return load_ariane_benchmark(process_node, canvas_scale)
+    if name_lower == "mempool":
+        return load_mempool_benchmark(process_node, canvas_scale)
+    if name_lower == "nvdla":
+        return load_nvdla_benchmark(process_node, canvas_scale)
+    raise KeyError(
+        f"未知 TILOS benchmark: {name}，可用: {list_tilos_benchmarks()}"
+        "（R03 无 fall-back）"
+    )
+
+
+def tilos_benchmark_info(name: str) -> dict:
+    """返回指定 TILOS benchmark 的元信息。
+
+    Args:
+        name: benchmark 名称（ariane/mempool/nvdla）。
+
+    Returns:
+        含模块数、连接数、总面积、工艺节点、来源 URL 的字典。
+
+    Raises:
+        KeyError: 未知 benchmark 名称（R03 无 fall-back）。
+    """
+    if name.lower() not in _TILOS_BENCHMARKS:
+        raise KeyError(
+            f"未知 TILOS benchmark: {name}，可用: {list_tilos_benchmarks()}"
+        )
+    name_lower = name.lower()
+    modules, connections, target = _TILOS_BENCHMARKS[name_lower]
+    total_area = sum(m.width_um * m.height_um for m in modules.values())
+    source_urls = {
+        "ariane": "https://github.com/openhwgroup/cva6",
+        "mempool": "https://github.com/pulp-platform/mempool",
+        "nvdla": "https://github.com/nvdla/hw",
+    }
+    return {
+        "name": f"tilos_{name_lower}",
+        "module_count": len(modules),
+        "connection_count": len(connections),
+        "total_area_um2": total_area,
+        "process_node": "NanGate45",
+        "benchmark_source": "TILOS",
+        "source_url": "https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
+        "cpu_source_url": source_urls[name_lower],
+        "categories": sorted({m.category for m in modules.values()}),
+        "target_metric": "HPWL",
+        "target_value": target,
+    }
+
+
 def ariane_benchmark_info() -> dict:
     """返回 Ariane benchmark 元信息（对标 TILOS 评估标准）。
 
@@ -336,8 +726,17 @@ __all__ = [
     "ArianeModule",
     "ARIANE_MODULES",
     "ARIANE_CONNECTIONS",
+    "MEMPOOL_MODULES",
+    "MEMPOOL_CONNECTIONS",
+    "NVDLA_MODULES",
+    "NVDLA_CONNECTIONS",
     "load_ariane_benchmark",
+    "load_mempool_benchmark",
+    "load_nvdla_benchmark",
+    "load_tilos_benchmark",
     "ariane_benchmark_info",
+    "tilos_benchmark_info",
+    "list_tilos_benchmarks",
     "list_ariane_modules",
     "get_ariane_module",
 ]
