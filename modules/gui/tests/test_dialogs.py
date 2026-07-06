@@ -239,9 +239,9 @@ def test_lazy_export_behavior() -> None:
     # WebServer/run_server 在 _LAZY_EXPORTS 中
     assert "WebServer" in polaris_gui._LAZY_EXPORTS
     assert "run_server" in polaris_gui._LAZY_EXPORTS
-    # 访问 WebServer：成功（依赖可用）或 raise（依赖缺失）均为 R03 合规
+    # 访问 WebServer：成功（依赖可用）或 skip（依赖缺失，R03 不静默兜底）
     try:
         ws = polaris_gui.WebServer
         assert ws is not None
-    except (ImportError, AttributeError, ModuleNotFoundError):
-        pass  # 依赖不可用，R03 合规 raise
+    except (ImportError, AttributeError, ModuleNotFoundError) as e:
+        pytest.skip(f"WebServer 依赖不可用: {e}")
