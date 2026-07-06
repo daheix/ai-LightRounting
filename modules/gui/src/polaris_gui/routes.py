@@ -4,9 +4,31 @@
 
 包含 HTTP 请求处理器类，负责路由分发与请求/响应处理：
 - GET 路由: 健康检查 / 预设列表 / Showcase 报告 / 作业管理 / 静态文件
+  + D10 增强: 任务结果查询 / 上传列表 / 编辑器场景渲染
 - POST 路由: 流水线运行 / Showcase 启动 / 作业提交 / 作业取消
+  + D10 增强: GDS 上传 / 独立布局/布线/DRC / 编辑器交互
 
-业务逻辑由 handlers.py 提供，本模块仅负责 HTTP 协议层。
+业务逻辑由 handlers.py + editor_handlers.py 提供，本模块仅负责 HTTP 协议层。
+
+D10 GUI 增强 API（4→8 分，对齐 KLayout/gdsfactory 工作流）:
+- POST /api/upload_gds             — 上传 GDSII/OASIS/KLayout 脚本文件
+- POST /api/run_placement          — 运行布局（polaris-place analytical）
+- POST /api/run_routing            — 运行布线（polaris-route curvy）
+- POST /api/run_drc                — 运行 DRC 检查（polaris-drc 18 规则）
+- GET  /api/results/{task_id}      — 获取任务结果
+- GET  /api/uploads                — 列出已上传文件
+- POST /api/editor/device          — 添加器件到场景
+- POST /api/editor/device/move     — 移动器件
+- POST /api/editor/device/delete   — 删除器件
+- GET  /api/editor/scene           — 渲染场景图（Canvas 驱动）
+- GET  /api/editor/devices         — 列出场景中所有器件
+- POST /api/editor/routes          — 设置布线路径用于可视化
+- POST /api/editor/drc             — 设置 DRC 高亮标记
+- POST /api/editor/drc/clear       — 清除 DRC 高亮
+- POST /api/editor/undo            — 撤销
+- POST /api/editor/redo            — 重做
+- POST /api/editor/export_klayout  — 导出 KLayout Python 脚本
+- POST /api/editor/clear           — 清空场景
 
 文献来源（R02 学术诚信，≥5 条）：
 1. Python http.server: https://docs.python.org/3/library/http.server.html
@@ -17,6 +39,10 @@
 6. CWE-209 Information Exposure: https://cwe.mitre.org/data/definitions/209.html
 7. JSON Lines 规范: http://jsonlines.org/
 8. REST API 错误处理: https://datatracker.ietf.org/doc/html/rfc7807
+9. OWASP Unrestricted File Upload:
+   https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
+10. RFC 7807 Problem Details:
+    https://datatracker.ietf.org/doc/html/rfc7807
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R05 Bug 必修。
 """
@@ -43,14 +69,16 @@ from polaris_gui.handlers import (
     _showcase_lock,
     _showcase_runs,
 )
+from polaris_gui.routes_d10 import D10RoutesMixin
 
 logger = logging.getLogger(__name__)
 
 
-class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
+class PolarisHTTPRequestHandler(D10RoutesMixin, BaseHTTPRequestHandler):
     """PoLaRIS HTTP 请求处理器。
 
-    路由分发层，业务逻辑由 handlers.py 提供。
+    路由分发层，业务逻辑由 handlers.py + editor_handlers.py 提供。
+    D10 GUI 增强路由由 ``D10RoutesMixin`` 提供（mixin 模式，R11 ≤800 行）。
     """
 
     def log_message(self, format: str, *args) -> None:
@@ -89,7 +117,7 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         """HTTP GET 路由分发（重构后圈复杂度 ≤15）。
 
-        路由优先级：简单精确匹配 > showcase > 作业管理 > 静态文件兜底。
+        路由优先级：简单精确匹配 > showcase > 作业管理 > D10 增强（结果/上传/编辑器）> 静态文件。
         """
         parsed = urlparse(self.path)
         path = parsed.path
@@ -101,6 +129,9 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
             return
         # 优先级 3: 作业管理 API（对齐 Cadence ADE-XL 作业队列查询）
         if self._try_jobs_get(path, parsed):
+            return
+        # 优先级 4: D10 增强 — 任务结果 / 上传列表 / 编辑器场景
+        if self._try_d10_get(path):
             return
         # 默认: 静态文件
         self._serve_static_index(path)
@@ -251,6 +282,12 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
         static_path = _STATIC_DIR / path.lstrip("/")
         self._send_static(static_path)
 
+    # D10 GUI 增强 API 的 handler 方法（_try_d10_get/_try_d10_post/
+    # _try_editor_post/_handle_get_results/_handle_upload_gds/
+    # _handle_run_placement/_handle_run_routing/_handle_run_drc/
+    # _read_json_body/_handle_editor_*/_parse_multipart_upload）
+    # 由 D10RoutesMixin 提供（见 routes_d10.py，mixin 模式，R11 ≤800 行）。
+
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
@@ -269,6 +306,10 @@ class PolarisHTTPRequestHandler(BaseHTTPRequestHandler):
             return
         if path.startswith("/api/jobs/") and path.endswith("/cancel"):
             self._handle_jobs_cancel(path)
+            return
+
+        # === D10 增强 API（GDS 上传 / 独立布局/布线/DRC / 编辑器交互）===
+        if self._try_d10_post(path):
             return
 
         self.send_error(404, "Not found")

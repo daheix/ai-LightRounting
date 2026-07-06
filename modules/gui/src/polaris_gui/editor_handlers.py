@@ -74,6 +74,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from polaris_gui.editor_circuits import build_circuit_dict as _build_circuit_dict
 from polaris_gui.layout_editor import (
     DeviceInstance,
     EditorConfig,
@@ -142,119 +143,9 @@ def _reset_editor() -> None:
     logger.info("LayoutEditor 已重置（场景清空）")
 
 
-# =============================================================================
-# 带端口的预设电路构建（polaris-route 需 ports 字段）
-# =============================================================================
-
-
-def _mzi_circuit_with_ports():
-    """构建带端口定义的 MZI 干涉仪电路规格。
-
-    端口坐标对齐 SiEPIC EBeam PDK 几何约定（dx/dy 相对器件原点，μm），
-    方向 north/south/east/west 用于 DRC PORT_FACING 检查。
-
-    来源:
-    - SiEPIC EBeam PDK mmi_1x2/mmi_2x2/grating_coupler 端口定义
-      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-    - polaris_core.specs.DeviceSpec ports 字段约定
-    - examples/e2e_showcase/stages/stage4_routing.py（同款电路）
-
-    Returns:
-        ``CircuitSpec`` 实例（含 ports）。
-    """
-    from polaris_core.specs import CircuitSpec, DeviceSpec
-
-    return CircuitSpec(
-        name="MZI",
-        canvas_w=500,
-        canvas_h=300,
-        devices=[
-            DeviceSpec("gc1", "grating_coupler", 10, 10,
-                       ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")]),
-            DeviceSpec("mmi1", "mmi_1x2", 20, 10,
-                       ports=[("in", 0, 5, "west"),
-                              ("out0", 20, 2.5, "east"),
-                              ("out1", 20, 7.5, "east")]),
-            DeviceSpec("wg1", "strip_waveguide", 100, 0.5,
-                       ports=[("in", 0, 0.25, "west"),
-                              ("out", 100, 0.25, "east")]),
-            DeviceSpec("wg2", "strip_waveguide", 120, 0.5,
-                       ports=[("in", 0, 0.25, "west"),
-                              ("out", 120, 0.25, "east")]),
-            DeviceSpec("mmi2", "mmi_2x2", 20, 10,
-                       ports=[("in0", 0, 2.5, "west"),
-                              ("in1", 0, 7.5, "west"),
-                              ("out0", 20, 2.5, "east"),
-                              ("out1", 20, 7.5, "east")]),
-        ],
-        connections=[
-            ("gc1", "out", "mmi1", "in"),
-            ("mmi1", "out0", "wg1", "in"),
-            ("mmi1", "out1", "wg2", "in"),
-            ("wg1", "out", "mmi2", "in0"),
-            ("wg2", "out", "mmi2", "in1"),
-        ],
-    )
-
-
-def _ring_circuit_with_ports():
-    """构建带端口定义的微环谐振器电路规格。
-
-    Returns:
-        ``CircuitSpec`` 实例（含 ports）。
-    """
-    from polaris_core.specs import CircuitSpec, DeviceSpec
-
-    return CircuitSpec(
-        name="Ring",
-        canvas_w=400,
-        canvas_h=300,
-        devices=[
-            DeviceSpec("gc1", "grating_coupler", 10, 10,
-                       ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")]),
-            DeviceSpec("wg1", "strip_waveguide", 200, 0.5,
-                       ports=[("in", 0, 0.25, "west"),
-                              ("out", 200, 0.25, "east")]),
-            DeviceSpec("ring1", "ring_resonator", 30, 30,
-                       ports=[("bus_in", 0, 15, "west"),
-                              ("bus_out", 30, 15, "east")]),
-            DeviceSpec("gc2", "grating_coupler", 10, 10,
-                       ports=[("in", 0, 5, "west"), ("out", 10, 5, "east")]),
-        ],
-        connections=[
-            ("gc1", "out", "wg1", "in"),
-            ("wg1", "out", "ring1", "bus_in"),
-            ("ring1", "bus_out", "gc2", "in"),
-        ],
-    )
-
-
-# 预设 ID → 电路构建器（带 ports 版本，用于布局+布线+DRC）
-_PRESET_BUILDERS_WITH_PORTS = {
-    "mzi": _mzi_circuit_with_ports,
-    "ring": _ring_circuit_with_ports,
-}
-
-
-def _build_circuit_dict(preset_id: str) -> dict:
-    """根据预设 ID 构建带端口的 circuit dict（供 polaris-place/route/drc 使用）。
-
-    Args:
-        preset_id: 预设 ID（"mzi" / "ring"）。
-
-    Returns:
-        polaris-core 风格 circuit dict（含 devices/connections/ports/canvas）。
-
-    Raises:
-        ValueError: 未知预设 ID（R03 禁止 fall-back）。
-    """
-    builder = _PRESET_BUILDERS_WITH_PORTS.get(preset_id)
-    if builder is None:
-        raise ValueError(
-            f"未知预设: {preset_id}（可用: {list(_PRESET_BUILDERS_WITH_PORTS)})）"
-        )
-    from polaris_core import circuit_to_dict
-    return circuit_to_dict(builder())
+# 带端口的预设电路构建（_mzi_circuit_with_ports/_ring_circuit_with_ports/
+# _PRESET_BUILDERS_WITH_PORTS/build_circuit_dict）已拆分到 editor_circuits.py
+# （R11 质量门禁：单文件≤800行）。本模块通过 ``_build_circuit_dict`` 别名导入。
 
 
 # =============================================================================
@@ -822,11 +713,6 @@ __all__ = [
     # 编辑器单例
     "_get_editor",
     "_reset_editor",
-    # 预设电路
-    "_mzi_circuit_with_ports",
-    "_ring_circuit_with_ports",
-    "_PRESET_BUILDERS_WITH_PORTS",
-    "_build_circuit_dict",
     # 任务存储
     "_gen_task_id",
     "_store_task",
