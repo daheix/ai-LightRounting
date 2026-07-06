@@ -546,6 +546,56 @@ def stratified_monte_carlo(
     )
 
 
+def _relative_error(estimate: float, true_value: float) -> float:
+    """计算相对误差 |estimate - true_value| / |true_value|。"""
+    if true_value != 0:
+        return abs(estimate - true_value) / abs(true_value)
+    return abs(estimate - true_value)
+
+
+def _compute_mc_error_for_n(
+    func: Callable[[np.ndarray], float], nominal_dist: list[dict],
+    n: int, true_value: float, rng: np.random.Generator, d: int,
+) -> float:
+    """对样本数 n 执行朴素 MC 采样并返回相对误差。"""
+    mc_samples = np.empty((n, d))
+    for j in range(d):
+        spec = nominal_dist[j]
+        if spec.get("type") == "norm":
+            mc_samples[:, j] = rng.normal(
+                loc=spec.get("loc", 0.0),
+                scale=spec.get("scale", 1.0),
+                size=n,
+            )
+        else:
+            mc_samples[:, j] = rng.uniform(
+                low=spec.get("loc", 0.0),
+                high=spec.get("loc", 0.0) + spec.get("scale", 1.0),
+                size=n,
+            )
+    mc_outputs = np.array([float(func(mc_samples[i])) for i in range(n)])
+    mc_mean = float(np.mean(mc_outputs))
+    return _relative_error(mc_mean, true_value)
+
+
+def _build_convergence_report(
+    sample_sizes: list[int], mc_errors: list[float],
+    stratified_errors: list[float],
+) -> dict:
+    """构造收敛对比报告 dict。"""
+    mc_final = mc_errors[-1]
+    strat_final = stratified_errors[-1]
+    speedup = mc_final / strat_final if strat_final > 0 else float("inf")
+    return {
+        "sample_sizes": list(sample_sizes),
+        "mc_errors": mc_errors,
+        "stratified_errors": stratified_errors,
+        "mc_final_error": mc_final,
+        "stratified_final_error": strat_final,
+        "speedup_factor": speedup,
+    }
+
+
 def compare_stratified_convergence(
     func: Callable[[np.ndarray], float],
     nominal_dist: list[dict],
@@ -580,61 +630,21 @@ def compare_stratified_convergence(
     d = len(nominal_dist)
     if d == 0:
         raise ValueError("nominal_dist 不能为空")
-
     rng = np.random.default_rng(seed)
     mc_errors: list[float] = []
     stratified_errors: list[float] = []
-
     for n in sample_sizes:
-        mc_samples = np.empty((n, d))
-        for j in range(d):
-            spec = nominal_dist[j]
-            if spec.get("type") == "norm":
-                mc_samples[:, j] = rng.normal(
-                    loc=spec.get("loc", 0.0),
-                    scale=spec.get("scale", 1.0),
-                    size=n,
-                )
-            else:
-                mc_samples[:, j] = rng.uniform(
-                    low=spec.get("loc", 0.0),
-                    high=spec.get("loc", 0.0) + spec.get("scale", 1.0),
-                    size=n,
-                )
-        mc_outputs = np.array(
-            [float(func(mc_samples[i])) for i in range(n)]
+        mc_errors.append(
+            _compute_mc_error_for_n(func, nominal_dist, n, true_value, rng, d)
         )
-        mc_mean = float(np.mean(mc_outputs))
-        mc_err = (
-            abs(mc_mean - true_value) / abs(true_value)
-            if true_value != 0
-            else abs(mc_mean - true_value)
-        )
-        mc_errors.append(mc_err)
-
         strat_result = stratified_monte_carlo(
             func=func, nominal_dist=nominal_dist, n_strata=n_strata,
             n_samples=n, strategy=strategy, seed=seed,
         )
-        strat_err = (
-            abs(strat_result.estimate - true_value) / abs(true_value)
-            if true_value != 0
-            else abs(strat_result.estimate - true_value)
+        stratified_errors.append(
+            _relative_error(strat_result.estimate, true_value)
         )
-        stratified_errors.append(strat_err)
-
-    mc_final = mc_errors[-1]
-    strat_final = stratified_errors[-1]
-    speedup = mc_final / strat_final if strat_final > 0 else float("inf")
-
-    return {
-        "sample_sizes": list(sample_sizes),
-        "mc_errors": mc_errors,
-        "stratified_errors": stratified_errors,
-        "mc_final_error": mc_final,
-        "stratified_final_error": strat_final,
-        "speedup_factor": speedup,
-    }
+    return _build_convergence_report(sample_sizes, mc_errors, stratified_errors)
 
 
 __all__ = [
