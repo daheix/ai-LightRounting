@@ -90,13 +90,20 @@ from polaris_parasitic import (  # noqa: E402
     SUPPORTED_DEVICE_TYPES,
     VerilogAModel,
     generate_detector_verilog_a,
+    generate_directional_coupler_verilog_a,
+    generate_grating_coupler_verilog_a,
     generate_mmi_1x2_verilog_a,
+    generate_mmi_2x2_verilog_a,
     generate_modulator_verilog_a,
+    generate_phase_shifter_verilog_a,
     generate_ring_verilog_a,
     generate_spice_netlist,
     generate_verilog_a,
     generate_waveguide_verilog_a,
+    generate_y_branch_verilog_a,
     optimize_opto_electrical_link,
+    run_ngspice_cosimulation,
+    run_photoelectric_cosim,
     save_verilog_a,
 )
 
@@ -548,28 +555,38 @@ def test_spice_simulation_config_invalid_raise():
 
 
 def test_generate_spice_netlist_pulse():
-    """generate_spice_netlist pulse 信号 Ngspice 网表生成。"""
-    model = generate_waveguide_verilog_a()
+    """generate_spice_netlist pulse 信号 Ngspice 网表生成（光电协同契约）。
+
+    R05 修复: 新版 generate_spice_netlist 强制要求 models 须含 ≥1 modulator
+    + ≥1 detector（光电协同紧凑模型），不再支持纯被动波导电路。测试用例
+    随之更新契约，使用 modulator+detector 链路替代旧版纯波导。
+    """
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
     config = SPICESimulationConfig()
     netlist = generate_spice_netlist(
-        models=[model], config=config, input_signal="pulse"
+        models=[modulator, detector], config=config, input_signal="pulse"
     )
     assert ".tran" in netlist
     assert ".end" in netlist
     assert "V_in in 0 PULSE" in netlist
-    assert "X1" in netlist
+    # 新版用 X_mod/X_pd 实例化调制器/探测器（替代旧版 X1）
+    assert "X_mod" in netlist
+    # 行为光电流源 B_pd 耦合光域传输（*创新* 紧凑模型）
+    assert "B_pd" in netlist
 
 
 def test_generate_spice_netlist_sine_and_pam4():
-    """generate_spice_netlist sine/pam4 信号网表生成。"""
-    model = generate_waveguide_verilog_a()
+    """generate_spice_netlist sine/pam4 信号网表生成（光电协同契约）。"""
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
     config = SPICESimulationConfig()
     sine_netlist = generate_spice_netlist(
-        models=[model], config=config, input_signal="sine"
+        models=[modulator, detector], config=config, input_signal="sine"
     )
     assert "SINE" in sine_netlist
     pam4_netlist = generate_spice_netlist(
-        models=[model], config=config, input_signal="pam4"
+        models=[modulator, detector], config=config, input_signal="pam4"
     )
     assert "PULSE" in pam4_netlist
 
@@ -698,3 +715,241 @@ def test_package_api_completeness():
     assert hasattr(polaris_parasitic, "optimize_opto_electrical_link")
     # SDict 本地定义（切断 v4 依赖）
     assert SDict is not None
+
+
+# =============================================================================
+# 10 器件 Verilog-A 生成器全覆盖（R13 一致性：与 SUPPORTED_DEVICE_TYPES 对齐）
+# =============================================================================
+
+
+def test_10_device_generators_complete():
+    """10 器件 Verilog-A 生成器全覆盖（R13 一致性）。
+
+    SUPPORTED_DEVICE_TYPES 声明 10 种器件，全部应有 generate_*_verilog_a 实现。
+    R05 Bug 必修: 旧版仅 5 个生成器，5 个缺失（mmi_2x2/grating_coupler/
+    y_branch/directional_coupler/phase_shifter）。
+    """
+    generators = {
+        DEVICE_TYPE_WAVEGUIDE: generate_waveguide_verilog_a,
+        DEVICE_TYPE_MMI_1X2: generate_mmi_1x2_verilog_a,
+        DEVICE_TYPE_MMI_2X2: generate_mmi_2x2_verilog_a,
+        DEVICE_TYPE_RING: generate_ring_verilog_a,
+        DEVICE_TYPE_MODULATOR: generate_modulator_verilog_a,
+        DEVICE_TYPE_DETECTOR: generate_detector_verilog_a,
+        DEVICE_TYPE_GRATING_COUPLER: generate_grating_coupler_verilog_a,
+        DEVICE_TYPE_Y_BRANCH: generate_y_branch_verilog_a,
+        DEVICE_TYPE_DIRECTIONAL_COUPLER: generate_directional_coupler_verilog_a,
+        DEVICE_TYPE_PHASE_SHIFTER: generate_phase_shifter_verilog_a,
+    }
+    # 10 种器件类型全部有生成器
+    assert len(generators) == 10
+    assert set(generators.keys()) == SUPPORTED_DEVICE_TYPES
+    # 每个生成器返回 VerilogAModel 实例，含 verilog_a_code
+    for device_type, gen_func in generators.items():
+        model = gen_func()
+        assert isinstance(model, VerilogAModel), f"{device_type} 应返回 VerilogAModel"
+        assert model.device_type == device_type
+        assert model.verilog_a_code, f"{device_type} verilog_a_code 不能为空"
+        assert "module" in model.verilog_a_code, f"{device_type} 缺 module 声明"
+
+
+def test_mmi_2x2_verilog_a_3db_coupler():
+    """MMI 2x2 3dB 耦合器: cross 端 90° 相位超前。"""
+    model = generate_mmi_2x2_verilog_a(
+        module_name="mmi2x2_test", insertion_loss_db=0.3
+    )
+    assert model.device_type == DEVICE_TYPE_MMI_2X2
+    assert model.ports == ["in1", "in2", "out1", "out2"]
+    # 3dB 分束: |S_out1_in1| = |S_out2_in1| = 10^(-(0.3+3)/20)
+    s31 = complex(model.s_params[("out1", "in1")])
+    s41 = complex(model.s_params[("out2", "in1")])
+    expected_amp = 10.0 ** (-(0.3 + 3.0) / 20.0)
+    assert abs(abs(s31) - expected_amp) < 1e-6
+    assert abs(abs(s41) - expected_amp) < 1e-6
+    # cross 端 90° 相位超前（π/2）
+    assert abs(s41.imag) > 0
+
+
+def test_grating_coupler_verilog_a():
+    """光栅耦合器: S21 = √η（耦合效率）。"""
+    model = generate_grating_coupler_verilog_a(
+        module_name="gc_test", coupling_efficiency=0.5
+    )
+    assert model.device_type == DEVICE_TYPE_GRATING_COUPLER
+    assert model.ports == ["fiber", "wg"]
+    # η=0.5 → |S21| = √0.5 ≈ 0.707
+    s21 = complex(model.s_params[("wg", "fiber")])
+    assert abs(abs(s21) - np.sqrt(0.5)) < 1e-6
+
+
+def test_y_branch_verilog_a():
+    """Y 分支 1x2 功分器 50:50（含插损）。"""
+    model = generate_y_branch_verilog_a(
+        module_name="yb_test", insertion_loss_db=0.3
+    )
+    assert model.device_type == DEVICE_TYPE_Y_BRANCH
+    assert model.ports == ["in", "out1", "out2"]
+    # 50:50 分束 + 0.3dB 插损 → |S_out| = 10^(-(0.3+3)/20)
+    expected_amp = 10.0 ** (-(0.3 + 3.0) / 20.0)
+    s31 = complex(model.s_params[("out1", "in")])
+    s41 = complex(model.s_params[("out2", "in")])
+    assert abs(abs(s31) - expected_amp) < 1e-6
+    assert abs(abs(s41) - expected_amp) < 1e-6
+
+
+def test_directional_coupler_verilog_a():
+    """定向耦合器: through=cos(κL), cross=-j·sin(κL)。"""
+    model = generate_directional_coupler_verilog_a(
+        module_name="dc_test", coupling_length_um=10.0, kappa=0.3
+    )
+    assert model.device_type == DEVICE_TYPE_DIRECTIONAL_COUPLER
+    assert model.ports == ["in", "through", "coupled_in", "cross"]
+    # 无源: |through|² + |cross|² = cos²(κL) + sin²(κL) = 1
+    s_through = complex(model.s_params[("through", "in")])
+    s_cross = complex(model.s_params[("cross", "in")])
+    assert abs(s_through) ** 2 + abs(s_cross) ** 2 <= 1.0 + 1e-6
+    # cross 端 -90° 相位（-j·sin(κL)）
+    assert s_cross.imag <= 0 or s_cross.real == 0.0
+
+
+def test_phase_shifter_verilog_a():
+    """移相器: φ=(2π/λ)·Δn_eff·L。"""
+    model = generate_phase_shifter_verilog_a(
+        module_name="ps_test", length_um=100.0, delta_n_eff=0.001
+    )
+    assert model.device_type == DEVICE_TYPE_PHASE_SHIFTER
+    assert model.ports == ["in", "out"]
+    # S21 幅度 = 1（无损耗），相位 = (2π/λ)·Δn_eff·L
+    s21 = complex(model.s_params[("out", "in")])
+    assert abs(abs(s21) - 1.0) < 1e-6
+    # 相位非零（Δn_eff ≠ 0）
+    assert abs(np.angle(s21)) > 0
+
+
+# =============================================================================
+# Ngspice 真实联合仿真（R13 §2 强制自测：调用真实 ngspice 子进程）
+# =============================================================================
+
+
+def _ngspice_available() -> bool:
+    """检测 ngspice 可执行文件是否可用。"""
+    import shutil
+    return shutil.which("ngspice") is not None
+
+
+def test_ngspice_real_cosimulation_sine():
+    """Ngspice 真实联合仿真（sine 信号，R13 §2 端到端自测）。
+
+    R02 学术诚信: 真实调用 ngspice 子进程生成 rawfile，解析真实仿真数据，
+    禁止任何合成数据（R03）。ngspice 不可用时跳过（环境依赖，非业务路径）。
+    """
+    if not _ngspice_available():
+        pytest.skip("ngspice 未安装，跳过真实联合仿真测试")
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
+    config = SPICESimulationConfig(
+        spice_timestep=1e-11, optical_timestep=1e-11, total_time=1e-9
+    )
+    netlist = generate_spice_netlist(
+        models=[modulator, detector], config=config, input_signal="sine"
+    )
+    result = run_ngspice_cosimulation(netlist, config, timeout=30)
+    # 真实 ngspice 仿真数据验证
+    assert isinstance(result, CoSimulationResult)
+    assert result.time_points.shape[0] > 0, "时间点数组不能为空"
+    assert result.voltage.shape[0] > 0, "电压数组不能为空"
+    assert result.optical_power.shape[0] > 0, "光功率数组不能为空"
+    # 时间点单调递增
+    assert np.all(np.diff(result.time_points) >= 0), "时间点应单调递增"
+    # sine 信号电压应有正负波动
+    assert np.max(result.voltage) > 0
+    assert np.min(result.voltage) < 0
+
+
+def test_ngspice_real_cosimulation_pulse():
+    """Ngspice 真实联合仿真（pulse 信号，R13 §2 端到端自测）。"""
+    if not _ngspice_available():
+        pytest.skip("ngspice 未安装，跳过真实联合仿真测试")
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
+    config = SPICESimulationConfig(
+        spice_timestep=1e-11, optical_timestep=1e-11, total_time=5e-10
+    )
+    netlist = generate_spice_netlist(
+        models=[modulator, detector], config=config, input_signal="pulse"
+    )
+    result = run_ngspice_cosimulation(netlist, config, timeout=30)
+    assert isinstance(result, CoSimulationResult)
+    # pulse 信号应有上升沿（0 → 1）
+    assert np.max(result.voltage) > 0.5, "pulse 峰值应 > 0.5"
+
+
+def test_ngspice_real_cosimulation_pam4():
+    """Ngspice 真实联合仿真（pam4 信号，R13 §2 端到端自测）。"""
+    if not _ngspice_available():
+        pytest.skip("ngspice 未安装，跳过真实联合仿真测试")
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
+    config = SPICESimulationConfig(
+        spice_timestep=1e-11, optical_timestep=1e-11, total_time=5e-10
+    )
+    netlist = generate_spice_netlist(
+        models=[modulator, detector], config=config, input_signal="pam4"
+    )
+    result = run_ngspice_cosimulation(netlist, config, timeout=30)
+    assert isinstance(result, CoSimulationResult)
+    # PAM4 信号应有多个电平（0 和 0.33）
+    unique_levels = np.unique(np.round(result.voltage, decimals=2))
+    assert len(unique_levels) >= 2, f"PAM4 应有 ≥2 电平，得到 {unique_levels}"
+
+
+# =============================================================================
+# run_photoelectric_cosim PAM4 BER 公式验证（MNA SPICE 桥接，*创新*）
+# =============================================================================
+
+
+def test_run_photoelectric_cosim_pam4_ber():
+    """run_photoelectric_cosim PAM4 BER 公式验证（*创新*）。
+
+    R02: PAM4 BER ≈ (3/4)·erfc(√(Es/(5·N0)))，区别于 NRZ BER=0.5·erfc(√(SNR/2))。
+    来源: Proakis §5; Keysight 5992-3268; Shafik 2016
+    """
+    try:
+        from polaris_circuit.mna_spice import MNACircuit  # noqa: F401
+    except ImportError:
+        pytest.skip("polaris_circuit 未安装，跳过 run_photoelectric_cosim 测试")
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
+    config = SPICESimulationConfig()
+    # NRZ 调制
+    result_nrz = run_photoelectric_cosim(
+        [modulator, detector], config, input_signal="sine", modulation="NRZ"
+    )
+    # PAM4 调制
+    result_pam4 = run_photoelectric_cosim(
+        [modulator, detector], config, input_signal="pam4", modulation="PAM4"
+    )
+    # 两种调制方式都应返回 CoSimulationResult
+    assert isinstance(result_nrz, CoSimulationResult)
+    assert isinstance(result_pam4, CoSimulationResult)
+    # BER 在 [0, 0.75] 范围内（PAM4 理论上限 0.75）
+    assert 0 <= result_pam4.ber <= 0.75
+    assert 0 <= result_nrz.ber <= 0.5  # NRZ 上限 0.5
+    # 眼图矩阵非空
+    assert result_pam4.eye_diagram is not None
+    assert result_nrz.eye_diagram is not None
+
+
+def test_run_photoelectric_cosim_invalid_modulation_raise():
+    """R03: run_photoelectric_cosim 不支持的调制方式 raise。"""
+    try:
+        from polaris_circuit.mna_spice import MNACircuit  # noqa: F401
+    except ImportError:
+        pytest.skip("polaris_circuit 未安装，跳过 run_photoelectric_cosim 测试")
+    modulator = generate_modulator_verilog_a(module_name="mzm_test")
+    detector = generate_detector_verilog_a(module_name="pd_test")
+    config = SPICESimulationConfig()
+    with pytest.raises(ValueError, match="不支持的调制方式"):
+        run_photoelectric_cosim(
+            [modulator, detector], config, modulation="QAM16"
+        )

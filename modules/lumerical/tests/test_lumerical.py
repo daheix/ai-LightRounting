@@ -342,6 +342,157 @@ def test_photoelectric_cosim_register():
     assert id1 == 1 and id2 == 2 and id3 == 3, f"器件 ID 应自增: {id1},{id2},{id3}"
 
 
+def test_photoelectric_end_to_end_link():
+    """端到端光电链路仿真 laser→mod→wg→pd（*创新*）。
+
+    R02 学术诚信: 完整 4 级光电链路，每级物理模型独立可溯源:
+    - 激光器 L-I (Coldren 1995 §5)
+    - MZM 调制 T(V)=cos²(πV/2Vπ) (Chrostowski 2015 §8.4)
+    - 波导传输 10^(-α·L/10) (Pozar §4)
+    - 探测器 I_photo=R·P_in (Chrostowski 2015 §9.2)
+    """
+    cfg = pl.CoSimConfig()
+    cosim = pl.PhotoelectricCoSim(cfg)
+    laser_id = cosim.add_laser(threshold_current=10e-3, slope_efficiency=0.4)
+    mod_id = cosim.add_modulator(vpi=2.0, insertion_loss=0.5)
+    pd_id = cosim.add_photodetector(responsivity=1.0, dark_current=10e-9)
+    v_in = np.array([0.0, 0.5, 1.0, 2.0])
+    result = cosim.run_end_to_end_link(
+        v_in, laser_id, mod_id, pd_id, waveguide_loss_db=0.5
+    )
+    # 完整链路 4 级输出
+    expected_keys = {
+        "v_in", "p_laser", "mzm_transfer", "p_modulated",
+        "p_waveguide", "i_photo", "v_out",
+    }
+    assert set(result.keys()) == expected_keys, f"链路输出键缺失: {result.keys()}"
+    # V=Vπ=2.0 时 MZM 传输 cos²(π/2)=0，光功率为零（仅剩暗电流）
+    assert result["mzm_transfer"][3] == pytest.approx(0.0, abs=1e-10)
+    # V=0 时 MZM 传输 cos²(0)·10^(-IL/20) = 10^(-0.5/20) ≈ 0.944（含 0.5dB 插损）
+    expected_t0 = 10.0 ** (-0.5 / 20.0)
+    assert result["mzm_transfer"][0] == pytest.approx(expected_t0, abs=1e-6)
+    # V_out 随 V_in 增大而单调递减（MZM 推挽调制特性）
+    assert result["v_out"][0] > result["v_out"][2] > result["v_out"][3]
+    # p_laser 为标量（稳态）
+    assert result["p_laser"] > 0, "激光器稳态功率应 > 0"
+
+
+def test_photoelectric_link_budget():
+    """链路预算分析（dB 域，与 Lumerical INTERCONNECT 对齐，*创新*）。
+
+    R02: P_rx_dBm = P_tx_dBm - L_mod - L_wg - L_pd
+    来源: Keysight 5992-3268
+    """
+    cfg = pl.CoSimConfig()
+    cosim = pl.PhotoelectricCoSim(cfg)
+    laser_id = cosim.add_laser(threshold_current=10e-3, slope_efficiency=0.4)
+    mod_id = cosim.add_modulator(vpi=2.0, insertion_loss=0.5)
+    pd_id = cosim.add_photodetector(responsivity=1.0, dark_current=10e-9)
+    budget = cosim.link_budget_analysis(
+        laser_id, mod_id, pd_id, waveguide_loss_db=0.5
+    )
+    # 链路预算键完整
+    expected_keys = {
+        "p_tx_dbm", "l_mod_db", "l_wg_db", "l_pd_db",
+        "p_rx_dbm", "p_rx_w", "i_photo", "v_out",
+    }
+    assert set(budget.keys()) == expected_keys, f"预算键缺失: {budget.keys()}"
+    # 链路预算守恒: p_rx_dBm = p_tx_dBm - L_mod - L_wg - L_pd
+    expected_p_rx = (
+        budget["p_tx_dbm"]
+        - budget["l_mod_db"]
+        - budget["l_wg_db"]
+        - budget["l_pd_db"]
+    )
+    assert budget["p_rx_dbm"] == pytest.approx(expected_p_rx, abs=1e-6)
+    # 探测器无源损耗为 0（响应度是转换效率）
+    assert budget["l_pd_db"] == 0.0
+    # p_rx_w > 0（链路有光功率到达）
+    assert budget["p_rx_w"] > 0
+    # i_photo > dark_current（光电流超过暗电流）
+    assert budget["i_photo"] > 10e-9
+
+
+def test_photoelectric_pam4_ber():
+    """PAM4 BER 严格公式（Gray 编码，*创新*）。
+
+    R02: BER ≈ (3/4)·erfc(√(Es/(5·N0)))
+    来源: Proakis §5; Keysight 5992-3268; Shafik 2016
+    PAM4 比 NRZ 差约 9.5 dB（4 电平判决阈值更密）。
+    """
+    # SNR=20dB: PAM4 BER 应在 1e-10 量级（NRZ @ 20dB 约 1e-20）
+    ber_pam4 = pl.PhotoelectricCoSim.compute_pam4_ber(20.0)
+    assert 1e-12 < ber_pam4 < 1e-8, f"PAM4 BER @ 20dB={ber_pam4} 应在 1e-10 量级"
+    # SNR 越高 BER 越低（单调递减）
+    ber_low_snr = pl.PhotoelectricCoSim.compute_pam4_ber(10.0)
+    ber_high_snr = pl.PhotoelectricCoSim.compute_pam4_ber(30.0)
+    assert ber_low_snr > ber_pam4 > ber_high_snr
+    # BER <= 0.75（理论上限，3/4·erfc(0)=0.75）
+    assert ber_pam4 <= 0.75
+    # R03: 非法 SNR 必须 raise
+    with pytest.raises(ValueError, match="SNR_dB"):
+        pl.PhotoelectricCoSim.compute_pam4_ber(-1.0)
+
+
+def test_photoelectric_eye_diagram():
+    """PAM4 眼图折叠（*创新*）。
+
+    R02: 按 samples_per_symbol 折叠为眼图矩阵
+    来源: Keysight 5992-3268
+    """
+    # 100 点信号，每符号 10 点 → 10 符号 × 10 采样眼图
+    signal = np.random.randn(100)
+    eye = pl.PhotoelectricCoSim.compute_eye_diagram(
+        signal, samples_per_symbol=10, n_levels=4
+    )
+    assert eye.shape == (10, 10), f"眼图形状应为 (10,10)，得到 {eye.shape}"
+    # NRZ 2 电平
+    eye_nrz = pl.PhotoelectricCoSim.compute_eye_diagram(
+        signal, samples_per_symbol=5, n_levels=2
+    )
+    assert eye_nrz.shape == (20, 5)
+    # R03: 参数非法 raise
+    with pytest.raises(ValueError, match="samples_per_symbol"):
+        pl.PhotoelectricCoSim.compute_eye_diagram(signal, samples_per_symbol=0)
+    with pytest.raises(ValueError, match="n_levels"):
+        pl.PhotoelectricCoSim.compute_eye_diagram(signal, 10, n_levels=1)
+    # 信号长度不足 raise
+    with pytest.raises(ValueError, match="信号长度"):
+        pl.PhotoelectricCoSim.compute_eye_diagram(np.array([1.0, 2.0]), 10)
+
+
+def test_photoelectric_end_to_end_link_invalid_raise():
+    """R03: 端到端链路非法参数 raise。"""
+    cfg = pl.CoSimConfig()
+    cosim = pl.PhotoelectricCoSim(cfg)
+    laser_id = cosim.add_laser(threshold_current=10e-3, slope_efficiency=0.4)
+    mod_id = cosim.add_modulator(vpi=2.0, insertion_loss=0.5)
+    pd_id = cosim.add_photodetector(responsivity=1.0, dark_current=10e-9)
+    v_in = np.array([0.0, 1.0])
+    # 波导损耗为负
+    with pytest.raises(ValueError, match="waveguide_loss_db"):
+        cosim.run_end_to_end_link(v_in, laser_id, mod_id, pd_id, -1.0)
+    # 设备 ID 未注册
+    with pytest.raises(ValueError, match="未注册"):
+        cosim.run_end_to_end_link(v_in, 999, mod_id, pd_id)
+    # 设备类型不匹配
+    with pytest.raises(ValueError, match="类型不匹配"):
+        cosim.run_end_to_end_link(v_in, mod_id, mod_id, pd_id)  # mod_id 当 laser
+
+
+def test_photoelectric_link_budget_zero_laser_raise():
+    """R03: 激光器零输出做链路预算 raise（无法 log）。"""
+    cfg = pl.CoSimConfig()
+    cosim = pl.PhotoelectricCoSim(cfg)
+    # bias_current 默认 2×I_th，手动设为低值使 P_laser=0
+    laser_id = cosim.add_laser(threshold_current=1.0, slope_efficiency=0.4)
+    cosim._devices[laser_id][1].bias_current = 0.5  # < threshold=1.0
+    mod_id = cosim.add_modulator(vpi=2.0, insertion_loss=0.5)
+    pd_id = cosim.add_photodetector(responsivity=1.0, dark_current=10e-9)
+    with pytest.raises(ValueError, match="激光器输出功率为零"):
+        cosim.link_budget_analysis(laser_id, mod_id, pd_id)
+
+
 def test_modulator_spec_validation():
     """R03: ModulatorSpec 非法参数必须 raise。"""
     with pytest.raises(ValueError, match="V_pi"):

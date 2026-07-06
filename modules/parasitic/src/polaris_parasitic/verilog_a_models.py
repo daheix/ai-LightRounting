@@ -47,10 +47,15 @@ from polaris_parasitic.constants import (
     DEFAULT_MODULATOR_EFFICIENCY,
     DEFAULT_WAVELENGTH_UM,
     DEVICE_TYPE_DETECTOR,
+    DEVICE_TYPE_DIRECTIONAL_COUPLER,
+    DEVICE_TYPE_GRATING_COUPLER,
     DEVICE_TYPE_MMI_1X2,
+    DEVICE_TYPE_MMI_2X2,
     DEVICE_TYPE_MODULATOR,
+    DEVICE_TYPE_PHASE_SHIFTER,
     DEVICE_TYPE_RING,
     DEVICE_TYPE_WAVEGUIDE,
+    DEVICE_TYPE_Y_BRANCH,
     SUPPORTED_DEVICE_TYPES,
 )
 
@@ -504,13 +509,218 @@ endmodule
     )
 
 
+def generate_mmi_2x2_verilog_a(
+    module_name: str = "mmi_2x2_soi",
+    insertion_loss_db: float = 0.4,
+    wavelength_um: float = DEFAULT_WAVELENGTH_UM,
+) -> VerilogAModel:
+    """生成 MMI 2x2 Verilog-A 模型（3dB 2x2 耦合器，cross 端 90° 相位超前）。
+
+    来源: SiEPIC EBeam PDK ebeam_mmi_2x2; Chrostowski 2015 §3
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    if insertion_loss_db < 0:
+        raise ValueError(f"插损须 >= 0，得到 {insertion_loss_db}")
+    amp = 10.0 ** (-(insertion_loss_db + 3.0) / 20.0)
+    cross = 1j * amp  # cross 端 90° 相位超前
+    s_params: SDict = {
+        ("in1", "in1"): np.array(0.0, dtype=complex),
+        ("out1", "in1"): np.array(amp, dtype=complex),
+        ("out2", "in1"): np.array(cross, dtype=complex),
+        ("out1", "in2"): np.array(cross, dtype=complex),
+        ("out2", "in2"): np.array(amp, dtype=complex),
+    }
+    code = f"""`include "disciplines.vams"
+module {module_name} (in1, in2, out1, out2);
+  electrical in1, in2, out1, out2;
+  parameter real insertion_loss_db = {insertion_loss_db:.6e} from [0:inf);
+  real amp;
+  analog begin
+    amp = pow(10.0, -(insertion_loss_db + 3.0) / 20.0);
+    V(out1) <+ amp * V(in1); V(out2) <+ amp * V(in1);
+  end
+endmodule
+"""
+    return VerilogAModel(
+        module_name=module_name, device_type=DEVICE_TYPE_MMI_2X2,
+        ports=["in1", "in2", "out1", "out2"],
+        parameters={"insertion_loss_db": insertion_loss_db, "wavelength_um": wavelength_um},
+        s_params=s_params, verilog_a_code=code,
+    )
+
+
+def generate_grating_coupler_verilog_a(
+    module_name: str = "grating_coupler_soi",
+    coupling_efficiency: float = 0.6,
+    wavelength_um: float = DEFAULT_WAVELENGTH_UM,
+) -> VerilogAModel:
+    """生成光栅耦合器 Verilog-A 模型（光纤↔波导耦合，S21=√η）。
+
+    来源: Chrostowski 2015 §6; Doerr 2011 IEEE PTL
+      https://doi.org/10.1109/LPT.2011.2156100
+    """
+    if not 0.0 <= coupling_efficiency <= 1.0:
+        raise ValueError(f"耦合效率须在 [0,1]，得到 {coupling_efficiency}")
+    s21 = math.sqrt(coupling_efficiency)
+    s_params: SDict = {
+        ("fiber", "fiber"): np.array(0.0, dtype=complex),
+        ("wg", "fiber"): np.array(s21, dtype=complex),
+        ("fiber", "wg"): np.array(s21, dtype=complex),
+        ("wg", "wg"): np.array(0.0, dtype=complex),
+    }
+    code = f"""`include "disciplines.vams"
+module {module_name} (fiber, wg);
+  electrical fiber, wg;
+  parameter real coupling_efficiency = {coupling_efficiency:.6e} from [0:1];
+  real s21;
+  analog begin
+    s21 = sqrt(coupling_efficiency); V(wg) <+ s21 * V(fiber);
+  end
+endmodule
+"""
+    return VerilogAModel(
+        module_name=module_name, device_type=DEVICE_TYPE_GRATING_COUPLER,
+        ports=["fiber", "wg"],
+        parameters={"coupling_efficiency": coupling_efficiency, "wavelength_um": wavelength_um},
+        s_params=s_params, verilog_a_code=code,
+    )
+
+
+def generate_y_branch_verilog_a(
+    module_name: str = "y_branch_soi",
+    insertion_loss_db: float = 0.3,
+    wavelength_um: float = DEFAULT_WAVELENGTH_UM,
+) -> VerilogAModel:
+    """生成 Y 分支 Verilog-A 模型（1x2 功分器，对称 Y 形 50:50）。
+
+    来源: SiEPIC EBeam PDK ebeam_y_1550; Chrostowski 2015 §3
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+    """
+    if insertion_loss_db < 0:
+        raise ValueError(f"插损须 >= 0，得到 {insertion_loss_db}")
+    amp = 10.0 ** (-(insertion_loss_db + 3.0) / 20.0)
+    s_params: SDict = {
+        ("in", "in"): np.array(0.0, dtype=complex),
+        ("out1", "in"): np.array(amp, dtype=complex),
+        ("out2", "in"): np.array(amp, dtype=complex),
+        ("in", "out1"): np.array(amp, dtype=complex),
+        ("in", "out2"): np.array(amp, dtype=complex),
+    }
+    code = f"""`include "disciplines.vams"
+module {module_name} (in, out1, out2);
+  electrical in, out1, out2;
+  parameter real insertion_loss_db = {insertion_loss_db:.6e} from [0:inf);
+  real amp;
+  analog begin
+    amp = pow(10.0, -(insertion_loss_db + 3.0) / 20.0);
+    V(out1) <+ amp * V(in); V(out2) <+ amp * V(in);
+  end
+endmodule
+"""
+    return VerilogAModel(
+        module_name=module_name, device_type=DEVICE_TYPE_Y_BRANCH,
+        ports=["in", "out1", "out2"],
+        parameters={"insertion_loss_db": insertion_loss_db, "wavelength_um": wavelength_um},
+        s_params=s_params, verilog_a_code=code,
+    )
+
+
+def generate_directional_coupler_verilog_a(
+    module_name: str = "directional_coupler_soi",
+    coupling_length_um: float = 10.0,
+    kappa: float = 0.3,
+    wavelength_um: float = DEFAULT_WAVELENGTH_UM,
+) -> VerilogAModel:
+    """生成定向耦合器 Verilog-A 模型（through=cos(κL), cross=-j·sin(κL)）。
+
+    来源: Yariv & Yeh, "Photonics", §10; Simphony directional_coupler
+      https://simphonyphotonics.readthedocs.io/
+    """
+    if coupling_length_um < 0:
+        raise ValueError(f"耦合长度须 >= 0，得到 {coupling_length_um}")
+    if kappa < 0:
+        raise ValueError(f"耦合系数须 >= 0，得到 {kappa}")
+    kl = kappa * coupling_length_um
+    s_through = math.cos(kl)
+    s_cross = -1j * math.sin(kl)  # cross 端 -90° 相位（Yariv §10）
+    s_params: SDict = {
+        ("through", "in"): np.array(s_through, dtype=complex),
+        ("cross", "in"): np.array(s_cross, dtype=complex),
+        ("through", "coupled_in"): np.array(s_cross, dtype=complex),
+        ("cross", "coupled_in"): np.array(s_through, dtype=complex),
+    }
+    code = f"""`include "disciplines.vams"
+module {module_name} (in, through, coupled_in, cross);
+  electrical in, through, coupled_in, cross;
+  parameter real coupling_length = {coupling_length_um:.6e} from [0:inf);
+  parameter real kappa = {kappa:.6e} from [0:inf);
+  real kl;
+  analog begin
+    kl = kappa * coupling_length;
+    V(through) <+ cos(kl) * V(in); V(cross) <+ -sin(kl) * V(in);
+  end
+endmodule
+"""
+    return VerilogAModel(
+        module_name=module_name, device_type=DEVICE_TYPE_DIRECTIONAL_COUPLER,
+        ports=["in", "through", "coupled_in", "cross"],
+        parameters={"coupling_length_um": coupling_length_um, "kappa": kappa, "wavelength_um": wavelength_um},
+        s_params=s_params, verilog_a_code=code,
+    )
+
+
+def generate_phase_shifter_verilog_a(
+    module_name: str = "phase_shifter_soi",
+    delta_n_eff: float = 1e-3,
+    length_um: float = 100.0,
+    wavelength_um: float = DEFAULT_WAVELENGTH_UM,
+) -> VerilogAModel:
+    """生成移相器 Verilog-A 模型（φ=(2π/λ)·Δn_eff·L，S21=exp(jφ)）。
+
+    来源: Chrostowski 2015 §8.2; Soref & Bennett 1987 等离子色散
+      https://doi.org/10.1109/JQE.1987.1073206
+    """
+    if length_um < 0:
+        raise ValueError(f"长度须 >= 0，得到 {length_um}")
+    phi = 2.0 * math.pi * delta_n_eff * length_um / wavelength_um
+    s21 = np.exp(1j * phi)
+    s_params: SDict = {
+        ("in", "in"): np.array(0.0, dtype=complex),
+        ("out", "in"): np.array(s21, dtype=complex),
+        ("in", "out"): np.array(s21, dtype=complex),
+        ("out", "out"): np.array(0.0, dtype=complex),
+    }
+    code = f"""`include "disciplines.vams"
+module {module_name} (in, out);
+  electrical in, out;
+  parameter real delta_n_eff = {delta_n_eff:.6e};
+  parameter real length = {length_um:.6e} from [0:inf);
+  parameter real wavelength = {wavelength_um:.6e} from (0:inf);
+  analog begin
+    V(out) <+ cos(2.0 * `M_PI * delta_n_eff * length / wavelength) * V(in);
+  end
+endmodule
+"""
+    return VerilogAModel(
+        module_name=module_name, device_type=DEVICE_TYPE_PHASE_SHIFTER,
+        ports=["in", "out"],
+        parameters={"delta_n_eff": delta_n_eff, "length_um": length_um, "wavelength_um": wavelength_um},
+        s_params=s_params, verilog_a_code=code,
+    )
+
+
 # 器件类型 → 生成器函数映射
 _DEVICE_GENERATORS = {
     DEVICE_TYPE_WAVEGUIDE: generate_waveguide_verilog_a,
     DEVICE_TYPE_MMI_1X2: generate_mmi_1x2_verilog_a,
+    DEVICE_TYPE_MMI_2X2: generate_mmi_2x2_verilog_a,
     DEVICE_TYPE_RING: generate_ring_verilog_a,
     DEVICE_TYPE_MODULATOR: generate_modulator_verilog_a,
     DEVICE_TYPE_DETECTOR: generate_detector_verilog_a,
+    DEVICE_TYPE_GRATING_COUPLER: generate_grating_coupler_verilog_a,
+    DEVICE_TYPE_Y_BRANCH: generate_y_branch_verilog_a,
+    DEVICE_TYPE_DIRECTIONAL_COUPLER: generate_directional_coupler_verilog_a,
+    DEVICE_TYPE_PHASE_SHIFTER: generate_phase_shifter_verilog_a,
 }
 
 
@@ -562,10 +772,15 @@ __all__ = [
     "SDict",
     "VerilogAModel",
     "generate_detector_verilog_a",
+    "generate_directional_coupler_verilog_a",
+    "generate_grating_coupler_verilog_a",
     "generate_mmi_1x2_verilog_a",
+    "generate_mmi_2x2_verilog_a",
     "generate_modulator_verilog_a",
+    "generate_phase_shifter_verilog_a",
     "generate_ring_verilog_a",
     "generate_verilog_a",
     "generate_waveguide_verilog_a",
+    "generate_y_branch_verilog_a",
     "save_verilog_a",
 ]

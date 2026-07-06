@@ -174,11 +174,16 @@ from polaris_parasitic.verilog_a_models import (
     SDict,
     VerilogAModel,
     generate_detector_verilog_a,
+    generate_directional_coupler_verilog_a,
+    generate_grating_coupler_verilog_a,
     generate_mmi_1x2_verilog_a,
+    generate_mmi_2x2_verilog_a,
     generate_modulator_verilog_a,
+    generate_phase_shifter_verilog_a,
     generate_ring_verilog_a,
     generate_verilog_a,
     generate_waveguide_verilog_a,
+    generate_y_branch_verilog_a,
     save_verilog_a,
 )
 from polaris_parasitic.verilog_a_spice import (
@@ -186,6 +191,7 @@ from polaris_parasitic.verilog_a_spice import (
     SPICESimulationConfig,
     generate_spice_netlist,
     run_ngspice_cosimulation,
+    run_photoelectric_cosim,
 )
 
 __version__ = "5.0.0"
@@ -218,21 +224,27 @@ __all__ = [
     "DEVICE_TYPE_WAVEGUIDE",
     "DEVICE_TYPE_Y_BRANCH",
     "SUPPORTED_DEVICE_TYPES",
-    # Verilog-A 模型生成（5+ 器件）
+    # Verilog-A 模型生成（10 器件，与 SUPPORTED_DEVICE_TYPES 一致）
     "SDict",
     "VerilogAModel",
     "generate_detector_verilog_a",
+    "generate_directional_coupler_verilog_a",
+    "generate_grating_coupler_verilog_a",
     "generate_mmi_1x2_verilog_a",
+    "generate_mmi_2x2_verilog_a",
     "generate_modulator_verilog_a",
+    "generate_phase_shifter_verilog_a",
     "generate_ring_verilog_a",
     "generate_verilog_a",
     "generate_waveguide_verilog_a",
+    "generate_y_branch_verilog_a",
     "save_verilog_a",
-    # SPICE 联合仿真（Ngspice）
+    # SPICE 联合仿真（Ngspice + 自研 MNA SPICE 桥接）
     "CoSimulationResult",
     "SPICESimulationConfig",
     "generate_spice_netlist",
     "run_ngspice_cosimulation",
+    "run_photoelectric_cosim",
     # 光电协同可微分（*创新*）
     "DifferentiableOptoElectricalModel",
     "optimize_opto_electrical_link",
