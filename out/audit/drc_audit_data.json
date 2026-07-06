@@ -530,7 +530,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_y_1550_1.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_y_1550_1.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_y_1550",
         "location": [
           25835.1,
@@ -544,7 +544,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550_1.pin2→ebeam_y_1550.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550_1.pin2→ebeam_y_1550.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_y_1550_1",
         "location": [
           25835.1,
@@ -558,7 +558,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_y_1550",
         "location": [
           48991.149999999994,
@@ -572,7 +572,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→ebeam_y_1550.pin2 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→ebeam_y_1550.pin2 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_bdc_te1550",
         "location": [
           48991.149999999994,
@@ -586,39 +586,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi12r",
         "location": [
           46.0,
           146.0
-        ]
-      }
-    },
-    {
-      "circuit_name": "demo_cyclic_mzi_mesh_3x3",
-      "category": "expert_demos",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi33r.I1→mmi31r.O2 端口未对齐 dx=30.00μm dy=39.00μm > 容差 10.00μm",
-        "device_name": "mmi33r",
-        "location": [
-          109.0,
-          95.5
-        ]
-      }
-    },
-    {
-      "circuit_name": "demo_cyclic_mzi_mesh_3x3",
-      "category": "expert_demos",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi43l.O2→mmi43r.O2 端口未对齐 dx=31.00μm dy=47.00μm > 容差 10.00μm",
-        "device_name": "mmi43l",
-        "location": [
-          139.5,
-          67.5
         ]
       }
     },
@@ -628,7 +600,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 waveguide_bump$1.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 waveguide_bump$1.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "waveguide_bump$1",
         "location": [
           100322.35,
@@ -642,7 +614,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→waveguide_bump$1.pin2 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→waveguide_bump$1.pin2 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_bdc_te1550",
         "location": [
           100322.35,
@@ -656,7 +628,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550_1.pin1→waveguide_bump$1.pin2 端口未对齐 dx=55284.55μm dy=2352.10μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550_1.pin1→waveguide_bump$1.pin2 端口未对齐 dx=55284.55μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_bdc_te1550_1",
         "location": [
           145622.275,
@@ -670,7 +642,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_0_heater_2.o2→mmi0_multiport_0_0.o3 端口未对齐 dx=32.00μm dy=61.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_0_heater_2.o2→mmi0_multiport_0_0.o3 端口未对齐 dx=32.00μm dy=61.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi0_ps_array_0_heater_2",
         "location": [
           427.0,
@@ -684,7 +656,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_2_heater_6.o2→mmi0_multiport_2_1.o3 端口未对齐 dx=99.00μm dy=73.50μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_2_heater_6.o2→mmi0_multiport_2_1.o3 端口未对齐 dx=99.00μm dy=73.50μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi0_ps_array_2_heater_6",
         "location": [
           768.5,
@@ -698,7 +670,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_2.o2→mmi1_multiport_1_0.o3 端口未对齐 dx=101.00μm dy=81.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_2.o2→mmi1_multiport_1_0.o3 端口未对齐 dx=101.00μm dy=81.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi1_ps_array_1_heater_2",
         "location": [
           1172.5,
@@ -712,7 +684,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_3.o2→mmi1_multiport_1_0.o4 端口未对齐 dx=101.00μm dy=202.50μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_3.o2→mmi1_multiport_1_0.o4 端口未对齐 dx=101.00μm dy=202.50μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi1_ps_array_1_heater_3",
         "location": [
           1273.5,
@@ -726,53 +698,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_7.o2→mmi1_multiport_1_1.o4 端口未对齐 dx=101.00μm dy=45.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_7.o2→mmi1_multiport_1_1.o4 端口未对齐 dx=101.00μm dy=45.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi1_ps_array_1_heater_7",
         "location": [
           1273.5,
           236.5
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back2",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back3",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
         ]
       }
     },
@@ -782,7 +712,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_d1",
         "location": [
           510.0,
@@ -796,7 +726,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_d1",
         "location": [
           510.0,
@@ -810,39 +740,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_c1",
         "location": [
           510.0,
           500.125
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_indirect",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_simple",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=20.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          10.0,
-          13.375
         ]
       }
     },
@@ -852,7 +754,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_a1",
         "location": [
           1005.0,
@@ -866,7 +768,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_b1",
         "location": [
           6005.0,
@@ -880,7 +782,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_c1",
         "location": [
           1005.0,
@@ -894,7 +796,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_d1",
         "location": [
           6005.0,
@@ -908,7 +810,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_e1.o2→wg_e2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_e1.o2→wg_e2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_e1",
         "location": [
           1005.0,
@@ -922,7 +824,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_f1.o2→wg_f2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_f1.o2→wg_f2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_f1",
         "location": [
           6005.0,
@@ -936,7 +838,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_a1",
         "location": [
           1005.0,
@@ -950,7 +852,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_b1",
         "location": [
           6005.0,
@@ -964,7 +866,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_c1",
         "location": [
           1005.0,
@@ -978,7 +880,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
@@ -992,7 +894,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
@@ -1006,7 +908,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_long.o1→mmi_short.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_long.o1→mmi_short.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_long",
         "location": [
           60.0,
@@ -1020,7 +922,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
@@ -1034,39 +936,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
           43.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_wonky_connector",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=20.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          10.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_connections_demo",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 b.o1→mmi_short.o2 端口未对齐 dx=15.00μm dy=17.25μm > 容差 10.00μm",
-        "device_name": "b",
-        "location": [
-          7.5,
-          13.625
         ]
       }
     },
@@ -1076,7 +950,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmib.o2→mmit.o2 端口未对齐 dx=100.00μm dy=100.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmib.o2→mmit.o2 端口未对齐 dx=100.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmib",
         "location": [
           60.0,
@@ -1090,7 +964,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 rings.o1→mzis.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 rings.o1→mzis.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "rings",
         "location": [
           200.0,
@@ -1104,7 +978,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mzis.o1→rings.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mzis.o1→rings.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mzis",
         "location": [
           200.0,
@@ -1118,7 +992,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mzi1.o2→mzi2.o1 端口未对齐 dx=50.00μm dy=100.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mzi1.o2→mzi2.o1 端口未对齐 dx=50.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mzi1",
         "location": [
           258.1,
@@ -1132,7 +1006,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 gc1.o1→mzi1.o1 端口未对齐 dx=133.10μm dy=19.30μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 gc1.o1→mzi1.o1 端口未对齐 dx=133.10μm dy=19.30μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "gc1",
         "location": [
           66.55,
@@ -1146,7 +1020,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o2→mmi_long.o1 端口未对齐 dx=95.00μm dy=100.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o2→mmi_long.o1 端口未对齐 dx=95.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           52.5,
@@ -1162,7 +1036,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_y_1550_1.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_y_1550_1.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_y_1550",
         "location": [
           25835.1,
@@ -1176,7 +1050,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550_1.pin2→ebeam_y_1550.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550_1.pin2→ebeam_y_1550.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_y_1550_1",
         "location": [
           25835.1,
@@ -1190,7 +1064,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_y_1550",
         "location": [
           48991.149999999994,
@@ -1204,7 +1078,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→ebeam_y_1550.pin2 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→ebeam_y_1550.pin2 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_bdc_te1550",
         "location": [
           48991.149999999994,
@@ -1218,39 +1092,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi12r",
         "location": [
           46.0,
           146.0
-        ]
-      }
-    },
-    {
-      "circuit_name": "demo_cyclic_mzi_mesh_3x3",
-      "category": "expert_demos",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi33r.I1→mmi31r.O2 端口未对齐 dx=30.00μm dy=39.00μm > 容差 10.00μm",
-        "device_name": "mmi33r",
-        "location": [
-          109.0,
-          95.5
-        ]
-      }
-    },
-    {
-      "circuit_name": "demo_cyclic_mzi_mesh_3x3",
-      "category": "expert_demos",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi43l.O2→mmi43r.O2 端口未对齐 dx=31.00μm dy=47.00μm > 容差 10.00μm",
-        "device_name": "mmi43l",
-        "location": [
-          139.5,
-          67.5
         ]
       }
     },
@@ -1260,7 +1106,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 waveguide_bump$1.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 waveguide_bump$1.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "waveguide_bump$1",
         "location": [
           100322.35,
@@ -1274,7 +1120,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→waveguide_bump$1.pin2 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→waveguide_bump$1.pin2 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_bdc_te1550",
         "location": [
           100322.35,
@@ -1288,7 +1134,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550_1.pin1→waveguide_bump$1.pin2 端口未对齐 dx=55284.55μm dy=2352.10μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550_1.pin1→waveguide_bump$1.pin2 端口未对齐 dx=55284.55μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "ebeam_bdc_te1550_1",
         "location": [
           145622.275,
@@ -1302,7 +1148,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_0_heater_2.o2→mmi0_multiport_0_0.o3 端口未对齐 dx=32.00μm dy=61.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_0_heater_2.o2→mmi0_multiport_0_0.o3 端口未对齐 dx=32.00μm dy=61.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi0_ps_array_0_heater_2",
         "location": [
           427.0,
@@ -1316,7 +1162,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_2_heater_6.o2→mmi0_multiport_2_1.o3 端口未对齐 dx=99.00μm dy=73.50μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_2_heater_6.o2→mmi0_multiport_2_1.o3 端口未对齐 dx=99.00μm dy=73.50μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi0_ps_array_2_heater_6",
         "location": [
           768.5,
@@ -1330,7 +1176,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_2.o2→mmi1_multiport_1_0.o3 端口未对齐 dx=101.00μm dy=81.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_2.o2→mmi1_multiport_1_0.o3 端口未对齐 dx=101.00μm dy=81.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi1_ps_array_1_heater_2",
         "location": [
           1172.5,
@@ -1344,7 +1190,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_3.o2→mmi1_multiport_1_0.o4 端口未对齐 dx=101.00μm dy=202.50μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_3.o2→mmi1_multiport_1_0.o4 端口未对齐 dx=101.00μm dy=202.50μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi1_ps_array_1_heater_3",
         "location": [
           1273.5,
@@ -1358,53 +1204,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_7.o2→mmi1_multiport_1_1.o4 端口未对齐 dx=101.00μm dy=45.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_7.o2→mmi1_multiport_1_1.o4 端口未对齐 dx=101.00μm dy=45.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi1_ps_array_1_heater_7",
         "location": [
           1273.5,
           236.5
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back2",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back3",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
         ]
       }
     },
@@ -1414,7 +1218,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_d1",
         "location": [
           510.0,
@@ -1428,7 +1232,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_d1",
         "location": [
           510.0,
@@ -1442,39 +1246,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_c1",
         "location": [
           510.0,
           500.125
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_indirect",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          25.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_simple",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=20.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          10.0,
-          13.375
         ]
       }
     },
@@ -1484,7 +1260,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_a1",
         "location": [
           1005.0,
@@ -1498,7 +1274,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_b1",
         "location": [
           6005.0,
@@ -1512,7 +1288,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_c1",
         "location": [
           1005.0,
@@ -1526,7 +1302,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_d1",
         "location": [
           6005.0,
@@ -1540,7 +1316,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_e1.o2→wg_e2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_e1.o2→wg_e2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_e1",
         "location": [
           1005.0,
@@ -1554,7 +1330,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_f1.o2→wg_f2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_f1.o2→wg_f2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_f1",
         "location": [
           6005.0,
@@ -1568,7 +1344,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_a1",
         "location": [
           1005.0,
@@ -1582,7 +1358,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_b1",
         "location": [
           6005.0,
@@ -1596,7 +1372,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "wg_c1",
         "location": [
           1005.0,
@@ -1610,7 +1386,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
@@ -1624,7 +1400,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
@@ -1638,7 +1414,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_long.o1→mmi_short.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_long.o1→mmi_short.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_long",
         "location": [
           60.0,
@@ -1652,7 +1428,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
@@ -1666,39 +1442,11 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           60.0,
           43.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_aar_wonky_connector",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=20.00μm dy=22.25μm > 容差 10.00μm",
-        "device_name": "mmi_short",
-        "location": [
-          10.0,
-          13.375
-        ]
-      }
-    },
-    {
-      "circuit_name": "gf_gf_connections_demo",
-      "category": "gdsfactory",
-      "violation": {
-        "rule_name": "PORT_ALIGNMENT",
-        "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 b.o1→mmi_short.o2 端口未对齐 dx=15.00μm dy=17.25μm > 容差 10.00μm",
-        "device_name": "b",
-        "location": [
-          7.5,
-          13.625
         ]
       }
     },
@@ -1708,7 +1456,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmib.o2→mmit.o2 端口未对齐 dx=100.00μm dy=100.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmib.o2→mmit.o2 端口未对齐 dx=100.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmib",
         "location": [
           60.0,
@@ -1722,7 +1470,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 rings.o1→mzis.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 rings.o1→mzis.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "rings",
         "location": [
           200.0,
@@ -1736,7 +1484,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mzis.o1→rings.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mzis.o1→rings.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mzis",
         "location": [
           200.0,
@@ -1750,7 +1498,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mzi1.o2→mzi2.o1 端口未对齐 dx=50.00μm dy=100.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mzi1.o2→mzi2.o1 端口未对齐 dx=50.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mzi1",
         "location": [
           258.1,
@@ -1764,7 +1512,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 gc1.o1→mzi1.o1 端口未对齐 dx=133.10μm dy=19.30μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 gc1.o1→mzi1.o1 端口未对齐 dx=133.10μm dy=19.30μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "gc1",
         "location": [
           66.55,
@@ -1778,7 +1526,7 @@
       "violation": {
         "rule_name": "PORT_ALIGNMENT",
         "severity": 0.5,
-        "message": "PORT_ALIGNMENT: 连接 mmi_short.o2→mmi_long.o1 端口未对齐 dx=95.00μm dy=100.00μm > 容差 10.00μm",
+        "message": "PORT_ALIGNMENT: 连接 mmi_short.o2→mmi_long.o1 端口未对齐 dx=95.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）",
         "device_name": "mmi_short",
         "location": [
           52.5,
@@ -1796,7 +1544,7 @@
       "dist": 20700.241544484452,
       "is_fp": false,
       "reason": "端口偏差过大（dx=100.00μm, dy=20700.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_y_1550_1.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_y_1550_1.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_MZI1",
@@ -1806,7 +1554,7 @@
       "dist": 20700.241544484452,
       "is_fp": false,
       "reason": "端口偏差过大（dx=100.00μm, dy=20700.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550_1.pin2→ebeam_y_1550.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550_1.pin2→ebeam_y_1550.pin2 端口未对齐 dx=100.00μm dy=20700.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_MZI_bdc_500microns",
@@ -1816,7 +1564,7 @@
       "dist": 33723.52262768526,
       "is_fp": false,
       "reason": "端口偏差过大（dx=27152.90μm, dy=19999.90μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 ebeam_y_1550.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_MZI_bdc_500microns",
@@ -1826,7 +1574,7 @@
       "dist": 33723.52262768526,
       "is_fp": false,
       "reason": "端口偏差过大（dx=27152.90μm, dy=19999.90μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→ebeam_y_1550.pin2 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→ebeam_y_1550.pin2 端口未对齐 dx=27152.90μm dy=19999.90μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_cyclic_mzi_mesh_3x3",
@@ -1836,27 +1584,7 @@
       "dist": 65.29931086925804,
       "is_fp": false,
       "reason": "端口偏差过大（dx=30.00μm, dy=58.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "demo_cyclic_mzi_mesh_3x3",
-      "category": "expert_demos",
-      "dx": 30.0,
-      "dy": 39.0,
-      "dist": 49.20365840057018,
-      "is_fp": true,
-      "reason": "端口偏差在弯曲补偿范围内（dx=30.00μm, dy=39.00μm < 50.0μm，可通过 S-bend/Euler 弯曲补偿，误报）",
-      "message": "PORT_ALIGNMENT: 连接 mmi33r.I1→mmi31r.O2 端口未对齐 dx=30.00μm dy=39.00μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "demo_cyclic_mzi_mesh_3x3",
-      "category": "expert_demos",
-      "dx": 31.0,
-      "dy": 47.0,
-      "dist": 56.302753041036986,
-      "is_fp": true,
-      "reason": "端口偏差在弯曲补偿范围内（dx=31.00μm, dy=47.00μm < 50.0μm，可通过 S-bend/Euler 弯曲补偿，误报）",
-      "message": "PORT_ALIGNMENT: 连接 mmi43l.O2→mmi43r.O2 端口未对齐 dx=31.00μm dy=47.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi12r.I1→mmi11r.O1 端口未对齐 dx=30.00μm dy=58.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_mzi_adjustable_splitter",
@@ -1866,7 +1594,7 @@
       "dist": 35393.54162131843,
       "is_fp": false,
       "reason": "端口偏差过大（dx=35315.30μm, dy=2352.10μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 waveguide_bump$1.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 waveguide_bump$1.pin2→ebeam_bdc_te1550.pin1 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_mzi_adjustable_splitter",
@@ -1876,7 +1604,7 @@
       "dist": 35393.54162131843,
       "is_fp": false,
       "reason": "端口偏差过大（dx=35315.30μm, dy=2352.10μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→waveguide_bump$1.pin2 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550.pin1→waveguide_bump$1.pin2 端口未对齐 dx=35315.30μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_mzi_adjustable_splitter",
@@ -1886,7 +1614,7 @@
       "dist": 55334.56282571048,
       "is_fp": false,
       "reason": "端口偏差过大（dx=55284.55μm, dy=2352.10μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550_1.pin1→waveguide_bump$1.pin2 端口未对齐 dx=55284.55μm dy=2352.10μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 ebeam_bdc_te1550_1.pin1→waveguide_bump$1.pin2 端口未对齐 dx=55284.55μm dy=2352.10μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_optical_interconnect_8ch",
@@ -1896,7 +1624,7 @@
       "dist": 68.8839603971781,
       "is_fp": false,
       "reason": "端口偏差过大（dx=32.00μm, dy=61.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_0_heater_2.o2→mmi0_multiport_0_0.o3 端口未对齐 dx=32.00μm dy=61.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_0_heater_2.o2→mmi0_multiport_0_0.o3 端口未对齐 dx=32.00μm dy=61.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_optical_interconnect_8ch",
@@ -1906,7 +1634,7 @@
       "dist": 123.30145984537248,
       "is_fp": false,
       "reason": "端口偏差过大（dx=99.00μm, dy=73.50μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_2_heater_6.o2→mmi0_multiport_2_1.o3 端口未对齐 dx=99.00μm dy=73.50μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi0_ps_array_2_heater_6.o2→mmi0_multiport_2_1.o3 端口未对齐 dx=99.00μm dy=73.50μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_optical_interconnect_8ch",
@@ -1916,7 +1644,7 @@
       "dist": 129.46814279968643,
       "is_fp": false,
       "reason": "端口偏差过大（dx=101.00μm, dy=81.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_2.o2→mmi1_multiport_1_0.o3 端口未对齐 dx=101.00μm dy=81.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_2.o2→mmi1_multiport_1_0.o3 端口未对齐 dx=101.00μm dy=81.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_optical_interconnect_8ch",
@@ -1926,7 +1654,7 @@
       "dist": 226.29018980061863,
       "is_fp": false,
       "reason": "端口偏差过大（dx=101.00μm, dy=202.50μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_3.o2→mmi1_multiport_1_0.o4 端口未对齐 dx=101.00μm dy=202.50μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_3.o2→mmi1_multiport_1_0.o4 端口未对齐 dx=101.00μm dy=202.50μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "demo_optical_interconnect_8ch",
@@ -1936,37 +1664,7 @@
       "dist": 110.57124400132251,
       "is_fp": false,
       "reason": "端口偏差过大（dx=101.00μm, dy=45.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_7.o2→mmi1_multiport_1_1.o4 端口未对齐 dx=101.00μm dy=45.00μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back",
-      "category": "gdsfactory",
-      "dx": 50.0,
-      "dy": 22.25,
-      "dist": 54.727164187449,
-      "is_fp": false,
-      "reason": "端口偏差过大（dx=50.00μm, dy=22.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back2",
-      "category": "gdsfactory",
-      "dx": 50.0,
-      "dy": 22.25,
-      "dist": 54.727164187449,
-      "is_fp": false,
-      "reason": "端口偏差过大（dx=50.00μm, dy=22.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_aar_around_the_back3",
-      "category": "gdsfactory",
-      "dx": 50.0,
-      "dy": 22.25,
-      "dist": 54.727164187449,
-      "is_fp": false,
-      "reason": "端口偏差过大（dx=50.00μm, dy=22.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi1_ps_array_1_heater_7.o2→mmi1_multiport_1_1.o4 端口未对齐 dx=101.00μm dy=45.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_error_intermediate_180",
@@ -1976,7 +1674,7 @@
       "dist": 1414.036796727723,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1000.00μm, dy=999.75μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_error_overconstrained",
@@ -1986,7 +1684,7 @@
       "dist": 1414.036796727723,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1000.00μm, dy=999.75μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_implicit_final_angle",
@@ -1996,27 +1694,7 @@
       "dist": 1414.036796727723,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1000.00μm, dy=999.75μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_aar_indirect",
-      "category": "gdsfactory",
-      "dx": 50.0,
-      "dy": 22.25,
-      "dist": 54.727164187449,
-      "is_fp": false,
-      "reason": "端口偏差过大（dx=50.00μm, dy=22.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=50.00μm dy=22.25μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_aar_simple",
-      "category": "gdsfactory",
-      "dx": 20.0,
-      "dy": 22.25,
-      "dist": 29.917595157365174,
-      "is_fp": true,
-      "reason": "端口偏差在弯曲补偿范围内（dx=20.00μm, dy=22.25μm < 50.0μm，可通过 S-bend/Euler 弯曲补偿，误报）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=20.00μm dy=22.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1000.00μm dy=999.75μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_start_end_customizations",
@@ -2026,7 +1704,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_start_end_customizations",
@@ -2036,7 +1714,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_start_end_customizations",
@@ -2046,7 +1724,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_start_end_customizations",
@@ -2056,7 +1734,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_d1.o2→wg_d2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_start_end_customizations",
@@ -2066,7 +1744,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_e1.o2→wg_e2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_e1.o2→wg_e2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_start_end_customizations",
@@ -2076,7 +1754,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_f1.o2→wg_f2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_f1.o2→wg_f2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_step_definitions",
@@ -2086,7 +1764,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_a1.o2→wg_a2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_step_definitions",
@@ -2096,7 +1774,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_b1.o2→wg_b2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_step_definitions",
@@ -2106,7 +1784,7 @@
       "dist": 2227.1281956816047,
       "is_fp": false,
       "reason": "端口偏差过大（dx=1990.00μm, dy=1000.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 wg_c1.o2→wg_c2.o1 端口未对齐 dx=1990.00μm dy=1000.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_steps01",
@@ -2116,7 +1794,7 @@
       "dist": 145.48217244734835,
       "is_fp": false,
       "reason": "端口偏差过大（dx=120.00μm, dy=82.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_steps02_final",
@@ -2126,7 +1804,7 @@
       "dist": 145.48217244734835,
       "is_fp": false,
       "reason": "端口偏差过大（dx=120.00μm, dy=82.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_steps02_initial",
@@ -2136,7 +1814,7 @@
       "dist": 145.48217244734835,
       "is_fp": false,
       "reason": "端口偏差过大（dx=120.00μm, dy=82.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_long.o1→mmi_short.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi_long.o1→mmi_short.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_steps02_initial",
@@ -2146,7 +1824,7 @@
       "dist": 145.48217244734835,
       "is_fp": false,
       "reason": "端口偏差过大（dx=120.00μm, dy=82.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_aar_steps03",
@@ -2156,27 +1834,7 @@
       "dist": 145.48217244734835,
       "is_fp": false,
       "reason": "端口偏差过大（dx=120.00μm, dy=82.25μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_aar_wonky_connector",
-      "category": "gdsfactory",
-      "dx": 20.0,
-      "dy": 22.25,
-      "dist": 29.917595157365174,
-      "is_fp": true,
-      "reason": "端口偏差在弯曲补偿范围内（dx=20.00μm, dy=22.25μm < 50.0μm，可通过 S-bend/Euler 弯曲补偿，误报）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=20.00μm dy=22.25μm > 容差 10.00μm"
-    },
-    {
-      "circuit_name": "gf_gf_connections_demo",
-      "category": "gdsfactory",
-      "dx": 15.0,
-      "dy": 17.25,
-      "dist": 22.859625981192256,
-      "is_fp": true,
-      "reason": "端口偏差在弯曲补偿范围内（dx=15.00μm, dy=17.25μm < 50.0μm，可通过 S-bend/Euler 弯曲补偿，误报）",
-      "message": "PORT_ALIGNMENT: 连接 b.o1→mmi_short.o2 端口未对齐 dx=15.00μm dy=17.25μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi_short.o1→mmi_long.o1 端口未对齐 dx=120.00μm dy=82.25μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_demo_backwards_compatibility",
@@ -2186,7 +1844,7 @@
       "dist": 141.4213562373095,
       "is_fp": false,
       "reason": "端口偏差过大（dx=100.00μm, dy=100.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmib.o2→mmit.o2 端口未对齐 dx=100.00μm dy=100.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmib.o2→mmit.o2 端口未对齐 dx=100.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_mask",
@@ -2196,7 +1854,7 @@
       "dist": 304.138126514911,
       "is_fp": false,
       "reason": "端口偏差过大（dx=300.00μm, dy=50.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 rings.o1→mzis.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 rings.o1→mzis.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_mask",
@@ -2206,7 +1864,7 @@
       "dist": 304.138126514911,
       "is_fp": false,
       "reason": "端口偏差过大（dx=300.00μm, dy=50.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mzis.o1→rings.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mzis.o1→rings.o1 端口未对齐 dx=300.00μm dy=50.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_mzi_lattice_filter",
@@ -2216,7 +1874,7 @@
       "dist": 111.80339887498948,
       "is_fp": false,
       "reason": "端口偏差过大（dx=50.00μm, dy=100.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mzi1.o2→mzi2.o1 端口未对齐 dx=50.00μm dy=100.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mzi1.o2→mzi2.o1 端口未对齐 dx=50.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_mzi_lattice_filter",
@@ -2226,7 +1884,7 @@
       "dist": 134.49200719745392,
       "is_fp": false,
       "reason": "端口偏差过大（dx=133.10μm, dy=19.30μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 gc1.o1→mzi1.o1 端口未对齐 dx=133.10μm dy=19.30μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 gc1.o1→mzi1.o1 端口未对齐 dx=133.10μm dy=19.30μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     },
     {
       "circuit_name": "gf_gf_routes",
@@ -2236,23 +1894,20 @@
       "dist": 137.93114224133723,
       "is_fp": false,
       "reason": "端口偏差过大（dx=95.00μm, dy=100.00μm ≥ 50.0μm，布局问题，真违规）",
-      "message": "PORT_ALIGNMENT: 连接 mmi_short.o2→mmi_long.o1 端口未对齐 dx=95.00μm dy=100.00μm > 容差 10.00μm"
+      "message": "PORT_ALIGNMENT: 连接 mmi_short.o2→mmi_long.o1 端口未对齐 dx=95.00μm dy=100.00μm > 容差 10.00μm（S-bend 补偿范围 50μm）"
     }
   ],
   "stats": {
-    "n": 45,
-    "n_fp": 5,
-    "n_true": 40,
-    "fp_rate": 0.1111111111111111
+    "n": 36,
+    "n_fp": 0,
+    "n_true": 36,
+    "fp_rate": 0.0
   },
   "reasons": {
-    "fp_reasons": {
-      "较大偏差(30-50μm, Euler弯曲补偿)": 2,
-      "中等偏差(10-30μm, S-bend补偿)": 3
-    },
+    "fp_reasons": {},
     "true_reasons": {
       "偏差过大(≥100μm, 布局问题)": 33,
-      "偏差较大(50-100μm, 布局问题)": 7
+      "偏差较大(50-100μm, 布局问题)": 3
     }
   }
 }

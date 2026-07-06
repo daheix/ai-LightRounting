@@ -64,6 +64,21 @@ def normalize_direction(direction: str) -> str:
 # 取下限 10.0μm（保守值，允许 PORT_ALIGNMENT 后处理 pass 对齐残余偏差）
 PORT_ALIGN_TOL_UM = 10.0
 
+# S-bend 弯曲补偿范围（μm），*创新* 多维容差方程（LiDAR 2.0 §III-C2 offset neighbor）
+# 来源: LiDAR 2.0 arXiv:2505.17239v2 §III-C2 "offset neighbors to correct small
+#   misalignments (less than the bending radius) between the source and target
+#   ports. The offset neighbor locations are computed analytically based on the
+#   predefined bending radius and grid size"
+# 物理含义: 端口偏差 dx<range 且 dy<range 时，可通过 S-bend/Euler 弯曲解析补偿，
+#   生成 DRV-free 路径（LiDAR 2.0 论文标题即 "DRV-free"）。
+# 数值: 50.0μm = 2× 典型弯曲半径（25μm），覆盖 SiEPIC bent_waveguide 5-50μm 范围
+# 商业对标: Mentor Calibre eqDRC 多维容差方程
+#   https://blogs.sw.siemens.com/calibre/2015/11/17/design-rule-checking-for-silicon-photonics/
+# SiEPIC-Tools Verification: "pins facing each other with the same angle (180
+#   degrees), and with the same position (accurate to the user database unit)"
+#   https://github.com/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+PORT_ALIGN_BEND_RANGE_UM = 50.0
+
 
 class CheckType(Enum):
     """DRC 检查类型枚举（与 KLayout DRC 规则类别对应）。
@@ -294,6 +309,7 @@ __all__ = [
     "DIR_ABBR_MAP",
     "FACING_PAIRS",
     "PORT_ALIGN_TOL_UM",
+    "PORT_ALIGN_BEND_RANGE_UM",
     "normalize_direction",
     "CheckType",
     "DRCRule",

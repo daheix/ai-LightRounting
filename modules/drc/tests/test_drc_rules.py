@@ -467,29 +467,91 @@ def test_port_facing_perpendicular_bend():
 
 
 def test_port_alignment_pass():
-    """PORT_ALIGNMENT 通过：bend_compensate=True（默认）跳过对齐检查。
+    """PORT_ALIGNMENT 通过：dy=0 ≤ 容差 10μm（直连对齐）。
 
-    *创新*: 弯曲补偿（S-bend/Bezier/Euler）可连接任意位置端口
-    （Chrostowski & Hochberg 2015 §4.3），PORT_ALIGNMENT 在 bend_compensate=True
-    时不检查（返回空）。
+    d1.out abs=(20,10), d2.in abs=(30,10), dx=10, dy=0 ≤ 10μm → 通过。
+    bend_compensate=True/False 均通过（严格对齐容差内）。
     """
     result = run_drc(_make_clean_circuit(), _make_clean_placements())
     assert "PORT_ALIGNMENT" not in _violation_rule_names(result)
 
 
-def test_port_alignment_fail():
-    """PORT_ALIGNMENT 违规（严格模式 bend_compensate=False）：dx>10 且 dy>10。
+def test_port_alignment_bend_compensate_pass():
+    """PORT_ALIGNMENT 通过：S-bend 弯曲补偿范围（*创新* 多维容差方程）。
 
-    d1.out abs=(20,10), d2.in abs=(50,30), dx=30>10, dy=20>10。
-    bend_compensate=False 时检查对齐；=True 时跳过（弯曲补偿）。
+    d1.out abs=(20,10), d2.in abs=(50,30), dx=30, dy=20。
+    dx>10 且 dy>10（超出严格容差），但 dx≤50 且 dy≤50（S-bend 补偿范围），
+    方向 east↔west 相对（FACING_PAIRS），bend_compensate=True/False 均通过。
+    来源: LiDAR 2.0 §III-C2 offset neighbor; Calibre eqDRC 多维容差。
     """
     circuit = _make_clean_circuit()
     placements = {
         "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
         "d2": {"x": 50.0, "y": 30.0, "w": 10.0, "h": 0.5},
     }
-    result = run_drc(circuit, placements, bend_compensate=False)
-    assert "PORT_ALIGNMENT" in _violation_rule_names(result)
+    # 严格模式: 方向相对，S-bend 补偿范围内 → 通过
+    result_strict = run_drc(circuit, placements, bend_compensate=False)
+    assert "PORT_ALIGNMENT" not in _violation_rule_names(result_strict), (
+        "S-bend 补偿范围内（dx≤50, dy≤50）且方向相对时，PORT_ALIGNMENT 应通过"
+    )
+    # 默认模式: 弯曲补偿任意有效方向 → 通过
+    result_default = run_drc(circuit, placements)
+    assert "PORT_ALIGNMENT" not in _violation_rule_names(result_default)
+
+
+def test_port_alignment_bend_compensate_any_direction():
+    """PORT_ALIGNMENT: bend_compensate=True 任意有效方向对通过（U 形补偿）。
+
+    d1.out=east, d2.in=east（同向），dx=30, dy=20 ≤ 50μm。
+    bend_compensate=True: 任意有效方向兼容（U 形 2 弯曲补偿）→ 通过。
+    bend_compensate=False: east↔east 非相对方向 → 违规。
+    """
+    circuit = {
+        "name": "bend_any_dir",
+        "devices": [
+            {"name": "d1", "device_type": "wg",
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "d2", "device_type": "wg",
+             "ports": [("in", 0, 0, "east"), ("out", 10, 0, "west")]},
+        ],
+        "connections": [("d1", "out", "d2", "in")],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 50.0, "y": 30.0, "w": 10.0, "h": 0.5},
+    }
+    # bend_compensate=True: east↔east 通过（U 形 2 弯曲）
+    result_default = run_drc(circuit, placements)
+    assert "PORT_ALIGNMENT" not in _violation_rule_names(result_default), (
+        "bend_compensate=True 时 east↔east 在 S-bend 范围内应通过"
+    )
+    # bend_compensate=False: east↔east 非相对 → 违规
+    result_strict = run_drc(circuit, placements, bend_compensate=False)
+    assert "PORT_ALIGNMENT" in _violation_rule_names(result_strict), (
+        "bend_compensate=False 时 east↔east 非相对方向应报 PORT_ALIGNMENT 违规"
+    )
+
+
+def test_port_alignment_fail():
+    """PORT_ALIGNMENT 违规：dx>50 且 dy>50（超出 S-bend 补偿范围）。
+
+    d1.out abs=(20,10), d2.in abs=(100,80), dx=80>50, dy=70>50。
+    超出 S-bend 补偿范围（50μm），bend_compensate=True/False 均违规。
+    """
+    circuit = _make_clean_circuit()
+    placements = {
+        "d1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "d2": {"x": 100.0, "y": 80.0, "w": 10.0, "h": 0.5},
+    }
+    # 严格模式: 超出补偿范围 → 违规
+    result_strict = run_drc(circuit, placements, bend_compensate=False)
+    assert "PORT_ALIGNMENT" in _violation_rule_names(result_strict)
+    # 默认模式: 超出补偿范围 → 违规（不再 fall-back 跳过）
+    result_default = run_drc(circuit, placements)
+    assert "PORT_ALIGNMENT" in _violation_rule_names(result_default), (
+        "超出 S-bend 补偿范围（dx>50, dy>50）时，bend_compensate=True 也应报违规"
+    )
 
 
 # =============================================================================

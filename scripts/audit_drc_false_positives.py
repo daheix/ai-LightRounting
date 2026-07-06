@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """DRC 误报率量化审查脚本（PoLaRIS real_board，R02/R03/R11 合规）。
 
-基于 real_board 87 个真实板级 benchmark 电路，在严格模式（bend_compensate=False）
-下运行 DRC 收集 PORT_ALIGNMENT 违规，抽样 50 个用例自动判定是否为误报，
-输出误报率与根因分析报告，对标商用门槛 ≤5%
+基于 real_board 87 个真实板级 benchmark 电路，在默认模式（bend_compensate=True，
+用户实际使用模式）下运行 DRC 收集 PORT_ALIGNMENT 违规，抽样 50 个用例自动
+判定是否为误报，输出误报率与根因分析报告，对标商用门槛 ≤5%
 （Mohan et al., DATE 2023 "Machine Learning for DRC"）。
+
+R03 修复（2026-07-06）: 引擎删除 bend_compensate=True 时 return[] 的 fall-back，
+改为多维容差方程（LiDAR 2.0 §III-C2 + Calibre eqDRC）。默认模式现在是
+用户实际使用的模式，反映真实误报率。
 
 ## 误报定义（R02 学术诚信）
 用例被 DRC 判为 PORT_ALIGNMENT 违规，但人工核查为物理可实现的连接:
@@ -15,7 +19,7 @@
 - 端口间距在弯曲补偿范围内（<50μm，可通过 S-bend/Bezier/Euler 弯曲补偿）
 
 ## Process
-加载 real_board 87 电路 → 严格模式 DRC 收集 PORT_ALIGNMENT 违规 →
+加载 real_board 87 电路 → 默认模式 DRC 收集 PORT_ALIGNMENT 违规 →
 按类别均匀抽样 50 个 → is_false_positive 自动判定（器件存在/端口在边界内/
 对端器件存在/方向兼容/间距<50μm 为误报）→ 生成报告。
 
@@ -258,10 +262,16 @@ def is_false_positive(violation: dict, circuit: dict,
 # 收集 PORT_ALIGNMENT 违规
 # =========================================================================
 def collect_port_alignment_violations(items: list[dict]) -> list[dict]:
-    """严格模式（bend_compensate=False）下运行 DRC 收集 PORT_ALIGNMENT 违规。
+    """默认模式（bend_compensate=True）下运行 DRC 收集 PORT_ALIGNMENT 违规。
 
-    严格模式启用 PORT_ALIGNMENT 检查（默认 bend_compensate=True 会跳过该检查）。
-    这是审查的"被审查对象"——DRC 引擎在严格模式下报出的违规。
+    R03 修复（2026-07-06）: 引擎删除 bend_compensate=True 时 return[] 的
+    fall-back，改为多维容差方程。默认模式现在是用户实际使用的模式:
+    - dx≤10 或 dy≤10: 严格对齐通过
+    - dx≤50 且 dy≤50 且方向兼容: S-bend 补偿通过
+    - 其他: 报违规
+
+    严格模式（bend_compensate=False）仅用于向后兼容调试，方向兼容性更严格
+    （仅 FACING_PAIRS 通过），不反映用户实际体验。
 
     Returns:
         PORT_ALIGNMENT 违规样本列表，每项含 circuit_name/category/violation/
@@ -281,9 +291,9 @@ def collect_port_alignment_violations(items: list[dict]) -> list[dict]:
             continue
         total_run += 1
         try:
-            # 严格模式: bend_compensate=False，启用 PORT_ALIGNMENT 检查
+            # 默认模式: bend_compensate=True（用户实际使用模式，多维容差方程）
             drc_result = polaris_drc.run_drc(
-                circuit, placements, bend_compensate=False
+                circuit, placements, bend_compensate=True
             )
             for v in drc_result["violations"]:
                 if v["rule_name"] == "PORT_ALIGNMENT":
