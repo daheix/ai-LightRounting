@@ -288,6 +288,42 @@ def _write_gdsii_layout(ly, out_path: Path):
         ) from e
 
 
+def _execute_scale_and_record_bbox(
+    ly, cells_to_scale, grid_dbu: int, mult: int, div: int, dbu: float,
+) -> tuple[tuple[float, float, float, float], tuple[float, float, float, float]]:
+    """执行 scale_and_snap 并记录缩放前后 bbox（仅单顶层 cell）。"""
+    original_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+    if len(cells_to_scale) == 1:
+        original_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
+    for cell in cells_to_scale:
+        ly.scale_and_snap(cell, grid_dbu, mult, div)
+    scaled_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
+    if len(cells_to_scale) == 1:
+        scaled_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
+    return original_bbox_um, scaled_bbox_um
+
+
+def _build_scale_report(
+    input_path, output_path, scale_factor: float, mult: int, div: int,
+    grid_dbu: int, dbu: float, top_cell_names_list, original_bbox_um,
+    scaled_bbox_um, actual_scale: float,
+) -> ScaleReport:
+    """构造 ScaleReport。"""
+    return ScaleReport(
+        input_path=str(input_path),
+        output_path=str(output_path),
+        scale_factor=scale_factor,
+        mult=mult,
+        div=div,
+        grid_dbu=grid_dbu,
+        dbu=dbu,
+        top_cell_names=top_cell_names_list,
+        original_bbox_um=original_bbox_um,
+        scaled_bbox_um=scaled_bbox_um,
+        actual_scale=actual_scale,
+    )
+
+
 def scale_gdsii(
     input_path: str | Path,
     output_path: str | Path,
@@ -331,56 +367,24 @@ def scale_gdsii(
     db = _import_klayout_db()
     in_path = _validate_scale_inputs(input_path, scale_factor, grid_dbu)
     out_path = Path(output_path)
-
-    # 转换 scale_factor → (mult, div)
     mult, div = _scale_factor_to_fraction(scale_factor, max_denominator)
     actual_scale = mult / div
-
-    # 读取 GDSII
     ly, top_cell_indices = _read_gdsii_layout(db, in_path, input_path)
     dbu = float(ly.dbu)
-
-    # 确定要缩放的 cell
     cells_to_scale, top_cell_names_list = _select_cells_to_scale(
         ly, top_cell_indices, top_cell_name
     )
-
-    # 记录缩放前 bbox（仅单顶层 cell 时有意义）
-    original_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
-    if len(cells_to_scale) == 1:
-        original_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
-
-    # 执行缩放
-    for cell in cells_to_scale:
-        ly.scale_and_snap(cell, grid_dbu, mult, div)
-
-    # 记录缩放后 bbox
-    scaled_bbox_um: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0)
-    if len(cells_to_scale) == 1:
-        scaled_bbox_um = _bbox_to_um(cells_to_scale[0].bbox(), dbu)
-
-    # 写出
-    _write_gdsii_layout(ly, out_path)
-
-    logger.info(
-        "GDSII 缩放: %s → %s (scale=%s, mult=%d, div=%d, grid=%d dbu, "
-        "cells=%d)",
-        in_path, out_path, scale_factor, mult, div, grid_dbu,
-        len(cells_to_scale),
+    original_bbox_um, scaled_bbox_um = _execute_scale_and_record_bbox(
+        ly, cells_to_scale, grid_dbu, mult, div, dbu
     )
-
-    return ScaleReport(
-        input_path=str(input_path),
-        output_path=str(output_path),
-        scale_factor=scale_factor,
-        mult=mult,
-        div=div,
-        grid_dbu=grid_dbu,
-        dbu=dbu,
-        top_cell_names=top_cell_names_list,
-        original_bbox_um=original_bbox_um,
-        scaled_bbox_um=scaled_bbox_um,
-        actual_scale=actual_scale,
+    _write_gdsii_layout(ly, out_path)
+    logger.info(
+        "GDSII 缩放: %s → %s (scale=%s, mult=%d, div=%d, grid=%d dbu, cells=%d)",
+        in_path, out_path, scale_factor, mult, div, grid_dbu, len(cells_to_scale),
+    )
+    return _build_scale_report(
+        input_path, output_path, scale_factor, mult, div, grid_dbu, dbu,
+        top_cell_names_list, original_bbox_um, scaled_bbox_um, actual_scale,
     )
 
 
