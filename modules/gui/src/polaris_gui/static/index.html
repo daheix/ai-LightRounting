@@ -3,71 +3,167 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PoLaRIS 光弈 — 光电子AI智能布局布线引擎</title>
+<title>PoLaRIS 光弈 — 交互式版图编辑器</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="hero">
-  <div class="container">
-    <h1>PoLaRIS 光弈</h1>
-    <p class="subtitle">光电子AI智能布局布线引擎 · 商业化前端</p>
+  <div class="hero-content">
+    <h1>PoLaRIS 光弈 <span class="version">v5.0 D10</span></h1>
+    <p class="subtitle">光电子AI智能布局布线引擎 · 交互式版图编辑器</p>
     <div class="badges">
-      <span class="badge">DRV-free</span>
-      <span class="badge">4 平台</span>
-      <span class="badge">RL + GNN</span>
-      <span class="badge">开源 AGPL</span>
+      <span class="badge">R19 编辑器</span>
+      <span class="badge">GDSII/OASIS</span>
+      <span class="badge">DRC 实时高亮</span>
+      <span class="badge">HPWL 指标</span>
+      <span class="badge">KLayout 导出</span>
     </div>
   </div>
 </header>
 
-<main class="container">
-  <section class="panel">
-    <h2>电路选择</h2>
-    <div id="presets" class="presets-grid">
-      <div class="loading">加载预设电路...</div>
+<!-- 顶部工具栏 -->
+<div class="toolbar" id="toolbar">
+  <div class="toolbar-group">
+    <label class="toolbar-label">预设:</label>
+    <select id="presetSelect" title="选择预设电路">
+      <option value="mzi">MZI 干涉仪</option>
+      <option value="ring">微环谐振器</option>
+    </select>
+  </div>
+  <div class="toolbar-group">
+    <button id="btnRunPlacement" class="btn-tool" title="运行布局 (polaris-place analytical)">
+      <span class="icon">⊞</span>布局
+    </button>
+    <button id="btnRunRouting" class="btn-tool" title="运行布线 (polaris-route curvy)">
+      <span class="icon">∿</span>布线
+    </button>
+    <button id="btnRunDrc" class="btn-tool" title="运行 DRC 检查 (polaris-drc 18 规则)">
+      <span class="icon">⚠</span>DRC
+    </button>
+    <button id="btnRunPipeline" class="btn-tool btn-accent" title="一键布局+布线+DRC">
+      <span class="icon">▶</span>一键流水线
+    </button>
+  </div>
+  <div class="toolbar-group">
+    <button id="btnUploadGds" class="btn-tool" title="上传 GDSII/OASIS 文件">
+      <span class="icon">⬆</span>上传 GDS
+    </button>
+    <input type="file" id="gdsFileInput" accept=".gds,.gdsii,.oas,.asis,.py" style="display:none;">
+    <button id="btnExportKlayout" class="btn-tool" title="导出 KLayout Python 脚本">
+      <span class="icon">⬇</span>导出 KLayout
+    </button>
+  </div>
+  <div class="toolbar-group">
+    <button id="btnUndo" class="btn-tool" title="撤销 (Ctrl+Z)">
+      <span class="icon">↶</span>撤销
+    </button>
+    <button id="btnRedo" class="btn-tool" title="重做 (Ctrl+Y)">
+      <span class="icon">↷</span>重做
+    </button>
+    <button id="btnClear" class="btn-tool btn-danger" title="清空场景">
+      <span class="icon">✕</span>清空
+    </button>
+  </div>
+  <div class="toolbar-group toolbar-right">
+    <button id="btnZoomIn" class="btn-tool" title="放大 (+)">+</button>
+    <span id="zoomLabel" class="zoom-label">100%</span>
+    <button id="btnZoomOut" class="btn-tool" title="缩小 (-)">−</button>
+    <button id="btnZoomReset" class="btn-tool" title="重置视图">⌂</button>
+  </div>
+</div>
+
+<!-- 主体三栏布局 -->
+<main class="editor-main">
+  <!-- 左侧栏：图层 + 器件树 -->
+  <aside class="sidebar sidebar-left">
+    <div class="sidebar-section">
+      <h3>图层 <span class="hint">(点击切换显示)</span></h3>
+      <ul id="layersList" class="layers-list">
+        <!-- 由 JS 动态填充 -->
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <h3>器件树 <span class="hint">(点击选中)</span></h3>
+      <ul id="devicesTree" class="devices-tree">
+        <li class="hint-item">无器件（运行布局或添加器件）</li>
+      </ul>
+    </div>
+    <div class="sidebar-section">
+      <h3>已上传文件</h3>
+      <ul id="uploadsList" class="uploads-list">
+        <li class="hint-item">无上传文件</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- 中间：Canvas + 状态条 -->
+  <section class="canvas-area">
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="layoutCanvas" width="1000" height="700"></canvas>
+      <div id="canvasTooltip" class="canvas-tooltip" style="display:none;"></div>
+      <div id="canvasHint" class="canvas-hint">
+        滚轮缩放 · 拖拽平移 · 单击选中器件 · 拖动器件移动 · 双击空白取消选中
+      </div>
+    </div>
+    <div class="metrics-bar" id="metricsBar">
+      <div class="metric">
+        <span class="metric-label">器件数</span>
+        <span class="metric-value" id="metricDevices">0</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">HPWL (μm)</span>
+        <span class="metric-value" id="metricHpwl">—</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">布线数</span>
+        <span class="metric-value" id="metricPaths">0</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">总损耗 (dB)</span>
+        <span class="metric-value" id="metricLoss">—</span>
+      </div>
+      <div class="metric">
+        <span class="metric-label">DRC 违规</span>
+        <span class="metric-value" id="metricDrc">—</span>
+      </div>
+      <div class="metric metric-status" id="metricStatus">
+        <span class="metric-label">状态</span>
+        <span class="metric-value">就绪</span>
+      </div>
     </div>
   </section>
 
-  <section class="panel">
-    <h2>运行配置</h2>
-    <div class="config-row">
-      <label for="routerType">布线器类型</label>
-      <select id="routerType">
-        <option value="default">默认（A* 折线）</option>
-        <option value="curvy">弯曲感知（LiDAR 欧拉弯曲）</option>
-      </select>
-      <button id="runBtn" class="btn-primary" disabled>一键布局布线</button>
+  <!-- 右侧栏：DRC 列表 + 任务日志 -->
+  <aside class="sidebar sidebar-right">
+    <div class="sidebar-section">
+      <h3>DRC 违规列表 <span class="hint">(单击定位)</span></h3>
+      <ul id="drcList" class="drc-list">
+        <li class="hint-item">运行 DRC 后显示违规</li>
+      </ul>
     </div>
-  </section>
-
-  <section class="panel" id="resultPanel" style="display:none;">
-    <h2>运行结果</h2>
-    <div class="stats-grid" id="statsGrid"></div>
-    <div class="canvas-wrapper">
-      <h3>版图可视化</h3>
-      <canvas id="layoutCanvas" width="800" height="500"></canvas>
+    <div class="sidebar-section">
+      <h3>布线路径</h3>
+      <ul id="pathsList" class="paths-list">
+        <li class="hint-item">运行布线后显示路径</li>
+      </ul>
     </div>
-    <div class="paths-section">
-      <h3>布线路径详情</h3>
-      <table class="paths-table">
-        <thead>
-          <tr><th>连接</th><th>长度 (μm)</th><th>损耗 (dB)</th><th>点数</th></tr>
-        </thead>
-        <tbody id="pathsBody"></tbody>
-      </table>
+    <div class="sidebar-section">
+      <h3>任务日志</h3>
+      <ul id="taskLog" class="task-log">
+        <li class="hint-item">无任务</li>
+      </ul>
     </div>
-  </section>
-
-  <section class="panel" id="errorPanel" style="display:none;">
-    <h2>错误信息</h2>
-    <pre id="errorContent" class="error-box"></pre>
-  </section>
+  </aside>
 </main>
 
+<!-- 错误提示 -->
+<div id="errorPanel" class="error-panel" style="display:none;">
+  <pre id="errorContent" class="error-box"></pre>
+  <button class="btn-tool" onclick="document.getElementById('errorPanel').style.display='none';">关闭</button>
+</div>
+
 <footer class="footer">
-  <div class="container">
-    <p>PoLaRIS 光弈 © 2026 · 开源 AGPL · 来源: LiDAR ISPD'25 + AlphaChip Nature 2021</p>
-  </div>
+  <p>PoLaRIS 光弈 © 2026 · 交互式版图编辑器 · 来源: DREAMPlace DAC'19 + LiDAR ISPD'25 + SiEPIC PDK + KLayout DRC</p>
 </footer>
 
 <script src="app.js"></script>
