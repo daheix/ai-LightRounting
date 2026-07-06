@@ -499,26 +499,9 @@ class LayoutEditor:
     # ------------------------------------------------------------------
     # KLayout 脚本导出（深度编辑模式）
     # ------------------------------------------------------------------
-    def export_klayout_script(
-        self,
-        output_gds: str = "layout.gds",
-        top_cell_name: str = "TOP",
-    ) -> str:
-        """导出 KLayout Python 脚本（深度编辑模式）。
-
-        生成可在 KLayout IDE 中执行的 Python 脚本，将当前场景图投影到
-        真实 foundry GDS 层（SiEPIC/gdsfactory 标准层号，止血7），
-        支持后续 DRC/LVS 深度验证。
-
-        Args:
-            output_gds: 脚本中 GDS 输出路径。
-            top_cell_name: 顶层 cell 名称。
-
-        Returns:
-            KLayout Python 脚本字符串。
-        """
-        dbu = self.config.dbu
-        lines: list[str] = [
+    def _build_klayout_header(self, dbu: float, top_cell_name: str) -> list[str]:
+        """构造 KLayout 脚本头部（import + cell + 层定义）。"""
+        return [
             "# -*- coding: utf-8 -*-",
             '"""PoLaRIS LayoutEditor → KLayout 深度编辑脚本（R19 自动生成）.',
             "",
@@ -544,6 +527,10 @@ class LayoutEditor:
             #   https://gdsfactory.github.io/gdsfactory/
             "",
         ]
+
+    def _build_klayout_device_lines(self, dbu: float) -> list[str]:
+        """构造器件 box 的 KLayout 脚本行。"""
+        lines: list[str] = []
         for dev in self._devices.values():
             corners = _device_corners(dev)
             xmin = float(corners[:, 0].min())
@@ -560,6 +547,29 @@ class LayoutEditor:
             )
             lines.append("top.shapes(layer_wg).insert(box)")
             lines.append("top.shapes(layer_devrec).insert(box)")
+        return lines
+
+    def export_klayout_script(
+        self,
+        output_gds: str = "layout.gds",
+        top_cell_name: str = "TOP",
+    ) -> str:
+        """导出 KLayout Python 脚本（深度编辑模式）。
+
+        生成可在 KLayout IDE 中执行的 Python 脚本，将当前场景图投影到
+        真实 foundry GDS 层（SiEPIC/gdsfactory 标准层号，止血7），
+        支持后续 DRC/LVS 深度验证。
+
+        Args:
+            output_gds: 脚本中 GDS 输出路径。
+            top_cell_name: 顶层 cell 名称。
+
+        Returns:
+            KLayout Python 脚本字符串。
+        """
+        dbu = self.config.dbu
+        lines = self._build_klayout_header(dbu, top_cell_name)
+        lines.extend(self._build_klayout_device_lines(dbu))
         # 布线路径
         for r in self._routes:
             pts = r.get("points", [])
