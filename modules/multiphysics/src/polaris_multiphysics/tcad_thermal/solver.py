@@ -317,6 +317,32 @@ class ThermalSolver2D:
                 return float(np.mean(self._T[mask, :]))
         raise KeyError(f"层 {layer_name} 不存在")
 
+    def _prepare_crosstalk_params(
+        self, heater_power_mw: float, heater_length_um: float,
+    ) -> tuple[float, float, float]:
+        """识别 Si 衬底并计算热串扰参数 (k_si, r_ref_um, p_lin_w_m)。
+
+        严格镜像源法：r_ref = 2h（热源到镜像源距离），R03 失败即 raise。
+        """
+        k_si = 148.0  # Si 衬底热导率 [W/(m·K)] (Cocorullo 1999 / Incropera)
+        si_k_threshold = 100.0  # W/(m·K)，排除 SiO2(1.4)/TiN(~28) 等低热导材料
+        sub_layers = [
+            l for l in self.layers if l.thermal_conductivity_w_mk >= si_k_threshold
+        ]
+        if not sub_layers:
+            raise ValueError(
+                f"缺少 Si 衬底层 (k ≥ {si_k_threshold} W/(m·K))，"
+                "无法应用 Carslaw-Jaeger 线热源模型"
+            )
+        h_um = sum(l.thickness_um for l in sub_layers)
+        if h_um <= 0.0:
+            raise ValueError(f"衬底厚度非正: {h_um}")
+        r_ref_um = 2.0 * h_um
+        if heater_length_um <= 0.0:
+            raise ValueError(f"heater_length_um 须 > 0，实际 {heater_length_um}")
+        p_lin_w_m = heater_power_mw * 1e-3 / (heater_length_um * 1e-6)
+        return k_si, r_ref_um, p_lin_w_m
+
     def thermal_crosstalk_matrix(
         self,
         heater_positions_um: list[float],
@@ -374,27 +400,9 @@ class ThermalSolver2D:
            半导体器件热特性（衬底热扩散）—
            https://www.wiley.com/en-us/Physics+of+Semiconductor+Devices-9780471143239
         """
-        k_si = 148.0  # Si 衬底热导率 [W/(m·K)] (Cocorullo 1999 / Incropera)
-        # Si 衬底识别阈值：k_Si ≈ 148 W/(m·K)，阈值 100 W/(m·K) 排除 SiO2 (1.4)、
-        # TiN (~28) 等低热导材料。阈值来源：Incropera §2.2 常用材料热导率表。
-        si_k_threshold = 100.0  # W/(m·K)
-        sub_layers = [l for l in self.layers if l.thermal_conductivity_w_mk >= si_k_threshold]
-        if not sub_layers:
-            raise ValueError(
-                f"缺少 Si 衬底层 (k ≥ {si_k_threshold} W/(m·K))，"
-                "无法应用 Carslaw-Jaeger 线热源模型"
-            )
-        # 严格镜像源法：r_ref = 2h（热源到镜像源的距离）
-        h_um = sum(l.thickness_um for l in sub_layers)
-        if h_um <= 0.0:
-            raise ValueError(f"衬底厚度非正: {h_um}")
-        r_ref_um = 2.0 * h_um
-
-        # 单位长度功率 P' [W/m]: 1 mW / 1 μm = 1e-3 W / 1e-6 m = 1e3 W/m
-        if heater_length_um <= 0.0:
-            raise ValueError(f"heater_length_um 须 > 0，实际 {heater_length_um}")
-        p_lin_w_m = heater_power_mw * 1e-3 / (heater_length_um * 1e-6)
-
+        k_si, r_ref_um, p_lin_w_m = self._prepare_crosstalk_params(
+            heater_power_mw, heater_length_um
+        )
         matrix = np.zeros(
             (len(heater_positions_um), len(device_positions_um)), dtype=float
         )
