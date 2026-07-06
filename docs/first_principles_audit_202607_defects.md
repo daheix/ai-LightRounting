@@ -296,6 +296,140 @@ drc_passed = bool(drc_res) and drc_res.get("n_violations", -1) == 0
 
 **审核人**: PoLaRIS AI 智能体
 **审核日期**: 2026-07-06 CST
-**文档版本**: v1.0
+**文档版本**: v1.1（v1.0 + 孤儿分支/信息丢失全面核查）
+
+---
+
+## 11. 补充核查：孤儿分支与信息丢失（v1.1 新增）
+
+### 11.1 核查背景
+
+用户指出"孤儿分支导致信息丢失，需要全面核查"。v1.0 审核 发现 `git log --follow engine.py` 仅返回 1 个 commit，疑似历史丢失。本节对 git 仓库的分支结构、reflog、dangling objects、commit hash 真实性进行系统性取证。
+
+### 11.2 取证方法
+
+1. `git branch -a` + `git show-ref` 枚举所有分支与引用
+2. `git fsck --lost-found` 查找 dangling commits
+3. `git reflog --all` 查看完整操作历史
+4. `git cat-file -t <hash>` 批量验证 commit hash 真实性
+5. `git ls-remote origin` 发现未 fetch 的远程分支
+6. `git fetch` + `git rev-list --count` 验证分支历史长度
+7. `git show <branch>:<file>` 对比两分支文件内容
+
+### 11.3 取证结果
+
+#### 11.3.1 分支结构
+
+| 分支 | commit 数 | 最新 commit | 时间 | 状态 |
+|------|-----------|-------------|------|------|
+| `refs/heads/main`（本地） | 2 | f1a197be（R382，本轮审核） | 2026-07-06 | reachable |
+| `refs/remotes/origin/main` | 2 | f1a197be | 2026-07-06 | reachable |
+| `refs/heads/trae/agent-Fc4lLh`（远程，未 fetch） | **1897** | ae38f9d7（R378） | 2026-07-06 01:09 UTC | **默认不可见** |
+
+**关键发现**：远程存在一个 `trae/agent-Fc4lLh` 分支，包含 **1897 个完整 commit**，但本地 `git clone` 默认只 fetch `main`，导致该分支对本地用户不可见——这正是"孤儿分支导致信息丢失"的表面现象。
+
+#### 11.3.2 main 分支的历史重写证据
+
+```
+git rev-list --all --count  → 2  （仅 f1a197be + 6dd1ac0c）
+git cat-file -p 6dd1ac0c    → parent eaba59e5...
+git cat-file -t eaba59e5    → fatal: Not a valid object name
+git rev-parse 6dd1ac0c^     → fatal: ambiguous argument
+```
+
+**main 分支的 6dd1ac0c（R381）的 parent 指向 `eaba59e5`，该 commit 在仓库中不存在**。这证明 main 被 **squash + force push** 重写：原 R1-R380 的 commit 链被压缩成单个 root commit `6dd1ac0c`，parent 引用断裂。
+
+#### 11.3.3 commit hash 真实性批量验证
+
+对 `操作记录.md` 中引用的所有 7-8 位十六进制 hash（含 a-f，过滤纯数字）进行 `git cat-file -t` 验证：
+
+| 指标 | 数值 |
+|------|------|
+| 操作记录引用的真正 commit hash 总数 | 308 |
+| 仓库中存在的 | 1（仅 6dd1ac0c） |
+| 丢失的 | **307（99.7%）** |
+
+**307 个 commit hash 全部丢失**，包括操作记录明确声明"已推送 origin main"的关键 commit：
+- `28b407de`（R379 PORT_ALIGNMENT 修复）
+- `721070b6`（R379 推送前基线）
+- `eaba59e5`（6dd1ac0c 的 parent）
+- `11fee592`（F6 真实用例 8158 文件）
+- `1b12da19`（F3 rl_pareto）
+- `1527b2eb`（R381 圈复杂度）
+- `a383c490`（R381 fall-back 修复）
+- 等等
+
+#### 11.3.4 agent 分支的完整性验证
+
+fetch `trae/agent-Fc4lLh` 分支后验证：
+
+| 项 | agent 分支（ae38f9d7） | main 分支（6dd1ac0c） |
+|----|------------------------|----------------------|
+| commit 数 | 1897 | 2 |
+| 最新 commit 时间 | 2026-07-06 01:09 UTC | 2026-07-06 16:05 UTC |
+| engine.py 行数 | 520 | 561 |
+| engine.py 含 bend_compensate | ❌ 0 处 | ✅ 17 处 |
+| rules.py 独立文件 | ❌ 不存在（规则在 engine.py 内） | ✅ 存在 |
+| PORT_ALIGN_TOL_UM 定义 | ❌ 无 | ✅ 10.0μm |
+| PORT_ALIGN_BEND_RANGE_UM | ❌ 无 | ✅ 50.0μm |
+| final_defect_audit_report | ❌ 不存在 | ✅ 存在 |
+| 文件总数 | 3348 | 21626 |
+| R379/R380/R381 commit | ❌ 无 | ✅ squash 进 6dd1ac0c |
+
+**agent 分支保留了 R1-R378 的完整开发历史**（1897 commits），但停在 R378（函数拆分轮次）。R379/R380/R381 的代码变更仅存在于 main 的 squash commit `6dd1ac0c` 中，**独立 commit 历史已永久丢失**。
+
+#### 11.3.5 28b407de 的最终定性
+
+对 `28b407de`（R379 操作记录声称的 commit hash）在三处验证：
+1. main 分支（2 commits）：❌ 不存在
+2. agent 分支（1897 commits）：❌ 不存在
+3. `git log --grep="R379" ae38f9d7`：❌ 返回空
+
+**28b407de 从未在任何分支存在过**。但 R379 操作记录描述的代码变更（bend_compensate 多维容差方程、3 个子函数拆分）**真实存在于 6dd1ac0c 的 tree 中**。
+
+### 11.4 信息丢失的准确根因
+
+**不是"孤儿分支"**，而是 **squash + force push 历史重写**：
+
+1. R1-R378 的完整历史（1897 commits）保留在 `trae/agent-Fc4lLh` 分支
+2. R379/R380/R381 三个轮次的变更被 squash 成单个 commit `6dd1ac0c`，force push 到 main
+3. main 的原 commit 链（含 28b407de 等所有 R379-R381 独立 commit）被覆盖，成为孤儿对象，经 GC 后永久丢失
+4. 6dd1ac0c 的 parent `eaba59e5` 引用断裂（squash 时的基线 commit 已不存在）
+5. 本地 fresh clone 默认只 fetch main，看不到 agent 分支，呈现"信息丢失"假象
+
+### 11.5 对 v1.0 审核结论的修正
+
+| v1.0 结论 | v1.1 修正 | 依据 |
+|-----------|-----------|------|
+| "commit 28b407de 伪造" | **修正为**：28b407de 从未存在，但 R379 代码变更真实（squash 进 6dd1ac0c） | agent 分支 1897 commits 中也无此 hash；6dd1ac0c tree 含完整 bend_compensate 代码 |
+| "R379 时间穿越" | **维持**：审计报告（2026-07-05）声称"R379已修复"，R379 实际发生于 2026-07-06 22:10 | 时间戳比对不变 |
+| 未涉及分支结构 | **补充**：main 被 squash+force push 重写，agent 分支保留 R1-R378 完整历史 | 本节 11.3 取证 |
+| 未涉及 307 个丢失 commit | **补充**：操作记录引用 308 个 hash，307 个丢失（99.7%） | 批量 git cat-file 验证 |
+
+### 11.6 R02 学术诚信最终评估
+
+| 项 | 评估 | 说明 |
+|----|------|------|
+| R379 代码变更真实性 | ✅ 真实 | bend_compensate 多维容差方程存在于 6dd1ac0c tree |
+| R379 commit hash 真实性 | ❌ 虚假 | 28b407de 从未存在，操作记录引用了不存在的 hash |
+| R1-R378 历史可溯源 | ✅ 可溯源 | agent 分支保留 1897 commits 完整链 |
+| R379-R381 历史可溯源 | ❌ 不可溯源 | squash 成单 commit，独立历史丢失 |
+| 操作记录 307 个 hash | ❌ 不可验证 | 99.7% 的 commit 引用无法溯源 |
+
+### 11.7 修复建议（v1.1 新增）
+
+| 优先级 | 修复项 | 动作 |
+|--------|--------|------|
+| **P0** | 恢复 R379-R381 独立 commit 历史 | 从 agent 分支 ae38f9d7 基于，重新提交 R379/R380/R381 的变更（非 squash），恢复可溯源链 |
+| **P0** | 修正操作记录中 307 个失效 hash | 标注"历史丢失，参考 agent 分支 ae38f9d7"或重新建立 commit 映射 |
+| **P0** | merge agent 分支到 main | `git merge ae38f9d7` 恢复 R1-R378 完整历史到 main，避免 agent 分支成为孤儿 |
+| **P1** | 禁止 squash + force push main | 在 R11 工作流中增加规则：main 禁止 force push，禁止 squash merge |
+| **P1** | fetch 所有远程分支 | clone 后执行 `git fetch origin 'refs/heads/*:refs/remotes/origin/*'` |
+
+---
+
+**审核人**: PoLaRIS AI 智能体
+**审核日期**: 2026-07-06 CST
+**文档版本**: v1.1
 **轮次编号**: R382
 **规则依据**: R01/R02/R03/R05/R11/R12
