@@ -225,69 +225,74 @@ def _construct_biasing_distribution(
     """
     method = biasing.method
     d = len(nominal_specs)
-
+    _validate_biasing_dimension(method, biasing, d)
     if method == BiasingMethod.MEAN_SHIFT:
+        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
+    if method == BiasingMethod.VARIANCE_SCALING:
+        return _build_variance_scaling_dists(nominal_specs, biasing.variance_scale)
+    if method == BiasingMethod.EXPONENTIAL_TWIST:
+        return _build_twist_dists(nominal_specs, biasing.twist_theta)
+    if method == BiasingMethod.MIXTURE:
+        _validate_mixture_alpha(biasing.mixture_alpha)
+        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
+    if method == BiasingMethod.CROSS_ENTROPY:
+        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
+    raise ValueError(f"不支持的偏置方法: {method}")
+
+
+def _validate_biasing_dimension(method, biasing: BiasingSpec, d: int) -> None:
+    """校验偏置参数维度（不合法 raise ValueError）。"""
+    if method in (BiasingMethod.MEAN_SHIFT, BiasingMethod.MIXTURE,
+                  BiasingMethod.CROSS_ENTROPY):
         if biasing.mean_shift is None or len(biasing.mean_shift) != d:
             raise ValueError(
-                f"MEAN_SHIFT 需要 mean_shift 长度 = {d}，"
+                f"{method.name} 需要 mean_shift 长度 = {d}，"
                 f"得到 {biasing.mean_shift}"
             )
-        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
-
-    if method == BiasingMethod.VARIANCE_SCALING:
-        if (
-            biasing.variance_scale is None
-            or len(biasing.variance_scale) != d
-        ):
+    elif method == BiasingMethod.VARIANCE_SCALING:
+        if biasing.variance_scale is None or len(biasing.variance_scale) != d:
             raise ValueError(
                 f"VARIANCE_SCALING 需要 variance_scale 长度 = {d}，"
                 f"得到 {biasing.variance_scale}"
             )
-        biasing_specs: list[dict] = []
-        for j, spec in enumerate(nominal_specs):
-            scale = float(biasing.variance_scale[j])
-            if scale <= 0:
-                raise ValueError(
-                    f"variance_scale[{j}] 必须 > 0，得到 {scale}"
-                )
-            new_spec = dict(spec)
-            new_spec["scale"] = spec.get("scale", 1.0) * scale
-            biasing_specs.append(new_spec)
-        return _build_univariate_distributions(biasing_specs)
-
-    if method == BiasingMethod.EXPONENTIAL_TWIST:
+    elif method == BiasingMethod.EXPONENTIAL_TWIST:
         if biasing.twist_theta is None or len(biasing.twist_theta) != d:
             raise ValueError(
                 f"EXPONENTIAL_TWIST 需要 twist_theta 长度 = {d}，"
                 f"得到 {biasing.twist_theta}"
             )
-        biasing_specs = []
-        for j, spec in enumerate(nominal_specs):
-            theta = float(biasing.twist_theta[j])
-            biasing_specs.append(_twist_single_spec(spec, theta))
-        return _build_univariate_distributions(biasing_specs)
 
-    if method == BiasingMethod.MIXTURE:
-        if biasing.mean_shift is None or len(biasing.mean_shift) != d:
-            raise ValueError(
-                f"MIXTURE 需要 mean_shift 长度 = {d}，"
-                f"得到 {biasing.mean_shift}"
-            )
-        if not (0.0 < biasing.mixture_alpha < 1.0):
-            raise ValueError(
-                f"mixture_alpha 必须在 (0, 1)，得到 {biasing.mixture_alpha}"
-            )
-        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
 
-    if method == BiasingMethod.CROSS_ENTROPY:
-        if biasing.mean_shift is None or len(biasing.mean_shift) != d:
-            raise ValueError(
-                f"CROSS_ENTROPY 需要 mean_shift 作为初始 h 长度 = {d}，"
-                f"得到 {biasing.mean_shift}"
-            )
-        return _build_shifted_specs_as_dists(nominal_specs, biasing.mean_shift)
+def _validate_mixture_alpha(alpha: float) -> None:
+    """校验 MIXTURE 方法的 mixture_alpha 参数。"""
+    if not (0.0 < alpha < 1.0):
+        raise ValueError(f"mixture_alpha 必须在 (0, 1)，得到 {alpha}")
 
-    raise ValueError(f"不支持的偏置方法: {method}")
+
+def _build_variance_scaling_dists(
+    nominal_specs: list[dict], variance_scale
+) -> list[norm | uniform]:
+    """构建 VARIANCE_SCALING 偏置分布列表。"""
+    biasing_specs: list[dict] = []
+    for j, spec in enumerate(nominal_specs):
+        scale = float(variance_scale[j])
+        if scale <= 0:
+            raise ValueError(f"variance_scale[{j}] 必须 > 0，得到 {scale}")
+        new_spec = dict(spec)
+        new_spec["scale"] = spec.get("scale", 1.0) * scale
+        biasing_specs.append(new_spec)
+    return _build_univariate_distributions(biasing_specs)
+
+
+def _build_twist_dists(
+    nominal_specs: list[dict], twist_theta
+) -> list[norm | uniform]:
+    """构建 EXPONENTIAL_TWIST 偏置分布列表。"""
+    biasing_specs = []
+    for j, spec in enumerate(nominal_specs):
+        theta = float(twist_theta[j])
+        biasing_specs.append(_twist_single_spec(spec, theta))
+    return _build_univariate_distributions(biasing_specs)
 
 
 def _twist_single_spec(spec: dict, theta: float) -> dict:

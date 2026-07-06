@@ -253,38 +253,49 @@ def _select_best_d2_pos(
     cur_x: float, cur_y: float,
 ) -> tuple:
     """评估候选: 边界/重叠/不破坏原则，选评分最高且总偏差最小。"""
-    def compute_devs(x: float, y: float) -> list:
-        return [
-            (abs(ci["abs1_x"] - (x + ci["port2_x"])),
-             abs(ci["abs1_y"] - (y + ci["port2_y"])))
-            for ci in conn_infos
-        ]
-    def is_pass(dx: float, dy: float) -> bool:
-        return dx <= TOL or dy <= TOL
     best_pos = (cur_x, cur_y)
     best_score = cur_score
     best_total_dev = cur_total_dev
     for x, y in expanded:
-        if x < 0.0 or x + w2 > canvas_w or y < 0.0 or y + h2 > canvas_h:
+        if not _is_candidate_legal(x, y, w2, h2, canvas_w, canvas_h,
+                                    placements, d2_name, d2_connected):
             continue
-        if not _no_overlap_at(placements, d2_name, x, y, w2, h2, d2_connected):
+        devs = _compute_conn_devs(x, y, conn_infos)
+        if _breaks_current_passes(devs, cur_passes, TOL):
             continue
-        devs = compute_devs(x, y)
-        # 不破坏检查: 当前通过的连接仍需通过
-        broke_any = False
-        for i, (dx, dy) in enumerate(devs):
-            if cur_passes[i] and not is_pass(dx, dy):
-                broke_any = True
-                break
-        if broke_any:
-            continue
-        score = sum(1 for dx, dy in devs if is_pass(dx, dy))
+        score = sum(1 for dx, dy in devs if dx <= TOL or dy <= TOL)
         total_dev = sum(dx + dy for dx, dy in devs)
         if score > best_score or (score == best_score and total_dev < best_total_dev):
             best_score = score
             best_total_dev = total_dev
             best_pos = (x, y)
     return best_pos
+
+
+def _is_candidate_legal(
+    x, y, w2, h2, canvas_w, canvas_h, placements, d2_name, d2_connected,
+) -> bool:
+    """候选位置合法性: 边界 + 无重叠。"""
+    if x < 0.0 or x + w2 > canvas_w or y < 0.0 or y + h2 > canvas_h:
+        return False
+    return _no_overlap_at(placements, d2_name, x, y, w2, h2, d2_connected)
+
+
+def _compute_conn_devs(x: float, y: float, conn_infos: list) -> list:
+    """计算候选位置下所有连接的 (dx, dy) 偏差。"""
+    return [
+        (abs(ci["abs1_x"] - (x + ci["port2_x"])),
+         abs(ci["abs1_y"] - (y + ci["port2_y"])))
+        for ci in conn_infos
+    ]
+
+
+def _breaks_current_passes(devs: list, cur_passes: list, TOL: float) -> bool:
+    """检查候选位置是否破坏当前已通过的连接（不破坏原则）。"""
+    for i, (dx, dy) in enumerate(devs):
+        if cur_passes[i] and not (dx <= TOL or dy <= TOL):
+            return True
+    return False
 
 
 def _align_d2_global(

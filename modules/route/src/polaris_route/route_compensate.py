@@ -216,15 +216,39 @@ def _try_compensate_one_conn(
     pl2 = placements[dev2_name]
     w2, h2 = float(pl2["w"]), float(pl2["h"])
     cur_x, cur_y = float(pl2["x"]), float(pl2["y"])
-    # 候选 A: x 对齐（d2.x = abs1_x - port2_dx），保持 cur_y
+    candidates = _build_compensate_candidates(
+        abs1_x, abs1_y, port2_dx, port2_dy, cur_x, cur_y,
+        w2, h2, canvas_w, canvas_h,
+    )
+    best_pos = _select_best_candidate(
+        placements, device_map, dev2, dev2_name,
+        incoming_per_d2, candidates, w2, h2, canvas_w, canvas_h,
+    )
+    if best_pos is None:
+        return 0
+    placements[dev2_name]["x"] = best_pos[0]
+    placements[dev2_name]["y"] = best_pos[1]
+    return 1
+
+
+def _build_compensate_candidates(
+    abs1_x, abs1_y, port2_dx, port2_dy, cur_x, cur_y,
+    w2, h2, canvas_w, canvas_h,
+) -> list[tuple[float, float]]:
+    """构建 x/y 对齐候选位置列表。"""
     cand_a_x = max(0.0, min(abs1_x - port2_dx, canvas_w - w2))
-    cand_a = (cand_a_x, cur_y)
-    # 候选 B: y 对齐（d2.y = abs1_y - port2_dy），保持 cur_x
     cand_b_y = max(0.0, min(abs1_y - port2_dy, canvas_h - h2))
-    cand_b = (cur_x, cand_b_y)
+    return [(cand_a_x, cur_y), (cur_x, cand_b_y)]
+
+
+def _select_best_candidate(
+    placements, device_map, dev2, dev2_name,
+    incoming_per_d2, candidates, w2, h2, canvas_w, canvas_h,
+) -> tuple[float, float] | None:
+    """从候选位置中选择偏差最小且合法的位置。"""
     best_pos = None
     best_dev = float("inf")
-    for cand in (cand_a, cand_b):
+    for cand in candidates:
         cx, cy = cand
         if cx < 0.0 or cx + w2 > canvas_w or cy < 0.0 or cy + h2 > canvas_h:
             continue
@@ -236,11 +260,7 @@ def _try_compensate_one_conn(
         if dev < best_dev:
             best_dev = dev
             best_pos = cand
-    if best_pos is None:
-        return 0
-    placements[dev2_name]["x"] = best_pos[0]
-    placements[dev2_name]["y"] = best_pos[1]
-    return 1
+    return best_pos
 
 
 def _regenerate_paths_after_compensate(
