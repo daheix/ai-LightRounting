@@ -410,6 +410,47 @@ def parse_pdk_yaml(yaml_path: str | Path) -> PDKYamlConfig:
     )
 
 
+def _serialize_layer_stack(layer_stack) -> list:
+    """序列化 layer_stack 为 list[dict]。"""
+    layer_stack_list: list = []
+    for level in layer_stack:
+        item: dict = {
+            "layer": level.layer,
+            "thickness_nm": level.thickness_nm,
+            "zmin_nm": level.zmin_nm,
+            "material": level.material,
+            "sidewall_angle_deg": level.sidewall_angle_deg,
+        }
+        if level.refractive_index_real is not None:
+            item["refractive_index"] = [
+                level.refractive_index_real,
+                level.refractive_index_imag if level.refractive_index_imag is not None else 0.0,
+            ]
+        layer_stack_list.append(item)
+    return layer_stack_list
+
+
+def _serialize_cross_sections(cross_sections) -> dict:
+    """序列化 cross_sections 为 dict。"""
+    return {
+        xs.name: {
+            "width_um": xs.width_um,
+            "offset_um": xs.offset_um,
+            "sections": [
+                {
+                    "width_um": s.width_um,
+                    "offset_um": s.offset_um,
+                    "layer": s.layer,
+                    "ports": list(s.ports) if s.ports else None,
+                    "hidden": s.hidden,
+                }
+                for s in xs.sections
+            ],
+        }
+        for xs in cross_sections
+    }
+
+
 def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
     """序列化 PDKYamlConfig 为 YAML 字符串（R309）。
 
@@ -428,7 +469,6 @@ def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
         raise ValueError("PDK 配置 version 不能为空")
     if not config.platform:
         raise ValueError("PDK 配置 platform 不能为空")
-
     pdk_dict: dict = {
         "name": config.name,
         "version": config.version,
@@ -446,38 +486,6 @@ def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
         }
         for layer in config.layers
     }
-    layer_stack_list: list = []
-    for level in config.layer_stack:
-        item: dict = {
-            "layer": level.layer,
-            "thickness_nm": level.thickness_nm,
-            "zmin_nm": level.zmin_nm,
-            "material": level.material,
-            "sidewall_angle_deg": level.sidewall_angle_deg,
-        }
-        if level.refractive_index_real is not None:
-            item["refractive_index"] = [
-                level.refractive_index_real,
-                level.refractive_index_imag if level.refractive_index_imag is not None else 0.0,
-            ]
-        layer_stack_list.append(item)
-    cross_sections_dict: dict = {
-        xs.name: {
-            "width_um": xs.width_um,
-            "offset_um": xs.offset_um,
-            "sections": [
-                {
-                    "width_um": s.width_um,
-                    "offset_um": s.offset_um,
-                    "layer": s.layer,
-                    "ports": list(s.ports) if s.ports else None,
-                    "hidden": s.hidden,
-                }
-                for s in xs.sections
-            ],
-        }
-        for xs in config.cross_sections
-    }
     cells_dict: dict = {
         cell.name: {
             "platform": cell.platform,
@@ -490,8 +498,8 @@ def serialize_pdk_yaml(config: PDKYamlConfig) -> str:
     full_dict = {
         "pdk": pdk_dict,
         "layers": layers_dict,
-        "layer_stack": layer_stack_list,
-        "cross_sections": cross_sections_dict,
+        "layer_stack": _serialize_layer_stack(config.layer_stack),
+        "cross_sections": _serialize_cross_sections(config.cross_sections),
         "cells": cells_dict,
     }
     return yaml.safe_dump(full_dict, allow_unicode=True, sort_keys=False, default_flow_style=False)
