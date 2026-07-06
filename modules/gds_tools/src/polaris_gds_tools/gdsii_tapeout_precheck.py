@@ -37,9 +37,9 @@
 - GDSII 格式:
   https://en.wikipedia.org/wiki/GDS_File
 - KLayout Layout.read:
-  https://www.klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 - KLayout Cell class:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - OpenROAD Sign-off:
   https://openroad.readthedocs.io/en/latest/main/src/src.html
 - CommonMark 规范:

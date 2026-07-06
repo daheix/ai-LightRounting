@@ -24,7 +24,7 @@ benchmark（17/15/11 模块 vs 真实数百模块），绝对 HPWL 不可直接�
 ## 学术依据（R02 学术诚信，≥5 个文献 URL）
 
 1. TILOS MacroPlacement 仓库
-   https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+   https://github.com/TILOS-AI-Institute/MacroPlacement
 2. RePlAce (Cheng et al., ICCAD 2019) https://doi.org/10.1109/ICCAD45719.2019.8942087
 3. DREAMPlace (Lin et al., DAC 2019) https://doi.org/10.1109/DAC.2019.8721934
 4. DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746

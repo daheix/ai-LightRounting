@@ -72,7 +72,7 @@ SiEPIC 真实 runset 源码或行业 PDK 文档）:
   工艺规则源码）
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC 文档（width_check / space_check / area_check 算子语义）
   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734

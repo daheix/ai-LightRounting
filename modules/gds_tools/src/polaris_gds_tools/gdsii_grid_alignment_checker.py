@@ -39,9 +39,9 @@
 - KLayout DRC Reference（grid 检查）:
   https://klayout.org/downloads/master/doc-qt5/about/drc_ref.html
 - KLayout Polygon class:
-  https://www.klayout.org/doc-qt5/code/class_Polygon.html
+  https://www.klayout.de/doc.html
 - KLayout Box class:
-  https://www.klayout.org/doc-qt5/code/class_Box.html
+  https://www.klayout.de/doc.html
 - KLayout Shape class（is_polygon/is_box/polygon）:
   https://www.klayout.org/doc-qt4/code/class_Shape.html
 - KLayout RecursiveShapeIterator:
@@ -183,7 +183,7 @@ def check_grid_alignment(
     - KLayout DRC grid check:
       https://klayout.org/downloads/master/doc-qt5/about/drc_ref.html
     - KLayout Polygon API:
-      https://www.klayout.org/doc-qt5/code/class_Polygon.html
+      https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path = Path(gds_path)
@@ -330,7 +330,7 @@ def _check_polygon_grid(
     """检查 polygon 所有顶点（外轮廓+孔）的网格对齐（R325 内部辅助）。
 
     来源: KLayout Polygon API
-        https://www.klayout.org/doc-qt5/code/class_Polygon.html
+        https://www.klayout.de/doc.html
     """
     # 外轮廓顶点
     num_hull = int(poly.num_points_hull())
@@ -363,7 +363,7 @@ def _check_box_grid(
 ) -> None:
     """检查 box 4 个角点的网格对齐（R325 内部辅助）。
 
-    来源: KLayout Box class https://www.klayout.org/doc-qt5/code/class_Box.html
+    来源: KLayout Box class https://www.klayout.de/doc.html
     """
     corners = [
         (int(box.left), int(box.bottom)),

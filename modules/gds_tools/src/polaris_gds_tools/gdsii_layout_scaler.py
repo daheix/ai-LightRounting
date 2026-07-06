@@ -52,7 +52,7 @@
 ## 学术依据
 
 - KLayout Layout.scale_and_snap:
-  https://klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - GDSII 格式: https://en.wikipedia.org/wiki/GDS_File
@@ -62,7 +62,7 @@
 - KLayout Cell Statistics:
   https://www.klayout.org/doc-qt5/about/cell_views.html
 - KLayout Trans class:
-  https://www.klayout.org/doc-qt5/code/class_Trans.html
+  https://www.klayout.de/doc.html
 
 合规: R01 / R02 / R03 / R04 / R05 / R11。
 """
@@ -361,7 +361,7 @@ def scale_gdsii(
 
     来源:
     - KLayout Layout.scale_and_snap:
-      https://klayout.org/doc-qt5/code/class_Layout.html
+      https://www.klayout.de/doc.html
     - Python Fraction:
       https://docs.python.org/3/library/fractions.html
     """

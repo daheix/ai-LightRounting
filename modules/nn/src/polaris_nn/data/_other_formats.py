@@ -226,7 +226,7 @@ def _parse_gdsfactory_routes_field(
 #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 # - GDSFactory 组件库: https://gdsfactory.github.io/gdsfactory/
 # - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-#   https://www.cambridge.org/core/books/silicon-photonics-design/
+#   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 _PICBENCH_DEVICE_TEMPLATES: dict[str, dict] = {
     # 2x2 MZI with phase shifter (Reck/Clements mesh 标准单元, 4-port)
     # 文献: Reck 1994 / Clements 2016 / Miller 2013 自重构光矩阵

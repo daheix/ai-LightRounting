@@ -19,7 +19,7 @@
 
 ## 学术依据
 
-- KLayout Region.area: https://www.klayout.org/doc-qt5/code/class_Region.html
+- KLayout Region.area: https://www.klayout.de/doc.html
 - KLayout DRC density check:
   https://www.klayout.org/doc-qt5/manual/drc.html
 - Synopsys OptoDesigner density rule:
@@ -211,8 +211,8 @@ def compute_layer_density(
         ImportError: klayout 未安装。
 
     来源:
-    - KLayout Region.area: https://www.klayout.org/doc-qt5/code/class_Region.html
-    - KLayout Layout.read: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Region.area: https://www.klayout.de/doc.html
+    - KLayout Layout.read: https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path = Path(gds_path)
@@ -397,7 +397,7 @@ def compute_density_map(
         ImportError: klayout 未安装。
 
     来源:
-    - KLayout Region & Box 运算: https://www.klayout.org/doc-qt5/code/class_Region.html
+    - KLayout Region & Box 运算: https://www.klayout.de/doc.html
     """
     if cell_size_um <= 0:
         raise ValueError(f"cell_size_um 必须 > 0，得到 {cell_size_um}")

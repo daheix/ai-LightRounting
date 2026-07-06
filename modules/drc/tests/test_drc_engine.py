@@ -10,7 +10,7 @@
 - SiEPIC EBeam PDK DRC runset URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - SiEPIC-Tools Verification URL: https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+  URL: https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC 文档 URL: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - LiDAR 2.0: Zhou et al. arXiv:2505.17239v1, ISPD 2025（Bend/Crossing）
   URL: https://arxiv.org/html/2505.17239v1
@@ -19,7 +19,7 @@
 - Berg et al. 2014, "Computational Geometry", Springer（AABB 相交/距离）
   URL: https://doi.org/10.1007/978-3-540-77974-2
 - SiEPIC Tools GDS 提取约定 https://github.com/SiEPIC/SiEPIC-Tools
-- KLayout Instance API https://www.klayout.org/doc-qt5/code/class_Instance.html
+- KLayout Instance API https://www.klayout.de/doc.html
 - IMEC iSiPP50G 5μm（Ring Modulator）
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
@@ -112,7 +112,7 @@ def _violation_rule_names(result: dict) -> set[str]:
 # 修复: 优先用 bbox[0:2]（真实物理 AABB 左下角），无 bbox 时 x-w/2, y-h/2。
 # 来源: SiEPIC Tools GDS 提取约定 + KLayout Instance API bbox 语义
 #   https://github.com/SiEPIC/SiEPIC-Tools
-#   https://www.klayout.org/doc-qt5/code/class_Instance.html
+#   https://www.klayout.de/doc.html
 
 
 def test_expert_demos_center_point_to_corner_bbox():
@@ -390,7 +390,7 @@ def test_waveguide_width_match_bbox_false_positive_regression():
         - IEEE 754 浮点比较 (math.isclose, PEP 485)
           https://peps.python.org/pep-0485/
         - Chrostowski & Hochberg 2015 §4.3 (模式失配)
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
     """
     # 模拟真实 GDS 提取的 y_branch 器件: BBOX width_um 不同 (浮点噪声),
     # 但 params.wg_width 相同 (0.5μm 真实波导宽度)

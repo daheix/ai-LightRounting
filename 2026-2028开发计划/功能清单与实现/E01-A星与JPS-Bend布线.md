@@ -304,7 +304,7 @@ Innovus NanoRoute 详细布线引擎采用网格 + 形状混合路由，支持�
 4. Red Blob Games. *A* Pathfinding Implementation*. https://www.redblobgames.com/pathfinding/a-star/implementation.html
 5. Fujisawa, T. et al. *Euler Bend Waveguide for Low Loss Integrated Photonic Circuits*. Opt. Express 25(8), 9150, 2017. https://opg.optica.org/oe/fulltext.cfm?uri=oe-25-8-9150
 6. Rizzo, S. et al. *Euler Curves for SOI Waveguide Bend Robustness*. Optics Letters 48(2), 215, 2023. https://lightwave.ee.columbia.edu/sites/default/files/content/publications/2022/ol-48-2-215.pdf
-7. Chrostowski, L. *Silicon Photonics Design*. Cambridge University Press, 2015, §6.3. https://www.cambridge.org/core/books/silicon-photonics-design/
+7. Chrostowski, L. *Silicon Photonics Design*. Cambridge University Press, 2015, §6.3. https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 8. SiEPIC EBeam PDK. https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 9. Sturtevant, N. *Moving Targets and Vacant Positions in Pathfinding*. AAAI AIIDE 2011. https://cdn.aaai.org/ojs/12438/12438-52-15966-1-2-20201228.pdf
 10. Cadence. *Innovus NanoRoute routeDesign Flow*. https://www.cadence.com/ko_KR/kr/home/tools/digital-design-and-signoff/soc-implementation/innovus-implementation.html

@@ -25,7 +25,7 @@ P0 波导级规则检查方法，由 ``DRCEngine`` 继承:
 - KLayout DRC 文档（width_check/space_check/area_check/notch）
   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 §4.3
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Berg et al. 2014, "Computational Geometry", Springer（AABB 相交/距离）
   https://doi.org/10.1007/978-3-540-77974-2
 """
@@ -86,7 +86,7 @@ class WaveguideRulesMixin:
             - FluxCore 5-10μm
               https://www.fluxcoredynamics.com/docs/design-rules
             - Chrostowski & Hochberg 2015 §4.3（弯曲损耗）
-              https://www.cambridge.org/core/books/silicon-photonics-design/
+              https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         """
         thr = rule.threshold
         violations: list[DRCViolation] = []
@@ -128,7 +128,7 @@ class WaveguideRulesMixin:
               https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
             - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
             - Chrostowski & Hochberg 2015 §4.3（模式失配损耗）
-              https://www.cambridge.org/core/books/silicon-photonics-design/
+              https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
             - IEEE 754 浮点比较最佳实践 (math.isclose, PEP 485)
               https://peps.python.org/pep-0485/
             - gdsfactory wg_width 参数约定

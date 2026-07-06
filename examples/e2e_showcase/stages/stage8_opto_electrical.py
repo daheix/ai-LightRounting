@@ -22,7 +22,7 @@ PoLaRIS v5.0 迁移说明:
 - Ansys Lumerical INTERCONNECT 眼图分析
   https://optics.ansys.com/hc/en-us/articles/49697869166611
 - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §9
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - NIST CODATA 2018 物理常量
   https://physics.nist.gov/cuu/Constants/
 """
@@ -96,7 +96,7 @@ def _compute_detector_noise(bit_rate: float) -> dict:
     - Saleh & Teich, "Photonics", 2019, §17.4/§17.5
       https://www.wiley.com/en-us/Photonics%3A+From+Basics+to+Advanced+Course
     - Chrostowski 2015 §9.2
-      https://www.cambridge.org/core/books/silicon-photonics-design/
+      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
     Args:
         bit_rate: 比特率（bps）。

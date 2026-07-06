@@ -39,7 +39,7 @@ Output:
 - KLayout Layout/OASIS 写入:
   https://www.klayout.de/doc-qt5/code/class_KLayout_Layout.html
 - KLayout SimplePolygon / Path / Box / Text:
-  https://www.klayout.org/doc-qt5/code/
+  https://www.klayout.de/doc.html
 - OASIS 格式规范 (SEMIM P39):
   https://en.wikipedia.org/wiki/Open_Artwork_System_Interchange_Standard
 - matplotlib Figure 内存管理（close 释放）:
@@ -275,7 +275,7 @@ def _insert_circle(kc, db, li, shape: Shape) -> None:
     """circle Shape → klayout 圆（多边形近似，64 边）。
 
     klayout.db 提供 DCircle（KLayout 0.27+），来源:
-    https://www.klayout.org/doc-qt5/code/class_DCircle.html
+    https://www.klayout.de/doc.html
     """
     c = shape.points[0] if shape.points else None
     if c is None:

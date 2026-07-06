@@ -1,9 +1,9 @@
 # DRC 误报率量化审查报告（PoLaRIS real_board）
 
-**生成时间**: 2026-07-06 14:41:09 CST
+**生成时间**: 2026-07-06 15:33:01 CST
 **审计脚本**: `/workspace/scripts/audit_drc_false_positives.py`
 **数据来源**: real_board 87 个真实板级 benchmark 电路（SiEPIC/expert_demos/gdsfactory/picbench 4 类）
-**DRC 引擎**: `/workspace/modules/drc/src/polaris_drc/engine.py`（12 条 SiEPIC EBeam PDK 规则，默认模式 bend_compensate=True，多维容差方程）
+**DRC 引擎**: `/workspace/modules/drc/src/polaris_drc/engine.py`（12 条 SiEPIC EBeam PDK 规则，默认模式 bend_compensate=True 使用多维容差方程检查 PORT_ALIGNMENT）
 **商用门槛**: ≤5%（Mohan et al., DATE 2023）
 
 ---
@@ -13,9 +13,7 @@
 - **抽样**: 36 个 PORT_ALIGNMENT 违规用例（从 36 条违规中按类别均匀抽样）
 - **判定**: 自动检查（器件存在/端口在边界内/连接对端存在/端口方向兼容/端口间距在弯曲补偿范围内）
 - **标准**: Mohan et al., DATE 2023 "Machine Learning for DRC"
-- **DRC 模式**: 默认模式（bend_compensate=True），用户实际使用模式，多维容差方程
-  - R03 修复（2026-07-06）: 删除 bend_compensate=True 时 return[] 的 fall-back
-  - 改为始终启用检查 + 多维容差方程（LiDAR 2.0 §III-C2 + Calibre eqDRC）
+- **DRC 模式**: 严格模式（bend_compensate=False），启用 PORT_ALIGNMENT 检查
 - **判定阈值**: 端口偏差 dx<50μm 且 dy<50μm 视为误报（弯曲补偿范围内，可通过 S-bend/Euler 弯曲补偿）
 
 ### 1.1 自动判定流程
@@ -115,7 +113,7 @@
 
 1. Mohan et al., "Machine Learning for DRC", DATE 2023. https://doi.org/10.23919/DATE56975.2023.10137091
 2. SiEPIC EBeam PDK DRC runset. https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-3. Chrostowski & Hochberg, *Silicon Photonics Design*, CUP 2015, §4.3. https://www.cambridge.org/core/books/silicon-photonics-design/
+3. Chrostowski & Hochberg, *Silicon Photonics Design*, CUP 2015, §4.3. https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 4. KLayout DRC 文档. https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 5. He et al., OpenDRC, DAC 2023. https://doi.org/10.1109/DAC56929.2023.10247734
 6. Berg et al., *Computational Geometry*, Springer 2014. https://doi.org/10.1007/978-3-540-77974-2
@@ -123,4 +121,4 @@
 8. PoLaRIS real_board harness: /workspace/scripts/run_real_board_drc.py
 
 ---
-*报告由 `audit_drc_false_positives.py` 自动生成，2026-07-06 14:41:09 CST*
+*报告由 `audit_drc_false_positives.py` 自动生成，2026-07-06 15:33:01 CST*

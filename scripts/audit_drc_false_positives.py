@@ -32,7 +32,7 @@ R03 修复（2026-07-06）: 引擎删除 bend_compensate=True 时 return[] 的 f
   https://doi.org/10.23919/DATE56975.2023.10137091
 - SiEPIC EBeam PDK DRC runset https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 §4.3
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC 文档 https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - He et al., OpenDRC, DAC 2023 https://doi.org/10.1109/DAC56929.2023.10247734
 - Berg et al. 2014, "Computational Geometry", Springer（AABB 几何）
@@ -623,7 +623,7 @@ def generate_report(items: list[dict], all_samples: list[dict],
     refs = [
         "1. Mohan et al., \"Machine Learning for DRC\", DATE 2023. https://doi.org/10.23919/DATE56975.2023.10137091",
         "2. SiEPIC EBeam PDK DRC runset. https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "3. Chrostowski & Hochberg, *Silicon Photonics Design*, CUP 2015, §4.3. https://www.cambridge.org/core/books/silicon-photonics-design/",
+        "3. Chrostowski & Hochberg, *Silicon Photonics Design*, CUP 2015, §4.3. https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731",
         "4. KLayout DRC 文档. https://www.klayout.org/doc-qt5/manual/drc_runsets.html",
         "5. He et al., OpenDRC, DAC 2023. https://doi.org/10.1109/DAC56929.2023.10247734",
         "6. Berg et al., *Computational Geometry*, Springer 2014. https://doi.org/10.1007/978-3-540-77974-2",

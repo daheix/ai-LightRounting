@@ -14,7 +14,7 @@
 - SiEPIC-Tools Verification（Mismatched pin widths / Manhattan / Radius）
   URL: https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
-  URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+  URL: https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC 文档（width_check/space_check/area_check/notch 算子语义）
   URL: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734

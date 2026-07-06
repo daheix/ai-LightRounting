@@ -37,12 +37,12 @@ polaris-bpm + polaris-fdfd 七个仿真子模块（v5.0）。
 
 - OpenROAD RTL-to-GDS21 流程: https://github.com/The-OpenROAD-Project/OpenROAD
 - TILOS MacroPlacement benchmark:
-  https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+  https://github.com/TILOS-AI-Institute/MacroPlacement
 - gdsfactory 流程编排: https://gdsfactory.github.io/gdsfactory/
 - Hamard et al., "Open source photonic integrated circuits",
   Opt Express 2020, https://doi.org/10.1364/OE.391040
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, §10
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 """
 
 from __future__ import annotations

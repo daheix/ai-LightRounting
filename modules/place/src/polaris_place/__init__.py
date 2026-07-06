@@ -36,7 +36,7 @@ re-export 所有内部函数），新代码推荐 ``from polaris_place.metrics i
 - HPWL 指标: Kahng & Lienig IEEE TCAD 2009
   https://ieeexplore.ieee.org/document/4685534
 - GDSFactory 组件库: https://gdsfactory.github.io/gdsfactory/
-- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 """
 
 from __future__ import annotations

@@ -319,7 +319,7 @@ def ring_resonator_s(
         - Bogaerts et al., "Silicon microring resonators", JLT 2012
           https://doi.org/10.1109/JLT.2012.2200478
         - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015 §4.5
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         - SiEPIC EBeam PDK strip waveguide neff=2.4
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """
@@ -392,7 +392,7 @@ def directional_coupler_s(
         - Yariv & Yeh, "Optical Waves in Crystals", Wiley 1984, Ch.13
           （耦合模理论）https://www.wiley.com/en-us/Optical+Waves+in+Crystals
         - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015 §4.5
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         - Soldano & Pennings, J. Lightwave Technol. 13(4), 1995
           https://ieeexplore.ieee.org/document/374358
         - SiPANN directional_coupler

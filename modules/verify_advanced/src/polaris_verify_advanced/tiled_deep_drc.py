@@ -60,7 +60,7 @@ flat / hierarchical / tiled / hierarchical / deep。
 4. SiEPIC EBeam PDK DRC runset（WG_MIN_WIDTH/WG_MIN_SPACE 等阈值来源）:
    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 5. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353:
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 6. He et al. 2022, "X-Check: An Open-Source Hierarchical DRC Engine",
    ICCAD 2022, https://dl.acm.org/doi/10.1145/3508352.3549440
 7. Berg et al. 2014, "Computational Geometry: Algorithms and Applications",

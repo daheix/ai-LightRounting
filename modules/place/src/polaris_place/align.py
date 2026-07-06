@@ -17,7 +17,7 @@
 来源（R02 学术诚信，≥5 个文献 URL）:
 - DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746（FFDH 基础）
 - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-  波导弯曲损耗 https://www.cambridge.org/core/books/silicon-photonics-design/
+  波导弯曲损耗 https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - SiEPIC EBeam PDK DRC runset PORT_ALIGNMENT 规则
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Kahng & Lienig "VLSI Placement" IEEE TCAD 2009
@@ -332,7 +332,7 @@ def _align_d2_global(
     https://realtimecollisiondetection.net/；
     DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746；
     Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-    https://www.cambridge.org/core/books/silicon-photonics-design/；
+    https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731；
     Berg "Computational Geometry" Springer（区间合并）
     https://doi.org/10.1007/978-3-540-77974-2
     """

@@ -25,7 +25,7 @@ Output:
 
 学术依据（R02 学术诚信，均经 WebSearch 验证可访问）:
 - KLayout Database API:
-  https://www.klayout.org/doc-qt5/code/
+  https://www.klayout.de/doc.html
 - SiEPIC EBeam PDK 层映射（13 层标准）:
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - gdsfactory generic_pdk 层定义:

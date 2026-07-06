@@ -11,7 +11,7 @@
 - Clements 矩阵: Clements et al., "Optimal design for universal multiport
   interferometers", Optica 2016, https://doi.org/10.1364/OPTICA.3.001460
 - MZI 干涉仪: Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - 玻色采样: Aaronson & Arkhipov, STOC 2011, https://arxiv.org/abs/0910.4698
 """
 

@@ -10,7 +10,7 @@
 - HyperLight LNOI PDK: https://hyperlightphotonics.com/
 - Pattern Project InP: https://www.patternproject.com/
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 """
 
 from __future__ import annotations

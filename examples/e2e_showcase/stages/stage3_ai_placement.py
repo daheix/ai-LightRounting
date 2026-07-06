@@ -24,7 +24,7 @@ HPWL 公式来源:
 - DREAMPlace TCAD 2020: https://arxiv.org/abs/2004.10746
 - AlphaChip: Mirhoseini et al., Nature 2021
   https://www.nature.com/articles/s41586-021-03544-w
-- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 """
 
 from __future__ import annotations
@@ -233,7 +233,7 @@ def run(output_dir: Path) -> dict:
       https://ieeexplore.ieee.org/document/4685534
     - AlphaChip: Mirhoseini et al., Nature 2021
       https://www.nature.com/articles/s41586-021-03544-w
-    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 
     Args:
         output_dir: 输出目录。

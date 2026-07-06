@@ -46,7 +46,7 @@
 - KLayout DCplxTrans class:
   https://www.klayout.de/doc-qt5/code/class_DCplxTrans.html
 - KLayout Cell class（transform 方法）:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - GDSII STRANS/ANGLE/MAG fields（变换标准）:
   https://en.wikipedia.org/wiki/GDS_File
 - KLayout Nuts and Bolts 示例（ICplxTrans 应用）:
@@ -259,7 +259,7 @@ def transform_gdsii_geometry(
 
     来源:
     - KLayout Cell.transform:
-      https://www.klayout.org/doc-qt5/code/class_Cell.html
+      https://www.klayout.de/doc.html
     - KLayout DCplxTrans:
       https://www.klayout.de/doc-qt5/code/class_DCplxTrans.html
     """

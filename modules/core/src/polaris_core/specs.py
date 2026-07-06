@@ -18,7 +18,7 @@ dataclass，避免内部对象泄漏（稳定 API 原则）。
 
 来源:
 - GDSFactory 组件库: https://gdsfactory.github.io/gdsfactory/
-- TILOS MacroPlacement benchmark: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement benchmark: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Apollo PTC/oNoC 光子 benchmark: https://github.com/ASU-LOPE-Group/Apollo
 - LiDAR ISPD'25 benchmark: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - SiEPIC PDK 设计规则: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
@@ -34,7 +34,7 @@ class BenchmarkSource(Enum):
     """Benchmark 来源标识（差距分析 P1-5，对标公开 benchmark）。
 
     来源:
-    - TILOS: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS: https://github.com/TILOS-AI-Institute/MacroPlacement
     - Apollo: https://github.com/ASU-LOPE-Group/Apollo
     - LiDAR: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
     - CUSTOM: PoLaRIS 自有 benchmark

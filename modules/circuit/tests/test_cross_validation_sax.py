@@ -22,7 +22,7 @@ PoLaRIS v5.0 设计决策: 不依赖 sax/simphony 库（R13 去除必装依赖�
 3. Pflüger et al. 2021, "Simphony", IEEE CiSE 23(4):74-85,
    https://arxiv.org/abs/2009.05146
 4. Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge,
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 5. Saleh & Teich 2019, "Fundamentals of Photonics", Wiley §4.4,
    https://www.wiley.com/en-us/Fundamentals+of+Photonics%2C+3rd+Edition-p-9781119303930
 

@@ -56,7 +56,7 @@ import numpy as np
 # - gdsfactory netlist/ComponentReference 抽象
 #   https://gdsfactory.github.io/gdsfactory/
 # - TILOS MacroPlacement bookshelf 网表格式
-#   https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+#   https://github.com/TILOS-AI-Institute/MacroPlacement
 # - Cadence Innovus 全局-详细分层布线数据结构
 #   https://community.cadence.com/
 # ---------------------------------------------------------------------------

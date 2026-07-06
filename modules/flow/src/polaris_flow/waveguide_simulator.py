@@ -30,7 +30,7 @@
 - Fiveable Optoelectronics（消光比公式教学参考）
   URL: https://www.fiveable.me/key-terms/optoelectronics/extinction-ratio
 - Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge
-  URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+  URL: https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Piggott 2017, Nature Photonics 11(9) 543-549（逆向设计波分解复用器）
   URL: https://www.nature.com/articles/nphoton.2017.126
 

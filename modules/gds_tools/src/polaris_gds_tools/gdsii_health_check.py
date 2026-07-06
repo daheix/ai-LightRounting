@@ -29,13 +29,13 @@ R02 学术诚信:
 - dbu 合理范围参考 GDSII 规范（典型值 1e-9 ~ 1e-3 m）
 
 来源:
-- KLayout Layout.read: https://www.klayout.org/doc-qt5/code/class_Layout.html
-- KLayout Cell API: https://www.klayout.org/doc-qt5/code/class_Cell.html
-- KLayout LayerInfo: https://www.klayout.org/doc-qt5/code/class_LayerInfo.html
+- KLayout Layout.read: https://www.klayout.de/doc.html
+- KLayout Cell API: https://www.klayout.de/doc.html
+- KLayout LayerInfo: https://www.klayout.de/doc.html
 - GDSII 格式: https://en.wikipedia.org/wiki/GDS_File
 - GDSII Specification: https://www.itu.int/rec/T-REC-GDSII
-- KLayout Region: https://www.klayout.org/doc-qt5/code/class_Region.html
-- KLayout SimplePolygon: https://www.klayout.org/doc-qt5/code/class_SimplePolygon.html
+- KLayout Region: https://www.klayout.de/doc.html
+- KLayout SimplePolygon: https://www.klayout.de/doc.html
 
 合规: R01 / R02 / R03 / R04 / R05 / R11。
 """
@@ -172,8 +172,8 @@ def check_layer_completeness(
         HealthCheckIssue 列表。
 
     来源:
-    - KLayout Layout.layer_indices: https://www.klayout.org/doc-qt5/code/class_Layout.html
-    - KLayout LayerInfo: https://www.klayout.org/doc-qt5/code/class_LayerInfo.html
+    - KLayout Layout.layer_indices: https://www.klayout.de/doc.html
+    - KLayout LayerInfo: https://www.klayout.de/doc.html
     """
     if layer_map is None:
         layer_map = _get_default_layer_map()
@@ -213,8 +213,8 @@ def check_polygon_validity(ly, top_cell) -> list[HealthCheckIssue]:
         HealthCheckIssue 列表。
 
     来源:
-    - KLayout Cell.begin_shapes_rec: https://www.klayout.org/doc-qt5/code/class_Cell.html
-    - KLayout SimplePolygon: https://www.klayout.org/doc-qt5/code/class_SimplePolygon.html
+    - KLayout Cell.begin_shapes_rec: https://www.klayout.de/doc.html
+    - KLayout SimplePolygon: https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     issues: list[HealthCheckIssue] = []
@@ -276,16 +276,16 @@ def check_cell_references(ly) -> list[HealthCheckIssue]:
         HealthCheckIssue 列表。
 
     来源:
-    - KLayout Cell.called_cells: https://www.klayout.org/doc-qt5/code/class_Cell.html
-    - KLayout Cell.caller_cells: https://www.klayout.org/doc-qt5/code/class_Cell.html
-    - KLayout Layout.each_top_cell: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Cell.called_cells: https://www.klayout.de/doc.html
+    - KLayout Cell.caller_cells: https://www.klayout.de/doc.html
+    - KLayout Layout.each_top_cell: https://www.klayout.de/doc.html
     """
     issues: list[HealthCheckIssue] = []
     # KLayout 0.30.9 API:
     # - ly.each_top_cell() 返回 int cell_index 迭代器
     # - ly.each_cell() 返回 Cell 对象迭代器
     # - cell.cell_index() 返回该 cell 的 index
-    # 来源: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    # 来源: https://www.klayout.de/doc.html
     top_cell_indices = set(ly.each_top_cell())
     for cell in ly.each_cell():
         ci = cell.cell_index()
@@ -326,7 +326,7 @@ def check_unit_consistency(ly) -> list[HealthCheckIssue]:
 
     来源:
     - GDSII 格式: https://en.wikipedia.org/wiki/GDS_File
-    - KLayout Layout.dbu: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Layout.dbu: https://www.klayout.de/doc.html
     """
     issues: list[HealthCheckIssue] = []
     dbu = float(ly.dbu)
@@ -382,7 +382,7 @@ def check_top_cell_uniqueness(ly) -> list[HealthCheckIssue]:
         HealthCheckIssue 列表。
 
     来源:
-    - KLayout Layout.each_top_cell: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Layout.each_top_cell: https://www.klayout.de/doc.html
     """
     issues: list[HealthCheckIssue] = []
     top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
@@ -537,7 +537,7 @@ def check_gdsii_health(
         RuntimeError: GDSII 读取失败。
 
     来源:
-    - KLayout Layout.read: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Layout.read: https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path = Path(gds_path)

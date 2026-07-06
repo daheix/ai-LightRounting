@@ -54,7 +54,7 @@ IDE 中执行的 Python 脚本，实现「Web 预览 + KLayout 深度编辑」�
 8. OWASP Unrestricted File Upload:
    https://owasp.org/www-community/vulnerabilities/Unrestricted_File_Upload
 9. Chrostowski & Hochberg 2015 Silicon Photonics Design:
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 10. Krinke et al. ISPD 2024 Layout Verification:
     https://dl.acm.org/doi/pdf/10.1145/3626184.3635289
 11. Soref et al. 1993 SOI 波导损耗:

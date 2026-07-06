@@ -8,7 +8,7 @@
 - Berenger 1994 JCP: https://doi.org/10.1006/jcph.1994.1159
 - Courant 1928: https://link.springer.com/article/10.1007/BF01448839
 - Lowery 1987 IEE Proc. J: https://digital-library.theiet.org/doi/abs/10.1049/ip-j-1.1987.0062
-- Lin et al., Opt. Express 2007: https://opg.optica.org/oe/abstract.cfm?uri=oe-15-6-3454
+- Lin et al., Opt. Express 2007: https://opg.optica.org/oe/fulltext.cfm?uri=oe-15-6-3454
 - Boyd, Nonlinear Optics, 4th ed., §4
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO /
@@ -234,7 +234,7 @@ class NonlinearModel:
 
     来源:
     - Lin et al., Opt. Express 15(6), 3454-3460 (2007)
-      https://opg.optica.org/oe/abstract.cfm?uri=oe-15-6-3454
+      https://opg.optica.org/oe/fulltext.cfm?uri=oe-15-6-3454
     - Boyd, Nonlinear Optics, 4th ed., §4
     """
 

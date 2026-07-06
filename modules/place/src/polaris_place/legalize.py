@@ -162,7 +162,7 @@ def _legalize(
         - Bin packing (Wikipedia)
           https://en.wikipedia.org/wiki/Bin_packing_problem
         - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
     """
     # MIN_SPACING 间距（来源: SiEPIC EBeam PDK WG_MIN_SPACE=1.0μm，
     # 与 polaris-drc engine.py MIN_SPACING 阈值一致，R02 学术诚信）

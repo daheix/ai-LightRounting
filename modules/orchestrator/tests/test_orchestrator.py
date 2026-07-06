@@ -21,7 +21,7 @@
 - pytest 文档: https://docs.pytest.org/
 - OpenROAD 流程编排: https://github.com/The-OpenROAD-Project/OpenROAD
 - TILOS MacroPlacement benchmark:
-  https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+  https://github.com/TILOS-AI-Institute/MacroPlacement
 - gdsfactory 流程: https://gdsfactory.github.io/gdsfactory/
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
 - Hamard et al., "Open source photonic integrated circuits",

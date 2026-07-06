@@ -54,7 +54,7 @@ dict::
    https://www.wiley.com/en-us/Fundamentals+of+Photonics%2C+3rd+Edition-p-9781119303930
 2. SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 3. Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015, §4.4
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 4. Simphony MZI 教程
    https://simphonyphotonics.readthedocs.io/en/stable/tutorials/mzi.html
 5. Soldano & Pennings, J. Lightwave Technol. 13(4), 1995（MMI 原理）

@@ -39,15 +39,15 @@ PDK 层转换等场景。
 ## 学术依据
 
 - KLayout Layout class:
-  https://klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 - KLayout Cell class:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - KLayout Shapes class:
-  https://klayout.org/doc-qt5/code/class_Shapes.html
+  https://www.klayout.de/doc.html
 - KLayout Shape class:
-  https://klayout.org/doc-qt5/code/class_Shape.html
+  https://www.klayout.de/doc.html
 - KLayout LayerInfo:
-  https://klayout.org/doc-qt5/code/class_LayerInfo.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - GDSII 层规范:
@@ -156,7 +156,7 @@ def copy_layer(
 
     来源:
     - KLayout Shapes class:
-      https://klayout.org/doc-qt5/code/class_Shapes.html
+      https://www.klayout.de/doc.html
     """
     src_layer, src_dt = _validate_layer(source_layer, "source_layer")
     tgt_layer, tgt_dt = _validate_layer(target_layer, "target_layer")
@@ -230,7 +230,7 @@ def merge_layers(
 
     来源:
     - KLayout Layout.delete_layer:
-      https://klayout.org/doc-qt5/code/class_Layout.html
+      https://www.klayout.de/doc.html
     """
     if not source_layers:
         raise ValueError(
@@ -311,7 +311,7 @@ def delete_layers(
 
     来源:
     - KLayout Layout.delete_layer:
-      https://klayout.org/doc-qt5/code/class_Layout.html
+      https://www.klayout.de/doc.html
     """
     if not layers_to_delete:
         raise ValueError(

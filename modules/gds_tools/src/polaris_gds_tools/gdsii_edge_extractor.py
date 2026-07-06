@@ -46,9 +46,9 @@
 ## 学术依据
 
 - KLayout Edges class:
-  https://www.klayout.org/doc-qt5/code/class_Edges.html
+  https://www.klayout.de/doc.html
 - KLayout Edge class:
-  https://www.klayout.org/doc-qt5/code/class_Edge.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - KLayout Geometry API:
@@ -212,8 +212,8 @@ def extract_edges(
             output_path 提供但 layer_result 未提供 / top_cell_name 不存在 / 层不存在 / max_samples <= 0。
 
     来源:
-    - KLayout Edges class: https://www.klayout.org/doc-qt5/code/class_Edges.html
-    - KLayout Edge class: https://www.klayout.org/doc-qt5/code/class_Edge.html
+    - KLayout Edges class: https://www.klayout.de/doc.html
+    - KLayout Edge class: https://www.klayout.de/doc.html
     - Martin Fowler《Refactoring》Extract Method 模式
     """
     db = _import_klayout_db()

@@ -5,7 +5,7 @@
 
 ## TILOS MacroPlacement 评估流程对标
 
-TILOS 评估流程（来源: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement）：
+TILOS 评估流程（来源: https://github.com/TILOS-AI-Institute/MacroPlacement）：
 1. 加载 benchmark（Ariane/MemPool/NVDLA + NanGate45/ASAP7/SKY130HD）
 2. 运行布局算法（DREAMPlace/RePlAce/Circuit Training/Custom）
 3. 评估指标（HPWL/重叠/利用率/拥塞/DRV）
@@ -45,7 +45,7 @@ TILOS 评估流程（来源: https://github.com/TILOS-AI-CAD-Institute/MacroPlac
 ```
 
 来源:
-- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Circuit Training 评估: https://github.com/google-research/circuit_training
 - ISPD 2025 评估标准: https://dl.acm.org/doi/10.1145/3698364.3705355
 
@@ -169,7 +169,7 @@ def generate_report(
         BenchmarkReport，含全部指标与达标判定。
 
     来源:
-        TILOS 评估流程: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+        TILOS 评估流程: https://github.com/TILOS-AI-Institute/MacroPlacement
     """
     result: BenchmarkResult = evaluate_benchmark(circuit, placements)
     return BenchmarkReport(
@@ -269,7 +269,7 @@ def run_all_benchmarks(
         ComparisonReport，含全部 benchmark 评估结果。
 
     来源:
-        TILOS 全 benchmark: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+        TILOS 全 benchmark: https://github.com/TILOS-AI-Institute/MacroPlacement
         Apollo: https://github.com/ASU-LOPE-Group/Apollo
         LiDAR: https://github.com/ScopeX-ASU/LiDAR
         DREAMPlace: https://arxiv.org/abs/2004.10746
@@ -368,7 +368,7 @@ def format_report_markdown(report: BenchmarkReport) -> str:
     lines.extend([
         "## 来源",
         "",
-        "- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
+        "- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement",
         "- Circuit Training: https://github.com/google-research/circuit_training",
         "- Apollo: https://github.com/ASU-LOPE-Group/Apollo",
         "- LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355",
@@ -437,7 +437,7 @@ def format_comparison_markdown(comp: ComparisonReport) -> str:
         "",
         "## 3. 来源",
         "",
-        "- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
+        "- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement",
         "- Apollo: https://github.com/ASU-LOPE-Group/Apollo",
         "- LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355",
         "- Congestion: Nesterenko & Hsu TCAD 2002, BoxRouter ISPD 2006",

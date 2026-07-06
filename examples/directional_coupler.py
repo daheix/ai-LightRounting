@@ -17,7 +17,7 @@ v5.0 迁移说明:
 - Yariv & Yeh 1984 Optical Waves in Crystals Wiley Ch.13（耦合模理论）
   https://www.wiley.com/en-us/Optical+Waves+in+Crystals
 - Chrostowski & Hochberg 2015 Silicon Photonics Design §4.5
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Soldano & Pennings 1995 JLT（MMI/耦合器）
   https://ieeexplore.ieee.org/document/374358
 - SiPANN directional_coupler https://sipann.readthedocs.io/en/latest/models.html

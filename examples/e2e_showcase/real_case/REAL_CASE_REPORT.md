@@ -64,7 +64,7 @@
 |--------|-----|------|------|-----|
 | wg1_length_um | 100.0 | μm | SiEPIC EBeam PDK / Chrostowski 2015 | https://github.com/SiEPIC/SiEPIC_EBeam_PDK |
 | wg2_length_um | 120.0 | μm | SiEPIC EBeam PDK / Chrostowski 2015 | https://github.com/SiEPIC/SiEPIC_EBeam_PDK |
-| delta_L_um | 20.0 | μm | Intel 100G CWDM4 MZM / Chrostowski 2015 | https://www.cambridge.org/core/books/silicon-photonics-design/ |
+| delta_L_um | 20.0 | μm | Intel 100G CWDM4 MZM / Chrostowski 2015 | https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731 |
 
 ### 2.5 PAM4 调制参数（IEEE 802.3bs 100GBASE-LR4）
 
@@ -516,7 +516,7 @@ PoLaRIS 光子 EDA 工具在 100Gbps MZI 调制器 + Clements 4x4 光矩阵真�
 | Intel 100G CWDM4 datasheet | 商业对标（插损/BER/ER） | https://www.intel.com/content/www/us/en/products/network-io/ethernet/100-gbe/100g-cwdm4-qsfp28-optical-module.html |
 | IEEE 802.3bs 100GBASE-LR4 | PAM4 BER 要求 | https://standards.ieee.org/ieee/802.3bs/10869/ |
 | OIF CEI-112G / Shafik 2016 | PAM4 调制参数 | https://ieeexplore.ieee.org/document/7545186 |
-| Chrostowski & Hochberg 2015 | MZI 臂长量级参考 | https://www.cambridge.org/core/books/silicon-photonics-design/ |
+| Chrostowski & Hochberg 2015 | MZI 臂长量级参考 | https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731 |
 | Saleh & Teich 2019 §4.4 | MZI 消光比公式 | - |
 | Clements et al., Optica 2016 | Stage 2 Clements 拓扑 | https://doi.org/10.1364/OPTICA.3.001460 |
 | Reck et al., PRL 1994 | Stage 2 Reck 拓扑 | https://doi.org/10.1103/PhysRevLett.73.58 |

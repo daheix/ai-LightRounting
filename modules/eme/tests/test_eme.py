@@ -33,7 +33,7 @@ redheffer_star / solve_eme。
 9. Lumerical EME 求解器文档,
    https://optics.ansys.com/hc/en-us/articles/360034902433
 10. Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge,
-    https://www.cambridge.org/core/books/silicon-photonics-design/
+    https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
 ================================================================
 合规声明

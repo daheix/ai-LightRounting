@@ -21,7 +21,7 @@
 
 == 来源（R02 学术诚信，≥5 文献 URL） ==
 
-1. TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+1. TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 2. Apollo PTC/oNoC: https://github.com/ASU-LOPE-Group/Apollo
 3. LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
 4. SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK

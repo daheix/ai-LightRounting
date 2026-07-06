@@ -27,7 +27,7 @@ PoLaRIS v5.0 迁移说明:
 - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 3 dB/cm）
   https://ieeexplore.ieee.org/document/1148303
 - Chrostowski & Hochberg 2015 §3.3 Silicon Photonics Design
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 """
 
 from __future__ import annotations

@@ -311,7 +311,7 @@ PoLaRIS LVS 测试覆盖（`tests/test_graph_lvs.py`）：
 5. SiEPIC EBeam PDK 开源仓库（DEVREC layer 68 / TEXT layer 10 / WG layer 1 标准源码）
    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 6. Chrostowski, L., Hochberg, M. "Silicon Photonics Design: From Devices to Systems." Cambridge University Press, 2015, p.353 — 波导长度影响 MZI FSR
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 7. Siemens Calibre nmLVS 官方文档（层次化处理/Recon Compare/PERC 集成）
    https://www.siemens.com/en-us/products/ic/calibre-design/circuit-verification/nmlvs/
 8. networkx VF2 实现（GraphMatcher/DiGraphMatcher 源码与文档）

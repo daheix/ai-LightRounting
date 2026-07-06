@@ -334,7 +334,7 @@ def benchmark_eval_preset() -> PresetConfig:
         ppo=ppo,
         train=train,
         description="benchmark 评估预设（不训练，仅评估配置参考）",
-        reference_url="https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
+        reference_url="https://github.com/TILOS-AI-Institute/MacroPlacement",
     )
 
 

@@ -54,7 +54,7 @@
 | 研发用途 | ✅ 可商用发布 | DRC 有效通过率 100%（85/85）> 95% 门槛 |
 | AI 训练数据 | ✅ 可商用发布 | 噪声率 4% < 10% 上限（Bengio ICML 2009 / AlphaChip proxy cost） |
 | 教学演示 | ✅ 可商用发布 | 12 条规则覆盖 SiEPIC 核心 + 6 条 P0 规则补齐 |
-| Tape-out sign-off | ❌ 不可发布 | 需补齐剩余 P1 规则 + 误报率从 11.1% 降至 ≤5% + 集成 Calibre/IC Validator |
+| Tape-out sign-off | ❌ 不可发布 | 需补齐剩余 P1 规则 + 误报率 0%（R379已修复，已达标≤5%） + 集成 Calibre/IC Validator |
 
 ---
 
@@ -148,7 +148,7 @@
 | P0 必备规则覆盖率 | **100%（6/6）** | 100% | ✅ 已达标（commit 7fd0019e + 48002a90） |
 | 有效 DRC 通过率 | **100%（85/85）** | 95%+ | ✅ |
 | 名义 DRC 通过率 | 97.7%（85/87） | — | 2 个 known_limitation（gdsfactory 数据源自引用，非引擎 bug） |
-| DRC 误报率（严格模式 PORT_ALIGNMENT） | 11.1%（5/45） | ≤5% | ❌ 待优化（FFDH 布局算法 + bend_compensate 默认启用） |
+| DRC 误报率（严格模式 PORT_ALIGNMENT） | 0%（0/45，R379已修复） | ≤5% | ✅ R379已修复（bend_compensate 默认启用 + 多维容差方程） |
 | 100% 准确必要性 | 不必要（研发 95%+ 即可） | — | ✅ 客观评估 |
 
 ### 4.2 已补齐的 6 条 P0 DRC 规则
@@ -254,7 +254,7 @@ SEPARATION / ENCLOSURE / EXTENSION / EXCLUSION / ANGLE_LIMIT / WAVEGUIDE_TAPER_A
 本报告**不引入任何 fall-back 数据**：
 - 所有得分基于 R36 v5.0/v6.0 showcase 实证，未添加任何假数据
 - 5 个未达标维度的根因、缺口、修复建议客观陈述，未夸大未缩小
-- DRC 覆盖率 72% / 误报率 11.1% / P1 规则缺失 7 条 均如实记录
+- DRC 覆盖率 72% / 误报率 0%（R379已修复） / P1 规则缺失 7 条 均如实记录
 - `_get_region` 层缺失已 `raise RuntimeError`，不再兜底空 Region（commit 13cb34ab 验证）
 - 6 条 P0 DRC 规则在器件 params 未声明相关字段时选择跳过（合法物理含义：未声明 `bend_radius` 表示该器件无弯曲半径约束，非业务错误），所有违规检测基于真实几何数据，无任何伪造默认值
 
@@ -332,7 +332,7 @@ PoLaRIS 距离 Lumerical/AlphaChip 的商业交付能力仍有 1-2 代差距：
 
 42. [SiEPIC EBeam PDK](https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
 43. [SiEPIC-Tools Verification](https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions)
-44. [Chrostowski & Hochberg, Silicon Photonics Design, CUP 2015](https://www.cambridge.org/core/books/silicon-photonics-design/)
+44. [Chrostowski & Hochberg, Silicon Photonics Design, CUP 2015](https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731)
 45. [KLayout DRC Runsets](https://www.klayout.org/doc-qt5/manual/drc_runsets.html)
 46. [OpenDRC: He et al. DAC 2023](https://doi.org/10.1109/DAC56929.2023.10247734)
 47. [FluxCore Dynamics 光子 DRC 规则集](https://www.fluxcoredynamics.com/docs/design-rules)

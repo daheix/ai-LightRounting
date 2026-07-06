@@ -34,15 +34,15 @@ Calibre REPORT）对齐。
 ## 学术依据
 
 - KLayout Layout class:
-  https://klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 - KLayout Cell class:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - KLayout Shapes class:
-  https://klayout.org/doc-qt5/code/class_Shapes.html
+  https://www.klayout.de/doc.html
 - KLayout SimplePolygon:
-  https://www.klayout.org/doc-qt5/code/class_SimplePolygon.html
+  https://www.klayout.de/doc.html
 - KLayout Box class:
-  https://www.klayout.org/doc-qt5/code/class_Box.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - GDSII 格式:
@@ -175,9 +175,9 @@ def generate_gdsii_statistics(
 
     来源:
     - KLayout Layout.read:
-      https://klayout.org/doc-qt5/code/class_Layout.html
+      https://www.klayout.de/doc.html
     - KLayout Cell.bbox:
-      https://www.klayout.org/doc-qt5/code/class_Cell.html
+      https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path = Path(gds_path)

@@ -646,7 +646,7 @@ def _fmt_klayout_float(x) -> str:
     规则: R03 禁止 fall-back / R05 Bug 必修
     文献:
     - KLayout Python API db.DPoint:
-      https://www.klayout.org/doc-qt5/code/class_KLayout_db_DPoint.html
+      https://www.klayout.de/doc.html
     - Python format spec:
       https://docs.python.org/3/library/string.html#format-specification-mini-language
     - IEEE 754: https://en.wikipedia.org/wiki/IEEE_754

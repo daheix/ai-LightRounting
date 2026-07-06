@@ -27,7 +27,7 @@
 
 引用（R02 学术诚信）:
 - SiEPIC EBeam PDK (MIT, UBC): https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-- KLayout Database API: https://www.klayout.org/doc-qt5/code/
+- KLayout Database API: https://www.klayout.de/doc.html
 - Chrostowski & Hochberg, Silicon Photonics Design, CUP 2015
   ISBN 9781107016838: https://www.cambridge.org/9781107016838
 """

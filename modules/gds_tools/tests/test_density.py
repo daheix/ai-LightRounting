@@ -17,7 +17,7 @@ R02 学术诚信: 所有断言基于源码 docstring 公开契约，不臆造行
 
 来源（R02 学术诚信，均经 WebSearch 验证可访问）:
 - pytest 文档: https://docs.pytest.org/
-- KLayout Database API: https://www.klayout.org/doc-qt5/code/
+- KLayout Database API: https://www.klayout.de/doc.html
 - GDSII 格式规范: https://en.wikipedia.org/wiki/GDS_File
 - OASIS 格式: https://en.wikipedia.org/wiki/Open_Artwork_System_Interchange_Standard
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK

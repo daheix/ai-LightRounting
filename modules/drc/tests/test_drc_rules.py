@@ -10,7 +10,7 @@
 - SiEPIC EBeam PDK DRC runset URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - SiEPIC-Tools Verification URL: https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+  URL: https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC 文档 URL: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - Berg et al. 2014, "Computational Geometry", Springer（AABB 相交/距离）
   URL: https://doi.org/10.1007/978-3-540-77974-2

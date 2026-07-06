@@ -23,7 +23,7 @@ R03 禁止 fall-back: validate 失败场景验证 raise RuntimeError。
 - NumPy 广播规则: https://numpy.org/doc/stable/user/basics.broadcasting.html
 - GDSFactory 组件库: https://gdsfactory.github.io/gdsfactory/
 - TILOS MacroPlacement benchmark:
-  https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+  https://github.com/TILOS-AI-Institute/MacroPlacement
 - Apollo PTC/oNoC benchmark: https://github.com/ASU-LOPE-Group/Apollo
 - SiEPIC PDK 设计规则: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 """

@@ -16,7 +16,7 @@
   URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
   (SOI 平台 min_bend_radius=5μm, min_spacing=1μm 默认值依据)
 - Chrostowski, "Silicon Photonics Design", Cambridge 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
   (§6.3 弯曲半径约束、§6.4 损耗系数，光子版图 DRC 验证理论)
 - KLayout DRC 引擎（开源光子版图设计规则检查）
   https://www.klayout.de/doc_manual/drc.html

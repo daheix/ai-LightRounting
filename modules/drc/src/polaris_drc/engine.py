@@ -57,7 +57,7 @@ placements 中 x, y 为器件左下角坐标 (μm)，w, h 为宽高
 - SiEPIC-Tools Verification（Mismatched pin widths / Manhattan / Radius）
   https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC 文档（width_check/space_check/area_check/notch）
   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
@@ -118,7 +118,7 @@ from polaris_drc.engine_waveguide import WaveguideRulesMixin
 #   - terminator: 光终端器，吸收残留光（链路末端， intentional 开路）
 #   - pad/bond_pad: 电学焊盘，连接外部探针/线键（电学 I/O）
 # 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-#      https://www.cambridge.org/core/books/silicon-photonics-design/
+#      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 # SiEPIC EBeam PDK DRC runset 不要求 gc/terminator 内部连接——它们是 I/O 端点。
 _IO_DEVICE_TYPES: set[str] = {
     # SiEPIC EBeam PDK I/O 器件
@@ -176,7 +176,7 @@ class DRCEngine(WaveguideRulesMixin):
             SiEPIC PDK 实际 GDS 中波导弯曲是常规结构（如 SiEPIC_EBeam_PDK
             的 bent_waveguide 单元）。
             来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-                 https://www.cambridge.org/core/books/silicon-photonics-design/
+                 https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
     """
 
     def __init__(self, rules: list[DRCRule] | None = None,
@@ -452,7 +452,7 @@ class DRCEngine(WaveguideRulesMixin):
               angle (180 degrees), and with the same position"
               https://github.com/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
             - Chrostowski & Hochberg 2015 §4.3 波导弯曲损耗
-              https://www.cambridge.org/core/books/silicon-photonics-design/
+              https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
             - SiEPIC EBeam PDK bent_waveguide 单元
               https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         """
@@ -603,7 +603,7 @@ class DRCEngine(WaveguideRulesMixin):
             - SiEPIC EBeam PDK bent_waveguide 单元
               https://github.com/SiEPIC/SiEPIC_EBeam_PDK
             - Chrostowski & Hochberg 2015 §4.3 波导弯曲损耗
-              https://www.cambridge.org/core/books/silicon-photonics-design/
+              https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         """
         device_map = build_device_map(circuit)
         violations: list[DRCViolation] = []

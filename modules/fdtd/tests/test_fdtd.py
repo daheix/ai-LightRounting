@@ -31,7 +31,7 @@ DifferentiableFDTD / simulate_waveguide_fdtd / simulate_mmi_fdtd。
 9. Lumerical FDTD 求解器文档,
    https://optics.ansys.com/hc/en-us/articles/360034914833
 10. Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge,
-    https://www.cambridge.org/core/books/silicon-photonics-design/
+    https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
 ================================================================
 合规声明

@@ -35,7 +35,7 @@ Output:
 - GDSII 层次结构（cell/SREF/AREF）:
   https://gdspy.readthedocs.io/en/master/gettingstarted.html#references
 - KLayout Layout.read API:
-  https://www.klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU / R05 Bug 必修。
 """

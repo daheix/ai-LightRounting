@@ -238,7 +238,7 @@ def path_loss(
       来源: SiEPIC_EBeam_PDK, Lukas Chrostowski et al., UBC, MIT 协议
       https://github.com/SiEPIC/SiEPIC_EBeam_PDK
       文献: Chrostowski & Hochberg 2015 §3.3 Silicon Photonics Design
-      https://www.cambridge.org/core/books/silicon-photonics-design/
+      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
       **注**: 若路径明确使用欧拉弯曲（clothoid, 曲率线性变化），单弯损耗
       典型值仅 0.005-0.015 dB（远低于上界），应使用 ``curvy_router.py``

@@ -31,7 +31,7 @@
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg 2015, "Silicon Photonics Design: From Devices
   to Systems", Cambridge University Press, DOI: 10.1017/CBO9781316084168
-  URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+  URL: https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Lu & Vuckovic 2013, "Nanophotonic computational design",
   Optics Express 21(15) 17293-17301, DOI: 10.1364/OE.21.017293
   URL: https://doi.org/10.1364/OE.21.017293
@@ -193,7 +193,7 @@ class PDKDeviceSampler:
     学术依据:
     - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     - Chrostowski & Hochberg 2015, Silicon Photonics Design, Cambridge
-      URL: https://www.cambridge.org/core/books/silicon-photonics-design/
+      URL: https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
     R03 合规: 加载失败即 raise FileNotFoundError，无 fall-back。
     """

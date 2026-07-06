@@ -26,7 +26,7 @@
     验证——用户需要全流程诊断报告而非单点中断。OpenROAD / klayout 流程也采用
     "best-effort + 报告"模式（OpenROAD GitHub Actions 2024）。
   - 支持理论: TILOS MacroPlacement 流程强调 stage 解耦 + 全报告
-    （https://github.com/TILOS-AI-CAD-Institute/MacroPlacement）。
+    （https://github.com/TILOS-AI-Institute/MacroPlacement）。
   - 上游 stage 失败时，下游 stage 不使用假数据 fall-back，而是让子模块自身
     抛 RuntimeError（如 placements=None → route_circuit raise），编排层捕获
     后记录为 stage 失败。即"失败向上传播，编排层汇总"，子模块内部仍零 fall-back。
@@ -36,7 +36,7 @@
 
 - OpenROAD RTL-to-GDS21 流程: https://github.com/The-OpenROAD-Project/OpenROAD
 - TILOS MacroPlacement benchmark:
-  https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+  https://github.com/TILOS-AI-Institute/MacroPlacement
 - gdsfactory 流程编排: https://gdsfactory.github.io/gdsfactory/
 - Hamard et al., "Open source photonic integrated circuits"),
   https://doi.org/10.1364/OE.391040
@@ -118,7 +118,7 @@ def _stage_route(circuit: dict, ctx: dict) -> Any:
     来源（R02 学术诚信）:
         - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design
           波导弯曲半径 ≥5μm，弯曲损耗 0.05 dB/bend
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         - SiEPIC EBeam PDK bend_euler radius=5μm
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         - LiDAR ISPD'25 §3.2 curvy waveguide detailed routing

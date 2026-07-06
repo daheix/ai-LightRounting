@@ -23,7 +23,7 @@ device 含 ports 字段，故本模块专门提供带端口的 MZI/Ring 电路�
 3. examples/e2e_showcase/stages/stage4_routing.py（同款电路）:
    https://dl.acm.org/doi/10.1145/3698364.3705355
 4. Chrostowski & Hochberg 2015 Silicon Photonics Design:
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 5. KLayout SiEPIC-Tools PinRec/DEVREC 端口标记规范:
    https://github.com/SiEPIC/SiEPIC-Tools/wiki
 

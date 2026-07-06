@@ -22,7 +22,7 @@
 - SiEPIC Connect Function (端口同位置互连推断):
   Chrostowski et al., "Silicon Photonics Design: From Devices to Systems",
   Cambridge University Press, 2022, ISBN 978-1-108-56830-6,
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - klayout Path/Polygon 几何提取:
   https://www.klayout.org/klayout-pypi/overview/instances/
 - 模仿学习理论（行为克隆教师信号）:
@@ -165,7 +165,7 @@ def _nearest_neighbor_connections(
       https://dl.acm.org/doi/10.1145/320756.320757
     - SiEPIC 器件布局邻近性: Chrostowski & Hochberg, "Silicon Photonics
       Design", Cambridge University Press, 2015, Ch.4 布局与布线,
-      https://www.cambridge.org/core/books/silicon-photonics-design/
+      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
     Args:
         placements: {device_name: {..., bbox: [xmin,ymin,xmax,ymax]}}。

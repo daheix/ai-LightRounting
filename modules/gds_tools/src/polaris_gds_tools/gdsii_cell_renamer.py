@@ -43,9 +43,9 @@
 ## 学术依据
 
 - KLayout Layout class:
-  https://www.klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 - KLayout Cell class:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - GDSII 格式: https://en.wikipedia.org/wiki/GDS_File
@@ -54,7 +54,7 @@
 - Calibre LVS 命名匹配:
   https://www.mentor.com/products/ic_nanometer_design/calibre-lvs
 - KLayout Cell rename:
-  https://www.klayout.org/doc-qt5/code/class_Layout.html#method915
+  https://www.klayout.de/doc.html
 - gdsfactory Component rename:
   https://gdsfactory.github.io/gdsfactory/
 
@@ -223,7 +223,7 @@ def rename_cells(
 
     来源:
     - KLayout Layout.rename_cell:
-      https://www.klayout.org/doc-qt5/code/class_Layout.html
+      https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     in_path, out_path = _validate_rename_params(input_path, output_path, rename_map)
@@ -279,7 +279,7 @@ def _read_rename_layout(db, in_path, input_path) -> tuple:
     Returns:
         (ly, dbu, original_cell_names)。
 
-    来源: KLayout Layout.read https://www.klayout.org/doc-qt5/code/class_Layout.html
+    来源: KLayout Layout.read https://www.klayout.de/doc.html
     """
     ly = db.Layout()
     try:
@@ -385,7 +385,7 @@ def _execute_cell_renames(ly, cycle_check_map) -> list:
 def _write_renamed_gdsii(ly, out_path, output_path) -> None:
     """写出重命名后的 GDSII（R339 内部辅助，R03 禁止 fall-back）。
 
-    来源: KLayout Layout.write https://www.klayout.org/doc-qt5/code/class_Layout.html
+    来源: KLayout Layout.write https://www.klayout.de/doc.html
     """
     try:
         ly.write(str(out_path))

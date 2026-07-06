@@ -29,7 +29,7 @@
 - Taflove & Hagness, "Computational Electrodynamics: The FDTD Method",
   Artech 2005（FDFD 第 5 章）
 - Shin & Fan, Opt. Express 2014（FDFD 2D 求解）
-  https://opg.optica.org/oe/abstract.cfm?uri=oe-22-5-5230
+  https://opg.optica.org/oe/fulltext.cfm?uri=oe-22-5-5230
 - scipy.sparse.linalg.spsolve（稀疏直接求解器）
   https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
 - Lumerical FDFD https://optics.ansys.com/hc/en-us/articles/360034902393

@@ -15,7 +15,7 @@
  *
  * 权威来源（R02 学术诚信）：
  *   - GDSII 格式规范 https://en.wikipedia.org/wiki/GDS_File
- *   - KLayout Database API https://www.klayout.org/doc-qt5/code/
+ *   - KLayout Database API https://www.klayout.de/doc.html
  *   - SiEPIC EBeam PDK 层映射 https://github.com/SiEPIC/SiEPIC_EBeam_PDK
  *   - ODB++ Specification http://www.odb-sa.com/
  *   - Si2 OpenAccess 22.60 API https://si2.org/openaccess/

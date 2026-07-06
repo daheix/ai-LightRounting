@@ -25,7 +25,7 @@
 
 ## 3. 来源
 
-- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Apollo: https://github.com/ASU-LOPE-Group/Apollo
 - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
 - Congestion: Nesterenko & Hsu TCAD 2002, BoxRouter ISPD 2006

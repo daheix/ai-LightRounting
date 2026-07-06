@@ -30,7 +30,7 @@ V5.0 拆包后旧 ``polaris.data.gds_loader`` 下线，导致 229 个真实 SiEP
 
 - GDSII 格式规范 SEMI P39-0308E:
   https://www.semi.org/en/products-services/notices/download-p39-0308e
-- KLayout Database API: https://www.klayout.org/doc-qt5/code/
+- KLayout Database API: https://www.klayout.de/doc.html
 - KLayout Instance class: https://www.klayout.org/klayout-pypi/overview/instances/
 - SiEPIC EBeam PDK (MIT, UBC): https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - SiEPIC-Tools netlist extraction: https://github.com/SiEPIC/SiEPIC-Tools
@@ -174,7 +174,7 @@ def _apply_trans(trans, x: float, y: float) -> tuple[float, float]:
     klayout Python 绑定中 ``DCplxTrans * DPoint`` 运算符不生效，需手动分解
     旋转/镜像/缩放/平移并应用。DCplxTrans 位移单位始终是微米。
     来源: KLayout DCplxTrans
-        https://www.klayout.org/doc-qt5/code/class_DCplxTrans.html
+        https://www.klayout.de/doc.html
     """
     angle = trans.angle
     mirror = trans.is_mirror
@@ -253,7 +253,7 @@ def load_gds_to_circuit(gds_path: str | Path) -> dict:
 
     来源:
     - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-    - KLayout Layout.read: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Layout.read: https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path = Path(gds_path)

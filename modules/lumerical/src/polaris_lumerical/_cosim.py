@@ -187,7 +187,7 @@ class PhotoelectricCoSim:
         数值求解），本方法是解析闭式计算，用于快速链路预算与设计空间探索。
 
         来源: Chrostowski 2015 §8.4/§9.2; Coldren 1995 §5; Pozar §4
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
         Args:
             v_in: 调制器 RF 输入电压数组 (V)。

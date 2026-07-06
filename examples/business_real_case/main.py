@@ -54,7 +54,7 @@ B. 直接调用 13 个子模块 API（适合精细控制）— 逐步打印每�
 - Soldano & Pennings, J. Lightwave Technol. 13(4), 1995（MMI）
   https://ieeexplore.ieee.org/document/374358
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Shafik et al., IEEE CommSurveys 2016（PAM4 BER/SNR）
   https://ieeexplore.ieee.org/document/7410082
 - Clements et al., Optica 3(12), 1460 (2016)（Clements 酉矩阵）

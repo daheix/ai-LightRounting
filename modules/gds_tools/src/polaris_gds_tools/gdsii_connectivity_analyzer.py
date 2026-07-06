@@ -30,7 +30,7 @@
 ## 学术依据
 
 - KLayout Region.merge: 几何连通分量提取
-  URL: https://www.klayout.org/doc-qt5/code/class_Region.html
+  URL: https://www.klayout.de/doc.html
 - 并查集（Union-Find）: Tarjan, "Efficiency of a Good But Not Linear Set
   Union Algorithm", JACM 1975, DOI: 10.1145/321879.321884
 - Calibre nmLVS 网络提取:
@@ -181,8 +181,8 @@ def analyze_layer_connectivity(
         ImportError: klayout 未安装。
 
     来源:
-    - KLayout Region.merge: https://www.klayout.org/doc-qt5/code/class_Region.html
-    - KLayout Layout.read: https://www.klayout.org/doc-qt5/code/class_Layout.html
+    - KLayout Region.merge: https://www.klayout.de/doc.html
+    - KLayout Layout.read: https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path = Path(gds_path)
@@ -229,7 +229,7 @@ def _analyze_all_layers(
     Returns:
         (layer_results, total_components, total_isolated)。
 
-    来源: KLayout Region.merge https://www.klayout.org/doc-qt5/code/class_Region.html
+    来源: KLayout Region.merge https://www.klayout.de/doc.html
     """
     layer_results: list[LayerConnectivityResult] = []
     total_components = total_isolated = 0
@@ -317,7 +317,7 @@ def _find_component_polygons(
         原始多边形索引列表。
 
     来源:
-    - KLayout Region & 运算: https://www.klayout.org/doc-qt5/code/class_Region.html
+    - KLayout Region & 运算: https://www.klayout.de/doc.html
     """
     # 用合并多边形构造 Region
     merged_region = db.Region()
@@ -502,7 +502,7 @@ def _build_layer_to_indices(ly, layer_map, available_layers) -> dict[str, int]:
 def _find_cross_layer_touching(db, top_cell, layer_to_indices, layer_pairs, report, union) -> None:
     """对每个层对找出接触的同层分量对并 union（R319 内部辅助）。
 
-    来源: KLayout Region & 运算 https://www.klayout.org/doc-qt5/code/class_Region.html
+    来源: KLayout Region & 运算 https://www.klayout.de/doc.html
     """
     for layer_a, layer_b in layer_pairs:
         li_a = layer_to_indices[layer_a]

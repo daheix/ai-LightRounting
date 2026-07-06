@@ -28,7 +28,7 @@
  * - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 3 dB/cm 传播损耗基准）
  *   https://ieeexplore.ieee.org/document/1148303
  * - Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
- *   https://www.cambridge.org/core/books/silicon-photonics-design/
+ *   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
  */
 #ifndef POLARIS_ROUTE_H
 #define POLARIS_ROUTE_H

@@ -194,7 +194,7 @@ def _port_direction(name: str, n_ports: int = 1, role: str = "") -> str:
         - SiEPIC EBeam PDK PORT_FACING DRC 规则
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         - Chrostowski & Hochberg 2015 §4.3 波导端口方向
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
     """
     n = str(name).lower().strip()
     # 1. 显式方向关键词优先

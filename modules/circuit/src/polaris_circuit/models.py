@@ -7,7 +7,7 @@
 
 来源:
 - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Yariv & Yeh, "Optical Waves in Crystals", Wiley 1984, Ch. 13 (CMT)
 - Soldano & Pennings, JLT 1995: https://ieeexplore.ieee.org/document/374358

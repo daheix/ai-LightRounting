@@ -23,7 +23,7 @@ R02 学术诚信: 所有断言基于 exporter/importer docstring 公开契约。
 - KLayout CellInstArray: https://www.klayout.de/doc-qt5/code/class_CellInstArray.html
 - GDSII 层次结构（cell/SREF/AREF）:
   https://gdspy.readthedocs.io/en/master/gettingstarted.html#references
-- KLayout Layout.read API: https://www.klayout.org/doc-qt5/code/class_Layout.html
+- KLayout Layout.read API: https://www.klayout.de/doc.html
 """
 
 from __future__ import annotations

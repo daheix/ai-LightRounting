@@ -44,7 +44,7 @@
 - SiEPIC EBeam PDK (Lukas Chrostowski, UBC, MIT 许可证)（真实器件数据源）:
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge:
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Piggott 2017, Nature Photonics 11(9) 543-549（逆向设计波分解复用器）:
   https://www.nature.com/articles/nphoton.2017.126
 - gdsfactory PDK (MIT 许可证): https://gdsfactory.github.io/gdsfactory/

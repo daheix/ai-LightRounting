@@ -39,7 +39,7 @@
 - SiEPIC EBeam PDK DEVREC 标准（器件识别层 layer 68）
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - gdsfactory PDK 文档（网表提取）
   https://gdsfactory.github.io/gdsfactory/notebooks/09_pdk_import.html
 - Luceda IPKISS（光子电路网表验证）

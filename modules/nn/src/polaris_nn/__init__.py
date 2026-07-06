@@ -33,7 +33,7 @@ O（Output，输出）:
    https://arxiv.org/abs/1706.03762
 3. Kingma & Ba, 2015, "Adam: A Method for Stochastic Optimization", ICLR
    https://arxiv.org/abs/1412.6980
-4. TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+4. TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 5. Apollo PTC/oNoC 光子 benchmark: https://github.com/ASU-LOPE-Group/Apollo
 6. LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
 7. DREAMPlace: https://arxiv.org/abs/2004.10746

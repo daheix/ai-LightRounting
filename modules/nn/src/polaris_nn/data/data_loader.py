@@ -205,7 +205,7 @@ def load_tilos_ariane(path: str | Path | None = None) -> CircuitSpec:
     默认返回真实 Ariane 模块拓扑（17 模块 + 25 连接，P1-5 第23轮），
     若提供 path 则从文件加载并覆盖 benchmark_source。
 
-    来源: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    来源: https://github.com/TILOS-AI-Institute/MacroPlacement
          Ariane RISC-V CPU, NanGate45/ASAP7/SKY130HD 工艺
          CPU 源码: https://github.com/openhwgroup/cva6
 
@@ -367,7 +367,7 @@ def generate_synthetic_benchmark(
     - ``lidar``：光子链式布线（模拟曲线波导布线）
 
     来源:
-    - TILOS Ariane: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS Ariane: https://github.com/TILOS-AI-Institute/MacroPlacement
     - Apollo PTC/oNoC: https://github.com/ASU-LOPE-Group/Apollo
     - LiDAR ISPD'25: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 

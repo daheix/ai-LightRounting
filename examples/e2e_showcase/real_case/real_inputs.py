@@ -10,7 +10,7 @@
 - IEEE 802.3bs 100GBASE-LR4 标准
   （PAM4 调制参数与 BER 要求）
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
   （MZI 臂长差量级参考）
 - Saleh & Teich, "Fundamentals of Photonics", 2019, §4.4
   （MZI 消光比公式）
@@ -161,7 +161,7 @@ GRATING_COUPLER_PARAMS: list[RealParam] = [
 # 来源:
 #   - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 #   - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-#     https://www.cambridge.org/core/books/silicon-photonics-design/
+#     https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 # 与 stage2_circuit_spec._build_mzi_circuit(wg1=100μm, wg2=120μm) /
 #      stage5_simulation._MZI_WG1_LENGTH_UM/_MZI_WG2_LENGTH_UM 一致
 # ΔL=20μm 对标 Intel CWDM4 MZM 臂长差量级（硅光 MZM 典型 ΔL 10-100μm）
@@ -182,7 +182,7 @@ MZI_PARAMS: list[RealParam] = [
     RealParam(
         "delta_L_um", 20.0, "μm",
         "Intel 100G CWDM4 MZM / Chrostowski 2015",
-        "https://www.cambridge.org/core/books/silicon-photonics-design/",
+        "https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731",
         "MZI 臂长差（wg2-wg1=20μm，对标 Intel CWDM4 MZM 臂长差量级；"
         "stage5_simulation.delta_L 计算）",
     ),

@@ -4,7 +4,7 @@
 （Innovus/ICC2/DREAMPlace/Circuit Training）公平对比布局算法。
 
 来源:
-- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Ariane RISC-V CPU: https://github.com/openhwgroup/cva6 (Ariane 后继 CVA6)
 - Circuit Training: https://github.com/google-research/circuit_training
 - NanGate45/ASAP7/SKY130HD 工艺库
@@ -255,7 +255,7 @@ def load_ariane_benchmark(
     模块面积与连接拓扑对齐 CVA6 源码结构。
 
     来源:
-    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
     - CVA6 源码: https://github.com/openhwgroup/cva6
 
     Args:
@@ -523,7 +523,7 @@ def load_mempool_benchmark(
 
     来源:
     - PULP MemPool: https://github.com/pulp-platform/mempool
-    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 
     Args:
         process_node: 工艺节点（NanGate45/ASAP7/SKY130HD）。
@@ -559,7 +559,7 @@ def load_nvdla_benchmark(
 
     来源:
     - NVDLA: https://github.com/nvdla/hw
-    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 
     Args:
         process_node: 工艺节点（NanGate45/ASAP7/SKY130HD）。
@@ -604,7 +604,7 @@ def load_tilos_benchmark(
     对齐 TILOS 评估标准（HPWL 指标 + NanGate45/ASAP7/SKY130HD 工艺）。
 
     来源:
-    - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+    - TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
     - Ariane (CVA6): https://github.com/openhwgroup/cva6
     - MemPool: https://github.com/pulp-platform/mempool
     - NVDLA: https://github.com/nvdla/hw
@@ -664,7 +664,7 @@ def tilos_benchmark_info(name: str) -> dict:
         "total_area_um2": total_area,
         "process_node": "NanGate45",
         "benchmark_source": "TILOS",
-        "source_url": "https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
+        "source_url": "https://github.com/TILOS-AI-Institute/MacroPlacement",
         "cpu_source_url": source_urls[name_lower],
         "categories": sorted({m.category for m in modules.values()}),
         "target_metric": "HPWL",
@@ -686,7 +686,7 @@ def ariane_benchmark_info() -> dict:
         "total_area_um2": total_area,
         "process_node": "NanGate45",
         "benchmark_source": "TILOS",
-        "source_url": "https://github.com/TILOS-AI-CAD-Institute/MacroPlacement",
+        "source_url": "https://github.com/TILOS-AI-Institute/MacroPlacement",
         "cpu_source_url": "https://github.com/openhwgroup/cva6",
         "categories": sorted({m.category for m in ARIANE_MODULES.values()}),
         "target_metric": "HPWL",

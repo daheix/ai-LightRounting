@@ -51,7 +51,7 @@ class WaveguideType(Enum):
 # - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183 SOI ridge/rib 波导损耗基准
 #   https://ieeexplore.ieee.org/document/1148303
 # - Chrostowski & Hochberg 2015 §3.3 Silicon Photonics Design
-#   https://www.cambridge.org/core/books/silicon-photonics-design/
+#   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 # - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 # - IMEC Silicon Photonics Design Guide (ridge/rib/buried 过渡段设计)
 #   https://www.imec-int.com/en/silicon-photonics

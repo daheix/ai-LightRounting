@@ -191,7 +191,7 @@ $$T_{\text{query}} = O(\log n + k), \quad T_{\text{build}} = O(n \log n)$$
 2. KLayout DRC Basics（扫描线算法、布尔运算、层次化模式）. https://klayout.org/downloads/master/doc-qt4/manual/drc_basic.html
 3. He Z, Zuo Y, Jiang J, Zheng H, Ma Y, Yu B, "OpenDRC: An Efficient Open-Source Design Rule Checking Engine with Hierarchical GPU Acceleration," *DAC 2023*, DOI: 10.1109/DAC56929.2023.10247734. https://www.cse.cuhk.edu.hk/~byu/papers/C172-DAC2023-OpenDRC.pdf
 4. SiEPIC EBeam PDK 开源仓库（DRC runset 阈值来源，MIT 协议）. https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-5. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Beginning to Production," *Cambridge University Press* 2015, p.353. https://www.cambridge.org/core/books/silicon-photonics-design/
+5. Chrostowski L, Hochberg M, "Silicon Photonics Design: From Beginning to Production," *Cambridge University Press* 2015, p.353. https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 6. Guttman A, "R-Trees: A Dynamic Index Structure for Spatial Searching," *SIGMOD 1984*, DOI: 10.1145/602259.602266. https://dl.acm.org/doi/10.1145/602259.602266
 7. gdsfactory KLayout DRC 训练教程（check_width/space/enclosing/density API 参考）. https://gdsfactory.github.io/gdsfactory-photonics-training/notebooks/11_drc.html
 8. Banerjee A, "CMOS Photonic Circuits: Design and Fabrication," *Springer* 2024（CMP 工艺密度规则 30%-70%）. https://doi.org/10.1007/978-3-031-47887-8

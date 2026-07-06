@@ -428,7 +428,7 @@ def run_ngspice_cosimulation(
 # 实现真实光电协同仿真。Ngspice 不可用时使用自研 MNA SPICE，是独立仿真路径非
 # fall-back（Ngspice 路径走 run_ngspice_cosimulation，本路径走 run_photoelectric_cosim）。
 # 文献来源(R02 ≥5 URL): Chrostowski 2015 §8.4/§9.2
-#   https://www.cambridge.org/core/books/silicon-photonics-design/;
+#   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731;
 # Ho/Ruehli/Brennan 1974 MNA https://ieeexplore.ieee.org/document/1084079;
 # Shafik 2016 IEEE CommSurveys(PAM4 BER) https://ieeexplore.ieee.org/document/7410082;
 # Lumerical INTERCONNECT https://optics.ansys.com/hc/en-us/articles/49697869166611;

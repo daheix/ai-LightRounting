@@ -18,7 +18,7 @@
 - SiEPIC EBeam PDK DRC runset PORT_ALIGNMENT
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Berg "Computational Geometry" Springer（AABB 相交判定）
   https://doi.org/10.1007/978-3-540-77974-2
 - Tarjan 1972 Union-Find（连通分量）

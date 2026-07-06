@@ -312,7 +312,7 @@ def device_waveguide_width(device: dict, placement: dict) -> float | None:
         - SiEPIC-Tools Verification "Mismatched pin widths"
           https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
         - Chrostowski & Hochberg 2015 §4.3 (模式失配损耗)
-          https://www.cambridge.org/core/books/silicon-photonics-design/
+          https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         - KLayout DRC width_check (波导宽度语义)
           https://www.klayout.org/doc-qt5/manual/drc_runsets.html
     """

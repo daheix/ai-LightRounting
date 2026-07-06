@@ -13,7 +13,7 @@ R05 网格尺寸 BUG 回归。
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 - Taflove & Hagness 2005 "Computational Electrodynamics" §5.8 PML
 - Shin & Fan 2014 Opt. Express
-  https://opg.optica.org/oe/abstract.cfm?uri=oe-22-5-5230
+  https://opg.optica.org/oe/fulltext.cfm?uri=oe-22-5-5230
 - Shin & Fan 2012 J. Comput. Phys. (SC-PML)
   https://doi.org/10.1016/j.jcp.2012.01.015
 - Berenger 1994 J. Comput. Phys. (PML 原创)

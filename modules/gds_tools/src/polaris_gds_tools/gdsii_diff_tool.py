@@ -24,9 +24,9 @@
 ## 学术依据
 
 - KLayout Region 运算（& | ^ -）:
-  https://www.klayout.org/doc-qt5/code/class_Region.html
+  https://www.klayout.de/doc.html
 - KLayout Layout.read:
-  https://www.klayout.org/doc-qt5/code/class_Layout.html
+  https://www.klayout.de/doc.html
 - GDSII 格式:
   https://en.wikipedia.org/wiki/GDS_File
 - 集合论差集:
@@ -173,7 +173,7 @@ def compare_gdsii_files(
         ImportError: klayout 未安装。
 
     来源:
-    - KLayout Region 运算: https://www.klayout.org/doc-qt5/code/class_Region.html
+    - KLayout Region 运算: https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     path_a = Path(file_a)
@@ -267,7 +267,7 @@ def _compute_all_layer_diffs(
         (layer_diffs, total_added_area, total_removed_area,
          total_added_count, total_removed_count, is_identical)。
 
-    来源: KLayout Region 运算 https://www.klayout.org/doc-qt5/code/class_Region.html
+    来源: KLayout Region 运算 https://www.klayout.de/doc.html
     """
     layer_diffs: list[LayerDiff] = []
     total_added_area = total_removed_area = 0.0

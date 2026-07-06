@@ -15,7 +15,7 @@ S 参数格式与 SAX 一致:
 4. Golub & Van Loan 2013, "Matrix Computations", 4th ed., §2.3,
    https://www.press.jhu.edu/books/title/10876/matrix-computations
 5. Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge,
-   https://www.cambridge.org/core/books/silicon-photonics-design/
+   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 6. gdsfactory sax 文档: https://gdsfactory.github.io/sax/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy/SciPy（不引入 JAX，

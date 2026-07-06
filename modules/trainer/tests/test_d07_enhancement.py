@@ -16,7 +16,7 @@
 
 学术依据（R02 学术诚信，≥5 个文献 URL）:
 1. Schulman et al., 2017, PPO https://arxiv.org/abs/1707.06347
-2. TILOS MacroPlacement https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+2. TILOS MacroPlacement https://github.com/TILOS-AI-Institute/MacroPlacement
 3. RePlAce ICCAD 2019 https://doi.org/10.1109/ICCAD45719.2019.8942087
 4. DREAMPlace DAC 2019 https://doi.org/10.1109/DAC.2019.8721934
 5. AlphaChip Nature 2021 https://www.nature.com/articles/s41586-021-03544-w

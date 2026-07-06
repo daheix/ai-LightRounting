@@ -19,7 +19,7 @@ v5.0 迁移说明:
 - Bogaerts et al. 2012 Silicon microring resonators JLT
   https://doi.org/10.1109/JLT.2012.2200478
 - Chrostowski & Hochberg 2015 Silicon Photonics Design §4.5
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - SiEPIC EBeam PDK strip waveguide neff=2.4
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 

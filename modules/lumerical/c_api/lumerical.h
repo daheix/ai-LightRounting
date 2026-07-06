@@ -30,7 +30,7 @@
  * - Tidy3D 文档 https://docs.flexcompute.com/projects/tidy3d/en/latest/
  * - MEEP 文档 https://meep.readthedocs.io/en/latest/
  * - Chrostowski 2015 Silicon Photonics Design Cambridge
- *   https://www.cambridge.org/core/books/silicon-photonics-design/
+ *   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
  * - Coldren & Corzine 1995 Diode Lasers and Photonic Integrated Circuits Wiley
  * - Agrawal 2010 Fiber-Optic Communication Systems 4th ed Wiley
  * - Sze & Ng 2007 Physics of Semiconductor Devices 3rd ed Wiley

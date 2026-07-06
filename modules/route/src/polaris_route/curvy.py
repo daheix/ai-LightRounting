@@ -47,7 +47,7 @@
 - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 3 dB/cm 传播损耗基准）
   https://ieeexplore.ieee.org/document/1148303
 - Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Flexcompute Tidy3D EulerWaveguideBend（clothoid 公式 RL=A², θ=L/(2R)）
   https://docs.flexcompute.com/projects/tidy3d/en/v2.9.2/notebooks/EulerWaveguideBend.html
 - A* 搜索算法（Hart, Nilsson & Raphael 1968）
@@ -510,7 +510,7 @@ def compute_path_loss(
     - SiEPIC EBeam PDK（0.05 dB/bend 上界）
       https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     - Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
-      https://www.cambridge.org/core/books/silicon-photonics-design/
+      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
     Args:
         points: 路径点序列 [(x, y), ...]，坐标单位 μm。

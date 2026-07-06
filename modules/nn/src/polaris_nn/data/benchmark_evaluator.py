@@ -7,7 +7,7 @@ R03 异常处理设计: 缺失 placements 坐标或 circuit.devices 中无对应
 raise KeyError，禁止静默跳过（会导致 HPWL/重叠/拥塞度/插入损耗/DRV 计算不准）。
 
 来源:
-- TILOS MacroPlacement 评估: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement 评估: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Circuit Training 评估: https://github.com/google-research/circuit_training
 - DREAMPlace: https://github.com/limbo018/DREAMPlace
 - HPWL 经典定义: EDA 教材半周长线长估计
@@ -270,7 +270,7 @@ def evaluate_congestion(
 
     来源:
         - TILOS MacroPlacement Congestion Evaluation
-          https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+          https://github.com/TILOS-AI-Institute/MacroPlacement
         - Circuit Training Obstacle Channel Congestion
           https://github.com/google-research/circuit_training
         - Nesterenko & Hsu, "Congestion-Aware Placement", TCAD 2002
@@ -459,7 +459,7 @@ def evaluate_drv(
 
     来源:
         - TILOS MacroPlacement DRV Evaluation
-          https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+          https://github.com/TILOS-AI-Institute/MacroPlacement
         - Cadence Innovus DRV 计数（spacing/width/area/short）
         - DREAMPlace Overlap/Boundary 违规检测
         - Fowler, "Refactoring" 2nd ed., 2018, Extract Method

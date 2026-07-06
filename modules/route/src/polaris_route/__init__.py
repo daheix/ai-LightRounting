@@ -39,7 +39,7 @@
 - Soref et al. 1993 IEEE Proc. 41(9) 1182-1183（SOI 3 dB/cm 传播损耗基准）
   https://ieeexplore.ieee.org/document/1148303
 - Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Klauss et al., "Euler spiral waveguide bends", Opt Express 2018
   https://doi.org/10.1364/OE.26.029637
 - Fujisawa et al. 2017, "Euler bend clothoid curve low-loss waveguide"
@@ -204,7 +204,7 @@ def _get_device_insertion_loss(device: dict) -> float:
     - polaris-sparam mmi_1x2_s/mmi_2x2_s/grating_coupler_s 默认值
       (modules/sparam/src/polaris_sparam/models.py)
     - Chrostowski & Hochberg 2015 §3.3 光子链路功率预算
-      https://www.cambridge.org/core/books/silicon-photonics-design/
+      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
     Args:
         device: 器件 dict（含 params 字段）。
@@ -475,7 +475,7 @@ def compute_path_loss(
     - SiEPIC EBeam PDK（0.05 dB/bend 上界）
       https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     - Chrostowski & Hochberg 2015 §6.4 Silicon Photonics Design
-      https://www.cambridge.org/core/books/silicon-photonics-design/
+      https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
     Args:
         points: 路径点序列 [[x, y], ...] 或 [(x, y), ...]，坐标单位 μm。

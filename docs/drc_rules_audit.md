@@ -17,7 +17,7 @@
 | 2 | MIN_WIDTH | 0.5 μm | rules.py:111 / engine.py:269 | SiEPIC `SLAB150_MIN_WIDTH`（浅刻蚀工艺极限）https://github.com/SiEPIC/SiEPIC_EBeam_PDK |
 | 3 | MIN_HEIGHT | 0.4 μm | rules.py:118 / engine.py:286 | SiEPIC `WG_MIN_WIDTH`（220nm SOI 工艺极限）https://github.com/SiEPIC/SiEPIC_EBeam_PDK |
 | 4 | MIN_AREA | 0.1 μm² | rules.py:125 / engine.py:303 | SiEPIC `WG_MIN_AREA`；KLayout `area_check`（鞋带公式）https://www.klayout.org/doc-qt5/manual/drc_runsets.html |
-| 5 | BOUNDARY | 0 | rules.py:132 / engine.py:324 | 通用画布边界约束（Chrostowski & Hochberg 2015 §4.3）https://www.cambridge.org/core/books/silicon-photonics-design/ |
+| 5 | BOUNDARY | 0 | rules.py:132 / engine.py:324 | 通用画布边界约束（Chrostowski & Hochberg 2015 §4.3）https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731 |
 | 6 | NO_OVERLAP | 0 | rules.py:139 / engine.py:346 | SiEPIC Verification "Overlapping component: DevRec 重叠，touching ok" https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions |
 | 7 | PORT_ALIGNMENT | 10 μm | rules.py:146 / engine.py:387 | SiEPIC EBeam PDK 波导弯曲容差；Chrostowski & Hochberg 2015 §4.3（每 90° 弯曲 ≈0.05dB） |
 | 8 | PORT_DIRECTION | — | rules.py:153 / engine.py:426 | SiEPIC Verification "Disconnected pin: pins facing 180°" https://github.com/SiEPIC/SiEPIC_EBeam_PDK |
@@ -329,7 +329,7 @@ PoLaRIS 已覆盖 = **0 条**（PoLaRIS 当前 12 条均属于几何基础+端�
 1. SiEPIC EBeam PDK — https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 2. SiEPIC-Tools Verification — https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
 3. SiEPIC openEBL（最小特征尺寸 70nm）— https://siepic.ca/openebl/
-4. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 — https://www.cambridge.org/core/books/silicon-photonics-design/
+4. Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015 — https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 5. KLayout DRC Runsets — https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 6. KLayout DRC Basics — https://klayout.org/downloads/master/doc-qt5/manual/drc_basic.html
 7. OpenDRC: He et al., DAC 2023, doi:10.1109/DAC56929.2023.10247734 — https://doi.org/10.1109/DAC56929.2023.10247734

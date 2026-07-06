@@ -23,7 +23,7 @@
 - DREAMPlace TCAD 2020（合法化在约束域内优化）
   https://arxiv.org/abs/2004.10746
 - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Berg "Computational Geometry" Springer（区间合并求可行域）
   https://doi.org/10.1007/978-3-540-77974-2
 """
@@ -442,7 +442,7 @@ def _residual_pair_fix(
         Boyd & Vandenberghe "Convex Optimization" §4 https://web.stanford.edu/~boyd/cvxbook/ ;
         Ericson "Real-Time Collision Detection" §5.1.3 https://realtimecollisiondetection.net/ ;
         DREAMPlace TCAD 2020 https://arxiv.org/abs/2004.10746 ;
-        Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3 https://www.cambridge.org/core/books/silicon-photonics-design/ ;
+        Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §4.3 https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731 ;
         Berg "Computational Geometry" Springer https://doi.org/10.1007/978-3-540-77974-2
     """
     tol = _ALIGN_PORT_TOL_UM

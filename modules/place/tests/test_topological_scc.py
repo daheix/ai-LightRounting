@@ -49,7 +49,7 @@ RuntimeError: 电路连接存在环，无法拓扑排序（processed=1/N，R03 �
   https://en.wikipedia.org/wiki/Condensation_(graph_theory)
 - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 """
 
 from __future__ import annotations

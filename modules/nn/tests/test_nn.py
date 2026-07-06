@@ -15,7 +15,7 @@ R02 学术诚信（docstring 含 ≥5 文献 URL）:
 - Vaswani et al., 2017, "Attention Is All You Need", NeurIPS
   https://arxiv.org/abs/1706.03762
 - Kingma & Ba, 2015, "Adam", ICLR https://arxiv.org/abs/1412.6980
-- TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Apollo: https://github.com/ASU-LOPE-Group/Apollo
 - LiDAR ISPD'25: https://dl.acm.org/doi/10.1145/3698364.3705355
 - pytest 文档: https://docs.pytest.org/

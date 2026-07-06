@@ -38,15 +38,15 @@
 ## 学术依据
 
 - KLayout Layout.clip:
-  https://klayout.org/doc-qt5/code/class_Layout.html#method33
+  https://www.klayout.de/doc.html
 - KLayout Layout.multi_clip:
-  https://klayout.org/doc-qt5/code/class_Layout.html#method98
+  https://www.klayout.de/doc.html
 - KLayout clip 示例:
   https://klayout.org/klayout-pypi/examples/clip/
 - KLayout Box class:
-  https://www.klayout.org/doc-qt5/code/class_Box.html
+  https://www.klayout.de/doc.html
 - KLayout Cell class:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - GDSII 格式:
@@ -260,7 +260,7 @@ def clip_gdsii(
         RuntimeError: 读取/写出失败。
 
     来源:
-    - KLayout Layout.clip: https://klayout.org/doc-qt5/code/class_Layout.html#method33
+    - KLayout Layout.clip: https://www.klayout.de/doc.html
     - KLayout clip 示例: https://klayout.org/klayout-pypi/examples/clip/
     """
     db = _import_klayout_db()
@@ -318,7 +318,7 @@ def multi_clip_gdsii(
 
     来源:
     - KLayout Layout.multi_clip:
-      https://klayout.org/doc-qt5/code/class_Layout.html#method98
+      https://www.klayout.de/doc.html
     """
     db = _import_klayout_db()
     in_path = Path(gds_path)

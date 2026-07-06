@@ -14,7 +14,7 @@
  * 来源（R02 学术诚信，≥5 个文献 URL）:
  * - Taflove & Hagness, "Computational Electrodynamics", Artech 2005
  * - Shin & Fan, Opt. Express 2014（FDFD 2D 求解）
- *   https://opg.optica.org/oe/abstract.cfm?uri=oe-22-5-5230
+ *   https://opg.optica.org/oe/fulltext.cfm?uri=oe-22-5-5230
  * - scipy.sparse.linalg.spsolve（UMFPACK 直接求解）
  *   https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.linalg.spsolve.html
  * - Lumerical FDFD https://optics.ansys.com/hc/en-us/articles/360034902393

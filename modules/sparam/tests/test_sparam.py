@@ -37,7 +37,7 @@
 - Reck et al., PRL 73, 58 (1994)（分束器酉矩阵）
   https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.73.58
 - Chrostowski & Hochberg, "Silicon Photonics Design", Cambridge 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO。
 """

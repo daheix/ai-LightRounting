@@ -17,7 +17,7 @@
  * - PyTorch nn C++ frontend: https://pytorch.org/cppdocs/
  * - Vaswani et al. 2017 Transformer: https://arxiv.org/abs/1706.03762
  * - Kingma & Ba 2015 Adam: https://arxiv.org/abs/1412.6980
- * - TILOS MacroPlacement: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+ * - TILOS MacroPlacement: https://github.com/TILOS-AI-Institute/MacroPlacement
  * - Apollo photonic benchmark: https://github.com/ASU-LOPE-Group/Apollo
  * - LiDAR ISPD'25 benchmark: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
  */

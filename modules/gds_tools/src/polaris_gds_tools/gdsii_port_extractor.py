@@ -34,11 +34,11 @@
 ## 学术依据
 
 - KLayout Cell.begin_shapes_rec:
-  https://www.klayout.org/doc-qt5/code/class_Cell.html
+  https://www.klayout.de/doc.html
 - KLayout Shape class:
-  https://www.klayout.org/doc-qt5/code/class_Shape.html
+  https://www.klayout.de/doc.html
 - KLayout Box class:
-  https://www.klayout.org/doc-qt5/code/class_Box.html
+  https://www.klayout.de/doc.html
 - KLayout Database API:
   https://klayout.org/downloads/master/doc-qt5/programming/database_api.html
 - GDSII 格式:
@@ -193,7 +193,7 @@ def extract_ports(
 
     来源:
     - KLayout Cell.begin_shapes_rec:
-      https://www.klayout.org/doc-qt5/code/class_Cell.html
+      https://www.klayout.de/doc.html
     - SiEPIC EBeam PDK 端口:
       https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     """

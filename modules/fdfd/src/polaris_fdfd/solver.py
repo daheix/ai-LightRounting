@@ -38,7 +38,7 @@ T = P_out / P_in，P = ∫ S_z dx，S_z = (1/(2ωμ)) Im[E* ∂E/∂z]
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 - Taflove & Hagness 2005 "Computational Electrodynamics" §5.8 PML
-- Shin & Fan 2014 Opt. Express https://opg.optica.org/oe/abstract.cfm?uri=oe-22-5-5230
+- Shin & Fan 2014 Opt. Express https://opg.optica.org/oe/fulltext.cfm?uri=oe-22-5-5230
 - Shin & Fan 2012 J. Comput. Phys. (SC-PML) https://doi.org/10.1016/j.jcp.2012.01.015
 - Berenger 1994 J. Comput. Phys. (PML 原创) https://doi.org/10.1006/jcph.1994.1159
 - Gedney 1996 IEEE T-AP (uniaxial PML) https://ieeexplore.ieee.org/document/549506

@@ -36,7 +36,7 @@ JSON 到 ``real_board/{cat}/{name}.json``，并统计各类别通过率。
 - GDSFactory YAML 格式: https://gdsfactory.github.io/gdsfactory/
 - PICBench: https://github.com/PICDA/PICBench
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - KLayout DRC: https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - PoLaRIS DRC 引擎: /workspace/modules/drc/src/polaris_drc/engine.py
 """
@@ -429,12 +429,12 @@ def convert_expert_demo(meta: dict, netlist: dict, placements_raw: dict
     # - SiEPIC Tools GDS 提取: instance.origin 为放置参考点（通常为中心）
     #   https://github.com/SiEPIC/SiEPIC-Tools
     # - KLayout Instance API: bbox 为变换后真实物理边界框 [xmin,ymin,xmax,ymax]
-    #   https://www.klayout.org/doc-qt5/code/class_Instance.html
+    #   https://www.klayout.de/doc.html
     # - KLayout DRC: bbox 算子返回真实物理 AABB
     #   https://www.klayout.org/doc-qt5/manual/drc_runsets.html
     # - Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §6.2:
     #   GDS 器件 placement 以参考点定义，bbox 为物理边界
-    #   https://www.cambridge.org/core/books/silicon-photonics-design/
+    #   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
     # - SiEPIC EBeam PDK: bbox 字段从 GDS cell.bbox() 提取
     #   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
     placements = {}

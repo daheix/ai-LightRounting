@@ -8,7 +8,7 @@ polaris-nn 的 data 子包内其他模块从 ``polaris_nn.data.specs`` 导入，
 
 来源:
 - GDSFactory 组件库: https://gdsfactory.github.io/gdsfactory/
-- TILOS MacroPlacement benchmark: https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- TILOS MacroPlacement benchmark: https://github.com/TILOS-AI-Institute/MacroPlacement
 - Apollo PTC/oNoC 光子 benchmark: https://github.com/ASU-LOPE-Group/Apollo
 - LiDAR ISPD'25 benchmark: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - SiEPIC PDK 设计规则: https://github.com/SiEPIC/SiEPIC_EBeam_PDK

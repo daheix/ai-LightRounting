@@ -21,7 +21,7 @@ DRC 规则来源:
 - OpenDRC: He et al., DAC 2023, DOI:10.1109/DAC56929.2023.10247734
   https://doi.org/10.1109/DAC56929.2023.10247734
 - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015, p.353
-  https://www.cambridge.org/core/books/silicon-photonics-design/
+  https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - Berg et al. 2014, "Computational Geometry", Springer（AABB 相交/距离）
   https://doi.org/10.1007/978-3-540-77974-2
 

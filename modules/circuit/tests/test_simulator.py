@@ -30,7 +30,7 @@ TLLM 激光器/信号流图/FDTD 2D Yee 网格。
 9. ITU-T G.977, "Characteristics of optical fibre submarine cable systems",
    https://www.itu.int/rec/T-REC-G.977
 10. Chrostowski & Hochberg 2015, "Silicon Photonics Design", Cambridge,
-    https://www.cambridge.org/core/books/silicon-photonics-design/
+    https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 
 ================================================================
 合规声明
