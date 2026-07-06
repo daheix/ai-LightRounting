@@ -65,4 +65,20 @@
 - [x] 0 except:pass / 0 TODO/FIXME/HACK（本轮无代码变更）
 - [x] 所有缺失字段raise（R03禁止fall-back）
 - [x] 所有阈值有文献来源（R02学术诚信，6 条新规则标注 SiEPIC/LiDAR/FluxCore/KLayout/Cormen 文献）
-- [ ] 代码已提交到main分支并push（rules.py/engine.py/checks.py 已自动提交；__init__.py/tests/test_drc.py/checklist.md/操作记录.md 待提交）
+- [x] 代码已提交到main分支并push（rules.py/engine.py/checks.py 已自动提交；__init__.py/tests/test_drc.py/checklist.md/操作记录.md 已提交）
+
+## 阶段8: v2综合整理（2026-07-05/06 第二轮全量诚信检索）
+
+- [x] 14个超80行函数全部拆分至≤80L (commit 8bc03bf8等14个)
+- [x] 11个超800行test文件全部拆分至≤800L (commit 304d8d99等11个)
+- [x] main分支4个超800行文件拆分 (test_drc/align/engine/route, commit 280b1137/6e746eaf/b49faf48/97d578bb)
+- [x] 13个URL<5模块全部补齐至≥5 URL (commit 3fdade80)
+- [x] AST扫描确认0超80行函数
+- [x] 确认0超800行文件
+- [x] 确认0 URL<5模块
+- [x] 0 except:pass / 0 TODO/FIXME/HACK
+- [x] `docs/drc_completeness_v2.md` 生成 (commit ec437f8e，38条规则/76%覆盖率)
+- [x] `docs/drc_100pct_conclusion_v2.md` 生成 (commit e8a079bc，3场景明确)
+- [x] `docs/final_comprehensive_audit_v2.md` 生成 (commit 12b38120)
+- [x] 所有质量门禁达标（0/0/0/0/0）
+- [x] 操作记录.md已追加（R371轮次）
