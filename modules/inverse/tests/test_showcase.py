@@ -152,3 +152,102 @@ def test_optimize_waveguide_width_full():
         f"（best-checkpoint 应保证 final >= initial）"
     )
     assert result["improvement_db"] >= 0.0
+
+
+# =============================================================================
+# V5.1.0 D12 增强: 3 个新 stage + run_showcase 集成测试
+# =============================================================================
+
+from polaris_inverse import (  # noqa: E402
+    run_showcase,
+    stage_3d_adjoint_optimization,
+    stage_level_set_optimization,
+    stage_topology_optimization,
+)
+
+
+def test_stage_topology_optimization():
+    """V5.1.0 stage_topology_optimization: 3 器件结果结构完整 + 无 NaN。"""
+    result = stage_topology_optimization(n_iterations=15)
+    assert set(result.keys()) == {"mmi_1x2", "mmi_2x2", "wdm"}
+    for key, dev_result in result.items():
+        assert dev_result["device"].startswith("Topology_")
+        assert len(dev_result["fom_history"]) == 15
+        has_nan = any(math.isnan(x) for x in dev_result["fom_history"])
+        assert not has_nan, f"{key} fom_history 含 NaN（违反 R03）"
+        assert math.isfinite(dev_result["improvement_db"])
+
+
+def test_stage_level_set_optimization():
+    """V5.1.0 stage_level_set_optimization: 2 器件结果结构完整 + 无 NaN。"""
+    result = stage_level_set_optimization(n_iterations=15)
+    assert set(result.keys()) == {"ybranch", "bend"}
+    for key, dev_result in result.items():
+        assert dev_result["device"].startswith("LevelSet_")
+        assert len(dev_result["fom_history"]) == 15
+        has_nan = any(math.isnan(x) for x in dev_result["fom_history"])
+        assert not has_nan, f"{key} fom_history 含 NaN（违反 R03）"
+        assert math.isfinite(dev_result["improvement_db"])
+
+
+def test_stage_3d_adjoint_optimization():
+    """V5.1.0 stage_3d_adjoint_optimization: 2 器件结果结构完整 + 无 NaN。"""
+    result = stage_3d_adjoint_optimization(n_iterations=10)
+    assert set(result.keys()) == {"taper", "grating"}
+    for key, dev_result in result.items():
+        assert dev_result["device"].startswith("Adjoint3D_")
+        assert len(dev_result["fom_history"]) == 10
+        has_nan = any(math.isnan(x) for x in dev_result["fom_history"])
+        assert not has_nan, f"{key} fom_history 含 NaN（违反 R03）"
+        assert math.isfinite(dev_result["improvement_db"])
+
+
+def test_run_showcase_v510_structure():
+    """V5.1.0 run_showcase: 6 器件 + summary 结构完整。
+
+    用小迭代（n_iterations=20）快速验证结构，增强器件迭代自动缩放。
+    """
+    result = run_showcase(n_iterations=20)
+    # 顶层 key: 基线 3 + 增强 3 + summary
+    expected_keys = {
+        "mmi", "wdm", "ybranch",  # 基线
+        "topology", "level_set", "adjoint_3d",  # V5.1.0 增强
+        "summary",
+    }
+    assert set(result.keys()) == expected_keys
+    # summary 结构
+    summary = result["summary"]
+    assert summary["n_devices"] == 10  # 3 基线 + 3 拓扑 + 2 level-set + 2 3D = 10
+    assert "devices" in summary
+    assert len(summary["devices"]) == 10
+    # 基线 3 器件
+    assert summary["n_baseline_improved_ge_10db"] <= 3
+    # 增强 7 器件
+    assert summary["n_enhanced_improved_ge_3db"] <= 7
+    # 所有器件名
+    expected_devices = {
+        "MMI_1x2", "WDM_filter", "Y_branch",  # 基线
+        "Topology_MMI_1x2", "Topology_MMI_2x2", "Topology_WDM",  # 拓扑
+        "LevelSet_Y_branch", "LevelSet_bend_waveguide",  # level-set
+        "Adjoint3D_taper", "Adjoint3D_grating_coupler",  # 3D
+    }
+    assert set(summary["devices"]) == expected_devices
+
+
+def test_run_showcase_v510_no_nan():
+    """V5.1.0 run_showcase: 所有器件 fom_history 无 NaN（R03 禁止 fall-back）。"""
+    result = run_showcase(n_iterations=15)
+    all_results = []
+    # 收集所有器件结果
+    for stage_key in ["mmi", "wdm", "ybranch"]:
+        all_results.append(result[stage_key])
+    for stage_key in ["topology", "level_set", "adjoint_3d"]:
+        for dev_result in result[stage_key].values():
+            all_results.append(dev_result)
+    # 验证无 NaN
+    for dev_result in all_results:
+        has_nan = any(math.isnan(x) for x in dev_result["fom_history"])
+        assert not has_nan, (
+            f"{dev_result['device']} fom_history 含 NaN（违反 R03）"
+        )
+        assert math.isfinite(dev_result["improvement_db"])

@@ -1,7 +1,7 @@
 [project]
 name = "polaris-inverse"
-version = "5.0.0"
-description = "PoLaRIS Adjoint 逆向设计子模块（JAX 可微 FDTD + jax.grad 自动微分优化波导宽度）"
+version = "5.1.0"
+description = "PoLaRIS 逆向设计子模块（adjoint + topology + level-set + 3D，6 器件统一优化框架）"
 requires-python = ">=3.10"
 dependencies = [
     "numpy>=1.24",
