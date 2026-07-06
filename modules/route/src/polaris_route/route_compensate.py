@@ -21,7 +21,7 @@
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 
 - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design, 弯曲半径 ≥5μm,
-  0.05 dB/bend https://www.cambridge.org/core/books/silicon-photonics-design/
+  0.05 dB/bend https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 - SiEPIC EBeam PDK bend_euler radius=5μm
   https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Klauss et al. 2018 "Euler spiral waveguide bends" Opt Express
@@ -65,7 +65,7 @@ _PORT_ALIGN_TOL_UM = 10.0
 
 # S 弯曲波导最小半径（μm），SiEPIC EBeam PDK bend_euler radius=5μm
 # 来源: Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design
-#   https://www.cambridge.org/core/books/silicon-photonics-design/
+#   https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 # SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 _MIN_BEND_RADIUS_UM = 5.0
 
@@ -160,7 +160,12 @@ def _compute_total_deviation(
     x: float,
     y: float,
 ) -> float:
-    """计算指定候选位置 (x, y) 下 dev2 所有入向连接的端口总偏差。"""
+    """计算指定候选位置 (x, y) 下 dev2 所有入向连接的端口总偏差。
+
+    Raises:
+        RuntimeError: 入向连接端口未找到（R03 禁止 fall-back，包装重抛
+            附 conn 上下文）。
+    """
     total = 0.0
     for ic in incoming_per_d2.get(dev2_name, []):
         i_d1, i_p1, _i_d2, i_p2 = ic
@@ -169,8 +174,11 @@ def _compute_total_deviation(
         try:
             ip1_dx, ip1_dy, _ = _find_port(device_map[i_d1], i_p1)
             ip2_dx, ip2_dy, _ = _find_port(dev2, i_p2)
-        except RuntimeError:
-            continue
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"计算 dev2={dev2_name} 候选位置 (x={x}, y={y}) 入向连接 "
+                f"{ic} 端口查找失败: {exc}（R03 禁止 fall-back）"
+            ) from exc
         ia1_x = placements[i_d1]["x"] + ip1_dx
         ia1_y = placements[i_d1]["y"] + ip1_dy
         ia2_x = x + ip2_dx
@@ -191,7 +199,11 @@ def _try_compensate_one_conn(
     """尝试补偿单个连接：评估 x/y 对齐候选并应用最佳位置。
 
     Returns:
-        1 若成功补偿（器件已移动），0 否则。
+        1 若成功补偿（器件已移动），0 否则（端口已对齐或无可行候选）。
+
+    Raises:
+        RuntimeError: 连接端口未找到（R03 禁止 fall-back，包装重抛
+            附 conn 上下文）。
     """
     dev1_name, port1_name, dev2_name, port2_name = conn
     if dev1_name not in device_map or dev2_name not in device_map:
@@ -203,8 +215,10 @@ def _try_compensate_one_conn(
     try:
         port1_dx, port1_dy, _ = _find_port(dev1, port1_name)
         port2_dx, port2_dy, _ = _find_port(dev2, port2_name)
-    except RuntimeError:
-        return 0
+    except RuntimeError as exc:
+        raise RuntimeError(
+            f"补偿连接 {conn} 端口查找失败: {exc}（R03 禁止 fall-back）"
+        ) from exc
     abs1_x = placements[dev1_name]["x"] + port1_dx
     abs1_y = placements[dev1_name]["y"] + port1_dy
     abs2_x = placements[dev2_name]["x"] + port2_dx
@@ -271,7 +285,12 @@ def _regenerate_paths_after_compensate(
     router: "CurvyRouter",
     n_compensated: int,
 ) -> dict:
-    """若有器件移动，重新生成所有路径并统计交叉数与损耗。"""
+    """若有器件移动，重新生成所有路径并统计交叉数与损耗。
+
+    Raises:
+        RuntimeError: 重生成路径时连接端口未找到（R03 禁止 fall-back，
+            包装重抛附 conn 上下文）。
+    """
     if n_compensated == 0:
         return route_result
     new_paths: list[dict] = []
@@ -285,8 +304,11 @@ def _regenerate_paths_after_compensate(
         try:
             p1_dx, p1_dy, _ = _find_port(dev1, port1_name)
             p2_dx, p2_dy, _ = _find_port(dev2, port2_name)
-        except RuntimeError:
-            continue
+        except RuntimeError as exc:
+            raise RuntimeError(
+                f"补偿后重生成路径，连接 {conn} 端口查找失败: {exc}"
+                f"（R03 禁止 fall-back）"
+            ) from exc
         start = (placements[dev1_name]["x"] + p1_dx,
                  placements[dev1_name]["y"] + p1_dy)
         end = (placements[dev2_name]["x"] + p2_dx,
@@ -388,7 +410,7 @@ def bend_compensate(
         RuntimeError: circuit/placements 结构非法（R03 禁止 fall-back）。
 
     来源（R02 学术诚信）:
-        - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design, 弯曲半径 ≥5μm, 0.05 dB/bend, https://www.cambridge.org/core/books/silicon-photonics-design/
+        - Chrostowski & Hochberg 2015 §4.2 Silicon Photonics Design, 弯曲半径 ≥5μm, 0.05 dB/bend, https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
         - SiEPIC EBeam PDK bend_euler radius=5μm, https://github.com/SiEPIC/SiEPIC_EBeam_PDK
         - Klauss et al. 2018 "Euler spiral waveguide bends" Opt Express, https://doi.org/10.1364/OE.26.029637
         - LiDAR ISPD'25 §3.2 curvy waveguide detailed routing, https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
