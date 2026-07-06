@@ -282,23 +282,54 @@ def is_waveguide_device(device_type: str) -> bool:
 def device_waveguide_width(device: dict, placement: dict) -> float | None:
     """提取波导宽度（μm），用于 WAVEGUIDE_WIDTH_MATCH 检查。
 
-    优先级: device.params.width_um → device.width_um → placement.h
-    （水平波导宽度 = h，与 SiEPIC strip_waveguide AABB 一致）。
-    未声明返回 None（调用方跳过，非 fall-back）。
+    优先级（仅波导宽度字段，禁止 BBOX 回退）:
+        1. device.params.width_um        — 显式波导宽度参数
+        2. device.params.wg_width        — gdsfactory/SiEPIC 波导宽度约定
+                                           (y_branch/mmi/gc 等器件的波导端口宽度)
+        3. device.params.waveguide_width — 替代命名
+        4. placement.h                   — 仅当器件为波导类(straight/bend/taper)
+                                           时有效 (strip_waveguide AABB 高度
+                                           = 波导宽度)；非波导类禁用 (BBOX 高度
+                                           ≠ 波导宽度)
 
-    来源: SiEPIC EBeam PDK strip_waveguide AABB 约定
+    R03 禁止 fall-back 合规:
+        device.width_um / device.height_um 是器件包围盒 (BBOX) 尺寸，
+        对 y_branch/mmi/grating_coupler 等非波导器件，BBOX 宽度 (如 15μm)
+        远大于波导宽度 (如 0.5μm)，用作波导宽度是语义错误的 fall-back，
+        会产生假阳性。故移除 device.width_um 回退分支。
+
+    Bug 修复 (R05): 真实板子测试 (real_board/siepic/MZI1.gds) 发现
+        ebeam_y_1550 (y_branch) width_um=15.0 (BBOX) 与
+        ebeam_y_1550_1 width_um=14.999999999999998 (BBOX 浮点噪声)
+        被误判为波导宽度不匹配，导致 7/7 真实电路 DRC 全失败。
+        修复后优先取 params.wg_width=0.5 (真实波导宽度)。
+
+    来源 (R02 学术诚信):
+        - SiEPIC EBeam PDK strip_waveguide AABB 约定 (BBOX h=波导宽度)
           https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - gdsfactory wg_width 参数约定 (y_branch/mmi/gc 波导端口宽度)
+          https://gdsfactory.github.io/gdsfactory/
+        - SiEPIC-Tools Verification "Mismatched pin widths"
+          https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+        - Chrostowski & Hochberg 2015 §4.3 (模式失配损耗)
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+        - KLayout DRC width_check (波导宽度语义)
+          https://www.klayout.org/doc-qt5/manual/drc_runsets.html
     """
     params = device.get("params", {}) or {}
+    # 1. 显式波导宽度参数（最高优先级，适用于所有器件类型）
     if "width_um" in params:
         return float(params["width_um"])
-    if "width_um" in device:
-        return float(device["width_um"])
-    if "width" in placement:
-        # 通用 placement.width（部分数据集用 width 而非 w）
-        return None  # width 是器件长度，非波导宽度
-    if "h" in placement:
+    if "wg_width" in params:
+        return float(params["wg_width"])
+    if "waveguide_width" in params:
+        return float(params["waveguide_width"])
+    # 2. 仅波导类器件：placement.h = 波导宽度（strip_waveguide AABB 约定）
+    device_type = device.get("device_type", "") or device.get("type", "") or ""
+    if is_waveguide_device(device_type) and "h" in placement:
         return float(placement["h"])
+    # 3. 无波导宽度字段：返回 None（调用方跳过，非 fall-back）
+    #    禁止回退到 device.width_um（BBOX 宽度，非波导宽度）
     return None
 
 

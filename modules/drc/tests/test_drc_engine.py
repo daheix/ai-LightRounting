@@ -369,6 +369,95 @@ def test_waveguide_width_match_edge_explicit_param():
     )
 
 
+def test_waveguide_width_match_bbox_false_positive_regression():
+    """WAVEGUIDE_WIDTH_MATCH 回归: 非波导器件 BBOX 宽度不得用作波导宽度。
+
+    R05 Bug: 真实板子测试 (real_board/siepic/MZI1.gds) 发现两个 ebeam_y_1550
+    (y_branch) 的 device.width_um (BBOX 宽度) 分别为 15.0 和
+    14.999999999999998 (GDS 浮点噪声)，被误判为波导宽度不匹配，导致
+    7/7 真实电路 DRC 全失败 (0% 通过率)。
+
+    修复后 device_waveguide_width 应取 params.wg_width=0.5 (真实波导宽度)，
+    而非 device.width_um=15.0 (BBOX 宽度)。
+
+    来源 (R02):
+        - SiEPIC EBeam PDK ebeam_y_1550 y_branch 器件
+          https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+        - gdsfactory wg_width 参数约定 (波导端口宽度)
+          https://gdsfactory.github.io/gdsfactory/
+        - SiEPIC-Tools Verification "Mismatched pin widths"
+          https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
+        - IEEE 754 浮点比较 (math.isclose, PEP 485)
+          https://peps.python.org/pep-0485/
+        - Chrostowski & Hochberg 2015 §4.3 (模式失配)
+          https://www.cambridge.org/core/books/silicon-photonics-design/
+    """
+    # 模拟真实 GDS 提取的 y_branch 器件: BBOX width_um 不同 (浮点噪声),
+    # 但 params.wg_width 相同 (0.5μm 真实波导宽度)
+    circuit = {
+        "name": "y_branch_bbox_regression",
+        "devices": [
+            {
+                "name": "ebeam_y_1550",
+                "device_type": "y_branch",
+                "width_um": 15.0,  # BBOX 宽度 (非波导宽度)
+                "height_um": 7.0,
+                "params": {"radius": 5.0, "wg_width": 0.5, "wg_length": 9.5},
+                "ports": [("pin1", 0, 0, "west"), ("pin2", 10, 0, "east")],
+            },
+            {
+                "name": "ebeam_y_1550_1",
+                "device_type": "y_branch",
+                "width_um": 14.999999999999998,  # BBOX 浮点噪声
+                "height_um": 7.0,
+                "params": {"radius": 5.0, "wg_width": 0.5, "wg_length": 12.3},
+                "ports": [("pin1", 0, 0, "west"), ("pin2", 10, 0, "east")],
+            },
+        ],
+        "connections": [("ebeam_y_1550", "pin2", "ebeam_y_1550_1", "pin2")],
+        "canvas_w": 200, "canvas_h": 200,
+    }
+    placements = {
+        "ebeam_y_1550": {"x": 1.0, "y": 31.89, "w": 15.0, "h": 7.0},
+        "ebeam_y_1550_1": {"x": 1.0, "y": 38.89, "w": 14.999999999999998, "h": 7.0},
+    }
+    result = run_drc(circuit, placements)
+    assert "WAVEGUIDE_WIDTH_MATCH" not in _violation_rule_names(result), (
+        f"y_branch wg_width=0.5/0.5 应匹配 (BBOX 15.0 vs 14.999... 不得用作"
+        f"波导宽度)，违规: {_violation_rule_names(result)}"
+    )
+
+
+def test_waveguide_width_match_float_noise_tolerance():
+    """WAVEGUIDE_WIDTH_MATCH 回归: 同宽度浮点噪声不得触发假阳性。
+
+    两个 strip_waveguide 的 params.width_um 因浮点运算产生 1e-15 级差异，
+    math.isclose 应吸收此噪声，不报告违规。
+    """
+    circuit = {
+        "name": "float_noise",
+        "devices": [
+            {"name": "wg1", "device_type": "strip_waveguide",
+             "params": {"width_um": 0.5},
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+            {"name": "wg2", "device_type": "strip_waveguide",
+             "params": {"width_um": 0.49999999999999994},  # 浮点噪声
+             "ports": [("in", 0, 0, "west"), ("out", 10, 0, "east")]},
+        ],
+        "connections": [("wg1", "out", "wg2", "in")],
+        "canvas_w": 100, "canvas_h": 100,
+    }
+    placements = {
+        "wg1": {"x": 10.0, "y": 10.0, "w": 10.0, "h": 0.5},
+        "wg2": {"x": 30.0, "y": 10.0, "w": 10.0, "h": 0.5},
+    }
+    result = run_drc(circuit, placements)
+    assert "WAVEGUIDE_WIDTH_MATCH" not in _violation_rule_names(result), (
+        f"浮点噪声 (0.5 vs 0.49999999999999994) 应由 math.isclose 吸收，"
+        f"违规: {_violation_rule_names(result)}"
+    )
+
+
 # ----- MIN_NOTCH（最小凹槽宽度 0.1μm = 100nm）-----
 
 

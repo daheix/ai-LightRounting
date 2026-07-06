@@ -227,7 +227,10 @@ DEFAULT_DRC_RULES: list[DRCRule] = [
         severity=0.9,
         description=("连接两端波导宽度必须匹配（SiEPIC Verification "
                      "'Mismatched pin widths'）。宽度取自 device.params.width_um "
-                     "或 device.width_um，未声明则视为器件级共享宽度（h）"),
+                     "→ params.wg_width → params.waveguide_width → 波导类器件 "
+                     "placement.h。禁止回退到 device.width_um（BBOX 宽度，非波导"
+                     "宽度）。浮点噪声由 math.isclose(rel_tol=1e-9, abs_tol=1e-9) "
+                     "吸收。"),
     ),
     DRCRule(
         name="MIN_NOTCH",

@@ -113,16 +113,29 @@ class WaveguideRulesMixin:
                                      placements: dict) -> list[DRCViolation]:
         """WAVEGUIDE_WIDTH_MATCH: 连接两端波导宽度必须匹配。
 
-        宽度取自 device.params.width_um → device.width_um → placements.h
-        （水平波导宽度 = h，与 SiEPIC strip_waveguide 一致）。
+        宽度取自 device_waveguide_width (params.width_um → params.wg_width
+        → params.waveguide_width → 波导类器件 placement.h)。
         tolerance=rule.threshold（默认 0.0μm，即完全匹配）。
+
+        浮点噪声处理 (R05 Bug 修复):
+            GDS 几何提取产生的浮点误差 (如 14.999999999999998 vs 15.0)
+            会在 threshold=0.0 时触发假阳性。使用 math.isclose(rel_tol=1e-9,
+            abs_tol=1e-9) 作为一级匹配判定，仅当 not isclose 且 delta > tol
+            时才计为违规。1e-9μm = 1fm 远低于任何物理意义 (典型波导 500nm)。
 
         来源（R02）:
             - SiEPIC Verification "Mismatched pin widths"
               https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
             - SiEPIC EBeam PDK https://github.com/SiEPIC/SiEPIC_EBeam_PDK
             - Chrostowski & Hochberg 2015 §4.3（模式失配损耗）
+              https://www.cambridge.org/core/books/silicon-photonics-design/
+            - IEEE 754 浮点比较最佳实践 (math.isclose, PEP 485)
+              https://peps.python.org/pep-0485/
+            - gdsfactory wg_width 参数约定
+              https://gdsfactory.github.io/gdsfactory/
         """
+        import math
+
         tol = rule.threshold
         device_map = build_device_map(circuit)
         violations: list[DRCViolation] = []
@@ -132,7 +145,11 @@ class WaveguideRulesMixin:
             w2 = device_waveguide_width(device_map.get(d2, {}), placements.get(d2, {}))
             if w1 is None or w2 is None:
                 continue  # 任一端宽度未声明，跳过（非 fall-back）
-            if abs(w1 - w2) > tol:
+            delta = abs(w1 - w2)
+            # 一级判定: math.isclose 吸收浮点噪声 (1e-9μm=1fm，无物理意义)
+            # 二级判定: 显式阈值 (rule.threshold)
+            if (not math.isclose(w1, w2, rel_tol=1e-9, abs_tol=1e-9)
+                    and delta > tol):
                 port1 = find_port(device_map.get(d1, {}), p1)
                 loc = port_abs(placements[d1], port1) if port1 else (0.0, 0.0)
                 violations.append(DRCViolation(
@@ -140,7 +157,7 @@ class WaveguideRulesMixin:
                     severity=rule.severity,
                     message=(f"{rule.name}: 连接 {d1}.{p1}(w={w1:.4f}μm)→"
                              f"{d2}.{p2}(w={w2:.4f}μm) 宽度不匹配 "
-                             f"Δ={abs(w1 - w2):.4f}μm > 容差 {tol:.4f}μm"),
+                             f"Δ={delta:.4f}μm > 容差 {tol:.4f}μm"),
                     device_name=d1,
                     location=loc,
                 ))
