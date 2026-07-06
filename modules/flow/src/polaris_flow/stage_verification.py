@@ -131,6 +131,42 @@ def stage5_simulation(recipe: Recipe, workspace: Workspace, prev_outputs: dict) 
 # =============================================================================
 
 
+def _serialize_drc_violations(violations) -> list[dict]:
+    """序列化 ConstraintViolation 列表为 dict 列表。
+
+    待 polaris_verify_advanced 迁移后激活（当前 stage6_drc_lvs raise ImportError）。
+    """
+    return [
+        {
+            "type": v.vtype.value,
+            "severity": float(v.severity),
+            "message": v.message,
+            "device_name": v.device_name,
+            "net_id": v.net_id,
+            "location": list(v.location) if v.location else None,
+        }
+        for v in violations
+    ]
+
+
+def _build_check_context(prev_outputs: dict):
+    """从 prev_outputs 构建 CheckContext（含损耗/交叉数/canvas 尺寸）。
+
+    待 polaris_verify_advanced 迁移后激活（当前 stage6_drc_lvs raise ImportError）。
+    """
+    total_loss_db = float(prev_outputs.get("total_loss_db", 0.0))
+    n_crossings = int(prev_outputs.get("n_crossings", 0))
+    circuit_dict = prev_outputs.get("circuit", {})
+    canvas_w = float(circuit_dict.get("canvas_w", 0.0)) if circuit_dict else 0.0
+    canvas_h = float(circuit_dict.get("canvas_h", 0.0)) if circuit_dict else 0.0
+    return CheckContext(
+        total_loss_db=total_loss_db,
+        n_crossings=n_crossings,
+        canvas_w=canvas_w,
+        canvas_h=canvas_h,
+    )
+
+
 def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 6: DRC/LVS 约束检查。
 
@@ -164,33 +200,10 @@ def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
         max_insertion_loss_db=loss_target_db,
     )
     checker = ConstraintChecker(config=config)
-
-    # 构建检查上下文（含损耗与交叉数，来自阶段 5）
-    total_loss_db = float(prev_outputs.get("total_loss_db", 0.0))
-    n_crossings = int(prev_outputs.get("n_crossings", 0))
-    circuit_dict = prev_outputs.get("circuit", {})
-    canvas_w = float(circuit_dict.get("canvas_w", 0.0)) if circuit_dict else 0.0
-    canvas_h = float(circuit_dict.get("canvas_h", 0.0)) if circuit_dict else 0.0
-    ctx = CheckContext(
-        total_loss_db=total_loss_db,
-        n_crossings=n_crossings,
-        canvas_w=canvas_w,
-        canvas_h=canvas_h,
-    )
+    ctx = _build_check_context(prev_outputs)
 
     violations = checker.check(placements=placements, paths=routes, context=ctx)
-    # 序列化违规列表
-    violation_list = [
-        {
-            "type": v.vtype.value,
-            "severity": float(v.severity),
-            "message": v.message,
-            "device_name": v.device_name,
-            "net_id": v.net_id,
-            "location": list(v.location) if v.location else None,
-        }
-        for v in violations
-    ]
+    violation_list = _serialize_drc_violations(violations)
     n_violations = len(violation_list)
     drc_passed = n_violations == 0
 
