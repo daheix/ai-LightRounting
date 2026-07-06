@@ -37,6 +37,7 @@ from polaris_parasitic.constants import (
     DEFAULT_SPICE_TIMESTEP_S,
 )
 from polaris_parasitic.verilog_a_models import VerilogAModel
+from polaris_parasitic.verilog_a_rawfile import parse_ngspice_rawfile
 
 
 @dataclass
@@ -236,18 +237,45 @@ def generate_spice_netlist(
         DEVICE_TYPE_DETECTOR,
         DEVICE_TYPE_MODULATOR,
     )
-    lines = [
+    lines = _build_netlist_header(config)
+    has_modulator, has_detector = _build_subckts(
+        models, lines, DEVICE_TYPE_MODULATOR, DEVICE_TYPE_DETECTOR
+    )
+    if not has_modulator:
+        raise ValueError("models 须含至少 1 个 modulator")
+    if not has_detector:
+        raise ValueError("models 须含至少 1 个 detector")
+    _build_input_source(lines, input_signal, config)
+    _instantiate_modulator(lines, models, DEVICE_TYPE_MODULATOR)
+    _instantiate_detector(lines, models, DEVICE_TYPE_DETECTOR)
+    _append_connections(lines, connections)
+    lines.append("")
+    lines.append(f".tran {config.sync_timestep:.6e} {config.total_time:.6e}")
+    lines.append(".end")
+    return "\n".join(lines)
+
+
+def _build_netlist_header(config: SPICESimulationConfig) -> list[str]:
+    """构建网表头部注释与时间步信息。"""
+    return [
         "* PoLaRIS 光电协同仿真网表 (self-contained ngspice-runnable)",
         f"* 同步时间步: {config.sync_timestep:.6e} s",
         f"* 总时间: {config.total_time:.6e} s",
         "",
     ]
-    # 内联 .subckt 定义：被动器件用 S-param VCCS，有源用行为 RC
+
+
+def _build_subckts(
+    models: list[VerilogAModel],
+    lines: list[str],
+    mod_type: str,
+    det_type: str,
+) -> tuple[bool, bool]:
+    """构建内联 .subckt 定义（被动器件用 S-param VCCS，有源用行为 RC）。"""
     has_modulator = has_detector = False
     for model in models:
-        if model.device_type in (DEVICE_TYPE_MODULATOR,):
+        if model.device_type == mod_type:
             has_modulator = True
-            v_pi = model.parameters.get("v_pi", 2.0)
             lines.append(
                 f".subckt {model.module_name} rf_in rf_gnd\n"
                 f"  * MZM RF 电极: R_series + C_electrode (Chrostowski §8.4)\n"
@@ -255,7 +283,7 @@ def generate_spice_netlist(
                 f"  C_rf rf_int rf_gnd 1p\n"
                 f".ends"
             )
-        elif model.device_type == DEVICE_TYPE_DETECTOR:
+        elif model.device_type == det_type:
             has_detector = True
             r_load = model.parameters.get("load_resistance", 50.0)
             lines.append(
@@ -266,18 +294,18 @@ def generate_spice_netlist(
                 f".ends"
             )
         else:
-            # 被动光子器件: S-param → Y-param VCCS 子电路
             try:
                 lines.append(s_params_to_spice_subcircuit(model))
             except ValueError:
-                # 非 2 端口被动器件: 跳过（网表仍可运行，仅缺该器件电学模型）
                 lines.append(f"* 跳过 {model.module_name} (非 2 端口，无电学子电路)")
         lines.append("")
-    if not has_modulator:
-        raise ValueError("models 须含至少 1 个 modulator")
-    if not has_detector:
-        raise ValueError("models 须含至少 1 个 detector")
-    # 输入信号源
+    return has_modulator, has_detector
+
+
+def _build_input_source(
+    lines: list[str], input_signal: str, config: SPICESimulationConfig
+) -> None:
+    """根据信号类型生成输入电压源 + 驱动电阻。"""
     dt = config.sync_timestep
     if input_signal == "pulse":
         lines.append(
@@ -291,25 +319,36 @@ def generate_spice_netlist(
             f"V_in in 0 PULSE(0 0.33 0 {dt:.6e} {dt:.6e} {dt*2:.6e} {dt*8:.6e})"
         )
     lines.append("R_driver in driver_int 50")
-    # 实例化调制器（RF 电极加载驱动）
+
+
+def _instantiate_modulator(
+    lines: list[str], models: list[VerilogAModel], mod_type: str
+) -> None:
+    """实例化调制器（RF 电极加载驱动）。"""
     for model in models:
-        if model.device_type == DEVICE_TYPE_MODULATOR:
+        if model.device_type == mod_type:
             lines.append(f"X_mod driver_int 0 {model.module_name}")
-    # 探测器行为光电流源（耦合光域传输，*创新* 紧凑模型）
+
+
+def _instantiate_detector(
+    lines: list[str], models: list[VerilogAModel], det_type: str
+) -> None:
+    """实例化探测器行为光电流源（耦合光域传输，*创新* 紧凑模型）。"""
     expr, _p_laser = _build_optical_chain_expression(models, rf_node="in")
     for model in models:
-        if model.device_type == DEVICE_TYPE_DETECTOR:
+        if model.device_type == det_type:
             lines.append(f"B_pd out 0 I=({expr})")
             lines.append(f"X_pd out 0 {model.module_name}")
             break
-    # 连接注释（拓扑已在实例化中体现）
+
+
+def _append_connections(
+    lines: list[str], connections: list[tuple[str, str]] | None
+) -> None:
+    """连接注释（拓扑已在实例化中体现）。"""
     if connections:
         for net1, net2 in connections:
             lines.append(f"* 连接: {net1} <-> {net2}")
-    lines.append("")
-    lines.append(f".tran {dt:.6e} {config.total_time:.6e}")
-    lines.append(".end")
-    return "\n".join(lines)
 
 
 def run_ngspice_cosimulation(
@@ -365,7 +404,7 @@ def run_ngspice_cosimulation(
                 f"Ngspice 输出文件不存在或为空: {rawfile_path}，"
                 f"请检查 Ngspice 仿真是否完成"
             )
-        time_points, voltage = _parse_ngspice_rawfile(rawfile)
+        time_points, voltage = parse_ngspice_rawfile(rawfile)
         optical_power = voltage ** 2 * DEFAULT_MODULATOR_EFFICIENCY
         return CoSimulationResult(
             time_points=time_points,
@@ -382,168 +421,6 @@ def run_ngspice_cosimulation(
         Path(rawfile_path).unlink(missing_ok=True)
 
 
-def _parse_ngspice_rawfile(rawfile_path: Path) -> tuple[np.ndarray, np.ndarray]:
-    """解析 Ngspice rawfile，提取时间轴与输入节点电压。
-
-    支持 ASCII 和二进制 rawfile 格式。优先提取 v(in) 节点电压
-    （网表输入源为 ``V_in in 0 PULSE(...)``），若不存在则取首个非 time 电压列。
-
-    来源: Ngspice rawfile https://ngspice.sourceforge.io/docs.html;
-    rawfile 规范
-    https://sourceforge.net/p/ngspice/code/ci/master/tree/manual/;
-    PySpice 实现 https://pyspice.fabrice-salvaire.fr/
-
-    Args: rawfile_path: Ngspice rawfile 路径。
-    Returns: (time_points, voltage) 元组，均为 1D float64 数组。
-    Raises: RuntimeError: rawfile 格式不支持、数据缺失或电压节点未找到。
-    """
-    with open(rawfile_path, "rb") as fh:
-        content = fh.read()
-
-    header_text, binary_payload = _split_rawfile_payload(content)
-    n_vars, n_points, var_names = _parse_rawfile_header(header_text)
-    if n_points <= 0 or n_vars <= 0:
-        raise RuntimeError(
-            f"Ngspice rawfile 无有效数据点 (n_vars={n_vars}, "
-            f"n_points={n_points}): {rawfile_path}"
-        )
-
-    if binary_payload is not None:
-        # 二进制格式：连续 float64 数据，布局 n_points × n_vars
-        expected_bytes = n_points * n_vars * 8
-        if len(binary_payload) < expected_bytes:
-            raise RuntimeError(
-                f"Ngspice rawfile 二进制数据不完整: 期望 {expected_bytes} 字节，"
-                f"实际 {len(binary_payload)} 字节: {rawfile_path}"
-            )
-        data = np.frombuffer(
-            binary_payload[:expected_bytes], dtype=np.float64
-        ).reshape(n_points, n_vars)
-    else:
-        # ASCII 格式：Values 段后逐点列出
-        data = _parse_rawfile_ascii_values(header_text, n_points, n_vars)
-
-    time_points = data[:, 0]
-    voltage = _extract_input_voltage(data, var_names, rawfile_path)
-    return time_points, voltage
-
-
-def _split_rawfile_payload(content: bytes) -> tuple[str, bytes | None]:
-    """分离 rawfile 的 ASCII 头部与二进制数据段。
-
-    Returns: (header_text, binary_payload) 元组。binary_payload 为 None 表示纯 ASCII。
-    """
-    binary_marker = b"Binary:"
-    idx = content.find(binary_marker)
-    if idx != -1:
-        header = content[:idx].decode("ascii", errors="replace")
-        payload_start = idx + len(binary_marker)
-        # 跳过 "Binary:" 后的换行符
-        if payload_start < len(content) and content[payload_start:payload_start + 1] in (
-            b"\n",
-            b"\r",
-        ):
-            payload_start += 1
-        return header, content[payload_start:]
-    return content.decode("ascii", errors="replace"), None
-
-
-def _parse_rawfile_header(header: str) -> tuple[int, int, list[str]]:
-    """解析 rawfile 头部，返回 (n_vars, n_points, var_names)。
-
-    头部格式示例: Title/Plotname/Flags/No. Variables/No. Points/Variables 段，
-    Variables 段每行 "idx name type"（如 "0 time time", "1 v(in) voltage"）。
-    """
-    n_vars = 0
-    n_points = 0
-    var_names: list[str] = []
-    in_variables = False
-    for raw_line in header.splitlines():
-        line = raw_line.strip()
-        if line.startswith("No. Variables:"):
-            n_vars = int(line.split(":", 1)[1].strip())
-            in_variables = False
-        elif line.startswith("No. Points:"):
-            n_points = int(line.split(":", 1)[1].strip())
-            in_variables = False
-        elif line.startswith("Variables:"):
-            in_variables = True
-        elif in_variables:
-            if not line:
-                in_variables = False
-                continue
-            parts = line.split()
-            # 格式: "  0  time  time" 或 "  1  v(in)  voltage"
-            if len(parts) >= 2 and parts[0].isdigit():
-                var_names.append(parts[1])
-            else:
-                in_variables = False
-    return n_vars, n_points, var_names
-
-
-def _parse_rawfile_ascii_values(
-    header: str, n_points: int, n_vars: int
-) -> np.ndarray:
-    """解析 ASCII rawfile 的 Values 段。
-
-    ASCII 格式两种布局，均通过 token 计数自适应:
-    - 含行索引: "0 0.000e+00 1.000e+00\\n1 1.000e-09 9.999e-01"
-    - 不含行索引: "0 0.000e+00\\n1.000e+00\\n1 1.000e-09\\n9.999e-01"
-    """
-    values_marker = "Values:"
-    idx = header.find(values_marker)
-    if idx == -1:
-        raise RuntimeError("Ngspice rawfile 无 Values 段，无法解析 ASCII 数据")
-    data_text = header[idx + len(values_marker):]
-    flat_values: list[float] = []
-    for token in data_text.split():
-        try:
-            flat_values.append(float(token))
-        except ValueError:
-            # 跳过非数值标记
-            continue
-    expected_with_index = n_points * (n_vars + 1)
-    expected_without_index = n_points * n_vars
-    if len(flat_values) >= expected_with_index:
-        # 含行索引：每 (n_vars+1) 个 token 的首个为索引，需剔除
-        values: list[float] = []
-        for i in range(n_points):
-            row_start = i * (n_vars + 1) + 1
-            values.extend(flat_values[row_start:row_start + n_vars])
-        return np.array(values, dtype=np.float64).reshape(n_points, n_vars)
-    if len(flat_values) >= expected_without_index:
-        return np.array(
-            flat_values[:expected_without_index], dtype=np.float64
-        ).reshape(n_points, n_vars)
-    raise RuntimeError(
-        f"Ngspice rawfile ASCII 数据不完整: 期望 {expected_without_index} 个数值，"
-        f"实际解析 {len(flat_values)} 个"
-    )
-
-
-def _extract_input_voltage(
-    data: np.ndarray, var_names: list[str], rawfile_path: Path
-) -> np.ndarray:
-    """从 rawfile 数据中提取输入节点电压。
-
-    网表输入源为 ``V_in in 0 PULSE(...)``，故优先提取 v(in)。
-    若 v(in) 不存在，取首个非 time 电压变量（真实仿真数据，非合成）。
-
-    Raises:
-        RuntimeError: 无可用电压列。
-    """
-    for i, name in enumerate(var_names):
-        if name.lower() == "v(in)":
-            return data[:, i]
-    for i, name in enumerate(var_names):
-        if i > 0 and name.lower().startswith("v("):
-            return data[:, i]
-    if data.shape[1] >= 2:
-        return data[:, 1]
-    raise RuntimeError(
-        f"Ngspice rawfile 无电压变量，无法提取电压数据: {rawfile_path} "
-        f"(变量: {var_names})"
-    )
 
 
 # === 光电协同仿真（*创新*）：Verilog-A 模型 + 自研 MNA SPICE 桥接 ===
