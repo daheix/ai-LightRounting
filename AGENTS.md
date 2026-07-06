@@ -43,7 +43,13 @@ git 有 commit + 操作记录有 → 跳过；目标文件存在 → 必须 Read
 不参与 GPU 计算。禁止 CuPy/CUDA/ROCm。纯 NumPy/SciPy/JAX(CPU)。
 
 ## 10. 磁盘空间
-日志上限 10MB（RotatingFileHandler）。空间不足时删：swiftly(6.5G)/mise(3.0G)/rustup(1.8G)。
+日志上限 99MB（RotatingFileHandler，单文件 99MB × 2 备份 = 198MB 总上限）。空间不足时删：swiftly(6.5G)/mise(3.0G)/rustup(1.8G)。
+
+## 10.1 禁止 Git LFS（2026-07-06 用户指示）
+- 禁止 `git lfs install` / `.gitattributes` 配置 LFS filter
+- 禁止 `git lfs track` 任何文件类型
+- 大文件（<100MB）直接 git add 提交，不使用 LFS
+- 单文件硬上限 99MB（低于 GitHub 100MB 硬限制）
 
 ## 11. 监控脚本
 - `scripts/auto_commit.py V8`：每 6 分钟检测变更→提交→push

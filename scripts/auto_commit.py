@@ -51,15 +51,15 @@ LOG_FILE = REPO_DIR / "auto_commit.log"
 MAIN_BRANCH = "main"
 MAX_DELETED_FILES = 10  # 删除文件阈值（防误删）
 
-# 日志配置（循环日志，R05 磁盘有限，循环保留 100MB）
-# 总上限 = maxBytes × (backupCount + 1) = 50 MB × 2 = 100 MB
-# 来源：用户规则 2026-06-29 "运行日志循环保留 100M"
+# 日志配置（循环日志，R05 磁盘有限，循环保留 198MB）
+# 总上限 = maxBytes × (backupCount + 1) = 99 MB × 2 = 198 MB
+# 来源：用户规则 2026-07-06 "日志上限提高到 99MB"（原 50MB → 99MB）
 from logging.handlers import RotatingFileHandler
 
 logger = logging.getLogger("auto_commit")
 logger.setLevel(logging.INFO)
 handler = RotatingFileHandler(
-    LOG_FILE, maxBytes=50 * 1024 * 1024, backupCount=1, encoding="utf-8"
+    LOG_FILE, maxBytes=99 * 1024 * 1024, backupCount=1, encoding="utf-8"
 )
 handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
 logger.addHandler(handler)
