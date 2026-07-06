@@ -30,6 +30,10 @@
 - KLayout DRC 文档 https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 - OpenDRC: He et al., DAC 2023 https://doi.org/10.1109/DAC56929.2023.10247734
 - Banerjee, "CMOS Photonic Circuits", Springer 2024（CMP 密度规则）
+  https://link.springer.com/book/10.1007/978-3-031-47837-9
+- Ericson, "Real-Time Collision Detection", MK 2005（AABB 距离）
+  https://realtimecollisiondetection.net/
+- Ligentec ANR PDK DRC runset https://www.ligentec.com/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

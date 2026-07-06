@@ -7,6 +7,13 @@
 
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
+- DREAMPlace (GPU 布局布线深度学习) https://arxiv.org/abs/2004.10746
+- AlphaChip (Google RL 宏布局) https://www.nature.com/articles/s41586-021-03544-w
+- TILOS MacroPlacement benchmark
+  https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- Apollo (ASU 布局布线 RL) https://github.com/ASU-LOPE-Group/Apollo
+- LiDAR ISPD 2025 (布线竞赛) https://arxiv.org/html/2505.17239v1
+- gdsfactory PDK 流水线 https://github.com/gdsfactory/gdsfactory
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

@@ -6,6 +6,15 @@
 
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
+- Clements et al., "Optimal design for universal multiport interferometers",
+  Optica 2016 https://doi.org/10.1364/OPTICA.3.001460
+- Reck et al., "Experimental realization of any discrete unitary operator",
+  PRL 1994 https://doi.org/10.1103/PhysRevLett.73.58
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- gdsfactory 预设电路 https://github.com/gdsfactory/gdsfactory
+- Knill-Laflamme-Milburn (KLM) 线性光学量子计算
+  https://www.nature.com/articles/35051009
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

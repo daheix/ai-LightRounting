@@ -4,6 +4,14 @@
 
 来源:
 - Python http.server: https://docs.python.org/3/library/http.server.html
+- Python threading（双重检查锁定） https://docs.python.org/3/library/threading.html
+- Double-checked locking pattern
+  https://en.wikipedia.org/wiki/Double-checked_locking
+- DREAMPlace (布局布线深度学习, 对标作业队列)
+  https://arxiv.org/abs/2004.10746
+- TILOS MacroPlacement benchmark
+  https://github.com/TILOS-AI-CAD-Institute/MacroPlacement
+- Apollo (ASU 布局布线 RL) https://github.com/ASU-LOPE-Group/Apollo
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

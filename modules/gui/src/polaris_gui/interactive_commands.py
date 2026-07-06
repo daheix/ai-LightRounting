@@ -13,6 +13,10 @@
 2. KLayout Scripting https://www.klayout.org/doc-qt5/manual/scripting.html
 3. Siemens L-Edit Photonics
    https://eda.sw.siemens.com/en-US/ic/ic-custom/photonic/l-edit-photonics/
+4. Qt Undo Framework（命令栈对标） https://doc.qt.io/qt-6/qundostack.html
+5. Python copy（深拷贝快照隔离） https://docs.python.org/3/library/copy.html
+6. Gamma Design Patterns（GoF 经典）
+   https://en.wikipedia.org/wiki/Design_Patterns
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

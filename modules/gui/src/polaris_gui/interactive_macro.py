@@ -14,8 +14,11 @@
    https://docs.python.org/3/library/code.html
 3. KLayout Macro IDE https://www.klayout.org/doc-qt5/manual/macro_editor.html
 4. Gamma et al., "Design Patterns", Addison-Wesley 1994
+   https://en.wikipedia.org/wiki/Design_Patterns
 5. Siemens L-Edit Photonics
    https://eda.sw.siemens.com/en-US/ic/ic-custom/photonic/l-edit-photonics/
+6. PEP 553 breakpoint() https://peps.python.org/pep-0553/
+7. Python sys.settrace https://docs.python.org/3/library/sys.html#sys.settrace
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

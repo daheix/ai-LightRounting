@@ -11,11 +11,15 @@
 来源（R02 学术诚信）:
 - SiEPIC EBeam PDK DRC runset https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 - Banerjee, "CMOS Photonic Circuits", Springer 2024（CMP 密度规则 30%-70%）
+  https://link.springer.com/book/10.1007/978-3-031-47837-9
 - Berg et al. 2014, "Computational Geometry", Springer（AABB 合并）
   https://doi.org/10.1007/978-3-540-77974-2
 - Ericson, "Real-Time Collision Detection", MK 2005（AABB 距离公式 §5.1.3）
   https://realtimecollisiondetection.net/
 - KLayout DRC 文档 https://www.klayout.org/doc-qt5/manual/drc_runsets.html
+- OpenDRC: He et al., DAC 2023 https://doi.org/10.1109/DAC56929.2023.10247734
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
+  https://www.cambridge.org/core/books/silicon-photonics-design/
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

@@ -5,6 +5,15 @@
 禁止假数据）。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU（纯数据结构）。
+
+文献来源（R02 学术诚信，≥5 个 URL）:
+- SiEPIC EBeam PDK (220nm SOI) https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- gdsfactory PDK 框架 https://github.com/gdsfactory/gdsfactory
+- AIM Photonics (US AIM) https://www.aimphotonics.com/
+- Luceda IPKISS https://www.lucedaphotonics.com/
+- AMF (Advanced Micro Foundry) https://www.advancedmicrofoundry.com/
 """
 
 from __future__ import annotations

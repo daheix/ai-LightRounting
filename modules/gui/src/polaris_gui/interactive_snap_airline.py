@@ -14,7 +14,11 @@
 3. Siemens L-Edit Photonics
    https://eda.sw.siemens.com/en-US/ic/ic-custom/photonic/l-edit-photonics/
 4. Gamma et al., "Design Patterns", Addison-Wesley 1994
+   https://en.wikipedia.org/wiki/Design_Patterns
 5. Farin, G., "Curves and Surfaces for CAGD", MK 2002
+   https://www.sciencedirect.com/book/9780122490545
+6. Python math（几何计算） https://docs.python.org/3/library/math.html
+7. KLayout DRC runset https://www.klayout.org/doc-qt5/manual/drc_runsets.html
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU。
 """

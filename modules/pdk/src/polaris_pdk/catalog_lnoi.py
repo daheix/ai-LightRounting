@@ -5,6 +5,18 @@
 禁止假数据）。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU（纯数据结构）。
+
+文献来源（R02 学术诚信，≥5 个 URL）:
+- HyperLight LNOI PDK (X-cut TFLN) https://hyperlightphotonics.com/
+- Liu et al., "LNOI platform: wafer-scale lithium niobate PICs",
+  Light Adv. Manuf. 2025 https://doi.org/10.37188/lam.2025.047
+- Chen et al., "High-confinement LNOI Mach-Zehnder modulator",
+  Opt. Lett. 2023 https://doi.org/10.1364/OL.481827
+- Wang et al., "LNOI MZM", Opt. Express 2018
+  https://doi.org/10.1364/OE.26.023428
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- gdsfactory PDK 框架 https://github.com/gdsfactory/gdsfactory
 """
 
 from __future__ import annotations

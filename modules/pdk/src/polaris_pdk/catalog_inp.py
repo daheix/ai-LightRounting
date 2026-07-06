@@ -5,6 +5,16 @@
 禁止假数据）。
 
 合规: R02 学术诚信 / R03 禁止 fall-back / R04 不参与 GPU（纯数据结构）。
+
+文献来源（R02 学术诚信，≥5 个 URL）:
+- JEPPIX InP generic platform https://www.jeppix.eu/
+- Soares et al., "InP-Based Foundry PICs for Optical Interconnects",
+  Appl. Sci. 2019 https://doi.org/10.3390/app9081588
+- Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
+  https://www.cambridge.org/core/books/silicon-photonics-design/
+- gdsfactory PDK 框架 https://github.com/gdsfactory/gdsfactory
+- AIM Photonics (US AIM) https://www.aimphotonics.com/
+- Fraunhofer HHI InP foundry https://www.hhi.fraunhofer.de/
 """
 
 from __future__ import annotations
