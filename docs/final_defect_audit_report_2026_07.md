@@ -54,7 +54,21 @@
 | 研发用途 | ✅ 可商用发布 | DRC 有效通过率 100%（85/85）> 95% 门槛 |
 | AI 训练数据 | ✅ 可商用发布 | 噪声率 4% < 10% 上限（Bengio ICML 2009 / AlphaChip proxy cost） |
 | 教学演示 | ✅ 可商用发布 | 12 条规则覆盖 SiEPIC 核心 + 6 条 P0 规则补齐 |
-| Tape-out sign-off | ❌ 不可发布 | 需补齐剩余 P1 规则 + 误报率 0%（R379已修复，已达标≤5%） + 集成 Calibre/IC Validator |
+| Tape-out sign-off | ❌ 不可发布 | 需补齐剩余 P1 规则 + 误报率 0%（R379已修复，实际修复日期 2026-07-06 22:10，本审计日期 2026-07-05 时尚未修复） + 集成 Calibre/IC Validator |
+
+> **第一性原理审核修正（2026-07-06 R382）**：本审计日期为 2026-07-05，但多处声称"R379已修复"。
+> 经核查 R379 实际发生于 2026-07-06 22:10（[操作记录.md:20256](file:///workspace/操作记录.md#L20256)），
+> 本审计在 2026-07-05 时 R379 **尚未发生**，属"时间穿越"错误（R02 学术诚信违规）。
+> 修正：所有"R379已修复"应理解为"R379 计划修复，实际于 2026-07-06 完成"。
+> 详见 [first_principles_audit_202607_defects.md](file:///workspace/docs/first_principles_audit_202607_defects.md) §3.2
+
+> **commit 6dd1ac0c 类型标注说明**：该 commit 标注为 "docs: R381" 但实际包含 17 处 `bend_compensate`
+> 代码变更（engine.py/rules.py），属 commit 类型误标。原因是 R379/R380/R381 三轮变更被 squash 合并。
+> 详见 [first_principles_audit_202607_defects.md](file:///workspace/docs/first_principles_audit_202607_defects.md) §11
+
+> **DRC 通过率口径披露**：本报告引用的 85/85（100%）来自 real_board 87 电路策划子集（排除 2 known_limitation），
+> 非 1200 合成电路全量测试（48%，576/1200）。商用发布结论须同时披露两个口径。
+> 详见 [first_principles_audit_202607_defects.md](file:///workspace/docs/first_principles_audit_202607_defects.md) §4
 
 ---
 
@@ -148,7 +162,7 @@
 | P0 必备规则覆盖率 | **100%（6/6）** | 100% | ✅ 已达标（commit 7fd0019e + 48002a90） |
 | 有效 DRC 通过率 | **100%（85/85）** | 95%+ | ✅ |
 | 名义 DRC 通过率 | 97.7%（85/87） | — | 2 个 known_limitation（gdsfactory 数据源自引用，非引擎 bug） |
-| DRC 误报率（严格模式 PORT_ALIGNMENT） | 0%（0/45，R379已修复） | ≤5% | ✅ R379已修复（bend_compensate 默认启用 + 多维容差方程） |
+| DRC 误报率（严格模式 PORT_ALIGNMENT） | 0%（0/45，R379已修复，实际修复日期 2026-07-06 22:10，本审计 2026-07-05 时尚未修复） | ≤5% | ✅ R379已修复（bend_compensate 默认启用 + 多维容差方程） |
 | 100% 准确必要性 | 不必要（研发 95%+ 即可） | — | ✅ 客观评估 |
 
 ### 4.2 已补齐的 6 条 P0 DRC 规则
@@ -254,7 +268,7 @@ SEPARATION / ENCLOSURE / EXTENSION / EXCLUSION / ANGLE_LIMIT / WAVEGUIDE_TAPER_A
 本报告**不引入任何 fall-back 数据**：
 - 所有得分基于 R36 v5.0/v6.0 showcase 实证，未添加任何假数据
 - 5 个未达标维度的根因、缺口、修复建议客观陈述，未夸大未缩小
-- DRC 覆盖率 72% / 误报率 0%（R379已修复） / P1 规则缺失 7 条 均如实记录
+- DRC 覆盖率 72% / 误报率 0%（R379实际修复于 2026-07-06，本审计 2026-07-05 时尚未修复，时间穿越错误已修正） / P1 规则缺失 7 条 均如实记录
 - `_get_region` 层缺失已 `raise RuntimeError`，不再兜底空 Region（commit 13cb34ab 验证）
 - 6 条 P0 DRC 规则在器件 params 未声明相关字段时选择跳过（合法物理含义：未声明 `bend_radius` 表示该器件无弯曲半径约束，非业务错误），所有违规检测基于真实几何数据，无任何伪造默认值
 
