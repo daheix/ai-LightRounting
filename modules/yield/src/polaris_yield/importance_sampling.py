@@ -553,6 +553,66 @@ def importance_sampling_yield(
     )
 
 
+def _evaluate_func_samples(
+    func: Callable[[np.ndarray], float], samples: np.ndarray, n_samples: int,
+) -> np.ndarray:
+    """评估 func(samples[i])，返回 g_values 数组（R03 失败即 raise）。"""
+    g_values = np.empty(n_samples, dtype=float)
+    for i in range(n_samples):
+        try:
+            g_values[i] = float(func(samples[i]))
+        except Exception as e:
+            raise RuntimeError(
+                f"func 评估失败 (样本 {i}): {type(e).__name__}: {e}。"
+                f"禁止 fall-back（R03）。"
+            ) from e
+    return g_values
+
+
+def _compute_is_mean_statistics(
+    g_values: np.ndarray, weights: np.ndarray, n_samples: int,
+    min_ess_ratio: float, log_w: np.ndarray, samples: np.ndarray,
+    biasing: BiasingSpec,
+) -> ImportanceSamplingResult:
+    """计算 IS 均值估计统计量并返回 ImportanceSamplingResult（R03 退化即 raise）。
+
+    学术依据: Glynn & Iglehart 1989, DOI: 10.1287/mnsc.35.11.1367
+    """
+    weighted = g_values * weights
+    mu_hat = float(np.mean(weighted))
+    var_is = float(np.var(weighted, ddof=1)) if n_samples > 1 else 0.0
+    se = float(np.sqrt(var_is / n_samples)) if var_is > 0 else 0.0
+    re = se / abs(mu_hat) if abs(mu_hat) > 0 else float("inf")
+    ci_lower = mu_hat - 1.96 * se
+    ci_upper = mu_hat + 1.96 * se
+    sum_w = float(np.sum(weights))
+    sum_w2 = float(np.sum(weights * weights))
+    ess = (sum_w * sum_w) / sum_w2 if sum_w2 > 0 else 0.0
+    ess_ratio = ess / n_samples if n_samples > 0 else 0.0
+    if ess_ratio < min_ess_ratio:
+        raise RuntimeError(
+            f"ESS 退化: ESS/n = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
+            f"权重过度集中，IS 估计不可靠。禁止 fall-back（R03）。"
+        )
+    if re > 0.5:
+        raise RuntimeError(
+            f"相对误差 RE = {re:.4f} > 0.5，IS 估计不可靠。禁止 fall-back（R03）。"
+        )
+    if ess_ratio < 0.3 or re > 0.1:
+        logger.warning(
+            "ESS/n = %.4f, RE = %.4f 在边缘区间，建议改进偏置分布。",
+            ess_ratio, re,
+        )
+    return ImportanceSamplingResult(
+        yield_estimate=mu_hat, std_error=se, relative_error=re,
+        ci_lower=ci_lower, ci_upper=ci_upper,
+        effective_sample_size=ess, speedup_vs_mc=float("nan"),
+        n_samples=n_samples, n_failures=0, n_evaluations=n_samples,
+        biasing_method=biasing.method.value, log_weights=log_w,
+        samples=samples, converged=None,
+    )
+
+
 def importance_sampling_mean(
     func: Callable[[np.ndarray], float],
     nominal_dist: list[dict],
@@ -583,71 +643,23 @@ def importance_sampling_mean(
 
     学术依据: Glynn & Iglehart 1989, DOI: 10.1287/mnsc.35.11.1367
     """
-    d = len(nominal_dist)
     _validate_yield_params(nominal_dist, n_samples, min_ess_ratio)
-    if d == 0:
+    if len(nominal_dist) == 0:
         raise ValueError("nominal_dist 不能为空")
-
     rng = np.random.default_rng(seed)
     f_dists = _build_univariate_distributions(nominal_dist)
     q_dists = _construct_biasing_distribution(nominal_dist, biasing)
-
     if biasing.method == BiasingMethod.MIXTURE:
         samples = _sample_mixture(
             f_dists, q_dists, biasing.mixture_alpha, n_samples, rng
         )
     else:
         samples = _sample_from_distributions(q_dists, n_samples, rng)
-
     log_w = _compute_log_weights(f_dists, q_dists, samples, biasing)
     weights = np.exp(log_w)
-
-    g_values = np.empty(n_samples, dtype=float)
-    for i in range(n_samples):
-        try:
-            g_values[i] = float(func(samples[i]))
-        except Exception as e:
-            raise RuntimeError(
-                f"func 评估失败 (样本 {i}): {type(e).__name__}: {e}。"
-                f"禁止 fall-back（R03）。"
-            ) from e
-
-    weighted = g_values * weights
-    mu_hat = float(np.mean(weighted))
-    var_is = float(np.var(weighted, ddof=1)) if n_samples > 1 else 0.0
-    se = float(np.sqrt(var_is / n_samples)) if var_is > 0 else 0.0
-    re = se / abs(mu_hat) if abs(mu_hat) > 0 else float("inf")
-    ci_lower = mu_hat - 1.96 * se
-    ci_upper = mu_hat + 1.96 * se
-
-    sum_w = float(np.sum(weights))
-    sum_w2 = float(np.sum(weights * weights))
-    ess = (sum_w * sum_w) / sum_w2 if sum_w2 > 0 else 0.0
-    ess_ratio = ess / n_samples if n_samples > 0 else 0.0
-
-    if ess_ratio < min_ess_ratio:
-        raise RuntimeError(
-            f"ESS 退化: ESS/n = {ess_ratio:.4f} < 阈值 {min_ess_ratio}。"
-            f"权重过度集中，IS 估计不可靠。禁止 fall-back（R03）。"
-        )
-    if re > 0.5:
-        raise RuntimeError(
-            f"相对误差 RE = {re:.4f} > 0.5，IS 估计不可靠。禁止 fall-back（R03）。"
-        )
-    if ess_ratio < 0.3 or re > 0.1:
-        logger.warning(
-            "ESS/n = %.4f, RE = %.4f 在边缘区间，建议改进偏置分布。",
-            ess_ratio,
-            re,
-        )
-
-    return ImportanceSamplingResult(
-        yield_estimate=mu_hat, std_error=se, relative_error=re,
-        ci_lower=ci_lower, ci_upper=ci_upper,
-        effective_sample_size=ess, speedup_vs_mc=float("nan"),
-        n_samples=n_samples, n_failures=0, n_evaluations=n_samples,
-        biasing_method=biasing.method.value, log_weights=log_w,
-        samples=samples, converged=None,
+    g_values = _evaluate_func_samples(func, samples, n_samples)
+    return _compute_is_mean_statistics(
+        g_values, weights, n_samples, min_ess_ratio, log_w, samples, biasing
     )
 
 
