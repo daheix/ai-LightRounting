@@ -140,19 +140,19 @@ class D10RoutesMixin:
             self._handle_editor_highlight_drc()
             return True
         if path == "/api/editor/drc/clear":
-            self._send_json(editor_clear_drc())
+            self._send_json({"success": True, **editor_clear_drc()})
             return True
         if path == "/api/editor/undo":
-            self._send_json(editor_undo())
+            self._send_json({"success": True, **editor_undo()})
             return True
         if path == "/api/editor/redo":
-            self._send_json(editor_redo())
+            self._send_json({"success": True, **editor_redo()})
             return True
         if path == "/api/editor/export_klayout":
             self._handle_editor_export_klayout()
             return True
         if path == "/api/editor/clear":
-            self._send_json(editor_clear())
+            self._send_json({"success": True, **editor_clear()})
             return True
         return False
 
