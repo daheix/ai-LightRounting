@@ -170,7 +170,7 @@ SEPARATION / ENCLOSURE / EXTENSION / EXCLUSION / ANGLE_LIMIT / WAVEGUIDE_TAPER_A
 
 基于 22 篇文献客观对照：
 - **Tape-out sign-off**: 100% 必要，但 PoLaRIS 非此类工具（不生成 sign-off deck）
-- **研发验证**: <5% 误报可接受（学术 SOTA PGR-DRC 99.95%，Mentor 承认光子曲线误报）
+- **研发验证**: <5% 误报可接受（Mohan et al. DATE 2023 商用门槛；Mentor 承认光子曲线误报；LiDAR 2.0 DRV-free 目标）
 - **AI 训练**: <10% 噪声可接受（Bengio CL / AlphaChip 用 proxy cost 非 DRC）
 - **PoLaRIS 当前**: 96-100% 通过率已超商用研发门槛（95%+）
 
@@ -348,36 +348,38 @@ PoLaRIS 距离 Lumerical/AlphaChip 的商业交付能力仍有 1-2 代差距：
 
 ### 8.6 误报率 / AI 训练噪声容忍度
 
-57. [PGR-DRC: Islam & Challagundla arXiv:2507.13355 (2025-06)](https://arxiv.org/html/2507.13355v1)
-58. [Mentor Graphics 光子 DRC 误报问题 DATE 2017](https://www.opticsforum.org/OPTICS2017/Hossam_Mentor_OPTICS_2017.pdf)
-59. [Mohan et al. Machine Learning for DRC DATE 2023](https://doi.org/10.23919/DATE56975.2023.10137091)
-60. [Bengio et al. Curriculum Learning ICML 2009](https://mn.cs.tsinghua.edu.cn/www24-curriculum/)
-61. [Wang et al. A Survey on Curriculum Learning TPAMI 2021](https://ar5iv.labs.arxiv.org/html/2010.13166)
-62. [Lu et al. Noise Robust SSL via Data Curriculum arXiv:2505.12191](https://arxiv.org/html/2505.12191v2)
-63. [AlphaChip 复现研究 UCSD IEEE TCAD](https://vlsicad.ucsd.edu/Publications/Journals/j148.pdf)
+57. [PGR-DRC: Islam & Challagundla arXiv:2507.13355 (2025-06)](https://arxiv.org/html/2507.13355v1) — **领域澄清**: VLSI 28nm CMOS DRC 违规预测（非光子学 DRC 检查器），仅作"学术 SOTA 也未达 100%"对照参考，不作为光子学 DRC 误报率对标
+58. [LiDAR 2.0 DRV-free 光子布线 arXiv:2505.17239v2 (ISPD 2025 + IEEE TCAD 2025)](https://arxiv.org/html/2505.17239v2) — 光子学 PORT_ALIGNMENT 误报优化的权威对标（offset neighbor 解析补偿）
+59. [Mentor Calibre eqDRC 多维容差方程](https://blogs.sw.siemens.com/calibre/2015/11/17/design-rule-checking-for-silicon-photonics/) — 商业光子 DRC 误报解决方案
+60. [Mentor Graphics 光子 DRC 误报问题 DATE 2017](https://www.opticsforum.org/OPTICS2017/Hossam_Mentor_OPTICS_2017.pdf)
+61. [Mohan et al. Machine Learning for DRC DATE 2023](https://doi.org/10.23919/DATE56975.2023.10137091) — 商用误报率门槛 ≤5%
+62. [Bengio et al. Curriculum Learning ICML 2009](https://mn.cs.tsinghua.edu.cn/www24-curriculum/)
+63. [Wang et al. A Survey on Curriculum Learning TPAMI 2021](https://ar5iv.labs.arxiv.org/html/2010.13166)
+64. [Lu et al. Noise Robust SSL via Data Curriculum arXiv:2505.12191](https://arxiv.org/html/2505.12191v2)
+65. [AlphaChip 复现研究 UCSD IEEE TCAD](https://vlsicad.ucsd.edu/Publications/Journals/j148.pdf)
 
 ### 8.7 流片服务 / 用户规模参考
 
-64. [NOEIC 2026 12 寸 40nm 硅光 MPW](https://www.noeic.com/news_center/1141.html)
-65. [NOEIC 2025 硅光 MPW 排期](https://www.noeic.com/news_center/1106.html)
-66. [光谷 12 寸硅光芯片流片平台投用 2025-11](https://news.hubeidaily.net/mobile/c_4768660.html)
+66. [NOEIC 2026 12 寸 40nm 硅光 MPW](https://www.noeic.com/news_center/1141.html)
+67. [NOEIC 2025 硅光 MPW 排期](https://www.noeic.com/news_center/1106.html)
+68. [光谷 12 寸硅光芯片流片平台投用 2025-11](https://news.hubeidaily.net/mobile/c_4768660.html)
 
 ### 8.8 国际标准
 
-67. [Verilog-AMS LRM](https://www.accellera.org/downloads/standards/v-ams)
-68. [GDSII Wikipedia](https://en.wikipedia.org/wiki/GDSII)
-69. [IEEE 802.3](https://standards.ieee.org/ieee/802.3/10853/)
-70. [ITU-T G.694.1 DWDM 频率栅格](https://www.itu.int/rec/T-REC-G.694.1)
+69. [Verilog-AMS LRM](https://www.accellera.org/downloads/standards/v-ams)
+70. [GDSII Wikipedia](https://en.wikipedia.org/wiki/GDSII)
+71. [IEEE 802.3](https://standards.ieee.org/ieee/802.3/10853/)
+72. [ITU-T G.694.1 DWDM 频率栅格](https://www.itu.int/rec/T-REC-G.694.1)
 
 ### 8.9 PoLaRIS 内部数据来源
 
-71. PoLaRIS DRC 规则定义 — `/workspace/modules/drc/src/polaris_drc/rules.py`
-72. PoLaRIS DRC 引擎 — `/workspace/modules/drc/src/polaris_drc/engine.py`
-73. R36 验收报告 v5.0 — `/workspace/docs/roundmap/R36_acceptance_report.md`
-74. 36 月路标总览 — `/workspace/docs/36-RoundMap.md`
-75. DRC 误报率审查报告 — `/workspace/out/audit/drc_false_positive_report.md`
-76. real_board 通过率统计 — `/workspace/real_board/summary.json`
-77. _get_region R03 修复 — `/workspace/modules/verify_advanced/src/polaris_verify_advanced/lvs_advanced_helpers.py:54-76`
+73. PoLaRIS DRC 规则定义 — `/workspace/modules/drc/src/polaris_drc/rules.py`
+74. PoLaRIS DRC 引擎 — `/workspace/modules/drc/src/polaris_drc/engine.py`
+75. R36 验收报告 v5.0 — `/workspace/docs/roundmap/R36_acceptance_report.md`
+76. 36 月路标总览 — `/workspace/docs/36-RoundMap.md`
+77. DRC 误报率审查报告 — `/workspace/out/audit/drc_false_positive_report.md`
+78. real_board 通过率统计 — `/workspace/real_board/summary.json`
+79. _get_region R03 修复 — `/workspace/modules/verify_advanced/src/polaris_verify_advanced/lvs_advanced_helpers.py:54-76`
 
 ---
 

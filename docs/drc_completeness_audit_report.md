@@ -186,7 +186,7 @@
 | 场景 | 100%必要？ | 行业依据 | PoLaRIS 当前状态 |
 |------|-----------|---------|-----------------|
 | **Tape-out sign-off** | ✅ 是 | TSMC/Synopsys/Calibre 严格要求，单次失败 >$1M | ❌ 非 PoLaRIS 定位（不生成 sign-off deck） |
-| **研发验证** | ❌ 否 | PGR-DRC SOTA 99.95%（Islam & Challagundla, arXiv:2507.13355）；Mentor 承认光子曲线误报 | ✅ 有效通过率100% |
+| **研发验证** | ❌ 否 | Mohan et al. DATE 2023 商用门槛 ≤5% 误报；LiDAR 2.0 DRV-free 目标；Mentor 承认光子曲线误报 | ✅ 有效通过率100%，误报率0% |
 | **AI训练数据** | ❌ 否 | Bengio CL（ICML 2009）；AlphaChip 用 proxy cost 非 DRC | ✅ 4% 噪声率 < 10% 上限 |
 | **商用发布（研发用途）** | ⚠️ 部分 | 核心100%、边缘95%+ | ✅ 已达商用门槛 |
 | **商用发布（tape-out级）** | ✅ 是 | 等同 tape-out sign-off | ❌ 需补齐6条P0规则+误报率降至≤5% |
@@ -198,8 +198,11 @@
 - 单次 DRC 违规可导致整批流片失败，损失数千美元至数百万美元。来源: https://www.fluxcoredynamics.com/docs/design-rules
 
 **研发阶段（允许<5%误报）**:
-- PGR-DRC（Islam & Challagundla, UMBC, arXiv:2507.13355, 2025-06）: 无监督 DRC 违规预测 SOTA，验证集 99.96%、测试集 99.95% 准确率。**即便是 SOTA 学术方法也未达 100%**。来源: https://arxiv.org/html/2507.13355v1
+- Mohan et al. DATE 2023《Machine Learning for DRC》: 商用 DRC 误报率门槛 ≤5%。来源: https://doi.org/10.23919/DATE56975.2023.10137091
+- LiDAR 2.0（arXiv:2505.17239v2, ISPD 2025 + IEEE TCAD 2025）: 光子布线 DRV-free 目标，§III-C2 offset neighbor 解析补偿消除 PORT_ALIGNMENT 误报。来源: https://arxiv.org/html/2505.17239v2
+- Mentor Calibre eqDRC: 商业光子 DRC 多维容差方程解决方案，"without the inclusion of false errors"。来源: https://blogs.sw.siemens.com/calibre/2015/11/17/design-rule-checking-for-silicon-photonics/
 - Mentor Graphics（现 Siemens EDA）光子 DRC 实践报告: "Rendered Curves Results in False DRC Errors"——光子电路的非曼哈顿曲线天然会产生 DRC 误报。来源: https://www.opticsforum.org/OPTICS2017/Hossam_Mentor_OPTICS_2017.pdf
+- PGR-DRC（Islam & Challagundla, UMBC, arXiv:2507.13355, 2025-06）: **领域澄清**——该论文是 VLSI 28nm CMOS 工艺的 DRC 违规预测（Synopsys Design Compiler + IC Compiler II），非光子学 DRC 检查器。仅作"学术 SOTA 也未达 100%"对照参考，不作为光子学 DRC 误报率对标。来源: https://arxiv.org/html/2507.13355v1
 
 **AI训练（允许<10%噪声）**:
 - Bengio et al. ICML 2009《Curriculum Learning》: 课程学习"减少低置信度噪声标签的负面影响"。来源: https://mn.cs.tsinghua.edu.cn/www24-curriculum/
@@ -290,37 +293,38 @@
 
 ### 7.3 学术论文来源
 
-21. LiDAR 2.0: Zhou et al. arXiv:2505.17239v1, ISPD 2025 — https://arxiv.org/html/2505.17239v1
-22. PGR-DRC: Islam & Challagundla, arXiv:2507.13355（2025-06）— https://arxiv.org/html/2507.13355v1
-23. Mentor Graphics 光子 DRC 误报问题（DATE 2017）— https://www.opticsforum.org/OPTICS2017/Hossam_Mentor_OPTICS_2017.pdf
-24. Mohan et al., "Machine Learning for DRC", DATE 2023 — https://doi.org/10.23919/DATE56975.2023.10137091
-25. Bengio et al., Curriculum Learning, ICML 2009 — https://mn.cs.tsinghua.edu.cn/www24-curriculum/
-26. Wang et al., A Survey on Curriculum Learning, TPAMI 2021 — https://ar5iv.labs.arxiv.org/html/2010.13166
-27. Lu et al., Noise Robust SSL via Data Curriculum, arXiv:2505.12191 — https://arxiv.org/html/2505.12191v2
-28. AlphaChip Nature 2024 Addendum — https://deepmind.google/discover/blog/how-alphachip-transformed-computer-chip-design/
-29. AlphaChip 复现研究（UCSD, IEEE TCAD）— https://vlsicad.ucsd.edu/Publications/Journals/j148.pdf
-30. El-Saeed et al., IMEC 低损耗硅弯曲 DC, arXiv:2404.06117（2024）— https://arxiv.org/html/2404.06117
+21. LiDAR 2.0: Zhou et al. arXiv:2505.17239v2, ISPD 2025 + IEEE TCAD 2025 — https://arxiv.org/html/2505.17239v2 — 光子学 PORT_ALIGNMENT 误报优化权威对标（offset neighbor 解析补偿，DRV-free 目标）
+22. Mentor Calibre eqDRC 多维容差方程 — https://blogs.sw.siemens.com/calibre/2015/11/17/design-rule-checking-for-silicon-photonics/ — 商业光子 DRC 误报解决方案
+23. PGR-DRC: Islam & Challagundla, arXiv:2507.13355（2025-06）— https://arxiv.org/html/2507.13355v1 — **领域澄清**: VLSI 28nm CMOS DRC 违规预测（非光子学 DRC 检查器），仅作"学术 SOTA 也未达 100%"对照参考
+24. Mentor Graphics 光子 DRC 误报问题（DATE 2017）— https://www.opticsforum.org/OPTICS2017/Hossam_Mentor_OPTICS_2017.pdf
+25. Mohan et al., "Machine Learning for DRC", DATE 2023 — https://doi.org/10.23919/DATE56975.2023.10137091 — 商用误报率门槛 ≤5%
+26. Bengio et al., Curriculum Learning, ICML 2009 — https://mn.cs.tsinghua.edu.cn/www24-curriculum/
+27. Wang et al., A Survey on Curriculum Learning, TPAMI 2021 — https://ar5iv.labs.arxiv.org/html/2010.13166
+28. Lu et al., Noise Robust SSL via Data Curriculum, arXiv:2505.12191 — https://arxiv.org/html/2505.12191v2
+29. AlphaChip Nature 2024 Addendum — https://deepmind.google/discover/blog/how-alphachip-transformed-computer-chip-design/
+30. AlphaChip 复现研究（UCSD, IEEE TCAD）— https://vlsicad.ucsd.edu/Publications/Journals/j148.pdf
+31. El-Saeed et al., IMEC 低损耗硅弯曲 DC, arXiv:2404.06117（2024）— https://arxiv.org/html/2404.06117
 
 ### 7.4 Tape-out sign-off 来源
 
-31. Synopsys IC Validator TSMC 28nm 资质认证 — https://news.synopsys.com/index.php?s=20295&item=123037
-32. Synopsys-TSMC N2P/A16 协作（2025-09）— https://investor.synopsys.com/news/news-details/2025/Synopsys-Collaborates-with-TSMC-to-Drive-the-Next-Wave-of-AI-and-Multi-Die-Innovation/default.aspx
-33. Synopsys IC Validator 白皮书 — https://www.synopsys.com/content/dam/synopsys/implementation&signoff/white-papers/ic-validator-physical-verification-wp.pdf
-34. IC 设计签核流程综述（2025-10）— https://juejin.cn/post/7556213099252301843
-35. Luceda IPKISS DRC 文档 — https://academy.lucedaphotonics.com/learn/drc
-36. Luceda SiEPIC Shuksan PDK — https://academy.lucedaphotonics.com/pdks/siepic_shuksan/siepic_shuksan
-37. AIM Photonics PDK 设计方法论 — https://www.latitudeda.com/document/372
-38. MIT/PhotonDelta 集成光电子路线图 — https://www.latitudeda.com/document/722
+32. Synopsys IC Validator TSMC 28nm 资质认证 — https://news.synopsys.com/index.php?s=20295&item=123037
+33. Synopsys-TSMC N2P/A16 协作（2025-09）— https://investor.synopsys.com/news/news-details/2025/Synopsys-Collaborates-with-TSMC-to-Drive-the-Next-Wave-of-AI-and-Multi-Die-Innovation/default.aspx
+34. Synopsys IC Validator 白皮书 — https://www.synopsys.com/content/dam/synopsys/implementation&signoff/white-papers/ic-validator-physical-verification-wp.pdf
+35. IC 设计签核流程综述（2025-10）— https://juejin.cn/post/7556213099252301843
+36. Luceda IPKISS DRC 文档 — https://academy.lucedaphotonics.com/learn/drc
+37. Luceda SiEPIC Shuksan PDK — https://academy.lucedaphotonics.com/pdks/siepic_shuksan/siepic_shuksan
+38. AIM Photonics PDK 设计方法论 — https://www.latitudeda.com/document/372
+39. MIT/PhotonDelta 集成光电子路线图 — https://www.latitudeda.com/document/722
 
 ### 7.5 PoLaRIS 内部数据来源
 
-39. PoLaRIS DRC 规则定义 — `/workspace/modules/drc/src/polaris_drc/rules.py`
-40. PoLaRIS DRC 引擎 — `/workspace/modules/drc/src/polaris_drc/engine.py`
-41. DRC规则对照报告 — `/workspace/docs/drc_rules_audit.md`
-42. 100%准确度评估 — `/workspace/docs/drc_100pct_accuracy_assessment.md`
-43. 误报率审查报告 — `/workspace/out/audit/drc_false_positive_report.md`
-44. real_board 通过率统计 — `/workspace/real_board/summary.json`
-45. 误报率审查脚本 — `/workspace/scripts/audit_drc_false_positives.py`
+40. PoLaRIS DRC 规则定义 — `/workspace/modules/drc/src/polaris_drc/rules.py`
+41. PoLaRIS DRC 引擎 — `/workspace/modules/drc/src/polaris_drc/engine.py`
+42. DRC规则对照报告 — `/workspace/docs/drc_rules_audit.md`
+43. 100%准确度评估 — `/workspace/docs/drc_100pct_accuracy_assessment.md`
+44. 误报率审查报告 — `/workspace/out/audit/drc_false_positive_report.md`
+45. real_board 通过率统计 — `/workspace/real_board/summary.json`
+46. 误报率审查脚本 — `/workspace/scripts/audit_drc_false_positives.py`
 
 ---
 
