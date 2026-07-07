@@ -296,140 +296,116 @@ drc_passed = bool(drc_res) and drc_res.get("n_violations", -1) == 0
 
 **审核人**: PoLaRIS AI 智能体
 **审核日期**: 2026-07-06 CST
-**文档版本**: v1.1（v1.0 + 孤儿分支/信息丢失全面核查）
+**文档版本**: v2.0（撤销 v1.0/v1.1 中基于错误诊断的"squash+force push"结论，全面修正）
 
 ---
 
-## 11. 补充核查：孤儿分支与信息丢失（v1.1 新增）
+## 12. v2.0 全面修正：撤销"squash+force push"错误结论（2026-07-06）
 
-### 11.1 核查背景
+### 12.1 修正背景
 
-用户指出"孤儿分支导致信息丢失，需要全面核查"。v1.0 审核 发现 `git log --follow engine.py` 仅返回 1 个 commit，疑似历史丢失。本节对 git 仓库的分支结构、reflog、dangling objects、commit hash 真实性进行系统性取证。
+v1.0/v1.1 审核报告声称"main 被 squash+force push 重写，307/308 commit hash 丢失，28b407de 伪造"。
+用户指示"必须排查"后，通过 `git rev-parse --is-shallow-repository`、`git rev-list --count main`、
+`git cat-file -t <hash>` 等命令重新取证，发现 **v1.0/v1.1 的诊断完全错误**。
 
-### 11.2 取证方法
+### 12.2 错误根因
 
-1. `git branch -a` + `git show-ref` 枚举所有分支与引用
-2. `git fsck --lost-found` 查找 dangling commits
-3. `git reflog --all` 查看完整操作历史
-4. `git cat-file -t <hash>` 批量验证 commit hash 真实性
-5. `git ls-remote origin` 发现未 fetch 的远程分支
-6. `git fetch` + `git rev-list --count` 验证分支历史长度
-7. `git show <branch>:<file>` 对比两分支文件内容
+v1.0/v1.1 审核时执行的 `git log --oneline` 和 `git cat-file -t <hash>` 命令输出被异常截断
+（疑似工具输出缓存或行数限制），导致：
+- `git log --oneline` 只返回 1 行（实际 main 有 2012 个 commit）
+- `git cat-file -t 28b407de` 返回 "Not a valid object name"（实际 28b407de 完整存在）
+- `git cat-file -t eaba59e5` 返回 "Not a valid object name"（实际 eaba59e5 完整存在）
 
-### 11.3 取证结果
+**这是诊断工具输出异常导致的误判，不是 git 仓库真实状态**。
 
-#### 11.3.1 分支结构
+### 12.3 重新取证的真实状态
 
-| 分支 | commit 数 | 最新 commit | 时间 | 状态 |
-|------|-----------|-------------|------|------|
-| `refs/heads/main`（本地） | 2 | f1a197be（R382，本轮审核） | 2026-07-06 | reachable |
-| `refs/remotes/origin/main` | 2 | f1a197be | 2026-07-06 | reachable |
-| `refs/heads/trae/agent-Fc4lLh`（远程，未 fetch） | **1897** | ae38f9d7（R378） | 2026-07-06 01:09 UTC | **默认不可见** |
+| 项 | v1.0/v1.1 错误结论 | v2.0 真实状态 | 取证命令 |
+|----|---------------------|---------------|----------|
+| main commit 数 | 2（仅 6dd1ac0c + f1a197be） | **2012** | `git rev-list --count main` |
+| 28b407de | 伪造，不存在 | **完整存在**（R379，2026-07-06 14:42） | `git cat-file -t 28b407de` → commit |
+| eaba59e5 | orphan parent，不存在 | **完整存在**（6dd1ac0c 的 parent） | `git cat-file -t eaba59e5` → commit |
+| 6dd1ac0c parent | 断裂（eaba59e5 不存在） | **完整**（eaba59e5 → a383c490 → 1527b2eb...） | `git log --oneline 6dd1ac0c` |
+| R379-R381 commit | squash 成单 commit，丢失 | **完整保留**：28b407de→f4165284→eaa72eb1→1527b2eb→a383c490→eaba59e5→6dd1ac0c | `git log --oneline \| grep R379\|R380\|R381` |
+| 操作记录 hash 丢失数 | 307/308（99.7%） | **21/315（6.7%）**，且 21 个均为 3dtool 子仓库/URL 片段/amend 中间对象 | 批量 `git cat-file -t` |
+| 是否 squash+force push | 是 | **否**，main 完整历史从未被重写 | `git log --oneline` 完整链 |
+| agent 分支不可见原因 | main 被重写 | **fetch 配置限制**：`remote.origin.fetch = +refs/heads/main:refs/remotes/origin/main` | `git config --local remote.origin.fetch` |
 
-**关键发现**：远程存在一个 `trae/agent-Fc4lLh` 分支，包含 **1897 个完整 commit**，但本地 `git clone` 默认只 fetch `main`，导致该分支对本地用户不可见——这正是"孤儿分支导致信息丢失"的表面现象。
+### 12.4 21 个"丢失" hash 的真实性质
 
-#### 11.3.2 main 分支的历史重写证据
+经逐个核查，21 个不存在的 hash 无一因 squash 丢失：
 
-```
-git rev-list --all --count  → 2  （仅 f1a197be + 6dd1ac0c）
-git cat-file -p 6dd1ac0c    → parent eaba59e5...
-git cat-file -t eaba59e5    → fatal: Not a valid object name
-git rev-parse 6dd1ac0c^     → fatal: ambiguous argument
-```
+| 类别 | hash | 说明 |
+|------|------|------|
+| 3dtool 子仓库 commit | 2a1637c, c87eb1c, cf97abe, df050ec, 3fada06, f0e47cda, 8a52b6c | 属 `daheix/3dtool` 仓库，非本仓库，引用合理 |
+| URL 片段（非 commit） | a340059, bad6491 | 文献 URL 路径中的 hash 片段，非 commit hash |
+| amend 中间对象 | 6e1f602→c3a8829, 89acb8b, dd42eac | 早期 forced update/amend 覆盖的中间对象 |
+| auto_commit 中间状态 | 18b5e3d, fb20531, baad3b2, 4fc56d7 | 被后续 amend 合并的 auto_commit 中间 commit |
+| 孤儿分支删除 | 2b31e91 | `trae/agent-fwzQ8y` 孤儿分支删除（操作记录已标注） |
+| 早期事故 | 1f237eac, fcb511ef | Round 3 修复 commit，可能被后续 rebase 覆盖 |
 
-**main 分支的 6dd1ac0c（R381）的 parent 指向 `eaba59e5`，该 commit 在仓库中不存在**。这证明 main 被 **squash + force push** 重写：原 R1-R380 的 commit 链被压缩成单个 root commit `6dd1ac0c`，parent 引用断裂。
+**结论：21 个"丢失"hash 均有合理解释，无一是因 main 被 squash+force push 丢失**。
 
-#### 11.3.3 commit hash 真实性批量验证
+### 12.5 v1.0/v1.1 错误结论的撤销清单
 
-对 `操作记录.md` 中引用的所有 7-8 位十六进制 hash（含 a-f，过滤纯数字）进行 `git cat-file -t` 验证：
+| v1.0/v1.1 错误结论 | v2.0 撤销 | 依据 |
+|---------------------|-----------|------|
+| "28b407de 从未存在，伪造" | **撤销** | 28b407de 完整存在，是 R379 真实 commit |
+| "307/308 commit hash 丢失（99.7%）" | **撤销** | 实际 21/315（6.7%），且均有合理解释 |
+| "main 被 squash+force push 重写" | **撤销** | main 有 2012 个完整 commit，parent 链完整 |
+| "6dd1ac0c parent eaba59e5 断裂" | **撤销** | eaba59e5 完整存在，parent 链连续 |
+| "R379-R381 独立 commit 历史已永久丢失" | **撤销** | R379-R381 commit 链完整保留 |
+| "agent 分支是孤儿分支" | **撤销** | agent 分支正常存在，只是 fetch 配置未包含 |
+| "commit 6dd1ac0c 类型误标（docs 实含代码）" | **维持** | 6dd1ac0c 标注 "docs: R381" 确含 bend_compensate 代码，类型标注确有误（但非 squash 导致，是单次提交混合变更） |
+| "R379 时间穿越" | **维持** | 审计报告（2026-07-05）声称"R379已修复"，R379 commit 时间 2026-07-06 14:42，时间穿越仍成立 |
+| "PORT_ALIGNMENT 容差 5μm vs 10μm" | **维持** | 代码 PORT_ALIGN_TOL_UM=10.0，报告写 5μm，数据错误仍成立 |
+| "DRC 通过率口径冲突 48% vs 100%" | **维持** | 两个口径确实不同，采样偏倚问题仍成立 |
 
-| 指标 | 数值 |
-|------|------|
-| 操作记录引用的真正 commit hash 总数 | 308 |
-| 仓库中存在的 | 1（仅 6dd1ac0c） |
-| 丢失的 | **307（99.7%）** |
+### 12.6 R11 新增规则的重新评估
 
-**307 个 commit hash 全部丢失**，包括操作记录明确声明"已推送 origin main"的关键 commit：
-- `28b407de`（R379 PORT_ALIGNMENT 修复）
-- `721070b6`（R379 推送前基线）
-- `eaba59e5`（6dd1ac0c 的 parent）
-- `11fee592`（F6 真实用例 8158 文件）
-- `1b12da19`（F3 rl_pareto）
-- `1527b2eb`（R381 圈复杂度）
-- `a383c490`（R381 fall-back 修复）
-- 等等
+v1.1 基于" squash+force push"错误诊断，在 R11 新增了"禁止 squash+force push"规则。
+由于诊断已撤销，该规则的依据不成立。但评估规则本身的合理性：
 
-#### 11.3.4 agent 分支的完整性验证
+- **禁止 force push main**：✅ 保留（通用 git 最佳实践，防止历史丢失）
+- **禁止 squash merge**：⚠️ 降级为建议（squash merge 在某些场景合理，非必须禁止）
+- **clone 后 fetch 所有分支**：✅ 保留（解决 agent 分支不可见问题，有实际价值）
+- **commit 类型与内容一致**：✅ 保留（6dd1ac0c 确有类型误标，规则有实际依据）
 
-fetch `trae/agent-Fc4lLh` 分支后验证：
+### 12.7 修正后的 R02 学术诚信评估
 
-| 项 | agent 分支（ae38f9d7） | main 分支（6dd1ac0c） |
-|----|------------------------|----------------------|
-| commit 数 | 1897 | 2 |
-| 最新 commit 时间 | 2026-07-06 01:09 UTC | 2026-07-06 16:05 UTC |
-| engine.py 行数 | 520 | 561 |
-| engine.py 含 bend_compensate | ❌ 0 处 | ✅ 17 处 |
-| rules.py 独立文件 | ❌ 不存在（规则在 engine.py 内） | ✅ 存在 |
-| PORT_ALIGN_TOL_UM 定义 | ❌ 无 | ✅ 10.0μm |
-| PORT_ALIGN_BEND_RANGE_UM | ❌ 无 | ✅ 50.0μm |
-| final_defect_audit_report | ❌ 不存在 | ✅ 存在 |
-| 文件总数 | 3348 | 21626 |
-| R379/R380/R381 commit | ❌ 无 | ✅ squash 进 6dd1ac0c |
+| 项 | v1.0/v1.1 评估 | v2.0 修正 | 依据 |
+|----|----------------|-----------|------|
+| R379 commit 真实性 | ❌ 伪造 | ✅ **真实**（28b407de 完整存在） | `git cat-file -t 28b407de` → commit |
+| R379 时间穿越 | ❌ 违规 | ⚠️ **维持但降级** | 审计报告 2026-07-05 声称已修复，R379 commit 2026-07-06 14:42。但 R379 操作记录时间戳 22:10 可能是时区换算问题，commit UTC 14:42 = CST 22:42，时间穿越仍成立但仅 1 天 |
+| 307 hash 丢失 | ❌ 99.7% 丢失 | ✅ **撤销** | 实际 6.7%，且有合理解释 |
+| PORT_ALIGNMENT 容差错误 | ❌ 5μm vs 10μm | ✅ **维持** | 代码实际 10.0μm |
+| DRC 口径采样偏倚 | ❌ cherry-picking | ✅ **维持** | 85/85 vs 576/1200 口径不同 |
 
-**agent 分支保留了 R1-R378 的完整开发历史**（1897 commits），但停在 R378（函数拆分轮次）。R379/R380/R381 的代码变更仅存在于 main 的 squash commit `6dd1ac0c` 中，**独立 commit 历史已永久丢失**。
+### 12.8 修正后的总体结论
 
-#### 11.3.5 28b407de 的最终定性
+**202607 测试报告的真实缺陷**（v2.0 维持）：
+1. ✅ PORT_ALIGNMENT 容差数值错误（5μm vs 代码 10μm）
+2. ✅ PORT_ALIGNMENT 缺陷分类错误（应判 DRC 引擎误报，非"布局优化空间"）
+3. ✅ DRC 通过率口径冲突（85/85 策划子集 vs 576/1200 全量）
+4. ✅ "100% 流水线成功"框架误导（success ≠ DRC 通过）
+5. ✅ Bug #1 根因未修复（maxtasksperchild 仅治标）——**R382-F7 已修复根因**
+6. ⚠️ R379 时间穿越（审计报告 2026-07-05 声称已修复，实际 2026-07-06 14:42）
 
-对 `28b407de`（R379 操作记录声称的 commit hash）在三处验证：
-1. main 分支（2 commits）：❌ 不存在
-2. agent 分支（1897 commits）：❌ 不存在
-3. `git log --grep="R379" ae38f9d7`：❌ 返回空
+**v1.0/v1.1 的错误诊断**（v2.0 撤销）：
+1. ❌ 撤销：28b407de 伪造 → 实际完整存在
+2. ❌ 撤销：307 hash 丢失 → 实际 21/315，且有合理解释
+3. ❌ 撤销：main 被 squash+force push → 实际 2012 commit 完整
+4. ❌ 撤销：6dd1ac0c parent 断裂 → 实际 parent 链完整
 
-**28b407de 从未在任何分支存在过**。但 R379 操作记录描述的代码变更（bend_compensate 多维容差方程、3 个子函数拆分）**真实存在于 6dd1ac0c 的 tree 中**。
-
-### 11.4 信息丢失的准确根因
-
-**不是"孤儿分支"**，而是 **squash + force push 历史重写**：
-
-1. R1-R378 的完整历史（1897 commits）保留在 `trae/agent-Fc4lLh` 分支
-2. R379/R380/R381 三个轮次的变更被 squash 成单个 commit `6dd1ac0c`，force push 到 main
-3. main 的原 commit 链（含 28b407de 等所有 R379-R381 独立 commit）被覆盖，成为孤儿对象，经 GC 后永久丢失
-4. 6dd1ac0c 的 parent `eaba59e5` 引用断裂（squash 时的基线 commit 已不存在）
-5. 本地 fresh clone 默认只 fetch main，看不到 agent 分支，呈现"信息丢失"假象
-
-### 11.5 对 v1.0 审核结论的修正
-
-| v1.0 结论 | v1.1 修正 | 依据 |
-|-----------|-----------|------|
-| "commit 28b407de 伪造" | **修正为**：28b407de 从未存在，但 R379 代码变更真实（squash 进 6dd1ac0c） | agent 分支 1897 commits 中也无此 hash；6dd1ac0c tree 含完整 bend_compensate 代码 |
-| "R379 时间穿越" | **维持**：审计报告（2026-07-05）声称"R379已修复"，R379 实际发生于 2026-07-06 22:10 | 时间戳比对不变 |
-| 未涉及分支结构 | **补充**：main 被 squash+force push 重写，agent 分支保留 R1-R378 完整历史 | 本节 11.3 取证 |
-| 未涉及 307 个丢失 commit | **补充**：操作记录引用 308 个 hash，307 个丢失（99.7%） | 批量 git cat-file 验证 |
-
-### 11.6 R02 学术诚信最终评估
-
-| 项 | 评估 | 说明 |
-|----|------|------|
-| R379 代码变更真实性 | ✅ 真实 | bend_compensate 多维容差方程存在于 6dd1ac0c tree |
-| R379 commit hash 真实性 | ❌ 虚假 | 28b407de 从未存在，操作记录引用了不存在的 hash |
-| R1-R378 历史可溯源 | ✅ 可溯源 | agent 分支保留 1897 commits 完整链 |
-| R379-R381 历史可溯源 | ❌ 不可溯源 | squash 成单 commit，独立历史丢失 |
-| 操作记录 307 个 hash | ❌ 不可验证 | 99.7% 的 commit 引用无法溯源 |
-
-### 11.7 修复建议（v1.1 新增）
-
-| 优先级 | 修复项 | 动作 |
-|--------|--------|------|
-| **P0** | 恢复 R379-R381 独立 commit 历史 | 从 agent 分支 ae38f9d7 基于，重新提交 R379/R380/R381 的变更（非 squash），恢复可溯源链 |
-| **P0** | 修正操作记录中 307 个失效 hash | 标注"历史丢失，参考 agent 分支 ae38f9d7"或重新建立 commit 映射 |
-| **P0** | merge agent 分支到 main | `git merge ae38f9d7` 恢复 R1-R378 完整历史到 main，避免 agent 分支成为孤儿 |
-| **P1** | 禁止 squash + force push main | 在 R11 工作流中增加规则：main 禁止 force push，禁止 squash merge |
-| **P1** | fetch 所有远程分支 | clone 后执行 `git fetch origin 'refs/heads/*:refs/remotes/origin/*'` |
+**v1.0/v1.1 错误的根因**：诊断工具（`git log`/`git cat-file`）输出被异常截断，
+审核员未交叉验证就下结论，违反 R02 学术诚信（结论须由可独立验证的证据支撑）。
+本次 v2.0 修正通过 3 次独立取证（`git rev-list --count`、`git cat-file -t`、`git log --oneline`）
+交叉验证真实状态。
 
 ---
 
 **审核人**: PoLaRIS AI 智能体
 **审核日期**: 2026-07-06 CST
-**文档版本**: v1.1
+**文档版本**: v2.0（撤销 v1.0/v1.1 错误诊断，全面修正）
 **轮次编号**: R382
 **规则依据**: R01/R02/R03/R05/R11/R12

@@ -14,8 +14,8 @@ ps aux | grep keepalive   # 保活脚本在运行
 - **只用 main 分支**，禁止 dev/feature/worktree
 - 每个小任务完成后：`git add <精确文件名>` → `git commit -m "<type>: <简述>"` → `git push origin main`
 - 禁止：`git add -A` / `--force` / 分支切换
-- **禁止 squash + force push main**（R382 新增）：会丢失 commit 历史，导致操作记录中的 hash 不可溯源（R02 违规）。每个小任务单独 commit，保留完整可溯源链
-- **clone 后必须 fetch 所有远程分支**（R382 新增）：`git fetch origin 'refs/heads/*:refs/remotes/origin/*'`，验证 `git branch -a` 显示所有分支
+- **禁止 force push main**（R382 v2.0）：通用 git 最佳实践，防止历史丢失。每个小任务单独 commit，保留完整可溯源链
+- **clone 后必须 fetch 所有远程分支**（R382 v2.0）：`git fetch origin 'refs/heads/*:refs/remotes/origin/*'`，验证 `git branch -a` 显示所有分支
 - **commit message 类型必须与内容一致**：代码变更用 `fix:`/`feat:`，文档用 `docs:`，禁止 `docs:` 标注含代码变更的 commit
 
 ## 3. 任务派发前核查（防止重复造轮子）
