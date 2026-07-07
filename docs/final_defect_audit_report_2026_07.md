@@ -158,7 +158,7 @@
 
 | 指标 | 当前值 | 商用门槛 | 状态 |
 |------|--------|----------|------|
-| DRC 规则覆盖率 | **72%（18/25）** | 90%+ | ⚠️ P0 已补齐，P1 仍缺 7 条 |
+| DRC 规则覆盖率 | **100%（25/25）** | 90%+ | ✅ 已达标（P0 commit 7fd0019e/48002a90 + P1 2026-07-07 R05 补齐 7 条，P1 缺失 7→0） |
 | P0 必备规则覆盖率 | **100%（6/6）** | 100% | ✅ 已达标（commit 7fd0019e + 48002a90） |
 | 有效 DRC 通过率 | **100%（85/85）** | 95%+ | ✅ |
 | 名义 DRC 通过率 | 97.7%（85/87） | — | 2 个 known_limitation（gdsfactory 数据源自引用，非引擎 bug） |
@@ -176,9 +176,23 @@
 | 5 | ENCLOSED_AREA_MIN | 0.01 μm² | KLayout `area_check` + DFS 环检测 |
 | 6 | CROSSING_ANGULAR | 90.0° | LiDAR 2.0 arXiv:2505.17239v1 ISPD 2025 II-B3 |
 
-### 4.3 待补齐的 P1 规则（7 条）
+### 4.3 已补齐的 P1 规则（7 条，2026-07-07 R05 修复）
 
-SEPARATION / ENCLOSURE / EXTENSION / EXCLUSION / ANGLE_LIMIT / WAVEGUIDE_TAPER_ANGLE / 单模宽度限制
+| # | 规则名 | 类别 | 阈值 | 文献来源 |
+|---|--------|------|------|----------|
+| 1 | SEPARATION | 跨层 | 1.0 μm | gdsfactory DRC notebook / KLayout DRC |
+| 2 | ENCLOSURE | 跨层 | 0.2 μm | gdsfactory DRC notebook / KLayout DRC |
+| 3 | EXTENSION | 跨层 | — | FluxCore |
+| 4 | EXCLUSION | 跨层 | — | FluxCore |
+| 5 | ANGLE_LIMIT | 波导级 | 45-135° | FluxCore |
+| 6 | WAVEGUIDE_TAPER_ANGLE | 波导级 | — | FluxCore / gdsfactory |
+| 7 | SINGLEMODE_WIDTH | 波导级 | 1.0 μm | Soref 1991 全矢量仿真 / Snyder & Love 1983 / Milton & Burns 1987 |
+
+**R05 Bug 修复记录**（SINGLEMODE_WIDTH 阈值溯源）：
+- `MW1_max_width_single_mode` 阈值由 1.05μm 修正为 **1.0μm**
+- V 参数块材料推导得出 0.375μm 过保守，不适用于矩形波导（V 参数源于阶跃光纤圆对称假设，矩形波导需全矢量本征模求解）
+- 1.0μm 来自 Soref 1991 SOI 条形波导全矢量仿真单模截止宽度
+- 文献溯源：Snyder & Love 1983《Optical Waveguide Theory》；Milton & Burns 1987《Coupled-mode theory》；Soref 1991 IEEE J. Quantum Electron.；gdsfactory DRC notebook；SiEPIC EBeam PDK；KLayout DRC；FluxCore
 
 ### 4.4 100% 准确度必要性评估结论
 
@@ -268,7 +282,7 @@ SEPARATION / ENCLOSURE / EXTENSION / EXCLUSION / ANGLE_LIMIT / WAVEGUIDE_TAPER_A
 本报告**不引入任何 fall-back 数据**：
 - 所有得分基于 R36 v5.0/v6.0 showcase 实证，未添加任何假数据
 - 5 个未达标维度的根因、缺口、修复建议客观陈述，未夸大未缩小
-- DRC 覆盖率 72% / 误报率 0%（R379实际修复于 2026-07-06，本审计 2026-07-05 时尚未修复，时间穿越错误已修正） / P1 规则缺失 7 条 均如实记录
+- DRC 覆盖率 72%→100%（2026-07-07 R05 修复补齐 7 条 P1 规则后达 25/25） / 误报率 0%（R379实际修复于 2026-07-06，本审计 2026-07-05 时尚未修复，时间穿越错误已修正） / P1 规则缺失 7→0 条 均如实记录
 - `_get_region` 层缺失已 `raise RuntimeError`，不再兜底空 Region（commit 13cb34ab 验证）
 - 6 条 P0 DRC 规则在器件 params 未声明相关字段时选择跳过（合法物理含义：未声明 `bend_radius` 表示该器件无弯曲半径约束，非业务错误），所有违规检测基于真实几何数据，无任何伪造默认值
 
@@ -422,8 +436,8 @@ PoLaRIS 36 个月路标（R01-R36）代码交付完成，v6.0 综合得分 **8.0
 
 - **研发用途**: ✅ **可发布**（DRC 有效通过率 100% > 95% 门槛，6 条 P0 规则已补齐）
 - **AI 训练数据**: ✅ **可发布**（噪声率 4% < 10% 上限）
-- **教学演示**: ✅ **可发布**（18 条 DRC 规则覆盖 SiEPIC 核心 + P0）
-- **Tape-out sign-off**: ❌ **不可发布**（需补齐 7 条 P1 规则 + 误报率降至 ≤5% + 集成 Calibre/IC Validator）
+- **教学演示**: ✅ **可发布**（25 条 DRC 规则覆盖 SiEPIC 核心 + P0 + P1，100% 覆盖率）
+- **Tape-out sign-off**: ❌ **不可发布**（7 条 P1 规则已补齐 2026-07-07 R05，DRC 覆盖率 100%；仍需误报率降至 ≤5% + 集成 Calibre/IC Validator）
 
 ### 10.3 优先行动建议
 

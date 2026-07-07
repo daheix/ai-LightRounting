@@ -1,9 +1,9 @@
 [project]
 name = "polaris-drc"
 version = "5.0.0"
-description = "PoLaRIS DRC 设计规则检查子模块（12 条 SiEPIC EBeam PDK DRC 规则，AABB 几何算法）"
+description = "PoLaRIS DRC 设计规则检查子模块（25 条 SiEPIC EBeam PDK + P0 波导级 + P1 跨层 DRC 规则，AABB 几何算法）"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.24"]
+dependencies = []
 
 [build-system]
 requires = ["setuptools>=68"]
