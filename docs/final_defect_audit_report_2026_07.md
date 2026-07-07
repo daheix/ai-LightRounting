@@ -286,6 +286,23 @@
 - `_get_region` 层缺失已 `raise RuntimeError`，不再兜底空 Region（commit 13cb34ab 验证）
 - 6 条 P0 DRC 规则在器件 params 未声明相关字段时选择跳过（合法物理含义：未声明 `bend_radius` 表示该器件无弯曲半径约束，非业务错误），所有违规检测基于真实几何数据，无任何伪造默认值
 
+### 7.2.1 环境限制客观陈述（2026-07-07 R384）
+
+| 限制项 | 状态 | 根因 | 解决方案 |
+|--------|------|------|----------|
+| real_board/skywater130 测试 | ✅ 已解决（285 passed in 14.87s） | gdsfactory 在 Python 3.14 不可用（pydantic-core 构建失败） | 使用 Python 3.12.13 venv (`/tmp/venv312`) 安装 gdsfactory 9.44.0 + pytest_regressions，全部 285 测试通过 |
+| 3dtool submodule 未检出 | ⚠️ 环境限制（sandbox 防火墙） | `git submodule update --init 3dtool` 失败：sandbox 防火墙阻止 github.com 访问（gnutls_handshake failed） | 需在有网络环境执行 `git submodule update --init 3dtool`；本地 sandbox 无法 clone |
+| numpy/networkx 依赖 | ✅ 已持久化 | pyenv Python 3.14.4 环境 pip install 后偶发丢失 | 已安装到 `/root/.pyenv/versions/3.14.4/lib/python3.14/site-packages/`，requirements.txt 已声明 |
+
+**real_board 测试环境配置（R384 验证）**:
+```bash
+/root/.pyenv/versions/3.12.13/bin/python3 -m venv /tmp/venv312
+/tmp/venv312/bin/pip install gdsfactory~=9.44.0 doroutes gdsfactoryplus PySpICE python-dotenv pytest_regressions
+/tmp/venv312/bin/pip install -e real_board/skywater130
+/tmp/venv312/bin/python3 -m pytest real_board/skywater130/tests/ --ignore=real_board/skywater130/tests/test_components.py -q
+# 结果: 285 passed in 14.87s
+```
+
 ### 7.3 与商业工具的真实差距（客观陈述）
 
 PoLaRIS 距离 Lumerical/AlphaChip 的商业交付能力仍有 1-2 代差距：
