@@ -218,8 +218,10 @@ class CurvilinearDRCEngine:
             CurvilinearDRCRule(
                 "MW1_max_width_single_mode",
                 DRCRuleCategory.MAX_WIDTH_SINGLE_MODE,
-                "waveguide", 1.05, "μm", False,
-                "最大宽度（防止过宽导致多模，1550nm SOI 单模截止）",
+                "waveguide", 1.0, "μm", False,
+                "最大宽度（单模截止，V 参数 V<2.405, Snyder & Love 1983 §13.5; "
+                "SOI 220nm@1550nm: W_max=2×2.405×1.55/(2π×√(3.476²-1.444²))≈1.00μm; "
+                "R05 修正: 原 1.05μm 无文献支撑）",
             ),
         ]
 

@@ -76,7 +76,7 @@ placements 中 x, y 为器件左下角坐标 (μm)，w, h 为宽高
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 # 重新导出 rules.py / checks.py 的公开符号，保持
 # `from polaris_drc.engine import X` 向后兼容（__init__.py 也从此处导入）。
@@ -84,32 +84,29 @@ from polaris_drc.checks import (
     aabb,
     aabb_center,
     aabb_distance,
-    aabb_orientation,
     aabb_overlap,
     build_device_map,
     check_density_range,
-    density_min_threshold_by_canvas,
-    detect_connection_cycles,
-    device_waveguide_width,
     find_port,
-    is_waveguide_device,
     merge_aabb,
     port_abs,
 )
-from polaris_drc.rules import (
-    DEFAULT_DRC_RULES,
-    CheckType,
-    DIR_ABBR_MAP,
-    DRCRule,
-    DRCViolation,
-    FACING_PAIRS,
-    PORT_ALIGN_BEND_RANGE_UM,
-    PORT_ALIGN_TOL_UM,
-    VALID_DIRECTIONS,
-    normalize_direction,
-)
+
+# P1 跨层规则（4 条，R383）以 Mixin 形式拆分到 engine_cross_layer.py
+from polaris_drc.engine_cross_layer import CrossLayerRulesMixin
+
 # P0 波导级规则（6 条）以 Mixin 形式拆分到 engine_waveguide.py（R11 质量门禁）
 from polaris_drc.engine_waveguide import WaveguideRulesMixin
+from polaris_drc.rules import (
+    DEFAULT_DRC_RULES,
+    FACING_PAIRS,
+    PORT_ALIGN_BEND_RANGE_UM,
+    VALID_DIRECTIONS,
+    CheckType,
+    DRCRule,
+    DRCViolation,
+    normalize_direction,
+)
 
 # I/O 器件类型集合：连接外部光纤/探针/线键，不要求内部连接（非 fall-back）
 # 物理依据: Chrostowski & Hochberg "Silicon Photonics Design" CUP 2015 §5.2
@@ -145,7 +142,7 @@ __all__ = [
 ]
 
 
-class DRCEngine(WaveguideRulesMixin):
+class DRCEngine(WaveguideRulesMixin, CrossLayerRulesMixin):
     """DRC 设计规则检查引擎。
 
     对 circuit + placements 执行所有规则检查，返回违规列表。
@@ -206,6 +203,15 @@ class DRCEngine(WaveguideRulesMixin):
             CheckType.WAVEGUIDE_MANHATTAN: self._check_waveguide_manhattan,
             CheckType.ENCLOSED_AREA_MIN: self._check_enclosed_area_min,
             CheckType.CROSSING_ANGULAR: self._check_crossing_angular,
+            # P1 跨层规则（4 条，R383，由 CrossLayerRulesMixin 提供）
+            CheckType.SEPARATION: self._check_separation,
+            CheckType.ENCLOSURE: self._check_enclosure,
+            CheckType.EXTENSION: self._check_extension,
+            CheckType.EXCLUSION: self._check_exclusion,
+            # P1 波导级规则（3 条，R383，由 WaveguideRulesMixin 提供）
+            CheckType.ANGLE_LIMIT: self._check_angle_limit,
+            CheckType.WAVEGUIDE_TAPER_ANGLE: self._check_waveguide_taper_angle,
+            CheckType.SINGLEMODE_WIDTH: self._check_singlemode_width,
         }
 
     def run(self, circuit: dict, placements: dict) -> list[DRCViolation]:
@@ -673,11 +679,3 @@ def run_drc_rules(circuit: dict, placements: dict,
         违规列表（空列表表示 DRC clean）。
     """
     return DRCEngine(rules, bend_compensate=bend_compensate).run(circuit, placements)
-
-
-# numpy 引用占位（保留依赖一致性，R04 纯 NumPy）
-# 原 engine.py 末尾 `_ = np` 用于标记 numpy 依赖；拆分后 numpy 由各
-# 检查函数内部使用，此处保留导入以维持依赖声明。
-import numpy as np  # noqa: E402
-
-_ = np

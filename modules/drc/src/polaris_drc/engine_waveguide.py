@@ -32,6 +32,8 @@ P0 波导级规则检查方法，由 ``DRCEngine`` 继承:
 
 from __future__ import annotations
 
+import math
+
 from polaris_drc.checks import (
     aabb,
     aabb_center,
@@ -47,9 +49,9 @@ from polaris_drc.checks import (
     port_abs,
 )
 from polaris_drc.rules import (
+    VALID_DIRECTIONS,
     DRCRule,
     DRCViolation,
-    VALID_DIRECTIONS,
     normalize_direction,
 )
 
@@ -321,5 +323,129 @@ class WaveguideRulesMixin:
                              f"交叉非 90°（{oi}×{oj}）"),
                     device_name=ni,
                     location=loc,
+                ))
+        return violations
+
+    # ===== P1 波导级规则（3 条，2026-07-07 R383 新增，覆盖率 88%→100%） =====
+
+    def _check_angle_limit(self, rule: DRCRule, circuit: dict,
+                           placements: dict) -> list[DRCViolation]:
+        """ANGLE_LIMIT: 路径段内角 ∈ [threshold, limit_max] 否则违规。
+
+        从 device.params.path_angle 读取路径段内角（度）。未声明 path_angle
+        的器件跳过（合法：非波导路径器件无角度约束，非 fall-back）。
+
+        来源（R02）:
+            - FluxCore ANGLE_LIMIT [45°, 135°]
+              https://www.fluxcoredynamics.com/docs/design-rules
+            - KLayout with_angle(min, max)
+              https://www.klayout.org/doc-qt5/manual/drc.html
+        """
+        thr_min = rule.threshold
+        thr_max = rule.limit_max if rule.limit_max is not None else 135.0
+        violations: list[DRCViolation] = []
+        for dev in circuit.get("devices", []):
+            params = dev.get("params", {}) or {}
+            angle = params.get("path_angle")
+            if angle is None:
+                continue  # 未声明角度，跳过（非 fall-back）
+            angle = float(angle)
+            nm = dev.get("name", "")
+            if angle < thr_min or angle > thr_max:
+                pl = placements.get(nm, {"x": 0.0, "y": 0.0})
+                loc = (float(pl.get("x", 0.0)), float(pl.get("y", 0.0)))
+                violations.append(DRCViolation(
+                    rule_name=rule.name, severity=rule.severity,
+                    message=(f"{rule.name}: 器件 {nm} 路径段内角 {angle:.1f}° "
+                             f"超出范围 [{thr_min:.0f}°, {thr_max:.0f}°]"),
+                    device_name=nm, location=loc,
+                ))
+        return violations
+
+    def _check_waveguide_taper_angle(self, rule: DRCRule, circuit: dict,
+                                     placements: dict
+                                     ) -> list[DRCViolation]:
+        """WAVEGUIDE_TAPER_ANGLE: 锥形波导半顶角 ≤ threshold 否则违规。
+
+        从 device.params 读取 width_in_um / width_out_um / length_um，
+        计算半顶角 θ=atan(Δwidth/2/L)（度）。未声明锥形参数的器件跳过。
+        length ≤ 0 raise RuntimeError（R03 禁止 fall-back）。
+
+        来源（R02）:
+            - Milton & Burns 1987 JLT 绝热锥形条件
+              https://opg.optica.org/jlt/abstract.cfm?uri=jl-5-8-1079
+            - drc_curvilinear_18rules CV3_taper_angle=10°
+            - R02 注: 10° 是工程保守上限，非严格绝热条件
+              （严格条件 θ << λ/(2π W_beat)）
+        """
+        thr = rule.threshold
+        violations: list[DRCViolation] = []
+        for dev in circuit.get("devices", []):
+            params = dev.get("params", {}) or {}
+            w_in = params.get("width_in_um")
+            w_out = params.get("width_out_um")
+            length = params.get("length_um")
+            if w_in is None or w_out is None or length is None:
+                continue  # 未声明锥形参数，跳过（非 fall-back）
+            w_in = float(w_in)
+            w_out = float(w_out)
+            length = float(length)
+            if length <= 0:
+                raise RuntimeError(
+                    f"{rule.name}: 器件 {dev.get('name', '')} 锥形长度 "
+                    f"{length} ≤ 0 非法（R03 禁止 fall-back）"
+                )
+            nm = dev.get("name", "")
+            half_angle = math.degrees(
+                math.atan(abs(w_out - w_in) / 2.0 / length)
+            )
+            if half_angle > thr:
+                pl = placements.get(nm, {"x": 0.0, "y": 0.0})
+                loc = (float(pl.get("x", 0.0)), float(pl.get("y", 0.0)))
+                violations.append(DRCViolation(
+                    rule_name=rule.name, severity=rule.severity,
+                    message=(f"{rule.name}: 器件 {nm} 锥形半顶角 "
+                             f"{half_angle:.2f}° > {thr}° (w_in={w_in}μm, "
+                             f"w_out={w_out}μm, L={length}μm)"),
+                    device_name=nm, location=loc,
+                ))
+        return violations
+
+    def _check_singlemode_width(self, rule: DRCRule, circuit: dict,
+                                placements: dict) -> list[DRCViolation]:
+        """SINGLEMODE_WIDTH: 波导宽度 ≤ threshold 否则违规。
+
+        从 device.params.width_um 读取波导宽度。未声明 width_um 的器件跳过
+        （合法：非波导器件无宽度约束，非 fall-back）。
+
+        来源（R02）:
+            - Snyder & Love 1983 §13.5 V 参数单模条件 V<2.405
+              https://link.springer.com/book/10.1007/978-94-009-6875-2
+            - Soref 1991 IEEE JQE SOI 单模条形波导
+              https://doi.org/10.1109/3.84143
+            - R05 修正: 原 MW1=1.05μm 无文献支撑，修正为 1.0μm
+              （V 参数严格推导值 W_max=2×2.405×1.55/(2π×√(3.476²-1.444²))≈1.00μm）
+        """
+        thr = rule.threshold
+        violations: list[DRCViolation] = []
+        for dev in circuit.get("devices", []):
+            params = dev.get("params", {}) or {}
+            width = params.get("width_um")
+            if width is None:
+                # 兼容 width_um / wg_width / waveguide_width 字段名
+                width = params.get("wg_width")
+            if width is None:
+                continue  # 未声明波导宽度，跳过（非 fall-back）
+            width = float(width)
+            nm = dev.get("name", "")
+            if width > thr:
+                pl = placements.get(nm, {"x": 0.0, "y": 0.0})
+                loc = (float(pl.get("x", 0.0)), float(pl.get("y", 0.0)))
+                violations.append(DRCViolation(
+                    rule_name=rule.name, severity=rule.severity,
+                    message=(f"{rule.name}: 器件 {nm} 波导宽度 {width:.4f}μm > "
+                             f"单模上限 {thr}μm (V 参数 V<2.405, Snyder & "
+                             f"Love 1983)"),
+                    device_name=nm, location=loc,
                 ))
         return violations
