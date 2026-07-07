@@ -191,7 +191,7 @@
 | 26 | 点云场监视器 (PointCloudFieldMonitor) | ❌缺失 | - | PoLaRIS 无自定义点云坐标频域 E/H 场采样 |
 | 27 | 稳态电荷残差监视器 (SteadyChargeResidualMonitor) | ❌缺失 | - | PoLaRIS 无 Charge 仿真每节点有符号残差监视器 |
 | 28 | 偶极子发射监视器 (DipoleEmissionMonitor) | ❌缺失 | - | PoLaRIS 无偶极子发射研究插件监视器 |
-| 29 | 功率 / 通量 / 模式监视器 | ⚠️部分 | `src/polaris/sim/meep_adjoint_backend.py:87` | PoLaRIS 有 flux/field monitor 类型（MEEP 后端），但无完整功率/通量/模式监视器抽象 |
+| 29 | 功率 / 通量 / 模式监视器 | ❌接口未实现 | `modules/lumerical/src/polaris_lumerical/_backends.py:301`（`MeepAdjointBackend` 接口定义，`run()` 第 319 行 raise NotImplementedError） | PoLaRIS 的 MEEP 后端为接口定义，`run()` 未实现（raise NotImplementedError），无 flux/field monitor 实际产出；同时无完整功率/通量/模式监视器抽象 |
 
 **监视器统计**: ✅0 / ⚠️2 / ❌3 / 🚫0
 

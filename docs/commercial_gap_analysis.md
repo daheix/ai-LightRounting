@@ -216,7 +216,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 #### P0-4 FDTD 仿真缺失（仅 S 参数级联）— 部分已修复（R1-R4 迭代）
 
-- **现状（v2.0）**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py + **JAX 可微分 FDTD（R1 已接入 showcase）** + **GedneyPML 吸收边界（R2 已启用）** + **Insertion Loss 评估（第90轮）**
+- **现状（v2.0）**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend（接口定义，未实现，实际位于 `modules/lumerical/src/polaris_lumerical/_backends.py:301`，`run()` 第 319 行 raise NotImplementedError）+ **JAX 可微分 FDTD（R1 已接入 showcase）** + **GedneyPML 吸收边界（R2 已启用）** + **Insertion Loss 评估（第90轮）**
 - **商业标杆**：
   - Lumerical FDTD：3D 全波 FDTD + 多物理场 + GPU 加速 + adjoint 逆向设计
   - Tidy3D：GPU 云端 FDTD，10-5000× 加速，亚像素精度，250+ 公司高校使用

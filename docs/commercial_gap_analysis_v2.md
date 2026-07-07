@@ -292,7 +292,7 @@ PoLaRIS（光弈）是一个**面向多工艺平台（SOI/SiN/InP/LNOI）的开�
 
 #### P0-4 FDTD 仿真缺失（仅 S 参数级联）— 已完整实现（v3.0，R27+R28+R31）
 
-- **现状（v3.0）**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend.py + **JAX 可微分 FDTD（R1）** + **GedneyPML 吸收边界（R2）** + **Insertion Loss 评估（第90轮）** + **R31 Lumerical 级 3D 全波 FDTD**（`src/polaris/sim/lumerical_fdtd.py`，6 分量 Yee leapfrog + 6 面 CPML + Drude ADE 色散 + 3D TFSF 平面波注入 + 3D S 参数提取）+ **R27 Tidy3D 云 API + CPU FDTD 后端**（`src/polaris/sim/tidy3d_backend.py`）+ **R28 密度法拓扑优化逆向设计**（`src/polaris/inverse/adjoint_optimizer.py`，pixelated density + 锥形滤波 + sigmoid 投影 + β 退火 + JAX autograd）
+- **现状（v3.0）**：simphony + sax + pyCopySiPANN（S 参数级联）+ fdtd_simulator.py + meep_adjoint_backend（接口定义，未实现，实际位于 `modules/lumerical/src/polaris_lumerical/_backends.py:301`，`run()` 第 319 行 raise NotImplementedError）+ **JAX 可微分 FDTD（R1）** + **GedneyPML 吸收边界（R2）** + **Insertion Loss 评估（第90轮）** + **R31 Lumerical 级 3D 全波 FDTD**（`src/polaris/sim/lumerical_fdtd.py`，6 分量 Yee leapfrog + 6 面 CPML + Drude ADE 色散 + 3D TFSF 平面波注入 + 3D S 参数提取）+ **R27 Tidy3D 云 API + CPU FDTD 后端**（`src/polaris/sim/tidy3d_backend.py`）+ **R28 密度法拓扑优化逆向设计**（`src/polaris/inverse/adjoint_optimizer.py`，pixelated density + 锥形滤波 + sigmoid 投影 + β 退火 + JAX autograd）
 - **商业标杆**：
   - Lumerical FDTD：3D 全波 FDTD + 多物理场 + GPU 加速 + adjoint 逆向设计
   - Tidy3D：GPU 云端 FDTD，10-5000× 加速，亚像素精度，250+ 公司高校使用

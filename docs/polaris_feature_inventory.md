@@ -209,7 +209,7 @@
 - **fast_marching_sdf**: Fast Marching SDF 重新初始化（Sethian 1996）。实现: `src/polaris/sim/level_set_geometry.py:179`。成熟度: 生产可用
 
 ### fdtd_simulator — FDTD 仿真
-- **FDTDBackend 枚举**: MEEP/Tidy3D/ANALYTICAL 三后端。实现: `src/polaris/sim/fdtd_simulator.py:57`。成熟度: 生产可用
+- **FDTDBackend 枚举**: MEEP/Tidy3D/ANALYTICAL 三后端。实现: `modules/lumerical/src/polaris_lumerical/_backends.py:326`。成熟度: MEEP 后端接口定义，`MeepAdjointBackend.run()` 第 319 行 `raise NotImplementedError` 未实现；TIDY3D/ANALYTICAL 另见对应后端实现
 - **run_fdtd_simulation**: FDTD 仿真统一入口。实现: `src/polaris/sim/fdtd_simulator.py:279`。成熟度: 生产可用
 - **get_available_backends**: 可用后端探测。实现: `src/polaris/sim/fdtd_simulator.py:224`。成熟度: 生产可用
 

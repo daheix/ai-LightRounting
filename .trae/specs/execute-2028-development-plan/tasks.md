@@ -107,7 +107,7 @@
   - [x] SubTask 3.5.2: 验收 — KLayout 集成，4/8/20 状态提升
   - 依赖：Task 2.6、Task 2.7
 
-- [x] Task 3.6: F01-伴随方法逆向设计 Phase 1-2 — FDFD 伴随 + FDTD 时域伴随（已验证：src/polaris/inverse/adjoint_optimizer.py、src/polaris/sim/adjoint_optimizer.py、src/polaris/sim/meep_adjoint_backend.py；FDFD/FDTD 伴随基于 Task 1.1/2.3 已实现内核）
+- [x] Task 3.6: F01-伴随方法逆向设计 Phase 1-2 — FDFD 伴随 + FDTD 时域伴随（已验证：src/polaris/inverse/adjoint_optimizer.py、src/polaris/sim/adjoint_optimizer.py（FDFD/FDTD 伴随基于 Task 1.1/2.3 已实现内核）；modules/lumerical/src/polaris_lumerical/_backends.py:301 MeepAdjointBackend 仅接口定义，run() 第 319 行 raise NotImplementedError 未实现）
   - [x] SubTask 3.6.1: Phase 1: FDFD 频域伴随（SC-PML 算子构造 A）
   - [x] SubTask 3.6.2: Phase 2: FDTD 时域伴随（leapfrog 复用为伴随内核）
   - [x] SubTask 3.6.3: 验收 — SOI Y 分支梯度 vs CS ≤1e-3

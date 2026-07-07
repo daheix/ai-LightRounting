@@ -63,7 +63,7 @@
 | Task 3.3 | C04-时域仿真 | src/polaris/sim/time/ 或 picwave_backend.py | ✅ 已实现 | src/polaris/sim/picwave_backend.py、time_domain_circuit.py、caphe_time_domain.py、caphe_backend.py |
 | Task 3.4 | C05-频域扫描 | src/polaris/sim/freq/ 或 freq.py | ✅ 已实现（路径不同） | src/polaris/sim/simulator.py（sweep_wavelength 方法 + JAX vmap 并行向量化） |
 | Task 3.5 | B05-版图编辑器 GUI | src/polaris/eval/gui/ 或 gui/layout_editor.py | ✅ 已实现 | src/polaris/gui/layout_editor.py |
-| Task 3.6 | F01-伴随方法逆向设计 P1-2 | src/polaris/inverse/adjoint_optimizer.py | ✅ 已实现 | src/polaris/inverse/adjoint_optimizer.py、src/polaris/sim/adjoint_optimizer.py、meep_adjoint_backend.py |
+| Task 3.6 | F01-伴随方法逆向设计 P1-2 | src/polaris/inverse/adjoint_optimizer.py | ⚠️ 部分实现 | src/polaris/inverse/adjoint_optimizer.py、src/polaris/sim/adjoint_optimizer.py（FDFD/FDTD 伴随内核已实现）；modules/lumerical/src/polaris_lumerical/_backends.py:301 MeepAdjointBackend 仅接口定义，run() 第 319 行 raise NotImplementedError 未实现 |
 
 ### Sprint 4：P3 ML/RL + 布线对标 AlphaChip
 
