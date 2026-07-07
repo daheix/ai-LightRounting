@@ -57,7 +57,6 @@ from polaris_drc import (  # noqa: E402
     run_drc_rules,
 )
 
-
 # =============================================================================
 # 测试辅助构造函数（真实几何数据，R03 禁止 fall-back）
 # =============================================================================
@@ -146,19 +145,21 @@ def test_drc_module_imports():
     assert callable(run_drc_rules)
 
 
-def test_drc_n_rules_18():
-    """验证默认 DRC 规则数为 18（12 SiEPIC 基础 + 6 P0 波导级）。
+def test_drc_n_rules_25():
+    """验证默认 DRC 规则数为 25（12 SiEPIC 基础 + 6 P0 波导级 + 7 P1 跨层/波导）。
 
-    18 条规则: MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/BOUNDARY/NO_OVERLAP/
+    25 条规则: MIN_SPACING/MIN_WIDTH/MIN_HEIGHT/MIN_AREA/BOUNDARY/NO_OVERLAP/
     PORT_ALIGNMENT/PORT_DIRECTION/PORT_CONNECTIVITY/PORT_FACING/DENSITY_MAX/
     DENSITY_MIN/BEND_RADIUS_MIN/WAVEGUIDE_WIDTH_MATCH/MIN_NOTCH/
-    WAVEGUIDE_MANHATTAN/ENCLOSED_AREA_MIN/CROSSING_ANGULAR。
+    WAVEGUIDE_MANHATTAN/ENCLOSED_AREA_MIN/CROSSING_ANGULAR/
+    SEPARATION/ENCLOSURE/EXTENSION/EXCLUSION/
+    ANGLE_LIMIT/WAVEGUIDE_TAPER_ANGLE/SINGLEMODE_WIDTH。
     """
     circuit = _make_simple_circuit()
     placements = _make_simple_placements()
     result = run_drc(circuit, placements)
-    assert result["n_rules"] == 18, (
-        f"n_rules 应为 18（12 基础 + 6 P0 波导级），实际 {result['n_rules']}"
+    assert result["n_rules"] == 25, (
+        f"n_rules 应为 25（12 基础 + 6 P0 + 7 P1），实际 {result['n_rules']}"
     )
 
 
@@ -168,12 +169,14 @@ def test_drc_n_rules_18():
 
 
 def test_check_type_enum_values():
-    """验证 CheckType 枚举 18 个值与 KLayout DRC 规则类别对应。
+    """验证 CheckType 枚举 25 个值与 KLayout DRC 规则类别对应。
 
     来源: KLayout DRC 规则类别
     https://www.klayout.org/doc-qt5/manual/drc_runsets.html
     SiEPIC-Tools Verification https://github-wiki-see.page/m/SiEPIC/SiEPIC-Tools/wiki/SiEPIC-Tools-Menu-descriptions
     LiDAR 2.0 II-B3 https://arxiv.org/html/2505.17239v1
+    gdsfactory DRC http://raw.githubusercontent.com/gdsfactory/gdsfactory-photonics-training/main/notebooks/11_drc.ipynb
+    Snyder & Love 1983 §13.5 https://link.springer.com/book/10.1007/978-94-009-6875-2
     """
     assert CheckType.MIN_SPACING.value == "min_spacing"
     assert CheckType.MIN_WIDTH.value == "min_width"
@@ -194,15 +197,24 @@ def test_check_type_enum_values():
     assert CheckType.WAVEGUIDE_MANHATTAN.value == "waveguide_manhattan"
     assert CheckType.ENCLOSED_AREA_MIN.value == "enclosed_area_min"
     assert CheckType.CROSSING_ANGULAR.value == "crossing_angular"
+    # P1 跨层（4 条，R383）
+    assert CheckType.SEPARATION.value == "separation"
+    assert CheckType.ENCLOSURE.value == "enclosure"
+    assert CheckType.EXTENSION.value == "extension"
+    assert CheckType.EXCLUSION.value == "exclusion"
+    # P1 波导级（3 条，R383）
+    assert CheckType.ANGLE_LIMIT.value == "angle_limit"
+    assert CheckType.WAVEGUIDE_TAPER_ANGLE.value == "waveguide_taper_angle"
+    assert CheckType.SINGLEMODE_WIDTH.value == "singlemode_width"
 
 
 def test_check_type_enum_count():
-    """验证 CheckType 枚举数量为 18（与 DEFAULT_DRC_RULES 一一对应）。"""
+    """验证 CheckType 枚举数量为 25（与 DEFAULT_DRC_RULES 一一对应）。"""
     members = list(CheckType)
-    assert len(members) == 18, f"CheckType 应有 18 个成员，实际 {len(members)}"
+    assert len(members) == 25, f"CheckType 应有 25 个成员，实际 {len(members)}"
     # 枚举值唯一
     values = [m.value for m in members]
-    assert len(set(values)) == 18, "CheckType 枚举值应唯一"
+    assert len(set(values)) == 25, "CheckType 枚举值应唯一"
 
 
 # =============================================================================
@@ -259,9 +271,9 @@ def test_drc_rule_default_severity():
 
 
 def test_default_rules_count():
-    """验证 DEFAULT_DRC_RULES 包含 18 条规则（12 基础 + 6 P0 波导级）。"""
-    assert len(DEFAULT_DRC_RULES) == 18, (
-        f"DEFAULT_DRC_RULES 应有 18 条，实际 {len(DEFAULT_DRC_RULES)}"
+    """验证 DEFAULT_DRC_RULES 包含 25 条规则（12 基础 + 6 P0 + 7 P1）。"""
+    assert len(DEFAULT_DRC_RULES) == 25, (
+        f"DEFAULT_DRC_RULES 应有 25 条，实际 {len(DEFAULT_DRC_RULES)}"
     )
 
 
@@ -297,7 +309,7 @@ def test_default_rules_thresholds():
 def test_default_rules_unique_names():
     """验证 DEFAULT_DRC_RULES 规则名唯一（无重复）。"""
     names = [r.name for r in DEFAULT_DRC_RULES]
-    assert len(set(names)) == 18, f"规则名有重复: {names}"
+    assert len(set(names)) == 25, f"规则名有重复或数量不符: {names}"
 
 
 def test_default_rules_severity_range():
@@ -347,7 +359,7 @@ def test_engine_init_default_rules():
     """验证 DRCEngine 默认使用 DEFAULT_DRC_RULES。"""
     engine = DRCEngine()
     assert engine.rules is DEFAULT_DRC_RULES
-    assert len(engine.rules) == 18
+    assert len(engine.rules) == 25
 
 
 def test_engine_init_custom_rules():
@@ -424,12 +436,12 @@ def test_drc_simple_waveguide():
     """简单波导布局验证（与任务验证脚本一致）。
 
     单个 strip_waveguide 10μm × 0.5μm，画布 100×100μm。
-    验证: 返回 dict 含全部必要字段，n_rules=18，pass_rate > 0。
+    验证: 返回 dict 含全部必要字段，n_rules=25，pass_rate > 0。
     """
     circuit = _make_simple_circuit()
     placements = _make_simple_placements()
     result = run_drc(circuit, placements)
-    assert result["n_rules"] == 18
+    assert result["n_rules"] == 25
     assert result["pass_rate"] > 0.0, (
         f"合法布局至少部分规则会通过，pass_rate={result['pass_rate']}"
     )

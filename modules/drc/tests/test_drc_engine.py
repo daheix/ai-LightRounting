@@ -30,15 +30,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
-
 # 让测试既能从已安装包导入，也能从源码树导入（CI/开发模式）
 _SRC = str(Path(__file__).resolve().parents[1] / "src")
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
 
 from polaris_drc import run_drc  # noqa: E402
-
 
 # =============================================================================
 # 测试辅助构造函数（真实几何数据，R03 禁止 fall-back）
@@ -281,7 +278,7 @@ def test_bend_radius_min_fail():
     placements = {"bend1": {"x": 0.0, "y": 0.0, "w": 10.0, "h": 0.5}}
     result = run_drc(circuit, placements)
     assert "BEND_RADIUS_MIN" in _violation_rule_names(result), (
-        f"bend_radius=3μm < 5μm 应违规"
+        "bend_radius=3μm < 5μm 应违规"
     )
 
 

@@ -37,7 +37,6 @@ if _SRC not in sys.path:
 
 from polaris_drc import run_drc  # noqa: E402
 
-
 # =============================================================================
 # 测试辅助构造函数（真实几何数据，R03 禁止 fall-back）
 # =============================================================================
@@ -718,7 +717,7 @@ def test_density_min_xxxl_threshold():
 
 
 def test_drc_clean_layout():
-    """DRC clean 布局：所有 18 条规则通过，n_violations=0，pass_rate=1.0。
+    """DRC clean 布局：所有 25 条规则通过，n_violations=0，pass_rate=1.0。
 
     构造 2 器件 + 1 连接的合法布局：
     - 几何规则：间距 10μm ≥ 1.0，宽 10 ≥ 0.5，高 0.5 ≥ 0.4，面积 5 ≥ 0.1
@@ -727,6 +726,9 @@ def test_drc_clean_layout():
     - 密度：0.1% ∈ [0.01%, 80%]
     - P0 波导级：无 bend_radius 声明（跳过）、宽度匹配（h=0.5）、
       无窄颈（间距 10μm > 0.1）、Manhattan（east/west）、无环、无交叉
+    - P1 跨层：无 layer 声明（跳过 SEPARATION/ENCLOSURE/EXTENSION/EXCLUSION）
+    - P1 波导级：无 path_angle/taper/width_um 声明（跳过 ANGLE_LIMIT/
+      WAVEGUIDE_TAPER_ANGLE/SINGLEMODE_WIDTH）
     """
     result = run_drc(_make_clean_circuit(), _make_clean_placements())
     assert result["n_violations"] == 0, (
@@ -734,4 +736,4 @@ def test_drc_clean_layout():
         f"violations={result['violations']}"
     )
     assert result["pass_rate"] == 1.0
-    assert result["n_passed"] == 18
+    assert result["n_passed"] == 25

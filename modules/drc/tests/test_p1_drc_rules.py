@@ -362,21 +362,17 @@ class TestVParameterDerivation:
     def test_r05_bugfix_mw1_is_1_0_not_1_05(self):
         """验证 drc_curvilinear_18rules MW1 已修正为 1.0μm（R05 防复发）。
 
-        用 importlib 直接加载模块文件，绕过 polaris_verify_advanced 包
-        __init__.py 的 networkx 依赖（graph_lvs），仅测试目标规则文件
-        （更精确的单元测试，非 fall-back）。
+        通过 sys.path 加载 polaris_verify_advanced 包，networkx 是其真实
+        依赖（graph_lvs 用），已 pip install（非 fall-back）。
         """
-        import importlib.util
-        mod_path = (Path(__file__).resolve().parents[2] /
-                    "verify_advanced" / "src" / "polaris_verify_advanced" /
-                    "drc_curvilinear_18rules.py")
-        spec = importlib.util.spec_from_file_location(
-            "drc_curvilinear_18rules_isolated", mod_path)
-        assert spec is not None and spec.loader is not None, (
-            f"无法加载模块文件: {mod_path}")
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        engine = mod.CurvilinearDRCEngine()
+        _VADV = str(Path(__file__).resolve().parents[2] /
+                    "verify_advanced" / "src")
+        if _VADV not in sys.path:
+            sys.path.insert(0, _VADV)
+        from polaris_verify_advanced.drc_curvilinear_18rules import CurvilinearDRCEngine
+        engine = CurvilinearDRCEngine()
+        # MW1 是扩展规则，需 enable_extended_rules() 加入 _rules
+        engine.enable_extended_rules()
         mw1 = [r for r in engine._rules
                if r.name == "MW1_max_width_single_mode"]
         assert len(mw1) == 1, "MW1_max_width_single_mode 规则应存在"
