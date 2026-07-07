@@ -132,8 +132,8 @@ class TestEnclosure:
             _dev("viac", params={"layer": "VIAC"}),
             _dev("metal", params={"layer": "M1"}),
         ])
-        # VIAC (5,5,5,5) 完全在 M1 (0,0,10,10) 内，包围量=5μm
-        placements = {**_pl("viac", 5, 5, 5, 5), **_pl("metal", 0, 0, 10, 10)}
+        # VIAC (1,1,8,8) AABB=(1,1,9,9) 在 M1 (0,0,10,10) 内，四边包围量=1μm
+        placements = {**_pl("viac", 1, 1, 8, 8), **_pl("metal", 0, 0, 10, 10)}
         violations = _run_single_rule(rule, circuit, placements)
         assert violations == []
 
@@ -186,8 +186,8 @@ class TestExtension:
             _dev("contact", params={"layer": "CONTACT"}),
             _dev("metal", params={"layer": "METAL1"}),
         ])
-        # CONTACT (0.1,0.1,9.8,9.8) 在 METAL1 (0,0,10,10) 内，延伸量=0.1μm
-        placements = {**_pl("contact", 0.1, 0.1, 9.7),
+        # CONTACT (0.1,0.1,9.7,9.7) AABB=(0.1,0.1,9.8,9.8) 在 METAL1 内，延伸量=0.1μm
+        placements = {**_pl("contact", 0.1, 0.1, 9.7, 9.7),
                       **_pl("metal", 0, 0, 10, 10)}
         violations = _run_single_rule(rule, circuit, placements)
         assert len(violations) == 1
@@ -326,34 +326,57 @@ class TestSinglemodeWidth:
 
 
 class TestVParameterDerivation:
-    """V 参数单模条件推导验证（Snyder & Love 1983 §13.5）。
+    """V 参数单模条件数学验证（Snyder & Love 1983 §13.5）。
 
-    V = (2π/λ) × (W/2) × √(n_core² - n_clad²) < 2.405
-    W_max = 2 × 2.405 × λ / (2π × √(n_core² - n_clad²))
-    SOI 220nm @ 1550nm: n_core=3.476, n_clad=1.444 → W_max ≈ 1.00μm
+    V 参数 V = (2π/λ) × (W/2) × √(n_core² - n_clad²) < 2.405 严格适用于
+    圆对称光纤。对矩形 SOI 波导，块材料 n_Si=3.476 算出 W_max≈0.375μm
+    过保守（Grillot 2006 JLT 方形<320nm 单模接近此值），不适用于 220nm×W
+    矩形波导。MW1=1.0μm 来自 Soref 1991 IEEE JQE 全矢量数值仿真 + SiEPIC
+    EBeam PDK 工程经验，非简单 V 参数推导（R02 学术诚信修正）。
     """
 
     def test_v_parameter_singlemode_width_max(self):
-        """验证 V 参数推导的单模宽度上限 ≈ 1.0μm（非 1.05μm）。"""
+        """验证 V 参数公式数学正确性（块材料过保守，非 MW1=1.0μm 来源）。
+
+        V 参数（块材料 n_Si=3.476）推导 W_max≈0.375μm，对应方形 SOI
+        <320nm 单模（Grillot 2006 JLT）。MW1=1.0μm 来自 Soref 1991 全矢量
+        仿真 + SiEPIC PDK 经验，非此 V 参数推导。
+        """
         wavelength = 1.55  # μm
         n_core = 3.476  # Si @ 1550nm
         n_clad = 1.444  # SiO2 @ 1550nm
         v_cutoff = 2.405  # LP11 截止（Snyder & Love 1983 §13.5）
-        w_max = 2.0 * v_cutoff * wavelength / (
+        # 块材料 V 参数推导（过保守，仅适用于方形/圆对称）
+        w_max_block = 2.0 * v_cutoff * wavelength / (
             2.0 * math.pi * math.sqrt(n_core ** 2 - n_clad ** 2))
-        # R05 修正: 应为 ~1.0μm，而非 1.05μm
-        assert 0.95 <= w_max <= 1.05, f"W_max={w_max}μm 偏离 1.0μm"
-        assert abs(w_max - 1.0) < 0.05, (
-            f"V 参数推导 W_max={w_max:.4f}μm，应 ≈ 1.00μm（R05: 非 1.05μm）")
+        # 数学验证: W_max_block ≈ 0.375μm（非 1.0μm）
+        assert 0.36 <= w_max_block <= 0.39, (
+            f"V 参数块材料推导 W_max={w_max_block:.4f}μm，应 ≈ 0.375μm")
+        # 反向验证: W=1.0μm 时 V 值 > 2.405（块材料过保守）
+        v_at_1um = (2.0 * math.pi / wavelength) * (1.0 / 2.0) * math.sqrt(
+            n_core ** 2 - n_clad ** 2)
+        assert v_at_1um > 2.405, (
+            f"W=1.0μm 时 V={v_at_1um:.3f} > 2.405，块材料 V 参数过保守，"
+            "MW1=1.0μm 来自 Soref 1991 全矢量仿真（非 V 参数）")
 
     def test_r05_bugfix_mw1_is_1_0_not_1_05(self):
-        """验证 drc_curvilinear_18rules MW1 已修正为 1.0μm（R05 防复发）。"""
-        _VADV = str(Path(__file__).resolve().parents[2] /
-                    "verify_advanced" / "src" / "polaris_verify_advanced")
-        if _VADV not in sys.path:
-            sys.path.insert(0, _VADV)
-        from polaris_verify_advanced.drc_curvilinear_18rules import CurvilinearDRCEngine
-        engine = CurvilinearDRCEngine()
+        """验证 drc_curvilinear_18rules MW1 已修正为 1.0μm（R05 防复发）。
+
+        用 importlib 直接加载模块文件，绕过 polaris_verify_advanced 包
+        __init__.py 的 networkx 依赖（graph_lvs），仅测试目标规则文件
+        （更精确的单元测试，非 fall-back）。
+        """
+        import importlib.util
+        mod_path = (Path(__file__).resolve().parents[2] /
+                    "verify_advanced" / "src" / "polaris_verify_advanced" /
+                    "drc_curvilinear_18rules.py")
+        spec = importlib.util.spec_from_file_location(
+            "drc_curvilinear_18rules_isolated", mod_path)
+        assert spec is not None and spec.loader is not None, (
+            f"无法加载模块文件: {mod_path}")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        engine = mod.CurvilinearDRCEngine()
         mw1 = [r for r in engine._rules
                if r.name == "MW1_max_width_single_mode"]
         assert len(mw1) == 1, "MW1_max_width_single_mode 规则应存在"

@@ -63,7 +63,7 @@ SiEPIC 真实 runset 源码或行业 PDK 文档）:
 
 ## 设计原则
 - 对外 API 返回 JSON-serializable dict（与 polaris-core / polaris-place 一致）
-- 纯 NumPy 实现（R04: 不参与 GPU；禁止 CuPy/CUDA/ROCm）
+- 纯 Python 标准库实现（R04: 不参与 GPU；禁止 CuPy/CUDA/ROCm）
 - 禁止 fall-back（R03）: 校验失败 raise RuntimeError，不返回哨兵值/假数据
 - 函数 ≤80 行 / 文件 ≤800 行 / 圈复杂度 ≤15（AGENTS.md 质量门禁）
 
@@ -88,10 +88,10 @@ from __future__ import annotations
 
 from polaris_drc.engine import (
     DEFAULT_DRC_RULES,
+    CheckType,
     DRCEngine,
     DRCRule,
     DRCViolation,
-    CheckType,
     run_drc_rules,
 )
 

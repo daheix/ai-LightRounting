@@ -11,7 +11,7 @@ P0 波导级规则检查方法，由 ``DRCEngine`` 继承:
 - ENCLOSED_AREA_MIN: 连接图环封闭面积
 - CROSSING_ANGULAR: 波导交叉角度
 
-仅依赖 numpy（R04: 不参与 GPU）。
+纯 Python 标准库实现（R04: 不参与 GPU）。
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 - SiEPIC EBeam PDK DRC runset（bend_radius=5μm, crossing 90°）

@@ -1,7 +1,7 @@
 """DRC 设计规则检查引擎（polaris-drc 子模块，引擎层）。
 
 从原 polaris-verify/src/polaris_verify/drc.py 拆分而来（R13 代码清理：
-禁止多个 vx 文件并存，新建立就彻底删除老的）。仅依赖 numpy（R04: 不参与 GPU）。
+禁止多个 vx 文件并存，新建立就彻底删除老的）。纯 Python 标准库实现（R04: 不参与 GPU）。
 
 v5.2 拆分（R11 质量门禁：文件 ≤800 行）:
 - ``rules.py``: CheckType / DRCRule / DEFAULT_DRC_RULES / DRCViolation + 端口方向常量

@@ -7,7 +7,7 @@ R383（2026-07-07）新增 4 条 P1 跨层 DRC 规则，由 ``DRCEngine`` 继承
 - EXTENSION: 延伸（metal1 延伸超出 contact，0.2μm）
 - EXCLUSION: 禁止层重叠（跨层零容忍，FluxCore）
 
-仅依赖 numpy（R04: 不参与 GPU）。
+纯 Python 标准库实现（R04: 不参与 GPU）。
 
 ## 数据模型约定
 

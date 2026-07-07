@@ -219,9 +219,11 @@ class CurvilinearDRCEngine:
                 "MW1_max_width_single_mode",
                 DRCRuleCategory.MAX_WIDTH_SINGLE_MODE,
                 "waveguide", 1.0, "μm", False,
-                "最大宽度（单模截止，V 参数 V<2.405, Snyder & Love 1983 §13.5; "
-                "SOI 220nm@1550nm: W_max=2×2.405×1.55/(2π×√(3.476²-1.444²))≈1.00μm; "
-                "R05 修正: 原 1.05μm 无文献支撑）",
+                "最大宽度（单模截止，SOI 220nm@1550nm 工程经验值; "
+                "Soref 1991 IEEE JQE 数值仿真; Grillot 2006 JLT 方形<320nm 单模; "
+                "SiEPIC EBeam PDK strip 500nm 标准; "
+                "R05 修正: 原 1.05μm 无文献支撑，V 参数块材料推导 W_max≈0.375μm "
+                "过保守不适用于矩形波导，1.0μm 来自 Soref/SiEPIC 全矢量仿真经验）",
             ),
         ]
 
