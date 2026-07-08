@@ -10,8 +10,8 @@
   URL: https://dl.acm.org/doi/pdf/10.1145/3698364.3705355
 - LiDAR 2.0: Hierarchical Curvy Waveguide Detailed Routing（TCAD 2025）
   URL: https://scopex-asu.github.io/files/publications/PD_TCAD2025_LiDARv2.pdf
-- 三点外接圆半径公式（R = |v1|*|v2|*|v1-v2| / (2*|v1×v2|)）
-  来源: LiDAR ISPD'25 §3.2
+- 三点外接圆半径公式（R = |v1|*|v2|*|v1+v2| / (2*|v1×v2|)，第三边 = p3-p1 = v1+v2）
+  来源: LiDAR ISPD'25 §3.2（R389 修正第三边向量：原 |v1-v2| 无几何意义，应为 |v1+v2|）
 - SiEPIC EBeam PDK 设计规则（最小弯曲半径/波导间距）
   URL: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
   (SOI 平台 min_bend_radius=5μm, min_spacing=1μm 默认值依据)
@@ -107,7 +107,14 @@ class DRVFreeValidator:
                 cross = abs(v1[0] * v2[1] - v1[1] * v2[0])
                 if cross < 1e-12:
                     continue  # 共线
-                v3 = v1 - v2
+                # R389 修复：三点外接圆半径公式第三边应为 p3-p1 = v1+v2
+                # 原代码 v3 = v1 - v2（无几何意义），导致半径估算偏小约 55%，
+                # DRV 验证器误报弯曲半径违规。与 curvy_astar_core.py:373 同步修复。
+                # 数学验证: p1=(0,0), p2=(1,0), p3=(2,1):
+                #   v1=(1,0), v2=(1,1), v3=v1+v2=(2,1), |v3|=√5
+                #   正确 R = 1·√2·√5 / (2·1) = √10/2 ≈ 1.581
+                #   bug R = 1·√2·|v1-v2|=|(0,-1)|=1 → R = √2·1/(2·1) = 0.707
+                v3 = v1 + v2  # 第三边 p3-p1 = (p3-p2)+(p2-p1) = v2+v1
                 r = (
                     float(np.hypot(*v1)) * float(np.hypot(*v2))
                     * float(np.hypot(*v3)) / (2.0 * cross)

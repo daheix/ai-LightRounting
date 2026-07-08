@@ -472,7 +472,10 @@ def _count_bend_radius_violations(
             continue  # 直线，无弯曲
         l1 = math.hypot(*v1)
         l2 = math.hypot(*v2)
-        l3 = math.hypot(v2[0] - v1[0], v2[1] - v1[1])
+        # R389 修复：三点外接圆半径公式第三边应为 p2-p0 = v1+v2
+        # 原代码 |v2-v1|（无几何意义），导致半径估算偏小，误报弯曲违规。
+        # 与 curvy_astar_core.py:373 / curvy_validator.py:110 同步修复。
+        l3 = math.hypot(v1[0] + v2[0], v1[1] + v2[1])
         radius = l1 * l2 * l3 / (2.0 * cross)
         if 0 < radius < min_radius:
             violations += 1

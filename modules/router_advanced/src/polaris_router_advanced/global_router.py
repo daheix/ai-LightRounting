@@ -474,7 +474,9 @@ def _pattern_route(
     demand: np.ndarray, capacity: np.ndarray, curvy: CurvyPatternConfig,
 ) -> list[tuple[int, int]] | None:
     """Curvy-Aware Pattern Routing（*创新*，第74轮：选最少弯曲路径）。"""
-    n_gx, n_gy = demand.shape
+    # R389 修复：demand 形状为 (gh, gw) = (y_size, x_size)，应解包为 (n_gy, n_gx)
+    # 原代码 `n_gx, n_gy = demand.shape` 顺序颠倒，导致非方形网格下越界检查错误
+    n_gy, n_gx = demand.shape
     candidates: list[tuple[float, list[tuple[int, int]]]] = []
     for path in _gen_l_shape_paths(start, goal):
         if _path_valid_and_ok(path, demand, capacity, n_gx, n_gy):
@@ -561,11 +563,16 @@ def _path_valid_and_ok(
     path: list[tuple[int, int]], demand: np.ndarray, capacity: np.ndarray,
     n_gx: int, n_gy: int,
 ) -> bool:
-    """检查路径是否在边界内且无拥塞溢出。"""
+    """检查路径是否在边界内且无拥塞溢出。
+
+    R389 修复：demand/capacity 形状为 (gh, gw) = (y_size, x_size)，
+    numpy 访问需用 [gy, gx]（行,列 = y,x）。原代码 `demand[gx, gy]`
+    索引顺序错误，非方形网格下会访问错误位置或越界。
+    """
     for gx, gy in path:
         if not (0 <= gx < n_gx and 0 <= gy < n_gy):
             return False
-        if demand[gx, gy] + 1.0 > capacity[gx, gy]:
+        if demand[gy, gx] + 1.0 > capacity[gy, gx]:
             return False
     return True
 
