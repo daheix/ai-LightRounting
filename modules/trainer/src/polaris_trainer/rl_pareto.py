@@ -91,7 +91,13 @@ class MultiObjectiveRewardConfig:
 
 
 def _port_positions(placement: dict, circuit: dict) -> dict:
-    """计算端口绝对坐标（简化：端口映射到器件中心）。"""
+    """计算端口绝对坐标（简化：端口映射到器件中心）。
+
+    R388 修复：兼容两种 ports 格式:
+    - list[str]: 简化格式（测试用），如 ["a", "b"]
+    - list[list]: 真实数据格式（SiEPIC/PICBench netlist.json），
+      如 [["pin1", 0.0, 0.0, "W"], ...]，取 port[0] 作为 name
+    """
     positions: dict[tuple[str, str], tuple[float, float]] = {}
     for dev in circuit["devices"]:
         if dev["id"] not in placement:
@@ -111,7 +117,9 @@ def _port_positions(placement: dict, circuit: dict) -> dict:
             )
         w = float(dev["width_um"])
         h = float(dev["height_um"])
-        for port_name in dev.get("ports", []):
+        for port_entry in dev.get("ports", []):
+            # R388 修复：兼容 list[str] 和 list[list] 两种 ports 格式
+            port_name = port_entry[0] if isinstance(port_entry, (list, tuple)) else port_entry
             positions[(dev["id"], port_name)] = (x + w / 2, y + h / 2)
     return positions
 
