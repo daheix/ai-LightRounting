@@ -648,9 +648,8 @@ def importance_sampling_mean(
 
     学术依据: Glynn & Iglehart 1989, DOI: 10.1287/mnsc.35.11.1367
     """
-    d = len(nominal_dist)
     _validate_yield_params(nominal_dist, n_samples, min_ess_ratio)
-    if d == 0:
+    if len(nominal_dist) == 0:
         raise ValueError("nominal_dist 不能为空")
     rng = np.random.default_rng(seed)
     f_dists = _build_univariate_distributions(nominal_dist)

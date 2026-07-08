@@ -351,6 +351,27 @@ def ring_resonator_s(
     }
 
 
+def _build_dc_s_matrix(tau_arr, kappa_arr, zero) -> dict:
+    """构造定向耦合器 S 参数矩阵 dict（4 端口 16 项）。"""
+    return {
+        # 直通: out1←in1, out2←in2
+        port_key("out1", "in1"): tau_arr.tolist(),
+        port_key("out2", "in2"): tau_arr.tolist(),
+        port_key("in1", "out1"): tau_arr.tolist(),
+        port_key("in2", "out2"): tau_arr.tolist(),
+        # 交叉耦合: out2←in1, out1←in2
+        port_key("out2", "in1"): kappa_arr.tolist(),
+        port_key("out1", "in2"): kappa_arr.tolist(),
+        port_key("in1", "out2"): kappa_arr.tolist(),
+        port_key("in2", "out1"): kappa_arr.tolist(),
+        # 对角反射项为零
+        port_key("in1", "in1"): zero.tolist(),
+        port_key("in2", "in2"): zero.tolist(),
+        port_key("out1", "out1"): zero.tolist(),
+        port_key("out2", "out2"): zero.tolist(),
+    }
+
+
 def directional_coupler_s(
     wavelength_um: list,
     coupling: float = 0.5,
@@ -409,7 +430,6 @@ def directional_coupler_s(
         raise ValueError(f"gap_um 必须 > 0，得到 {gap_um}")
     if neff <= 0:
         raise ValueError(f"neff 必须 > 0，得到 {neff}")
-
     wl = _to_array(wavelength_um)
     # κL = arcsin(√coupling) → 振幅耦合系数 sin(κL)，直通 cos(κL)
     kappa_L = np.arcsin(np.sqrt(coupling))
@@ -430,20 +450,4 @@ def _assemble_dc_s_matrix(
     tau_arr = np.full_like(wl, tau_amp, dtype=complex)
     kappa_arr = np.full_like(wl, kappa_amp, dtype=complex)
     zero = np.zeros_like(wl, dtype=complex)
-    return {
-        # 直通: out1←in1, out2←in2
-        port_key("out1", "in1"): tau_arr.tolist(),
-        port_key("out2", "in2"): tau_arr.tolist(),
-        port_key("in1", "out1"): tau_arr.tolist(),
-        port_key("in2", "out2"): tau_arr.tolist(),
-        # 交叉耦合: out2←in1, out1←in2
-        port_key("out2", "in1"): kappa_arr.tolist(),
-        port_key("out1", "in2"): kappa_arr.tolist(),
-        port_key("in1", "out2"): kappa_arr.tolist(),
-        port_key("in2", "out1"): kappa_arr.tolist(),
-        # 对角反射项为零
-        port_key("in1", "in1"): zero.tolist(),
-        port_key("in2", "in2"): zero.tolist(),
-        port_key("out1", "out1"): zero.tolist(),
-        port_key("out2", "out2"): zero.tolist(),
-    }
+    return _build_dc_s_matrix(tau_arr, kappa_arr, zero)

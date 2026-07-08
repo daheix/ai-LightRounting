@@ -63,6 +63,45 @@ _WG_LAYER: tuple[int, int] = (1, 0)
 _DEVICE_SPACING_UM: float = 5.0
 
 
+def _place_device_cells(
+    ly, circuit: dict, wg_li, dbu: float, top_cell,
+) -> None:
+    """为每个器件创建子 cell 并在顶层放置实例（沿 x 轴顺序排列）。"""
+    x_offset = 0.0
+    for dev in circuit["devices"]:
+        w_um = float(dev["width_um"])
+        h_um = float(dev["height_um"])
+        dev_name = str(dev["name"])
+        child = ly.create_cell(dev_name)
+        # box 在 WG 层（dbu 单位），尺寸为器件 footprint
+        w_dbu = int(round(w_um / dbu))
+        h_dbu = int(round(h_um / dbu))
+        if w_dbu < 1:
+            w_dbu = 1
+        if h_dbu < 1:
+            h_dbu = 1
+        child.shapes(wg_li).insert(db.Box(0, 0, w_dbu, h_dbu))
+        # 在顶层放置实例（沿 x 轴顺序排列，y=0 居中）
+        x_dbu = int(round(x_offset / dbu))
+        trans = db.Trans(x_dbu, 0)
+        top_cell.insert(db.CellInstArray(child.cell_index(), trans))
+        x_offset += w_um + _DEVICE_SPACING_UM
+
+
+def _build_export_result(out: Path, ly, loadable: bool) -> dict[str, Any]:
+    """构造导出结果 dict。"""
+    file_size = out.stat().st_size
+    n_structures = ly.cells()
+    n_layers = len([li for li in ly.layer_indices()])
+    return {
+        "path": str(out.resolve()),
+        "file_size_bytes": file_size,
+        "n_structures": n_structures,
+        "n_layers": n_layers,
+        "loadable": loadable,
+    }
+
+
 def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
     """将 polaris_core circuit dict 导出为 gdsfactory 兼容 GDSII 文件。
 
@@ -88,15 +127,11 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
     if out.is_dir():
         raise RuntimeError(f"输出路径是目录不是文件: {output_path}")
     out.parent.mkdir(parents=True, exist_ok=True)
-
     ly = db.Layout()
     ly.dbu = _GDSFACTORY_DEFAULT_DBU_UM
-
-    # 顶层 cell
     top_name = str(circuit["name"])
     top_cell = ly.create_cell(top_name)
     wg_li = ly.layer(_WG_LAYER[0], _WG_LAYER[1])
-
     dbu = _GDSFACTORY_DEFAULT_DBU_UM
     # 为每个器件创建子 cell + 在顶层放置实例
     _place_device_instances(db, ly, top_cell, wg_li, circuit["devices"], dbu)
@@ -105,7 +140,6 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
         raise RuntimeError(
             "Layout 无 cell，无法写出 GDSII（circuit.devices 为空）"
         )
-
     try:
         ly.write(str(out))
     except Exception as e:
@@ -113,21 +147,8 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
             f"klayout 写出 GDSII 失败: {type(e).__name__}: {e}。"
             f"禁止 fall-back（R03）。"
         ) from e
-
-    file_size = out.stat().st_size
-    n_structures = ly.cells()
-    n_layers = len([li for li in ly.layer_indices()])
-
-    # 重新读入验证 loadable
     loadable = _verify_loadable(str(out))
-
-    return {
-        "path": str(out.resolve()),
-        "file_size_bytes": file_size,
-        "n_structures": n_structures,
-        "n_layers": n_layers,
-        "loadable": loadable,
-    }
+    return _build_export_result(out, ly, loadable)
 
 
 def _place_device_instances(

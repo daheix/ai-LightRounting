@@ -275,12 +275,10 @@ def compute_worst_case_distance(
             f"func 标称评估失败: {type(e).__name__}: {e}。禁止 fall-back。"
         ) from e
     n_eval = 1
-
     sensitivities, n_sens = _compute_unnormalized_sensitivity(
         func, base_params, delta=sensitivity_delta
     )
     n_eval += n_sens
-
     sigma_output = float(
         np.sqrt(np.sum((sensitivities * param_sigmas) ** 2))
     )
@@ -289,14 +287,11 @@ def compute_worst_case_distance(
             "σ_f = 0: 输出对参数完全不敏感或 σ_i 全为 0，WCD 无定义。"
             "禁止 fall-back（R03）。"
         )
-
     if direction == "lower":
         wcd = (f_nominal - spec_threshold) / sigma_output
     else:
         wcd = (spec_threshold - f_nominal) / sigma_output
-
     yield_estimate = float(norm.cdf(wcd))
-
     return WorstCaseDistanceResult(
         wcd=wcd, yield_estimate=yield_estimate, f_nominal=f_nominal,
         sigma_output=sigma_output, spec_threshold=spec_threshold,

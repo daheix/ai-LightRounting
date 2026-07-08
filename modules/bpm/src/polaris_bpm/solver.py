@@ -236,10 +236,6 @@ def build_loss_profile(
         cap_fraction,
     )
     alpha = np.zeros(nx, dtype=np.float64)
-    # 芯区 Soref 材料吸收 (功率衰减系数)
-    # α_p = loss_dB/cm · ln(10)/10 / 1e4 (μm⁻¹)
-    # 推导: P(z)=P(0)·10^(-loss·z_cm/10) = P(0)·exp(-loss·ln10·z/10)
-    #       z_cm = z_μm / 1e4 → α_p = loss·ln10/(10·1e4) (μm⁻¹)
     if loss_db_per_cm > 0:
         alpha_core = loss_db_per_cm * np.log(10.0) / 10.0 / 1e4
         alpha[core_x0:core_x1] = alpha_core
@@ -398,10 +394,8 @@ def _setup_bpm_field(
     alpha_profile = build_loss_profile(
         nx, core_x0, core_x1, pad_pts,
         loss_db_per_cm=LOSS_DB_PER_CM_SI,
-        cap_strength=CAP_STRENGTH,
-        cap_fraction=CAP_FRACTION,
+        cap_strength=CAP_STRENGTH, cap_fraction=CAP_FRACTION,
     )
-    # symmetric split-step 振幅衰减因子 (|E| *= exp(-α·dz/2))
     attn_half = np.exp(-0.5 * alpha_profile * dz)
     # 初始场: 高斯光束（中心对准波导，腰斑≈波导宽度，耦合到基模）
     center_um = window_um / 2.0
@@ -523,3 +517,53 @@ def solve_bpm(
             "alpha_profile": alpha_profile.tolist(),
         },
     }
+
+
+def solve_bpm(
+    width_um: float = 0.5,
+    length_um: float = 50.0,
+    wavelength_um: float = 1.55,
+    n_core: float = 3.476,
+    n_clad: float = 1.444,
+    dz_um: float = 0.1,
+    dx_um: float = 0.01,
+    pad_um: float = 2.0,
+) -> dict:
+    """1D Crank-Nicolson split-step BPM 求解器。
+
+    在硅条形波导中传播高斯光束，CN 隐式格式求解抛物波动方程，
+    symmetric split-step 显式衰减步引入物理损耗。
+
+    每步: E^{n+1} = exp(-α·dz/2) · A⁻¹·B · exp(-α·dz/2) · E^n
+
+    Args:
+        width_um: 波导芯宽度（μm）。
+        length_um: 传播长度（μm）。
+        wavelength_um: 波长（μm）。
+        n_core: 芯区折射率（Si 3.476，Soref 1993）。
+        n_clad: 包层折射率（SiO2 1.444）。
+        dz_um: 纵向步长（μm）。
+        dx_um: 横向步长（μm）。
+        pad_um: 包层 padding（μm，每侧）。
+
+    Returns:
+        dict: {field_z, transmission_db, n_steps, grid_info, physics, loss}
+
+    Raises:
+        ValueError: 参数非法（R03）。
+        RuntimeError: 求解失败或 NaN（R03）。
+
+    来源: Feit & Fleck 1978; Crank & Nicolson 1947; Soref 1993; Hadley 1992
+    """
+    (field, A_banded, B_banded, attn_half, nx, nz, dz, dx,
+     window_um, core_x0, core_x1, k0, n0, alpha_profile, p_initial) = (
+        _solve_bpm_setup(
+            width_um, length_um, wavelength_um, n_core, n_clad,
+            dx_um, dz_um, pad_um
+        )
+    )
+    field = _solve_bpm_propagate(field, A_banded, B_banded, attn_half, nx, nz)
+    return _solve_bpm_build_result(
+        field, p_initial, nx, nz, dz, dx, window_um, core_x0, core_x1,
+        k0, n0, n_core, n_clad, wavelength_um, alpha_profile
+    )

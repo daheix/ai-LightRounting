@@ -13,6 +13,7 @@
 - Galetzka, Loukrezis, De Gersem, "Data-driven model-free modified nodal
   analysis circuit solver", Int. J. Numer. Model. 2024,
   https://doi.org/10.1002/jnm.3205
+- ngspice 开源 SPICE 引擎: https://ngspice.sourceforge.io/
 
 MNA 核心算法:
 1. 构建节点-元件关联矩阵

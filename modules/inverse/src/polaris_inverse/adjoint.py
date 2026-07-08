@@ -352,42 +352,7 @@ def run_adjoint_optimization(
 ) -> dict:
     """执行 Adjoint 逆向设计：JAX 可微分 FDTD 优化波导宽度。
 
-    流程:
-    1. 构建 YeeGrid3D 网格 + DifferentiableFDTD 求解器
-    2. 启用 Gedney PML 吸收边界
-    3. 定义归一化 FoM(width) = max(|monitor|) / max(|source|)（值域 [0,1]，
-       *修复 R05* 旧版未归一化致场强 ~1e16 梯度裁剪恒触发不收敛）
-    4. *创新* jax.grad 自动计算 dFoM/dwidth（替代手动伴随方程）
-    5. heavy-ball 动量梯度上升优化 width（最大化 FoM）
-    6. 记录 FoM 历史、收敛状态
-
-    Args:
-        n_iterations: 优化迭代次数（默认 50）。
-        learning_rate: 学习率（默认 0.5）。
-
-    Returns:
-        优化结果 dict（best-checkpoint 语义，2026-07-03 R05 修复）::
-
-            {
-                "initial_width_nm": float,    # 初始波导半宽度 (nm)
-                "optimal_width_nm": float,    # 历史最优 FoM 对应宽度 (nm)
-                "initial_fom": float,         # 初始 FoM
-                "final_fom": float,           # 历史最优 FoM（best_fom，非末步）
-                "improvement_db": float,      # 10*log10(best/initial)，恒 >= 0
-                "fom_history": list[float],   # 真实轨迹（含震荡，长度 n_iterations+1）
-                "converged": bool,            # 末 3 步变化 <1%（反映末段稳定性）
-                "iterations": int,            # 实际迭代次数
-            }
-
-        best-checkpoint 说明: 200nm 网格 FoM 景观非光滑，heavy-ball 动量在
-        n≥10 迭代后过冲震荡致末步 FoM 反降。返回历史最优（best_fom/best_width）
-        而非末步，是嘈杂优化的标准做法（torch.save best_model / Keras
-        ModelCheckpoint save_best_only / lumopt 保留最优结构），非 R03 fall-back
-        ——优化器仍执行真实梯度上升，fom_history 记录真实轨迹供诊断。
-
-    Raises:
-        ValueError: n_iterations/learning_rate 非法。
-        RuntimeError: JAX 不可用或优化过程出现 NaN（R03 禁止 fall-back）。
+    来源: Taflove 2005 §4.4 CFL; Gedney 1996 IEEE TAP PML
     """
     _validate_adjoint_params(n_iterations, learning_rate)
     ctx = _build_adjoint_setup()
@@ -412,6 +377,71 @@ def run_adjoint_optimization(
         best_width = float(width_param)
     return _finalize_adjoint_result(
         fom_history, best_fom, best_width, n_iterations
+    )
+
+
+def run_adjoint_optimization(
+    n_iterations: int = N_ITERATIONS,
+    learning_rate: float = LEARNING_RATE,
+) -> dict:
+    """执行 Adjoint 逆向设计：JAX 可微分 FDTD 优化波导宽度。
+
+    流程: 构建 YeeGrid3D+PML → jax.grad 自动微分 → heavy-ball 动量梯度上升
+    → best-checkpoint 返回（历史最优 FoM 对应 width，非末步）。
+
+    best-checkpoint 语义（R05 修复 2026-07-03）: 200nm 网格 FoM 景观非光滑，
+    heavy-ball 动量在 n>=10 后过冲震荡。返回历史最优（best_fom/best_width）
+    而非末步，是嘈杂优化标准做法（torch.save best_model / Keras
+    ModelCheckpoint save_best_only / lumopt 保留最优结构），非 R03 fall-back
+    ——优化器仍执行真实梯度上升，fom_history 记录真实轨迹供诊断。
+
+    Args:
+        n_iterations: 优化迭代次数（默认 50）。
+        learning_rate: 学习率（默认 0.5）。
+
+    Returns:
+        优化结果 dict（best-checkpoint 语义）::
+
+            {
+                "initial_width_nm": float,
+                "optimal_width_nm": float,   # 历史最优 FoM 对应宽度
+                "initial_fom": float,
+                "final_fom": float,          # 历史最优 FoM（best_fom，非末步）
+                "improvement_db": float,     # 10*log10(best/initial)，恒 >= 0
+                "fom_history": list[float],  # 真实轨迹（含震荡）
+                "converged": bool,           # 末 3 步变化 <1%
+                "iterations": int,
+            }
+
+    Raises:
+        ValueError: n_iterations/learning_rate 非法。
+        RuntimeError: JAX 不可用或优化过程出现 NaN（R03 禁止 fall-back）。
+
+    来源（R02 学术诚信）:
+        - Mahau 2024 arXiv:2412.12360 https://arxiv.org/abs/2412.12360
+        - Hughes 2018 ACS Photonics https://arxiv.org/abs/1811.01255
+        - Polyak 1964 heavy-ball
+        - Kingma & Ba 2014 Adam https://arxiv.org/abs/1412.6980
+        - lumopt https://github.com/chriskeraly/lumopt
+    """
+    if not isinstance(n_iterations, int) or n_iterations <= 0:
+        raise ValueError(f"n_iterations 须为正整数，实际 {n_iterations}")
+    if not isinstance(learning_rate, (int, float)) or learning_rate <= 0:
+        raise ValueError(f"learning_rate 须为正数，实际 {learning_rate}")
+
+    grid, fdtd, source_pos, monitor_pos, source_freq, target_freq, _, ny = (
+        _run_adjoint_build_solver()
+    )
+    width_param = jnp.array(INITIAL_WIDTH_PIXELS, dtype=jnp.float32)
+    grad_fn = jax.grad(fom_fn, argnums=0)
+
+    fom_history, best_fom, best_width, width_param = _run_adjoint_optimize_loop(
+        n_iterations, learning_rate, width_param, grad_fn, fdtd, grid,
+        source_pos, source_freq, monitor_pos, target_freq, ny,
+    )
+    return _run_adjoint_finalize(
+        width_param, fom_history, best_fom, best_width, fdtd, grid,
+        source_pos, source_freq, monitor_pos, target_freq, n_iterations,
     )
 
 

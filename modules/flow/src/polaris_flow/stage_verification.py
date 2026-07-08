@@ -183,19 +183,7 @@ def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
         max_insertion_loss_db=loss_target_db,
     )
     checker = ConstraintChecker(config=config)
-
-    # 构建检查上下文（含损耗与交叉数，来自阶段 5）
-    total_loss_db = float(prev_outputs.get("total_loss_db", 0.0))
-    n_crossings = int(prev_outputs.get("n_crossings", 0))
-    circuit_dict = prev_outputs.get("circuit", {})
-    canvas_w = float(circuit_dict.get("canvas_w", 0.0)) if circuit_dict else 0.0
-    canvas_h = float(circuit_dict.get("canvas_h", 0.0)) if circuit_dict else 0.0
-    ctx = CheckContext(
-        total_loss_db=total_loss_db,
-        n_crossings=n_crossings,
-        canvas_w=canvas_w,
-        canvas_h=canvas_h,
-    )
+    ctx = _build_check_context(prev_outputs)
 
     violations = checker.check(placements=placements, paths=routes, context=ctx)
     violation_list = _serialize_drc_violations(violations)

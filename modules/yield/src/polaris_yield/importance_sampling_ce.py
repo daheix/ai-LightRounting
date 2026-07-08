@@ -311,12 +311,10 @@ def cross_entropy_importance_sampling(
         nominal_dist, n_samples, n_iterations, elite_ratio, smoothing_alpha
     )
     d = len(nominal_dist)
-
     rng = np.random.default_rng(seed)
     f_dists = _build_univariate_distributions(nominal_dist)
     q_means, q_stds = _init_ce_distribution(nominal_dist, initial_mean_shift)
     n_elite = max(1, int(n_samples * elite_ratio))
-
     q_means, q_stds, total_evals, converged = _run_ce_iterations(
         failure_region, rng, q_means, q_stds, n_samples, n_iterations,
         n_elite, smoothing_alpha, d,

@@ -317,6 +317,32 @@ class ThermalSolver2D:
                 return float(np.mean(self._T[mask, :]))
         raise KeyError(f"层 {layer_name} 不存在")
 
+    def _prepare_crosstalk_params(
+        self, heater_power_mw: float, heater_length_um: float,
+    ) -> tuple[float, float, float]:
+        """识别 Si 衬底并计算热串扰参数 (k_si, r_ref_um, p_lin_w_m)。
+
+        严格镜像源法：r_ref = 2h（热源到镜像源距离），R03 失败即 raise。
+        """
+        k_si = 148.0  # Si 衬底热导率 [W/(m·K)] (Cocorullo 1999 / Incropera)
+        si_k_threshold = 100.0  # W/(m·K)，排除 SiO2(1.4)/TiN(~28) 等低热导材料
+        sub_layers = [
+            l for l in self.layers if l.thermal_conductivity_w_mk >= si_k_threshold
+        ]
+        if not sub_layers:
+            raise ValueError(
+                f"缺少 Si 衬底层 (k ≥ {si_k_threshold} W/(m·K))，"
+                "无法应用 Carslaw-Jaeger 线热源模型"
+            )
+        h_um = sum(l.thickness_um for l in sub_layers)
+        if h_um <= 0.0:
+            raise ValueError(f"衬底厚度非正: {h_um}")
+        r_ref_um = 2.0 * h_um
+        if heater_length_um <= 0.0:
+            raise ValueError(f"heater_length_um 须 > 0，实际 {heater_length_um}")
+        p_lin_w_m = heater_power_mw * 1e-3 / (heater_length_um * 1e-6)
+        return k_si, r_ref_um, p_lin_w_m
+
     def thermal_crosstalk_matrix(
         self,
         heater_positions_um: list[float],

@@ -231,6 +231,76 @@ def _do_multi_clip_one_region(
 # =============================================================================
 # 单区域裁剪
 # =============================================================================
+def _clip_load_layout(db, in_path: Path):
+    """加载 GDSII layout 文件（R03 禁止 fall-back）。
+
+    Args:
+        db: klayout.db 模块。
+        in_path: 输入 GDSII 文件路径。
+
+    Returns:
+        klayout.db.Layout 对象。
+
+    Raises:
+        FileNotFoundError: 输入文件不存在。
+        ValueError: 输入路径不是文件。
+        RuntimeError: klayout 读取失败。
+    """
+    if not in_path.exists():
+        raise FileNotFoundError(f"GDSII 文件不存在: {in_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {in_path}")
+    ly = db.Layout()
+    try:
+        ly.read(str(in_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return ly
+
+
+def _clip_compute_cell_stats(cell, ly, dbu: float) -> tuple[int, tuple]:
+    """递归统计 cell 的 shapes 数与 bbox（μm）。
+
+    Args:
+        cell: klayout.db.Cell。
+        ly: klayout.db.Layout。
+        dbu: 数据库单位（μm）。
+
+    Returns:
+        (shapes_count, bbox_um=(left, bottom, right, top) μm)。
+    """
+    shapes = _count_shapes_rec(cell, ly)
+    bbox = cell.bbox()
+    bbox_um = (
+        float(bbox.left) * dbu,
+        float(bbox.bottom) * dbu,
+        float(bbox.right) * dbu,
+        float(bbox.top) * dbu,
+    )
+    return shapes, bbox_um
+
+
+def _clip_write_cell(new_cell, out_path: Path):
+    """写出单个 cell 为 GDSII（R03 禁止 fall-back）。
+
+    用 Cell.write 而非 Layout.write，只写出该 cell 及其引用的子 cell 层次，
+    避免写出原 layout 中的孤儿 cell。
+
+    来源: KLayout Cell.write
+        https://www.klayout.org/doc-qt5/code/class_Cell.html
+    """
+    try:
+        new_cell.write(str(out_path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+
+
 def clip_gdsii(
     gds_path: str | Path,
     output_path: str | Path,
@@ -288,6 +358,115 @@ def clip_gdsii(
 # =============================================================================
 # 多区域裁剪
 # =============================================================================
+def _multi_clip_validate_inputs(
+    in_path: Path, clip_boxes_um: list,
+) -> list[tuple[float, float, float, float]]:
+    """校验 multi_clip 输入参数（R03 禁止 fall-back）。
+
+    Args:
+        in_path: 输入文件路径。
+        clip_boxes_um: 裁剪框列表。
+
+    Returns:
+        validated_boxes: 校验后的裁剪框列表。
+
+    Raises:
+        FileNotFoundError: 输入文件不存在。
+        ValueError: 输入不是文件 / clip_boxes 为空 / 任一 box 无效。
+    """
+    if not in_path.exists():
+        raise FileNotFoundError(f"GDSII 文件不存在: {in_path}")
+    if not in_path.is_file():
+        raise ValueError(f"输入路径不是文件: {in_path}")
+    if not clip_boxes_um:
+        raise ValueError(
+            "clip_boxes_um 不能为空。禁止 fall-back（R03）。"
+        )
+    validated_boxes: list[tuple[float, float, float, float]] = []
+    for i, box in enumerate(clip_boxes_um):
+        validated_boxes.append(
+            _validate_clip_box(box, context=f"clip_boxes[{i}]")
+        )
+    return validated_boxes
+
+
+def _multi_clip_build_box_dbu_list(
+    db, validated_boxes: list, dbu: float,
+) -> list:
+    """构造 dbu 整数单位的裁剪框列表。
+
+    Args:
+        db: klayout.db 模块。
+        validated_boxes: 校验后的 (l, b, r, t) μm 裁剪框列表。
+        dbu: 数据库单位（μm）。
+
+    Returns:
+        list[db.Box]: dbu 单位的 Box 列表。
+    """
+    box_dbu_list = []
+    for (left, bottom, right, top) in validated_boxes:
+        box_dbu_list.append(
+            db.Box(
+                int(round(left / dbu)),
+                int(round(bottom / dbu)),
+                int(round(right / dbu)),
+                int(round(top / dbu)),
+            )
+        )
+    return box_dbu_list
+
+
+def _multi_clip_process_one(
+    idx: int, ci: int, box_um: tuple, ly, dbu: float, out_dir: Path,
+    prefix: str, original_name: str, gds_path, shapes_before: int,
+    bbox_before_um: tuple,
+) -> ClipReport:
+    """处理单个裁剪结果: 重命名、统计、写出、构造报告。
+
+    Args:
+        idx: 裁剪区域序号。
+        ci: 新 cell index。
+        box_um: 裁剪框 (l, b, r, t) μm。
+        ly: klayout.db.Layout。
+        dbu: 数据库单位（μm）。
+        out_dir: 输出目录。
+        prefix: 文件名前缀。
+        original_name: 源 top cell 名。
+        gds_path: 输入文件路径（用于报告）。
+        shapes_before: 裁剪前 shape 数（共享）。
+        bbox_before_um: 裁剪前 bbox（共享）。
+
+    Returns:
+        ClipReport。
+    """
+    new_cell = ly.cell(ci)
+    final_name = f"{prefix}_clip{idx}"
+    new_cell.name = final_name
+    left, bottom, right, top = box_um
+    shapes_after, bbox_after_um = _clip_compute_cell_stats(new_cell, ly, dbu)
+    out_file = out_dir / f"{final_name}.gds"
+    # 单独写出此 cell（Cell.write 只写该 cell 及其子 cell 的层次）
+    try:
+        new_cell.write(str(out_file))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 写出文件 {out_file} 失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    return ClipReport(
+        input_path=str(gds_path),
+        output_path=str(out_file),
+        dbu=dbu,
+        top_cell_name=original_name,
+        clip_box_um=(left, bottom, right, top),
+        clipped_cell_name=final_name,
+        shapes_before=shapes_before,
+        shapes_after=shapes_after,
+        bbox_before_um=bbox_before_um,
+        bbox_after_um=bbox_after_um,
+    )
+
+
 def multi_clip_gdsii(
     gds_path: str | Path,
     output_dir: str | Path,

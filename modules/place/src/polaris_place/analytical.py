@@ -317,20 +317,20 @@ def place_analytical(
         circuit, canvas_w, canvas_h, widths, heights
     )
     # 1. 初始布局
-    pos = _initial_placement(n, connections, canvas_w, canvas_h, cfg.seed)
+    pos = initial_placement(n, connections, canvas_w, canvas_h, cfg.seed)
     m = np.zeros_like(pos)
     v = np.zeros_like(pos)
     prev_hpwl = float("inf")
     # 2. 梯度下降主循环
     for t in range(1, cfg.max_iterations + 1):
-        hpwl_grad = _smooth_hpwl_gradient(pos, connections, cfg.gamma)
-        dens_grad = _density_gradient(pos, n, cfg.density_bandwidth)
+        hpwl_grad = smooth_hpwl_gradient(pos, connections, cfg.gamma)
+        dens_grad = density_gradient(pos, n, cfg.density_bandwidth)
         total_grad = hpwl_grad + cfg.density_weight * dens_grad
-        pos, m, v = _adam_step(pos, total_grad, m, v, t, cfg.learning_rate)
+        pos, m, v = adam_step(pos, total_grad, m, v, t, cfg.learning_rate)
         pos[:, 0] = np.clip(pos[:, 0], 0.0, canvas_w)
         pos[:, 1] = np.clip(pos[:, 1], 0.0, canvas_h)
         if t % 10 == 0:
-            cur_hpwl = _compute_hpwl_pos(pos, connections)
+            cur_hpwl = compute_hpwl_pos(pos, connections)
             if abs(prev_hpwl - cur_hpwl) < cfg.convergence_threshold:
                 break
             prev_hpwl = cur_hpwl

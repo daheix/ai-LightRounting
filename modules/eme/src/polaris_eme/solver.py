@@ -186,7 +186,6 @@ def solve_slab_modes(
         dx_um: 网格步长（μm）。
         pad_um: 包层 padding（μm，每侧）。当 window_um 给定时被忽略。
         window_um: 可选，显式指定仿真窗口宽度（μm）。
-            用于 EME 多段级联时保证各段网格一致。
 
     Returns:
         dict: {modes: [{neff, beta, field_1d}], n_modes, grid_info}
@@ -214,9 +213,7 @@ def solve_slab_modes(
         "modes": guided,
         "n_modes": len(guided),
         "grid_info": {
-            "nx": nx,
-            "dx_um": float(dx),
-            "window_um": float(win_um),
+            "nx": nx, "dx_um": float(dx), "window_um": float(win_um),
             "core_x": [core_x0, core_x1],
         },
     }
@@ -535,3 +532,46 @@ def solve_eme(
             for i, sd in enumerate(section_data)
         ],
     }
+
+
+def solve_eme(
+    sections: list[dict],
+    wavelength_um: float = 1.55,
+    n_modes_per_section: int = 2,
+    dx_um: float = 0.01,
+    pad_um: float = 1.0,
+) -> dict:
+    """EME 求解器: 多段均匀波导级联。
+
+    每段截面为 1D slab 波导（宽度可变），沿 z 传播。
+    段内相位传播，界面模式匹配，Redheffer 星积级联。
+
+    Args:
+        sections: 段列表，每段 dict{width_um, length_um, n_core, n_clad}。
+        wavelength_um: 波长（μm）。
+        n_modes_per_section: 每段求解的模式数。
+        dx_um: 横向网格步长（μm）。
+        pad_um: 包层 padding（μm）。
+
+    Returns:
+        dict: {transmission, transmission_db, reflection, s_matrix, sections_info}
+
+    Raises:
+        ValueError: 参数非法（R03）。
+        RuntimeError: 求解失败（R03）。
+
+    来源: Smit & van Dam 1996 IEEE/OSA JLT; Bienstman 2001 PhD（Redheffer 星积）
+    """
+    parsed = _solve_eme_validate_and_parse(
+        sections, wavelength_um, n_modes_per_section, dx_um, pad_um
+    )
+    section_data = _solve_eme_compute_modes(
+        parsed, wavelength_um, n_modes_per_section, dx_um, pad_um
+    )
+    for sd in section_data:
+        sd["propagation_phase"] = propagate_phase(
+            sd["mode"]["beta"], sd["length_um"]
+        )
+    interfaces = _solve_eme_compute_interfaces(section_data)
+    S_total = _solve_eme_cascade(section_data, interfaces)
+    return _solve_eme_build_result(S_total, section_data, wavelength_um)

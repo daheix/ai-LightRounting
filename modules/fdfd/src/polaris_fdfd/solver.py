@@ -249,7 +249,6 @@ def build_helmholtz_operator(
     # z 方向偏移 ±1，每行末尾清零（防止 x 方向 wrap）
     for i in range(nx - 1):
         off_z[(i + 1) * nz - 1] = 0.0
-
     L = sparse.diags(
         [off_x, off_z, main_diag, off_z, off_x],
         [-nz, -1, 0, 1, nz],

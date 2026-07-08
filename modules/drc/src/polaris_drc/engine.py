@@ -33,7 +33,7 @@ v5.2 拆分（R11 质量门禁：文件 ≤800 行）:
 | MIN_AREA | 0.1μm² | SiEPIC WG_MIN_AREA（确保工艺可识别）|
 | BOUNDARY | 0 | 器件不超出画布边界 |
 | NO_OVERLAP | 0 | 器件之间不能重叠（touching 允许）|
-| PORT_ALIGNMENT | 10μm | 连接端口坐标对齐（SiEPIC EBeam PDK 波导弯曲容差）|
+| PORT_ALIGNMENT | 5μm | 连接端口坐标对齐（SiEPIC EBeam PDK 低损耗波导弯曲半径下限）|
 | PORT_DIRECTION | - | 端口方向合法（north/south/east/west）|
 | PORT_CONNECTIVITY | - | 每个器件至少有一个端口被连接 |
 | PORT_FACING | - | 连接端口方向相对（east↔west / north↔south）|

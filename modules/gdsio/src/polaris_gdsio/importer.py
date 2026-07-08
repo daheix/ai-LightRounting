@@ -97,26 +97,20 @@ def _collect_layer_info(ly: Any) -> list[dict[str, Any]]:
 def import_gds(gds_path: str) -> dict[str, Any]:
     """从 GDSII 文件导入，返回结构化信息（兼容 gdsfactory 输出格式）。
 
-    流程详见模块 docstring 的 Process 段。
-
-    Args:
-        gds_path: GDSII 文件路径。
-
-    Returns:
-        dict 含 n_structures/n_layers/layers/bbox_um（详见模块 docstring 的
-        Output 段）。
+    路径校验在 klayout import 之前，确保文件不存在时 raise FileNotFoundError
+    而非 ModuleNotFoundError（R05 Bug 修复：原 import klayout 先于路径检查）。
 
     Raises:
         FileNotFoundError: 文件不存在。
-        RuntimeError: klayout 读取失败（R03 禁止 fall-back）。
+        RuntimeError: klayout 读取失败或无顶层 cell（R03 禁止 fall-back）。
     """
-    import klayout.db as db
-
     p = Path(gds_path)
     if not p.exists():
         raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
     if not p.is_file():
         raise RuntimeError(f"路径不是文件: {gds_path}")
+
+    import klayout.db as db
 
     ly = db.Layout()
     try:
@@ -128,12 +122,10 @@ def import_gds(gds_path: str) -> dict[str, Any]:
         ) from e
 
     dbu = float(ly.dbu)
-
-    # 选择顶层 cell（取第一个 top cell）
     top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
     if not top_cells:
         raise RuntimeError(f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空")
-    top_cell = top_cells[0]
+    return ly, top_cells[0], dbu
 
     layers = _collect_layer_info(ly)
 

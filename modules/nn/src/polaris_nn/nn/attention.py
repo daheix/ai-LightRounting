@@ -190,7 +190,7 @@ def _multi_head_attention_op(
     将 q/k/v 投影、分头、attention、拼头、输出投影表达为自定义可微 op，
     手动实现反向传播，梯度可流回 w_q/w_k/w_v 参数。
 
-    数学（来源: Vaswani et al. 2017 NeurIPS）:
+    数学（来源: Vaswani et al. 2017 NeurIPS https://arxiv.org/abs/1706.03762）:
     - scores = Q·K^T / sqrt(d_k)
     - attn = softmax(scores)
     - out = attn · V

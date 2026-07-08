@@ -153,6 +153,90 @@ class TextLabelReport:
 # =============================================================================
 # 文本提取
 # =============================================================================
+def _text_labels_load_layout(
+    db, gds_path: str | Path, layer_map, top_cell_name: str | None,
+):
+    """加载 GDSII layout 并校验（R03 禁止 fall-back）。
+
+    Args:
+        db: klayout.db 模块。
+        gds_path: GDSII 文件路径。
+        layer_map: 层映射（None 用 SiEPIC 标准）。
+        top_cell_name: 顶层 cell 名。
+
+    Returns:
+        (ly, dbu, top_cell, layer_map)。
+    """
+    path = Path(gds_path)
+    if not path.exists():
+        raise FileNotFoundError(f"GDSII 文件不存在: {gds_path}")
+    if not path.is_file():
+        raise ValueError(f"路径不是文件: {gds_path}")
+    ly = db.Layout()
+    try:
+        ly.read(str(path))
+    except Exception as e:
+        raise RuntimeError(
+            f"klayout 读取文件失败: {type(e).__name__}: {e}。"
+            f"禁止 fall-back（R03）。"
+        ) from e
+    dbu = float(ly.dbu)
+    if layer_map is None:
+        layer_map = _get_default_layer_map()
+    top_cell = _get_top_cell(ly, top_cell_name, gds_path)
+    return ly, dbu, top_cell, layer_map
+
+
+def _text_labels_collect_one_layer(
+    top_cell, li: int, layer_map: dict, dbu: float,
+    allowed_layer_keys: set | None,
+) -> list:
+    """递归遍历单层收集 TEXT 元素。
+
+    Args:
+        top_cell: klayout.db.Cell。
+        li: layer index。
+        layer_map: 层映射。
+        dbu: 数据库单位（μm）。
+        allowed_layer_keys: 允许的 (layer, datatype) 集合（None 提取所有）。
+
+    Returns:
+        list[TextLabel] 该层文本标签列表（可能为空）。
+
+    来源:
+        KLayout RecursiveShapeIterator:
+        https://www.klayout.org/doc-qt4/code/class_RecursiveShapeIterator.html
+    """
+    info = top_cell.layout().get_info(li)
+    gds_layer = int(info.layer)
+    gds_datatype = int(info.datatype)
+    layer_key = (gds_layer, gds_datatype)
+    layer_name = layer_map.get(
+        layer_key, f"LAYER_{gds_layer}_{gds_datatype}"
+    )
+    if allowed_layer_keys is not None and layer_key not in allowed_layer_keys:
+        return []
+    labels: list = []
+    it = top_cell.begin_shapes_rec(li)
+    while not it.at_end():
+        shape = it.shape()
+        if shape.is_text():
+            text_str = str(shape.text_string)
+            pos = shape.text_pos
+            cell_obj = it.cell()
+            labels.append({
+                "text": text_str,
+                "layer_name": layer_name,
+                "gds_layer": gds_layer,
+                "gds_datatype": gds_datatype,
+                "x_um": float(pos.x) * dbu,
+                "y_um": float(pos.y) * dbu,
+                "cell_name": str(cell_obj.name),
+            })
+        it.next()
+    return labels
+
+
 def extract_text_labels(
     gds_path: str | Path,
     layer_map: dict[tuple[int, int], str] | None = None,

@@ -356,17 +356,9 @@ def run_eda_flow(
     n_failed = 0
     n_skipped = 0
     flow_start = time.perf_counter()
-
     for stage_id, name, stage_fn in _STAGE_LIST:
         if stage_id in skip_set:
-            stages.append({
-                "stage_id": stage_id,
-                "name": name,
-                "status": "skipped",
-                "duration": 0.0,
-                "result": None,
-                "error": None,
-            })
+            stages.append(_run_eda_flow_make_skip_entry(stage_id, name))
             n_skipped += 1
             continue
         stage_dict, success = _run_one_eda_stage(

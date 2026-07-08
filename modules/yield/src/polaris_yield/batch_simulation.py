@@ -141,6 +141,42 @@ def _validate_batch_params(
     return len(param_sigmas)
 
 
+def _simulate_one_scenario(
+    sid: int, base: np.ndarray, param_sigmas: np.ndarray, n_samples: int,
+    d: int, rng: np.random.Generator, func: Callable[[np.ndarray], float],
+) -> BatchScenarioResult:
+    """对单个标称点执行 MC 仿真并返回统计结果（R03: 失败即 raise）。"""
+    base = np.asarray(base, dtype=float)
+    if base.shape != (d,):
+        raise ValueError(
+            f"base_params_list[{sid}] shape {base.shape} 与 "
+            f"param_sigmas ({d},) 不匹配"
+        )
+    noise = rng.normal(0.0, 1.0, size=(n_samples, d))
+    samples = base * (1.0 + param_sigmas * noise)
+    outputs = np.empty(n_samples, dtype=float)
+    for i in range(n_samples):
+        try:
+            outputs[i] = float(func(samples[i]))
+        except Exception as e:
+            raise RuntimeError(
+                f"func 评估失败 (场景 {sid}, 样本 {i}): "
+                f"{type(e).__name__}: {e}。禁止 fall-back（R03）。"
+            ) from e
+    return BatchScenarioResult(
+        scenario_id=sid, base_params=base,
+        mean=float(np.mean(outputs)),
+        std=(
+            float(np.std(outputs, ddof=1)) if n_samples > 1 else 0.0
+        ),
+        min=float(np.min(outputs)),
+        max=float(np.max(outputs)),
+        percentile_95=float(np.percentile(outputs, 95)),
+        percentile_05=float(np.percentile(outputs, 5)),
+        n_samples=n_samples, n_evaluations=n_samples,
+    )
+
+
 def batch_simulate(
     func: Callable[[np.ndarray], float],
     base_params_list: list[np.ndarray],
@@ -178,10 +214,8 @@ def batch_simulate(
     n_scenarios = len(base_params_list)
     rng = np.random.default_rng(seed)
     start_time = time.perf_counter()
-
     scenarios: list[BatchScenarioResult] = []
     total_eval = 0
-
     for sid, base in enumerate(base_params_list):
         scenario, n_eval = _run_batch_one_scenario(
             sid, base, param_sigmas, n_samples, d, func, rng,
