@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import json
 import os
+import zlib
 from pathlib import Path
 
 import numpy as np
@@ -402,13 +403,17 @@ def _build_node_features(devices: list, canvas_w: float, canvas_h: float) -> np.
     """构建 GNN 节点特征 [N, 4]（width_norm, height_norm, type_hash, idx_norm）。
 
     来源: AlphaChip node features, Mirhoseini et al. Nature 2021。
+
+    R389 修复：器件类型哈希用 zlib.crc32（稳定跨进程），原 Python 内置
+    hash() 受 PYTHONHASHSEED 随机化影响，导致训练/推理特征不一致，checkpoint
+    失效（训练时特征值与加载 checkpoint 推理时不同 → GNN 嵌入错误）。
     """
     n = len(devices)
     feats = np.zeros((n, _GNN_NODE_FEAT_DIM), dtype=np.float64)
     for i, d in enumerate(devices):
         feats[i, 0] = float(d["width_um"]) / max(canvas_w, 1.0)
         feats[i, 1] = float(d["height_um"]) / max(canvas_h, 1.0)
-        feats[i, 2] = hash(d["device_type"]) % 100 / 100.0
+        feats[i, 2] = zlib.crc32(d["device_type"].encode("utf-8")) % 100 / 100.0
         feats[i, 3] = i / max(n - 1, 1)
     return feats
 
@@ -468,9 +473,11 @@ def _encode_obs(devices: list, idx: int, n_dev: int, canvas_w: float, canvas_h: 
     [0] idx/(n-1), [1] width/canvas_w, [2] height/canvas_h, [3] n_dev/20,
     [4] 连接数/20（此处用 n_dev 代理）, [5] canvas_w/1000, [6] canvas_h/1000,
     [7] 器件类型哈希。
+
+    R389 修复：器件类型哈希用 zlib.crc32（稳定跨进程），与 _build_node_features 同步。
     """
     d = devices[idx]
-    type_hash = hash(d["device_type"]) % 100 / 100.0
+    type_hash = zlib.crc32(d["device_type"].encode("utf-8")) % 100 / 100.0
     return np.array([
         idx / max(n_dev - 1, 1),
         float(d["width_um"]) / max(canvas_w, 1.0),
@@ -502,6 +509,10 @@ def _resolve_overlap(
 
     Returns:
         调整后的 (x, y)。
+
+    Raises:
+        RuntimeError: max_tries 用尽仍未消解重叠（R03 禁止 fall-back：
+            不返回可能重叠的位置伪装成功放置）。
     """
     step = 5.0
     max_tries = 200
@@ -520,7 +531,14 @@ def _resolve_overlap(
         if y + h > canvas_h:
             y = 0.0
             x += step
-    return x, y
+    # R389 修复：max_tries 用尽仍重叠 → raise（R03 禁止 fall-back）
+    # 原代码 return x, y 会返回可能重叠的位置，后续 NO_OVERLAP DRC 必然违规，
+    # 把"未能消解重叠"伪装成"成功放置"是假数据兜底。
+    raise RuntimeError(
+        f"_resolve_overlap 在 {max_tries} 次尝试后仍未消解重叠"
+        f"（画布 {canvas_w}×{canvas_h}μm 可能已满，器件 {w}×{h}μm）"
+        f"（R03 禁止 fall-back）"
+    )
 
 
 def place_ppo_gnn(circuit: dict) -> tuple[dict[str, dict[str, float]], bool]:
@@ -538,7 +556,8 @@ def place_ppo_gnn(circuit: dict) -> tuple[dict[str, dict[str, float]], bool]:
         （无 checkpoint 时已 raise）。
 
     Raises:
-        RuntimeError: 无可用 checkpoint 或 checkpoint 不可加载。
+        RuntimeError: 无可用 checkpoint / checkpoint 不可加载 / 画布空间
+            不足无法消解器件重叠（R03 禁止 fall-back）。
     """
     devices, names, connections_idx, canvas_w, canvas_h = _parse_circuit(circuit)
     n_dev = len(devices)
