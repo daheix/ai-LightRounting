@@ -49,14 +49,16 @@ import sys
 import traceback
 from pathlib import Path
 
-# PoLaRIS 子模块路径
-sys.path.insert(0, "/workspace/modules/drc/src")
-sys.path.insert(0, "/workspace/modules/place/src")
+# R388 修复：项目迁移到 ai-LightRounting_20260708 后，路径需动态计算
+# （原硬编码 /workspace/modules/... 在目录迁移后失效）
+_REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO / "modules" / "drc" / "src"))
+sys.path.insert(0, str(_REPO / "modules" / "place" / "src"))
 
 import polaris_drc  # noqa: E402
 import polaris_place  # noqa: E402
 
-WORKSPACE = Path("/workspace")
+WORKSPACE = _REPO
 BENCH_DIR = WORKSPACE / "data" / "benchmarks"
 OUT_ROOT = WORKSPACE / "real_board"
 
