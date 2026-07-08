@@ -161,6 +161,12 @@ def _collect_rollout(
 
     env.step 须返回 Gymnasium 5-tuple ``(obs, reward, terminated, truncated, info)``。
     last_info 用于提取 HPWL 等布局指标（供 TrainingLogger 记录）。
+
+    R388 修复：terminated 时不再 break，而是 reset env 继续采集到
+    rollout_steps 满（PPO 标准做法：多 episode 拼接到一个 rollout）。
+    原 break 行为导致 5 器件 episode 仅采集 5 步，PPO 样本不足无法学习。
+    来源: SB3 PPO RolloutBuffer 多 episode 拼接
+      https://stable-baselines3.readthedocs.io/
     """
     ep_reward = 0.0
     steps = 0
@@ -176,7 +182,9 @@ def _collect_rollout(
             last_info = info
         agent.store(Transition(obs_vec, action, reward, logprob, value, terminated))
         if terminated:
-            break
+            # R388 修复：reset env 继续采集（多 episode 拼接），
+            # 而非 break（原行为导致小 episode rollout 样本不足）
+            obs, _info = env.reset()
     return ep_reward, steps, last_info
 
 
