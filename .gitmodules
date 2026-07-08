@@ -1,5 +1,3 @@
-[submodule "3dtool"]
-	path = 3dtool
-	url = https://github.com/daheix/3dtool.git
-	branch = main
-	sparse = true
+# 3dtool 已迁移为独立工具目录 /workspace/3dtool（所有项目共用，非 submodule）
+# 如需在新项目中使用 3dtool，请单独 clone 到 /workspace/3dtool
+# 详见 /workspace/3dtool/README.md 和 /workspace/3dtool/env.sh
