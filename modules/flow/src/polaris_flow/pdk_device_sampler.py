@@ -63,9 +63,11 @@ logger = logging.getLogger(__name__)
 # 1) 环境变量 POLARIS_PDK_NETLIST_DIR
 # 2) 项目内相对路径（基于本文件位置）
 # 3) /workspace/data/benchmarks/siepic_netlists（沙箱固定路径）
+# R389 修复：原 4 个 .parent = modules/ 目录，少一级，应为 5 个 .parent
+# = 仓库根目录 ai-LightRounting_20260708/（项目迁移遗留路径 Bug）
 _PDK_NETLIST_CANDIDATES: tuple[str, ...] = (
     "POLARIS_PDK_NETLIST_DIR",
-    str(Path(__file__).resolve().parent.parent.parent.parent
+    str(Path(__file__).resolve().parents[4]
         / "data" / "benchmarks" / "siepic_netlists"),
     "/workspace/data/benchmarks/siepic_netlists",
 )
