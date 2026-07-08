@@ -315,6 +315,18 @@ def _assemble_eda_flow_result(
     }
 
 
+def _run_eda_flow_make_skip_entry(stage_id: int, name: str) -> dict:
+    """构造跳过 stage 的结果字典（R05 修复：原调用未定义导致 NameError）。"""
+    return {
+        "stage_id": stage_id,
+        "name": name,
+        "status": "skipped",
+        "duration": 0.0,
+        "result": None,
+        "error": None,
+    }
+
+
 def run_eda_flow(
     circuit: dict,
     output_dir: str,

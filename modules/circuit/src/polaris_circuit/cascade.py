@@ -277,44 +277,6 @@ def _process_one_cascade_connection(
             inst_to_subnet[inst] = new_name
 
 
-def cascade_circuit(
-    instances: dict[str, SDict],
-    connections: list[tuple[str, str]],
-) -> None:
-    """处理所有连接，逐步合并子网络（原地修改 subnetworks/inst_to_subnet）。
-
-    逐步将器件两两连接，消去内部端口，保留外部端口。
-    连接用原始实例名引用，通过 inst_to_subnet 映射解析当前所属子网络，
-    避免合并后重命名导致的端口名冲突。
-
-    来源 (R02):
-    - SAX circuit 级联: https://flapport.github.io/sax/
-    - Filipsson 1978 Eur. Microw. Conf.
-    - Pozar §4.3 两网络级联
-
-    Args:
-        instances: 器件实例字典 {instance_name: SDict}。
-        connections: 连接列表 [(instance1.port, instance2.port), ...]。
-        ports: 外部端口映射 {external_name: instance.port}。
-
-    Returns:
-        电路级 S 参数字典。
-
-    Raises:
-        RuntimeError: 数值不稳定（分母趋零）或连接指向不存在的实例（R03）。
-    """
-    # 给所有实例端口名加实例前缀（避免同名端口冲突）
-    subnetworks: dict[str, SDict] = {
-        name: _prefix_instance_ports(name, sdict)
-        for name, sdict in instances.items()
-    }
-    # 实例名 → 当前所属子网络名（合并后更新）
-    inst_to_subnet: dict[str, str] = {name: name for name in instances}
-
-    for conn in connections:
-        _process_one_cascade_connection(conn, subnetworks, inst_to_subnet)
-
-
 def _merge_final_subnetworks(
     subnetworks: dict[str, SDict],
     ports: dict[str, str] | None,
@@ -368,7 +330,8 @@ def cascade_circuit(
     }
     # 实例名 → 当前所属子网络名（合并后更新）
     inst_to_subnet: dict[str, str] = {name: name for name in instances}
-    _process_cascade_connections(subnetworks, inst_to_subnet, connections)
+    for conn in connections:
+        _process_one_cascade_connection(conn, subnetworks, inst_to_subnet)
     return _merge_final_subnetworks(subnetworks, ports)
 
 

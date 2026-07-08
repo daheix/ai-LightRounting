@@ -186,8 +186,8 @@ class TestConstants:
         assert effective_step < GRID_NY / 2.0 - 1.0
 
     def test_inverse_version(self) -> None:
-        """验证子模块版本号为 5.0.0（与 8 子模块统一版本对齐）。"""
-        assert polaris_inverse.__version__ == "5.0.0"
+        """验证子模块版本号为 5.1.0（与 8 子模块统一版本对齐）。"""
+        assert polaris_inverse.__version__ == "5.1.0"
 
     def test_module_exports(self) -> None:
         """验证 __all__ 导出完整（全部稳定 API 可导入）。"""

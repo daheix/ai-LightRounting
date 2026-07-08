@@ -299,61 +299,6 @@ def validate_circuit(circuit: dict) -> bool:
     return True
 
 
-def _validate_circuit_devices(devices: list) -> None:
-    """校验每个 device 的结构完整性（Extract Method，R11 质量门禁）。
-
-    Raises:
-        RuntimeError: device 结构不完整或类型不符。
-    """
-    for i, dev in enumerate(devices):
-        if not isinstance(dev, dict):
-            raise RuntimeError(
-                f"circuit.devices[{i}] 必须是 dict，得到 {type(dev).__name__}"
-            )
-        _require_keys(
-            dev,
-            ("name", "device_type", "width_um", "height_um"),
-            f"circuit.devices[{i}]",
-        )
-        if not isinstance(dev["name"], str):
-            raise RuntimeError(f"circuit.devices[{i}].name 必须是 str")
-        if not isinstance(dev["device_type"], str):
-            raise RuntimeError(f"circuit.devices[{i}].device_type 必须是 str")
-        if not isinstance(dev["width_um"], (int, float)):
-            raise RuntimeError(f"circuit.devices[{i}].width_um 必须是 number")
-        if not isinstance(dev["height_um"], (int, float)):
-            raise RuntimeError(f"circuit.devices[{i}].height_um 必须是 number")
-        ports = dev.get("ports", [])
-        if not isinstance(ports, list):
-            raise RuntimeError(f"circuit.devices[{i}].ports 必须是 list")
-        params = dev.get("params", {})
-        if not isinstance(params, dict):
-            raise RuntimeError(f"circuit.devices[{i}].params 必须是 dict")
-
-
-def _validate_circuit_connections(connections: list, dev_names: set) -> None:
-    """校验每条 connection 引用的器件存在（Extract Method，R11 质量门禁）。
-
-    Raises:
-        RuntimeError: connection 结构不符或引用悬空器件。
-    """
-    for i, conn in enumerate(connections):
-        if not isinstance(conn, (list, tuple)) or len(conn) != 4:
-            raise RuntimeError(
-                f"circuit.connections[{i}] 必须是长度 4 的 list/tuple "
-                f"[dev1, port1, dev2, port2]"
-            )
-        dev1, _port1, dev2, _port2 = conn
-        if dev1 not in dev_names:
-            raise RuntimeError(
-                f"circuit.connections[{i}] 引用了不存在的器件: {dev1}"
-            )
-        if dev2 not in dev_names:
-            raise RuntimeError(
-                f"circuit.connections[{i}] 引用了不存在的器件: {dev2}"
-            )
-
-
 __all__ = [
     "make_device",
     "make_circuit",

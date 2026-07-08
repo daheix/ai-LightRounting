@@ -277,22 +277,17 @@ def _select_best_candidate(
     return best_pos
 
 
-def _regenerate_paths_after_compensate(
+def _rebuild_paths_for_connections(
     circuit: dict,
     placements: dict,
-    route_result: dict,
     device_map: dict,
     router: "CurvyRouter",
-    n_compensated: int,
-) -> dict:
-    """若有器件移动，重新生成所有路径并统计交叉数与损耗。
+) -> tuple[list[dict], list[list[tuple[float, float]]]]:
+    """补偿后重建所有连接的路径点。
 
     Raises:
-        RuntimeError: 重生成路径时连接端口未找到（R03 禁止 fall-back，
-            包装重抛附 conn 上下文）。
+        RuntimeError: 端口查找失败（R03 禁止 fall-back，包装重抛附 conn 上下文）。
     """
-    if n_compensated == 0:
-        return route_result
     new_paths: list[dict] = []
     path_points_list: list[list[tuple[float, float]]] = []
     for conn in circuit["connections"]:
@@ -320,6 +315,16 @@ def _regenerate_paths_after_compensate(
             "dev2": dev2_name, "port2": port2_name,
             "points": points,
         })
+    return new_paths, path_points_list
+
+
+def _build_path_stats_output(
+    new_paths: list[dict],
+    path_points_list: list[list[tuple[float, float]]],
+    device_map: dict,
+    n_compensated: int,
+) -> dict:
+    """统计重建路径的交叉/弯曲/损耗并组装输出字典。"""
     crossing_counts = _count_path_crossings(path_points_list)
     paths_out: list[dict] = []
     total_waveguide_loss = 0.0
@@ -358,6 +363,30 @@ def _regenerate_paths_after_compensate(
         "router_type": "curvy",
         "bend_compensated": n_compensated,
     }
+
+
+def _regenerate_paths_after_compensate(
+    circuit: dict,
+    placements: dict,
+    route_result: dict,
+    device_map: dict,
+    router: "CurvyRouter",
+    n_compensated: int,
+) -> dict:
+    """若有器件移动，重新生成所有路径并统计交叉数与损耗。
+
+    Raises:
+        RuntimeError: 重生成路径时连接端口未找到（R03 禁止 fall-back，
+            包装重抛附 conn 上下文）。
+    """
+    if n_compensated == 0:
+        return route_result
+    new_paths, path_points_list = _rebuild_paths_for_connections(
+        circuit, placements, device_map, router
+    )
+    return _build_path_stats_output(
+        new_paths, path_points_list, device_map, n_compensated
+    )
 
 
 def bend_compensate(

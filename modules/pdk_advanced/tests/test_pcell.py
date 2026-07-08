@@ -207,10 +207,7 @@ def test_ai_generate_pcell_ring_with_gap():
 
 # ===== yaml_config 深度测试 =====
 
-
-def test_yaml_pdk_roundtrip_and_validation():
-    """YAML PDK 配置解析/序列化 roundtrip + 校验。"""
-    yaml_content = """\
+_YAML_PDK_ROUNDTRIP_CONTENT = """\
 pdk:
   name: polaris_test
   version: "1.0.0"
@@ -257,10 +254,14 @@ cells:
       width: 0.5
     description: 直波导
 """
+
+
+def test_yaml_pdk_roundtrip_and_validation():
+    """YAML PDK 配置解析/序列化 roundtrip + 校验。"""
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".yml", delete=False, encoding="utf-8"
     ) as f:
-        f.write(yaml_content)
+        f.write(_YAML_PDK_ROUNDTRIP_CONTENT)
         yaml_path = f.name
     try:
         config = parse_pdk_yaml(yaml_path)

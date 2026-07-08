@@ -94,6 +94,12 @@ from polaris_flow import (  # noqa: E402
 )
 
 
+def _make_workspace() -> Workspace:
+    """构造临时工作空间（R05 修复：原调用未定义导致 NameError）。"""
+    tmp = tempfile.mkdtemp(prefix="polaris_flow_test_")
+    return Workspace(output_dir=tmp, job_id="test-job")
+
+
 # =============================================================================
 # 1. 包加载与 __all__ 完整性
 # =============================================================================

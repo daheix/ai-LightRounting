@@ -80,6 +80,32 @@ from polaris_pdk_advanced import (  # noqa: E402
 )
 
 
+def _make_device(device_id: str) -> Device:
+    """构造测试用直波导器件（R05 修复：原调用未定义导致 NameError）。
+
+    与 test_pdk_advanced_ext._make_device 保持一致：10μm 直波导，
+    in(WEST@0,0) / out(EAST@10,0)，bbox (0,-0.25,10,0.25) → footprint (10,0.5)。
+    """
+    return Device(
+        device_id=device_id,
+        platform="SOI",
+        category="passive",
+        name=device_id,
+        ports=[
+            Port(name="in", x=0.0, y=0.0, direction=Direction.WEST,
+                 waveguide_type="strip", width=0.5),
+            Port(name="out", x=10.0, y=0.0, direction=Direction.EAST,
+                 waveguide_type="strip", width=0.5),
+        ],
+        bbox=BoundingBox(xmin=0.0, ymin=-0.25, xmax=10.0, ymax=0.25),
+        params={"length": 10.0, "width": 0.5},
+        source=Source(
+            title="test", authors="test", year=2026,
+            url="https://gdsfactory.github.io/gdsfactory/",
+        ),
+    )
+
+
 # ===== gdsfactory_bridge 深度测试 =====
 
 

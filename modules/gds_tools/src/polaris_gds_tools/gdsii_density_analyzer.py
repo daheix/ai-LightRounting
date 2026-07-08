@@ -760,11 +760,15 @@ def generate_density_report(
     report = compute_layer_density(
         gds_path, layer_map=layer_map, top_cell_name=top_cell_name,
     )
+    from polaris_gds_tools.gdsii_density_report import (
+        render_markdown_report,
+        render_text_report,
+    )
     fmt = output_format.lower()
     if fmt == "text":
-        return _render_text_report(report)
+        return render_text_report(report)
     if fmt == "markdown":
-        return _render_markdown_report(report)
+        return render_markdown_report(report)
     raise ValueError(
         f"不支持的 output_format: {output_format}。"
         f"支持: text / markdown。"
@@ -789,82 +793,3 @@ def _get_top_cell(ly, top_cell_name: str | None, gds_path):
             f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空"
         )
     return top_cells[0]
-
-
-def _render_text_report(report: DensityReport) -> str:
-    """渲染纯文本报告。"""
-    lines: list[str] = []
-    lines.append("=" * 60)
-    lines.append("GDSII 层密度分析报告")
-    lines.append("=" * 60)
-    lines.append(f"文件: {report.file_path}")
-    lines.append(f"顶层 cell: {report.top_cell_name}")
-    lines.append(f"dbu: {report.dbu} m")
-    x_min, y_min, x_max, y_max = report.overall_bbox
-    lines.append(
-        f"整体包围盒: [{x_min:.2f}, {y_min:.2f}] - "
-        f"[{x_max:.2f}, {y_max:.2f}] μm"
-    )
-    lines.append(f"层数: {len(report.layer_densities)}")
-    lines.append("")
-    lines.append("-" * 60)
-    lines.append("各层密度:")
-    lines.append("-" * 60)
-    for ld in report.layer_densities:
-        bx_min, by_min, bx_max, by_max = ld.bbox
-        lines.append(
-            f"  {ld.layer_name} (GDS {ld.gds_layer}/{ld.gds_datatype}):"
-        )
-        lines.append(f"    多边形面积: {ld.polygon_area_um2:.4f} μm²")
-        lines.append(f"    包围盒面积: {ld.bbox_area_um2:.4f} μm²")
-        lines.append(f"    密度: {ld.density:.4f} ({ld.density * 100:.2f}%)")
-        lines.append(
-            f"    包围盒: [{bx_min:.2f}, {by_min:.2f}]-"
-            f"[{bx_max:.2f}, {by_max:.2f}] μm"
-        )
-    if report.violations:
-        lines.append("-" * 60)
-        lines.append(f"密度违规: {len(report.violations)} 条")
-        lines.append("-" * 60)
-        for v in report.violations:
-            lines.append(f"  {v.message}")
-    lines.append("=" * 60)
-    return "\n".join(lines)
-
-
-def _render_markdown_report(report: DensityReport) -> str:
-    """渲染 Markdown 报告。"""
-    lines: list[str] = []
-    lines.append("# GDSII 层密度分析报告")
-    lines.append("")
-    lines.append(f"**文件**: `{report.file_path}`")
-    lines.append(f"**顶层 cell**: {report.top_cell_name}")
-    lines.append(f"**dbu**: {report.dbu} m")
-    x_min, y_min, x_max, y_max = report.overall_bbox
-    lines.append(
-        f"**整体包围盒**: [{x_min:.2f}, {y_min:.2f}] - "
-        f"[{x_max:.2f}, {y_max:.2f}] μm"
-    )
-    lines.append(f"**层数**: {len(report.layer_densities)}")
-    lines.append("")
-    lines.append("## 各层密度")
-    lines.append("")
-    lines.append(
-        "| 层名 | GDS 层/datatype | 多边形面积(μm²) | 包围盒面积(μm²) | 密度 |"
-    )
-    lines.append(
-        "|------|------------------|------------------|------------------|------|"
-    )
-    for ld in report.layer_densities:
-        lines.append(
-            f"| {ld.layer_name} | {ld.gds_layer}/{ld.gds_datatype} | "
-            f"{ld.polygon_area_um2:.4f} | {ld.bbox_area_um2:.4f} | "
-            f"{ld.density:.4f} ({ld.density * 100:.2f}%) |"
-        )
-    if report.violations:
-        lines.append("")
-        lines.append(f"## 密度违规（{len(report.violations)} 条）")
-        lines.append("")
-        for v in report.violations:
-            lines.append(f"- **{v.layer_name}** {v.rule_type}: {v.message}")
-    return "\n".join(lines)
