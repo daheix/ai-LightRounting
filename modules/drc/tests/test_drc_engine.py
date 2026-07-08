@@ -34,6 +34,11 @@ from pathlib import Path
 _SRC = str(Path(__file__).resolve().parents[1] / "src")
 if _SRC not in sys.path:
     sys.path.insert(0, _SRC)
+# R388 修复：项目迁移到 ai-LightRounting_20260708 后，scripts 路径需动态计算
+# （原硬编码 /workspace/scripts 在目录迁移后失效）
+_SCRIPTS = str(Path(__file__).resolve().parents[3] / "scripts")
+if _SCRIPTS not in sys.path:
+    sys.path.insert(0, _SCRIPTS)
 
 from polaris_drc import run_drc  # noqa: E402
 
@@ -119,7 +124,8 @@ def test_expert_demos_center_point_to_corner_bbox():
     验证转换后 placements.x = 132（bbox[0]），而非 147（中心点 x）。
     """
     # 延迟导入：测试 scripts/run_real_board_drc.py 的转换函数
-    sys.path.insert(0, "/workspace/scripts")
+    # R388 修复：scripts 路径已在文件头部动态添加，此处无需重复
+    # 保留 importlib 以避免与测试模块名冲突
     # 重命名避免与测试模块名冲突
     import importlib
     rbd = importlib.import_module("run_real_board_drc")
@@ -166,7 +172,8 @@ def test_expert_demos_center_point_to_corner_no_bbox():
     构造中心点 (50, 30) + w=20, h=10（无 bbox）的器件，
     验证转换后 x = 50 - 20/2 = 40, y = 30 - 10/2 = 25。
     """
-    sys.path.insert(0, "/workspace/scripts")
+    # R388 修复：scripts 路径已在文件头部动态添加，此处无需重复
+    # 保留 importlib 以避免与测试模块名冲突
     import importlib
     rbd = importlib.import_module("run_real_board_drc")
 
@@ -205,13 +212,14 @@ def test_expert_demos_mzi_2x2_switch_no_overlap():
     因中心点当左下角导致 AABB 偏移，误报重叠。
     修复后: 用 bbox 正确计算 AABB，无重叠。
     """
-    sys.path.insert(0, "/workspace/scripts")
+    # R388 修复：scripts 路径已在文件头部动态添加，此处无需重复
+    # 保留 importlib 以避免与测试模块名冲突
     import importlib
     rbd = importlib.import_module("run_real_board_drc")
     import json
     from pathlib import Path
 
-    demo_dir = Path("/workspace/data/expert_demos/mzi_2x2_switch")
+    demo_dir = Path(__file__).resolve().parents[3] / "data" / "expert_demos" / "mzi_2x2_switch"
     meta = json.loads((demo_dir / "meta.json").read_text())
     netlist = json.loads((demo_dir / "netlist.json").read_text())
     placements_raw = json.loads((demo_dir / "placements.json").read_text())
