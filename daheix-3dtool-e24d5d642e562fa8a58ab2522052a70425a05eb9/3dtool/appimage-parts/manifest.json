@@ -1,0 +1,119 @@
+{
+  "version": "2.0.0",
+  "schema": "3dtool-appimage-parts-v2",
+  "packed_at": "2026-06-27T07:14:13Z",
+  "appimage_dir": "3dtool-appimage",
+  "shard_size": "95M",
+  "packages": [
+    {
+      "name": "AppRun",
+      "file": "AppRun.tar.gz",
+      "size": 2647,
+      "md5": "5e52dcc4b58d242cae56cd759f7289a0",
+      "sha256": "42fe285d14d45e20a29fd16c5e54a32d052677772dff96e2b59c0d3937d14e9f",
+      "sharded": false,
+      "shard_count": 0,
+      "shard_suffix": ""
+    },
+    {
+      "name": "bin",
+      "file": "bin.tar.gz",
+      "size": 55181858,
+      "md5": "46635d97d0593323b57c44759f8ee1e9",
+      "sha256": "81c84538c4f31f9cc1070fabb4a256d487b25c9e28dc1393ea8f49c0f93d3e9c",
+      "sharded": false,
+      "shard_count": 0,
+      "shard_suffix": ""
+    },
+    {
+      "name": "lib",
+      "file": "lib.tar.gz",
+      "size": 354649840,
+      "md5": "4c5f497c603e8496660af399dd76b47d",
+      "sha256": "e4fa77ac331e6f980d985496ea43761b8a5b6e2b721f997c0f317a92c2dc8980",
+      "sharded": true,
+      "shard_count": 4,
+      "shard_suffix": "part_aa"
+    },
+    {
+      "name": "python-runtime",
+      "file": "python-runtime.tar.gz",
+      "size": 103503966,
+      "md5": "3183b290cd2f09c30561fe018a8711f4",
+      "sha256": "a8e51bc154caaa527e70f63a578dcd5bc9f1decee652b9775ee2324360584ba9",
+      "sharded": false,
+      "shard_count": 0,
+      "shard_suffix": ""
+    },
+    {
+      "name": "python-site-packages",
+      "file": "python-site-packages.tar.gz",
+      "size": 735152665,
+      "md5": "37734295fe113e230969946dd154ea99",
+      "sha256": "38bad010fe774d86815aba6393a627e38b7431a2f4524c2c7841ea28f71ceabf",
+      "sharded": true,
+      "shard_count": 8,
+      "shard_suffix": "part_aa"
+    },
+    {
+      "name": "kicad-3dmodels",
+      "file": "kicad-3dmodels.tar.gz",
+      "size": 458863481,
+      "md5": "51b321d5232d03123ae6609833543f1d",
+      "sha256": "4ab0d7bb9ea1c4d84b70207b7e0ca2b300331f9306886c92e75b83805778c635",
+      "sharded": true,
+      "shard_count": 5,
+      "shard_suffix": "part_aa"
+    },
+    {
+      "name": "kicad-symbols",
+      "file": "kicad-symbols.tar.gz",
+      "size": 23308955,
+      "md5": "41fdea1c33bc67162965f74e560086aa",
+      "sha256": "543bcf4cd0a8bfcc02cb1ededc5ead980ba82ff311b54e3bf10e36e1701817b6",
+      "sharded": true,
+      "shard_count": 1,
+      "shard_suffix": "part_aa"
+    },
+    {
+      "name": "kicad-footprints",
+      "file": "kicad-footprints.tar.gz",
+      "size": 15489884,
+      "md5": "e0adaef9ebac21b6541023895327a860",
+      "sha256": "0ec32d38e9b3628cc4f677217aa198190b5177e4845223625622716def7bc8e1",
+      "sharded": false,
+      "shard_count": 0,
+      "shard_suffix": ""
+    },
+    {
+      "name": "kicad-demos",
+      "file": "kicad-demos.tar.gz",
+      "size": 96500267,
+      "md5": "d560fbafd06e6ab76199ec2ad60239bd",
+      "sha256": "d7832934860f11aca21094eee26ae1265dad6916aa2d864406f5607f7f6a31f3",
+      "sharded": true,
+      "shard_count": 1,
+      "shard_suffix": "part_aa"
+    },
+    {
+      "name": "kicad-misc",
+      "file": "kicad-misc.tar.gz",
+      "size": 23412852,
+      "md5": "0449060badb1a9e6bc99910f1f400654",
+      "sha256": "4c78a2362f2ef9fcb7d925cd5abd4e8b381e6fcefa8183a827daabffe307b675",
+      "sharded": false,
+      "shard_count": 0,
+      "shard_suffix": ""
+    },
+    {
+      "name": "jre",
+      "file": "jre.tar.gz",
+      "size": 222529751,
+      "md5": "7a83be03cc67e0de4e15f10f99a163c8",
+      "sha256": "1ee528deed56c321bfd487df7a96642481256f37bdb218cebdc322114a4ee35d",
+      "sharded": true,
+      "shard_count": 3,
+      "shard_suffix": "part_aa"
+    }
+  ]
+}
