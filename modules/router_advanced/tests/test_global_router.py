@@ -693,3 +693,79 @@ def np_zeros(shape, dtype=None):
     """numpy zeros 简便调用（避免顶层 import numpy，默认 float32）。"""
     import numpy as np
     return np.zeros(shape, dtype=dtype or np.float32)
+
+
+# ---------------------------------------------------------------------------
+# R389 回归测试：_pattern_route 非方形 demand 索引顺序
+# ---------------------------------------------------------------------------
+
+
+def test_pattern_route_non_square_grid_no_indexerror():
+    """R389 回归: 非方形 demand (gh=5, gw=10) 下 _pattern_route 不应 IndexError。
+
+    原 Bug: `n_gx, n_gy = demand.shape` 顺序颠倒（实际应为 n_gy, n_gx），
+    且 `demand[gx, gy]` 索引顺序错误（应为 demand[gy, gx]）。
+    在 gw != gh 时，gx 可达 gw-1=9，原代码 demand[9, 4] 访问第 9 行（越界，
+    demand 仅 5 行）导致 IndexError 或访问错误位置。
+    """
+    import numpy as np
+    from polaris_router_advanced.global_router import (
+        _pattern_route,
+        CurvyPatternConfig,
+    )
+
+    # 非方形 demand: gh=5 行, gw=10 列
+    demand = np.zeros((5, 10), dtype=np.float64)
+    capacity = np.full((5, 10), 4.0, dtype=np.float64)
+    curvy = CurvyPatternConfig()
+
+    # start=(0,0), goal=(9,4): gx 跨度 9（接近 gw-1），gy 跨度 4（=gh-1）
+    path = _pattern_route((0, 0), (9, 4), demand, capacity, curvy)
+    assert path is not None, "非方形网格应能找到 L/Z-shape 路径"
+    assert path[0] == (0, 0), f"起点应为 (0,0)，实际 {path[0]}"
+    assert path[-1] == (9, 4), f"终点应为 (9,4)，实际 {path[-1]}"
+    # 所有路径点必须在边界内（gx < gw=10, gy < gh=5）
+    for gx, gy in path:
+        assert 0 <= gx < 10, f"gx 越界: {gx}（gw=10）"
+        assert 0 <= gy < 5, f"gy 越界: {gy}（gh=5）"
+
+
+def test_global_router_non_square_canvas_routes_without_error():
+    """R389 回归: 非方形画布全局布线不应因索引 Bug 失败。
+
+    画布 500×250μm，gcell_size=50μm → gw=10, gh=5（非方形）。
+    2 器件 1 连接，触发 _pattern_route 路径。
+    """
+    from polaris_router_advanced.global_router import (
+        Netlist,
+        NetlistConnection,
+        NetlistInstance,
+    )
+
+    instances = [
+        NetlistInstance(instance_id="d1", component="wg"),
+        NetlistInstance(instance_id="d2", component="wg"),
+    ]
+    connections = [
+        NetlistConnection("d1", "out", "d2", "in"),
+    ]
+    net = Netlist(instances=instances, connections=connections, name="nonsquare")
+
+    placements = {
+        "d1": _MockPlacement("d1", 10.0, 50.0),
+        "d2": _MockPlacement("d2", 480.0, 200.0),
+    }
+    # 非方形画布: 500×250 → gw=10, gh=5
+    result = run_global_routing(
+        net, placements, CanvasSize(width=500.0, height=250.0),
+        config=GlobalRouterConfig(gcell_size_um=50.0),
+    )
+    assert isinstance(result, list)
+    # 1 连接应布线成功
+    assert len(result) == 1, f"应布线 1 条，实际 {len(result)}"
+    assert result[0].conn_idx == 0
+    assert len(result[0].gcell_path) >= 2, "路径至少 2 个 GCell"
+    # 验证路径点在非方形边界内
+    for gx, gy in result[0].gcell_path:
+        assert 0 <= gx < 10, f"GCell gx 越界: {gx}"
+        assert 0 <= gy < 5, f"GCell gy 越界: {gy}"
