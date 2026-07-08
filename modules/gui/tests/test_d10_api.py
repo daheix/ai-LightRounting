@@ -187,7 +187,7 @@ def test_run_drc_mzi(server) -> None:
     assert data["success"] is True
     assert data["status"] == "done"
     r = data["result"]
-    assert r["n_rules"] == 18
+    assert r["n_rules"] == 25
     assert "n_violations" in r
     assert "pass_rate" in r
     assert "drc_highlights" in r

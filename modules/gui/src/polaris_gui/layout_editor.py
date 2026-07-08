@@ -528,7 +528,9 @@ class LayoutEditor:
             "",
         ]
 
-    def _build_klayout_device_lines(self, dbu: float) -> list[str]:
+    def _build_klayout_device_lines(
+        self, dbu: float, output_gds: str
+    ) -> list[str]:
         """构造器件 box 的 KLayout 脚本行。"""
         lines: list[str] = []
         for dev in self._devices.values():
@@ -546,7 +548,37 @@ class LayoutEditor:
         lines.append("")
         lines.append(f'ly.write("{output_gds}")')
         lines.append(f'print("GDS written to {output_gds}")')
-        return "\n".join(lines)
+        return lines
+
+    def export_klayout_script(
+        self,
+        output_gds: str = "polaris_output.gds",
+        top_cell_name: str = "TOP",
+    ) -> str:
+        """生成可在 KLayout IDE 中执行的 Python 脚本（深度编辑模式）。
+
+        脚本含 import/cell/层定义/器件 box/布线路径/DRC 注释/GDS 写出，
+        可直接在 KLayout Tools > Macro IDE 中运行，或独立 python 执行。
+
+        Args:
+            output_gds: 输出 GDS 文件名（写入脚本 ly.write 行）。
+            top_cell_name: 顶层 cell 名（默认 "TOP"，KLayout 标准）。
+
+        Returns:
+            完整 KLayout Python 脚本字符串。
+
+        来源:
+            - KLayout Ruby/Python API:
+              https://www.klayout.de/doc/about/macro_editor.html
+            - SiEPIC EBeam PDK KLayout 脚本:
+              https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+            - gdsfactory KLayout 集成:
+              https://gdsfactory.github.io/gdsfactory/
+        """
+        dbu = self.config.dbu
+        header_lines = self._build_klayout_header(dbu, top_cell_name)
+        body_lines = self._build_klayout_device_lines(dbu, output_gds)
+        return "\n".join(header_lines + body_lines)
 
 
 def _emit_klayout_device_lines(dev: DeviceInstance, dbu: float) -> list[str]:

@@ -125,7 +125,7 @@ def import_gds(gds_path: str) -> dict[str, Any]:
     top_cells = [ly.cell(ci) for ci in ly.each_top_cell()]
     if not top_cells:
         raise RuntimeError(f"GDSII 文件 {gds_path} 无顶层 cell，文件可能为空")
-    return ly, top_cells[0], dbu
+    top_cell = top_cells[0]
 
     layers = _collect_layer_info(ly)
 
