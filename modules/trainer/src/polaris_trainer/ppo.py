@@ -317,8 +317,21 @@ class PPOAgent:
                     p.grad = p.grad * (self.config.max_grad_norm / norm)
 
     def _compute_minibatch_metrics(self, mb, mean, value, std):
-        """计算小批量指标（非可微，仅用于日志）。"""
-        new_lp_data = -0.5 * ((mb.actions - mean.data) ** 2).sum(axis=-1)
+        """计算小批量指标（非可微，仅用于日志）。
+
+        R389 修复：new_lp_data 需与 _process_minibatch 中可微路径的 new_lp
+        一致（完整高斯 logprob = -0.5*Σ(diff²/var) - log_std_sum - const_term）。
+        原代码漏了 /var 和 -log_std_sum-const_term，导致 ratio 与实际梯度
+        路径的 ratio 不一致，policy_loss 日志失真（仅影响日志，不影响训练）。
+        """
+        var = std ** 2
+        log_std_sum = float(np.log(std).sum())
+        action_dim = mean.data.shape[-1]
+        const_term = 0.5 * action_dim * math.log(2 * math.pi)
+        new_lp_data = (
+            -0.5 * (((mb.actions - mean.data) ** 2) / var).sum(axis=-1)
+            - log_std_sum - const_term
+        )
         ratio = np.exp(new_lp_data - mb.old_logprobs)
         surr1 = ratio * mb.advantages
         clip_lo = 1 - self.config.clip_eps
