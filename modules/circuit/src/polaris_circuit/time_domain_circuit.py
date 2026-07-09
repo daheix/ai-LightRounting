@@ -328,12 +328,17 @@ class TimeDomainCircuitSimulator:
         neff: float = 2.4,
         alpha: float = 0.0,
         nonlinear: NonlinearModel | None = None,
+        wavelength: float = 1.55e-6,
     ) -> np.ndarray:
         """仿真波导时域传输。
 
         1. 信号沿波导传播，时延 = neff * length / c
         2. 应用损耗衰减
         3. 应用非线性效应（Kerr/TPA）
+
+        Args:
+            wavelength: 工作波长（m），默认 1.55e-6（1550nm C 波段通信波长，
+                Soref 1993 IEEE JQE @1.55μm）。用于 Kerr 非线性相位计算。
         """
         if length < 0:
             raise ValueError(f"length 必须 >= 0，实际 {length}")
@@ -354,7 +359,7 @@ class TimeDomainCircuitSimulator:
             attenuation = 10 ** (-alpha * length / 20)
             output *= attenuation
         if nonlinear is not None and length > 0:
-            wavelength = 1.55e-6
+            # R390 修复: wavelength 改为函数参数（默认 1550nm C 波段）
             I = np.abs(output) ** 2  # noqa: E741
             phase = nonlinear.kerr_phase(I, length, wavelength)
             output *= np.exp(1j * phase)

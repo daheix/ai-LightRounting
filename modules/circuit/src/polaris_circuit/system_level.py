@@ -28,6 +28,8 @@ from itertools import combinations
 import numpy as np
 
 from polaris_circuit.types import SDict
+# R390 修复: 复用模块级常量 C0（NIST CODATA 2018 光速），避免硬编码
+from polaris_circuit.simulator import SPEED_OF_LIGHT as _C0
 
 
 @dataclass
@@ -482,7 +484,7 @@ def to_time_domain(sdict: SDict, wavelengths: np.ndarray, t_array: np.ndarray) -
     Raises:
         ValueError: 波长/时间数组长度不足或不匹配时告警退出。
     """
-    c = 2.99792458e8
+    c = _C0  # 光速（m/s），NIST CODATA 2018，复用 simulator.SPEED_OF_LIGHT
     if len(wavelengths) < 2:
         raise ValueError(f"波长数组长度需 ≥ 2，当前 {len(wavelengths)}")
     freqs = c / np.asarray(wavelengths, dtype=float)

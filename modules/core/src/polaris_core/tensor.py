@@ -364,12 +364,23 @@ class Tensor(TensorArithmeticMixin):
         return out
 
     def log(self):
-        out = Tensor(np.log(self.data + 1e-12), self.requires_grad, (self,))
+        # R390 修复: 原 np.log(self.data + 1e-12) 是 fall-back（R03 违规）。
+        # log(0) = -inf, log(负数) = NaN 是数学正确的特殊值，
+        # 加 1e-12 会产生 log(1e-12)≈-27.6 的虚假有限值，污染整个计算图。
+        # 参考PyTorch: torch.log 对非正值产生 NaN/-inf 而非静默兜底。
+        # 自动微分场景下，调用方应确保输入 > 0（如用 log1p/softmax 等稳定实现）。
+        if np.any(self.data <= 0):
+            raise ValueError(
+                f"log 输入含非正值（≤0），自动微分不支持。"
+                f"最小值={float(np.min(self.data))}。"
+                f"请使用 log1p 或确保输入 > 0。"
+            )
+        out = Tensor(np.log(self.data), self.requires_grad, (self,))
 
         def _back(g):
             if self.requires_grad:
                 self._ensure_grad()
-                self.grad = self.grad + g / (self.data + 1e-12)
+                self.grad = self.grad + g / self.data
 
         out._backward = _back
         return out

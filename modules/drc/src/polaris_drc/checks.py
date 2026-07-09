@@ -201,14 +201,16 @@ def density_min_threshold_by_canvas(canvas_w: float, canvas_h: float) -> float:
         return 0.005         # M (500-1000μm)
     else:
         # 大画布连续缩放（≥1mm）：threshold = MIN_PATTERN_AREA / canvas_area × 100
-        # 确保 threshold 不低于 1e-10%（数值下界，避免浮点除零）
+        # R390 修复: 原 max(threshold, 1e-10) 是 fall-back（R03 违规）。
+        # canvas_area<=0 已在上游 raise，threshold 不会除零。
+        # threshold 极小值是真实计算结果，不应被 1e-10 替代。
         canvas_area = cw * ch
         if canvas_area <= 0:
             raise RuntimeError(
                 f"画布面积非正: {canvas_area}（R03 禁止 fall-back）"
             )
         threshold = MIN_PATTERN_AREA_UM2 / canvas_area * 100.0
-        return max(threshold, 1e-10)
+        return threshold
 
 
 def check_density_range(rule: DRCRule, circuit: dict, placements: dict,
