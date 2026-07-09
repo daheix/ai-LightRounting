@@ -539,7 +539,13 @@ def test_inverse_design_evaluator() -> None:
 # =============================================================================
 
 def test_lazy_export_raises_on_missing_core() -> None:
-    """lazy 导出在 polaris-core 缺失时 raise（R03 禁止 fall-back）。"""
+    """lazy 导出在 polaris-core 缺失时 raise（R03 禁止 fall-back）。
+
+    R390 修复: 原测试检查 TrainingPipeline，但 R390 已将 training.py 清理为
+    纯 stub（不依赖 polaris_core，仅 __init__ 时 raise ImportError）。
+    改用 STAGE_EXECUTORS 验证 lazy 导出 raise 机制——它通过
+    executors → stage_serializers → polaris_core.specs 真正依赖 polaris_core。
+    """
     try:
         import polaris_core  # noqa: F401
         polaris_core_available = True
@@ -549,10 +555,10 @@ def test_lazy_export_raises_on_missing_core() -> None:
     if not polaris_core_available:
         # polaris-core 缺失：访问 lazy 导出必须 raise（R03）
         with pytest.raises((ImportError, AttributeError)):
-            _ = polaris_flow.TrainingPipeline
+            _ = polaris_flow.STAGE_EXECUTORS
     else:
         # polaris-core 可用：lazy 导出应正常工作
-        assert polaris_flow.TrainingPipeline is not None
+        assert polaris_flow.STAGE_EXECUTORS is not None
 
     # 访问不存在的属性必 raise AttributeError
     with pytest.raises(AttributeError):

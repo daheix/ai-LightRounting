@@ -325,7 +325,15 @@ class OpticalLink:
         return rng.integers(0, 2, size=n_bits).astype(np.int8)
 
     def modulate(self, bits: np.ndarray) -> np.ndarray:
-        """将比特序列调制为电平信号并上采样。"""
+        """将比特序列调制为电平信号并上采样。
+
+        R390 修复: QAM16 原代码仅用 4 比特中前 2 比特（丢失后 2 比特），
+        实际退化为 4-QAM。修复为标准 16-QAM I/Q 映射:
+        - I = 2*b0 + b1 → {-3, -1, 1, 3}
+        - Q = 2*b2 + b3 → {-3, -1, 1, 3}
+        - 符号 = I + 1j*Q（复数信号，16 个星座点）
+        来源: Proakis, Digital Communications §5 (16-QAM 星座图)
+        """
         if self.tx_modulation == "NRZ":
             symbols = bits.astype(float)
         elif self.tx_modulation == "PAM4":
@@ -333,30 +341,64 @@ class OpticalLink:
             pairs = b.reshape(-1, 2)
             symbols = 2 * (2 * pairs[:, 0] + pairs[:, 1]) - 3
         else:
+            # QAM16: 4 比特/符号 → I/Q 各 2 比特，16 星座点
             pad = (4 - len(bits) % 4) % 4
             b = np.append(bits, np.zeros(pad)) if pad else bits
             quads = b.reshape(-1, 4)
-            real_idx = 2 * quads[:, 0] + quads[:, 1]
-            symbols = 2 * real_idx - 3
+            i_idx = 2 * quads[:, 0] + quads[:, 1]  # I: 2 比特 → {0,1,2,3}
+            q_idx = 2 * quads[:, 2] + quads[:, 3]  # Q: 2 比特 → {0,1,2,3}
+            i_val = 2 * i_idx - 3  # → {-3, -1, 1, 3}
+            q_val = 2 * q_idx - 3  # → {-3, -1, 1, 3}
+            symbols = i_val + 1j * q_val  # 复数 16-QAM 星座
         return np.repeat(symbols, self.samples_per_bit)
 
     def transmit(self, signal: np.ndarray) -> np.ndarray:
-        """光纤传输：施加损耗 + 加性高斯噪声。"""
+        """光纤传输：施加损耗 + 加性高斯噪声。
+
+        R390 修复: QAM16 复数信号需复数噪声（I/Q 独立 AWGN）。
+        """
         total_loss_db = self.fiber_loss * (self.fiber_length / 1e3)
         gain_linear = 10 ** (-total_loss_db / 20)
         rng = np.random.default_rng(seed=123)
-        noise = rng.normal(0, self.noise_sigma, size=len(signal))
+        if np.iscomplexobj(signal):
+            # 复数信号: I/Q 各加独立高斯噪声
+            noise_real = rng.normal(0, self.noise_sigma, size=len(signal))
+            noise_imag = rng.normal(0, self.noise_sigma, size=len(signal))
+            noise = noise_real + 1j * noise_imag
+        else:
+            noise = rng.normal(0, self.noise_sigma, size=len(signal))
         return signal * gain_linear + noise
 
     def receive(self, signal: np.ndarray) -> np.ndarray:
-        """接收机判决：下采样 + 阈值判决。"""
+        """接收机判决：下采样 + 阈值判决。
+
+        R390 修复:
+        - PAM4: 原 receive 返回符号索引（0-3），ber() 比较比特时语义错误。
+          修复为解码 2 比特/符号，返回与 tx_bits 等长的比特序列。
+        - QAM16: 原 receive 仅处理实数信号（4 电平），无法解码 16-QAM。
+          修复为 I/Q 独立判决，解码 4 比特/符号。
+        """
         n_symbols = len(signal) // self.samples_per_bit
         sampled = signal[: n_symbols * self.samples_per_bit].reshape(n_symbols, -1).mean(axis=1)
         levels = np.array([-3, -1, 1, 3])
         if self.tx_modulation == "NRZ":
             return (sampled > 0.5).astype(np.int8)
-        idx = np.argmin(np.abs(sampled[:, None] - levels[None, :]), axis=1)
-        return idx.astype(np.int8)
+        if self.tx_modulation == "PAM4":
+            # 符号索引 → 2 比特/符号
+            idx = np.argmin(np.abs(sampled[:, None] - levels[None, :]), axis=1)
+            b0 = (idx >> 1) & 1  # 高位
+            b1 = idx & 1          # 低位
+            return np.stack([b0, b1], axis=1).reshape(-1).astype(np.int8)
+        # QAM16: I/Q 独立判决，各 2 比特，共 4 比特/符号
+        i_sampled = sampled.real
+        q_sampled = sampled.imag
+        i_idx = np.argmin(np.abs(i_sampled[:, None] - levels[None, :]), axis=1)
+        q_idx = np.argmin(np.abs(q_sampled[:, None] - levels[None, :]), axis=1)
+        b0 = (i_idx >> 1) & 1
+        b1 = i_idx & 1
+        b2 = (q_idx >> 1) & 1
+        b3 = q_idx & 1
+        return np.stack([b0, b1, b2, b3], axis=1).reshape(-1).astype(np.int8)
 
     def ber(self, tx_bits: np.ndarray, rx_bits: np.ndarray) -> float:
         """计算误码率 BER。

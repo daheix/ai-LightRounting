@@ -1,22 +1,15 @@
 """训练流水线: 基准数据 → 变体生成 → RL训练 → 仿真校验。
 
-用基准数据训练 RL agent，每个训练样本都经过仿真校验，
-确保自研工具和布局布线一体发展。
-
-本模块是 ``trainer.train_loop`` 的高层封装：
-- 加载基准数据（支持 GDSFactory/PICBench/LiDAR 三种格式）
-- 可选生成变体增强训练数据
-- 调用 ``train_floorplan`` / ``train_routing`` 执行真正的 PPO 训练
-  （rollout 采集 → GAE 优势估计 → PPO clip 更新 → 价值函数拟合）
-- 调用 ``sim.calibration.calibrate`` 做仿真校验
+R390 清理: TrainingPipeline.__init__ 始终 raise ImportError（依赖
+polaris_orchestrator 的 IntegratedPipeline/PipelineConfig，v5.0 未迁移），
+因此原 train()/_train_floorplan_agent/_train_routing_agent/_build_train_config/
+_extract_best_reward/_extract_avg_loss/_run_calibration/_save_checkpoint/
+_load_benchmarks 及 13 个 _parse_* 辅助函数均为死代码（~480 行）。
+保留 TrainingConfig/TrainingResult 数据类与 TrainingPipeline 桩（__init__ raise）。
 
 来源:
 - ChiPFormer ICML'23: 离线RL + 迁移学习
   https://arxiv.org/pdf/2306.14744.pdf
-- ICLR'26 专家RL: 领域知识注入
-  https://openreview.net/forum?id=yqvNwfxRR6
-- CORE NeurIPS'25: 进化+RL协同
-  https://nips.cc/virtual/2025/loc/san-diego/poster/119653
 - PPO 标准训练循环: UC Berkeley Scalable AI Lecture 15 (2026)
   https://scalable-ai.eecs.berkeley.edu/assets/lecture_slides/lecture_15.pdf
 - CleanRL ppo.py 单文件训练循环
@@ -25,24 +18,13 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import os
-import tempfile
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import TYPE_CHECKING
-
-from polaris_core.specs import CircuitSpec, DeviceSpec
 
 if TYPE_CHECKING:
     # 类型注解仅用于静态检查，运行时不解析（PEP 563 `from __future__ import annotations`）
     from polaris_nn.data.variant_generator import VariantConfig
-    from polaris_trainer.ppo import PPOAgent
-    from polaris_trainer.train_loop import TrainConfig
-    # PipelineConfig / CalibrationResult 在 v5.0 尚未迁移到任何子模块，
-    # 运行时使用处（IntegratedPipeline / calibrate）已 raise ImportError（R03）。
-    # 此处注解保留为前向字符串引用，不导入不存在的模块。
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +54,7 @@ class TrainingConfig:
 
     benchmark_dir: str = "data/benchmarks"
     variant_config: VariantConfig | None = None
-    pipeline_config: PipelineConfig | None = None
+    pipeline_config: object | None = None  # PipelineConfig（v5.0 未迁移）
     num_episodes: int = 50
     hidden_dim: int = 64
     lr: float = 3e-4
@@ -107,27 +89,22 @@ class TrainingResult:
     best_reward: float = 0.0
     avg_loss_db: float = 0.0
     calibration_passed: bool = False
-    calibration_result: CalibrationResult | None = None
+    calibration_result: object | None = None  # CalibrationResult（v5.0 未迁移）
     checkpoint_path: str = ""
     floorplan_logs: list[dict] = field(default_factory=list)
     routing_logs: list[dict] = field(default_factory=list)
 
 
 class TrainingPipeline:
-    """训练流水线。
+    """训练流水线桩（stub）。
 
-    基准数据 → 变体生成 → RL训练 → 仿真校验
+    R390 清理: 原实现依赖 polaris_orchestrator.IntegratedPipeline 和
+    PipelineConfig（v5.0 未迁移），__init__ 始终 raise ImportError。
+    原 ~480 行方法（train/_train_*/_load_benchmarks/_save_checkpoint 等）
+    全部为不可达死代码，已删除。保留桩类供 __all__ 导出兼容。
 
-    真正的 PPO 训练流程（非伪实现）：
-    1. 加载基准数据（GDSFactory/PICBench/LiDAR 三种格式）
-    2. 可选生成变体增强训练数据
-    3. 调用 ``train_floorplan`` / ``train_routing`` 执行 PPO 训练
-       （rollout → GAE → clip 更新 → 价值拟合）
-    4. 调用 ``sim.calibration.calibrate`` 做仿真校验
-
-    来源:
-    - ChiPFormer ICML'23: https://arxiv.org/pdf/2306.14744.pdf
-    - PPO 标准训练循环: https://scalable-ai.eecs.berkeley.edu/assets/lecture_slides/lecture_15.pdf
+    迁移指南: 改用 polaris_trainer.train_loop.train_ppo / train_with_env_factory
+    直接训练，或迁移 IntegratedPipeline 后恢复完整实现。
     """
 
     def __init__(self, config: TrainingConfig | None = None) -> None:
@@ -135,482 +112,9 @@ class TrainingPipeline:
         raise ImportError(
             "TrainingPipeline 需要 polaris_orchestrator 子模块提供 IntegratedPipeline"
             "（v5.0 polaris_orchestrator 未迁移 IntegratedPipeline/PipelineConfig，"
-            "R03 禁止 fall-back）。请迁移 TrainingPipeline 改用 polaris_flow 调度。"
+            "R03 禁止 fall-back）。请改用 polaris_trainer.train_loop.train_ppo / "
+            "train_with_env_factory 直接训练。"
         )
-
-    def train(self) -> TrainingResult:
-        """执行训练流水线。
-
-        Returns:
-            TrainingResult。
-        """
-        cfg = self.config
-        logger.info("训练流水线启动: %d episodes", cfg.num_episodes)
-
-        circuits = self._load_benchmarks(cfg.benchmark_dir)
-        if not circuits:
-            # R05 Bug 修复 v4.0-FALLBACK-01（第1轮迭代发现）:
-            # 原 return TrainingResult() 是静默 fall-back，客户以为"训练完成"
-            # 但实际无任何训练（episodes_completed=0），拿到空模型部署 RL 布局无效。
-            # 修复：raise ValueError，禁止静默返回空结果。
-            # 规则: R03 禁止 fall-back / R05 Bug 必修
-            # 文献: Effective Python Item 32 https://effectivepython.com/
-            raise ValueError(
-                f"基准目录 {cfg.benchmark_dir!r} 无可用 JSON 文件，"
-                f"训练终止。请提供真实 benchmark 数据（参考 data/benchmarks/）。"
-                f"R03 禁止 fall-back：禁止返回空 TrainingResult 让客户误以为训练完成。"
-            )
-
-        floorplan_logs: list[dict] = []
-        routing_logs: list[dict] = []
-        floorplan_agent: PPOAgent | None = None
-        routing_agent: PPOAgent | None = None
-
-        if cfg.train_floorplan_enabled:
-            floorplan_agent, floorplan_logs = self._train_floorplan_agent(cfg)
-
-        if cfg.train_routing_enabled:
-            routing_agent, routing_logs = self._train_routing_agent(cfg)
-
-        best_reward = self._extract_best_reward(floorplan_logs, routing_logs)
-        avg_loss = self._extract_avg_loss(floorplan_logs, routing_logs)
-
-        cal_result = self._run_calibration(cfg)
-        ckpt_path = self._save_checkpoint(cfg, best_reward, avg_loss, cal_result)
-
-        result = TrainingResult(
-            episodes_completed=cfg.num_episodes,
-            best_reward=best_reward,
-            avg_loss_db=avg_loss,
-            calibration_passed=cal_result.all_passed,
-            calibration_result=cal_result,
-            checkpoint_path=ckpt_path,
-            floorplan_logs=floorplan_logs,
-            routing_logs=routing_logs,
-        )
-        logger.info(
-            "训练完成: best_reward=%.3f, avg_loss=%.2f dB, 校准=%s",
-            best_reward,
-            avg_loss,
-            "通过" if cal_result.all_passed else "未通过",
-        )
-        return result
-
-    def _train_floorplan_agent(self, cfg: TrainingConfig) -> tuple[PPOAgent, list[dict]]:
-        """执行布局 PPO 训练。
-
-        调用 ``train_loop.train_floorplan`` 做真正的 PPO 训练：
-        rollout 采集 → GAE 优势估计 → PPO clip 更新 → 价值函数拟合。
-
-        Args:
-            cfg: 训练配置。
-
-        Returns:
-            (训练后的 agent, 训练日志列表)。
-        """
-        logger.info("开始布局 PPO 训练: %d episodes", cfg.num_episodes)
-        raise ImportError(
-            "_train_floorplan_agent 需要 polaris_trainer 子模块提供 train_floorplan"
-            "（v5.0 polaris_trainer 仅迁移 train_ppo/train_with_env_factory，"
-            "未迁移 train_floorplan，R03 禁止 fall-back）。"
-            "请改用 polaris_trainer.train_loop.train_ppo 并适配 env_factory。"
-        )
-
-    def _train_routing_agent(self, cfg: TrainingConfig) -> tuple[PPOAgent, list[dict]]:
-        """执行布线 PPO 训练。
-
-        调用 ``train_loop.train_routing`` 做真正的 PPO 训练：
-        先随机布局再创建 RoutingEnv，rollout 采集 → GAE → clip 更新。
-
-        Args:
-            cfg: 训练配置。
-
-        Returns:
-            (训练后的 agent, 训练日志列表)。
-        """
-        logger.info("开始布线 PPO 训练: %d episodes", cfg.num_episodes)
-        raise ImportError(
-            "_train_routing_agent 需要 polaris_trainer 子模块提供 train_routing"
-            "（v5.0 polaris_trainer 仅迁移 train_ppo/train_with_env_factory，"
-            "未迁移 train_routing，R03 禁止 fall-back）。"
-            "请改用 polaris_trainer.train_loop.train_with_env_factory 并适配 RoutingEnv。"
-        )
-
-    @staticmethod
-    def _build_train_config(cfg: TrainingConfig) -> TrainConfig:
-        """从 TrainingConfig 构造 TrainConfig。
-
-        Args:
-            cfg: 训练流水线配置。
-
-        Returns:
-            TrainConfig 实例。
-
-        Raises:
-            ImportError: polaris_trainer 未迁移 DatasetConfig（R03 禁止 fall-back）。
-        """
-        raise ImportError(
-            "_build_train_config 需要 polaris_trainer 子模块提供 DatasetConfig"
-            "（v5.0 polaris_trainer 未迁移 dataset 模块/DatasetConfig，"
-            "R03 禁止 fall-back）。请迁移数据集配置或改用 TrainConfig 默认数据集。"
-        )
-
-    @staticmethod
-    def _extract_best_reward(floorplan_logs: list[dict], routing_logs: list[dict]) -> float:
-        """从训练日志中提取最佳奖励。
-
-        Args:
-            floorplan_logs: 布局训练日志。
-            routing_logs: 布线训练日志。
-
-        Returns:
-            布局与布线中的最大 ep_reward。
-        """
-        rewards: list[float] = []
-        rewards.extend(lg.get("ep_reward", 0.0) for lg in floorplan_logs)
-        rewards.extend(lg.get("ep_reward", 0.0) for lg in routing_logs)
-        return max(rewards) if rewards else 0.0
-
-    @staticmethod
-    def _extract_avg_loss(floorplan_logs: list[dict], routing_logs: list[dict]) -> float:
-        """从训练日志中提取平均插入损耗。
-
-        Args:
-            floorplan_logs: 布局训练日志。
-            routing_logs: 布线训练日志。
-
-        Returns:
-            布线日志中 total_loss_db 的平均值（布局无损耗指标，返回 0）。
-            注意：0.0 表示"无布线日志/无损耗指标"，**非**"完美布线"——
-            调用方区分二者应同时检查 routing_logs 是否为空。
-        """
-        if not routing_logs:
-            return 0.0  # 合法默认值：无布线日志即无损耗指标（非完美布线 0 损耗）
-        losses = [lg.get("total_loss_db", 0.0) for lg in routing_logs]
-        return sum(losses) / len(losses) if losses else 0.0
-
-    @staticmethod
-    def _run_calibration(cfg: TrainingConfig) -> CalibrationResult:
-        """执行仿真校验。
-
-        调用 ``sim.calibration.calibrate`` 对比自研仿真与基准数据。
-
-        Args:
-            cfg: 训练配置。
-
-        Returns:
-            CalibrationResult。
-
-        Raises:
-            ImportError: 仿真校准子模块未迁移（R03 禁止 fall-back）。
-        """
-        raise ImportError(
-            "_run_calibration 需要 v5.0 仿真校准子模块提供 "
-            "CalibrationConfig/calibrate（polaris.sim.calibration 尚未迁移到"
-            "任何子模块，R03 禁止 fall-back）。请迁移校准逻辑或移除校验步骤。"
-        )
-
-    @staticmethod
-    def _save_checkpoint(
-        cfg: TrainingConfig,
-        best_reward: float,
-        avg_loss: float,
-        cal_result: CalibrationResult,
-    ) -> str:
-        """保存训练检查点。
-
-        Args:
-            cfg: 训练配置。
-            best_reward: 最佳奖励。
-            avg_loss: 平均损耗。
-            cal_result: 校准结果。
-
-        Returns:
-            检查点文件路径。
-        """
-        save_dir = Path(cfg.save_dir)
-        save_dir.mkdir(parents=True, exist_ok=True)
-        ckpt_path = str(save_dir / "training_result.json")
-        ckpt_data = {
-            "episodes": cfg.num_episodes,
-            "best_reward": best_reward,
-            "avg_loss_db": avg_loss,
-            "calibration_passed": cal_result.all_passed,
-            "calibration_passed_items": cal_result.passed_items,
-            "calibration_total_items": cal_result.total_items,
-            "calibration_max_error_db": cal_result.max_error_db,
-            "calibration_mean_error_db": cal_result.mean_error_db,
-        }
-        # R05 Bug 修复 v4.0-ATOMIC-03 + v4.0-JSON-NAN（第1轮迭代发现）:
-        # 原裸 write_text 非原子 + 未传 allow_nan=False。
-        # 1. 原子写入：训练耗时数小时，断电/中断时检查点损坏无法恢复
-        # 2. NaN/Inf 检测：NumPy 计算可能产生 NaN，写出后无法被其他工具解析
-        # 修复：原子写入 + allow_nan=False，NaN/Inf 即 raise
-        # 规则: R03 禁止 fall-back / R05 Bug 必修
-        # 文献: POSIX rename(2) https://pubs.opengroup.org/onlinepubs/9699919799/functions/rename.html
-        # 文献: RFC 8259 JSON §6 https://datatracker.ietf.org/doc/html/rfc8259#section-6
-        target = Path(ckpt_path)
-        content = json.dumps(ckpt_data, indent=2, allow_nan=False)
-        fd, tmp_name = tempfile.mkstemp(
-            dir=target.parent, prefix=target.name + ".", suffix=".tmp"
-        )
-        tmp_path = Path(tmp_name)
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(content)
-                f.flush()
-                os.fsync(f.fileno())
-            os.replace(tmp_path, target)
-        except Exception:
-            tmp_path.unlink(missing_ok=True)
-            raise
-        return ckpt_path
-
-    @staticmethod
-    def _load_benchmarks(benchmark_dir: str) -> list[CircuitSpec]:
-        """加载基准数据并解析为完整 CircuitSpec。
-
-        基准 JSON 快照格式（来自 data/benchmarks/）含 instances 字典、
-        connections 列表、routes.optical.links 等字段，需正确解析为
-        DeviceSpec 列表与 connections 列表，避免空 CircuitSpec 训练 Bug。
-
-        Args:
-            benchmark_dir: 基准数据目录。
-
-        Returns:
-            完整解析的 CircuitSpec 列表（含 devices 与 connections）。
-        """
-        bdir = Path(benchmark_dir)
-        if not bdir.exists():
-            # R03 合规：基准目录不存在属配置错误，禁止 fall-back 返回空列表
-            # （否则下游会在零基准上训练，掩盖配置 Bug）。直接 raise 告警。
-            raise FileNotFoundError(
-                f"基准目录不存在: {benchmark_dir}"
-                "（R03: 禁止 fall-back 返回空列表掩盖配置错误）"
-            )
-        circuits: list[CircuitSpec] = []
-        for f in sorted(bdir.glob("*.json")):
-            if f.name in ("index.json", "variant_stats.json"):
-                continue
-            # R03 合规：基准文件解析失败属数据损坏，禁止 except+logger.warning 静默跳过。
-            # _parse_benchmark_json 对空/无法识别格式直接 raise，由上层决策。
-            circuit = _parse_benchmark_json(f)
-            circuits.append(circuit)
-        logger.info(
-            "加载了 %d 个基准电路 (总器件数=%d, 总连接数=%d)",
-            len(circuits),
-            sum(len(c.devices) for c in circuits),
-            sum(len(c.connections) for c in circuits),
-        )
-        return circuits
-
-
-def _parse_benchmark_json(path: Path) -> CircuitSpec:
-    """解析基准 JSON 快照为 CircuitSpec。
-
-    支持三种来源格式：
-    - GDSFactory: instances 字典 + connections/routes
-    - PICBench: data.netlist.instances/connections
-    - LiDAR PIC IR: instances 列表 + nets
-
-    R03 合规：原实现对“无器件且无连接”返回 None 静默跳过，是 fall-back——
-    掩盖了格式不匹配或空文件等数据质量问题。现改为 raise ValueError 告警，
-    强制上层处理（Effective Python Item 32: 优先抛异常而非返回 None）。
-
-    Args:
-        path: JSON 文件路径。
-
-    Returns:
-        CircuitSpec（含 devices 与 connections）。
-
-    Raises:
-        ValueError: 文件无器件且无连接（空基准 / 无法识别格式）。
-    """
-    data = json.loads(path.read_text(encoding="utf-8"))
-    name = data.get("name", path.stem)
-    netlist = _extract_netlist(data)
-
-    devices = _parse_instances(netlist)
-    if not devices:
-        devices = _parse_components(netlist)
-    connections = _parse_connections(netlist)
-    connections.extend(_parse_routes(netlist))
-    connections.extend(_parse_nets(netlist))
-
-    if not devices and not connections:
-        raise ValueError(
-            f"基准文件 {name} 无器件且无连接"
-            "（R03: 禁止 fall-back 跳过空基准，数据质量问题必须上抛）"
-        )
-
-    return CircuitSpec(name=name, devices=devices, connections=connections)
-
-
-def _extract_netlist(data: dict) -> dict:
-    """从基准数据提取 netlist（兼容 PICBench 嵌套结构）。"""
-    if isinstance(data.get("data"), dict):
-        return data["data"].get("netlist", data)
-    return data
-
-
-def _parse_instances(netlist: dict) -> list[DeviceSpec]:
-    """解析 instances 字段（GDSFactory 字典 / LiDAR 列表格式）。"""
-    devices: list[DeviceSpec] = []
-    instances = netlist.get("instances", [])
-    if isinstance(instances, dict):
-        for inst_name, inst_data in instances.items():
-            if not isinstance(inst_data, dict):
-                continue
-            devices.append(_make_device_from_dict_inst(inst_name, inst_data))
-    elif isinstance(instances, list):
-        for inst in instances:
-            if not isinstance(inst, dict):
-                continue
-            devices.append(_make_device_from_list_inst(inst))
-    return devices
-
-
-def _first_float(source: dict, keys: tuple[str, ...], default: float) -> float:
-    """从 source 中按 keys 顺序取第一个非 None 值并转 float。
-
-    修复 #v3.3-P-6（R05 根因修复）：原 ``source.get(k1, source.get(k2, default))``
-    在 key 存在但值为 None 时返回 None（dict.get 语义：key 存在即返回其值，
-    即便为 None），导致 ``float(None)`` 抛 TypeError。该 Bug 曾被
-    ``_load_benchmarks`` 的 ``except logger.warning`` fall-back 静默吞没
-    （整文件被跳过，造成基准数据大量丢失），R03 移除 fall-back 后暴露。
-    本辅助函数显式跳过 None 值，取首个非 None 候选。
-
-    来源: Python dict.get 语义
-      https://docs.python.org/3/library/stdtypes.html#dict.get
-    """
-    for k in keys:
-        v = source.get(k)
-        if v is not None:
-            return float(v)
-    return default
-
-
-def _make_device_from_dict_inst(name: str, inst_data: dict) -> DeviceSpec:
-    """从 GDSFactory 字典格式 instance 构造 DeviceSpec。"""
-    component = inst_data.get("component", inst_data.get("type", "unknown"))
-    settings = inst_data.get("settings") or {}
-    w = _first_float(settings, ("length", "width"), 10.0)
-    h = _first_float(settings, ("gap", "height"), 10.0)
-    return DeviceSpec(
-        name=name,
-        device_type=component,
-        width_um=w,
-        height_um=h,
-        params=dict(settings),
-    )
-
-
-def _make_device_from_list_inst(inst: dict) -> DeviceSpec:
-    """从 LiDAR 列表格式 instance 构造 DeviceSpec。"""
-    inst_name = inst.get("name", inst.get("instance", "unknown"))
-    cell = inst.get("cell_type", inst.get("component", inst.get("type", "unknown")))
-    w = _first_float(inst, ("width", "xsize"), 10.0)
-    h = _first_float(inst, ("height", "ysize"), 10.0)
-    return DeviceSpec(name=inst_name, device_type=cell, width_um=w, height_um=h)
-
-
-def _parse_components(netlist: dict) -> list[DeviceSpec]:
-    """解析 PICBench components/devices 字段（备选）。"""
-    devices: list[DeviceSpec] = []
-    components = netlist.get("components", netlist.get("devices", []))
-    if not isinstance(components, list):
-        return devices
-    for comp in components:
-        if not isinstance(comp, dict):
-            continue
-        cname = comp.get("name", "unknown")
-        ctype = comp.get("type", comp.get("component", "unknown"))
-        w = _first_float(comp, ("width", "xsize"), 10.0)
-        h = _first_float(comp, ("height", "ysize"), 10.0)
-        devices.append(DeviceSpec(name=cname, device_type=ctype, width_um=w, height_um=h))
-    return devices
-
-
-def _parse_connections(netlist: dict) -> list[tuple[str, str, str, str]]:
-    """解析 connections 字段（GDSFactory 列表 / PICBench 字典格式）。"""
-    connections: list[tuple[str, str, str, str]] = []
-    raw_conns = netlist.get("connections", [])
-    if isinstance(raw_conns, list):
-        for conn in raw_conns:
-            src, dst = _extract_conn_endpoints(conn)
-            connections.extend(_make_connection(src, dst))
-    elif isinstance(raw_conns, dict):
-        for src, dst in raw_conns.items():
-            connections.extend(_make_connection(str(src), str(dst)))
-    return connections
-
-
-def _parse_routes(netlist: dict) -> list[tuple[str, str, str, str]]:
-    """解析 routes.optical.links 字段（GDSFactory 路由连接）。"""
-    connections: list[tuple[str, str, str, str]] = []
-    routes = netlist.get("routes", {})
-    if not isinstance(routes, dict):
-        return connections
-    for route_data in routes.values():
-        if not isinstance(route_data, dict):
-            continue
-        links = route_data.get("links", {})
-        if isinstance(links, dict):
-            for src, dst in links.items():
-                connections.extend(_make_connection(str(src), str(dst)))
-    return connections
-
-
-def _parse_nets(netlist: dict) -> list[tuple[str, str, str, str]]:
-    """解析 LiDAR nets 字段。"""
-    connections: list[tuple[str, str, str, str]] = []
-    nets = netlist.get("nets", [])
-    if not isinstance(nets, list):
-        return connections
-    for net in nets:
-        if not isinstance(net, dict):
-            continue
-        src = net.get("src", net.get("source", ""))
-        dst = net.get("dst", net.get("destination", ""))
-        connections.extend(_make_connection(str(src), str(dst)))
-    return connections
-
-
-def _make_connection(src: str, dst: str) -> list[tuple[str, str, str, str]]:
-    """从 src/dst 端点字符串构造连接（空则返回空列表）。"""
-    if not src or not dst:
-        return []  # 合法：空输入空输出，src/dst 缺失无法构成连接
-    sd, sp = _split_port_ref(src)
-    dd, dp = _split_port_ref(dst)
-    if sd and dd:
-        return [(sd, sp, dd, dp)]
-    return []  # 合法：空输入空输出，端口解析失败（无 device 名）
-
-
-def _extract_conn_endpoints(conn) -> tuple[str, str]:
-    """从 connection 条目提取 src/dst 端点字符串。"""
-    if isinstance(conn, dict):
-        src = conn.get("source", conn.get("src", ""))
-        dst = conn.get("destination", conn.get("dst", ""))
-        return str(src), str(dst)
-    if isinstance(conn, str):
-        if "," in conn:
-            parts = conn.split(",")
-            return parts[0].strip(), parts[1].strip() if len(parts) > 1 else ""
-    return "", ""
-
-
-def _split_port_ref(ref: str) -> tuple[str, str]:
-    """拆分端口引用 'device,port' → (device, port)。"""
-    if not ref:
-        return "", ""
-    if "," in ref:
-        parts = ref.split(",", 1)
-        return parts[0].strip(), parts[1].strip()
-    if ":" in ref:
-        parts = ref.split(":", 1)
-        return parts[0].strip(), parts[1].strip()
-    return ref.strip(), "o1"
 
 
 __all__ = [

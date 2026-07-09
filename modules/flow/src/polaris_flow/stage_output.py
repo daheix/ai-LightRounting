@@ -150,14 +150,21 @@ def stage8_opto_electrical(
     # 1.0 pF/mm = 0.001 pF/μm
     capacitance_pf = total_length_um * 0.001
 
-    # 电阻: 基于加热器数量（每个加热器 50 Ω，串联）
+    # 电阻: 仅基于加热器类器件（heater/thermo_optic_phase_shifter），
+    # 每个 50 Ω 串联。调制器（MZM/MRM）不贡献热光电阻。
+    # R390 修复: 原代码 n_heaters = len(coupled_devices) 把调制器也算作
+    # 加热器，导致电阻高估。修复为仅统计热光类器件。
     # 来源: SiEPIC EBeam PDK 热光移相器电阻典型值 50-100 Ω
-    n_heaters = len(coupled_devices)
+    heater_types = {"heater", "thermo_optic_phase_shifter"}
+    n_heaters = sum(
+        1 for d in coupled_devices if d.get("device_type") in heater_types
+    )
     resistance_ohm = float(n_heaters * 50.0)
+    n_coupled = len(coupled_devices)
 
     logger.info(
-        "阶段 8 完成: 电容 %.4f pF, 电阻 %.1f Ω, 光电耦合=%s",
-        capacitance_pf, resistance_ohm, coupled,
+        "阶段 8 完成: 电容 %.4f pF, 电阻 %.1f Ω, 光电耦合=%s (耦合器件 %d, 加热器 %d)",
+        capacitance_pf, resistance_ohm, coupled, n_coupled, n_heaters,
     )
 
     return {
@@ -165,7 +172,8 @@ def stage8_opto_electrical(
             "capacitance_pf": float(capacitance_pf),
             "resistance_ohm": float(resistance_ohm),
             "coupled": bool(coupled),
-            "n_coupled_devices": int(n_heaters),
+            "n_coupled_devices": int(n_coupled),
+            "n_heaters": int(n_heaters),
         }
     }
 

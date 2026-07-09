@@ -109,9 +109,14 @@ class JobScheduler:
         return jobs
 
     def shutdown(self) -> None:
-        """关闭调度器"""
+        """关闭调度器。
+
+        R390 修复: 原 wait=False 不等待已提交 future 完成，导致测试中
+        TemporaryDirectory 清理时后台线程仍在写文件 → OSError Directory not empty。
+        改为 wait=True 等待所有已提交的 stage executor 完成，确保无残留线程。
+        """
         self._shutdown = True
-        self._executor.shutdown(wait=False)
+        self._executor.shutdown(wait=True)
 
     def _dispatch_loop(self) -> None:
         """调度循环：从队列取作业分配给 worker"""

@@ -399,6 +399,66 @@ def test_optical_link_empty_bits_ber_raises() -> None:
         link.ber(np.array([]), np.array([]))
 
 
+def test_optical_link_qam16_all_4_bits_used() -> None:
+    """QAM16: 4 比特/符号全部使用，16 个星座点（R390 回归测试）。
+
+    原代码仅用前 2 比特（丢失后 2 比特），退化为 4-QAM。
+    修复后 I/Q 各 2 比特 → 16 个复数星座点。
+    来源: Proakis, Digital Communications §5 (16-QAM 星座图)
+    """
+    link = OpticalLink(tx_modulation="QAM16", noise_sigma=0.0)  # 无噪声
+    # 16 种 4 比特组合 → 16 个符号
+    bits = np.array([
+        0, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 0,  0, 0, 1, 1,
+        0, 1, 0, 0,  0, 1, 0, 1,  0, 1, 1, 0,  0, 1, 1, 1,
+        1, 0, 0, 0,  1, 0, 0, 1,  1, 0, 1, 0,  1, 0, 1, 1,
+        1, 1, 0, 0,  1, 1, 0, 1,  1, 1, 1, 0,  1, 1, 1, 1,
+    ], dtype=np.int8)
+    signal = link.modulate(bits)
+    # 16 符号 × samples_per_bit = 256 采样点
+    assert len(signal) == 16 * link.samples_per_bit
+    # 下采样得到 16 个符号
+    symbols = signal[::link.samples_per_bit]
+    assert len(symbols) == 16
+    # 16 个星座点应全部唯一（若仅用 2 比特则只有 4 个唯一点）
+    unique = set(zip(symbols.real.tolist(), symbols.imag.tolist()))
+    assert len(unique) == 16, f"QAM16 应有 16 个星座点，实际 {len(unique)}"
+    # I/Q 各 4 电平 {-3, -1, 1, 3}
+    for s in symbols:
+        assert s.real in (-3.0, -1.0, 1.0, 3.0), f"I 分量 {s.real} 不在 16-QAM 电平"
+        assert s.imag in (-3.0, -1.0, 1.0, 3.0), f"Q 分量 {s.imag} 不在 16-QAM 电平"
+
+
+def test_optical_link_qam16_ber_zero_noise() -> None:
+    """QAM16 无噪声: BER=0（R390 回归测试，I/Q 独立判决正确）。"""
+    link = OpticalLink(tx_modulation="QAM16", noise_sigma=0.0, fiber_loss=0.0)
+    tx_bits = link.generate_bits(100)
+    tx_signal = link.modulate(tx_bits)
+    rx_signal = link.transmit(tx_signal)
+    rx_bits = link.receive(rx_signal)
+    # 无噪声无损耗 → BER=0
+    ber = link.ber(tx_bits, rx_bits)
+    assert ber == 0.0, f"无噪声 QAM16 BER 应=0, 得 {ber}"
+
+
+def test_optical_link_pam4_receive_returns_bits() -> None:
+    """PAM4 receive 返回比特（2 比特/符号），非符号索引（R390 回归测试）。
+
+    原 receive 返回符号索引 0-3，ber() 比较比特时语义错误。
+    修复后 receive 解码 2 比特/符号，返回与 tx_bits 等长的比特序列。
+    """
+    link = OpticalLink(tx_modulation="PAM4", noise_sigma=0.0, fiber_loss=0.0)
+    tx_bits = link.generate_bits(100)
+    tx_signal = link.modulate(tx_bits)
+    rx_signal = link.transmit(tx_signal)
+    rx_bits = link.receive(rx_signal)
+    # PAM4: 100 bits → 50 symbols → receive 应返回 100 bits
+    assert len(rx_bits) == 100, f"PAM4 receive 应返回 100 比特, 得 {len(rx_bits)}"
+    # 无噪声 → BER=0
+    ber = link.ber(tx_bits, rx_bits)
+    assert ber == 0.0, f"无噪声 PAM4 BER 应=0, 得 {ber}"
+
+
 def test_hybrid_simulator_empty_sdict_raises() -> None:
     """HybridSimulator 空 S 参数应 raise ValueError。"""
     sim = HybridSimulator({}, TLLMLaser())
