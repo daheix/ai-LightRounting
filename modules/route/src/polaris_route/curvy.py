@@ -298,10 +298,9 @@ def generate_arc_bend(
     # 圆弧半径至少为 radius_um；若两点距离过近无法满足，则放大半径到 dist/2
     r = max(radius_um, dist / 2.0)
     half_dist = dist / 2.0
-    if r >= half_dist:
-        d = math.sqrt(max(0.0, r * r - half_dist * half_dist))
-    else:
-        d = 0.0
+    # R390 修复: r = max(radius_um, dist/2) 保证 r >= half_dist 恒成立
+    # 删除永不执行的 else 分支（死代码）
+    d = math.sqrt(max(0.0, r * r - half_dist * half_dist))
     mx, my = (sx + ex) / 2.0, (sy + ey) / 2.0
     # 中垂线方向（垂直于 start-end 连线）
     perp_x = -(ey - sy) / dist

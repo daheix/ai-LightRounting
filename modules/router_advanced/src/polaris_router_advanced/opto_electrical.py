@@ -159,9 +159,12 @@ class OptoElectricalRouter:
         sg = (int(start[0] / self.grid_size), int(start[1] / self.grid_size))
         eg = (int(end[0] / self.grid_size), int(end[1] / self.grid_size))
         grid_path = self.optical_router.route(sg, eg)
+        # R390 修复: 布线失败禁止 fall-back 返回空对象，应 raise（R03）
         if grid_path is None:
-            logger.error("光波导布线失败: %s", net_id)
-            return WaveguidePath()
+            raise RuntimeError(
+                f"光波导布线失败: {net_id}（start={start}, end={end}），"
+                f"R03 禁止 fall-back 返回空 WaveguidePath"
+            )
         pts = [(g[0] * self.grid_size, g[1] * self.grid_size) for g in grid_path]
         if pts:
             pts[0] = start
@@ -185,9 +188,12 @@ class OptoElectricalRouter:
         sg = (int(net.start[0] / self.grid_size), int(net.start[1] / self.grid_size))
         eg = (int(net.end[0] / self.grid_size), int(net.end[1] / self.grid_size))
         grid_path = self.electrical_router.route(sg, eg)
+        # R390 修复: 布线失败禁止 fall-back 返回空对象，应 raise（R03）
         if grid_path is None:
-            logger.error("电金属布线失败: %s", net.net_id)
-            return ElectricalPath(layer=net.layer)
+            raise RuntimeError(
+                f"电金属布线失败: {net.net_id}（start={net.start}, end={net.end}），"
+                f"R03 禁止 fall-back 返回空 ElectricalPath"
+            )
         pts = [(g[0] * self.grid_size, g[1] * self.grid_size) for g in grid_path]
         if pts:
             pts[0] = net.start

@@ -274,8 +274,12 @@ class GedneyPML:
             dt_ratio = 1.0
         else:
             dt_ratio = dt / float(cfl_dt)
+            # R390 修复: dt_ratio <= 0 是业务错误（dt<=0 或 cfl_dt<=0），禁止 fall-back
             if dt_ratio <= 0:
-                dt_ratio = 0.95  # 保护：dt_ratio 必须为正
+                raise RuntimeError(
+                    f"dt_ratio={dt_ratio} <= 0（dt={dt}, cfl_dt={cfl_dt}），"
+                    f"R03 禁止 fall-back 用 0.95 兜底"
+                )
         # Taflove 2005 §7.6.2 优化值: sigma_opt = 0.8*(m+1)/(η0*Δ*sqrt(eps_r))
         # 补偿 dt<CFL: sigma_max = sigma_opt / dt_ratio
         sigma_max = (

@@ -367,7 +367,13 @@ def _finalize_result(
         best_density_arr = best_density
     else:
         best_density_arr = best_density
-    improvement_db = 10.0 * math.log10(max(best_fom, 1e-30) / max(fom_init, 1e-30))
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-30) 兜底
+    if best_fom <= 0 or fom_init <= 0:
+        raise RuntimeError(
+            f"Topology opt FoM 异常: best_fom={best_fom}, fom_init={fom_init}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * math.log10(best_fom / fom_init)
     grayness = float(jnp.mean(4.0 * best_density_arr * (1.0 - best_density_arr)))
     binary_ratio = float(
         jnp.mean(

@@ -170,7 +170,9 @@ def ring_resonator_s(
     circumference = 2.0 * np.pi * radius
     beta = 2.0 * np.pi * params.neff / wl
     phi = beta * circumference
-    loss_db_cm = params.loss_db_cm if params.loss_db_cm > 0 else 0.1
+    # R390 修复: loss_db_cm=0 是用户显式设置的无损耗设计，禁止 fall-back 为 0.1
+    # RingParams.__post_init__ 已校验 loss_db_cm >= 0 合法，0 是有效值
+    loss_db_cm = params.loss_db_cm
     a = 10.0 ** (-loss_db_cm * circumference / 1e4 / 20.0)
     t = np.sqrt(1.0 - params.coupling)
     numerator = t - a * np.exp(1j * phi)

@@ -352,7 +352,10 @@ class PDKDeviceSampler:
         dist = np.sqrt((rr - r_arc) ** 2 + (cc - r_arc) ** 2)
         arc_mask = np.abs(dist - r_arc) <= 1.0
         # 仅保留下三角部分（1/4 圆弧）
-        arc_mask &= (rr >= 0) & (cc >= 0) & (rr - r_arc <= 0) | (cc - r_arc <= 0)
+        # R390 修复: 运算符优先级 Bug — 原 & 和 | 混用导致 | 分隔的两个子表达式
+        # 实际为 ((A & B & C) | D)，保留了 3/4 圆弧而非 1/4
+        # 意图是左下象限: rr<=r_arc AND cc<=r_arc，应用 & 连接
+        arc_mask &= (rr >= 0) & (cc >= 0) & (rr - r_arc <= 0) & (cc - r_arc <= 0)
         mask[r0:r1, c0:c1] = np.where(arc_mask, 1.0, mask[r0:r1, c0:c1])
         # 防止全空（小栅格）回退到对角线
         if mask.sum() == 0:

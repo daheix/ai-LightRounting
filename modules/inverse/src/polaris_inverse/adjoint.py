@@ -326,13 +326,23 @@ def _finalize_adjoint_result(
     末步 FoM 已由 run_adjoint_optimization 在调用本函数前追加到 fom_history。
     """
     fom_initial = fom_history[0]
-    improvement_db = 10.0 * np.log10(
-        max(best_fom, 1e-30) / max(fom_initial, 1e-30)
-    )
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-30) 兜底
+    if best_fom <= 0 or fom_initial <= 0:
+        raise RuntimeError(
+            f"Adjoint 优化 FoM 异常: best_fom={best_fom}, fom_initial={fom_initial}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * np.log10(best_fom / fom_initial)
     converged = False
     if len(fom_history) >= 4:
         recent = fom_history[-4:]
-        rel_change = abs(recent[-1] - recent[0]) / max(abs(recent[0]), 1e-30)
+        # R390 修复: recent[0]=0 是异常，禁止 max(abs,1e-30) 兜底
+        if abs(recent[0]) < 1e-30:
+            raise RuntimeError(
+                f"Adjoint 收敛判定异常: recent[0]={recent[0]}，"
+                f"R03 禁止 fall-back"
+            )
+        rel_change = abs(recent[-1] - recent[0]) / abs(recent[0])
         converged = rel_change < 0.01
     return {
         "initial_width_nm": float(INITIAL_WIDTH_PIXELS * GRID_DX_M * 1e9),

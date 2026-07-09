@@ -205,10 +205,20 @@ def optimize_mmi(
     L_pi_opt = 4.0 * N_SI * W_opt**2 / (3.0 * WAVELENGTH_UM)
     L_target_opt = 3.0 * L_pi_opt / 4.0
     eta = float(jnp.cos(jnp.pi * (L_opt - L_target_opt) / L_pi_opt) ** 2)
-    il_db = -10.0 * math.log10(max(eta, 1e-6))
+    # R390 修复: eta<=0 是物理异常（完全失配），禁止 max(x,1e-6) 兜底
+    if eta <= 0:
+        raise RuntimeError(f"MMI eta={eta} <= 0，物理异常，R03 禁止 fall-back")
+    il_db = -10.0 * math.log10(eta)
     delta = float(jnp.sin(jnp.pi * (L_opt - L_target_opt) / L_pi_opt) ** 2 * 0.5)
-    nonuniformity_db = 10.0 * math.log10(1.0 + max(delta, 1e-6))
-    improvement_db = 10.0 * math.log10(max(best_fom, 1e-6) / max(fom_init, 1e-6))
+    # delta>=0 恒成立，1+delta>=1，log10 安全，无需 max 兜底
+    nonuniformity_db = 10.0 * math.log10(1.0 + delta)
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-6) 兜底
+    if best_fom <= 0 or fom_init <= 0:
+        raise RuntimeError(
+            f"MMI 优化 FoM 异常: best_fom={best_fom}, fom_init={fom_init}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * math.log10(best_fom / fom_init)
     return {
         "device": "MMI_1x2",
         "initial_W_um": 7.0,
@@ -258,8 +268,10 @@ def wdm_fom(params: jnp.ndarray) -> jnp.ndarray:
     T = jnp.sin(kappa * L) ** 2
     # 物理带宽 (Yariv 1973 §V): Δλ = λ²·κ/(π·n_g), 转 nm
     bandwidth_nm = (WAVELENGTH_UM**2) * kappa / (jnp.pi * N_GROUP_SI) * 1000.0
-    # 隔离度 (1-T 的对数)
-    isolation_db = -10.0 * jnp.log10(jnp.maximum(1.0 - T**2, 1e-6))
+    # R390 修复: 隔离度公式 1-T² 应为 1-T
+    # T=sin²(κL) 已是功率耦合比，1-T 是直通端口功率（越小隔离越高）
+    # 1-T² 是功率的平方，无物理意义，会系统性低估隔离度
+    isolation_db = -10.0 * jnp.log10(jnp.maximum(1.0 - T, 1e-6))
     return T + 0.05 * bandwidth_nm + 0.05 * isolation_db
 
 
@@ -308,8 +320,15 @@ def optimize_wdm(
     T = math.sin(kappa * L_opt) ** 2
     # 物理带宽 (Yariv 1973 §V): Δλ = λ²·κ/(π·n_g), 转 nm
     bandwidth_nm = (WAVELENGTH_UM**2) * kappa / (math.pi * N_GROUP_SI) * 1000.0
-    isolation_db = -10.0 * math.log10(max(1.0 - T**2, 1e-6))
-    improvement_db = 10.0 * math.log10(max(best_fom, 1e-6) / max(fom_init, 1e-6))
+    # R390 修复: 隔离度 1-T² 应为 1-T（同 _wdm_fom 修复）
+    isolation_db = -10.0 * math.log10(max(1.0 - T, 1e-6))
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-6) 兜底
+    if best_fom <= 0 or fom_init <= 0:
+        raise RuntimeError(
+            f"WDM 优化 FoM 异常: best_fom={best_fom}, fom_init={fom_init}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * math.log10(best_fom / fom_init)
     return {
         "device": "WDM_filter",
         "initial_g_um": 1.6,
@@ -403,8 +422,17 @@ def optimize_ybranch(
     fom_history.append(fom_final)
     theta_opt = float(best_params[0])
     T = math.tanh(10.0 * theta_opt)
-    il_db = -10.0 * math.log10(max(T, 1e-6))
-    improvement_db = 10.0 * math.log10(max(best_fom, 1e-6) / max(fom_init, 1e-6))
+    # R390 修复: T<=0 是物理异常（theta_opt<=0），禁止 max(x,1e-6) 兜底
+    if T <= 0:
+        raise RuntimeError(f"Y-branch T={T} <= 0，物理异常，R03 禁止 fall-back")
+    il_db = -10.0 * math.log10(T)
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-6) 兜底
+    if best_fom <= 0 or fom_init <= 0:
+        raise RuntimeError(
+            f"Y-branch 优化 FoM 异常: best_fom={best_fom}, fom_init={fom_init}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * math.log10(best_fom / fom_init)
     return {
         "device": "Y_branch",
         "initial_theta_rad": 0.008,

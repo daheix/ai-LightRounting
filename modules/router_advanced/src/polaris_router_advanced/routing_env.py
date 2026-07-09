@@ -446,7 +446,8 @@ def _count_bend_radius_violations(
     用三点圆弧半径估计：对每个中间点 p1，由 (p0, p1, p2) 估算弯曲半径，
     若半径 < 工艺最小值则计为违规。
 
-    来源: 三点圆弧半径公式 R = |v1||v2||v1-v2| / (2|v1×v2|)
+    来源: 三点圆弧半径公式 R = |v1||v2||v1+v2| / (2|v1×v2|)
+           （第三边 = p3-p1 = v1+v2，R389 修复）
            与 polaris.sim.constraint_checker._estimate_bend_radius 一致
     工艺最小值来源: polaris_router_advanced.waveguide_router.PLATFORM_CONSTRAINTS
            SOI=5.0μm / SiN=100.0μm / InP=250.0μm / LNOI=80.0μm

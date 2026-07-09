@@ -153,9 +153,10 @@ def compute_ber(
     PAM4 理论 BER（基于眼图开口与噪声方差）::
 
         SNR_eye = (eye_opening / 2)² / σ_noise²
-        BER ≈ 0.5 · erfc(√(SNR_eye / 2))
+        BER ≈ (3/8) · erfc(√(SNR_eye / 2))
 
-    来源: Shafik et al., IEEE CommSurveys 2016
+    R390 修复: 原 0.5·erfc 是 NRZ/OOK 系数，PAM4 应为 3/8
+    来源: Proakis, Digital Communications §5; Shafik et al., IEEE CommSurveys 2016
       https://ieeexplore.ieee.org/document/7410082
 
     Args:
@@ -180,8 +181,16 @@ def compute_ber(
     eye_opening = 1.0 / (n_levels - 1)
     # SNR_eye = (eye/2)² / σ²
     snr_eye = (eye_opening / 2.0) ** 2 / (noise_std ** 2)
-    # BER ≈ 0.5 · erfc(√(SNR_eye/2))（Shafik 2016）
-    ber = 0.5 * math.erfc(math.sqrt(snr_eye / 2.0))
+    # R390 修复: PAM4 BER 系数应为 3/8 而非 0.5
+    # 原 0.5·erfc(√(SNR/2)) 是 NRZ/OOK 二进制 BER 公式
+    # PAM4（4 电平等距）标准理论 BER:
+    #   符号错误率 P_e = (3/2)·Q(d/σ)（内外层判决边界加权平均）
+    #   BER ≈ P_e / log₂4 = (3/4)·Q(d/σ) = (3/8)·erfc(d/(σ√2))
+    # 来源: Proakis, Digital Communications §5; Shafik 2016
+    #   https://ieeexplore.ieee.org/document/7545186
+    # d = eye_opening/2，snr_eye/2 = (d/σ)²/2 = d²/(2σ²)
+    # erfc(d/(σ√2)) = erfc(√(snr_eye/2))
+    ber = (3.0 / 8.0) * math.erfc(math.sqrt(snr_eye / 2.0))
     return float(ber)
 
 
@@ -209,8 +218,7 @@ def compute_snr_db(
         return float("inf")
     signal_power = float(np.mean(signal ** 2))
     noise_power = noise_std ** 2
-    if noise_power <= 0:
-        return float("inf")
+    # R390 修复: 删除死分支（noise_std>0 已在行 217 校验，noise_power 必 > 0）
     return 10.0 * math.log10(signal_power / noise_power)
 
 

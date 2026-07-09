@@ -350,7 +350,13 @@ def _finalize_adjoint_3d_result(
     fom_final = float(fom_history[-1]) if fom_history else fom_init
     if fom_final > best_fom:
         best_fom = fom_final
-    improvement_db = 10.0 * math.log10(max(best_fom, 1e-30) / max(fom_init, 1e-30))
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-30) 兜底
+    if best_fom <= 0 or fom_init <= 0:
+        raise RuntimeError(
+            f"3D Adjoint 优化 FoM 异常: best_fom={best_fom}, fom_init={fom_init}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * math.log10(best_fom / fom_init)
     grayness = float(jnp.mean(4.0 * best_density * (1.0 - best_density)))
     binary_ratio = float(
         jnp.mean((best_density < 0.1) | (best_density > 0.9))

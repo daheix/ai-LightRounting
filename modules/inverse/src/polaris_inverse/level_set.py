@@ -371,7 +371,13 @@ def _finalize_levelset_result(
     fom_final = float(fom_history[-1]) if fom_history else fom_init
     if fom_final > best_fom:
         best_fom = fom_final
-    improvement_db = 10.0 * math.log10(max(best_fom, 1e-30) / max(fom_init, 1e-30))
+    # R390 修复: FoM<=0 是物理异常，禁止 max(x,1e-30) 兜底
+    if best_fom <= 0 or fom_init <= 0:
+        raise RuntimeError(
+            f"Level-set 优化 FoM 异常: best_fom={best_fom}, fom_init={fom_init}，"
+            f"R03 禁止 fall-back"
+        )
+    improvement_db = 10.0 * math.log10(best_fom / fom_init)
     rho = regularized_heaviside(best_phi)
     si_ratio = float(jnp.mean(rho))
     # 边界长度（|∇ρ| 总和）

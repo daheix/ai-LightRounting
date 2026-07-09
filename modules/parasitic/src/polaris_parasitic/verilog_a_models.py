@@ -187,7 +187,8 @@ module {module_name} (in, out);
     // 相位累积
     phase = beta * length;
     // 损耗转线性 (dB/cm -> 振幅衰减)
-    alpha_linear = pow(10.0, -loss_db_cm * length * 1e4 / 20.0);
+    // R390 修复: length 单位为 μm，μm→cm 应除以 1e4（原 *1e4 错误放大 1e8 倍）
+    alpha_linear = pow(10.0, -loss_db_cm * length / 1e4 / 20.0);
     // S21 = alpha * exp(j*phase)
     s21_mag = alpha_linear;
     s21_phase = phase;
@@ -359,7 +360,8 @@ module {module_name} (in, through);
     circumference = 2.0 * `M_PI * radius;
     beta = 2.0 * `M_PI * neff / wavelength;
     phi = beta * circumference;
-    a = pow(10.0, -loss_db_cm * circumference * 1e4 / 20.0);
+    // R390 修复: circumference 单位为 μm，μm→cm 应除以 1e4（原 *1e4 错误放大 1e8 倍）
+    a = pow(10.0, -loss_db_cm * circumference / 1e4 / 20.0);
     t = sqrt(1.0 - coupling);
     // T = (t - a*exp(j*phi)) / (1 - t*a*exp(j*phi))
     T_real = (t - a*cos(phi)) / (1.0 - t*a*cos(phi));
