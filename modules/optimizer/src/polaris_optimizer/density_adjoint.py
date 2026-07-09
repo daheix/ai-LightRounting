@@ -600,10 +600,17 @@ def example_mmi_1x2() -> dict:
     config = OptimizerConfig(n_iters=20, learning_rate=0.05, drc_weight=0.005)
     optimizer = TopologyAdjointOptimizer(config, objective, design_shape=(h, w))
     result = optimizer.optimize()
+    # R390 修复: 原 max(optimal_fom, 1e-10) 是 fall-back（R03 违规）。
+    # FoM = 模式重叠 ≥ 0；若 ≤ 0 说明优化失败，应 raise 而非用假值算 IL。
+    if result.optimal_fom <= 0.0:
+        raise RuntimeError(
+            f"MMI 1x2 优化失败: optimal_fom={result.optimal_fom} ≤ 0，"
+            f"无法计算插入损耗（FoM 应 > 0）"
+        )
     return {
         "device": "MMI 1x2",
         "result": result,
-        "insertion_loss_db": -10.0 * np.log10(max(result.optimal_fom, 1e-10)),
+        "insertion_loss_db": -10.0 * np.log10(result.optimal_fom),
     }
 
 

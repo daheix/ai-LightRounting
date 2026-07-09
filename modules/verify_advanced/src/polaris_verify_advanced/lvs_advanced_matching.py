@@ -78,7 +78,13 @@ def match_devices_with_tolerance(
             spec = tolerances.get(key, ToleranceSpec(abs_tol=0.0, rel_tol=0.05))
             allowed = spec.abs_tol + spec.rel_tol * abs(rv)
             if deviation > allowed:
-                rel_dev = deviation / max(abs(rv), 1e-12) * 100
+                # R390 修复: 原 max(abs(rv), 1e-12) 是 fall-back（R03 违规）。
+                # 参考值 rv≈0 时相对偏差无意义：deviation=0 → 0%，否则 → 100%
+                # （参考值为 0 而提取值非 0，视为完全偏离）。
+                if abs(rv) < 1e-12:
+                    rel_dev = 0.0 if deviation == 0.0 else 100.0
+                else:
+                    rel_dev = deviation / abs(rv) * 100
                 result.param_mismatches.append(
                     ParamMismatch(
                         device_name=name,

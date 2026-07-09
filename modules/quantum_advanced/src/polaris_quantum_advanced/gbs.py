@@ -112,5 +112,13 @@ def gbs_probability(
         return 1.0
     sub_matrix = sigma[np.ix_(indices, indices)]
     haf = hafnian(sub_matrix)
+    # 协方差矩阵 + εI 正则化（Hamilton PRL 2017 标准技巧，防数值奇异）
     det_sigma = np.linalg.det(sigma + np.eye(M) * 1e-10)
-    return float(haf ** 2 / max(abs(det_sigma), 1e-10))
+    # R390 修复: 原 max(abs(det_sigma), 1e-10) 是 fall-back（R03 违规）。
+    # 已加 εI 正则化，若 det 仍 ≈ 0 说明协方差矩阵严重奇异，应 raise。
+    if abs(det_sigma) < 1e-12:
+        raise RuntimeError(
+            f"GBS 协方差矩阵奇异: det(σ+εI)={det_sigma} ≈ 0，"
+            f"无法计算输出概率（请检查协方差矩阵正定性）"
+        )
+    return float(haf ** 2 / det_sigma)

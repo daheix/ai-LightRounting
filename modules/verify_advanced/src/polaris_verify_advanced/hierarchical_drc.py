@@ -373,7 +373,14 @@ class HierarchicalDRC:
             return []  # 合法：region 为空 → 无多边形 → 无密度违规，空输入产生空输出
         total_area = sum(self._polygon_area(p) for p in region)
         cell_bbox = BVH._merge_bboxes([BVH._polygon_bbox(p) for p in region])
-        cell_area = max((cell_bbox[2] - cell_bbox[0]) * (cell_bbox[3] - cell_bbox[1]), 1e-15)
+        # R390 修复: 原 max(cell_area, 1e-15) 是 fall-back（R03 违规）。
+        # cell_area=0 说明 region 中多边形退化（共线/重合），无法计算密度。
+        cell_area = (cell_bbox[2] - cell_bbox[0]) * (cell_bbox[3] - cell_bbox[1])
+        if cell_area <= 0.0:
+            raise ValueError(
+                f"DRC 密度检查失败: region 包围盒面积={cell_area} ≤ 0，"
+                f"多边形退化（共线/重合），无法计算密度"
+            )
         density_pct = total_area / cell_area * 100.0
         if density_pct < min_density or density_pct > max_density:
             return [
