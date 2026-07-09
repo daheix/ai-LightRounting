@@ -284,8 +284,11 @@ class EdgeGNN:
                 msg = _tanh(_linear(msg_in, layer["edge_msg.W"], layer["edge_msg.b"]))  # [E, hidden]
                 np.add.at(agg, dst_idx, msg)
                 np.add.at(cnt, dst_idx, 1.0)
-            cnt_safe = np.maximum(cnt, 1.0).reshape(-1, 1)
-            agg = agg / cnt_safe  # 均值聚合
+            # R390 修复: 原 np.maximum(cnt, 1.0) 是 fall-back（R03 违规）。
+            # 孤立节点（无入边）cnt=0，agg=0/1=0，用 np.where 显式处理：
+            # 有入边 → 均值聚合，无入边 → 零向量（GNN 标准处理）。
+            cnt_col = cnt.reshape(-1, 1)
+            agg = np.where(cnt_col > 0, agg / cnt_col, 0.0)
             # 节点更新：concat(proj, agg) → relu(node_update)
             upd_in = np.concatenate([proj, agg], axis=1)  # [N, hidden*2]
             upd = _relu(_linear(upd_in, layer["node_update.W"], layer["node_update.b"]))
@@ -409,12 +412,15 @@ def _build_node_features(devices: list, canvas_w: float, canvas_h: float) -> np.
     失效（训练时特征值与加载 checkpoint 推理时不同 → GNN 嵌入错误）。
     """
     n = len(devices)
+    # R390 修复: canvas_w/h 已在 __init__.py:79 和 analytical.py:150 校验 > 0，
+    # 此处 max(canvas_w, 1.0) 是冗余 fall-back（R03 违规），直接用 canvas_w。
     feats = np.zeros((n, _GNN_NODE_FEAT_DIM), dtype=np.float64)
     for i, d in enumerate(devices):
-        feats[i, 0] = float(d["width_um"]) / max(canvas_w, 1.0)
-        feats[i, 1] = float(d["height_um"]) / max(canvas_h, 1.0)
+        feats[i, 0] = float(d["width_um"]) / canvas_w
+        feats[i, 1] = float(d["height_um"]) / canvas_h
         feats[i, 2] = zlib.crc32(d["device_type"].encode("utf-8")) % 100 / 100.0
-        feats[i, 3] = i / max(n - 1, 1)
+        # n=1 时无其他器件，idx_norm=0（单器件归一化索引无意义，置 0）
+        feats[i, 3] = i / (n - 1) if n > 1 else 0.0
     return feats
 
 
