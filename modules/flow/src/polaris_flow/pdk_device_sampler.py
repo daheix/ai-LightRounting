@@ -344,7 +344,9 @@ class PDKDeviceSampler:
         # 1/4 圆弧，圆心在 (r0, c0)，半径按真实 radius 比例缩放
         max_r = min(bh, bw) - 1
         # 真实 radius 占器件宽度比例 → 栅格半径
-        r_arc = max(2, int(max_r * min(1.0, radius_um / max(dev.width_um, 1e-6))))
+        # R390 修复: 原 max(dev.width_um, 1e-6) 是冗余 fall-back（R03 违规）。
+        # _load_devices_from_dir 已校验 width_um > 0（行 152），此处不会除 0。
+        r_arc = max(2, int(max_r * min(1.0, radius_um / dev.width_um)))
         if r_arc < 1:
             mask[r0:r1, c0:c1] = 1.0
             return

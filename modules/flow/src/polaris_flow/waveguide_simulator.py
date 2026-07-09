@@ -161,6 +161,10 @@ class WaveguideSimulator:
         transmission = t_base * fill_ratio * connectivity
         # ER(dB) = 10·log10(P_on/P_off)（IEC 61280-2-2 国际标准）
         # URL: https://www.keysight.com/us/en/assets/7018-01286/application-notes-archived/5989-2602.pdf
+        # eps_er=1e-12 是数值稳定常数（防 log10(0) 和除 0），非 R03 fall-back:
+        # - transmission=0（空形状/无连接）→ ER≈-120 dB（极低消光比，合法边界值）
+        # - transmission=1（无损全传输）→ ER≈+120 dB（极高消光比，合法边界值）
+        # 这两种是合法物理状态，不是失败，用 eps 产生有限边界值符合工程惯例。
         eps_er = 1e-12
         extinction_ratio = 10.0 * np.log10(
             (transmission + eps_er) / (1.0 - transmission + eps_er)

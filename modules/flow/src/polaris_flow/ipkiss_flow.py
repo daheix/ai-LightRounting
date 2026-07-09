@@ -371,7 +371,14 @@ class SDLFlow:
         routes: list[dict] = []
         for conn_spec, _ in self.schematic.get("connections", {}).items():
             inst1, port1 = conn_spec.split(",")
-            x1, y1 = self.placement.get(inst1, (0.0, 0.0))
+            # R390 修复: 原 self.placement.get(inst1, (0.0, 0.0)) 用 (0,0)
+            # 当真值（R03 违规）。器件未放置应 raise KeyError。
+            if inst1 not in self.placement:
+                raise KeyError(
+                    f"器件 {inst1!r} 未放置（不在 placement 中），"
+                    f"无法布线。请先调用 place() 放置所有器件。"
+                )
+            x1, y1 = self.placement[inst1]
             routes.append(
                 {"from": conn_spec, "to": _,
                  "path": [(x1, y1), (x1 + 10, y1)]}

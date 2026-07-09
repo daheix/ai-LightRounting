@@ -212,7 +212,14 @@ class RLInverseDesigner:
         for t in reversed(range(len(rewards))):
             g = rewards[t] + gamma * g
             returns[t] = g
-        returns = (returns - np.mean(returns)) / (np.std(returns) + 1e-8)
+        # R390 修复: 原 (np.std(returns)+1e-8) 是 fall-back（R03 违规）。
+        # std=0 说明所有 return 相同（轨迹退化），策略梯度无法区分动作，
+        # 不应更新。此时 returns - mean = 0，梯度自然为 0。
+        std = np.std(returns)
+        if std > 1e-8:
+            returns = (returns - np.mean(returns)) / std
+        else:
+            returns = returns - np.mean(returns)
         for (state, action, _), g_t in zip(trajectory, returns, strict=True):
             probs = self._policy_forward(state)
             h = np.maximum(0, state @ self.W1 + self.b1)
@@ -294,7 +301,12 @@ class GANInverseDesigner:
 
     def _adam_update(self, grads: dict) -> None:
         """Adam 优化器 step（Kingma & Ba 2015 ICLR, arXiv:1412.6980）。
-        仅更新 grads 中提供的参数，未知参数 raise KeyError。"""
+        仅更新 grads 中提供的参数，未知参数 raise KeyError。
+
+        注: eps=1e-8 是 Adam 论文 §2 推荐的数值稳定常数（防 sqrt(v_hat)=0
+        除零），属算法标准实现而非 R03 fall-back。来源:
+        https://arxiv.org/abs/1412.6980
+        """
         self._adam_t += 1
         beta1, beta2, eps = self.config.beta1, 0.999, 1e-8
         lr = self.config.learning_rate
@@ -393,8 +405,10 @@ class GANInverseDesigner:
         g_all = gw @ self.D_W1.T  # [bs, n] = ∇_interp D per sample
         g_norm = np.linalg.norm(g_all, axis=1)  # [bs]
         gp_val = float(np.mean((g_norm - 1.0) ** 2))
-        gn_safe = np.where(g_norm > 1e-12, g_norm, 1e-12)
-        beta = 2.0 * (g_norm - 1.0) / gn_safe  # [bs]
+        # R390 修复: 原 np.where(g_norm>1e-12, g_norm, 1e-12) 是 fall-back（R03）。
+        # g_norm=0 时梯度为 0，该样本对参数梯度惩罚无贡献 → beta=0。
+        # 原 1e-12 会导致 beta=-2/1e-12=-2e12 梯度爆炸。
+        beta = np.where(g_norm > 1e-12, 2.0 * (g_norm - 1.0) / g_norm, 0.0)
         gp_gW1 = (beta[:, None] * g_all).T @ gw / bs  # ∂GP/∂D_W1 [n, hidden]
         w1_g = g_all @ self.D_W1  # [bs, hidden]
         gp_gW2 = ((mask_i * beta[:, None]) * w1_g).sum(0)[:, None] / bs  # ∂GP/∂D_W2
@@ -651,7 +665,8 @@ class DiffusionInverseDesigner:
         grad_h = grad_out @ self.W2.T * (h > 0)
         grad_W1 = np.outer(inp, grad_h)
         grad_b1 = grad_h
-        # Adam step（Kingma & Ba 2015 ICLR，参数确实更新）
+        # Adam step（Kingma & Ba 2015 ICLR, arXiv:1412.6980，参数确实更新）
+        # eps=1e-8 是论文 §2 推荐的数值稳定常数（非 R03 fall-back）
         self._ddpm_t += 1
         b1_, b2_, lr = 0.9, 0.999, self.config.learning_rate
         grads = {"W1": grad_W1, "b1": grad_b1, "W2": grad_W2, "b2": grad_b2}
