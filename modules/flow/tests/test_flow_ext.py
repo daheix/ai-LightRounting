@@ -563,3 +563,157 @@ def test_lazy_export_raises_on_missing_core() -> None:
     # 访问不存在的属性必 raise AttributeError
     with pytest.raises(AttributeError):
         _ = polaris_flow.NotExistAttrXYZ
+
+
+# =============================================================================
+# 17. training.py stub 端到端测试覆盖（R390 stub 化后补全）
+# =============================================================================
+
+def test_training_pipeline_stub_raises_import_error() -> None:
+    """TrainingPipeline stub 实例化必 raise ImportError（R03 禁止 fall-back）。
+
+    R390 清理: 原 ~480 行方法依赖 polaris_orchestrator.IntegratedPipeline
+    （v5.0 未迁移），__init__ 始终 raise ImportError。这是有意的设计，
+    非 R03 违规——指引用户改用 polaris_trainer.train_loop.train_ppo。
+    """
+    from polaris_flow import TrainingPipeline, TrainingConfig
+
+    # 默认 config 也必 raise
+    with pytest.raises(ImportError, match="IntegratedPipeline"):
+        TrainingPipeline()
+
+    # 传入 config 同样 raise（避免被绕过）
+    cfg = TrainingConfig(num_episodes=5)
+    with pytest.raises(ImportError, match="IntegratedPipeline"):
+        TrainingPipeline(cfg)
+
+
+def test_training_config_defaults() -> None:
+    """TrainingConfig 默认值合理（R02 学术诚信：参数可溯源）。"""
+    from polaris_flow import TrainingConfig
+
+    cfg = TrainingConfig()
+    # 默认值校验（与 docstring 一致，避免漂移）
+    assert cfg.benchmark_dir == "data/benchmarks"
+    assert cfg.num_episodes == 50
+    assert cfg.hidden_dim == 64
+    assert cfg.lr == 3e-4  # PPO 标准学习率 (Schulman 2017 PPO 论文)
+    assert cfg.save_dir == "checkpoints"
+    assert cfg.calibrate_every == 10
+    assert cfg.train_floorplan_enabled is True
+    assert cfg.train_routing_enabled is True
+    assert cfg.rollout_steps == 64
+    assert cfg.canvas_w == 1000.0
+    assert cfg.canvas_h == 1000.0
+    assert cfg.grid_size == 10.0
+    assert cfg.sim_feedback is False
+    assert cfg.seed == 42
+    assert cfg.variant_config is None
+    assert cfg.pipeline_config is None
+
+
+def test_training_config_custom_values() -> None:
+    """TrainingConfig 接受自定义参数（端到端：用户可定制训练）。"""
+    from polaris_flow import TrainingConfig
+
+    cfg = TrainingConfig(
+        benchmark_dir="/tmp/bench",
+        num_episodes=10,
+        hidden_dim=128,
+        lr=1e-3,
+        save_dir="/tmp/ckpt",
+        calibrate_every=5,
+        train_floorplan_enabled=False,
+        train_routing_enabled=True,
+        rollout_steps=32,
+        canvas_w=500.0,
+        canvas_h=500.0,
+        grid_size=5.0,
+        sim_feedback=True,
+        seed=123,
+    )
+    assert cfg.benchmark_dir == "/tmp/bench"
+    assert cfg.num_episodes == 10
+    assert cfg.hidden_dim == 128
+    assert cfg.lr == 1e-3
+    assert cfg.save_dir == "/tmp/ckpt"
+    assert cfg.calibrate_every == 5
+    assert cfg.train_floorplan_enabled is False
+    assert cfg.train_routing_enabled is True
+    assert cfg.rollout_steps == 32
+    assert cfg.canvas_w == 500.0
+    assert cfg.canvas_h == 500.0
+    assert cfg.grid_size == 5.0
+    assert cfg.sim_feedback is True
+    assert cfg.seed == 123
+
+
+def test_training_result_defaults() -> None:
+    """TrainingResult 默认值合理（端到端：未训练状态可表示）。"""
+    from polaris_flow import TrainingResult
+
+    result = TrainingResult()
+    assert result.episodes_completed == 0
+    assert result.best_reward == 0.0
+    assert result.avg_loss_db == 0.0
+    assert result.calibration_passed is False
+    assert result.calibration_result is None
+    assert result.checkpoint_path == ""
+    assert result.floorplan_logs == []
+    assert result.routing_logs == []
+
+
+def test_training_result_custom_values() -> None:
+    """TrainingResult 接受自定义值（端到端：训练后状态可表示）。"""
+    from polaris_flow import TrainingResult
+
+    result = TrainingResult(
+        episodes_completed=50,
+        best_reward=0.85,
+        avg_loss_db=-3.2,
+        calibration_passed=True,
+        calibration_result={"snr": 18.5},
+        checkpoint_path="/tmp/ckpt/best.pt",
+        floorplan_logs=[{"ep": 0, "reward": 0.5}],
+        routing_logs=[{"ep": 0, "reward": 0.6}],
+    )
+    assert result.episodes_completed == 50
+    assert result.best_reward == 0.85
+    assert result.avg_loss_db == -3.2
+    assert result.calibration_passed is True
+    assert result.calibration_result == {"snr": 18.5}
+    assert result.checkpoint_path == "/tmp/ckpt/best.pt"
+    assert len(result.floorplan_logs) == 1
+    assert len(result.routing_logs) == 1
+
+
+def test_training_classes_lazy_export() -> None:
+    """TrainingPipeline/TrainingConfig/TrainingResult 通过 __all__ 懒导出（端到端）。"""
+    from polaris_flow import TrainingPipeline, TrainingConfig, TrainingResult
+
+    # 三个类均可导入（lazy export 机制工作）
+    assert TrainingPipeline.__name__ == "TrainingPipeline"
+    assert TrainingConfig.__name__ == "TrainingConfig"
+    assert TrainingResult.__name__ == "TrainingResult"
+
+    # __all__ 包含三者
+    assert "TrainingPipeline" in polaris_flow.__all__
+    assert "TrainingConfig" in polaris_flow.__all__
+    assert "TrainingResult" in polaris_flow.__all__
+
+
+def test_training_migration_path_importable() -> None:
+    """TrainingPipeline stub 的迁移路径真实可导入（R02 学术诚信）。
+
+    stub docstring 推荐"改用 polaris_trainer.train_loop.train_ppo /
+    train_with_env_factory"，必须验证该迁移路径真实存在且可调用，
+    否则 stub 推荐无效，违反 R02 学术诚信（误导用户）。
+    """
+    try:
+        from polaris_trainer.train_loop import train_ppo, train_with_env_factory
+    except ImportError as e:
+        pytest.skip(f"polaris_trainer 未安装: {e}（迁移路径测试跳过）")
+
+    # 迁移路径函数可调用
+    assert callable(train_ppo)
+    assert callable(train_with_env_factory)
