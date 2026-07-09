@@ -31,7 +31,8 @@ polaris-bpm + polaris-fdfd 七个仿真子模块（v5.0）。
 6. DRC / LVS    polaris_drc.run_drc + polaris_lvs.run_lvs
 7. GDS 导出     polaris_gdsio.export_gds
 8. 逆向设计     polaris_inverse.optimize_waveguide_width  n_iterations=10
-9. 量子验证     polaris_quantum.klm_cnot + hom_interference
+9. 量子验证     polaris_klm.klm_cnot + polaris_boson.hom_interference
+                (原 polaris_quantum 已拆分为 klm/boson/quantum_advanced)
 
 ## 来源（R02 学术诚信，≥5 个文献 URL）
 
