@@ -337,23 +337,31 @@ class MNASolver:
             A[n2 - 1, n1 - 1] -= g_c
 
     def _stamp_inductor(self, A: np.ndarray, z: np.ndarray, ind: dict, idx: int, dt: float, x_prev: np.ndarray) -> None:
-        """电感后向欧拉 stamping：R_eq=L/dt, V_prev=R_eq·I_prev。"""
+        """电感后向欧拉 stamping：R_eq=L/dt, V_prev=R_eq·I_prev。
+
+        MNA 标准格式（额外电流变量 I_L）:
+        - KCL: I_L 从 n1 流出，流入 n2
+        - 支路方程: V_{n1} - V_{n2} - R_eq·I_L = -V_prev
+
+        R390 修复: 原代码混合了 Norton 导纳 stamping（A[n1,n1] += 1/r_eq）
+        和额外电流变量格式，但 A[col,col] 未设置（=0），导致支路方程退化为
+        V_{n1} = V_{n2}（短路），电感在瞬态中被错误地强制为短路。
+        正确做法: 仅用额外电流变量格式，A[col,col] = -r_eq, z[col] = -v_prev。
+        """
         n1, n2 = ind["n1"], ind["n2"]
         col = self.n + self.m + idx
         r_eq = ind["l"] / dt
         i_prev = x_prev[col]
         v_prev = r_eq * i_prev
+        # MNA stamping（标准额外电流变量格式）
         if n1 > 0:
-            A[n1 - 1, n1 - 1] += 1.0 / r_eq
-            A[n1 - 1, col] = 1.0
-            A[col, n1 - 1] = 1.0
-            z[n1 - 1] += v_prev / r_eq
+            A[n1 - 1, col] = 1.0      # KCL at n1: +I_L
+            A[col, n1 - 1] = 1.0      # 支路方程: +V_{n1}
         if n2 > 0:
-            A[n2 - 1, n2 - 1] += 1.0 / r_eq
-            A[n2 - 1, col] = -1.0
-            A[col, n2 - 1] = -1.0
-            z[n2 - 1] -= v_prev / r_eq
-        z[col] = 0.0
+            A[n2 - 1, col] = -1.0     # KCL at n2: -I_L
+            A[col, n2 - 1] = -1.0     # 支路方程: -V_{n2}
+        A[col, col] = -r_eq            # 支路方程: -R_eq·I_L
+        z[col] = -v_prev               # 支路方程 RHS: -V_prev = -R_eq·I_prev
 
     def _stamp_vsource(self, A: np.ndarray, z: np.ndarray, v: dict, idx: int, t: float) -> None:
         """电压源 stamping（支持 AC 正弦叠加）。"""

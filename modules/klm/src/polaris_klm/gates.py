@@ -141,12 +141,15 @@ def klm_cnot() -> dict:
             f"KLM CNOT 电路酉性误差 {unitarity_err} > {_UNITARITY_TOL}"
             f"（R03 禁止 fall-back）"
         )
-    # 后选择成功率: Ralph 2002 PRA 65, 062324 理论值 1/9（文献溯源）
+    # 后选择成功率: Ralph 2002 PRA 65, 062324 理论值 1/9（文献溯源，非电路振幅实算）
+    # 说明: 完整 KLM 后选择成功率需多光子干涉计算（输入 |1,1,1,1⟩ 经 U 后
+    # 投影到后选择子空间并对所有合法输出态求和），Ralph 2002 表 I 报告 1/9。
+    # 此处报告文献理论值作为电路正确性的参考基准（R02 学术诚信）。
     success_prob = _KLM_CNOT_THEORETICAL_SUCCESS
-    # verified: 电路酉性实算通过 + 报告值匹配 Ralph 2002 理论值
-    verified = (unitarity_err < _UNITARITY_TOL) and (
-        abs(success_prob - 1.0 / 9.0) < 1e-12
-    )
+    # verified: 仅反映电路酉性实算通过（上方 raise 已保证 unitarity_err < tol）
+    # R390 修复: 删除原 tautological 第二条件 abs(success_prob - 1/9) < 1e-12
+    # （success_prob 刚被赋值为 1/9，该比较恒真，是假验证）
+    verified = True  # unitarity_err < _UNITARITY_TOL（已在上方 raise 校验）
     return {
         "success_prob": float(success_prob),
         "verified": bool(verified),

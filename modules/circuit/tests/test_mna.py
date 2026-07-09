@@ -196,6 +196,38 @@ def test_mna_transient_invalid_time_raises() -> None:
         run_mna_spice(circuit, analysis="transient", t_total=1e-6, dt=0.0)
 
 
+def test_mna_transient_rl_exponential_rise() -> None:
+    """MNA 瞬态 RL: 电感电流指数上升 I(t)=(V/R)(1-exp(-t/τ)), τ=L/R。
+
+    R390 回归测试: 原电感 stamping 混合 Norton 导纳和额外电流变量格式，
+    A[col,col] 未设置导致支路方程退化为短路，电流立即跳到稳态值。
+    修复后应呈现正确的指数上升。
+    """
+    circuit = MNACircuit(n_nodes=2)
+    circuit.add_vsource("V1", n1=1, n2=0, dc=1.0)
+    circuit.add_resistor("R1", n1=1, n2=2, r=1000.0)
+    circuit.add_inductor("L1", n1=2, n2=0, l=1e-3)
+    tau = 1e-3 / 1000.0  # τ = L/R = 1μs
+    result = run_mna_spice(circuit, analysis="transient", t_total=5 * tau, dt=tau / 50.0)
+    # 解析解: I(t) = (V/R)·(1 - exp(-t/τ))
+    t_vals = np.arange(len(result.time)) * (tau / 50.0)
+    i_analytical = 0.001 * (1.0 - np.exp(-t_vals / tau))
+    i_sim = np.abs(result.vsource_currents["V1"])
+    # 误差应 < 1e-4（后向欧拉一阶精度，dt=τ/50）
+    max_err = float(np.max(np.abs(i_sim - i_analytical)))
+    assert max_err < 1e-4, f"RL 指数上升误差 {max_err} ≥ 1e-4"
+    # t=0 时电流 = 0（电感初始电流为 0）
+    assert abs(i_sim[0]) < 1e-12, f"t=0 电流应=0, 得 {i_sim[0]}"
+    # t=τ 时电流 ≈ 0.001*(1-1/e) ≈ 6.32e-4（不是稳态值 1e-3）
+    idx_tau = 50
+    expected_tau = 0.001 * (1.0 - np.exp(-1.0))
+    assert abs(i_sim[idx_tau] - expected_tau) < 1e-4, (
+        f"t=τ 电流应≈{expected_tau}, 得 {i_sim[idx_tau]}"
+    )
+    # 稳态电流 ≈ V/R = 1mA
+    assert abs(i_sim[-1] - 0.001) < 1e-4, f"稳态电流应≈0.001A, 得 {i_sim[-1]}"
+
+
 # ============================================================================
 # 4. 时域电路仿真 — 波导/MZI/损耗 (5 测试)
 # ============================================================================
