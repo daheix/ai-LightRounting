@@ -34,7 +34,7 @@ import logging
 import math
 from dataclasses import dataclass, field
 
-from .waveguide_router import GridRouter, RouterConstraints, WaveguidePath
+from .waveguide_router import GridRouter, RouterConstraints, WaveguidePath, _PLATFORM_LOSS_DB_CM
 
 logger = logging.getLogger(__name__)
 
@@ -173,13 +173,11 @@ class OptoElectricalRouter:
             math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
             for i in range(len(pts) - 1)
         )
-        # R5-P1-1 修复: 原 2.0 dB/cm 与项目 7 处 3.0 dB/cm 不一致。
-        # 统一为 3.0 dB/cm（SOI 上界，Soref 1993 IEEE + SiEPIC PDK）。
+        # R390 修复: 原硬编码 3.0 dB/cm 改为复用 _PLATFORM_LOSS_DB_CM 常量
+        # （Soref 1993 IEEE + SiEPIC PDK）。SOI 平台损耗值统一管理。
         # 文献: Soref 1993 IEEE Proc. 41(9) 1182-1183
         #   https://ieeexplore.ieee.org/document/1148303
-        # 同步: waveguide_router.py / curvy_router.py / rip_reroute.py /
-        #       alphachip_gnn.py / benchmark_evaluator.py / multilayer.py
-        loss = 3.0 * length / 1e4
+        loss = _PLATFORM_LOSS_DB_CM["SOI"] * length / 1e4
         self._optical_paths_cache[net_id] = pts
         return WaveguidePath(points=pts, length_um=length, loss_db=loss)
 
