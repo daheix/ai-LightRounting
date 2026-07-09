@@ -59,7 +59,14 @@ def _matmul_backward(left: "Tensor", right: "Tensor", g: np.ndarray) -> None:
     r2d = right.data.ndim == 1
     left_data = left.data.reshape(1, -1) if l2d else left.data
     right_data = right.data.reshape(-1, 1) if r2d else right.data
-    g2d = g.reshape(1, -1) if g.ndim == 1 else g
+    # R390 修复：1D@1D 内积时 g 为 0D 标量，需 reshape 为 (1,1)
+    # 原 code 仅处理 g.ndim==1，g.ndim==0 时 g2d=g(0D) 导致 matmul 崩溃
+    if g.ndim == 0:
+        g2d = g.reshape(1, 1)
+    elif g.ndim == 1:
+        g2d = g.reshape(1, -1)
+    else:
+        g2d = g
 
     if left.requires_grad:
         left._ensure_grad()
@@ -147,7 +154,8 @@ class TensorArithmeticMixin:
 
     def __sub__(self, other):
         other = other if isinstance(other, Tensor) else Tensor(other)
-        return self + (-other if isinstance(other, Tensor) else Tensor(-other.data))
+        # R390 修复：删除死代码（第 156 行后 other 必为 Tensor，else 分支永不执行）
+        return self + (-other)
 
     def __rsub__(self, other):
         other = other if isinstance(other, Tensor) else Tensor(other)
@@ -217,6 +225,9 @@ class Tensor(TensorArithmeticMixin):
         return out
 
     def reshape(self, *shape) -> "Tensor":
+        # R390 修复：支持元组传参 t.reshape((2,3))，与 PyTorch 接口一致
+        if len(shape) == 1 and isinstance(shape[0], (tuple, list)):
+            shape = tuple(shape[0])
         out = Tensor(self.data.reshape(shape), self.requires_grad, (self,))
 
         def _back(g):
@@ -389,16 +400,12 @@ class Tensor(TensorArithmeticMixin):
         def _back(g):
             if self.requires_grad:
                 self._ensure_grad()
-                # d softmax / d x = diag(s) - s s^T
-                grad = np.zeros_like(self.data)
-                for i in range(g.shape[0] if g.ndim > 1 else 1):
-                    gi = g[i] if g.ndim > 1 else g
-                    si = sm[i] if sm.ndim > 1 else sm
-                    grad_i = si * gi - si * (si * gi).sum(axis=axis, keepdims=True)
-                    if g.ndim > 1:
-                        grad[i] = grad_i
-                    else:
-                        grad = grad_i
+                # R390 修复：softmax 反向传播向量化实现，正确支持任意 axis
+                # 原 loop 按 axis=0 切片，axis!=-1 时梯度错误
+                # 公式: d softmax / d x = diag(s) - s s^T（沿 axis 方向）
+                # 向量化: grad = s * g - s * sum(s * g, axis, keepdims)
+                dot = (sm * g).sum(axis=axis, keepdims=True)
+                grad = sm * g - sm * dot
                 self.grad = self.grad + grad
 
         out._backward = _back

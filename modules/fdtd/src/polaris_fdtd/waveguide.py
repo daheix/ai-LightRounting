@@ -157,7 +157,13 @@ def _run_waveguide_fdtd_and_compute(
             f"源功率 {p_source} <= 0，传输率无法计算（R03 禁止 fall-back）"
         )
     t_fdtd = p_monitor / p_source
-    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
+    # R390 修复：t_fdtd <= 0 是物理异常（零传输），禁止 max(t,1e-30) 兜底
+    if t_fdtd <= 0:
+        raise RuntimeError(
+            f"FDTD 波导传输率 {t_fdtd} <= 0（p_monitor={p_monitor}, "
+            f"p_source={p_source}），物理异常，R03 禁止 fall-back"
+        )
+    transmission_db = 10.0 * float(np.log10(t_fdtd))
     return {
         "transmission_db": transmission_db,
         "T_fdtd": float(t_fdtd),

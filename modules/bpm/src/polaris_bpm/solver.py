@@ -424,8 +424,14 @@ def _run_bpm_split_step(
         # CN 全步（相位演化，实折射率守恒功率）
         rhs = np.zeros_like(field)
         rhs[:] = B_banded[1, :] * field
-        rhs[1:] += B_banded[0, 1:] * field[:-1]  # 上副对角
-        rhs[:-1] += B_banded[2, :-1] * field[1:]  # 下副对角
+        # R390 修复：CN 矩阵-向量乘法上下副对角索引错位
+        # scipy banded 约定: B_banded[0,j]=B[j-1,j]（上副对角，列 j），
+        #                   B_banded[2,j]=B[j+1,j]（下副对角，列 j）
+        # y[i] = B[i,i-1]*x[i-1] + B[i,i]*x[i] + B[i,i+1]*x[i+1]
+        #   B[i,i+1]=B_banded[0,i+1] 配 x[i+1] → 加到 rhs[i]（即 rhs[:-1]）
+        #   B[i,i-1]=B_banded[2,i-1] 配 x[i-1] → 加到 rhs[i]（即 rhs[1:]）
+        rhs[:-1] += B_banded[0, 1:] * field[1:]   # 上副对角 B[i,i+1]*x[i+1] -> rhs[i]
+        rhs[1:] += B_banded[2, :-1] * field[:-1]  # 下副对角 B[i,i-1]*x[i-1] -> rhs[i]
         rhs[0] = 0.0  # Dirichlet 边界
         rhs[-1] = 0.0
         # 求解 A · E^{n+1} = rhs
@@ -493,7 +499,13 @@ def solve_bpm(
     if p_initial <= 0:
         raise RuntimeError(f"初始功率 {p_initial} <= 0（R03 禁止 fall-back）")
     transmission = p_final / p_initial
-    transmission_db = 10.0 * float(np.log10(max(transmission, 1e-30)))
+    # R390 修复：transmission <= 0 是物理异常（零传输），禁止 max(t,1e-30) 兜底
+    if transmission <= 0:
+        raise RuntimeError(
+            f"BPM 传输率 {transmission} <= 0（p_final={p_final}, "
+            f"p_initial={p_initial}），物理异常，R03 禁止 fall-back"
+        )
+    transmission_db = 10.0 * float(np.log10(transmission))
     return {
         "field_z": field.tolist(),
         "transmission": float(transmission),

@@ -170,9 +170,21 @@ def _run_mmi_fdtd_and_compute(
     if p_src <= 0:
         raise RuntimeError(f"源功率 {p_src} <= 0（R03 禁止 fall-back）")
     p_total = p1 + p2
-    split_ratio = p1 / p_total if p_total > 0 else 0.5
+    # R390 修复：p_total <= 0 是物理异常（双输出功率之和为零/负），禁止 fall-back
+    if p_total <= 0:
+        raise RuntimeError(
+            f"MMI 双输出功率之和 {p_total} <= 0（p1={p1}, p2={p2}），"
+            f"物理异常，R03 禁止 fall-back 返回假数据 0.5"
+        )
+    split_ratio = p1 / p_total
     t_fdtd = p_total / p_src
-    transmission_db = 10.0 * float(np.log10(max(t_fdtd, 1e-30)))
+    # R390 修复：t_fdtd <= 0 是物理异常（零传输），禁止 max(t,1e-30) 兜底
+    if t_fdtd <= 0:
+        raise RuntimeError(
+            f"FDTD 传输率 {t_fdtd} <= 0（p_total={p_total}, p_src={p_src}），"
+            f"物理异常，R03 禁止 fall-back"
+        )
+    transmission_db = 10.0 * float(np.log10(t_fdtd))
     return {
         "split_ratio": float(split_ratio),
         "T_fdtd": float(t_fdtd),

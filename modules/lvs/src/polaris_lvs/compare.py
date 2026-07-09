@@ -53,8 +53,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
-import numpy as np
-
 __all__ = [
     "LVSMismatchType",
     "LVSMismatch",
@@ -297,7 +295,3 @@ def _parse_netlist_dict(netlist: dict) -> Netlist:
         # 兼容 [dev1, dev2] 与 [dev1, port1, dev2, port2] 两种格式
         connections.append((str(conn[0]), str(conn[2] if len(conn) >= 4 else conn[1])))
     return Netlist(devices=devices, connections=connections)
-
-
-# numpy 引用占位（保留依赖一致性，R04 纯 NumPy）
-_ = np

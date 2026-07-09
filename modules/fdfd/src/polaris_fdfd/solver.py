@@ -422,7 +422,12 @@ def _solve_fdfd_extract_transmission(
     transmission = p_output / p_source
     if transmission < 0:
         raise RuntimeError(f"transmission={transmission} < 0，物理异常（R03）")
-    transmission_db = 10.0 * float(np.log10(max(transmission, 1e-30)))
+    # R390 修复：transmission == 0 是物理异常（零传输），禁止 max(t,1e-30) 兜底
+    if transmission == 0:
+        raise RuntimeError(
+            f"FDFD 传输率 = 0（p_output={p_output}），物理异常，R03 禁止 fall-back"
+        )
+    transmission_db = 10.0 * float(np.log10(transmission))
     return (field_2d, transmission, transmission_db, p_output, p_source,
             input_z_idx, output_z_idx)
 

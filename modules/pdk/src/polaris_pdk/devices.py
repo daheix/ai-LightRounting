@@ -791,4 +791,6 @@ DEVICES: list[dict[str, Any]] = [
 ]
 
 
-__all__ = ["PLATFORM_META", "DEVICES", "make_source"]
+# R390 修复：移除未定义的 PLATFORM_META（实际定义在 filters.py）
+# 原 __all__ 含 PLATFORM_META 会导致 `from polaris_pdk.devices import *` 抛 AttributeError
+__all__ = ["DEVICES", "make_source"]

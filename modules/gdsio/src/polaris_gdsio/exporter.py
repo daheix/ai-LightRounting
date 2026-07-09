@@ -63,31 +63,6 @@ _WG_LAYER: tuple[int, int] = (1, 0)
 _DEVICE_SPACING_UM: float = 5.0
 
 
-def _place_device_cells(
-    ly, circuit: dict, wg_li, dbu: float, top_cell,
-) -> None:
-    """为每个器件创建子 cell 并在顶层放置实例（沿 x 轴顺序排列）。"""
-    x_offset = 0.0
-    for dev in circuit["devices"]:
-        w_um = float(dev["width_um"])
-        h_um = float(dev["height_um"])
-        dev_name = str(dev["name"])
-        child = ly.create_cell(dev_name)
-        # box 在 WG 层（dbu 单位），尺寸为器件 footprint
-        w_dbu = int(round(w_um / dbu))
-        h_dbu = int(round(h_um / dbu))
-        if w_dbu < 1:
-            w_dbu = 1
-        if h_dbu < 1:
-            h_dbu = 1
-        child.shapes(wg_li).insert(db.Box(0, 0, w_dbu, h_dbu))
-        # 在顶层放置实例（沿 x 轴顺序排列，y=0 居中）
-        x_dbu = int(round(x_offset / dbu))
-        trans = db.Trans(x_dbu, 0)
-        top_cell.insert(db.CellInstArray(child.cell_index(), trans))
-        x_offset += w_um + _DEVICE_SPACING_UM
-
-
 def _build_export_result(out: Path, ly, loadable: bool) -> dict[str, Any]:
     """构造导出结果 dict。"""
     file_size = out.stat().st_size
@@ -123,6 +98,11 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
     import klayout.db as db
 
     _validate_circuit(circuit)
+    # R390 修复：空 devices 检查应在创建 cell 之前（原 ly.cells()==0 永远为 False）
+    if not circuit["devices"]:
+        raise RuntimeError(
+            f"circuit.devices 为空，无法导出 GDSII（R03 禁止 fall-back）"
+        )
     out = Path(output_path)
     if out.is_dir():
         raise RuntimeError(f"输出路径是目录不是文件: {output_path}")
@@ -136,10 +116,6 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
     # 为每个器件创建子 cell + 在顶层放置实例
     _place_device_instances(db, ly, top_cell, wg_li, circuit["devices"], dbu)
 
-    if ly.cells() == 0:
-        raise RuntimeError(
-            "Layout 无 cell，无法写出 GDSII（circuit.devices 为空）"
-        )
     try:
         ly.write(str(out))
     except Exception as e:

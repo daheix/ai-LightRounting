@@ -510,7 +510,12 @@ def solve_eme(
     transmission = complex(S_total[1, 0])  # S21: 左→右透射
     reflection = complex(S_total[0, 0])    # S11: 左侧反射
     t_abs = abs(transmission)
-    transmission_db = 20.0 * float(np.log10(max(t_abs, 1e-30)))
+    # R390 修复：t_abs <= 0 是物理异常（零透射），禁止 max(t,1e-30) 兜底
+    if t_abs <= 0:
+        raise RuntimeError(
+            f"EME 透射振幅 |t|={t_abs} <= 0，物理异常，R03 禁止 fall-back"
+        )
+    transmission_db = 20.0 * float(np.log10(t_abs))
     return {
         "transmission": transmission,
         "transmission_db": transmission_db,

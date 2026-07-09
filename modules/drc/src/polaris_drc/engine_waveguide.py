@@ -432,8 +432,11 @@ class WaveguideRulesMixin:
             params = dev.get("params", {}) or {}
             width = params.get("width_um")
             if width is None:
-                # 兼容 width_um / wg_width / waveguide_width 字段名
+                # R390 修复：原注释声明兼容 width_um/wg_width/waveguide_width 三个字段名，
+                # 但代码漏掉 waveguide_width（与 checks.py:320-325 不一致）
                 width = params.get("wg_width")
+            if width is None:
+                width = params.get("waveguide_width")
             if width is None:
                 continue  # 未声明波导宽度，跳过（非 fall-back）
             width = float(width)
