@@ -68,9 +68,17 @@ def _euler_raw_points(
     radius_um: float,
     n_points: int,
 ) -> list[tuple[float, float]]:
-    """生成欧拉弯曲原始采样点。"""
+    """生成欧拉弯曲原始采样点。
+
+    Raises:
+        ValueError: n_points < 2（无法构成曲线）或 L <= 0。
+    """
+    if n_points < 2:
+        raise ValueError(f"n_points 必须 >= 2，得到 {n_points}")
+    if L <= 0.0:
+        raise ValueError(f"弯曲长度 L 必须 > 0，得到 {L}")
     sx, sy = start
-    ds = L / max(1, n_points - 1)
+    ds = L / (n_points - 1)
     x, y = sx, sy
     theta = angle_in
     s = 0.0
@@ -89,11 +97,23 @@ def _rescale_euler_points(
     sx: float, sy: float, ex: float, ey: float,
     pts: list[tuple[float, float]],
 ) -> list[tuple[float, float]]:
-    """旋转+缩放欧拉弯曲点到目标位置。"""
+    """旋转+缩放欧拉弯曲点到目标位置。
+
+    Raises:
+        RuntimeError: 采样点全部在起点（数值积分失败）。
+    """
     target_angle = math.atan2(ey - sy, ex - sx)
     actual_end = pts[-1]
     dist_actual = math.hypot(actual_end[0] - sx, actual_end[1] - sy)
-    scale = math.hypot(ex - sx, ey - sy) / max(1e-9, dist_actual)
+    # R390 修复: 原 max(1e-9, dist_actual) 是 fall-back（R03 违规）。
+    # dist_actual=0 说明所有采样点在起点（数值积分失败），
+    # 用 1e-9 会导致 scale≈1e9 几何严重变形（假数据）。
+    if dist_actual < 1e-9:
+        raise RuntimeError(
+            f"欧拉弯曲生成失败: 所有采样点在起点 ({sx}, {sy})，"
+            f"数值积分失败（请检查 radius_um/L 参数）"
+        )
+    scale = math.hypot(ex - sx, ey - sy) / dist_actual
     rot = target_angle - math.atan2(actual_end[1] - sy, actual_end[0] - sx)
     cos_r, sin_r = math.cos(rot), math.sin(rot)
     result: list[tuple[float, float]] = []

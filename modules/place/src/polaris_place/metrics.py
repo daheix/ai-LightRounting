@@ -85,10 +85,12 @@ def _smooth_hpwl_gradient(
     exp_neg_x = np.exp((-xs_pair + min_x) / gamma)
     exp_y = np.exp((ys_pair - max_y) / gamma)
     exp_neg_y = np.exp((-ys_pair + min_y) / gamma)
-    sum_exp_x = np.maximum(exp_x.sum(axis=1, keepdims=True), 1e-300)
-    sum_exp_neg_x = np.maximum(exp_neg_x.sum(axis=1, keepdims=True), 1e-300)
-    sum_exp_y = np.maximum(exp_y.sum(axis=1, keepdims=True), 1e-300)
-    sum_exp_neg_y = np.maximum(exp_neg_y.sum(axis=1, keepdims=True), 1e-300)
+    # R390 修复: 原 np.maximum(..., 1e-300) 是冗余 fall-back（R03 违规）。
+    # exp(x-max)/gamma 中 x-max <= 0，exp ∈ (0,1]，sum >= exp(0)=1，不会为 0。
+    sum_exp_x = exp_x.sum(axis=1, keepdims=True)
+    sum_exp_neg_x = exp_neg_x.sum(axis=1, keepdims=True)
+    sum_exp_y = exp_y.sum(axis=1, keepdims=True)
+    sum_exp_neg_y = exp_neg_y.sum(axis=1, keepdims=True)
     gx_per = exp_x / sum_exp_x - exp_neg_x / sum_exp_neg_x
     gy_per = exp_y / sum_exp_y - exp_neg_y / sum_exp_neg_y
     np.add.at(grad, src, np.column_stack([gx_per[:, 0], gy_per[:, 0]]))
@@ -134,7 +136,15 @@ def _density_gradient(
         return grad
     diff = pos[iu] - pos[ju]
     d2 = diff[:, 0] ** 2 + diff[:, 1] ** 2
-    mask = (d2 < bw2) & (d2 > 1e-6)
+    # R390 修复: 原 d2 > 1e-6 静默跳过零距离器件对（R03 违规）。
+    # d2=0 说明器件完全重叠（legalize 未解决），应 raise。
+    if np.any(d2 == 0):
+        overlap_idx = np.where(d2 == 0)[0]
+        raise RuntimeError(
+            f"器件完全重叠（d2=0），legalize 未解决: "
+            f"{len(overlap_idx)} 对器件重叠"
+        )
+    mask = (d2 < bw2) & (d2 > 0)
     if not np.any(mask):
         return grad
     d2_m = d2[mask]

@@ -342,7 +342,7 @@ def evaluate_insertion_loss(
     Args:
         circuit: 电路规格（含连接列表和器件参数）。
         placements: 布局字典 {module_name: (x, y)}。
-        waveguide_loss_db_cm: 波导损耗系数（dB/cm），默认 1.0（SOI 平台典型值）。
+        waveguide_loss_db_cm: 波导损耗系数（dB/cm），默认 3.0（SOI 上界，Soref 1993 + SiEPIC PDK）。
 
     Returns:
         总插入损耗（dB）。

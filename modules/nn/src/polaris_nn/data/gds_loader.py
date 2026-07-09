@@ -454,8 +454,15 @@ def _build_device_specs(instances: list[dict], ports: list[dict]) -> list[Device
         cell_name = inst["cell_name"]
         polaris_name = siepic_to_polaris(cell_name) or cell_name
         xmin, ymin, xmax, ymax = inst["bbox"]
-        w = max(xmax - xmin, 1.0)
-        h = max(ymax - ymin, 1.0)
+        # R390 修复: 原 max(xmax-xmin, 1.0) 是 fall-back（R03 违规）。
+        # bbox 无效（xmax<=xmin）说明 GDS 数据异常，应 raise。
+        if xmax <= xmin or ymax <= ymin:
+            raise ValueError(
+                f"GDS bbox 无效: {inst['bbox']}（xmax<=xmin 或 ymax<=ymin），"
+                f"cell_name={cell_name}"
+            )
+        w = xmax - xmin
+        h = ymax - ymin
         dev_ports = [
             (p["name"], 0.0, 0.0, p["direction"])
             for p in ports
@@ -493,12 +500,20 @@ def _compute_canvas_size(instances: list[dict], ports: list[dict]) -> tuple[floa
     for p in ports:
         all_x.append(p["pos"][0])
         all_y.append(p["pos"][1])
-    if all_x and all_y:
-        canvas_w = max(all_x) - min(all_x) + 50.0
-        canvas_h = max(all_y) - min(all_y) + 50.0
-    else:
-        canvas_w = canvas_h = 500.0
-    return max(canvas_w, 100.0), max(canvas_h, 100.0)
+    # R390 修复: 原 max(canvas_w, 100.0) 和 canvas=500.0 是 fall-back（R03）。
+    # 无器件/端口时 raise（空 GDS 不应到达画布计算）；画布 < 50μm 时 raise
+    # （说明器件布局异常密集或 bbox 数据错误）。
+    if not all_x or not all_y:
+        raise ValueError(
+            "GDS 无器件/端口坐标，无法计算画布尺寸（空 GDS 文件）"
+        )
+    canvas_w = max(all_x) - min(all_x) + 50.0
+    canvas_h = max(all_y) - min(all_y) + 50.0
+    if canvas_w < 50.0 or canvas_h < 50.0:
+        raise ValueError(
+            f"画布尺寸过小: {canvas_w}x{canvas_h} μm（器件布局异常密集或 bbox 错误）"
+        )
+    return canvas_w, canvas_h
 
 
 def _load_klayout_layout(gds_path: Path):
