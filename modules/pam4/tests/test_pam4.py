@@ -198,9 +198,10 @@ def test_ber_range():
 
 
 def test_ber_formula():
-    """公式: BER = 0.5·erfc(√(SNR_eye/2)), SNR_eye=(eye/2)²/σ², eye=1/(n-1)。
+    """公式: BER = (3/8)·erfc(√(SNR_eye/2)), SNR_eye=(eye/2)²/σ², eye=1/(n-1)。
 
-    来源: Shafik et al., IEEE CommSurveys 2016.
+    R390 修复: PAM4 BER 系数应为 3/8 而非 0.5（原用 NRZ 系数高估 33%）
+    来源: Proakis, Digital Communications §5; Shafik et al., IEEE CommSurveys 2016.
          URL: https://ieeexplore.ieee.org/document/7410082
     """
     _, signal = generate_pam4_signal(100, bit_rate=100e9, samples_per_symbol=16, seed=42)
@@ -208,7 +209,7 @@ def test_ber_formula():
     ber = compute_ber(signal, noise_std=noise_std, n_levels=4)
     eye = 1.0 / 3.0  # PAM4 眼图开口 = 1/(4-1)
     snr_eye = (eye / 2.0) ** 2 / (noise_std ** 2)
-    expected = 0.5 * math.erfc(math.sqrt(snr_eye / 2.0))
+    expected = (3.0 / 8.0) * math.erfc(math.sqrt(snr_eye / 2.0))
     assert abs(ber - expected) < 1e-12, f"BER 期望 {expected}，实际 {ber}"
 
 
