@@ -39,6 +39,19 @@ _SHOWCASE_DIR = _SCRIPT_DIR.parent  # e2e_showcase/
 if str(_SHOWCASE_DIR) not in sys.path:
     sys.path.insert(0, str(_SHOWCASE_DIR))
 
+# R390 修复：注入 18 个子模块源码路径（与 run_showcase.py 一致）
+# 缺失此注入会导致 `ModuleNotFoundError: No module named 'polaris_inverse'`
+# 等 18 个子模块无法导入（stage10_adjoint_inverse_design 依赖 polaris_inverse）
+_PROJECT_ROOT = _SCRIPT_DIR.parent.parent.parent  # /workspace
+_SUBMODULES_V5 = [
+    "core", "sparam", "place", "route", "pdk", "drc", "lvs", "gdsio", "fdtd",
+    "inverse", "boson", "klm", "pam4", "fde", "eme", "bpm", "fdfd", "orchestrator",
+]
+for _sub in _SUBMODULES_V5:
+    _src_dir = _PROJECT_ROOT / "modules" / _sub / "src"
+    if _src_dir.is_dir() and str(_src_dir) not in sys.path:
+        sys.path.insert(0, str(_src_dir))
+
 # 复用现有 stage 代码（sys.path 已含 e2e_showcase 目录）
 from stages import (  # noqa: E402
     stage10_adjoint_inverse_design,
@@ -178,3 +191,57 @@ def run(output_dir: Path) -> dict:
             "total_duration": total_duration,
         },
     }
+
+
+# =============================================================================
+# 主入口（R390 修复：原脚本缺失 __main__ 块，直接运行无输出）
+# =============================================================================
+if __name__ == "__main__":
+    import json
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+
+    # 默认输出目录: out/real_case（与 analyze_results.py 期望路径一致）
+    _DEFAULT_OUTPUT = (
+        Path(__file__).resolve().parent.parent.parent.parent / "out" / "real_case"
+    )
+    _result = run(_DEFAULT_OUTPUT)
+
+    # 保存汇总结果到 stage_results_summary.json（analyze_results.py 数据源）
+    _summary_path = _DEFAULT_OUTPUT / "stage_results_summary.json"
+    _DEFAULT_OUTPUT.mkdir(parents=True, exist_ok=True)
+    with _summary_path.open("w", encoding="utf-8") as _f:
+        # 将 stage 结果转为 analyze_results.py 期望的 stage_summaries 格式
+        _stage_summaries = []
+        for _s in _result["stages"]:
+            _stage_summaries.append({
+                "stage_id": _s["stage_id"],
+                "name": _s["name"],
+                "status": _s["status"],
+                "duration": _s["duration"],
+                "result": _s["result"],
+                "error": _s["error"],
+            })
+        json.dump(
+            {
+                "case_name": _result["case_name"],
+                "benchmark": _result["benchmark"],
+                "stage_summaries": _stage_summaries,
+                "summary": _result["summary"],
+            },
+            _f,
+            ensure_ascii=False,
+            indent=2,
+            default=str,
+        )
+
+    print("=" * 60)
+    print(f"真实 case 完成: {_result['summary']['n_success']} 成功 / "
+          f"{_result['summary']['n_failed']} 失败, "
+          f"总耗时 {_result['summary']['total_duration']:.2f}s")
+    print(f"汇总结果: {_summary_path}")
+    print("=" * 60)
