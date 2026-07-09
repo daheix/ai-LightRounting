@@ -1,0 +1,21 @@
+{
+  "drc": {
+    "n_rules": 25,
+    "n_violations": 0,
+    "n_passed": 25,
+    "pass_rate": 1.0,
+    "violations": []
+  },
+  "lvs": {
+    "is_consistent": true,
+    "n_mismatches": 0,
+    "mismatches": [],
+    "n_devices": 5,
+    "n_connections": 5
+  },
+  "circuit_name": "MZI",
+  "placement_hpwl": 305.0,
+  "placement_mode": "analytical",
+  "drc_source": "polaris-drc (SiEPIC EBeam PDK), https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
+  "lvs_source": "polaris-lvs (KLayout LVS), https://www.klayout.org/doc-qt5/manual/lvs.html"
+}

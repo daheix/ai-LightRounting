@@ -1,0 +1,29 @@
+{
+  "method": "JAX jax.grad \u81ea\u52a8\u5fae\u5206\uff08*\u521b\u65b0*\uff0c\u66ff\u4ee3 lumopt \u624b\u52a8\u4f34\u968f\u65b9\u7a0b\uff09\u2014 polaris-inverse \u5b50\u6a21\u5757",
+  "initial_width_nm": 400.0,
+  "optimal_width_nm": 413.06152343749994,
+  "initial_fom": 0.006223167292773724,
+  "final_fom": 0.006482280790805817,
+  "improvement_db": 0.17716363336933488,
+  "fom_history": [
+    0.006223167292773724,
+    0.006345178000628948,
+    0.006446941290050745,
+    0.006482280790805817,
+    0.006481391377747059,
+    0.006432199850678444
+  ],
+  "iterations": 5,
+  "converged": true,
+  "n_iterations_requested": 5,
+  "learning_rate": 0.5,
+  "sources": [
+    "Yee 1966 IEEE TAP https://doi.org/10.1109/TAP.1966.1138693",
+    "Mahau 2024 arXiv:2412.12360",
+    "lumopt https://github.com/chriskeraly/lumopt",
+    "Jensen & Sigmund 2011 https://doi.org/10.1002/lpor.201000014",
+    "Polyak 1964 heavy-ball method",
+    "Hughes 2018 ACS Photonics https://arxiv.org/abs/1811.01255",
+    "Giles & Pierce 2000 SIAM Review (adjoint approach)"
+  ]
+}

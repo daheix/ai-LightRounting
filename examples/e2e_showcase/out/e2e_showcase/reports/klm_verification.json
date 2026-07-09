@@ -1,0 +1,34 @@
+{
+  "scheme": "Ralph 2002 PRA 65, 062324 simplified 4-BS CNOT",
+  "n_modes": 4,
+  "n_beamsplitters": 4,
+  "success_prob": 0.1111111111111111,
+  "expected_success_prob": 0.1111111111111111,
+  "cnot_verified": true,
+  "api_verified": true,
+  "tolerance": 1e-06,
+  "scheme_comparison": {
+    "knill_2001_nature": {
+      "modes": 8,
+      "success_prob": 0.0625,
+      "url": "https://www.nature.com/articles/35051009"
+    },
+    "ralph_2002_pra": {
+      "modes": 4,
+      "success_prob": 0.1111111111111111,
+      "url": "https://doi.org/10.1103/PhysRevA.65.062324",
+      "note": "polaris_klm 实现此方案"
+    },
+    "knill_2002_pra": {
+      "modes": "varies",
+      "success_prob": "~1/9",
+      "url": "https://doi.org/10.1103/PhysRevA.66.052306"
+    }
+  },
+  "sources": {
+    "klm_scheme": "https://www.nature.com/articles/35051009",
+    "ralph_2002": "https://doi.org/10.1103/PhysRevA.65.062324",
+    "obrien_2003": "https://doi.org/10.1038/nature02354",
+    "hofmann_2002": "https://doi.org/10.1103/PhysRevA.66.024308"
+  }
+}
