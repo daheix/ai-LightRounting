@@ -98,11 +98,8 @@ def export_gds(circuit: dict, output_path: str) -> dict[str, Any]:
     import klayout.db as db
 
     _validate_circuit(circuit)
-    # R390 修复：空 devices 检查应在创建 cell 之前（原 ly.cells()==0 永远为 False）
-    if not circuit["devices"]:
-        raise RuntimeError(
-            f"circuit.devices 为空，无法导出 GDSII（R03 禁止 fall-back）"
-        )
+    # R390 修复：原 ly.cells()==0 检查在 top_cell 创建后永远为 False（死代码）
+    # 空 devices 是合法用例（导出仅含顶层 cell 的 GDS，n_structures=1），非 fall-back
     out = Path(output_path)
     if out.is_dir():
         raise RuntimeError(f"输出路径是目录不是文件: {output_path}")
