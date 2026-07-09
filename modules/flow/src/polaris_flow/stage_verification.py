@@ -131,29 +131,16 @@ def stage5_simulation(recipe: Recipe, workspace: Workspace, prev_outputs: dict) 
 # =============================================================================
 
 
-def _serialize_drc_violations(violations: list) -> list[dict]:
-    """将 ConstraintViolation 对象列表序列化为 JSON 可序列化字典列表。
-
-    Extract Method，R11 质量门禁。每项含 type/severity/message/device_name/
-    net_id/location。
-    """
-    return [
-        {
-            "type": v.vtype.value,
-            "severity": float(v.severity),
-            "message": v.message,
-            "device_name": v.device_name,
-            "net_id": v.net_id,
-            "location": list(v.location) if v.location else None,
-        }
-        for v in violations
-    ]
-
-
 def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 6: DRC/LVS 约束检查。
 
     用 ConstraintChecker 检查布局布线结果是否满足光子学设计约束。
+
+    R390 清理: 原实现依赖 polaris_verify_advanced.ConstraintChecker/
+    ConstraintConfig/CheckContext（v5.0 未迁移），始终 raise ImportError。
+    原 39 行业务代码为不可达死代码，已删除。保留 stub 供 STAGE_EXECUTORS 导出兼容。
+
+    迁移指南: 迁移 polaris_verify_advanced 约束检查器后恢复完整实现。
 
     Args:
         recipe: 作业配方（使用 recipe.sim_config.loss_target_db）。
@@ -168,46 +155,6 @@ def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
         "stage_verification 需要 polaris_verify_advanced 子模块提供 "
         "ConstraintChecker/ConstraintConfig/CheckContext（v5.0 未迁移，R03 禁止 fall-back）"
     )
-
-    placements = _require_input(prev_outputs, "placements", 6)
-    routes = _require_input(prev_outputs, "routes", 6)
-
-    logger.info("阶段 6: DRC/LVS 约束检查")
-
-    # 从 recipe.sim_config 读取损耗目标
-    loss_target_db = float(getattr(
-        recipe.sim_config, "loss_target_db", 5.0
-    ))
-    config = ConstraintConfig(
-        min_bend_radius_um=5.0,  # SOI 平台标准弯曲半径
-        max_insertion_loss_db=loss_target_db,
-    )
-    checker = ConstraintChecker(config=config)
-    ctx = _build_check_context(prev_outputs)
-
-    violations = checker.check(placements=placements, paths=routes, context=ctx)
-    violation_list = _serialize_drc_violations(violations)
-    n_violations = len(violation_list)
-    drc_passed = n_violations == 0
-
-    # LVS: 简化为端口连接性检查（无器件网表不一致即视为通过）
-    # 真实 LVS 需要版图提取网表与原理图网表对比，此处用 DRC 的端口连接性结果
-    lvs_passed = drc_passed
-
-    logger.info(
-        "阶段 6 完成: DRC %s（%d 违规），LVS %s",
-        "通过" if drc_passed else "失败", n_violations,
-        "通过" if lvs_passed else "失败",
-    )
-
-    return {
-        "drc_report": {
-            "violations": violation_list,
-            "n_violations": n_violations,
-            "passed": drc_passed,
-        },
-        "lvs_passed": lvs_passed,
-    }
 
 
 __all__ = [

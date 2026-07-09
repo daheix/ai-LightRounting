@@ -146,7 +146,10 @@ def stage8_opto_electrical(
 
     # 电容: 基于波导总长度（SOI 波导单位电容 1.0 pF/mm）
     # 来源: Chrostowski 2015 §8.4, SOI strip waveguide 单位电容
-    total_length_um = float(prev_outputs.get("total_length_um", 0.0))
+    # R390 修复: 原 get("total_length_um", 0.0) 用 0 当真值（R03 违规）。
+    # total_length_um 由 stage4 (routing) 产出，缺失说明 stage4 未执行，
+    # 无法计算电容 → raise ValueError。
+    total_length_um = float(_require_input(prev_outputs, "total_length_um", 8))
     # 1.0 pF/mm = 0.001 pF/μm
     capacitance_pf = total_length_um * 0.001
 
