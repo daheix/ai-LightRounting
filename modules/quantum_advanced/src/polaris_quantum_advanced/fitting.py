@@ -73,6 +73,7 @@ class SParamFitter:
         freqs: NDArray[np.float64],
         s_meas: NDArray[np.complex128],
         initial_params: NDArray[np.float64] | None = None,
+        length: float = 1e-3,
     ) -> FitResult:
         """拟合 S 参数。
 
@@ -80,6 +81,8 @@ class SParamFitter:
             freqs: 频率 (Hz) 数组。
             s_meas: 测量 S 参数（复数）数组。
             initial_params: 初始参数 [A, φ, α_0, n_eff, p]。
+            length: 器件长度 (m)，默认 1e-3 (1mm，典型 SOI 波导长度)。
+                调用方应传入真实长度以正确反推 α_0 和 n_eff。
 
         Returns:
             FitResult。
@@ -90,6 +93,8 @@ class SParamFitter:
             raise ValueError(
                 f"freqs {freqs.shape} 与 s_meas {s_meas.shape} 形状不匹配"
             )
+        if length <= 0.0:
+            raise ValueError(f"器件长度必须 > 0，得到 {length}")
         if initial_params is None:
             initial_params = np.array([0.9, 0.0, 0.0, 2.0, 1.0])
         initial_params = np.asarray(initial_params, dtype=np.float64)
@@ -104,10 +109,9 @@ class SParamFitter:
             A_clip = np.clip(A, 0.0, 1.0)
             alpha = alpha_0 * (omega / omega_ref) ** p
             beta = n_eff * omega / c0
-            L = 1e-3  # 假设 1mm 长度
             return (
                 A_clip * np.exp(1j * phi)
-                * np.exp(-alpha * L) * np.exp(1j * beta * L)
+                * np.exp(-alpha * length) * np.exp(1j * beta * length)
             )
 
         def cost(params: NDArray[np.float64]) -> float:

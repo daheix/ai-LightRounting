@@ -294,10 +294,15 @@ def _build_subckts(
                 f".ends"
             )
         else:
-            try:
+            # R390 修复: 原 try/except ValueError 静默吞异常（R03 违规）。
+            # 改为显式端口数检查：端口数 < 2 是正常业务分支（终端器/Y 分支等），
+            # 生成注释行；S 参数奇异(D≈0)仍由 s_params_to_spice_subcircuit raise。
+            if len(model.ports) < 2:
+                lines.append(
+                    f"* 跳过 {model.module_name} (端口数 < 2，无电学子电路)"
+                )
+            else:
                 lines.append(s_params_to_spice_subcircuit(model))
-            except ValueError:
-                lines.append(f"* 跳过 {model.module_name} (非 2 端口，无电学子电路)")
         lines.append("")
     return has_modulator, has_detector
 

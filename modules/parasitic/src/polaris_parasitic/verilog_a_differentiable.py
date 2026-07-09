@@ -56,6 +56,7 @@ from polaris_parasitic.constants import (
     DEFAULT_DETECTOR_RESPONSIVITY,
     DEFAULT_LOAD_RESISTANCE_OHM,
     DEFAULT_MODULATOR_EFFICIENCY,
+    DEFAULT_WAVEGUIDE_LOSS_DB_CM,
 )
 
 
@@ -79,11 +80,13 @@ class DifferentiableOptoElectricalModel:
         modulator_efficiency: 调制器效率 η（W/V²）。
         detector_responsivity: 探测器响应度 R（A/W）。
         load_resistance: 负载电阻（Ω）。
+        loss_db_cm: 波导损耗（dB/cm），默认 0.5（SOI strip 典型值）。
     """
 
     modulator_efficiency: float = DEFAULT_MODULATOR_EFFICIENCY
     detector_responsivity: float = DEFAULT_DETECTOR_RESPONSIVITY
     load_resistance: float = DEFAULT_LOAD_RESISTANCE_OHM
+    loss_db_cm: float = DEFAULT_WAVEGUIDE_LOSS_DB_CM
 
     def __post_init__(self) -> None:
         """验证模型参数（规则 14.1）。
@@ -102,6 +105,10 @@ class DifferentiableOptoElectricalModel:
         if self.load_resistance <= 0:
             raise ValueError(
                 f"load_resistance 须 > 0，得到 {self.load_resistance}"
+            )
+        if self.loss_db_cm < 0:
+            raise ValueError(
+                f"loss_db_cm 须 >= 0，得到 {self.loss_db_cm}"
             )
 
     def forward(
@@ -127,8 +134,10 @@ class DifferentiableOptoElectricalModel:
         """
         # 调制器: 光功率 = η · V²
         # 长度衰减: f(L) = exp(-α·L), α = loss_db_cm / (10·4.343) / 1e4
-        # 默认损耗 0.5 dB/cm
-        alpha_linear = math.exp(-0.5 * modulator_length / 1e4 / 4.343)
+        # loss_db_cm 来自类属性（默认 0.5 dB/cm SOI strip 典型值）
+        alpha_linear = math.exp(
+            -self.loss_db_cm * modulator_length / 1e4 / 4.343
+        )
         optical_power = (
             self.modulator_efficiency * voltage_in ** 2 * alpha_linear
         )
