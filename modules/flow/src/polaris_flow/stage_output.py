@@ -68,23 +68,22 @@ def stage7_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict
         含 gds_path/gds_size_bytes 的字典。
     """
     from polaris_gdsio.exporter import export_gds
-    from polaris_flow._converters import convert_to_paths, convert_to_placements
 
     circuit_dict = _require_input(prev_outputs, "circuit", 7)
-    placements = _require_input(prev_outputs, "placements", 7)
-    routes = _require_input(prev_outputs, "routes", 7)
+    # placements/routes 为 stage7 逻辑前置条件（布局布线须已完成），
+    # export_gds v5.0 接收 circuit dict 自行排列器件，不再消费坐标对象。
+    _require_input(prev_outputs, "placements", 7)
+    _require_input(prev_outputs, "routes", 7)
     circuit = _circuit_from_dict(circuit_dict)
 
     logger.info("阶段 7: GDS 版图导出")
 
-    # 转换为 Placement/WaveguidePath 对象
-    placement_objs = convert_to_placements(circuit, placements)
-    path_objs = convert_to_paths(routes)
-
     # 输出到 workspace 的 gds 目录
     gds_path = str(workspace.gds_path(f"{circuit.name}.gds"))
 
-    export_gds(placement_objs, path_objs, gds_path)
+    # R391 修复: export_gds(circuit_dict, output_path) 为 v5.0 稳定 API，
+    # 接收 circuit dict 内部按 x 轴排列器件生成 GDS（原 3 参数接口已废弃）。
+    export_gds(circuit_dict, gds_path)
 
     if not os.path.exists(gds_path):
         raise RuntimeError(
