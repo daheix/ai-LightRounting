@@ -49,19 +49,40 @@ logger = logging.getLogger(__name__)
 
 
 def stage1_pdk(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
-    """阶段 1: PDK 器件目录加载（stub）。
+    """阶段 1: PDK 器件目录加载。
 
-    R390 清理: 原实现依赖 polaris_pdk.DeviceCatalog/_device_to_dict
-    （v5.0 未迁移），__init__ 始终 raise ImportError。原 21 行业务代码
-    为不可达死代码，已删除。保留 stub 供 STAGE_EXECUTORS 导出兼容。
+    R391 修复: 原依赖 polaris_pdk.DeviceCatalog（v5.0 未迁移）已改为
+    直接调用 polaris_pdk.list_devices(platform)，返回 device dict 列表。
 
-    迁移指南: 迁移 polaris_pdk.DeviceCatalog 后恢复完整实现，
-    或改用 polaris_pdk.list_devices(platform=...) 直接查询。
+    Args:
+        recipe: 作业配方（使用 recipe.platform）。
+        workspace: 工作空间。
+        prev_outputs: 之前所有阶段的输出字典（本阶段无依赖）。
+
+    Returns:
+        含 device_catalog/platform/n_devices 的字典。
     """
-    raise ImportError(
-        "stage_input 需要 polaris_pdk 子模块提供 DeviceCatalog/_device_to_dict"
-        "（v5.0 polaris_pdk 仅提供 list/get 查询，未迁移 DeviceCatalog，R03）"
+    from polaris_pdk.filters import list_devices
+
+    platform = recipe.platform
+    logger.info("阶段 1: 加载 PDK 器件目录（平台=%s）", platform)
+
+    device_catalog = list_devices(platform)
+    if not device_catalog:
+        raise RuntimeError(
+            f"平台 '{platform}' 无可用器件。"
+            f"请检查 recipe.platform 是否为 SOI/SiN/InP/LNOI 之一。"
+        )
+
+    logger.info(
+        "阶段 1 完成: 平台 %s 共 %d 个器件", platform, len(device_catalog)
     )
+
+    return {
+        "device_catalog": device_catalog,
+        "platform": platform,
+        "n_devices": len(device_catalog),
+    }
 
 
 # =============================================================================

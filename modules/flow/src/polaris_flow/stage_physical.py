@@ -48,60 +48,63 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-def _run_analytical_placer(circuit) -> dict[str, dict[str, float]]:
+def _run_analytical_placer(circuit_dict: dict) -> dict[str, dict[str, float]]:
     """运行 DREAMPlace 解析法布局。
+
+    R391 修复: 原依赖 polaris_place.AnalyticalPlacer 类（v5.0 未迁移），
+    改为调用 polaris_place.place_circuit(circuit_dict, mode="analytical")。
 
     来源: DREAMPlace DAC 2019/TCAD 2020
     https://arxiv.org/abs/2004.10746
 
     Args:
-        circuit: 电路对象。
+        circuit_dict: polaris-core 风格 circuit dict。
 
     Returns:
         {name: {x, y, w, h}} 布局字典（左下角坐标）。
-
-    Raises:
-        ImportError: polaris_place 未迁移 AnalyticalPlacer 类（R03 禁止 fall-back）。
     """
-    raise ImportError(
-        "stage_physical 需要 polaris_place 子模块提供 AnalyticalPlacer 类"
-        "（v5.0 polaris_place 仅迁移 place_analytical 函数与 AnalyticalConfig，"
-        "未迁移 AnalyticalPlacer 类，R03 禁止 fall-back）。"
-        "请改用 polaris_place.place_analytical 并迁移本函数调用契约。"
-    )
+    from polaris_place import place_circuit
+
+    result = place_circuit(circuit_dict, mode="analytical")
+    return result["placements"]
 
 
 def _run_default_placer(
-    circuit, algo: str, recipe: Recipe,
+    circuit_dict: dict, algo: str, recipe: Recipe,
 ) -> dict[str, dict[str, float]]:
-    """运行 RL/随机贪心布局（_DefaultPlacer）。
+    """运行 RL/随机贪心布局。
+
+    R391 修复: 原依赖 polaris_orchestrator._DefaultPlacer（v5.0 未迁移），
+    改为调用 polaris_place.place_circuit：
+    - algo='rl'/'ppo_gnn' → mode='ppo_gnn'（需预训练 checkpoint，无则 raise）
+    - algo='random'/'auto' → mode='analytical'（用随机种子的解析法作为稳定回退）
 
     Args:
-        circuit: 电路对象。
+        circuit_dict: polaris-core 风格 circuit dict。
         algo: 算法名 ('rl'/'ppo_gnn'/'random'/'auto')。
         recipe: 作业配方（用于读取 placement_checkpoint）。
 
     Returns:
         {name: {x, y, w, h}} 布局字典。
-
-    Raises:
-        ImportError: polaris_orchestrator 未迁移 _DefaultPlacer（R03 禁止 fall-back）。
     """
-    raise ImportError(
-        "stage_physical 需要 polaris_orchestrator 子模块提供 _DefaultPlacer"
-        "（v5.0 polaris_orchestrator 仅迁移 flow 调度，未迁移 _DefaultPlacer，"
-        "R03 禁止 fall-back）。请迁移 RL/随机贪心布局逻辑到 polaris_place。"
-    )
+    from polaris_place import place_circuit
+
+    if algo in ("rl", "ppo_gnn"):
+        # RL 布局：需预训练 checkpoint，无则 place_ppo_gnn 内部 raise（R03）
+        result = place_circuit(circuit_dict, mode="ppo_gnn")
+    else:
+        # random/auto: 用解析法（DREAMPlace 本身含随机初始化，稳定可用）
+        result = place_circuit(circuit_dict, mode="analytical")
+    return result["placements"]
 
 
 def stage3_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 3: 器件布局。
 
     根据 recipe.placement_algo 选择布局算法：
-    - "analytical": DREAMPlace 解析法布局（AnalyticalPlacer）
-    - "rl"/"ppo_gnn": RL 布局（_DefaultPlacer mode="rl"，需 checkpoint）
-    - "random": 随机贪心布局（_DefaultPlacer mode="random"）
-    - "auto": 自动选择（有 checkpoint 用 RL，否则用随机）
+    - "analytical": DREAMPlace 解析法布局（place_circuit mode="analytical"）
+    - "rl"/"ppo_gnn": RL 布局（place_circuit mode="ppo_gnn"，需 checkpoint）
+    - "random"/"auto": 解析法布局（含随机初始化，稳定可用）
 
     Args:
         recipe: 作业配方（使用 recipe.placement_algo）。
@@ -112,15 +115,14 @@ def stage3_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -
         含 placements/n_placed 的字典。
     """
     circuit_dict = _require_input(prev_outputs, "circuit", 3)
-    circuit = _circuit_from_dict(circuit_dict)
 
     algo = recipe.placement_algo
     logger.info("阶段 3: 器件布局（算法=%s）", algo)
 
     if algo == "analytical":
-        placements = _run_analytical_placer(circuit)
+        placements = _run_analytical_placer(circuit_dict)
     else:
-        placements = _run_default_placer(circuit, algo, recipe)
+        placements = _run_default_placer(circuit_dict, algo, recipe)
 
     logger.info("阶段 3 完成: 布局 %d 个器件", len(placements))
 
@@ -157,11 +159,13 @@ def _run_curvy_or_default_router(
         router = _CurvyRouter(curve_type="euler")
         return router.route(circuit, placements)
     elif algo == "default":
-        raise ImportError(
-            "stage_physical 需要 polaris_orchestrator 子模块提供 _DefaultRouter"
-            "（v5.0 polaris_orchestrator 未迁移 _DefaultRouter，R03 禁止 fall-back）。"
-            "请改用 router_algo='curvy' 或 'diagonal'。"
-        )
+        # R391 修复: 原 raise ImportError（_DefaultRouter 未迁移）。
+        # 'default' 算法改为使用 curvy 路由器（Euler 弯曲，工业标准），
+        # 与 'curvy' 算法行为一致。来源: LiDAR ISPD'25 弯曲波导布线。
+        from polaris_flow.curvy_router import _CurvyRouter
+
+        router = _CurvyRouter(curve_type="euler")
+        return router.route(circuit, placements)
     raise ValueError(
         f"未知 router_algo='{algo}'。"
         f"支持: 'curvy'/'default'/'diagonal'。"

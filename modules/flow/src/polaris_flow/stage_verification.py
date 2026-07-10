@@ -134,27 +134,52 @@ def stage5_simulation(recipe: Recipe, workspace: Workspace, prev_outputs: dict) 
 def stage6_drc_lvs(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 6: DRC/LVS 约束检查。
 
-    用 ConstraintChecker 检查布局布线结果是否满足光子学设计约束。
+    R391 修复: 原依赖 polaris_verify_advanced.ConstraintChecker（v5.0 未迁移），
+    改为调用 polaris_drc.run_drc + polaris_lvs.run_lvs 稳定 API。
 
-    R390 清理: 原实现依赖 polaris_verify_advanced.ConstraintChecker/
-    ConstraintConfig/CheckContext（v5.0 未迁移），始终 raise ImportError。
-    原 39 行业务代码为不可达死代码，已删除。保留 stub 供 STAGE_EXECUTORS 导出兼容。
-
-    迁移指南: 迁移 polaris_verify_advanced 约束检查器后恢复完整实现。
+    DRC 规则来源: SiEPIC EBeam PDK DRC runset
+    https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
     Args:
         recipe: 作业配方（使用 recipe.sim_config.loss_target_db）。
         workspace: 工作空间。
-        prev_outputs: 之前所有阶段的输出字典（依赖 "placements", "routes",
+        prev_outputs: 之前所有阶段的输出字典（依赖 "circuit", "placements",
             可选 "total_loss_db", "n_crossings"）。
 
     Returns:
         含 drc_report/lvs_passed 的字典。
     """
-    raise ImportError(
-        "stage_verification 需要 polaris_verify_advanced 子模块提供 "
-        "ConstraintChecker/ConstraintConfig/CheckContext（v5.0 未迁移，R03 禁止 fall-back）"
+    from polaris_drc import run_drc
+    from polaris_lvs import run_lvs
+
+    circuit_dict = _require_input(prev_outputs, "circuit", 6)
+    placements = _require_input(prev_outputs, "placements", 6)
+
+    logger.info("阶段 6: DRC/LVS 约束检查")
+
+    # DRC: 设计规则检查（间距/宽度/弯曲半径/端口对齐等）
+    drc_result = run_drc(circuit_dict, placements)
+    n_violations = drc_result.get("n_violations", 0)
+    drc_passed = n_violations == 0
+
+    # LVS: 版图与原理图一致性比对
+    lvs_result = run_lvs(circuit_dict)
+    lvs_passed = lvs_result.get("passed", False)
+
+    logger.info(
+        "阶段 6 完成: DRC %s（%d 违规），LVS %s",
+        "通过" if drc_passed else "失败", n_violations,
+        "通过" if lvs_passed else "失败",
     )
+
+    return {
+        "drc_report": {
+            "violations": drc_result.get("violations", []),
+            "n_violations": int(n_violations),
+            "passed": bool(drc_passed),
+        },
+        "lvs_passed": bool(lvs_passed),
+    }
 
 
 __all__ = [
