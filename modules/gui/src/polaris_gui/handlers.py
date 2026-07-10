@@ -473,6 +473,8 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
             stage7_gds_export,
             stage8_opto_electrical,
             stage9_quantum_photonics,
+            stage10_adjoint_inverse_design,
+            stage11_interactive_layout_edit,
         )
 
         out_dir = Path(output_dir)
@@ -496,6 +498,8 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
             (7, "GDS 导出", stage7_gds_export),
             (8, "光电协同", stage8_opto_electrical),
             (9, "量子光子验证", stage9_quantum_photonics),
+            (10, "Adjoint 逆向设计", stage10_adjoint_inverse_design),
+            (11, "交互式版图编辑", stage11_interactive_layout_edit),
         ]
 
         for stage_id, stage_name, stage_module in stages:

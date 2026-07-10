@@ -1,5 +1,5 @@
 // PoLaRIS 端到端 Demo Showcase 前端逻辑
-// 9 阶段定义（与后端 _SHOWCASE_STAGES 对齐）
+// 11 阶段定义（与后端 handlers.py stages 列表对齐）
 const STAGES = [
     {id: 1, name: "PDK 器件目录展示"},
     {id: 2, name: "电路规格定义"},
@@ -10,6 +10,8 @@ const STAGES = [
     {id: 7, name: "GDS 导出"},
     {id: 8, name: "光电协同"},
     {id: 9, name: "量子光子验证"},
+    {id: 10, name: "Adjoint 逆向设计"},
+    {id: 11, name: "交互式版图编辑"},
 ];
 
 // 状态图标映射
