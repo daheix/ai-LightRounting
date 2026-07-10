@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PoLaRIS 光弈 · 投资计划 v1.0</title>
+<style>
+  /* ===== 设计令牌 =====
+   * 视觉方向：深科技蓝投资计划主题，区别于技术汇报的深空蓝
+   * 色板：#0a1a3f 深科技蓝底 / #00d4ff 科技青蓝主调 / #ff9500 暖橙数据高亮
+   * 字体：serif 标题(Georgia) + mono 数据(Consolas) + sans 正文
+   * 数据诚信（R02）：工资数据来源 jobui/liepin/csdn 2026-07，支出标注"估算"，融资标注"建议"
+   */
+  :root{
+    --bg:#0a1a3f;
+    --bg-elev:#0f2451;
+    --bg-elev2:#163066;
+    --bg-elev3:#1d3d7a;
+    --text:#e8f1ff;
+    --text-dim:#8fa8cc;
+    --text-faint:#5a7299;
+    --accent:#00d4ff;
+    --accent-bright:#33dfff;
+    --accent-soft:rgba(0,212,255,0.16);
+    --accent2:#ff9500;
+    --accent2-soft:rgba(255,149,0,0.16);
+    --success:#2ee6a6;
+    --danger:#ff5c8a;
+    --warn:#ffd93d;
+    --purple:#7c5cff;
+    --border:rgba(255,255,255,0.08);
+    --border-strong:rgba(255,255,255,0.16);
+    --serif:Georgia,'Times New Roman',serif;
+    --sans:'Segoe UI',system-ui,-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;
+    --mono:'Consolas','SF Mono','Roboto Mono',monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);}
+  body{
+    background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(0,212,255,0.12), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(255,149,0,0.08), transparent 60%),
+      var(--bg);
+  }
+
+  /* ===== Deck 容器 ===== */
+  .deck{position:fixed;inset:0;}
+  .slide{
+    position:absolute;inset:0;
+    padding:3.2vh 4.5vw 7vh;
+    display:flex;flex-direction:column;
+    opacity:0;transform:translateX(48px);
+    transition:opacity .5s ease, transform .5s ease;
+    pointer-events:none;
+    overflow:hidden;
+  }
+  .slide.active{opacity:1;transform:translateX(0);pointer-events:auto;}
+  .slide.prev{transform:translateX(-48px);}
+
+  /* ===== 顶部进度条 ===== */
+  .progress{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.05);z-index:50;}
+  .progress-bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .45s ease;}
+
+  /* ===== 页码 + 导航 ===== */
+  .hud{position:fixed;bottom:2.2vh;right:3vw;z-index:50;display:flex;align-items:center;gap:14px;
+       font-family:var(--mono);font-size:13px;color:var(--text-dim);letter-spacing:.5px;}
+  .hud .counter{min-width:62px;text-align:right;}
+  .nav-btn{width:34px;height:34px;border:1px solid var(--border-strong);border-radius:50%;background:rgba(15,36,81,0.7);
+           color:var(--text-dim);cursor:pointer;font-size:15px;display:grid;place-items:center;transition:all .2s;backdrop-filter:blur(4px);}
+  .nav-btn:hover{color:var(--accent-bright);border-color:var(--accent);background:var(--accent-soft);}
+  .nav-btn:disabled{opacity:.3;cursor:not-allowed;}
+
+  /* ===== 通用排版 ===== */
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:3px;text-transform:uppercase;color:var(--accent2);margin-bottom:14px;}
+  h1.title{font-family:var(--serif);font-weight:400;line-height:1.05;}
+  h2.slide-title{font-family:var(--serif);font-weight:400;font-size:38px;letter-spacing:-.5px;margin-bottom:6px;}
+  .slide-title .num{font-family:var(--mono);font-size:15px;color:var(--accent);vertical-align:super;margin-right:10px;letter-spacing:1px;}
+  .slide-sub{color:var(--text-dim);font-size:15px;margin-bottom:26px;font-family:var(--mono);letter-spacing:.5px;}
+  .rule{height:1px;background:linear-gradient(90deg,var(--accent),transparent 70%);margin:10px 0 22px;}
+
+  /* ===== 卡片 ===== */
+  .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:20px 22px;}
+  .card:hover{border-color:var(--border-strong);}
+
+  /* ===== Slide 1 封面 ===== */
+  .cover{justify-content:center;align-items:flex-start;}
+  .cover .brand{font-family:var(--mono);font-size:13px;letter-spacing:5px;color:var(--accent);margin-bottom:30px;}
+  .cover h1{font-size:118px;font-family:var(--serif);font-weight:400;letter-spacing:-2px;line-height:.95;}
+  .cover h1 .glow{color:var(--accent2);}
+  .cover .sub{font-size:26px;color:var(--text);margin-top:18px;font-weight:300;}
+  .cover .tagline{margin-top:34px;font-family:var(--mono);font-size:15px;color:var(--text-dim);letter-spacing:1px;
+                  border-left:2px solid var(--accent2);padding-left:14px;max-width:680px;line-height:1.6;}
+  .cover .meta{position:absolute;bottom:9vh;left:4.5vw;display:flex;gap:36px;font-family:var(--mono);font-size:13px;color:var(--text-faint);}
+  .cover .meta b{color:var(--accent-bright);font-weight:500;}
+  .cover .deco{position:absolute;right:-100px;top:-100px;width:520px;height:520px;border-radius:50%;
+               border:1px solid rgba(0,212,255,0.2);box-shadow:inset 0 0 120px rgba(0,212,255,0.12);}
+  .cover .deco::before{content:"";position:absolute;inset:60px;border-radius:50%;border:1px dashed rgba(255,149,0,0.18);}
+
+  /* ===== Slide 2 差距卡片 ===== */
+  .gap-grid{display:grid;grid-template-columns:1fr;gap:10px;flex:1;align-content:center;}
+  .gap-card{display:grid;grid-template-columns:64px 1fr 150px 140px;gap:16px;align-items:center;
+       background:linear-gradient(135deg,var(--bg-elev),var(--bg-elev2));border:1px solid var(--border);border-radius:10px;padding:16px 20px;border-left:3px solid var(--danger);}
+  .gap-card .gid{font-family:var(--mono);font-size:18px;color:var(--accent2);font-weight:600;}
+  .gap-card .gname{font-family:var(--serif);font-size:17px;color:var(--text);}
+  .gap-card .gname small{display:block;color:var(--text-dim);font-size:12.5px;margin-top:3px;font-family:var(--sans);line-height:1.5;}
+  .gap-card .gneed{font-family:var(--mono);font-size:11.5px;color:var(--accent-bright);text-align:center;line-height:1.5;}
+  .gap-card .gbench{font-family:var(--mono);font-size:11.5px;color:var(--accent2);text-align:center;line-height:1.5;}
+  .gap-score-bar{margin-top:14px;display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:13px;}
+  .gap-score-bar .arrow{color:var(--accent);font-size:18px;}
+  .gap-score-bar b{color:var(--accent2);}
+
+  /* ===== 表格通用 ===== */
+  table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:var(--accent-bright);
+           text-align:left;padding:11px 12px;border-bottom:2px solid var(--accent);background:var(--bg-elev2);}
+  tbody td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text);}
+  tbody tr:hover{background:var(--bg-elev);}
+  td.mono{font-family:var(--mono);color:var(--accent-bright);}
+  td.num{font-family:var(--mono);text-align:center;}
+  td.src{font-family:var(--mono);font-size:11px;color:var(--text-faint);}
+  td.tot{font-family:var(--mono);color:var(--accent2);font-weight:600;background:var(--accent-soft);}
+  .table-wrap{background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:1;display:flex;flex-direction:column;}
+  .table-wrap table{flex:1;}
+  .table-wrap.compact table{font-size:12px;}
+  .table-wrap.compact thead th{padding:8px 10px;font-size:10px;}
+  .table-wrap.compact tbody td{padding:7px 10px;}
+
+  /* ===== 时间线岗位卡片 ===== */
+  .role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;flex:1;align-content:center;}
+  .role{background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative;border-top:3px solid var(--accent);}
+  .role.q12{border-top-color:var(--accent);}
+  .role.q23{border-top-color:var(--accent2);}
+  .role.q34{border-top-color:var(--purple);}
+  .role .qt{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1px;}
+  .role h4{font-family:var(--serif);font-size:17px;font-weight:400;margin:4px 0 6px;color:var(--text);}
+  .role p{font-size:12.5px;color:var(--text-dim);line-height:1.6;}
+  .role .cnt{position:absolute;top:14px;right:16px;font-family:var(--mono);font-size:13px;color:var(--accent2);}
+
+  /* ===== 支出汇总条 ===== */
+  .spend-summary{display:flex;gap:18px;margin-top:14px;align-items:center;}
+  .spend-summary .total{font-family:var(--serif);font-size:30px;color:var(--accent2);}
+  .spend-summary .lbl{font-family:var(--mono);font-size:12px;color:var(--text-dim);}
+  .spend-summary .note{font-family:var(--mono);font-size:11px;color:var(--text-faint);margin-left:auto;}
+
+  /* ===== 饼图布局 ===== */
+  .pie-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px;flex:1;align-items:center;}
+  .pie-svg-wrap{display:flex;align-items:center;justify-content:center;}
+  .pie-legend{display:flex;flex-direction:column;gap:7px;font-family:var(--mono);font-size:12px;}
+  .pie-legend .pl{display:flex;align-items:center;gap:9px;color:var(--text-dim);}
+  .pie-legend .pl .sw{width:14px;height:11px;border-radius:2px;flex:0 0 auto;}
+  .pie-legend .pl b{color:var(--text);font-weight:500;min-width:70px;}
+  .pie-legend .pl span{color:var(--accent-bright);margin-left:auto;}
+  .pie-center{font-family:var(--serif);fill:var(--text);font-size:28px;text-anchor:middle;}
+  .pie-center-sub{font-family:var(--mono);fill:var(--text-dim);font-size:11px;text-anchor:middle;}
+
+  /* ===== 资金需求大数字卡片 ===== */
+  .capital-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-bottom:18px;}
+  .cap-card{background:linear-gradient(160deg,var(--bg-elev),var(--bg-elev2));border:1px solid var(--border);border-radius:12px;padding:22px;position:relative;overflow:hidden;}
+  .cap-card::after{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent);}
+  .cap-card.a2::after{background:var(--accent2);}
+  .cap-card.a3::after{background:var(--success);}
+  .cap-card .stage{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;}
+  .cap-card .big{font-family:var(--serif);font-size:46px;color:var(--text);line-height:1;margin:8px 0 4px;}
+  .cap-card .big .unit{font-family:var(--mono);font-size:16px;color:var(--accent-bright);margin-left:4px;}
+  .cap-card .lbl{font-family:var(--mono);font-size:12px;color:var(--accent2);}
+  .cap-card .cum{font-family:var(--mono);font-size:11px;color:var(--text-faint);margin-top:8px;}
+
+  /* ===== 里程碑时间线 ===== */
+  .ms-grid{display:grid;grid-template-columns:1fr;gap:12px;flex:1;align-content:center;}
+  .ms-row{display:grid;grid-template-columns:140px 1fr 110px;gap:18px;align-items:center;
+          background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:16px 20px;border-left:3px solid var(--accent);}
+  .ms-row.a2{border-left-color:var(--accent2);}
+  .ms-row.a3{border-left-color:var(--success);}
+  .ms-row .round{font-family:var(--serif);font-size:19px;color:var(--accent);}
+  .ms-row.a2 .round{color:var(--accent2);}
+  .ms-row.a3 .round{color:var(--success);}
+  .ms-row .round small{display:block;font-family:var(--mono);font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .ms-row .desc{font-size:13.5px;color:var(--text);line-height:1.6;}
+  .ms-row .desc b{font-family:var(--mono);color:var(--accent-bright);}
+  .ms-row .delta{text-align:right;font-family:var(--mono);font-size:14px;color:var(--success);}
+
+  /* ===== 风险卡片 ===== */
+  .risk-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;flex:1;align-content:center;}
+  .risk{background:var(--bg-elev);border:1px solid var(--border);border-radius:10px;padding:18px;border-top:3px solid var(--danger);}
+  .risk:nth-child(2){border-top-color:var(--warn);}
+  .risk:nth-child(3){border-top-color:var(--accent2);}
+  .risk:nth-child(4){border-top-color:var(--purple);}
+  .risk:nth-child(5){border-top-color:var(--accent);}
+  .risk:nth-child(6){border-top-color:var(--success);}
+  .risk h4{font-family:var(--serif);font-size:17px;font-weight:400;color:var(--text);margin-bottom:6px;}
+  .risk .rt{font-size:12.5px;color:var(--text-dim);line-height:1.6;margin-bottom:8px;}
+  .risk .mit{font-family:var(--mono);font-size:11.5px;color:var(--accent-bright);border-top:1px dashed var(--border);padding-top:8px;line-height:1.5;}
+  .risk .mit::before{content:"→ ";color:var(--accent2);}
+
+  /* ===== 文献来源 ===== */
+  .refs{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;align-content:center;}
+  .ref{display:grid;grid-template-columns:36px 1fr;gap:14px;align-items:start;padding:12px 16px;
+       background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;}
+  .ref .rid{font-family:var(--serif);font-size:20px;color:var(--accent2);}
+  .ref .rt{font-size:12.5px;color:var(--text);line-height:1.5;}
+  .ref .rt .au{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);display:block;margin-top:3px;word-break:break-all;}
+
+  /* ===== 诚实声明 ===== */
+  .disclaimer{grid-column:span 2;background:var(--accent2-soft);border:1px solid var(--accent2);border-radius:8px;padding:14px 18px;margin-top:6px;}
+  .disclaimer h4{font-family:var(--serif);font-size:15px;color:var(--accent2);margin-bottom:6px;}
+  .disclaimer p{font-size:12px;color:var(--text);line-height:1.7;}
+  .disclaimer p b{color:var(--accent-bright);}
+
+  /* ===== 封底 ===== */
+  .end{justify-content:center;align-items:center;text-align:center;}
+  .end h1{font-family:var(--serif);font-size:72px;font-weight:400;letter-spacing:-1px;}
+  .end .copy{font-family:var(--mono);font-size:14px;color:var(--text-dim);margin-top:14px;letter-spacing:1px;}
+  .end .repo{margin-top:26px;font-family:var(--mono);font-size:16px;color:var(--accent-bright);
+             border:1px solid var(--accent);border-radius:8px;padding:12px 24px;display:inline-block;}
+  .end .lic{margin-top:14px;font-family:var(--mono);font-size:13px;color:var(--accent2);}
+  .end .stats{margin-top:32px;display:flex;gap:40px;font-family:var(--mono);font-size:13px;color:var(--text-faint);}
+  .end .stats b{display:block;font-family:var(--serif);font-size:24px;color:var(--text);margin-bottom:4px;}
+
+  /* ===== 辅助 ===== */
+  .footer-mark{position:fixed;bottom:2.2vh;left:3vw;z-index:50;font-family:var(--mono);font-size:11px;color:var(--text-faint);letter-spacing:1px;}
+  .footer-mark b{color:var(--accent);}
+
+  /* ===== 大数字条 ===== */
+  .bignum-row{display:flex;gap:20px;align-items:baseline;margin-bottom:8px;}
+  .bignum-row .bn{font-family:var(--serif);font-size:48px;color:var(--accent2);line-height:1;}
+  .bignum-row .bn .unit{font-family:var(--mono);font-size:16px;color:var(--accent-bright);margin-left:4px;}
+  .bignum-row .bl{font-family:var(--mono);font-size:13px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+<div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+<div class="footer-mark"><b>PoLaRIS</b> 光弈 · 投资计划 v1.0</div>
+
+<div class="deck" id="deck">
+
+  <!-- ============ Slide 01 封面 ============ -->
+  <section class="slide cover active">
+    <div class="deco"></div>
+    <div class="brand">P · o · L · a · R · I · S · INVEST</div>
+    <h1>投资计划<br><span class="glow">PoLaRIS 光弈</span></h1>
+    <div class="sub">追赶商业 EDA 的人才与资金规划</div>
+    <div class="tagline">
+      1 / 3 / 5 年路线 · Boss直聘 / 猎聘 / 职友集工资基准<br>
+      Photonic Layout &amp; Routing Intelligent System · Investment Plan
+    </div>
+    <div class="meta">
+      <span>版本 <b>v1.0</b></span>
+      <span>日期 <b>2026-07</b></span>
+      <span>许可 <b>MIT</b></span>
+      <span>综合得分 <b>8.08 / 10</b></span>
+    </div>
+  </section>
+
+  <!-- ============ Slide 02 追赶商业差距 ============ -->
+  <section class="slide">
+    <div class="eyebrow">01 · Gap to Commercial</div>
+    <h2 class="slide-title"><span class="num">02</span>追赶商业 EDA 的 5 大差距</h2>
+    <div class="slide-sub">5 unmet dimensions · benchmark Synopsys / Cadence / Lumerical</div>
+    <div class="rule"></div>
+    <div class="gap-grid">
+      <div class="gap-card">
+        <div class="gid">D07</div>
+        <div class="gname">AI 训练 <small>需 PPO 训练打通 / 100+ PIC 预训练 / 策略网络自学习放置策略</small></div>
+        <div class="gneed">PPO 训练<br>100+ PIC 预训练</div>
+        <div class="gbench">对标<br>AlphaChip (Google)</div>
+      </div>
+      <div class="gap-card">
+        <div class="gid">D10</div>
+        <div class="gname">GUI 桌面化 <small>需 Tauri 桌面化 / KLayout 深度集成 / 可视化版图编辑</small></div>
+        <div class="gneed">Tauri 桌面<br>KLayout 集成</div>
+        <div class="gbench">对标<br>Lumerical GUI</div>
+      </div>
+      <div class="gap-card">
+        <div class="gid">D12</div>
+        <div class="gname">逆向设计 <small>需 level-set 拓扑优化 / 3D 逆向 / JAX 可微 FDTD</small></div>
+        <div class="gneed">level-set<br>3D 逆向</div>
+        <div class="gbench">对标<br>Tidy3D adjoint</div>
+      </div>
+      <div class="gap-card">
+        <div class="gid">D11</div>
+        <div class="gname">光电协同 <small>需 Ngspice 接入 / 多物理场耦合 / 电子-光子联合仿真</small></div>
+        <div class="gneed">Ngspice 接入<br>多物理场</div>
+        <div class="gbench">对标<br>Lumerical CHARGE</div>
+      </div>
+      <div class="gap-card">
+        <div class="gid">D15</div>
+        <div class="gname">用户规模 <small>需社区运营 / MPW 流片验证 / 学术合作生态</small></div>
+        <div class="gneed">社区运营<br>MPW 流片</div>
+        <div class="gbench">对标<br>gdsfactory 社区</div>
+      </div>
+    </div>
+    <div class="gap-score-bar">
+      <span>综合得分 <b>8.08</b> / 10</span>
+      <span class="arrow">→</span>
+      <span>目标 <b>9.20</b> / 10</span>
+      <span class="arrow" style="color:var(--danger);">差距 <b>−1.12</b></span>
+      <span style="margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--text-faint);">9 达标 · 1 部分达标 · 5 未达标</span>
+    </div>
+  </section>
+
+  <!-- ============ Slide 03 人才需求总览 ============ -->
+  <section class="slide">
+    <div class="eyebrow">02 · Talent Demand</div>
+    <h2 class="slide-title"><span class="num">03</span>追赶商业所需人才矩阵</h2>
+    <div class="slide-sub">10 roles · 1 / 3 / 5 year headcount · salary from jobui / liepin / csdn 2026-07</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact">
+      <table>
+        <thead>
+          <tr>
+            <th>岗位</th>
+            <th class="num">1年</th>
+            <th class="num">3年</th>
+            <th class="num">5年</th>
+            <th>月薪区间</th>
+            <th>年薪区间</th>
+            <th>数据来源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>硅光芯片设计工程师</td><td class="num">1</td><td class="num">2</td><td class="num">3</td><td class="mono">20-70K</td><td class="mono">24-105W</td><td class="src">jobui</td></tr>
+          <tr><td>EDA 布局布线工程师</td><td class="num">2</td><td class="num">3</td><td class="num">5</td><td class="mono">35-75K</td><td class="mono">50-130W</td><td class="src">liepin</td></tr>
+          <tr><td>强化学习算法工程师</td><td class="num">1</td><td class="num">2</td><td class="num">3</td><td class="mono">30-50K</td><td class="mono">36-80W</td><td class="src">jobui</td></tr>
+          <tr><td>逆向设计工程师（JAX）</td><td class="num">1</td><td class="num">2</td><td class="num">2</td><td class="mono">25-50K</td><td class="mono">30-75W</td><td class="src">参考EDA</td></tr>
+          <tr><td>电磁/光学仿真工程师</td><td class="num">1</td><td class="num">2</td><td class="num">3</td><td class="mono">20-50K</td><td class="mono">24-60W</td><td class="src">jobui</td></tr>
+          <tr><td>光电协同工程师（SPICE）</td><td class="num">0</td><td class="num">1</td><td class="num">2</td><td class="mono">25-45K</td><td class="mono">30-65W</td><td class="src">参考</td></tr>
+          <tr><td>React 前端工程师</td><td class="num">1</td><td class="num">2</td><td class="num">3</td><td class="mono">10-20K</td><td class="mono">12-30W</td><td class="src">jobui</td></tr>
+          <tr><td>DevOps 工程师</td><td class="num">0</td><td class="num">1</td><td class="num">1</td><td class="mono">20-40K</td><td class="mono">24-60W</td><td class="src">行业典型</td></tr>
+          <tr><td>应用工程师 FAE</td><td class="num">0</td><td class="num">1</td><td class="num">3</td><td class="mono">18-35K</td><td class="mono">22-50W</td><td class="src">行业典型</td></tr>
+          <tr><td>技术销售</td><td class="num">0</td><td class="num">1</td><td class="num">2</td><td class="mono">15-35K+提成</td><td class="mono">20-60W</td><td class="src">行业典型</td></tr>
+          <tr><td class="tot">合计</td><td class="num tot">7</td><td class="num tot">17</td><td class="num tot">27</td><td class="tot">—</td><td class="tot">—</td><td class="tot">10 岗位</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ Slide 04 第 1 年人才计划 ============ -->
+  <section class="slide">
+    <div class="eyebrow">03 · Year 1 Plan</div>
+    <h2 class="slide-title"><span class="num">04</span>第 1 年 · 核心团队 7 人</h2>
+    <div class="slide-sub">build core · attack D07 PPO / D10 Tauri / D12 level-set</div>
+    <div class="rule"></div>
+    <div class="role-grid">
+      <div class="role q12">
+        <div class="qt">Q1–Q2</div><div class="cnt">×1</div>
+        <h4>硅光芯片设计</h4>
+        <p>攻克 D07 / D12 物理基础，器件建模与 PDK 校准</p>
+      </div>
+      <div class="role q12">
+        <div class="qt">Q1–Q2</div><div class="cnt">×2</div>
+        <h4>EDA 布局布线</h4>
+        <p>攻克 D07 PPO 训练 + 布局优化，核心算法落地</p>
+      </div>
+      <div class="role q23">
+        <div class="qt">Q2–Q3</div><div class="cnt">×1</div>
+        <h4>强化学习算法</h4>
+        <p>PPO 训练打通，对标 AlphaChip，策略网络</p>
+      </div>
+      <div class="role q23">
+        <div class="qt">Q2–Q3</div><div class="cnt">×1</div>
+        <h4>逆向设计</h4>
+        <p>JAX level-set，攻克 D12，可微 FDTD</p>
+      </div>
+      <div class="role q34">
+        <div class="qt">Q3–Q4</div><div class="cnt">×1</div>
+        <h4>电磁仿真</h4>
+        <p>FDTD 加速，物理求解器深化，对标 Tidy3D</p>
+      </div>
+      <div class="role q34">
+        <div class="qt">Q3–Q4</div><div class="cnt">×1</div>
+        <h4>React 前端</h4>
+        <p>GUI Tauri 桌面化，攻克 D10，可视化</p>
+      </div>
+    </div>
+    <div class="spend-summary">
+      <span class="total">≈ 280W</span>
+      <span class="lbl">年薪总支出估算 · 7 人 × 均薪 40W</span>
+      <span class="note">基于 jobui / liepin 2026-07 工资中位数估算</span>
+    </div>
+    <div style="margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--accent-bright);">
+      里程碑：D07 PPO 打通 · D10 Tauri MVP · D12 level-set demo
+    </div>
+  </section>
+
+  <!-- ============ Slide 05 第 3 年人才计划 ============ -->
+  <section class="slide">
+    <div class="eyebrow">04 · Year 3 Plan</div>
+    <h2 class="slide-title"><span class="num">05</span>第 3 年 · 扩张团队 17 人</h2>
+    <div class="slide-sub">7 → 17 · +10 new hires · research 13 / eng 2 / biz 2</div>
+    <div class="rule"></div>
+    <div class="role-grid" style="grid-template-columns:repeat(5,1fr);gap:11px;">
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">硅光</h4><p style="font-size:11.5px;">芯片设计深化</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">EDA</h4><p style="font-size:11.5px;">布线优化</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">算法</h4><p style="font-size:11.5px;">RL 训练</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">逆向</h4><p style="font-size:11.5px;">3D 逆向</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">仿真</h4><p style="font-size:11.5px;">FDTD 深化</p></div>
+      <div class="role q23"><div class="cnt">+1</div><h4 style="font-size:15px;">光电协同</h4><p style="font-size:11.5px;">Ngspice 新 D11</p></div>
+      <div class="role q23"><div class="cnt">+1</div><h4 style="font-size:15px;">前端</h4><p style="font-size:11.5px;">KLayout 集成</p></div>
+      <div class="role q34"><div class="cnt">+1</div><h4 style="font-size:15px;">DevOps</h4><p style="font-size:11.5px;">CI/CD 新</p></div>
+      <div class="role q34"><div class="cnt">+1</div><h4 style="font-size:15px;">FAE</h4><p style="font-size:11.5px;">应用支持 新</p></div>
+      <div class="role q34"><div class="cnt">+1</div><h4 style="font-size:15px;">销售</h4><p style="font-size:11.5px;">商务拓展 新</p></div>
+    </div>
+    <div class="spend-summary">
+      <span class="total">≈ 714W</span>
+      <span class="lbl">年薪总支出估算 · 17 人 × 均薪 42W</span>
+      <span class="note">团队结构：研发 13 · 工程 2 · 商务 2</span>
+    </div>
+    <div style="margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--accent-bright);">
+      里程碑：D11 Ngspice 接入 · D15 MPW 首次流片 · 综合得分 8.48
+    </div>
+  </section>
+
+  <!-- ============ Slide 06 第 5 年人才计划 ============ -->
+  <section class="slide">
+    <div class="eyebrow">05 · Year 5 Plan</div>
+    <h2 class="slide-title"><span class="num">06</span>第 5 年 · 成熟团队 27 人</h2>
+    <div class="slide-sub">17 → 27 · +10 new hires · research 18 / eng 4 / biz 5</div>
+    <div class="rule"></div>
+    <div class="role-grid" style="grid-template-columns:repeat(5,1fr);gap:11px;">
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">硅光</h4><p style="font-size:11.5px;">流片验证</p></div>
+      <div class="role"><div class="cnt">+2</div><h4 style="font-size:15px;">EDA</h4><p style="font-size:11.5px;">布线团队</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">算法</h4><p style="font-size:11.5px;">PIC 预训练</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">仿真</h4><p style="font-size:11.5px;">多物理场</p></div>
+      <div class="role"><div class="cnt">+1</div><h4 style="font-size:15px;">光电</h4><p style="font-size:11.5px;">协同深化</p></div>
+      <div class="role q23"><div class="cnt">+1</div><h4 style="font-size:15px;">前端</h4><p style="font-size:11.5px;">GUI 商业化</p></div>
+      <div class="role q34"><div class="cnt">+2</div><h4 style="font-size:15px;">FAE</h4><p style="font-size:11.5px;">客户支持</p></div>
+      <div class="role q34"><div class="cnt">+1</div><h4 style="font-size:15px;">销售</h4><p style="font-size:11.5px;">海外拓展</p></div>
+      <div class="role" style="opacity:.4;border-style:dashed;"><div class="cnt">—</div><h4 style="font-size:15px;">—</h4><p style="font-size:11.5px;">结构占位</p></div>
+      <div class="role" style="opacity:.4;border-style:dashed;"><div class="cnt">—</div><h4 style="font-size:15px;">—</h4><p style="font-size:11.5px;">结构占位</p></div>
+    </div>
+    <div class="spend-summary">
+      <span class="total">≈ 1215W</span>
+      <span class="lbl">年薪总支出估算 · 27 人 × 均薪 45W</span>
+      <span class="note">团队结构：研发 18 · 工程 4 · 商务 5</span>
+    </div>
+    <div style="margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--accent-bright);">
+      里程碑：综合得分 8.86 · 100+ PIC 预训练 · 学术合作生态 · IPO 评估
+    </div>
+  </section>
+
+  <!-- ============ Slide 07 工资基准详解 ============ -->
+  <section class="slide">
+    <div class="eyebrow">06 · Salary Benchmark</div>
+    <h2 class="slide-title"><span class="num">07</span>岗位工资基准</h2>
+    <div class="slide-sub">Boss直聘 / 猎聘 / 职友集 · data collected 2026-07</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact">
+      <table>
+        <thead>
+          <tr>
+            <th>岗位</th>
+            <th>月薪区间</th>
+            <th>年薪区间</th>
+            <th>经验</th>
+            <th>学历</th>
+            <th>数据来源</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>硅光芯片设计工程师</td><td class="mono">20-70K</td><td class="mono">24-105W</td><td class="num">3-10年</td><td class="num">硕士+</td><td class="src">jobui / liepin / zhipin</td></tr>
+          <tr><td>EDA 软件工程师（上海）</td><td class="mono">20-50K 均38.1K</td><td class="mono">24-60W</td><td class="num">3-8年</td><td class="num">本科+</td><td class="src">jobui 2026-07-09</td></tr>
+          <tr><td>资深布局布线 EDA 工程师</td><td class="mono">35-75K</td><td class="mono">50-130W</td><td class="num">5-10年</td><td class="num">硕士+</td><td class="src">liepin 2026-07</td></tr>
+          <tr><td>强化学习算法工程师（硕士）</td><td class="mono">30-50K 占75%</td><td class="mono">36-80W</td><td class="num">3-5年</td><td class="num">硕士</td><td class="src">jobui 2026-07-10</td></tr>
+          <tr><td>电磁仿真工程师（FDTD）</td><td class="mono">20-50K 本科均33K</td><td class="mono">24-60W</td><td class="num">3-8年</td><td class="num">本科+</td><td class="src">jobui 2026-07-04</td></tr>
+          <tr><td>光学仿真工程师</td><td class="mono">15-50K</td><td class="mono">20-75W</td><td class="num">3-8年</td><td class="num">硕士+</td><td class="src">liepin 2026-07</td></tr>
+          <tr><td>React 前端工程师</td><td class="mono">10-20K 占74%</td><td class="mono">12-30W</td><td class="num">3-5年</td><td class="num">本科</td><td class="src">jobui 2026-07-10</td></tr>
+          <tr><td>EDA 初级研发（0-3年）</td><td class="mono">—</td><td class="mono">27-42W</td><td class="num">0-3年</td><td class="num">硕士</td><td class="src">csdn 晋升阶梯</td></tr>
+          <tr><td>EDA 中级研发（3-6年）</td><td class="mono">—</td><td class="mono">48-78W</td><td class="num">3-6年</td><td class="num">硕士</td><td class="src">csdn 2026-07-10</td></tr>
+          <tr><td>EDA 高级研发（6-10年）</td><td class="mono">—</td><td class="mono">75-115W</td><td class="num">6-10年</td><td class="num">博士</td><td class="src">csdn 晋升阶梯</td></tr>
+          <tr><td>DevOps 工程师</td><td class="mono">20-40K</td><td class="mono">24-60W</td><td class="num">3-6年</td><td class="num">本科</td><td class="src">行业典型（脉脉2026）</td></tr>
+          <tr><td>技术销售（光子/EDA）</td><td class="mono">15-35K+提成</td><td class="mono">20-60W</td><td class="num">5-10年</td><td class="num">本科+</td><td class="src">行业典型</td></tr>
+          <tr><td>应用工程师 FAE</td><td class="mono">18-35K</td><td class="mono">22-50W</td><td class="num">3-8年</td><td class="num">硕士</td><td class="src">行业典型</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--text-faint);">
+      声明：数据采集于 2026-07 公开招聘平台（jobui / liepin / csdn / juejin），仅供参考，实际 offer 受能力 / 城市 / 期权影响。
+    </div>
+  </section>
+
+  <!-- ============ Slide 08 第 1 年支出 ============ -->
+  <section class="slide">
+    <div class="eyebrow">07 · Year 1 Spend</div>
+    <h2 class="slide-title"><span class="num">08</span>第 1 年公司支出明细</h2>
+    <div class="slide-sub">total ≈ 400W · estimate based on public salary + industry typical</div>
+    <div class="rule"></div>
+    <div class="pie-layout">
+      <div class="pie-svg-wrap">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <!-- donut chart Year1 total 400W -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#163066" stroke-width="34"/>
+          <!-- 人员工资 280W 70% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#00d4ff" stroke-width="34"
+            stroke-dasharray="351.86 502.65" stroke-dashoffset="0" transform="rotate(-90 130 130)"/>
+          <!-- MPW 50W 12.5% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ff9500" stroke-width="34"
+            stroke-dasharray="62.83 502.65" stroke-dashoffset="-351.86" transform="rotate(-90 130 130)"/>
+          <!-- 服务器 20W 5% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#7c5cff" stroke-width="34"
+            stroke-dasharray="25.13 502.65" stroke-dashoffset="-414.69" transform="rotate(-90 130 130)"/>
+          <!-- 办公 25W 6.25% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#2ee6a6" stroke-width="34"
+            stroke-dasharray="31.42 502.65" stroke-dashoffset="-439.82" transform="rotate(-90 130 130)"/>
+          <!-- 法务 15W 3.75% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ff5c8a" stroke-width="34"
+            stroke-dasharray="18.85 502.65" stroke-dashoffset="-471.24" transform="rotate(-90 130 130)"/>
+          <!-- 市场 10W 2.5% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ffd93d" stroke-width="34"
+            stroke-dasharray="12.57 502.65" stroke-dashoffset="-490.09" transform="rotate(-90 130 130)"/>
+          <text x="130" y="128" class="pie-center">400W</text>
+          <text x="130" y="148" class="pie-center-sub">YEAR 1 · 估算</text>
+        </svg>
+      </div>
+      <div class="pie-legend">
+        <div class="pl"><span class="sw" style="background:#00d4ff;"></span><b>人员工资</b><span>280W · 70%</span></div>
+        <div class="pl"><span class="sw" style="background:#ff9500;"></span><b>MPW 流片</b><span>50W · 12.5%</span></div>
+        <div class="pl"><span class="sw" style="background:#7c5cff;"></span><b>服务器 / CI</b><span>20W · 5%</span></div>
+        <div class="pl"><span class="sw" style="background:#2ee6a6;"></span><b>办公场地</b><span>25W · 6.25%</span></div>
+        <div class="pl"><span class="sw" style="background:#ff5c8a;"></span><b>法务 / 专利</b><span>15W · 3.75%</span></div>
+        <div class="pl"><span class="sw" style="background:#ffd93d;"></span><b>市场 / 会议</b><span>10W · 2.5%</span></div>
+        <div class="pl" style="border-top:1px dashed var(--border);padding-top:7px;margin-top:4px;">
+          <b style="color:var(--accent2);">合计</b><span style="color:var(--accent2);">400W · 100%</span>
+        </div>
+        <div class="pl" style="font-size:10.5px;color:var(--text-faint);">注：估算，MPW 来源 IMEC AMC 报价，场地参考上海张江</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 09 第 3 年支出 ============ -->
+  <section class="slide">
+    <div class="eyebrow">08 · Year 3 Spend</div>
+    <h2 class="slide-title"><span class="num">09</span>第 3 年公司支出明细</h2>
+    <div class="slide-sub">total ≈ 1099W · 3 tape-outs · cumulative 3yr ≈ 2700W</div>
+    <div class="rule"></div>
+    <div class="pie-layout">
+      <div class="pie-svg-wrap">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#163066" stroke-width="34"/>
+          <!-- 工资 714W 64.97% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#00d4ff" stroke-width="34"
+            stroke-dasharray="326.54 502.65" stroke-dashoffset="0" transform="rotate(-90 130 130)"/>
+          <!-- MPW 150W 13.65% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ff9500" stroke-width="34"
+            stroke-dasharray="68.61 502.65" stroke-dashoffset="-326.54" transform="rotate(-90 130 130)"/>
+          <!-- 服务器 50W 4.55% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#7c5cff" stroke-width="34"
+            stroke-dasharray="22.87 502.65" stroke-dashoffset="-395.15" transform="rotate(-90 130 130)"/>
+          <!-- 办公 60W 5.46% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#2ee6a6" stroke-width="34"
+            stroke-dasharray="27.44 502.65" stroke-dashoffset="-418.02" transform="rotate(-90 130 130)"/>
+          <!-- 法务 30W 2.73% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ff5c8a" stroke-width="34"
+            stroke-dasharray="13.72 502.65" stroke-dashoffset="-445.46" transform="rotate(-90 130 130)"/>
+          <!-- 市场 50W 4.55% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ffd93d" stroke-width="34"
+            stroke-dasharray="22.87 502.65" stroke-dashoffset="-459.18" transform="rotate(-90 130 130)"/>
+          <!-- 储备 45W 4.10% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#6b8fd1" stroke-width="34"
+            stroke-dasharray="20.61 502.65" stroke-dashoffset="-482.05" transform="rotate(-90 130 130)"/>
+          <text x="130" y="128" class="pie-center">1099W</text>
+          <text x="130" y="148" class="pie-center-sub">YEAR 3 · 估算</text>
+        </svg>
+      </div>
+      <div class="pie-legend">
+        <div class="pl"><span class="sw" style="background:#00d4ff;"></span><b>人员工资</b><span>714W · 65.0%</span></div>
+        <div class="pl"><span class="sw" style="background:#ff9500;"></span><b>MPW 流片</b><span>150W · 13.6% (3次)</span></div>
+        <div class="pl"><span class="sw" style="background:#7c5cff;"></span><b>服务器 / CI</b><span>50W · 4.5%</span></div>
+        <div class="pl"><span class="sw" style="background:#2ee6a6;"></span><b>办公场地</b><span>60W · 5.5%</span></div>
+        <div class="pl"><span class="sw" style="background:#ff5c8a;"></span><b>法务 / 专利</b><span>30W · 2.7%</span></div>
+        <div class="pl"><span class="sw" style="background:#ffd93d;"></span><b>市场 / 会议</b><span>50W · 4.5%</span></div>
+        <div class="pl"><span class="sw" style="background:#6b8fd1;"></span><b>储备金</b><span>45W · 4.1%</span></div>
+        <div class="pl" style="border-top:1px dashed var(--border);padding-top:7px;margin-top:4px;">
+          <b style="color:var(--accent2);">合计</b><span style="color:var(--accent2);">1099W · 累计3年≈2700W</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 10 第 5 年支出 ============ -->
+  <section class="slide">
+    <div class="eyebrow">09 · Year 5 Spend</div>
+    <h2 class="slide-title"><span class="num">10</span>第 5 年公司支出明细</h2>
+    <div class="slide-sub">total ≈ 2035W · 6 tape-outs · cumulative 5yr ≈ 6500W</div>
+    <div class="rule"></div>
+    <div class="pie-layout">
+      <div class="pie-svg-wrap">
+        <svg width="260" height="260" viewBox="0 0 260 260">
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#163066" stroke-width="34"/>
+          <!-- 工资 1215W 59.71% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#00d4ff" stroke-width="34"
+            stroke-dasharray="300.13 502.65" stroke-dashoffset="0" transform="rotate(-90 130 130)"/>
+          <!-- MPW 300W 14.74% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ff9500" stroke-width="34"
+            stroke-dasharray="74.09 502.65" stroke-dashoffset="-300.13" transform="rotate(-90 130 130)"/>
+          <!-- 服务器 100W 4.91% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#7c5cff" stroke-width="34"
+            stroke-dasharray="24.68 502.65" stroke-dashoffset="-374.22" transform="rotate(-90 130 130)"/>
+          <!-- 办公 120W 5.90% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#2ee6a6" stroke-width="34"
+            stroke-dasharray="29.66 502.65" stroke-dashoffset="-398.90" transform="rotate(-90 130 130)"/>
+          <!-- 法务 60W 2.95% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ff5c8a" stroke-width="34"
+            stroke-dasharray="14.83 502.65" stroke-dashoffset="-428.56" transform="rotate(-90 130 130)"/>
+          <!-- 市场 120W 5.90% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#ffd93d" stroke-width="34"
+            stroke-dasharray="29.66 502.65" stroke-dashoffset="-443.39" transform="rotate(-90 130 130)"/>
+          <!-- 储备 120W 5.90% -->
+          <circle cx="130" cy="130" r="80" fill="none" stroke="#6b8fd1" stroke-width="34"
+            stroke-dasharray="29.66 502.65" stroke-dashoffset="-473.05" transform="rotate(-90 130 130)"/>
+          <text x="130" y="128" class="pie-center">2035W</text>
+          <text x="130" y="148" class="pie-center-sub">YEAR 5 · 估算</text>
+        </svg>
+      </div>
+      <div class="pie-legend">
+        <div class="pl"><span class="sw" style="background:#00d4ff;"></span><b>人员工资</b><span>1215W · 59.7%</span></div>
+        <div class="pl"><span class="sw" style="background:#ff9500;"></span><b>MPW 流片</b><span>300W · 14.7% (6次)</span></div>
+        <div class="pl"><span class="sw" style="background:#7c5cff;"></span><b>服务器 / CI</b><span>100W · 4.9%</span></div>
+        <div class="pl"><span class="sw" style="background:#2ee6a6;"></span><b>办公场地</b><span>120W · 5.9%</span></div>
+        <div class="pl"><span class="sw" style="background:#ff5c8a;"></span><b>法务 / 专利</b><span>60W · 3.0%</span></div>
+        <div class="pl"><span class="sw" style="background:#ffd93d;"></span><b>市场 / 会议</b><span>120W · 5.9%</span></div>
+        <div class="pl"><span class="sw" style="background:#6b8fd1;"></span><b>储备金</b><span>120W · 5.9%</span></div>
+        <div class="pl" style="border-top:1px dashed var(--border);padding-top:7px;margin-top:4px;">
+          <b style="color:var(--accent2);">合计</b><span style="color:var(--accent2);">2035W · 累计5年≈6500W</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 11 资金需求汇总 ============ -->
+  <section class="slide">
+    <div class="eyebrow">10 · Capital Need</div>
+    <h2 class="slide-title"><span class="num">11</span>5 年资金需求汇总</h2>
+    <div class="slide-sub">angel / A / B rounds · recommendation based on spend estimate</div>
+    <div class="rule"></div>
+    <div class="capital-grid">
+      <div class="cap-card">
+        <div class="stage">第 1 年 · 天使轮</div>
+        <div class="big">400<span class="unit">W</span></div>
+        <div class="lbl">覆盖 1 年运营</div>
+        <div class="cum">建议融资 500W（含缓冲）</div>
+      </div>
+      <div class="cap-card a2">
+        <div class="stage">第 3 年累计 · A 轮</div>
+        <div class="big">2700<span class="unit">W</span></div>
+        <div class="lbl">覆盖 2-3 年</div>
+        <div class="cum">建议融资 2500W</div>
+      </div>
+      <div class="cap-card a3">
+        <div class="stage">第 5 年累计 · B 轮</div>
+        <div class="big">6500<span class="unit">W</span></div>
+        <div class="lbl">覆盖 4-5 年 + 商业化</div>
+        <div class="cum">建议融资 4000W</div>
+      </div>
+    </div>
+    <div class="pie-svg-wrap" style="display:block;">
+      <svg width="100%" height="200" viewBox="0 0 760 200" preserveAspectRatio="xMidYMid meet">
+        <!-- bar chart: 资金需求 -->
+        <!-- baseline -->
+        <line x1="60" y1="170" x2="740" y2="170" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+        <line x1="60" y1="40" x2="60" y2="170" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>
+        <!-- y axis labels -->
+        <text x="50" y="173" font-family="Consolas" font-size="10" fill="#5a7299" text-anchor="end">0</text>
+        <text x="50" y="108" font-family="Consolas" font-size="10" fill="#5a7299" text-anchor="end">3250W</text>
+        <text x="50" y="43" font-family="Consolas" font-size="10" fill="#5a7299" text-anchor="end">6500W</text>
+        <!-- gridlines -->
+        <line x1="60" y1="105" x2="740" y2="105" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="60" y1="40" x2="740" y2="40" stroke="rgba(255,255,255,0.05)" stroke-width="1" stroke-dasharray="3,3"/>
+        <!-- Year 1 bar 400W -->
+        <rect x="130" y="161.5" width="90" height="8.5" fill="#00d4ff" rx="2"/>
+        <text x="175" y="155" font-family="Consolas" font-size="13" fill="#33dfff" text-anchor="middle">400W</text>
+        <text x="175" y="186" font-family="Consolas" font-size="11" fill="#8fa8cc" text-anchor="middle">第1年</text>
+        <!-- Year 3 cumulative 2700W -->
+        <rect x="335" y="113.2" width="90" height="56.8" fill="#ff9500" rx="2"/>
+        <text x="380" y="107" font-family="Consolas" font-size="13" fill="#ff9500" text-anchor="middle">2700W</text>
+        <text x="380" y="186" font-family="Consolas" font-size="11" fill="#8fa8cc" text-anchor="middle">3年累计</text>
+        <!-- Year 5 cumulative 6500W -->
+        <rect x="540" y="40" width="90" height="130" fill="#2ee6a6" rx="2"/>
+        <text x="585" y="34" font-family="Consolas" font-size="13" fill="#2ee6a6" text-anchor="middle">6500W</text>
+        <text x="585" y="186" font-family="Consolas" font-size="11" fill="#8fa8cc" text-anchor="middle">5年累计</text>
+        <!-- title -->
+        <text x="60" y="25" font-family="Consolas" font-size="11" fill="#5a7299">累计资金需求 (W) · 建议</text>
+      </svg>
+    </div>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--text-faint);text-align:center;">
+      融资节奏：天使 500W → A 轮 2500W → B 轮 4000W（合计 7000W，含缓冲）。注：融资金额为基于支出估算的建议，实际以估值谈判为准。
+    </div>
+  </section>
+
+  <!-- ============ Slide 12 里程碑绑定 ============ -->
+  <section class="slide">
+    <div class="eyebrow">11 · Milestone Binding</div>
+    <h2 class="slide-title"><span class="num">12</span>资金 → 里程碑绑定</h2>
+    <div class="slide-sub">each round binds to verifiable dimension targets</div>
+    <div class="rule"></div>
+    <div class="ms-grid">
+      <div class="ms-row">
+        <div class="round">天使轮<small>500W · 第1年</small></div>
+        <div class="desc">D07 PPO 训练打通 · D10 Tauri MVP · D12 level-set demo<br><b>核心团队 7 人组建</b>，PPO 策略网络可收敛，Tauri 桌面原型可用</div>
+        <div class="delta">8.08 → 8.22</div>
+      </div>
+      <div class="ms-row a2">
+        <div class="round">A 轮<small>2500W · 2-3年</small></div>
+        <div class="desc">D11 Ngspice 接入 · D10 KLayout 深度集成 · D15 MPW 首次流片<br><b>团队扩至 17 人</b>，光电协同打通，首片 PIC 流片验证</div>
+        <div class="delta">8.22 → 8.48</div>
+      </div>
+      <div class="ms-row a3">
+        <div class="round">B 轮<small>4000W · 4-5年</small></div>
+        <div class="desc">D07 100+ PIC 预训练 · D13 量子硬件 · D15 学术合作生态<br><b>团队扩至 27 人</b>，RL 模型可迁移跨规模，学术生态成型</div>
+        <div class="delta">8.48 → 8.86</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;font-family:var(--mono);font-size:12px;color:var(--accent-bright);text-align:center;">
+      每轮资金绑定明确的维度达标节点，可验证 · 无 fall-back（R03）
+    </div>
+  </section>
+
+  <!-- ============ Slide 13 风险与应对 ============ -->
+  <section class="slide">
+    <div class="eyebrow">12 · Risk &amp; Mitigation</div>
+    <h2 class="slide-title"><span class="num">13</span>投资风险与应对</h2>
+    <div class="slide-sub">6 risk categories · mitigation strategy</div>
+    <div class="rule"></div>
+    <div class="risk-grid">
+      <div class="risk">
+        <h4>人才风险</h4>
+        <div class="rt">硅光 / EDA 人才稀缺，硅光设计 + RL 复合型人才市场存量少</div>
+        <div class="mit">高校合作（复旦/浙大光电）+ 期权激励 + 开源社区筛选</div>
+      </div>
+      <div class="risk">
+        <h4>技术风险</h4>
+        <div class="rt">PPO 训练不收敛，RL 布局策略可能无法迁移跨规模电路</div>
+        <div class="mit">解析法（DREAMPlace）作为基线 + 学术合作 + 课程学习</div>
+      </div>
+      <div class="risk">
+        <h4>市场风险</h4>
+        <div class="rt">海外巨头（Synopsys/Cadence/Lumerical）垄断，国产替代周期长</div>
+        <div class="mit">开源差异化 + 国产替代政策红利 + 垂直行业切入</div>
+      </div>
+      <div class="risk">
+        <h4>流片风险</h4>
+        <div class="rt">MPW 流片失败，工艺偏差导致器件性能不达标</div>
+        <div class="mit">多平台备份（SOI / SiN / LNOI）+ 仿真先验 + 迭代验证</div>
+      </div>
+      <div class="risk">
+        <h4>资金风险</h4>
+        <div class="rt">融资不及预期，估值下行导致 A/B 轮缩水</div>
+        <div class="mit">分阶段里程碑融资 + 政府科研补贴 + 自造血（咨询/授权）</div>
+      </div>
+      <div class="risk">
+        <h4>竞争风险</h4>
+        <div class="rt">gdsfactory 等开源项目追赶，算法壁垒被抹平</div>
+        <div class="mit">算法护城河（3,031 文献溯源）+ RL 训练数据壁垒 + 商业化先行</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 14 文献来源 + 封底 ============ -->
+  <section class="slide">
+    <div class="eyebrow">13 · Provenance</div>
+    <h2 class="slide-title"><span class="num">14</span>数据来源与诚实声明</h2>
+    <div class="slide-sub">salary provenance · academic honesty · no fall-back</div>
+    <div class="rule"></div>
+    <div class="refs">
+      <div class="ref"><div class="rid">1</div><div class="rt">jobui 硅光芯片设计工程师工资<span class="au">m.jobui.com/salary/quanguo-guiguanggongyigongchengshi/ind-xinpian/</span></div></div>
+      <div class="ref"><div class="rid">2</div><div class="rt">jobui EDA 软件工程师（上海）工资<span class="au">m.jobui.com/salary/shanghai-edaruanjiangongchengshi/ · 2026-07-09</span></div></div>
+      <div class="ref"><div class="rid">3</div><div class="rt">jobui 强化学习算法工程师工资<span class="au">m.jobui.com/salary/quanguo-qianghuaxuexisuanfagongchengshi/ · 2026-07-10</span></div></div>
+      <div class="ref"><div class="rid">4</div><div class="rt">jobui 电磁仿真工程师工资<span class="au">m.jobui.com/salary/quanguo-diancifangzhengongchengshi/size8/ · 2026-07-04</span></div></div>
+      <div class="ref"><div class="rid">5</div><div class="rt">jobui React 前端工程师工资<span class="au">m.jobui.com/salary/quanguo-reactqianduangongchengshi/ · 2026-07-10</span></div></div>
+      <div class="ref"><div class="rid">6</div><div class="rt">猎聘 liepin 硅光芯片设计岗位<span class="au">m.liepin.com/zpgggcsj3z1b/pn0/ · 2026-07</span></div></div>
+      <div class="ref"><div class="rid">7</div><div class="rt">猎聘 liepin EDA 工程师（上海）<span class="au">m.liepin.com/city-sh/zpedagcs/ · 2026-07</span></div></div>
+      <div class="ref"><div class="rid">8</div><div class="rt">CSDN EDA 工程师晋升阶梯与薪资<span class="au">blog.csdn.net/jgy1968/article/details/162769553 · 2026-07-10</span></div></div>
+      <div class="ref"><div class="rid">9</div><div class="rt">掘金 juejin 程序员薪资分布参考<span class="au">juejin.cn/post/7613927450733756426</span></div></div>
+      <div class="ref"><div class="rid">10</div><div class="rt">PoLaRIS 项目真实数据<span class="au">github.com/daheix/ai-LightRounting · 33模块 / 99,017行 / 1,614测试 / 3,031文献 / 8.08分</span></div></div>
+      <div class="disclaimer">
+        <h4>诚实声明（R02 学术诚信 / R03 无 fall-back）</h4>
+        <p>工资数据为公开招聘区间，采集于 2026-07 jobui / liepin / csdn / juejin，实际 offer 受能力 / 城市 / 期权影响。<b>支出金额为基于工资中位数的估算</b>，非精确预算；MPW 流片参考 IMEC AMC 公开报价，场地参考上海张江。<b>融资金额为建议值</b>，实际以估值谈判为准。项目数据（8.08分 / 33模块 / 1,614测试 / 3,031文献）为真实可验证。无假客户 / 无假收入 / 无 fall-back 兜底数据。</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="hud">
+  <button class="nav-btn" id="prev" aria-label="上一页">‹</button>
+  <span class="counter" id="counter">1 / 14</span>
+  <button class="nav-btn" id="next" aria-label="下一页">›</button>
+</div>
+
+<script>
+(function(){
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+  const counter = document.getElementById('counter');
+  const bar = document.getElementById('progress-bar');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+
+  function show(n){
+    if(n < 0 || n >= total) return;
+    slides[current].classList.remove('active');
+    if(n < current) slides[current].classList.add('prev');
+    else slides[current].classList.remove('prev');
+    current = n;
+    slides[current].classList.add('active');
+    slides[current].classList.remove('prev');
+    counter.textContent = (current + 1) + ' / ' + total;
+    bar.style.width = ((current + 1) / total * 100) + '%';
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.code === 'Space'){ e.preventDefault(); show(current + 1); }
+    else if(e.key === 'ArrowLeft'){ e.preventDefault(); show(current - 1); }
+    else if(e.key === 'Home'){ e.preventDefault(); show(0); }
+    else if(e.key === 'End'){ e.preventDefault(); show(total - 1); }
+  });
+
+  prevBtn.addEventListener('click', function(){ show(current - 1); });
+  nextBtn.addEventListener('click', function(){ show(current + 1); });
+
+  // 点击左右半屏翻页（避开控件）
+  document.getElementById('deck').addEventListener('click', function(e){
+    if(e.target.closest('.hud') || e.target.closest('button')) return;
+    const x = e.clientX;
+    const w = window.innerWidth;
+    if(x > w * 0.5) show(current + 1);
+    else show(current - 1);
+  });
+
+  show(0);
+})();
+</script>
+</body>
+</html>
