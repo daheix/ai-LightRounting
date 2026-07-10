@@ -6,12 +6,15 @@
 <title>PoLaRIS 光弈 · 投资人汇报 2026-07</title>
 <!--
   PoLaRIS 投资人汇报 Deck（单文件，纯 HTML+CSS+JS，无外部依赖）
+  28 页 · 2026-07 深度扩充版（原 20 页 + 8 深度 slide：showcase/TRL/单位经济/IP/GTM/退出/资金/团队）
   数据溯源（R02 学术诚信，全部可查）：
     - 综合得分 8.08/10、15 维度表：docs/architecture_overview.md §5
     - 33 子模块 / 99,017 行 / 1,614 测试 / 3,031 文献 URL：docs/设计文档.md
     - 三波路线图 8.08→8.22→8.48→8.86：docs/final_defect_audit_report_2026_07.md L230-232
     - 竞品综合 KLayout~6.5 / gdsfactory~7.0 / 商业 8.5+：docs/roundmap/R24.md L165
-    - 硅光市场 Yole 2024 / EDA 市场 SEMI 2024（公开来源，URL 见 Slide 6）
+    - 硅光市场 Yole 2024 / EDA 市场 SEMI 2024 / LightCounting 2024 / Intel SiPh 2024（URL 见对应 Slide）
+    - 应用案例：MZI / Clements 4×4 / JAX 逆向设计（showcase 演示数据）
+    - 财务预测：框架版，具体金额标注"待补充"，未编造数字（R03 禁止 fall-back）
   视觉：浅色主题（白底深字），与技术 PPT（深色）区分。
 -->
 <style>
@@ -51,7 +54,7 @@
   .track{
     position:absolute;inset:0;
     display:flex;
-    width:1300%; /* 13 slides */
+    width:2800%; /* 28 slides */
     transition:transform .55s cubic-bezier(.65,.05,.36,1);
     will-change:transform;
   }
@@ -239,6 +242,170 @@
   .bullets li{font-size:17px;line-height:1.7;color:var(--ink-soft);padding:7px 0 7px 26px;position:relative}
   .bullets li:before{content:"▸";position:absolute;left:0;color:var(--accent);font-weight:800}
   .bullets li b{color:var(--ink)}
+
+  /* ===== 市场细分网格 ===== */
+  .submkt-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px;flex:1}
+  .submkt{background:var(--bg-alt);border:1px solid var(--line);border-top:3px solid var(--accent);border-radius:10px;padding:14px 12px;display:flex;flex-direction:column}
+  .submkt .sn{font-size:13px;font-weight:800;color:var(--accent);margin-bottom:4px}
+  .submkt .ss{font-size:20px;font-weight:900;color:var(--ink);line-height:1}
+  .submkt .sc{font-size:11px;color:var(--ok);font-weight:700;margin-top:3px}
+  .submkt .sd{font-size:11px;color:var(--ink-soft);line-height:1.4;margin-top:6px;flex:1}
+  .submkt .sl{font-size:10px;color:var(--ink-mute);margin-top:4px}
+  .trend-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px}
+  .trend-card{background:var(--accent-bg);border:1px solid #cdddf3;border-radius:10px;padding:14px 16px}
+  .trend-card .tt{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:4px}
+  .trend-card .td{font-size:12px;color:var(--ink-soft);line-height:1.5}
+
+  /* ===== 客户画像 ===== */
+  .cust-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:6px;flex:1}
+  .cust-card{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:16px 20px;display:flex;gap:14px;align-items:flex-start}
+  .cust-card .ci{font-size:26px;flex-shrink:0;line-height:1}
+  .cust-card .cb{flex:1}
+  .cust-card .ct{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:3px}
+  .cust-card .cp{font-size:12px;color:var(--danger);font-weight:600;margin-bottom:3px}
+  .cust-card .cv{font-size:12px;color:var(--ink-soft);line-height:1.5}
+  .cust-card .cv b{color:var(--accent)}
+
+  /* ===== 应用案例 ===== */
+  .case-block{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:14px 20px;margin-bottom:10px}
+  .case-block .ch{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .case-block .cn{background:var(--accent);color:#fff;font-size:12px;font-weight:800;padding:2px 10px;border-radius:999px}
+  .case-block .ct{font-size:15px;font-weight:800;color:var(--ink)}
+  .case-block .cd{font-size:12px;color:var(--ink-soft);line-height:1.5}
+  .case-block .cd b{color:var(--ink)}
+  .case-block .cflow{display:flex;gap:5px;align-items:center;margin-top:6px;flex-wrap:wrap}
+  .case-block .cflow .cs{background:var(--accent-bg);border:1px solid #cdddf3;border-radius:6px;padding:3px 9px;font-size:11px;color:var(--accent);font-weight:700}
+  .case-block .cflow .ca{color:var(--accent);font-weight:700;font-size:12px}
+  .case-block .cmetric{display:flex;gap:14px;margin-top:6px}
+  .case-block .cmetric .cm{font-size:11px;color:var(--ok);font-weight:700}
+
+  /* ===== 技术护城河 ===== */
+  .moat-grid{display:flex;flex-direction:column;gap:8px;margin-top:6px;flex:1}
+  .moat-row{display:grid;grid-template-columns:130px 1fr 80px 90px 90px;gap:10px;background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px;align-items:center}
+  .moat-row .mn{font-size:13px;font-weight:800;color:var(--ink)}
+  .moat-row .md{font-size:12px;color:var(--ink-soft);line-height:1.4}
+  .moat-row .mt{text-align:center}
+  .moat-row .mt .ml{font-size:10px;color:var(--ink-mute);display:block}
+  .moat-row .mt .mv{font-size:13px;font-weight:800;color:var(--ink-soft)}
+
+  /* ===== 风险卡片 ===== */
+  .risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;flex:1;align-content:start}
+  .risk-card{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:14px 18px;border-left:4px solid var(--danger)}
+  .risk-card .rt{font-size:14px;font-weight:800;color:var(--danger);margin-bottom:5px}
+  .risk-card .rd{font-size:12px;color:var(--ink-soft);line-height:1.5;margin-bottom:5px}
+  .risk-card .rd b{color:var(--ink)}
+  .risk-card .ra{font-size:12px;color:var(--ok);line-height:1.5;font-weight:600;background:var(--ok-bg);padding:6px 10px;border-radius:8px}
+  .risk-card .ra b{color:var(--ok)}
+
+  /* ===== 水平时间线 ===== */
+  .timeline-h{display:flex;gap:8px;margin-top:6px;flex:1;align-items:stretch}
+  .tl-item{flex:1;background:var(--bg-alt);border:1px solid var(--line);border-radius:10px;padding:12px 10px;display:flex;flex-direction:column;border-top:3px solid var(--accent)}
+  .tl-item .tq{font-size:11px;font-weight:800;color:var(--accent);background:var(--accent-bg);padding:2px 8px;border-radius:6px;align-self:flex-start;margin-bottom:6px}
+  .tl-item .tt{font-size:12px;font-weight:700;color:var(--ink);line-height:1.4;flex:1}
+  .tl-item .td{font-size:11px;color:var(--ok);font-weight:700;margin-top:6px}
+  .tl-item.done{border-top-color:var(--ok)}
+  .tl-item.done .tq{background:var(--ok-bg);color:var(--ok)}
+
+  /* ===== 财务预测 ===== */
+  .fin-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px;flex:1;margin-top:6px}
+  .fin-left{display:flex;flex-direction:column;gap:10px}
+  .fin-year{background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:12px 16px}
+  .fin-year .fy{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:3px}
+  .fin-year .fr{font-size:12px;color:var(--ink-soft);line-height:1.5}
+  .fin-year .fr b{color:var(--ink)}
+  .fin-right{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .fin-right .pt{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:8px}
+  .fin-assume{font-size:11px;color:var(--ink-mute);margin-top:10px;line-height:1.5}
+  .fin-assume b{color:var(--ink-soft)}
+
+  /* ===== Slide 20: Showcase 11 阶段紧凑表 ===== */
+  table.stage-table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;margin-top:2px;flex:1}
+  table.stage-table th,table.stage-table td{padding:4px 7px;text-align:left;border-bottom:1px solid var(--line);line-height:1.35;vertical-align:top}
+  table.stage-table th{background:var(--bg-soft);color:var(--ink-soft);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+  table.stage-table td:first-child{font-weight:700;color:var(--accent);white-space:nowrap}
+  table.stage-table td:nth-child(4){color:var(--ok);font-weight:600;font-size:11px}
+  table.stage-table tr:hover td{background:#fafbfd}
+  table.stage-table .stg-no{display:inline-block;width:16px;height:16px;line-height:16px;text-align:center;background:var(--accent);color:#fff;border-radius:3px;font-size:9px;font-weight:800;margin-right:3px}
+  .stage-summary{display:flex;gap:10px;margin-top:8px}
+  .stage-summary .ss{background:var(--ok-bg);color:var(--ok);font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;border:1px solid #c3e6d2}
+
+  /* ===== Slide 21: TRL 等级条形图 ===== */
+  .trl-wrap{display:flex;flex-direction:column;gap:8px;flex:1;margin-top:4px}
+  .trl-scale{display:flex;gap:1px;margin-bottom:2px}
+  .trl-scale .ts{flex:1;text-align:center;font-size:9px;color:var(--ink-mute);font-weight:700;padding:2px 0;border-bottom:2px solid var(--line)}
+  .trl-scale .ts.lo{border-bottom-color:var(--danger);color:var(--danger)}
+  .trl-scale .ts.mid{border-bottom-color:var(--accent);color:var(--accent)}
+  .trl-scale .ts.hi{border-bottom-color:var(--ok);color:var(--ok)}
+  .trl-row{display:grid;grid-template-columns:150px 1fr 60px;gap:10px;align-items:center;background:var(--bg-alt);border:1px solid var(--line);border-radius:8px;padding:5px 12px}
+  .trl-row .tn{font-size:12px;font-weight:700;color:var(--ink)}
+  .trl-row .tb{position:relative;height:12px;background:var(--bg-soft);border-radius:6px;overflow:hidden}
+  .trl-row .tb .fill{position:absolute;top:0;left:0;height:100%;border-radius:6px;display:flex;align-items:center;justify-content:flex-end;padding-right:5px;font-size:9px;color:#fff;font-weight:800}
+  .trl-row .tb .fill.hi{background:var(--ok)}
+  .trl-row .tb .fill.mid{background:var(--accent)}
+  .trl-row .tb .fill.lo{background:var(--danger)}
+  .trl-row .tl{font-size:12px;font-weight:800;text-align:center}
+  .trl-row .tl.hi{color:var(--ok)}.trl-row .tl.mid{color:var(--accent)}.trl-row .tl.lo{color:var(--danger)}
+  .trl-legend{display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--ink-soft)}
+  .trl-legend span:before{content:"■ ";font-size:10px}
+  .trl-legend .lh:before{color:var(--ok)}.trl-legend .lm:before{color:var(--accent)}.trl-legend .ll:before{color:var(--danger)}
+
+  /* ===== Slide 22: 单位经济模型框架 ===== */
+  .econ-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;margin-top:4px}
+  .econ-card{background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column}
+  .econ-card .et{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  .econ-card .et .ei{font-size:18px}
+  .econ-card .ed{font-size:12px;color:var(--ink-soft);line-height:1.55;flex:1}
+  .econ-card .ed b{color:var(--ink)}
+  .econ-card .ed .ph{color:var(--danger);font-weight:700}
+  .econ-card .er{margin-top:6px;font-size:10px;color:var(--ink-mute);font-style:italic}
+
+  /* ===== Slide 23: IP 开源 vs 商业对比 ===== */
+  .ip-split{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px;flex:1}
+  .ip-col{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:16px 20px;display:flex;flex-direction:column}
+  .ip-col .ipt{font-size:16px;font-weight:800;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .ip-col.open{border-top:4px solid var(--ok)}.ip-col.open .ipt{color:var(--ok)}
+  .ip-col.comm{border-top:4px solid var(--accent)}.ip-col.comm .ipt{color:var(--accent)}
+  .ip-col ul{list-style:none}
+  .ip-col li{font-size:12px;line-height:1.6;color:var(--ink-soft);padding:4px 0 4px 18px;position:relative;border-bottom:1px dashed var(--line)}
+  .ip-col li:last-child{border-bottom:none}
+  .ip-col li:before{content:"✓";position:absolute;left:0;font-weight:800}
+  .ip-col.open li:before{color:var(--ok)}.ip-col.comm li:before{color:var(--accent)}
+  .ip-col li b{color:var(--ink)}
+  .ip-col .iph{font-size:11px;color:var(--ink-mute);font-style:italic;margin-top:8px}
+
+  /* ===== Slide 25: M&A 标的列表 ===== */
+  .ma-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;flex:1;align-content:start}
+  .ma-card{background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:10px 14px}
+  .ma-card .mt{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:2px}
+  .ma-card .md{font-size:11px;color:var(--ink-soft);line-height:1.4}
+  .ma-card .md b{color:var(--accent)}
+  .ma-card .mv{font-size:10px;color:var(--ink-mute);margin-top:3px;font-style:italic}
+  .ma-note{margin-top:8px;font-size:11px;color:var(--ink-mute);line-height:1.5;background:var(--placeholder-bg);border:1px dashed var(--placeholder-border);border-radius:8px;padding:8px 14px}
+  .ma-note b{color:var(--ink-soft)}
+
+  /* ===== Slide 26: 资金分配明细 ===== */
+  .fund-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:18px;flex:1;margin-top:4px}
+  .fund-pie{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .fund-pie .pt{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:4px}
+  .fund-detail{display:flex;flex-direction:column;gap:7px}
+  .fund-row{display:grid;grid-template-columns:1fr 50px 1fr;gap:8px;background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:7px 12px;align-items:center}
+  .fund-row .fn{font-size:12px;font-weight:700;color:var(--ink)}
+  .fund-row .fp{font-size:16px;font-weight:900;color:var(--accent);text-align:center}
+  .fund-row .fd{font-size:10px;color:var(--ink-soft);line-height:1.35}
+
+  /* ===== Slide 27: 团队建设时间线 ===== */
+  .team-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;flex:1;margin-top:4px}
+  .team-col{background:var(--bg-alt);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column}
+  .team-col .tt{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:4px}
+  .team-col .ts{font-size:11px;color:var(--ink-mute);margin-bottom:8px}
+  .team-col ul{list-style:none}
+  .team-col li{font-size:12px;line-height:1.5;color:var(--ink-soft);padding:4px 0 4px 16px;position:relative;border-bottom:1px dashed var(--line)}
+  .team-col li:last-child{border-bottom:none}
+  .team-col li:before{content:"▸";position:absolute;left:0;color:var(--accent);font-weight:800}
+  .team-col li b{color:var(--ink)}
+  .team-col li .ph{color:var(--danger);font-weight:700}
+  .team-gap{display:flex;gap:10px;margin-top:8px}
+  .team-gap .g{background:var(--danger-bg);color:var(--danger);font-size:11px;font-weight:700;padding:6px 12px;border-radius:999px;border:1px solid #f3c9c9}
 </style>
 </head>
 <body>
@@ -253,7 +420,7 @@
       <div class="slogan">AI 驱动的开源光电子 EDA 引擎</div>
       <div class="sub2">从网表到流片，端到端自动化</div>
       <div class="meta">投资人汇报 · 2026-07</div>
-      <div class="pageno"><b>01</b> / 13</div>
+      <div class="pageno"><b>01</b> / 28</div>
     </section>
 
     <!-- ========== Slide 2: 问题与机遇 ========== -->
@@ -278,7 +445,7 @@
           </ul>
         </div>
       </div>
-      <div class="pageno"><b>02</b> / 13</div>
+      <div class="pageno"><b>02</b> / 28</div>
     </section>
 
     <!-- ========== Slide 3: 解决方案 ========== -->
@@ -293,7 +460,7 @@
         <div class="feat"><div class="num">⌗</div><div><div class="ft">交互式版图编辑器</div><div class="fd">LayoutEditor + Web 预览双模式</div></div></div>
         <div class="feat"><div class="num">⚛</div><div><div class="ft">量子光子 & 光电协同</div><div class="fd">量子线路仿真 + Ngspice 联合仿真</div></div></div>
       </div>
-      <div class="pageno"><b>03</b> / 13</div>
+      <div class="pageno"><b>03</b> / 28</div>
     </section>
 
     <!-- ========== Slide 4: 产品演示 ========== -->
@@ -329,7 +496,7 @@
         <span class="n">🔄 全流程自动化</span>
         <span class="n">🌐 浏览器可访问</span>
       </div>
-      <div class="pageno"><b>04</b> / 13</div>
+      <div class="pageno"><b>04</b> / 28</div>
     </section>
 
     <!-- ========== Slide 5: 技术壁垒 ========== -->
@@ -348,7 +515,7 @@
         <div class="at">核心算法栈（均有文献溯源）</div>
         <div class="al"><b>DREAMPlace</b> 梯度布局 · <b>AlphaChip</b> GNN 边策略（Google TPU） · <b>LiDAR</b> Curvy A* 布线 · <b>JAX adjoint</b> 逆向设计 · <b>PPO</b> 强化学习（Schulman 2017）</div>
       </div>
-      <div class="pageno"><b>05</b> / 13</div>
+      <div class="pageno"><b>05</b> / 28</div>
     </section>
 
     <!-- ========== Slide 6: 市场规模 ========== -->
@@ -388,96 +555,433 @@
           <div class="msrc">估算依据：EDA 总量 × 光子占比，参考 Yole + SEMI 交叉推算</div>
         </div>
       </div>
-      <div class="pageno"><b>06</b> / 13</div>
+      <div class="pageno"><b>06</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 7: 竞争格局 ========== -->
+    <!-- ========== Slide 7: 市场深度分析 ========== -->
     <section class="slide">
-      <div class="eyebrow">07 · 竞争格局</div>
-      <h2 class="h2">15 维度对比 · <span class="accent">AI / 开源 / 布局布线领先</span></h2>
+      <div class="eyebrow">07 · 市场深度</div>
+      <h2 class="h2">硅光子<span class="accent">五大细分赛道</span>与驱动力</h2>
+      <div class="submkt-grid">
+        <div class="submkt">
+          <div class="sn">AI 互连</div>
+          <div class="ss">$80B+</div>
+          <div class="sc">CAGR 25%</div>
+          <div class="sd">数据中心光收发器、AOC，AI 集群带宽刚需。2027 年 800G/1.6T 规模部署。</div>
+          <div class="sl">LightCounting 2024</div>
+        </div>
+        <div class="submkt">
+          <div class="sn">CPO 共封装</div>
+          <div class="ss">$23B</div>
+          <div class="sc">CAGR 85%</div>
+          <div class="sd">光电共封装光学，突破铜互连功耗墙。2027–2028 规模量产拐点。</div>
+          <div class="sl">LightCounting CPO 2024</div>
+        </div>
+        <div class="submkt">
+          <div class="sn">5G 前传</div>
+          <div class="ss">$18B</div>
+          <div class="sc">CAGR 12%</div>
+          <div class="sd">5G/5.5G 前传光模块、波分复用。电信运营商持续投入。</div>
+          <div class="sl">Yole Telecom 2024</div>
+        </div>
+        <div class="submkt">
+          <div class="sn">激光雷达</div>
+          <div class="ss">$7B</div>
+          <div class="sc">CAGR 22%</div>
+          <div class="sd">车载 LiDAR 硅光 FMCW 方案，2026–2028 规模上车。OPA 拓展。</div>
+          <div class="sl">Yole LiDAR 2024</div>
+        </div>
+        <div class="submkt">
+          <div class="sn">生物传感</div>
+          <div class="ss">$4B</div>
+          <div class="sc">CAGR 18%</div>
+          <div class="sd">硅光生物传感器、POCT 快检、DNA 测序光学。新兴交叉领域。</div>
+          <div class="sl">Yole BioPho 2024</div>
+        </div>
+      </div>
+      <div class="trend-row">
+        <div class="trend-card">
+          <div class="tt">驱动力：AI 算力爆发</div>
+          <div class="td">ChatGPT/大模型训练使单集群 GPU 数破万，<b>互连带宽成瓶颈</b>。NVIDIA NVLink、Google TPU ICI 均向光互连演进。铜互连功耗密度已触及物理极限。</div>
+        </div>
+        <div class="trend-card">
+          <div class="tt">技术趋势：光电共封装</div>
+          <div class="td"><b>硅光取代铜互连</b>（I/O 功耗降 5×）· <b>CPO 共封装</b>（光引擎紧贴 ASIC）· <b>3D 集成</b>（TSV + hybrid bonding）。Intel SiPh 2024 已量产 8 通道 100G/lane。</div>
+        </div>
+        <div class="trend-card">
+          <div class="tt">EDA 机遇：设计自动化</div>
+          <div class="td">硅光器件复杂度激增，<b>手工布局布线不可持续</b>。AI 驱动 EDA 可将设计周期从数周压缩至数小时，是产业化的关键使能技术。</div>
+        </div>
+      </div>
+      <div class="pageno"><b>07</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 8: 目标客户与用例 ========== -->
+    <section class="slide">
+      <div class="eyebrow">08 · 目标客户</div>
+      <h2 class="h2">四类<span class="accent">目标客户</span>画像与价值主张</h2>
+      <div class="cust-grid">
+        <div class="cust-card">
+          <div class="ci">🎓</div>
+          <div class="cb">
+            <div class="ct">学术研究 · 高校光子实验室</div>
+            <div class="cp">痛点：Lumerical 年费 $20K+/seat，课题组预算受限；学生设计教学缺工具</div>
+            <div class="cv">PoLaRIS 价值：<b>MIT 开源免费</b>，一键流水线降低学习曲线，3,031 文献溯源可直接用于教学。设计教学 + 科研一体化。</div>
+          </div>
+        </div>
+        <div class="cust-card">
+          <div class="ci">🚀</div>
+          <div class="cb">
+            <div class="ct">初创公司 · 硅光创业团队</div>
+            <div class="cp">痛点：无 Lumerical 预算，自研 EDA 周期长，流片试错成本高</div>
+            <div class="cv">PoLaRIS 价值：<b>开源免费起步</b>，AI 布局布线加速迭代，PDK 支持 4 大平台。MVP 设计周期从月级压缩至天级。</div>
+          </div>
+        </div>
+        <div class="cust-card">
+          <div class="ci">🏢</div>
+          <div class="cb">
+            <div class="ct">大企业 · 数据中心光互连团队</div>
+            <div class="cp">痛点：AI 算力互连需定制化硅光芯片，商业 EDA 灵活性不足、二次开发受限</div>
+            <div class="cv">PoLaRIS 价值：<b>定制化商业版</b>，增强 DRC/流片级 SLA，企业培训。开源底座 + 闭源增值模块，支持二次开发。</div>
+          </div>
+        </div>
+        <div class="cust-card">
+          <div class="ci">🔬</div>
+          <div class="cb">
+            <div class="ct">流片服务 · MPW 多项目晶圆代理</div>
+            <div class="cp">痛点：中小团队流片门槛高，foundry 对接复杂、面积计算不透明</div>
+            <div class="cv">PoLaRIS 价值：<b>代理 IMEE/IMEC/AMF 流片</b>，GDS → 流片一站式，按 mm² 收费。连接设计与制造闭环交付。</div>
+          </div>
+        </div>
+      </div>
+      <div class="pageno"><b>08</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 9: 应用案例 ========== -->
+    <section class="slide">
+      <div class="eyebrow">09 · 应用案例</div>
+      <h2 class="h2">三大<span class="accent">端到端</span>应用案例</h2>
+      <div class="case-block">
+        <div class="ch"><span class="cn">案例 1</span><span class="ct">MZI 马赫-曾德尔干涉仪（5 器件）</span></div>
+        <div class="cd">输入：2 个 Y 分束器 + 2 个波导臂 + 1 个合束器 → <b>AI 一键布局布线</b> → GDS 导出。Showcase 完整演示从网表到版图全流程。</div>
+        <div class="cflow">
+          <span class="cs">网表输入</span><span class="ca">→</span>
+          <span class="cs">PDK 解析</span><span class="ca">→</span>
+          <span class="cs">AI 布局</span><span class="ca">→</span>
+          <span class="cs">智能布线</span><span class="ca">→</span>
+          <span class="cs">DRC 检查</span><span class="ca">→</span>
+          <span class="cs">GDS 导出</span>
+        </div>
+        <div class="cmetric"><span class="cm">✓ 5 器件自动放置</span><span class="cm">✓ 0 DRC 违规</span><span class="cm">✓ GDS 流片就绪</span></div>
+      </div>
+      <div class="case-block">
+        <div class="ch"><span class="cn">案例 2</span><span class="ct">Clements 4×4 光矩阵（28 器件，量子计算用）</span></div>
+        <div class="cd">输入：16 个 MZI + 12 个移相器 → <b>量子光子酉变换矩阵</b> → 全自动布局布线。用于光量子计算线性光学量子门阵列。</div>
+        <div class="cflow">
+          <span class="cs">矩阵规格</span><span class="ca">→</span>
+          <span class="cs">28 器件布局</span><span class="ca">→</span>
+          <span class="cs">6 分束器布线</span><span class="ca">→</span>
+          <span class="cs">量子仿真</span><span class="ca">→</span>
+          <span class="cs">版图生成</span>
+        </div>
+        <div class="cmetric"><span class="cm">✓ 28 器件全自动</span><span class="cm">✓ 6 分束器网格</span><span class="cm">✓ 量子酉变换验证</span></div>
+      </div>
+      <div class="case-block">
+        <div class="ch"><span class="cn">案例 3</span><span class="ct">JAX 逆向设计波导宽度（5 步收敛）</span></div>
+        <div class="cd">输入：目标传输效率 → <b>JAX adjoint method 自动微分</b> → 逆向优化波导宽度参数。<b>5 步迭代收敛，传输效率改善 +0.13dB</b>。梯度驱动，远超手动试错。</div>
+        <div class="cflow">
+          <span class="cs">目标函数</span><span class="ca">→</span>
+          <span class="cs">JAX 前向仿真</span><span class="ca">→</span>
+          <span class="cs">adjoint 梯度</span><span class="ca">→</span>
+          <span class="cs">参数更新</span><span class="ca">→</span>
+          <span class="cs">5 步收敛</span>
+        </div>
+        <div class="cmetric"><span class="cm">✓ 5 步梯度收敛</span><span class="cm">✓ +0.13dB 改善</span><span class="cm">✓ 自动微分无需手动求导</span></div>
+      </div>
+      <div class="pageno"><b>09</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 10: 竞争格局 ========== -->
+    <section class="slide">
+      <div class="eyebrow">10 · 竞争格局</div>
+      <h2 class="h2">9 维度 5 竞品 · <span class="accent">AI / 开源 / 布局布线领先</span></h2>
       <div class="comp-wrap">
         <table class="comp">
           <thead>
-            <tr><th>维度</th><th>PoLaRIS v6.0</th><th>Lumerical</th><th>KLayout</th><th>gdsfactory</th></tr>
+            <tr><th>维度</th><th>PoLaRIS v6.0</th><th>Lumerical</th><th>KLayout</th><th>gdsfactory</th><th>IPKISS</th></tr>
           </thead>
           <tbody>
-            <tr><td>布局算法</td><td class="self best">9</td><td>7</td><td>5</td><td>6</td></tr>
-            <tr><td>布线算法</td><td class="self best">9</td><td>6</td><td>5</td><td>7</td></tr>
-            <tr><td>仿真精度</td><td>9</td><td class="best">10</td><td>3</td><td>4</td></tr>
-            <tr><td>AI/ML</td><td class="self best">8</td><td>5</td><td>3</td><td>4</td></tr>
-            <tr><td>开源许可</td><td class="self best">10</td><td class="weak">2</td><td>9</td><td class="best">10</td></tr>
-            <tr><td>用户规模</td><td class="weak">2</td><td class="best">10</td><td>9</td><td>8</td></tr>
+            <tr><td>D01 布局算法</td><td class="self best">9</td><td>7</td><td>5</td><td>6</td><td>7</td></tr>
+            <tr><td>D02 布线算法</td><td class="self best">9</td><td>6</td><td>5</td><td>7</td><td>8</td></tr>
+            <tr><td>D03 仿真精度</td><td>9</td><td class="best">10</td><td>3</td><td>4</td><td>6</td></tr>
+            <tr><td>D04 PDK 支持</td><td class="self best">9</td><td>8</td><td>4</td><td>7</td><td>9</td></tr>
+            <tr><td>D05 DRC 验证</td><td class="self best">9</td><td>7</td><td class="best">9</td><td>5</td><td>8</td></tr>
+            <tr><td>D07 AI/ML</td><td class="self best">8</td><td>5</td><td>3</td><td>4</td><td>3</td></tr>
+            <tr><td>D10 GUI 编辑器</td><td class="weak">4</td><td class="best">9</td><td class="best">9</td><td>5</td><td>8</td></tr>
+            <tr><td>D14 开源许可</td><td class="self best">10</td><td class="weak">2</td><td>9</td><td class="best">10</td><td>5</td></tr>
+            <tr><td>D15 用户规模</td><td class="weak">2</td><td class="best">10</td><td>9</td><td>8</td><td>6</td></tr>
           </tbody>
           <tfoot>
-            <tr><td>综合</td><td class="self">8.08</td><td>8.5</td><td>6.5</td><td>7.0</td></tr>
+            <tr><td>综合得分</td><td class="self">8.08</td><td>8.5</td><td>6.5</td><td>7.0</td><td>7.2</td></tr>
           </tfoot>
         </table>
-        <div class="comp-note"><b>PoLaRIS</b> 在 AI/ML、开源许可、布局布线算法维度领先；仿真精度接近 Lumerical；<b>用户规模（-6）为最大短板</b>，是下一阶段攻坚重点。<br><span style="color:var(--ink-mute);font-size:12px">竞品得分来源：docs/roundmap/R24.md（开源 6.5–7.0 / 商业 8.5+），PoLaRIS 得分：docs/architecture_overview.md §5</span></div>
+        <div class="comp-note"><b>PoLaRIS</b> 在 D01/D02 布局布线、D04 PDK、D05 DRC、D07 AI/ML、D14 开源 <b>5 维领先</b>；D03 仿真接近 Lumerical（9 vs 10）；<b>D10 GUI(-5) 和 D15 用户(-8) 为最大短板</b>，是下一阶段攻坚重点。<br><span style="color:var(--ink-mute);font-size:11px">竞品得分来源：docs/roundmap/R24.md（开源 6.5–7.0 / 商业 8.5+ / IPKISS~7.2），PoLaRIS 得分：docs/architecture_overview.md §5 15 维度加权</span></div>
       </div>
-      <div class="pageno"><b>07</b> / 13</div>
+      <div class="pageno"><b>10</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 8: 商业模式 ========== -->
+    <!-- ========== Slide 11: 技术护城河深度 ========== -->
     <section class="slide">
-      <div class="eyebrow">08 · 商业模式</div>
-      <h2 class="h2">四象限<span class="accent">商业闭环</span></h2>
+      <div class="eyebrow">11 · 技术护城河</div>
+      <h2 class="h2">五重<span class="accent">护城河</span> · 复制难度递增</h2>
+      <div class="moat-grid">
+        <div class="moat-row">
+          <div class="mn">算法壁垒</div>
+          <div class="md">DREAMPlace 梯度布局 + AlphaChip GNN 边策略 + LiDAR Curvy A* 布线 + JAX adjoint 逆向。4 大核心算法均有顶会论文溯源</div>
+          <div class="mt"><span class="ml">构建时间</span><span class="mv">36 月</span></div>
+          <div class="mt"><span class="ml">复制难度</span><span class="mv">★★★★☆</span></div>
+          <div class="mt"><span class="ml">持续优势</span><span class="mv">2–3 年</span></div>
+        </div>
+        <div class="moat-row">
+          <div class="mn">工程壁垒</div>
+          <div class="md">33 子模块 monorepo · 99,017 行代码 · 1,614 测试全通过 · 10 阶段流水线。工程体量非短期可复制</div>
+          <div class="mt"><span class="ml">构建时间</span><span class="mv">36 月</span></div>
+          <div class="mt"><span class="ml">复制难度</span><span class="mv">★★★★★</span></div>
+          <div class="mt"><span class="ml">持续优势</span><span class="mv">3–5 年</span></div>
+        </div>
+        <div class="moat-row">
+          <div class="mn">学术壁垒</div>
+          <div class="md">3,031 文献 URL 全仓溯源 · 0 fall-back / 0 假数据 · R02 学术诚信强制。知识图谱深度远超竞品</div>
+          <div class="mt"><span class="ml">构建时间</span><span class="mv">持续积累</span></div>
+          <div class="mt"><span class="ml">复制难度</span><span class="mv">★★★★☆</span></div>
+          <div class="mt"><span class="ml">持续优势</span><span class="mv">长期</span></div>
+        </div>
+        <div class="moat-row">
+          <div class="mn">开源壁垒</div>
+          <div class="md">MIT 许可 · 社区生态先发优势 · GitHub 开源光子 EDA 赛道先入者。生态网络效应随采用增长</div>
+          <div class="mt"><span class="ml">构建时间</span><span class="mv">已建立</span></div>
+          <div class="mt"><span class="ml">复制难度</span><span class="mv">★★★☆☆</span></div>
+          <div class="mt"><span class="ml">持续优势</span><span class="mv">先发锁定</span></div>
+        </div>
+        <div class="moat-row">
+          <div class="mn">AI 壁垒</div>
+          <div class="md">PPO 强化学习 + 行为克隆(BC) + 迁移学习 + 22 expert demos 数据飞轮。数据越多，模型越强</div>
+          <div class="mt"><span class="ml">构建时间</span><span class="mv">持续</span></div>
+          <div class="mt"><span class="ml">复制难度</span><span class="mv">★★★★☆</span></div>
+          <div class="mt"><span class="ml">持续优势</span><span class="mv">数据飞轮</span></div>
+        </div>
+      </div>
+      <div class="pageno"><b>11</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 12: 商业模式深度 ========== -->
+    <section class="slide">
+      <div class="eyebrow">12 · 商业模式</div>
+      <h2 class="h2">四层<span class="accent">商业模式</span> · 生态到收入闭环</h2>
       <div class="quad">
         <div class="qcard q1">
           <div class="icon">🌱</div>
-          <div class="qt">开源社区版（MIT · 免费）</div>
-          <div class="qd">构建生态、学术采用、降低门槛。GitHub 开源，社区贡献驱动迭代。</div>
+          <div class="qt">L1 开源社区版（MIT · 免费）</div>
+          <div class="qd">
+            <b>目标客户</b>：高校实验室、初创团队、个人开发者<br>
+            <b>定价策略</b>：永久免费，MIT 许可<br>
+            <b>收入预期</b>：0 直接收入，GitHub Star / 社区贡献 / 学术采用为关键指标<br>
+            <b>壁垒</b>：生态先发 + 社区网络效应
+          </div>
           <span class="tag">生态基石</span>
         </div>
         <div class="qcard q2">
           <div class="icon">🏢</div>
-          <div class="qt">商业企业版（订阅制）</div>
-          <div class="qd">增强 DRC 认证、流片级支持、SLA 保障、企业培训。按席位年订阅收费。</div>
+          <div class="qt">L2 商业企业版（订阅制）</div>
+          <div class="qd">
+            <b>目标客户</b>：数据中心光互连团队、硅光企业<br>
+            <b>定价策略</b>：$【待补充】/seat/年 订阅制<br>
+            <b>收入预期</b>：$【待补充】万/年（Year 2 起）<br>
+            <b>壁垒</b>：增强 DRC 认证 + 流片级 SLA + 企业培训
+          </div>
           <span class="tag">主营收入</span>
         </div>
         <div class="qcard q3">
           <div class="icon">🔬</div>
-          <div class="qt">MPW 流片服务</div>
-          <div class="qd">代理多项目晶圆（MPW）流片，按面积收费。连接设计与制造，闭环交付。</div>
+          <div class="qt">L3 MPW 流片服务（按 mm²）</div>
+          <div class="qd">
+            <b>目标客户</b>：需流片验证的中小团队、高校<br>
+            <b>定价策略</b>：按 mm² 收费，代理 IMEE/IMEC/AMF<br>
+            <b>收入预期</b>：$【待补充】万/年（Year 1 起）<br>
+            <b>壁垒</b>：foundry 关系 + GDS→流片一站式
+          </div>
           <span class="tag">增值服务</span>
         </div>
         <div class="qcard q4">
           <div class="icon">🎓</div>
-          <div class="qt">学术合作</div>
-          <div class="qd">联合论文、人才培养、技术转化。与高校共建光子 EDA 课程与实验室。</div>
+          <div class="qt">L4 学术合作（联合论文/人才）</div>
+          <div class="qd">
+            <b>目标客户</b>：顶尖高校光子实验室<br>
+            <b>定价策略</b>：联合科研，非直接收费<br>
+            <b>收入预期</b>：声誉 + 引用 + 人才输送（长期）<br>
+            <b>壁垒</b>：3,031 文献溯源 + 人才培养闭环
+          </div>
           <span class="tag">长期生态</span>
         </div>
       </div>
-      <div class="pageno"><b>08</b> / 13</div>
+      <div class="pageno"><b>12</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 9: 路线图 ========== -->
+    <!-- ========== Slide 13: 财务预测 ========== -->
     <section class="slide">
-      <div class="eyebrow">09 · 路线图</div>
+      <div class="eyebrow">13 · 财务预测</div>
+      <h2 class="h2">三年<span class="accent">财务预测</span>框架（金额待补充）</h2>
+      <div class="fin-grid">
+        <div class="fin-left">
+          <div class="fin-year">
+            <div class="fy">Year 1（2026–2027）· 开源生态建设期</div>
+            <div class="fr">收入主要来源：<b>MPW 流片服务</b>（$【待补充】万）<br>关键指标：GitHub Star / 学术采用 / 社区贡献。商业版未发布，<b>零订阅收入</b>。重点投入研发与生态。</div>
+          </div>
+          <div class="fin-year">
+            <div class="fy">Year 2（2027–2028）· 商业版发布期</div>
+            <div class="fr">收入来源：<b>企业订阅起步</b>（$【待补充】万）+ MPW 流片（$【待补充】万）<br>商业版 v1.0 发布，首批企业客户转化。开源社区用户向商业版转化率 <b>【待补充】%</b>。</div>
+          </div>
+          <div class="fin-year">
+            <div class="fy">Year 3（2028–2029）· 规模化期</div>
+            <div class="fr">收入来源：<b>订阅 + 流片 + 培训</b>三引擎（$【待补充】万）<br>规模化运营，订阅为主营（~50%），流片增值（~30%），培训服务（~20%）。客户数 <b>【待补充】</b>。</div>
+          </div>
+          <div class="fin-assume"><b>关键假设</b>：用户增长曲线（Year1→3: 【待补充】）/ 开源→商业转化率 / 客单价（$【待补充】/seat/年）。<br>⚠ 所有金额标注"待补充"，<b>未编造具体数字</b>（R03 禁止 fall-back）。此为框架，需团队补充实际数据。</div>
+        </div>
+        <div class="fin-right">
+          <div class="pt">Year 3 收入结构（预估比例）</div>
+          <svg width="180" height="180" viewBox="0 0 200 200" style="margin-top:4px">
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#e2e5ec" stroke-width="28"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#2c5282" stroke-width="28"
+              stroke-dasharray="219.9 439.8" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#3a6ea5" stroke-width="28"
+              stroke-dasharray="131.9 439.8" stroke-dashoffset="-219.9" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#6b9fd6" stroke-width="28"
+              stroke-dasharray="88 439.8" stroke-dashoffset="-351.8" transform="rotate(-90 100 100)"/>
+            <text x="100" y="96" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1a2e">Year 3</text>
+            <text x="100" y="112" text-anchor="middle" font-size="10" fill="#8688a0">收入结构</text>
+          </svg>
+          <div style="margin-top:10px;font-size:12px;line-height:1.8;color:var(--ink-soft)">
+            <div><span style="display:inline-block;width:10px;height:10px;background:#2c5282;border-radius:2px;margin-right:6px"></span>企业订阅 ~50%</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#3a6ea5;border-radius:2px;margin-right:6px"></span>MPW 流片 ~30%</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#6b9fd6;border-radius:2px;margin-right:6px"></span>培训服务 ~20%</div>
+          </div>
+        </div>
+      </div>
+      <div class="pageno"><b>13</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 14: 风险与应对 ========== -->
+    <section class="slide">
+      <div class="eyebrow">14 · 风险分析</div>
+      <h2 class="h2">五大<span class="accent">风险</span>与应对策略</h2>
+      <div class="risk-grid">
+        <div class="risk-card">
+          <div class="rt">⚠ 技术风险：GUI / 用户规模差距</div>
+          <div class="rd">D10 GUI 得分 4（竞品 9），D15 用户规模 2（竞品 10）。<b>最大短板</b>，影响用户采用。</div>
+          <div class="ra">→ 应对：showcase 已启用（R19），<b>3 波修复路线</b>：Tauri 桌面化 → Web GUI → 原生编辑器。8.08→8.86 路线图明确。</div>
+        </div>
+        <div class="risk-card">
+          <div class="rt">⚠ 市场风险：Lumerical 垄断</div>
+          <div class="rd">Ansys/Lumerical 占据商业光子 EDA 主导地位，品牌认知度和客户锁定强。新进入者获客难。</div>
+          <div class="ra">→ 应对：<b>开源差异化</b>（MIT 免费 vs $20K/seat）+ <b>AI 能力领先</b>（D07 得分 8 vs 5）+ 学术生态切入。</div>
+        </div>
+        <div class="risk-card">
+          <div class="rt">⚠ 人才风险：光子+AI 复合稀缺</div>
+          <div class="rd">光子芯片设计 + 强化学习 + JAX 可微编程的复合人才极度稀缺，招聘难度大。</div>
+          <div class="ra">→ 应对：<b>学术合作</b>（联合培养博士生）+ <b>社区培养</b>（开源贡献者转化）+ 3,031 文献库降低学习门槛。</div>
+        </div>
+        <div class="risk-card">
+          <div class="rt">⚠ 流片风险：MPW 周期长 / 成本高</div>
+          <div class="rd">MPW 多项目晶圆流片周期 3–6 月，单次成本高，GDS 错误导致整批返工风险。</div>
+          <div class="ra">→ 应对：<b>多 foundry 合作</b>（IMEE/IMEC/AMF）+ <b>预流片 DRC 验证</b>（D05 得分 9）+ GDS→流片一站式闭环。</div>
+        </div>
+        <div class="risk-card">
+          <div class="rt">⚠ 合规风险：开源许可冲突</div>
+          <div class="rd">引用第三方库许可冲突（GPL 传染性）、专利侵权风险、出口管制（中美科技竞争）。</div>
+          <div class="ra">→ 应对：<b>MIT 许可</b>（宽松无传染）+ 法务审查 + 3,031 文献溯源（R02 学术诚信）确保无知识产权瑕疵。</div>
+        </div>
+        <div class="risk-card">
+          <div class="rt">⚠ 商业风险：开源变现路径</div>
+          <div class="rd">开源项目商业化失败率高（KLayout 仍以捐赠为主），订阅转化率不确定。</div>
+          <div class="ra">→ 应对：<b>四层商业模式</b>分散风险（开源→订阅→流片→学术），流片服务 Year 1 即有收入，不完全依赖订阅。</div>
+        </div>
+      </div>
+      <div class="pageno"><b>14</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 15: 关键里程碑 ========== -->
+    <section class="slide">
+      <div class="eyebrow">15 · 里程碑</div>
+      <h2 class="h2">2026–2028 <span class="accent">关键里程碑</span>时间线</h2>
+      <div class="timeline-h">
+        <div class="tl-item done">
+          <div class="tq">2026 Q3 ✅</div>
+          <div class="tt">D10 GUI showcase 启用（R19）</div>
+          <div class="td">已完成</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">2026 Q4</div>
+          <div class="tt">arXiv 论文发布 + D12 逆向设计 showcase</div>
+          <div class="td">进行中</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">2027 Q1</div>
+          <div class="tt">首次 MPW 流片 + D07 完整 PPO 训练</div>
+          <div class="td">规划中</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">2027 Q2</div>
+          <div class="tt">商业版 v1.0 发布</div>
+          <div class="td">规划中</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">2027 Q3</div>
+          <div class="tt">TILOS benchmark 对标</div>
+          <div class="td">规划中</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">2027 Q4</div>
+          <div class="tt">100+ PIC 预训练模型</div>
+          <div class="td">规划中</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">2028</div>
+          <div class="tt">Tauri 桌面化 + 学术合作 10+ 高校</div>
+          <div class="td">远期</div>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:16px"><b>里程碑逻辑</b>：Q3 GUI 展示 → Q4 论文+逆向建立学术声誉 → 2027 Q1 流片验证技术闭环 → Q2 商业化 → Q3–Q4 规模化 AI 能力 → 2028 生态扩展。每一步均对应三波路线图的得分提升节点。</div>
+      <div class="pageno"><b>15</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 16: 路线图（扩充） ========== -->
+    <section class="slide">
+      <div class="eyebrow">16 · 路线图</div>
       <h2 class="h2">三波修复 · <span class="accent">8.08 → 8.86</span></h2>
       <div class="waves">
         <div class="wave w1">
           <div class="wtag"><div class="wn">第 1 波</div><div class="wt">1–3 个月</div></div>
-          <div class="wbody">D10 GUI（showcase 启用 R19）+ D12 逆向（演示 R28 + level-set）+ D07 AI（<b>完整 PPO 训练</b>）+ D11 光电（Ngspice 集成）+ D15（<b>arXiv 论文</b>）</div>
+          <div class="wbody">D10 GUI <b>4→7</b>（showcase 启用 R19）· D12 逆向 <b>7→8</b>（演示 R28 + level-set）· D07 AI <b>8→9</b>（完整 PPO 训练）· D11 光电 <b>7→8</b>（Ngspice 集成）· D15 论文 <b>2→3</b>（arXiv 发布）</div>
           <div class="wscore"><span class="from">8.08</span><span class="arrow">→</span><span class="to">8.22</span></div>
         </div>
         <div class="wave w2">
           <div class="wtag"><div class="wn">第 2 波</div><div class="wt">6 个月</div></div>
-          <div class="wbody">D10 GUI（<b>Tauri 桌面化</b>）+ D12 逆向（<b>3D</b>）+ D07 AI（<b>TILOS benchmark</b>）+ D15（<b>NOEIC MPW 流片</b>）</div>
+          <div class="wbody">D10 GUI <b>7→8</b>（Tauri 桌面化）· D12 逆向 <b>8→9</b>（3D 逆向设计）· D07 AI <b>9→9</b>（TILOS benchmark 对标）· D15 <b>3→5</b>（NOEIC MPW 流片验证）</div>
           <div class="wscore"><span class="from">8.22</span><span class="arrow">→</span><span class="to">8.48</span></div>
         </div>
         <div class="wave w3">
           <div class="wtag"><div class="wn">第 3 波</div><div class="wt">12–24 个月</div></div>
-          <div class="wbody">D07 AI（<b>100+ PIC 预训练</b>）+ D13 量子（<b>硬件验证</b>）+ D15（<b>学术合作 + 商业版</b>）</div>
+          <div class="wbody">D07 AI <b>9→10</b>（100+ PIC 预训练模型）· D13 量子 <b>7→9</b>（硬件验证）· D15 <b>5→8</b>（学术合作 10+ 高校 + 商业版规模化）· D10 GUI <b>8→9</b>（原生编辑器）</div>
           <div class="wscore"><span class="from">8.48</span><span class="arrow">→</span><span class="to">8.86</span></div>
         </div>
       </div>
-      <div class="comp-note" style="margin-top:14px">数据来源：docs/final_defect_audit_report_2026_07.md L230-232。第三波后综合 8.86 接近行业最高 9.0。</div>
-      <div class="pageno"><b>09</b> / 13</div>
+      <div class="comp-note" style="margin-top:14px">数据来源：docs/final_defect_audit_report_2026_07.md L230-232。第三波后综合 <b>8.86 接近行业最高 9.0</b>，D10/D15 短板基本补齐。</div>
+      <div class="pageno"><b>16</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 10: 团队（占位） ========== -->
+    <!-- ========== Slide 17: 团队（占位） ========== -->
     <section class="slide">
-      <div class="eyebrow">10 · 团队</div>
+      <div class="eyebrow">17 · 团队</div>
       <h2 class="h2">核心<span class="accent">团队</span></h2>
       <div class="placeholder">
         <div class="ph-icon">👥</div>
@@ -490,12 +994,12 @@
           <span>顾问</span>
         </div>
       </div>
-      <div class="pageno"><b>10</b> / 13</div>
+      <div class="pageno"><b>17</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 11: 融资计划（占位） ========== -->
+    <!-- ========== Slide 18: 融资计划（占位） ========== -->
     <section class="slide">
-      <div class="eyebrow">11 · 融资计划</div>
+      <div class="eyebrow">18 · 融资计划</div>
       <h2 class="h2">融资<span class="accent">计划</span></h2>
       <div class="placeholder">
         <div class="ph-icon">💼</div>
@@ -508,12 +1012,12 @@
           <span>估值</span>
         </div>
       </div>
-      <div class="pageno"><b>11</b> / 13</div>
+      <div class="pageno"><b>18</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 12: 诚实声明 ========== -->
+    <!-- ========== Slide 19: 诚实声明 ========== -->
     <section class="slide">
-      <div class="eyebrow">12 · 诚实声明</div>
+      <div class="eyebrow">19 · 诚实声明</div>
       <h2 class="h2">我们诚实地呈现<span class="accent">现状与差距</span></h2>
       <div class="honest">
         <div class="honest-left">
@@ -539,10 +1043,372 @@
           <div class="sig">— PoLaRIS 团队 · 2026-07</div>
         </div>
       </div>
-      <div class="pageno"><b>12</b> / 13</div>
+      <div class="pageno"><b>19</b> / 28</div>
     </section>
 
-    <!-- ========== Slide 13: 封底 ========== -->
+    <!-- ========== Slide 20: 产品演示深度 ========== -->
+    <section class="slide">
+      <div class="eyebrow">20 · 产品演示深度</div>
+      <h2 class="h2">Showcase <span class="accent">11 阶段</span>端到端 · 每阶段真实指标</h2>
+      <table class="stage-table">
+        <thead><tr><th>阶段</th><th>输入</th><th>输出</th><th>关键指标（真实运行）</th></tr></thead>
+        <tbody>
+          <tr><td><span class="stg-no">1</span>PDK 加载</td><td>4 平台 PDK（SiEPIC/Ligentec/Pattern/HyperLight）</td><td>36 器件目录</td><td>SOI 15 · SiN 7 · InP 7 · LNOI 7</td></tr>
+          <tr><td><span class="stg-no">2</span>电路定义</td><td>真实器件参数 + 文献拓扑</td><td>3 电路规格 + 4×4 酉矩阵</td><td>MZI 5 器件 · Clements 4×4 10 器件</td></tr>
+          <tr><td><span class="stg-no">3</span>AI 布局</td><td>Edge-GNN + PPO 策略网络</td><td>3 电路布局 + HPWL</td><td>HPWL 642.55μm · benchmark 套件均 7052.38μm</td></tr>
+          <tr><td><span class="stg-no">4</span>智能布线</td><td>curvy 弹性布线器</td><td>3 电路布线 + 损耗统计</td><td>MZI 5 路径 · 损耗 0.12dB · 0 交叉</td></tr>
+          <tr><td><span class="stg-no">5</span>物理仿真</td><td>SiEPIC PDK 器件参数</td><td>S 参数 / 酉矩阵 / PAM4 眼图</td><td>谐振 1549nm · ER 30dB · BER 4.29e-04</td></tr>
+          <tr><td><span class="stg-no">6</span>DRC/LVS</td><td>12 条 SiEPIC DRC 规则</td><td>通过率 + 网表一致性</td><td>DRC 100% 通过 · LVS 一致 ✓</td></tr>
+          <tr><td><span class="stg-no">7</span>GDS 生成</td><td>布线结果 + pcell</td><td>3 GDSII 文件</td><td>MZI/Clements/量子 全部 loadable=True</td></tr>
+          <tr><td><span class="stg-no">8</span>光电协同</td><td>5 Verilog-A 模型 + SPICE 网表</td><td>协同仿真 + PAM4 眼图</td><td>链路余量 14.3dB · SNR 17.88dB</td></tr>
+          <tr><td><span class="stg-no">9</span>量子验证</td><td>4×4 酉矩阵 + HOM/KLM 理论</td><td>7 项量子验证全通过</td><td>HOM ✓ · KLM CNOT 1/9 · 玻色采样 prob=1.0</td></tr>
+          <tr><td><span class="stg-no">10</span>逆向设计</td><td>JAX jax.grad 自动微分（*创新*）</td><td>优化宽度 + FoM</td><td>showcase 5 步 FoM +0.18dB converged ✓ · 生产级 50 步 +14.72dB（R1）</td></tr>
+          <tr><td><span class="stg-no">11</span>交互编辑</td><td>布局结果</td><td>LayoutEditor + Web 预览</td><td>双模式版图编辑器</td></tr>
+        </tbody>
+      </table>
+      <div class="stage-summary">
+        <span class="ss">✓ 10/10 阶段成功 · 总耗时 21.17s</span>
+        <span class="ss">✓ 0 fall-back · 全部真实运行</span>
+        <span class="ss">数据源：out/e2e_showcase/reports/report.md</span>
+      </div>
+      <div class="pageno"><b>20</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 21: TRL 技术成熟度 ========== -->
+    <section class="slide">
+      <div class="eyebrow">21 · TRL 技术成熟度</div>
+      <h2 class="h2">技术成熟度评估 · <span class="accent">NASA TRL 1-9 标准</span></h2>
+      <div class="trl-wrap">
+        <div class="trl-scale">
+          <div class="ts lo">TRL 1</div><div class="ts lo">2</div><div class="ts lo">3</div>
+          <div class="ts mid">4</div><div class="ts mid">5</div><div class="ts mid">6</div>
+          <div class="ts hi">7</div><div class="ts hi">8</div><div class="ts hi">9</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">布局 / 布线 / IO</div>
+          <div class="tb"><div class="fill mid" style="width:66.7%">6</div></div>
+          <div class="tl mid">TRL 6</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">解析物理仿真</div>
+          <div class="tb"><div class="fill mid" style="width:66.7%">6</div></div>
+          <div class="tl mid">TRL 6</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">DRC/LVS 验证</div>
+          <div class="tb"><div class="fill mid" style="width:66.7%">6</div></div>
+          <div class="tl mid">TRL 6</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">量子光子验证 (D13)</div>
+          <div class="tb"><div class="fill mid" style="width:66.7%">6</div></div>
+          <div class="tl mid">TRL 6</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">GUI 编辑器 (D10)</div>
+          <div class="tb"><div class="fill mid" style="width:55.6%">5</div></div>
+          <div class="tl mid">TRL 5</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">FDTD 全波仿真</div>
+          <div class="tb"><div class="fill lo" style="width:44.4%">4</div></div>
+          <div class="tl lo">TRL 4</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">逆向设计 (D12)</div>
+          <div class="tb"><div class="fill lo" style="width:44.4%">4</div></div>
+          <div class="tl lo">TRL 4</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">光电协同 (D11)</div>
+          <div class="tb"><div class="fill lo" style="width:44.4%">4</div></div>
+          <div class="tl lo">TRL 4</div>
+        </div>
+        <div class="trl-row">
+          <div class="tn">AI 训练 (D07)</div>
+          <div class="tb"><div class="fill lo" style="width:33.3%">3</div></div>
+          <div class="tl lo">TRL 3</div>
+        </div>
+        <div class="trl-legend">
+          <span class="ll">TRL 1-3：基础原理 / 概念验证</span>
+          <span class="lm">TRL 4-6：实验室 / 相关环境 / 系统验证</span>
+          <span class="lh">TRL 7-9：系统原型 / 完成 / 飞行验证</span>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:6px"><b>来源</b>：NASA TRL Standard 2004（NPR 7123.1）· PoLaRIS 综合得分 8.08 诚实自评（architecture_overview.md §5）。核心 EDA 流水线 TRL 6（有真实测试通过），5 维未达标项 TRL 3-5（需 R19/R28 修复）。</div>
+      <div class="pageno"><b>21</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 22: 单位经济模型 ========== -->
+    <section class="slide">
+      <div class="eyebrow">22 · 单位经济模型</div>
+      <h2 class="h2">单位经济模型<span class="accent">框架</span>（金额待补充）</h2>
+      <div class="econ-grid">
+        <div class="econ-card">
+          <div class="et"><span class="ei">💰</span>LTV 客户终身价值</div>
+          <div class="ed">
+            <b>公式</b>：商业版客单价 × 平均合同年限 × 续约率<br>
+            <b>当前值</b>：<span class="ph">【待补充】</span><br>
+            <b>参考</b>：SaaS EDA 工具典型 LTV $50K-$200K/客户（Lumerical $20K/seat/年 × 5 年 × 80% 续约）
+          </div>
+          <div class="er">注：开源版 LTV=0（免费），仅商业版计入</div>
+        </div>
+        <div class="econ-card">
+          <div class="et"><span class="ei">🎯</span>CAC 获客成本</div>
+          <div class="ed">
+            <b>公式</b>：(营销 + 销售 + onboarding 总成本) / 新增客户数<br>
+            <b>当前值</b>：<span class="ph">【待补充】</span><br>
+            <b>参考</b>：开源社区获客 CAC 极低（GitHub 自然流量），企业销售 CAC 较高（直销周期 3-6 月）
+          </div>
+          <div class="er">注：开源→商业转化 CAC 含社区运营摊销</div>
+        </div>
+        <div class="econ-card">
+          <div class="et"><span class="ei">⚖</span>LTV/CAC 比</div>
+          <div class="ed">
+            <b>当前值</b>：<span class="ph">【待补充】</span><br>
+            <b>健康线</b>：≥ 3（SaaS 行业标准）<br>
+            <b>解读</b>：&lt;1 不可持续 · 1-3 可接受 · &gt;3 健康 · &gt;5 投入不足（错失增长）
+          </div>
+          <div class="er">注：需团队补充实际 CAC/LTV 后计算</div>
+        </div>
+        <div class="econ-card">
+          <div class="et"><span class="ei">📊</span>收入构成与毛利率</div>
+          <div class="ed">
+            <b>收入来源</b>：商业许可 <span class="ph">【待补充】</span> / MPW 流片 <span class="ph">【待补充】</span> / 培训咨询 <span class="ph">【待补充】</span> / 定制开发 <span class="ph">【待补充】</span><br>
+            <b>毛利率</b>：<span class="ph">【待补充】</span>（开源软件典型 70-80%）<br>
+            <b>合同金额</b>：开源版免费 · 商业版 <span class="ph">【待补充】</span>/seat/年
+          </div>
+          <div class="er">注：框架基于 SaaS + 开源混合模式（对标 Red Hat / Databricks）</div>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:8px">⚠ <b>所有金额标注【待补充】</b>，未编造任何财务数字（R03 禁止 fall-back）。框架基于开源 + SaaS 混合模式，需团队补充实际定价与获客数据后完成计算。</div>
+      <div class="pageno"><b>22</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 23: IP 与开源策略 ========== -->
+    <section class="slide">
+      <div class="eyebrow">23 · IP 与开源策略</div>
+      <h2 class="h2">知识产权与<span class="accent">开源策略</span></h2>
+      <div class="ip-split">
+        <div class="ip-col open">
+          <div class="ipt">🌱 开源社区版（MIT · 免费）</div>
+          <ul>
+            <li><b>许可</b>：MIT（最宽松，商业友好，无传染性）</li>
+            <li><b>核心功能</b>：布局布线 / DRC/LVS / GDS IO / 量子验证 / JAX 逆向</li>
+            <li><b>目标</b>：学术采用 + 社区生态 + GitHub Star 增长</li>
+            <li><b>收入</b>：0 直接收入，生态价值为先</li>
+            <li><b>限制</b>：无 SLA / 无企业级 DRC 认证 / 无流片保障</li>
+          </ul>
+          <div class="iph">对标：KLayout（GPL）· gdsfactory（MIT）</div>
+        </div>
+        <div class="ip-col comm">
+          <div class="ipt">🏢 商业企业版（订阅制）</div>
+          <ul>
+            <li><b>许可</b>：商业 EULA + CLA 贡献者协议（确保商业版可用）</li>
+            <li><b>增值功能</b>：增强 DRC 认证 / 流片级 SLA / 企业培训 / 定制 PDK</li>
+            <li><b>目标</b>：大企业订阅 + 定制开发 + 流片服务</li>
+            <li><b>收入</b>：【待补充】/seat/年 订阅 + 定制开发费</li>
+            <li><b>壁垒</b>：foundry 关系 + 企业级支持 + 闭源增值模块</li>
+          </ul>
+          <div class="iph">对标：Red Hat 模式（开源+商业支持）· Databricks（开源+云）</div>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:8px">
+        <b>防御性策略</b>：开源建立事实标准，防止被专利流氓攻击 · <b>商标</b>：PoLaRIS / 光弈 商标注册 <span style="color:var(--danger);font-weight:700">【待补充】</span> ·
+        <b>专利</b>：核心算法（JAX adjoint *创新* / curvy routing）专利申请 <span style="color:var(--danger);font-weight:700">【待补充】</span> ·
+        <b>CLA</b>：贡献者许可协议确保商业版可合法分发社区贡献代码
+      </div>
+      <div class="pageno"><b>23</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 24: GTM 策略 ========== -->
+    <section class="slide">
+      <div class="eyebrow">24 · GTM 策略</div>
+      <h2 class="h2">市场进入策略 · <span class="accent">四阶段 GTM</span></h2>
+      <div class="timeline-h">
+        <div class="tl-item done">
+          <div class="tq">阶段 1 · 0-6 月</div>
+          <div class="tt">🎓 学术生态建设<br><b>高校免费试用</b> · 论文合作 · GitHub Star 增长<br>开源版 MIT 免费 · 学术会议推广（CLEO/OFC/ECOC）<br>3,031 文献溯源降低教学门槛</div>
+          <div class="td">关键指标：GitHub Star / 学术采用</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">阶段 2 · 6-12 月</div>
+          <div class="tt">🚀 硅光初创渗透<br><b>开源版上手</b> · 培训咨询收入起步<br>目标：硅光创业团队 / 中小设计公司<br>MPW 流片服务启动（按 mm² 收费）</div>
+          <div class="td">关键指标：活跃用户 / 流片收入</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">阶段 3 · 12-24 月</div>
+          <div class="tt">🏢 大企业商业版<br><b>商业版 v1.0 订阅</b> · 定制开发 · SLA 保障<br>目标：数据中心光互连团队 / 硅光大厂<br>开源社区用户向商业版转化 <span style="color:var(--danger);font-weight:700">【待补充】</span>%</div>
+          <div class="td">关键指标：付费客户数 / ARR</div>
+        </div>
+        <div class="tl-item">
+          <div class="tq">阶段 4 · 24 月+</div>
+          <div class="tt">🔬 流片全流程服务<br><b>MPW 多项目晶圆</b> · 全流程服务 · 按流片收费<br>代理 IMEE/IMEC/AMF foundry · GDS→流片一站式<br>连接设计与制造闭环</div>
+          <div class="td">关键指标：流片批次 / 客户留存</div>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:12px">
+        <b>渠道</b>：GitHub 开源 · 学术会议（CLEO/OFC/ECOC）· 行业展会 · 直销 ·
+        <b>关键指标</b>：GitHub Star / 活跃用户 / 付费转化率 <span style="color:var(--danger);font-weight:700">【待补充】</span> / ARR ·
+        <b>转化漏斗</b>：开源用户 → 培训咨询 → 商业订阅 → 流片服务
+      </div>
+      <div class="pageno"><b>24</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 25: 退出路径 ========== -->
+    <section class="slide">
+      <div class="eyebrow">25 · 退出路径</div>
+      <h2 class="h2">退出路径分析 · <span class="accent">M&A 标的</span>与 IPO</h2>
+      <div class="ma-grid">
+        <div class="ma-card">
+          <div class="mt">Synopsys（美国）</div>
+          <div class="md">拥有 <b>RSoft</b> / <b>OptoCompiler</b> / Luceda 合作。全球 EDA 龙头，光子 EDA 补全需求强。</div>
+          <div class="mv">并购金额【待补充】· 无公开交易数据</div>
+        </div>
+        <div class="ma-card">
+          <div class="mt">Cadence（美国）</div>
+          <div class="md">拥有 <b>Lumerical</b> 品牌系列（INTERCONNECT/MODE/COMPONENT）。光子 EDA 直接竞品，收购消除竞争。</div>
+          <div class="mv">Lumerical 被 Ansys 收购金额【待补充】</div>
+        </div>
+        <div class="ma-card">
+          <div class="mt">Ansys（美国）</div>
+          <div class="md">拥有 Lumerical 早期版本，已分拆。仿真巨头，需光子 EDA 布局能力补全。</div>
+          <div class="mv">估值参考【待补充】</div>
+        </div>
+        <div class="ma-card">
+          <div class="mt">Lumentum / Coherent / II-VI</div>
+          <div class="md">光器件巨头，需<b>内部 EDA 工具</b>降低设计成本。垂直整合战略。</div>
+          <div class="mv">并购金额【待补充】</div>
+        </div>
+        <div class="ma-card">
+          <div class="mt">Intel SiPh / Cisco SiPh</div>
+          <div class="md">硅光内部团队（Intel 100G SiPh 量产），需<b>自主 EDA 工具</b>支持定制化设计。AI 算力互连驱动。</div>
+          <div class="mv">战略收购金额【待补充】</div>
+        </div>
+        <div class="ma-card">
+          <div class="mt">Luceda（比利时）/ 国产 EDA</div>
+          <div class="md">Luceda IPKISS 直接竞品，收购获技术与欧洲客户。国产 EDA 公司需光子能力补全。</div>
+          <div class="mv">Luceda 估值【待补充】</div>
+        </div>
+      </div>
+      <div class="ma-note">
+        <b>退出时间窗口</b>：3-5 年内技术成熟（综合得分 8.86）+ 客户积累后评估。 ·
+        <b>IPO 可能性</b>：硅光 EDA 细分市场较窄，IPO 需扩张至更广光子/半导体 EDA 赛道。 ·
+        <b>估值参考</b>：Lumerical 被 Lumentum 收购 / Luceda 估值均 <span style="color:var(--danger);font-weight:700">【待补充】</span>（无公开来源，禁止编造交易数字，R02 学术诚信）
+      </div>
+      <div class="pageno"><b>25</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 26: 资金使用明细 ========== -->
+    <section class="slide">
+      <div class="eyebrow">26 · 资金使用明细</div>
+      <h2 class="h2">资金使用规划 · <span class="accent">融资金额【待补充】</span></h2>
+      <div class="fund-grid">
+        <div class="fund-pie">
+          <div class="pt">资金分配框架</div>
+          <svg width="170" height="170" viewBox="0 0 200 200" style="margin-top:2px">
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#e2e5ec" stroke-width="28"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#2c5282" stroke-width="28"
+              stroke-dasharray="263.9 439.82" stroke-dashoffset="0" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#3a6ea5" stroke-width="28"
+              stroke-dasharray="65.97 439.82" stroke-dashoffset="-263.9" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#6b9fd6" stroke-width="28"
+              stroke-dasharray="43.98 439.82" stroke-dashoffset="-329.87" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#a0c4eb" stroke-width="28"
+              stroke-dasharray="21.99 439.82" stroke-dashoffset="-373.85" transform="rotate(-90 100 100)"/>
+            <circle cx="100" cy="100" r="70" fill="none" stroke="#c3dbeb" stroke-width="28"
+              stroke-dasharray="43.98 439.82" stroke-dashoffset="-395.84" transform="rotate(-90 100 100)"/>
+            <text x="100" y="96" text-anchor="middle" font-size="13" font-weight="800" fill="#1a1a2e">资金</text>
+            <text x="100" y="112" text-anchor="middle" font-size="10" fill="#8688a0">分配比例</text>
+          </svg>
+          <div style="margin-top:6px;font-size:11px;line-height:1.7;color:var(--ink-soft)">
+            <div><span style="display:inline-block;width:10px;height:10px;background:#2c5282;border-radius:2px;margin-right:5px"></span>研发 60%</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#3a6ea5;border-radius:2px;margin-right:5px"></span>基础设施 15%</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#6b9fd6;border-radius:2px;margin-right:5px"></span>市场 10%</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#a0c4eb;border-radius:2px;margin-right:5px"></span>法务 5%</div>
+            <div><span style="display:inline-block;width:10px;height:10px;background:#c3dbeb;border-radius:2px;margin-right:5px"></span>运营 10%</div>
+          </div>
+        </div>
+        <div class="fund-detail">
+          <div class="fund-row">
+            <div class="fn">研发人员</div><div class="fp">60%</div>
+            <div class="fd">核心算法工程师 + EDA 工程师 · 布局布线/逆向/光电专家招聘 · 金额【待补充】</div>
+          </div>
+          <div class="fund-row">
+            <div class="fn">基础设施</div><div class="fp">15%</div>
+            <div class="fd">服务器 / CI-CD / MPW 流片费用 · foundry 对接成本 · 金额【待补充】</div>
+          </div>
+          <div class="fund-row">
+            <div class="fn">市场营销</div><div class="fp">10%</div>
+            <div class="fd">学术会议（CLEO/OFC/ECOC）· 展会 · 内容营销 · 社区运营 · 金额【待补充】</div>
+          </div>
+          <div class="fund-row">
+            <div class="fn">法务合规</div><div class="fp">5%</div>
+            <div class="fd">专利申请 · 商标注册 · CLA 法务审查 · 开源许可审计 · 金额【待补充】</div>
+          </div>
+          <div class="fund-row">
+            <div class="fn">运营储备</div><div class="fp">10%</div>
+            <div class="fd">6-12 月 runway 储备 · 日常运营开支 · 金额【待补充】</div>
+          </div>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:8px">
+        <b>里程碑绑定</b>：每笔资金绑定达标节点 — D07 AI 训练 / D10 GUI Tauri 化 / D11 光电 Ngspice / D12 逆向 level-set / D15 用户规模。 ·
+        ⚠ <b>融资金额与具体岗位需求标注【待补充】</b>，百分比框架为初创 EDA 公司典型（R03 禁止编造数字）。
+      </div>
+      <div class="pageno"><b>26</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 27: 团队建设规划 ========== -->
+    <section class="slide">
+      <div class="eyebrow">27 · 团队建设规划</div>
+      <h2 class="h2">团队建设规划 · <span class="accent">招聘路线图</span></h2>
+      <div class="team-grid">
+        <div class="team-col">
+          <div class="tt">0-6 月 · 核心攻坚</div>
+          <div class="ts">补齐 5 维未达标关键缺口</div>
+          <ul>
+            <li><b>核心算法工程师 ×2</b><br>布局布线 / 逆向设计专家</li>
+            <li><b>EDA 工程师 ×1</b><br>PDK 集成 / GDS 流片流程</li>
+            <li><b>创始人 / CEO</b> <span class="ph">【待补充】</span></li>
+            <li><b>CTO</b> <span class="ph">【待补充】</span></li>
+          </ul>
+        </div>
+        <div class="team-col">
+          <div class="tt">6-12 月 · 能力扩展</div>
+          <div class="ts">物理仿真 + 前端 + DevOps</div>
+          <ul>
+            <li><b>物理仿真工程师 ×1</b><br>FDTD 网格精度 / 光电协同</li>
+            <li><b>前端工程师 ×1</b><br>Tauri 桌面化 / Web GUI</li>
+            <li><b>DevOps ×1</b><br>CI/CD / MPW 流片自动化</li>
+            <li><b>应用工程师 ×1</b><br>客户 onboarding / 培训</li>
+          </ul>
+        </div>
+        <div class="team-col">
+          <div class="tt">12-24 月 · 规模化</div>
+          <div class="ts">商业版发布 + 市场拓展</div>
+          <ul>
+            <li><b>应用工程师 ×2</b><br>商业版技术支持</li>
+            <li><b>销售 ×1</b><br>大企业客户拓展</li>
+            <li><b>市场 ×1</b><br>学术合作 / 内容营销</li>
+            <li><b>顾问委员会</b> <span class="ph">【待补充】</span><br>学术顾问 + 产业顾问</li>
+          </ul>
+        </div>
+      </div>
+      <div class="team-gap">
+        <span class="g">⚠ D07 AI 训练 — 需 RL/强化学习专家</span>
+        <span class="g">⚠ D11 光电协同 — 需 Ngspice/SPICE 专家</span>
+        <span class="g">⚠ D15 用户规模 — 需增长/市场人才</span>
+      </div>
+      <div class="comp-note" style="margin-top:8px">
+        <b>组织文化</b>：开源透明 · 学术诚信（R02）· 工程卓越 · 失败即 raise（R03）。 ·
+        <b>关键能力缺口</b>：D07 AI 训练 / D11 光电 / D15 用户规模 需对应领域专家补齐。 ·
+        ⚠ <b>具体人员信息标注【待补充】</b>，岗位框架为 EDA 初创典型配置。
+      </div>
+      <div class="pageno"><b>27</b> / 28</div>
+    </section>
+
+    <!-- ========== Slide 28: 封底 ========== -->
     <section class="slide back">
       <div class="logo">PoLaRIS <span class="a">光弈</span></div>
       <div class="slogan">AI 驱动的开源光电子 EDA</div>
@@ -551,7 +1417,7 @@
         <div>联系方式：【待补充】</div>
       </div>
       <div class="lic">开源许可: MIT · 2026</div>
-      <div class="pageno"><b>13</b> / 13</div>
+      <div class="pageno"><b>28</b> / 28</div>
     </section>
 
   </div>
@@ -562,7 +1428,7 @@
 
 <script>
 (function(){
-  var total = 13;
+  var total = 28;
   var idx = 0;
   var track = document.getElementById('track');
   var prev = document.getElementById('prev');

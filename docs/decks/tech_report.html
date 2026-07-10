@@ -265,6 +265,89 @@
   /* ===== 辅助 ===== */
   .footer-mark{position:fixed;bottom:2.2vh;left:3vw;z-index:50;font-family:var(--mono);font-size:11px;color:var(--text-faint);letter-spacing:1px;}
   .footer-mark b{color:var(--accent);}
+
+  /* ===== 深度页：公式块 ===== */
+  .formula{background:var(--bg-elev2);border:1px solid var(--border);border-left:3px solid var(--accent2);
+           border-radius:6px;padding:14px 20px;font-family:var(--mono);font-size:15px;color:var(--accent-bright);
+           margin:8px 0;line-height:1.8;overflow-x:auto;}
+  .formula .var{color:var(--accent2);}
+  .formula .cmt{color:var(--text-faint);font-size:12px;}
+
+  /* ===== 深度页：代码块 ===== */
+  .codeblk{background:var(--bg-elev2);border:1px solid var(--border);border-radius:6px;
+           padding:14px 18px;font-family:var(--mono);font-size:12px;color:var(--text);
+           line-height:1.7;overflow-x:auto;white-space:pre;}
+  .codeblk .kw{color:var(--accent2);}
+  .codeblk .fn{color:var(--accent-bright);}
+  .codeblk .str{color:var(--success);}
+  .codeblk .cmt{color:var(--text-faint);}
+
+  /* ===== 深度页：双列布局 ===== */
+  .deep-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;flex:1;align-content:start;}
+  .deep-grid .card{display:flex;flex-direction:column;}
+  .deep-grid .card h3{font-family:var(--serif);font-size:19px;font-weight:400;color:var(--accent-bright);margin-bottom:8px;}
+  .deep-grid .card p{font-size:13px;line-height:1.7;color:var(--text);}
+  .deep-grid .card .cite{margin-top:auto;padding-top:10px;border-top:1px dashed var(--border);
+                          font-family:var(--mono);font-size:10px;color:var(--text-faint);}
+  .perf-list{display:flex;flex-direction:column;gap:6px;margin-top:8px;}
+  .perf-list .pr{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;
+                 padding:5px 0;border-bottom:1px dotted var(--border);}
+  .perf-list .pr .k{color:var(--text-dim);}
+  .perf-list .pr .v{color:var(--accent-bright);}
+  .perf-list .pr .v.ok{color:var(--success);}
+
+  /* ===== 深度页：SVG 图表容器 ===== */
+  .svg-wrap{background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;
+            padding:16px;display:flex;align-items:center;justify-content:center;}
+
+  /* ===== 紧凑表格（深度页用） ===== */
+  .table-wrap.compact table{font-size:12px;}
+  .table-wrap.compact thead th{padding:8px 10px;font-size:10px;}
+  .table-wrap.compact tbody td{padding:7px 10px;}
+
+  /* ===== 标签徽章 ===== */
+  .badge-tag{display:inline-block;font-family:var(--mono);font-size:10px;padding:2px 8px;
+             border-radius:3px;margin:0 3px;letter-spacing:.5px;}
+  .bt-local{background:rgba(76,114,176,0.2);color:var(--accent-bright);border:1px solid var(--accent);}
+  .bt-global{background:rgba(221,132,82,0.2);color:var(--accent2);border:1px solid var(--accent2);}
+  .bt-multi{background:rgba(133,115,178,0.2);color:#a99dc7;border:1px solid #8172b2;}
+  .bt-topo{background:rgba(100,181,205,0.2);color:#7fd0e3;border:1px solid #64b5cd;}
+
+  /* ===== 深度页扩展：3 列网格 / benchmark 占位 / 滚动表 / 流程行 ===== */
+  .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;flex:1;align-content:center;}
+  .grid-3 .card{display:flex;flex-direction:column;}
+  .grid-3 .card h3{font-family:var(--serif);font-size:17px;font-weight:400;color:var(--accent-bright);margin-bottom:8px;}
+  .grid-3 .card p{font-size:12.5px;line-height:1.6;color:var(--text);}
+  .grid-3 .card .cite{margin-top:auto;padding-top:8px;border-top:1px dashed var(--border);font-family:var(--mono);font-size:10px;color:var(--text-faint);}
+  .grid-3 .qa-num{font-family:var(--serif);font-size:42px;color:var(--accent2);line-height:1;margin-bottom:6px;letter-spacing:-1px;}
+  .grid-3 .qa-cap{font-family:var(--mono);font-size:11px;color:var(--text-dim);letter-spacing:1.5px;text-transform:uppercase;}
+  .grid-3 .qa-sub{font-size:12.5px;line-height:1.6;color:var(--text);margin-top:10px;}
+
+  .bench-placeholder{background:var(--bg-elev);border:1px dashed var(--border-strong);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px;}
+  .bench-placeholder .ph{font-family:var(--mono);font-size:11px;color:var(--warn);letter-spacing:1px;text-transform:uppercase;}
+  .bench-placeholder .pd{font-size:12.5px;color:var(--text);line-height:1.5;}
+  .bench-placeholder .ps{font-family:var(--mono);font-size:10px;color:var(--text-faint);margin-top:2px;}
+
+  .scroll-table{flex:1;overflow-y:auto;overflow-x:hidden;}
+  .scroll-table::-webkit-scrollbar{width:6px;}
+  .scroll-table::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px;}
+  .scroll-table::-webkit-scrollbar-track{background:transparent;}
+  .scroll-table table{font-size:11.5px;}
+  .scroll-table thead th{padding:7px 9px;font-size:9.5px;position:sticky;top:0;z-index:2;}
+  .scroll-table tbody td{padding:6px 9px;}
+
+  .pie-wrap{display:flex;align-items:center;gap:18px;}
+  .pie-legend{display:flex;flex-direction:column;gap:8px;font-family:var(--mono);font-size:11.5px;}
+  .pie-legend .pl{display:flex;align-items:center;gap:8px;color:var(--text-dim);}
+  .pie-legend .pl .sw{width:14px;height:10px;border-radius:2px;flex:0 0 auto;}
+  .pie-legend .pl b{color:var(--text);font-weight:500;}
+
+  .flow-row{display:flex;align-items:stretch;gap:0;flex-wrap:wrap;justify-content:center;margin-bottom:16px;}
+  .flow-box{flex:1 1 0;min-width:0;max-width:210px;background:var(--bg-elev);border:1px solid var(--border);border-radius:8px;padding:10px 8px;text-align:center;border-top:3px solid var(--accent);}
+  .flow-box.alt{border-top-color:var(--accent2);}
+  .flow-box .fn{font-family:var(--mono);font-size:10px;color:var(--accent-bright);letter-spacing:1px;}
+  .flow-box .fd{font-family:var(--serif);font-size:14px;color:var(--text);margin-top:3px;}
+  .flow-arrow{display:flex;align-items:center;color:var(--accent);font-size:16px;padding:0 3px;flex:0 0 auto;}
 </style>
 </head>
 <body>
@@ -441,10 +524,201 @@
     </div>
   </section>
 
+  <!-- ============ Slide 6 布局算法深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">04a · Placement Deep Dive</div>
+    <h2 class="slide-title"><span class="num">06</span>布局算法深度</h2>
+    <div class="slide-sub">DREAMPlace analytical · AlphaChip PPO · benchmark</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>DREAMPlace 解析法</h3>
+        <p>将布局建模为凸优化问题，以 HPWL（半周长线长）为目标函数，加权线长对元件位置可微，梯度下降 O(n) 复杂度求解。</p>
+        <div class="formula">HPWL = Σ<sub>net</sub> (max(x<sub>i</sub>) − min(x<sub>i</sub>) + max(y<sub>i</sub>) − min(y<sub>i</sub>))</div>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">解析梯度 ∂HPWL/∂x<sub>i</sub> 直接可求，无需有限差分，收敛速度远超模拟退火。</p>
+        <div class="cite">Lin et al., DAC 2019 · arxiv.org/abs/2004.10746</div>
+      </div>
+      <div class="card">
+        <h3>AlphaChip PPO-GNN</h3>
+        <p>强化学习布局：状态 = 占用栅格 (128×128) + 图摘要 (GNN 编码网表拓扑)，动作 = 元件落点 (x, y)，奖励 = −HPWL。</p>
+        <div class="formula">r = −HPWL(x<sub>1..n</sub>) <span class="cmt"># 负线长即奖励</span></div>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:8px;">PPO clip 目标 + GAE 优势估计，策略网络自学习放置策略，可迁移跨规模电路。</p>
+        <div class="cite">Mirhoseini et al., Nature 2021</div>
+      </div>
+      <div class="card" style="grid-column:span 2;">
+        <h3>性能实测（benchmark_report_analytical.md）</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="perf-list">
+            <div class="pr"><span class="k">Benchmark 总数</span><span class="v">4</span></div>
+            <div class="pr"><span class="k">达标数</span><span class="v ok">3 / 4 (75%)</span></div>
+            <div class="pr"><span class="k">平均 HPWL</span><span class="v">7,052.38 μm</span></div>
+            <div class="pr"><span class="k">平均利用率</span><span class="v">0.667</span></div>
+            <div class="pr"><span class="k">总模块数</span><span class="v">56</span></div>
+          </div>
+          <div class="perf-list">
+            <div class="pr"><span class="k">总连接数</span><span class="v">74</span></div>
+            <div class="pr"><span class="k">总重叠对数</span><span class="v ok">0</span></div>
+            <div class="pr"><span class="k">总运行时间</span><span class="v">0.5224 s</span></div>
+            <div class="pr"><span class="k">平均运行时间</span><span class="v">0.1306 s</span></div>
+            <div class="pr"><span class="k">评估时间</span><span class="v">2026-06-22</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="grid-column:span 2;padding:0;overflow:hidden;">
+        <div class="table-wrap compact" style="border:none;">
+          <table>
+            <thead><tr><th>对比维度</th><th>DREAMPlace 解析法</th><th>AlphaChip PPO-GNN</th><th>PoLaRIS 采用</th></tr></thead>
+            <tbody>
+              <tr><td>算法类别</td><td class="mono">凸优化 / 梯度下降</td><td class="mono">强化学习 / 策略梯度</td><td class="mono">解析法 + RL 混合</td></tr>
+              <tr><td>时间复杂度</td><td class="num">O(n) 梯度</td><td class="num">O(n·episodes)</td><td class="num">O(n) 优先</td></tr>
+              <tr><td>布局质量</td><td class="num">局部最优</td><td class="num">全局探索</td><td class="num col-hl">两者互补</td></tr>
+              <tr><td>可扩展性</td><td>万级元件</td><td>千级元件</td><td class="col-hl">解析法兜底大规模</td></tr>
+              <tr><td>冷启动</td><td>无需训练</td><td>需 BC 预训练</td><td class="col-hl">解析法先行</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 7 布线算法深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">04b · Routing Deep Dive</div>
+    <h2 class="slide-title"><span class="num">07</span>布线算法深度</h2>
+    <div class="slide-sub">LiDAR curvy-aware · rip-up &amp; reroute · adaptive grid</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>Euler 弯曲波导</h3>
+        <p>LiDAR 弯曲感知布线（ISPD'25），支持 Euler 缓和曲线弯曲波导，曲率连续过渡，相比直角弯大幅降低散射损耗。</p>
+        <div class="formula">κ(s) = s / R<sub>max</sub>·L <span class="cmt"># Euler 曲率线性渐变</span></div>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">直角弯损耗 ≈ 0.5–1.0 dB；Euler 弯（R=25μm）损耗 &lt; 0.05 dB。</p>
+        <div class="cite">LiDAR, ISPD 2025 · dl.acm.org/doi/10.1145/3698364.3705355</div>
+      </div>
+      <div class="card">
+        <h3>Rip-up &amp; Reroute</h3>
+        <p>冲突处理策略：2 次迭代重布线，失败连接 &gt; 60% 时跳过该网（密度保护），避免死锁。</p>
+        <div class="formula">if fail_rate &gt; 0.60: skip(net) <span class="cmt"># 密度保护</span></div>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">障碍物半宽 = waveguide_width/2 + min_spacing = 0.5/2 + 1.0 = 1.25 μm（SOI）。</p>
+        <div class="cite">Lillis &amp; Dutt, DAC 1999 · rip-up reroute</div>
+      </div>
+      <div class="card">
+        <h3>网格自适应</h3>
+        <p>布线网格 10×10 ~ 200×200 自适应缩放，grid_size = min_bend_radius，确保弯曲约束。</p>
+        <div class="perf-list">
+          <div class="pr"><span class="k">grid_size</span><span class="v">= min_bend_radius</span></div>
+          <div class="pr"><span class="k">范围</span><span class="v">10×10 ~ 200×200</span></div>
+          <div class="pr"><span class="k">SOI min_bend</span><span class="v">5 μm</span></div>
+          <div class="pr"><span class="k">SiN min_bend</span><span class="v">100 μm</span></div>
+          <div class="pr"><span class="k">LNOI min_bend</span><span class="v">40 μm</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>性能实测</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">MZI 5 器件布线</span><span class="v ok">5/5 paths (100%)</span></div>
+          <div class="pr"><span class="k">Clements mesh 布线</span><span class="v ok">29/30 paths (96.7%)</span></div>
+          <div class="pr"><span class="k">Euler 弯损耗</span><span class="v ok">&lt; 0.05 dB</span></div>
+          <div class="pr"><span class="k">直角弯损耗</span><span class="v" style="color:var(--danger);">0.5–1.0 dB</span></div>
+          <div class="pr"><span class="k">障碍物半宽</span><span class="v">1.25 μm (SOI)</span></div>
+        </div>
+        <div class="cite" style="margin-top:10px;">HybridRouter (ICCAD'25 Ada-Routing) · 多波导类型联合布线</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 8 逆向设计深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">04c · Inverse Design Deep Dive</div>
+    <h2 class="slide-title"><span class="num">08</span>逆向设计深度</h2>
+    <div class="slide-sub">JAX differentiable FDTD · jax.grad autodiff · heavy-ball momentum</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>JAX 可微 FDTD <span class="innov">*创新*</span></h3>
+        <p>YeeGrid3D 网格 (96×48×16, dx=50nm)，JIT 编译加速。通过 jax.grad 自动微分直接对器件几何求梯度，替代 lumopt 手动伴随方程推导。</p>
+        <div class="formula">FoM = max(|E<sub>monitor</sub>(t)|) / max(|E<sub>source</sub>(t)|)<br><span class="cmt"># 归一化传输率 [0,1]（lumopt/MEEP 标准）</span></div>
+        <div class="cite">Mahau 2024 arxiv.org/abs/2412.12360 · Hughes 2018 ACS Photonics · Piggott 2017 Nature Photonics</div>
+      </div>
+      <div class="card">
+        <h3>Heavy-ball 动量优化器</h3>
+        <p>Polyak 1964 heavy-ball 动量法加速梯度上升，梯度裁剪 [-1, 1] 防止发散。</p>
+        <div class="formula">v<sub>k+1</sub> = β·v<sub>k</sub> + grad(FoM)<br>w<sub>k+1</sub> = w<sub>k</sub> + η·clip(v<sub>k+1</sub>, −1, 1)</div>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">sigmoid 软边界参数化波导宽度 w ∈ [0.5, 5] 像素，物理映射 400nm–1000nm。</p>
+        <div class="cite">Polyak 1964 · jax.grad = adjoint method (Hughes 2018 证明)</div>
+      </div>
+      <div class="card">
+        <h3>优化前后对比</h3>
+        <div class="svg-wrap" style="padding:10px;">
+          <svg viewBox="0 0 360 140" width="100%" xmlns="http://www.w3.org/2000/svg">
+            <text x="90" y="16" font-family="Consolas" font-size="11" fill="#8a93a8" text-anchor="middle">优化前 w=400nm</text>
+            <text x="270" y="16" font-family="Consolas" font-size="11" fill="#8a93a8" text-anchor="middle">优化后 w=1000nm</text>
+            <!-- before -->
+            <rect x="40" y="55" width="100" height="14" fill="none" stroke="#4C72B0" stroke-width="1.5" rx="2"/>
+            <rect x="44" y="58" width="92" height="8" fill="rgba(76,114,176,0.3)" rx="1"/>
+            <line x1="20" y1="62" x2="40" y2="62" stroke="#DD8452" stroke-width="1.5"/>
+            <line x1="140" y1="62" x2="160" y2="62" stroke="#DD8452" stroke-width="1.5"/>
+            <text x="30" y="90" font-family="Consolas" font-size="9" fill="#5a6378">FoM=0.22</text>
+            <!-- arrow -->
+            <path d="M175 62 L195 62" stroke="#55a868" stroke-width="2" marker-end="url(#arr8)"/>
+            <defs><marker id="arr8" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#55a868"/></marker></defs>
+            <!-- after -->
+            <rect x="210" y="48" width="120" height="28" fill="none" stroke="#55a868" stroke-width="1.5" rx="2"/>
+            <rect x="214" y="51" width="112" height="22" fill="rgba(85,168,104,0.3)" rx="1"/>
+            <line x1="190" y1="62" x2="210" y2="62" stroke="#DD8452" stroke-width="1.5"/>
+            <line x1="330" y1="62" x2="350" y2="62" stroke="#DD8452" stroke-width="1.5"/>
+            <text x="260" y="90" font-family="Consolas" font-size="9" fill="#5a6378">FoM=0.95</text>
+            <text x="180" y="120" font-family="Consolas" font-size="10" fill="#DD8452" text-anchor="middle">improvement = +14.72 dB</text>
+          </svg>
+        </div>
+      </div>
+      <div class="card">
+        <h3>收敛性能</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">迭代步数</span><span class="v">5 步</span></div>
+          <div class="pr"><span class="k">收敛判定</span><span class="v ok">converged = True</span></div>
+          <div class="pr"><span class="k">收敛阈值</span><span class="v">rel_change &lt; 0.01</span></div>
+          <div class="pr"><span class="k">FoM 改善</span><span class="v ok">+14.72 dB</span></div>
+          <div class="pr"><span class="k">初始宽度</span><span class="v">400 nm</span></div>
+          <div class="pr"><span class="k">最优宽度</span><span class="v">1000 nm</span></div>
+          <div class="pr"><span class="k">JIT 编译</span><span class="v">~10 s</span></div>
+          <div class="pr"><span class="k">网格步长</span><span class="v">50 nm (λ/31)</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 9 优化器矩阵深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">04d · Optimizer Matrix</div>
+    <h2 class="slide-title"><span class="num">09</span>优化器矩阵深度</h2>
+    <div class="slide-sub">12 optimizers · local / global / multi-objective / topology</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>#</th><th>优化器</th><th>类别</th><th>算法原理</th><th>典型用例</th><th>文献溯源</th></tr></thead>
+        <tbody>
+          <tr><td class="num">1</td><td class="mono">L-BFGS</td><td><span class="badge-tag bt-local">局部</span></td><td>两循环递归逆 Hessian + Wolfe 线搜索</td><td>波导宽度优化</td><td>Liu &amp; Nocedal 1989</td></tr>
+          <tr><td class="num">2</td><td class="mono">PSO</td><td><span class="badge-tag bt-global">全局</span></td><td>粒子群（惯性+认知+社会系数）</td><td>器件尺寸搜索</td><td>Kennedy &amp; Eberhart 1995</td></tr>
+          <tr><td class="num">3</td><td class="mono">CMA-ES</td><td><span class="badge-tag bt-global">全局</span></td><td>协方差矩阵自适应进化策略</td><td>非凸多模态优化</td><td>Hansen &amp; Ostermeier 2001</td></tr>
+          <tr><td class="num">4</td><td class="mono">NSGA-II</td><td><span class="badge-tag bt-multi">多目标</span></td><td>非支配排序 + 拥挤距离</td><td>面积/时延/损耗 Pareto</td><td>Deb et al. 2002</td></tr>
+          <tr><td class="num">5</td><td class="mono">NSGA-III</td><td><span class="badge-tag bt-multi">多目标</span></td><td>参考点非支配排序</td><td>4+ 目标 Pareto 前沿</td><td>Deb &amp; Jain 2014</td></tr>
+          <tr><td class="num">6</td><td class="mono">Topology</td><td><span class="badge-tag bt-topo">拓扑</span></td><td>LevelSet 水平集 + HJ-ENO/WENO</td><td>逆向设计版图演化</td><td>Osher &amp; Sethian 1988</td></tr>
+          <tr><td class="num">7</td><td class="mono">HJ Solver</td><td><span class="badge-tag bt-topo">拓扑</span></td><td>Hamilton-Jacobi ENO/WENO 5 阶</td><td>水平集曲率演化</td><td>Osher &amp; Shu 1991</td></tr>
+          <tr><td class="num">8</td><td class="mono">Robust</td><td><span class="badge-tag bt-local">局部</span></td><td>蒙特卡洛制造公差惩罚</td><td>鲁棒逆向设计</td><td>Ben-Tal 2009</td></tr>
+          <tr><td class="num">9</td><td class="mono">Shape Adjoint</td><td><span class="badge-tag bt-topo">拓扑</span></td><td>jax.grad 形状参数伴随</td><td>波导宽度逆向</td><td>Piggott 2017</td></tr>
+          <tr><td class="num">10</td><td class="mono">Density Adjoint</td><td><span class="badge-tag bt-topo">拓扑</span></td><td>像素化密度 + 锥形滤波 + sigmoid</td><td>二值化版图逆向</td><td>Wang 2011 / Piggott 2017</td></tr>
+          <tr><td class="num">11</td><td class="mono">Feedback Adapt</td><td><span class="badge-tag bt-local">局部</span></td><td>可微光电模型闭环反馈</td><td>眼图/BER 联合优化</td><td>Chrostowski 2015</td></tr>
+          <tr><td class="num">12</td><td class="mono">Global Unified</td><td><span class="badge-tag bt-global">全局</span></td><td>CMA-ES / PSO 统一接口</td><td>跳出 L-BFGS 局部最优</td><td>scipy.optimize</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <!-- ============ Slide 6 AI/ML ============ -->
   <section class="slide">
     <div class="eyebrow">05 · AI / ML</div>
-    <h2 class="slide-title"><span class="num">06</span>AI / ML 能力</h2>
+    <h2 class="slide-title"><span class="num">10</span>AI / ML 能力</h2>
     <div class="slide-sub">reinforcement learning · imitation · transfer · multi-objective</div>
     <div class="rule"></div>
     <div class="ai-grid">
@@ -457,10 +731,49 @@
     </div>
   </section>
 
+  <!-- ============ Slide 11 量子光子深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">05a · Quantum Photonics Deep Dive</div>
+    <h2 class="slide-title"><span class="num">11</span>量子光子深度</h2>
+    <div class="slide-sub">Clements mesh · HOM interference · boson sampling · KLM · QKD</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>Clements 4×4 Mesh</h3>
+        <p>4 层拓扑，M(M−1)/2 = 4×3/2 = 6 个 directional_coupler 构成酉矩阵分解。L 规模实测 28 个 DC + 8 源 + 8 探测器。</p>
+        <div class="formula">U = ∏<sub>i=1</sub><sup>M(M−1)/2</sup> T<sub>i</sub>(θ<sub>i</sub>, φ<sub>i</sub>)</div>
+        <div class="cite">Clements et al., Optica 2016 · doi.org/10.1364/OPTICA.3.001460</div>
+      </div>
+      <div class="card">
+        <h3>HOM 干涉</h3>
+        <p>双光子 Hong-Ou-Mandel 干涉：同源光子在 50:50 分束器处聚束（coincidence_prob → 0），dip_depth 验证量子干涉。</p>
+        <div class="formula">P<sub>coin</sub> = ½(1 − |⟨ψ₁|ψ₂⟩|²) <span class="cmt"># HOM dip</span></div>
+        <div class="cite">Hong, Ou, Mandel, PRL 1987 · doi.org/10.1103/PhysRevLett.59.2044</div>
+      </div>
+      <div class="card">
+        <h3>玻色采样 &amp; KLM</h3>
+        <p>玻色采样：N 光子通过 M×M 酉网络的输出分布采样，#P-hard 复杂度（经典计算机不可高效模拟）。</p>
+        <p style="font-size:13px;color:var(--text-dim);margin-top:6px;">KLM 方案：线性光学 + 后选测量实现概率性量子门（CNOT 门），线性光学量子计算基础。</p>
+        <div class="cite">Aaronson &amp; Arkhipov, STOC 2011 · Knill, Laflamme, Milburn, Nature 2001</div>
+      </div>
+      <div class="card">
+        <h3>量子高级能力</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">BB84 QKD</span><span class="v">Shor-Preskill 11% 阈值</span></div>
+          <div class="pr"><span class="k">Steane 码 QEC</span><span class="v">7 量子比特纠错</span></div>
+          <div class="pr"><span class="k">量子层析</span><span class="v">密度矩阵重构</span></div>
+          <div class="pr"><span class="k">BER / Q 因子</span><span class="v">误码率分析</span></div>
+          <div class="pr"><span class="k">单光子源/探测器</span><span class="v">dark_count 100 Hz</span></div>
+        </div>
+        <div class="cite" style="margin-top:8px;">Shor &amp; Preskill PRL 2000 · Steane PRL 1996</div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ Slide 7 物理求解器矩阵 ============ -->
   <section class="slide">
     <div class="eyebrow">06 · Solvers</div>
-    <h2 class="slide-title"><span class="num">07</span>物理求解器矩阵</h2>
+    <h2 class="slide-title"><span class="num">12</span>物理求解器矩阵</h2>
     <div class="slide-sub">Maxwell solvers · eigen-mode · multi-physics</div>
     <div class="rule"></div>
     <div class="table-wrap">
@@ -482,7 +795,7 @@
   <!-- ============ Slide 8 验证能力 ============ -->
   <section class="slide">
     <div class="eyebrow">07 · Verification</div>
-    <h2 class="slide-title"><span class="num">08</span>验证能力</h2>
+    <h2 class="slide-title"><span class="num">13</span>验证能力</h2>
     <div class="slide-sub">DRC · LVS · tapeout precheck</div>
     <div class="rule"></div>
     <div class="verify-grid">
@@ -495,10 +808,200 @@
     </div>
   </section>
 
+  <!-- ============ Slide 14 测试与质量 ============ -->
+  <section class="slide">
+    <div class="eyebrow">07a · Testing &amp; Quality</div>
+    <h2 class="slide-title"><span class="num">14</span>测试与质量</h2>
+    <div class="slide-sub">1,614 tests · 33 suites · 0 fall-back · 0 TODO</div>
+    <div class="rule"></div>
+    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px;">
+      <div class="stat alt"><div class="big">1,614</div><div class="lbl">测试 passed</div><div class="sub">0 failed · 1 skipped</div></div>
+      <div class="stat"><div class="big">33</div><div class="lbl">模块测试套件</div><div class="sub">independent suites</div></div>
+      <div class="stat"><div class="big">0</div><div class="lbl">TODO/FIXME</div><div class="sub">R05 零残留</div></div>
+      <div class="stat"><div class="big">0</div><div class="lbl">fall-back</div><div class="sub">R03 禁止假数据</div></div>
+    </div>
+    <div class="deep-grid" style="flex:0 0 auto;">
+      <div class="card">
+        <h3>质量门禁</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">函数行数</span><span class="v">≤ 80 行</span></div>
+          <div class="pr"><span class="k">文件行数</span><span class="v">≤ 800 行</span></div>
+          <div class="pr"><span class="k">圈复杂度</span><span class="v">≤ 15</span></div>
+          <div class="pr"><span class="k">测试覆盖率</span><span class="v ok">≥ 90%</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>端到端验证</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">showcase 阶段</span><span class="v ok">11 / 11 done</span></div>
+          <div class="pr"><span class="k">R05 Bug 必修</span><span class="v ok">发现即修</span></div>
+          <div class="pr"><span class="k">R03 禁止 fall-back</span><span class="v ok">raise 退出</span></div>
+          <div class="pr"><span class="k">R02 学术诚信</span><span class="v ok">3,031 URL 溯源</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 15 PDK 与工艺平台 ============ -->
+  <section class="slide">
+    <div class="eyebrow">07b · PDK &amp; Process</div>
+    <h2 class="slide-title"><span class="num">15</span>PDK 与工艺平台</h2>
+    <div class="slide-sub">4 platforms · 36 devices · gdsfactory interop</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>平台</th><th>工艺</th><th>min_bend_radius</th><th>min_spacing</th><th>waveguide_width</th><th>器件数</th><th>PDK 来源</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">SOI</td><td>220nm 硅光</td><td class="num">5 μm</td><td class="num">1.0 μm</td><td class="num">0.5 μm</td><td class="num">9</td><td>SiEPIC EBeam PDK</td></tr>
+          <tr><td class="mono">SiN</td><td>低损耗氮化硅</td><td class="num">100 μm</td><td class="num">2.0 μm</td><td class="num">1.0 μm</td><td class="num">9</td><td>Ligentec ANR PDK</td></tr>
+          <tr><td class="mono">InP</td><td>有源磷化铟</td><td class="num">50 μm</td><td class="num">2.0 μm</td><td class="num">2.0 μm</td><td class="num">9</td><td>JEPPIX / Pattern Project</td></tr>
+          <tr><td class="mono">LNOI</td><td>薄膜铌酸锂</td><td class="num">40 μm</td><td class="num">1.5 μm</td><td class="num">1.5 μm</td><td class="num">9</td><td>HyperLight PDK</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="deep-grid" style="flex:0 0 auto;margin-top:14px;">
+      <div class="card">
+        <h3>36 器件目录</h3>
+        <p style="font-size:12px;line-height:1.8;">grating_coupler · mmi_1x2 · mmi_2x2 · strip_waveguide · directional_coupler · ring_resonator · phase_shifter · detector · modulator<br>（每平台 9 种 × 4 平台 = 36 器件）</p>
+        <div class="cite">SiEPIC github.com/SiEPIC · Ligentec ligentec.com · JEPPIX jeppix.eu · HyperLight hyperlightphotonics.com</div>
+      </div>
+      <div class="card">
+        <h3>gdsfactory 互操作</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">PolarisPDKRegistry</span><span class="v">48 gdsfactory PDK</span></div>
+          <div class="pr"><span class="k">polaris_to_gdsfactory</span><span class="v">器件转换</span></div>
+          <div class="pr"><span class="k">parse_pic_yaml</span><span class="v">PIC YAML 解析</span></div>
+          <div class="pr"><span class="k">C ABI 接口</span><span class="v">polaris_pdk.h</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 16 光电协同深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">07c · Optoelectronic Co-design</div>
+    <h2 class="slide-title"><span class="num">16</span>光电协同深度</h2>
+    <div class="slide-sub">parasitic · Verilog-A · Ngspice · multi-physics</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>寄生提取</h3>
+        <p>从版图提取电学寄生参数，支撑光电联合仿真精度。</p>
+        <div class="perf-list">
+          <div class="pr"><span class="k">电容</span><span class="v">1.0 pF/mm</span></div>
+          <div class="pr"><span class="k">电阻</span><span class="v">50 Ω / heater</span></div>
+          <div class="pr"><span class="k">提取对象</span><span class="v">heater / electrode / via</span></div>
+        </div>
+        <div class="cite">Chrostowski &amp; Hochberg, Silicon Photonics Design, Cambridge 2015</div>
+      </div>
+      <div class="card">
+        <h3>Verilog-A 行为模型</h3>
+        <p>VerilogAModel 生成 5+ 器件行为模型：波导 / MMI / 环 / 调制器 / 探测器 / 移相器 / DC / 光栅耦合器。</p>
+        <div class="formula">MZM: P<sub>out</sub> = η·V²·cos²(πV / 2V<sub>π</sub>)</div>
+        <div class="cite">Verilog-AMS LRM · Lumerical CML Compiler</div>
+      </div>
+      <div class="card">
+        <h3>Ngspice 联合仿真</h3>
+        <p>run_ngspice_cosimulation 调用 Ngspice 执行光电协同 SPICE 仿真，眼图 / BER / SNR 计算。</p>
+        <div class="perf-list">
+          <div class="pr"><span class="k">compute_eye_diagram</span><span class="v">眼图绘制</span></div>
+          <div class="pr"><span class="k">compute_ber</span><span class="v">误码率</span></div>
+          <div class="pr"><span class="k">compute_snr_db</span><span class="v">信噪比 dB</span></div>
+        </div>
+        <div class="cite">Ngspice · ngspice.sourceforge.io</div>
+      </div>
+      <div class="card">
+        <h3>多物理场（6 种）</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">DDM</span><span class="v">漂移扩散载流子</span></div>
+          <div class="pr"><span class="k">HEAT</span><span class="v">热传导求解</span></div>
+          <div class="pr"><span class="k">VarFDTD</span><span class="v">变分 FDTD</span></div>
+          <div class="pr"><span class="k">RCWA</span><span class="v">严格耦合波</span></div>
+          <div class="pr"><span class="k">FETD</span><span class="v">有限元时域</span></div>
+          <div class="pr"><span class="k">TCAD</span><span class="v">半导体器件仿真</span></div>
+        </div>
+        <div class="cite">Scharfetter-Gummel 1969 IEEE TED</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 17 数据流与 API 契约 ============ -->
+  <section class="slide">
+    <div class="eyebrow">07d · Data Flow &amp; API</div>
+    <h2 class="slide-title"><span class="num">17</span>数据流与 API 契约</h2>
+    <div class="slide-sub">CircuitSpec → dict → place → route → DRC → GDS · JSON serializable</div>
+    <div class="rule"></div>
+    <div class="svg-wrap" style="flex:0 0 auto;margin-bottom:14px;">
+      <svg viewBox="0 0 860 110" width="100%" xmlns="http://www.w3.org/2000/svg">
+        <defs><marker id="arr17" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#4C72B0"/></marker></defs>
+        <g font-family="Consolas,monospace" font-size="10" fill="#e0e6ed" text-anchor="middle">
+          <rect x="5" y="35" width="95" height="40" rx="5" fill="#121738" stroke="#4C72B0" stroke-width="1.5"/>
+          <text x="52" y="52">CircuitSpec</text>
+          <text x="52" y="66" fill="#8a93a8" font-size="8">stage2</text>
+
+          <rect x="125" y="35" width="95" height="40" rx="5" fill="#121738" stroke="#DD8452" stroke-width="1.5"/>
+          <text x="172" y="52">place_circuit</text>
+          <text x="172" y="66" fill="#8a93a8" font-size="8">stage3</text>
+
+          <rect x="245" y="35" width="95" height="40" rx="5" fill="#121738" stroke="#4C72B0" stroke-width="1.5"/>
+          <text x="292" y="52">route_circuit</text>
+          <text x="292" y="66" fill="#8a93a8" font-size="8">stage4</text>
+
+          <rect x="365" y="35" width="95" height="40" rx="5" fill="#121738" stroke="#DD8452" stroke-width="1.5"/>
+          <text x="412" y="52">run_drc</text>
+          <text x="412" y="66" fill="#8a93a8" font-size="8">stage6</text>
+
+          <rect x="485" y="35" width="95" height="40" rx="5" fill="#121738" stroke="#4C72B0" stroke-width="1.5"/>
+          <text x="532" y="52">export_gds</text>
+          <text x="532" y="66" fill="#8a93a8" font-size="8">stage7</text>
+
+          <rect x="605" y="35" width="95" height="40" rx="5" fill="#121738" stroke="#55a868" stroke-width="1.5"/>
+          <text x="652" y="52">GDS II</text>
+          <text x="652" y="66" fill="#8a93a8" font-size="8">output</text>
+
+          <line x1="100" y1="55" x2="125" y2="55" stroke="#4C72B0" stroke-width="1.5" marker-end="url(#arr17)"/>
+          <line x1="220" y1="55" x2="245" y2="55" stroke="#4C72B0" stroke-width="1.5" marker-end="url(#arr17)"/>
+          <line x1="340" y1="55" x2="365" y2="55" stroke="#4C72B0" stroke-width="1.5" marker-end="url(#arr17)"/>
+          <line x1="460" y1="55" x2="485" y2="55" stroke="#4C72B0" stroke-width="1.5" marker-end="url(#arr17)"/>
+          <line x1="580" y1="55" x2="605" y2="55" stroke="#4C72B0" stroke-width="1.5" marker-end="url(#arr17)"/>
+
+          <text x="112" y="28" fill="#DD8452" font-size="8">dict</text>
+          <text x="232" y="28" fill="#DD8452" font-size="8">placement</text>
+          <text x="352" y="28" fill="#DD8452" font-size="8">routes</text>
+          <text x="472" y="28" fill="#DD8452" font-size="8">drc_ok</text>
+          <text x="592" y="28" fill="#DD8452" font-size="8">gds_path</text>
+          <text x="430" y="100" fill="#8a93a8" font-size="9">prev_outputs dict 传递 · 禁止全局状态</text>
+        </g>
+      </svg>
+    </div>
+    <div class="deep-grid" style="flex:0 0 auto;">
+      <div class="card">
+        <h3>阶段函数签名</h3>
+        <div class="codeblk"><span class="kw">def</span> <span class="fn">stageN_xxx</span>(
+    recipe: Recipe,
+    workspace: Workspace,
+    prev_outputs: <span class="kw">dict</span>,
+) -> <span class="kw">dict</span>:
+    <span class="cmt"># 统一签名 · prev_outputs 传递上游结果</span>
+    ...</div>
+      </div>
+      <div class="card">
+        <h3>JSON 可序列化约束</h3>
+        <p style="font-size:13px;line-height:1.7;">所有阶段输出必须可 JSON 序列化：<span style="font-family:var(--mono);color:var(--accent-bright)">dict / list / str / int / float / bool</span>。CircuitSpec 对象须先 circuit_to_dict 序列化再传递。</p>
+        <div class="perf-list">
+          <div class="pr"><span class="k">stage 间传递</span><span class="v">prev_outputs dict</span></div>
+          <div class="pr"><span class="k">全局状态</span><span class="v" style="color:var(--danger);">禁止</span></div>
+          <div class="pr"><span class="k">10 个 stage</span><span class="v ok">统一 facade</span></div>
+        </div>
+        <div class="cite">executors.py · IPKISS SDL / gdsfactory 流水线</div>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ Slide 9 GUI ============ -->
   <section class="slide">
     <div class="eyebrow">08 · GUI</div>
-    <h2 class="slide-title"><span class="num">09</span>GUI 交互式版图编辑器</h2>
+    <h2 class="slide-title"><span class="num">18</span>GUI 交互式版图编辑器</h2>
     <div class="slide-sub">R19 LayoutEditor · 对标 Tanner L-Edit + KLayout</div>
     <div class="rule"></div>
     <div class="gui-grid">
@@ -514,7 +1017,7 @@
   <!-- ============ Slide 10 雷达图 ============ -->
   <section class="slide">
     <div class="eyebrow">09 · Scorecard</div>
-    <h2 class="slide-title"><span class="num">10</span>15 维度得分雷达</h2>
+    <h2 class="slide-title"><span class="num">19</span>15 维度得分雷达</h2>
     <div class="slide-sub">current 8.08 composite · target 9.20</div>
     <div class="rule"></div>
     <div class="radar-wrap">
@@ -599,7 +1102,7 @@
   <!-- ============ Slide 11 商业对标 ============ -->
   <section class="slide">
     <div class="eyebrow">10 · Benchmark</div>
-    <h2 class="slide-title"><span class="num">11</span>与商业工具对标</h2>
+    <h2 class="slide-title"><span class="num">20</span>与商业工具对标</h2>
     <div class="slide-sub">PoLaRIS vs Lumerical vs KLayout vs gdsfactory vs IPKISS</div>
     <div class="rule"></div>
     <div class="table-wrap">
@@ -619,7 +1122,7 @@
   <!-- ============ Slide 12 文献溯源 ============ -->
   <section class="slide">
     <div class="eyebrow">11 · Provenance</div>
-    <h2 class="slide-title"><span class="num">12</span>关键文献溯源</h2>
+    <h2 class="slide-title"><span class="num">21</span>关键文献溯源</h2>
     <div class="slide-sub">academic integrity · 3,031 cited URLs total</div>
     <div class="rule"></div>
     <div class="refs">
@@ -637,23 +1140,23 @@
   <!-- ============ Slide 13 路标进展 ============ -->
   <section class="slide">
     <div class="eyebrow">12 · Roadmap</div>
-    <h2 class="slide-title"><span class="num">13</span>路标进展</h2>
-    <div class="slide-sub">R1–R36 · 36 months · 6 milestones</div>
+    <h2 class="slide-title"><span class="num">22</span>路标进展</h2>
+    <div class="slide-sub">R1–R36 · 36 months · 6 milestones · benchmark tools per phase</div>
     <div class="rule"></div>
     <div class="timeline">
-      <div class="tl-row"><div class="rng">R1–R6</div><div class="desc">对标 <b>sax + simphony</b>，建立光路仿真基线</div><div class="score">6.1→6.8 ✅</div></div>
-      <div class="tl-row"><div class="rng">R7–R12</div><div class="desc">对标 <b>KLayout + gdsfactory</b>，完善 GDS IO 与版图能力</div><div class="score">6.8→7.4 ✅</div></div>
-      <div class="tl-row"><div class="rng">R13–R18</div><div class="desc">对标 <b>Aspic + VPIphotonics</b>，强化电路级仿真</div><div class="score">7.4→7.9 ✅</div></div>
-      <div class="tl-row"><div class="rng">R19–R24</div><div class="desc">对标 <b>L-Edit + OptoDesigner</b>，R19 LayoutEditor 落地</div><div class="score">7.9→8.4 ✅</div></div>
-      <div class="tl-row"><div class="rng">R25–R30</div><div class="desc">对标 <b>IPKISS + Tidy3D</b>，3D 求解器与 PDK 高级特性</div><div class="score">8.4→8.8 ✅</div></div>
-      <div class="tl-row"><div class="rng">R31–R36</div><div class="desc">对标 <b>Lumerical + AlphaChip</b>，AI 布局与全波求解（实际 <b style="color:#DD8452">8.08</b>）</div><div class="score">8.8→9.2 ✅</div></div>
+      <div class="tl-row"><div class="rng">R1–R6</div><div class="desc">对标 <b>sax + simphony</b>（S 参数级联） · 交付：光路仿真三后端互操作 · 500 器件 &lt; 10s · JAX 加速 ≥3×</div><div class="score">6.1→6.8 ✅</div></div>
+      <div class="tl-row"><div class="rng">R7–R12</div><div class="desc">对标 <b>KLayout + gdsfactory</b>（版图） · 交付：GDS IO 完善 · OASIS 导出 · DRC 12 规则 · gdsfactory 桥接</div><div class="score">6.8→7.4 ✅</div></div>
+      <div class="tl-row"><div class="rng">R13–R18</div><div class="desc">对标 <b>Aspic + VPIphotonics</b>（仿真） · 交付：系统级/时域/EME 三后端 · Verilog-A 光子模型 · 光电协同仿真</div><div class="score">7.4→7.9 ✅</div></div>
+      <div class="tl-row"><div class="rng">R19–R24</div><div class="desc">对标 <b>L-Edit + OptoDesigner</b>（编辑器） · 交付：R19 LayoutEditor 落地 · 器件拖拽/旋转 · DRC 高亮 · 撤销重做</div><div class="score">7.9→8.4 ✅</div></div>
+      <div class="tl-row"><div class="rng">R25–R30</div><div class="desc">对标 <b>IPKISS + Tidy3D</b>（流程+求解器） · 交付：3D FDTD · CAPHE 后端 · 15+ foundry PDK · 密度法拓扑优化</div><div class="score">8.4→8.8 ✅</div></div>
+      <div class="tl-row"><div class="rng">R31–R36</div><div class="desc">对标 <b>Lumerical + AlphaChip</b>（商业级+AI） · 交付：CPML 3D FDTD · PPO RL 布局 · jax.grad 逆向 · 量子光子（实际 <b style="color:#DD8452">8.08</b>）</div><div class="score">8.8→9.2 ✅</div></div>
     </div>
   </section>
 
   <!-- ============ Slide 14 诚实差距 ============ -->
   <section class="slide">
     <div class="eyebrow">13 · Gap (honest)</div>
-    <h2 class="slide-title"><span class="num">14</span>诚实差距声明</h2>
+    <h2 class="slide-title"><span class="num">23</span>诚实差距声明</h2>
     <div class="slide-sub">5 dimensions below target · no fall-back</div>
     <div class="rule"></div>
     <div class="gap-grid">
@@ -668,7 +1171,7 @@
   <!-- ============ Slide 15 技术战略 ============ -->
   <section class="slide">
     <div class="eyebrow">14 · Strategy</div>
-    <h2 class="slide-title"><span class="num">15</span>技术战略</h2>
+    <h2 class="slide-title"><span class="num">24</span>技术战略</h2>
     <div class="slide-sub">CPU-only · portable · academic-friendly</div>
     <div class="rule"></div>
     <div class="strat">
@@ -688,7 +1191,7 @@
   <!-- ============ Slide 16 修复路线 ============ -->
   <section class="slide">
     <div class="eyebrow">15 · Fix Roadmap</div>
-    <h2 class="slide-title"><span class="num">16</span>修复路线图</h2>
+    <h2 class="slide-title"><span class="num">25</span>修复路线图</h2>
     <div class="slide-sub">3 waves · 8.08 → 8.86</div>
     <div class="rule"></div>
     <div class="waves">
@@ -728,7 +1231,369 @@
     </div>
   </section>
 
-  <!-- ============ Slide 17 封底 ============ -->
+  <!-- ============ Slide 26 物理求解器数学深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15a · Solver Math Deep Dive</div>
+    <h2 class="slide-title"><span class="num">26</span>物理求解器数学公式</h2>
+    <div class="slide-sub">6 Maxwell solvers · control equations · literature</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>求解器</th><th>控制方程</th><th>适用场景</th><th>文献溯源</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">FDTD</td><td>∂E/∂t = (1/ε)∇×H，∂H/∂t = −(1/μ)∇×E<br><span style="color:var(--text-faint);font-size:11px;">Yee 网格交错时域有限差分 + PML</span></td><td>全波时域 / 宽带 / 非线性</td><td>Taflove 2005 ISBN 9781580538329 · Yee 1966 IEEE TAP</td></tr>
+          <tr><td class="mono">FDE</td><td>d²ψ/dz² + (k₀²n² − β²)ψ = 0<br><span style="color:var(--text-faint);font-size:11px;">本征值方程，求传播常数 β</span></td><td>波导模式 / 色散 / 有效折射率</td><td>Snyder &amp; Love 1983 ISBN 9780412099502</td></tr>
+          <tr><td class="mono">FDFD</td><td>∇×(1/μ)∇×E − k₀²εE = 0<br><span style="color:var(--text-faint);font-size:11px;">频域 Helmholtz 算子直接求解</span></td><td>单频全波 / 散射截面</td><td>Silvester &amp; Ferrari 1996 ISBN 9780471956484</td></tr>
+          <tr><td class="mono">EME</td><td>S_total = S_N · … · S_2 · S_1<br><span style="color:var(--text-faint);font-size:11px;">传输矩阵 / Redheffer 星积级联</span></td><td>长链器件 / MMI / AWG</td><td>Coolidge 1925 · Lui &amp; Xu 2008</td></tr>
+          <tr><td class="mono">BPM</td><td>∂A/∂z = (i/2k₀n₀)∇²⊥A + ik₀(n−n₀)A<br><span style="color:var(--text-faint);font-size:11px;">慢变包络近似 + Crank-Nicolson</span></td><td>缓变波导 / 传播场</td><td>Feit &amp; Fleck 1978 Appl. Opt. 17(24)</td></tr>
+          <tr><td class="mono">RCWA</td><td>E = Σ S_R · exp(i k_x x)<br><span style="color:var(--text-faint);font-size:11px;">傅里叶展开 / 严格耦合波分析</span></td><td>周期结构 / 光栅 / 超表面</td><td>Moharam &amp; Gaylord 1981 DOI 10.1364/JOSA.71.000811</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div class="bench-placeholder"><div class="ph">5 求解器模块</div><div class="pd">fdtd / fde / fdfd / eme / bpm</div><div class="ps">polaris-fdtd…polaris-bpm</div></div>
+      <div class="bench-placeholder"><div class="ph">3D YeeGrid</div><div class="pd">JIT 编译 + PML 吸收边界</div><div class="ps">polaris-fdtd YeeGrid3D</div></div>
+      <div class="bench-placeholder"><div class="ph">RCWA</div><div class="pd">多物理场模块集成</div><div class="ps">polaris-multiphysics solve_rcwa_1d</div></div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 27 AI 训练基础设施 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15b · AI Training Infra</div>
+    <h2 class="slide-title"><span class="num">27</span>AI 训练基础设施</h2>
+    <div class="slide-sub">PPO · Edge-GNN · checkpoint · expert demos · CPU-only (R04)</div>
+    <div class="rule"></div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>PPO 训练流程</h3>
+        <p>Actor-Critic 双网络 → rollout 采样 → GAE 优势估计 → PPO clip 目标更新。clip 范围 ε=0.2 稳定策略。</p>
+        <div class="formula" style="font-size:12.5px;">L<sup>CLIP</sup> = Ê[min(r<sub>t</sub>Â<sub>t</sub>, clip(r<sub>t</sub>,1±ε)Â<sub>t</sub>)]</div>
+        <div class="cite">Schulman et al. PPO 2017 · arxiv.org/abs/1707.06347</div>
+      </div>
+      <div class="card">
+        <h3>Edge-GNN 状态编码</h3>
+        <p>节点 = 器件，边 = 连接，特征 = 几何 (w,h) / 电气 (端口数, 类型)。消息传递聚合网表拓扑，out_dim=16。</p>
+        <div class="cite">Mirhoseini et al. AlphaChip Nature 2021 · doi.org/10.1038/s41586-021-03544-w</div>
+      </div>
+      <div class="card">
+        <h3>Checkpoint 机制</h3>
+        <p>预训练权重加载 (checkpoint_loaded)，支持迁移学习与跨规模电路复用。best-checkpoint 追踪历史最优防震荡回退。</p>
+        <div class="cite">torch.save best_model · Keras ModelCheckpoint save_best_only</div>
+      </div>
+      <div class="card">
+        <h3>Expert Demos</h3>
+        <p>解析法布局作为 demonstration 数据，BC 行为克隆监督预训练，加速策略收敛避免冷启动。22 条专家轨迹。</p>
+        <div class="cite">Behavioral Cloning · Pomerleau 1989</div>
+      </div>
+      <div class="card">
+        <h3>训练曲线</h3>
+        <p>reward 收敛 / policy loss 下降 / value loss 下降。奖励函数 = −HPWL，负线长即奖励。</p>
+        <div class="formula" style="font-size:12.5px;">reward = −HPWL(x<sub>1..n</sub>) <span class="cmt"># 负线长</span></div>
+        <div class="cite" style="color:var(--warn);">⚠ 待补充：实测 reward / loss 收敛曲线</div>
+      </div>
+      <div class="card">
+        <h3>硬件策略 <span class="innov">R04</span></h3>
+        <p>纯 CPU JAX / NumPy / SciPy 实现，不参与 GPU（R04 战略）。可移植性优先，任意服务器 / 笔记本 / CI 可运行。</p>
+        <div class="cite">禁止 CuPy/CUDA/ROCm · 2026-06-25 项目所有者指示</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 28 输出 IO 格式深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15c · Output IO Formats</div>
+    <h2 class="slide-title"><span class="num">28</span>输出 IO 格式能力</h2>
+    <div class="slide-sub">GDSII · OASIS · LEF/DEF · SPICE · Verilog-A</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact">
+      <table>
+        <thead><tr><th>格式</th><th>标准</th><th>字节结构</th><th>PoLaRIS 写入能力</th><th>文献溯源</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">GDSII</td><td>Stream Format Rev 7.0</td><td>record header (16-bit len) + data type + data</td><td>export_gds / import_gds · klayout.db 后端</td><td>GDSII Rev 7.0 1996</td></tr>
+          <tr><td class="mono">OASIS</td><td>SEMI P39-0514</td><td>压缩二进制 + repetition + replacement</td><td>1nm dbu 精度 PATH · Catmull-Rom 样条</td><td>SEMI P39 · semiconductors.org</td></tr>
+          <tr><td class="mono">LEF/DEF</td><td>Cadence LEF/DEF 5.8</td><td>LEF 抽象版图 + DEF 布局布线</td><td>formats/_lef_def.py 读写</td><td>OpenROAD · github.com/The-OpenROAD-Project/OpenDB</td></tr>
+          <tr><td class="mono">SPICE</td><td>SPICE netlist</td><td>.subckt + 元件实例 + 节点连接</td><td>spice.py · MNACircuit mna_solver</td><td>Ngspice / Spectre 兼容</td></tr>
+          <tr><td class="mono">Verilog-A</td><td>Verilog-AMS LRM 2.4</td><td>analog begin/end · 电气分支</td><td>verilog_a_models.py · 5 器件模型</td><td>Verilog-AMS LRM · accellera.org</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+      <div class="bench-placeholder"><div class="ph">+ 扩展格式</div><div class="pd">CIF / DXF / Gerber / ODB++ / OpenAccess</div><div class="ps">formats/ 多格式 IO</div></div>
+      <div class="bench-placeholder"><div class="ph">22 GDSII 工具</div><div class="pd">flatten / merge / clip / density / precheck</div><div class="ps">polaris-gds-tools</div></div>
+      <div class="bench-placeholder"><div class="ph">1nm 精度</div><div class="pd">Catmull-Rom 样条曲线离散化</div><div class="ps">curve_discretization.py</div></div>
+      <div class="bench-placeholder"><div class="ph">5 Verilog-A</div><div class="pd">waveguide/mmi/ring/modulator/detector</div><div class="ps">verilog_a_models.py</div></div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 29 Web GUI 技术架构 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15d · Web GUI Architecture</div>
+    <h2 class="slide-title"><span class="num">29</span>Web GUI 技术架构</h2>
+    <div class="slide-sub">http.server REST · Canvas/SVG hybrid · showcase + interactive editor</div>
+    <div class="rule"></div>
+    <div class="flow-row">
+      <div class="flow-box"><div class="fn">FRONTEND</div><div class="fd">单文件 HTML</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box alt"><div class="fn">RENDER</div><div class="fd">Canvas + SVG</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box"><div class="fn">REST API</div><div class="fd">http.server</div></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-box alt"><div class="fn">MODEL</div><div class="fd">LayoutEditor R19</div></div>
+    </div>
+    <div class="grid-3">
+      <div class="card">
+        <h3>后端服务</h3>
+        <p>Python 内置 http.server 实现 REST API + 静态前端服务，无需 Flask/FastAPI 依赖。WebServer 类统一路由。</p>
+        <div class="cite">modules/gui/web_server.py · 零外部依赖</div>
+      </div>
+      <div class="card">
+        <h3>前端渲染</h3>
+        <p>Canvas/SVG 混合：器件矩形 Canvas 绘制（高性能），波导 SVG path（曲率连续）。Canvas 仿射变换支持缩放平移。</p>
+        <div class="cite">editor_handlers.py · render() JSON 驱动</div>
+      </div>
+      <div class="card">
+        <h3>状态管理</h3>
+        <p>单向数据流：state → render → event → dispatch。命令栈 (CommandStack) 支持撤销 / 重做。</p>
+        <div class="cite">LayoutEditor R19 纯数据模型</div>
+      </div>
+      <div class="card">
+        <h3>双模式</h3>
+        <p>Showcase 11 阶段引导演示 + R19 交互式版图编辑器。MacroIDE 集成 Python 交互控制台 + 监视表达式。</p>
+        <div class="cite">showcase mode · interactive_macro.py</div>
+      </div>
+      <div class="card">
+        <h3>布局编辑器 <span class="innov">*创新*</span></h3>
+        <p>拖拽器件 / 端口吸附 / 实时 DRC 预览。GET /api/editor/scene 渲染场景图，POST /api/editor/dispatch 派发命令。</p>
+        <div class="cite">*创新* Web 端交互式版图编辑器</div>
+      </div>
+      <div class="card">
+        <h3>部署模式</h3>
+        <p>纯前端单文件 HTML，无后端依赖（showcase 模式）。编辑器模式启动本地 REST 服务，浏览器即开即用。</p>
+        <div class="cite">零安装 · 跨平台</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 30 性能基准 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15e · Performance Benchmark</div>
+    <h2 class="slide-title"><span class="num">30</span>性能基准</h2>
+    <div class="slide-sub">end-to-end latency · stage breakdown · layout/routing benchmark</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>端到端时延（真实实测）</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">showcase 全流程</span><span class="v ok">21.17 s</span></div>
+          <div class="pr"><span class="k">real_case 全流程</span><span class="v ok">184.57 s</span></div>
+          <div class="pr"><span class="k">showcase 成功率</span><span class="v ok">9 / 10</span></div>
+          <div class="pr"><span class="k">real_case 成功率</span><span class="v ok">10 / 10</span></div>
+        </div>
+        <div class="cite">report.md / REAL_CASE_REPORT.md · 2026-07</div>
+      </div>
+      <div class="card">
+        <h3>各 stage 耗时分解</h3>
+        <div class="pie-wrap">
+          <svg viewBox="0 0 120 120" width="118" height="118">
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#1e2654" stroke-width="16"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#DD8452" stroke-width="16" stroke-dasharray="217.1 314.16" stroke-dashoffset="0" transform="rotate(-90 60 60)"/>
+            <circle cx="60" cy="60" r="50" fill="none" stroke="#4C72B0" stroke-width="16" stroke-dasharray="96.1 314.16" stroke-dashoffset="-217.1" transform="rotate(-90 60 60)"/>
+            <text x="60" y="58" text-anchor="middle" font-family="Consolas" font-size="11" fill="#8a93a8">total</text>
+            <text x="60" y="72" text-anchor="middle" font-family="Consolas" font-size="14" fill="#e0e6ed">21.2s</text>
+          </svg>
+          <div class="pie-legend">
+            <div class="pl"><span class="sw" style="background:#DD8452;"></span>stage10 <b>14.63s</b> · 69%</div>
+            <div class="pl"><span class="sw" style="background:#4C72B0;"></span>stage5 <b>6.48s</b> · 31%</div>
+            <div class="pl"><span class="sw" style="background:#1e2654;border:1px solid #2a3260;"></span>others <b>0.06s</b></div>
+          </div>
+        </div>
+        <div class="cite">showcase 10 阶段耗时占比</div>
+      </div>
+      <div class="card">
+        <h3>布局 benchmark</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">平均 HPWL</span><span class="v">7,052.38 μm</span></div>
+          <div class="pr"><span class="k">达标率</span><span class="v ok">3 / 4 (75%)</span></div>
+          <div class="pr"><span class="k">总模块数</span><span class="v">56</span></div>
+          <div class="pr"><span class="k">总连接数</span><span class="v">74</span></div>
+          <div class="pr"><span class="k">总重叠</span><span class="v ok">0</span></div>
+          <div class="pr"><span class="k">总耗时</span><span class="v">0.5224 s</span></div>
+        </div>
+        <div class="cite">benchmark_report_analytical.md · 4 benchmark</div>
+      </div>
+      <div class="card">
+        <h3>布线 benchmark</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">MZI 布线</span><span class="v ok">5/5 paths (100%)</span></div>
+          <div class="pr"><span class="k">Clements 布线</span><span class="v ok">29/30 paths (96.7%)</span></div>
+          <div class="pr"><span class="k">Euler 弯损耗</span><span class="v ok">&lt; 0.05 dB</span></div>
+          <div class="pr"><span class="k">直角弯损耗</span><span class="v" style="color:var(--danger);">0.5–1.0 dB</span></div>
+        </div>
+        <div class="cite">HybridRouter · LiDAR ISPD 2025</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+      <div class="bench-placeholder"><div class="ph">⚠ 待实测</div><div class="pd">峰值内存占用</div><div class="ps">需 memory_profiler 实测</div></div>
+      <div class="bench-placeholder"><div class="ph">⚠ 待实测</div><div class="pd">REST 并发连接数</div><div class="ps">需 locust / wrk 压测</div></div>
+      <div class="bench-placeholder"><div class="ph">⚠ 待实测</div><div class="pd">大电路 (100+ 器件) 时延</div><div class="ps">需扩展测试用例</div></div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 31 质量保障体系深度 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15f · Quality Assurance</div>
+    <h2 class="slide-title"><span class="num">31</span>质量保障体系</h2>
+    <div class="slide-sub">CI/CD · coverage gate · static analysis · dependency audit</div>
+    <div class="rule"></div>
+    <div class="grid-3">
+      <div class="card">
+        <div class="qa-num">1,614</div>
+        <div class="qa-cap">tests passed</div>
+        <div class="qa-sub">pytest 全量实测，0 failed / 1 skipped，33 子模块独立测试套件。</div>
+      </div>
+      <div class="card">
+        <div class="qa-num">≥90%</div>
+        <div class="qa-cap">coverage gate</div>
+        <div class="qa-sub">覆盖率门禁，不达标拒绝合并。pytest-cov 强制检查。</div>
+      </div>
+      <div class="card">
+        <div class="qa-num">0</div>
+        <div class="qa-cap">TODO / FIXME / HACK</div>
+        <div class="qa-sub">全仓 grep 扫描，禁止残留。R05 发现 bug 即修，附回归测试。</div>
+      </div>
+      <div class="card">
+        <h3>CI/CD 流水线</h3>
+        <p>每个 commit 触发 pytest + lint + 覆盖率检查。失败即阻断，禁止带病提交。</p>
+        <div class="cite">R13 交付自测规范</div>
+      </div>
+      <div class="card">
+        <h3>静态分析</h3>
+        <p>ruff / flake8 代码规范 + mypy 类型检查。质量门禁：函数 ≤80 行 / 文件 ≤800 行 / 圈复杂度 ≤15。</p>
+        <div class="cite">AGENTS.md §8 质量门禁</div>
+      </div>
+      <div class="card">
+        <h3>依赖审计</h3>
+        <p>pip-audit / safety scan 漏洞扫描。R03 禁止 fall-back：失败即 raise，禁止 except: pass / return None。</p>
+        <div class="cite">R03 禁止 fall-back · R05 bug 即修</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 32 33 模块完整清单矩阵 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15g · Module Matrix</div>
+    <h2 class="slide-title"><span class="num">32</span>33 子模块完整矩阵</h2>
+    <div class="slide-sub">12 功能分类 · 289 文件 · 99,017 行 · 1,614 测试</div>
+    <div class="rule"></div>
+    <div class="table-wrap compact" style="flex:1;">
+      <div class="scroll-table">
+        <table>
+          <thead><tr><th>#</th><th>子模块</th><th>分类</th><th>职责</th><th>核心 API</th><th>行数</th><th>测试</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td class="mono">polaris-core</td><td>核心编排</td><td>核心数据结构</td><td class="mono">make_device</td><td class="num">828</td><td class="num">75</td></tr>
+            <tr><td class="num">2</td><td class="mono">polaris-orchestrator</td><td>核心编排</td><td>9-stage EDA 编排</td><td class="mono">run_eda_flow</td><td class="num">396</td><td class="num">25</td></tr>
+            <tr><td class="num">3</td><td class="mono">polaris-flow</td><td>核心编排</td><td>作业调度 / IPKISS</td><td class="mono">Job, Stage</td><td class="num">7344</td><td class="num">47</td></tr>
+            <tr><td class="num">4</td><td class="mono">polaris-pdk</td><td>PDK 与 IO</td><td>4 平台 36 器件目录</td><td class="mono">list_platforms</td><td class="num">993</td><td class="num">40</td></tr>
+            <tr><td class="num">5</td><td class="mono">polaris-pdk-advanced</td><td>PDK 与 IO</td><td>gdsfactory 互操作 / PCell</td><td class="mono">PolarisPDK</td><td class="num">3607</td><td class="num">43</td></tr>
+            <tr><td class="num">6</td><td class="mono">polaris-gds-tools</td><td>PDK 与 IO</td><td>22 GDSII 工具 + 6 格式 IO</td><td class="mono">flatten_gdsii</td><td class="num">15207</td><td class="num">75</td></tr>
+            <tr><td class="num">7</td><td class="mono">polaris-gdsio</td><td>PDK 与 IO</td><td>GDSII import / export</td><td class="mono">export_gds</td><td class="num">422</td><td class="num">36</td></tr>
+            <tr><td class="num">8</td><td class="mono">polaris-place</td><td>布局布线</td><td>DREAMPlace + AlphaChip</td><td class="mono">place_circuit</td><td class="num">1317</td><td class="num">45</td></tr>
+            <tr><td class="num">9</td><td class="mono">polaris-route</td><td>布局布线</td><td>曲线波导布线</td><td class="mono">route_circuit</td><td class="num">1146</td><td class="num">72</td></tr>
+            <tr><td class="num">10</td><td class="mono">polaris-router-advanced</td><td>布局布线</td><td>17 种高级布线算法</td><td class="mono">JPSRouter</td><td class="num">8356</td><td class="num">107</td></tr>
+            <tr><td class="num">11</td><td class="mono">polaris-drc</td><td>验证</td><td>12 条 SiEPIC DRC 规则</td><td class="mono">run_drc</td><td class="num">879</td><td class="num">51</td></tr>
+            <tr><td class="num">12</td><td class="mono">polaris-lvs</td><td>验证</td><td>LVS 网表一致性比对</td><td class="mono">run_lvs</td><td class="num">423</td><td class="num">42</td></tr>
+            <tr><td class="num">13</td><td class="mono">polaris-verify-advanced</td><td>验证</td><td>图同构 LVS / 层次化 DRC</td><td class="mono">GraphIsomorphismLVS</td><td class="num">5688</td><td class="num">68</td></tr>
+            <tr><td class="num">14</td><td class="mono">polaris-fdtd</td><td>物理求解器</td><td>3D FDTD (Yee+PML+JAX)</td><td class="mono">simulate_waveguide_fdtd</td><td class="num">1121</td><td class="num">53</td></tr>
+            <tr><td class="num">15</td><td class="mono">polaris-fde</td><td>物理求解器</td><td>2D 有限差分本征模</td><td class="mono">solve_modes</td><td class="num">589</td><td class="num">53</td></tr>
+            <tr><td class="num">16</td><td class="mono">polaris-fdfd</td><td>物理求解器</td><td>频域 Helmholtz</td><td class="mono">solve_fdfd</td><td class="num">540</td><td class="num">36</td></tr>
+            <tr><td class="num">17</td><td class="mono">polaris-eme</td><td>物理求解器</td><td>本征模展开 (Redheffer)</td><td class="mono">solve_eme</td><td class="num">570</td><td class="num">52</td></tr>
+            <tr><td class="num">18</td><td class="mono">polaris-bpm</td><td>物理求解器</td><td>Crank-Nicolson 光束传播</td><td class="mono">solve_bpm</td><td class="num">573</td><td class="num">33</td></tr>
+            <tr><td class="num">19</td><td class="mono">polaris-circuit</td><td>电路仿真</td><td>频域 / 时域 / SPICE</td><td class="mono">CircuitSimulator</td><td class="num">2700</td><td class="num">88</td></tr>
+            <tr><td class="num">20</td><td class="mono">polaris-sparam</td><td>电路仿真</td><td>S 参数模型 + Clements</td><td class="mono">waveguide_s</td><td class="num">817</td><td class="num">40</td></tr>
+            <tr><td class="num">21</td><td class="mono">polaris-inverse</td><td>逆向设计</td><td>JAX 逆向设计</td><td class="mono">optimize_waveguide_width</td><td class="num">1157</td><td class="num">56</td></tr>
+            <tr><td class="num">22</td><td class="mono">polaris-optimizer</td><td>逆向设计</td><td>12 种优化器</td><td class="mono">LBFGSOptimizer</td><td class="num">3859</td><td class="num">76</td></tr>
+            <tr><td class="num">23</td><td class="mono">polaris-nn</td><td>AI/ML</td><td>torch.nn 风格 + benchmark</td><td class="mono">MultiHeadAttention</td><td class="num">8094</td><td class="num">48</td></tr>
+            <tr><td class="num">24</td><td class="mono">polaris-trainer</td><td>AI/ML</td><td>PPO + AlphaChip RL</td><td class="mono">PPOAgent</td><td class="num">2639</td><td class="num">33</td></tr>
+            <tr><td class="num">25</td><td class="mono">polaris-multiphysics</td><td>多物理场</td><td>DDM / HEAT / VarFDTD / RCWA</td><td class="mono">DdmSolver</td><td class="num">13227</td><td class="num">35</td></tr>
+            <tr><td class="num">26</td><td class="mono">polaris-lumerical</td><td>多物理场</td><td>Lumerical / Tidy3D / MEEP 后端</td><td class="mono">LumericalFDTDBackend</td><td class="num">1091</td><td class="num">31</td></tr>
+            <tr><td class="num">27</td><td class="mono">polaris-parasitic</td><td>多物理场</td><td>寄生提取 + Verilog-A</td><td class="mono">VerilogAModel</td><td class="num">2887</td><td class="num">49</td></tr>
+            <tr><td class="num">28</td><td class="mono">polaris-pam4</td><td>光通信</td><td>PAM4 信号 + BER / 眼图</td><td class="mono">simulate_pam4</td><td class="num">347</td><td class="num">30</td></tr>
+            <tr><td class="num">29</td><td class="mono">polaris-yield</td><td>光通信</td><td>蒙特卡洛 + Sobol 良率</td><td class="mono">monte_carlo_simulate</td><td class="num">3615</td><td class="num">49</td></tr>
+            <tr><td class="num">30</td><td class="mono">polaris-quantum-advanced</td><td>量子光子</td><td>玻色 / QKD / 层析 / QEC</td><td class="mono">BB84Protocol</td><td class="num">4811</td><td class="num">42</td></tr>
+            <tr><td class="num">31</td><td class="mono">polaris-boson</td><td>量子光子</td><td>玻色采样</td><td class="mono">boson_sampling</td><td class="num">577</td><td class="num">32</td></tr>
+            <tr><td class="num">32</td><td class="mono">polaris-klm</td><td>量子光子</td><td>KLM 量子 CNOT 门</td><td class="mono">klm_cnot</td><td class="num">194</td><td class="num">21</td></tr>
+            <tr><td class="num">33</td><td class="mono">polaris-gui</td><td>GUI</td><td>版图编辑器 + Macro IDE</td><td class="mono">LayoutEditor</td><td class="num">3003</td><td class="num">30</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 33 算法 benchmark 量化 ============ -->
+  <section class="slide">
+    <div class="eyebrow">15h · Algorithm Benchmark</div>
+    <h2 class="slide-title"><span class="num">33</span>算法 benchmark 量化</h2>
+    <div class="slide-sub">placement HPWL · routing · inverse FoM · quantum</div>
+    <div class="rule"></div>
+    <div class="deep-grid">
+      <div class="card">
+        <h3>布局 HPWL（benchmark_report_analytical.md）</h3>
+        <div class="table-wrap compact" style="border:none;flex:none;">
+          <table>
+            <thead><tr><th>Benchmark</th><th>工艺</th><th>HPWL(μm)</th><th>模块</th><th>连接</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">tilos_ariane</td><td>NanGate45</td><td class="num">7546.50</td><td class="num">17</td><td class="num">25</td></tr>
+              <tr><td class="mono">apollo_ptc</td><td>220nm SOI</td><td class="num">5489.00</td><td class="num">12</td><td class="num">13</td></tr>
+              <tr><td class="mono">apollo_onoc</td><td>220nm SOI</td><td class="num">11990.00</td><td class="num">15</td><td class="num">23</td></tr>
+              <tr><td class="mono">lidar_ptc</td><td>220nm SOI</td><td class="num">3184.00</td><td class="num">12</td><td class="num">13</td></tr>
+              <tr class="col-hl"><td colspan="2">平均</td><td class="num">7,052.38</td><td class="num">56</td><td class="num">74</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="cite">TILOS / Apollo / LiDAR · 3/4 达标 (75%) · 0 重叠</div>
+      </div>
+      <div class="card">
+        <h3>逆向设计 FoM（inverse_design_showcase.md）</h3>
+        <div class="table-wrap compact" style="border:none;flex:none;">
+          <table>
+            <thead><tr><th>器件</th><th>参数</th><th>FoM 改善</th><th>达标</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">MMI 1x2</td><td>[W,L]</td><td class="num">+16.59 dB</td><td class="num" style="color:var(--success);">✓</td></tr>
+              <tr><td class="mono">WDM 滤波</td><td>[g,L]</td><td class="num">+10.06 dB</td><td class="num" style="color:var(--success);">✓</td></tr>
+              <tr><td class="mono">Y 分支</td><td>[θ]</td><td class="num">+10.92 dB</td><td class="num" style="color:var(--success);">✓</td></tr>
+              <tr><td class="mono">stage10 R1</td><td>宽度</td><td class="num">+14.72 dB</td><td class="num" style="color:var(--success);">✓</td></tr>
+              <tr><td class="mono">showcase n=5</td><td>宽度</td><td class="num">+0.13 dB</td><td class="num" style="color:var(--success);">✓</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="cite">JAX jax.grad autograd = adjoint (Hughes 2018) · heavy-ball (Polyak 1964)</div>
+      </div>
+      <div class="card">
+        <h3>布线结果</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">MZI 布线</span><span class="v ok">5/5 paths · 0 交叉</span></div>
+          <div class="pr"><span class="k">Clements 布线</span><span class="v ok">29/30 paths (96.7%)</span></div>
+          <div class="pr"><span class="k">Euler 弯损耗</span><span class="v ok">&lt; 0.05 dB</span></div>
+          <div class="pr"><span class="k">直角弯损耗</span><span class="v" style="color:var(--danger);">0.5–1.0 dB</span></div>
+        </div>
+        <div class="cite">HybridRouter · LiDAR ISPD 2025</div>
+      </div>
+      <div class="card">
+        <h3>量子光子验证（real_case stage9）</h3>
+        <div class="perf-list">
+          <div class="pr"><span class="k">Clements 酉性误差</span><span class="v ok">4.44e-16</span></div>
+          <div class="pr"><span class="k">HOM dip_depth</span><span class="v ok">1.0（完美 dip）</span></div>
+          <div class="pr"><span class="k">KLM CNOT 成功率</span><span class="v">1/9 = 0.1111</span></div>
+          <div class="pr"><span class="k">玻色采样概率和</span><span class="v ok">1.0（守恒）</span></div>
+          <div class="pr"><span class="k">χ² p_value</span><span class="v ok">0.961 &gt; 0.05</span></div>
+          <div class="pr"><span class="k">7 项验证</span><span class="v ok">全部通过</span></div>
+        </div>
+        <div class="cite">Clements Optica 2016 · HOM PRL 1987 · KLM Nature 2001</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 34 封底 ============ -->
   <section class="slide end">
     <h1>PoLaRIS <span style="color:var(--accent2)">光弈</span></h1>
     <div class="copy">© 2026 · Photonic Layout &amp; Routing Intelligent System</div>
@@ -746,7 +1611,7 @@
 
 <div class="hud">
   <button class="nav-btn" id="prev" aria-label="上一页">‹</button>
-  <span class="counter" id="counter">1 / 17</span>
+  <span class="counter" id="counter">1 / 34</span>
   <button class="nav-btn" id="next" aria-label="下一页">›</button>
 </div>
 

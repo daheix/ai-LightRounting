@@ -25,6 +25,14 @@
   - [x] SubTask 4.2: 15 维度得分三处一致
   - [x] SubTask 4.3: 文献溯源抽查（≥5 个核心算法 URL 可访问）
 
+- [x] Task 5: PPT 深度内容扩充（用户要求"继续丰富"）
+  - [x] SubTask 5.1: 技术 PPT 第一轮扩充 17→26 页（布局/布线/逆向/优化器/量子/测试/PDK/光电/数据流 9 深度 slide）
+  - [x] SubTask 5.2: 投资人 PPT 第一轮扩充 13→20 页（市场深度/客户/案例/护城河/财务/风险/里程碑 7 深度 slide）
+  - [x] SubTask 5.3: 技术 PPT 第二轮扩充 26→34 页（物理求解器数学/AI训练基础设施/输出IO格式/Web GUI架构/性能基准/质量体系/33模块矩阵/benchmark量化 8 深度 slide）
+  - [x] SubTask 5.4: 投资人 PPT 第二轮扩充 20→28 页（产品演示深度/TRL成熟度/单位经济/IP开源策略/GTM策略/退出路径/资金使用/团队建设 8 深度 slide）
+  - [x] SubTask 5.5: FoM 数据一致性修正（stage10 showcase +0.18dB + 生产级 +14.72dB，与技术 PPT 对齐）
+  - [x] SubTask 5.6: 结构校验（34/28 section 闭合，pageno / 28 全部更新，JS total=28）
+
 # Task Dependencies
 - Task 2 依赖 Task 1（PPT 内容引用架构文档数据）
 - Task 3 依赖 Task 1（同上）
