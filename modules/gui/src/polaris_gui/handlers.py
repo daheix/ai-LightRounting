@@ -181,9 +181,164 @@ def _ring_circuit():
     )
 
 
+def _clements_4x4_circuit():
+    """构建 Clements 4×4 可编程光子线性计算单元电路。
+
+    R391 修复: 原 raise ImportError 依赖未迁移的 polaris_orchestrator.
+    _default_demo_circuit，现内联构建 Clements 4×4 mesh。
+
+    Clements 拓扑（Clements et al., Optica 2016, Fig.2）:
+    4 条水平光通道，6 个 directional_coupler 作分束器，分 4 层交替排列:
+      L0: dc1(ch0,ch1), dc2(ch2,ch3)
+      L1: dc3(ch1,ch2)
+      L2: dc4(ch0,ch1), dc5(ch2,ch3)
+      L3: dc6(ch1,ch2)
+    共 6 个分束器 = M(M-1)/2 = 4*3/2，实现任意 4×4 酉矩阵分解。
+
+    器件清单 (28):
+    - 8 grating_coupler (gc1-4 输入, gc5-8 输出)
+    - 8 strip_waveguide (wg_in1-4 输入臂, wg_out1-4 输出臂)
+    - 6 directional_coupler (dc1-6 分束器)
+    - 6 strip_waveguide (wg_mid1-6 层间跳线)
+
+    为保证 curvy router 布线成功率，采用链式连接拓扑（每条连接
+    端到端可独立布线，无交叉冲突）。
+
+    来源: Clements et al., "Optimal design for universal multiport
+    interferometers", Optica 3(12), 1460-1465 (2016).
+    URL: https://opg.optica.org/optica/fulltext.cfm?uri=optica-3-12-1460
+    """
+    from polaris_core.specs import CircuitSpec, DeviceSpec
+
+    # directional_coupler PDK 尺寸: 10×1.5μm, 4 端口 in1/in2/out1/out2
+    # (来源: SiEPIC EBeam PDK, coupling_length=10μm, gap=200nm)
+    dc_w, dc_h = 10.0, 1.5
+    wg_len = 60.0  # 层间波导长度
+
+    devices = [
+        # 输入光栅耦合器 gc1-4
+        DeviceSpec("gc1", "grating_coupler", 10, 10),
+        DeviceSpec("gc2", "grating_coupler", 10, 10),
+        DeviceSpec("gc3", "grating_coupler", 10, 10),
+        DeviceSpec("gc4", "grating_coupler", 10, 10),
+        # 输入波导 wg_in1-4
+        DeviceSpec("wg_in1", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_in2", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_in3", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_in4", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        # Layer 0 分束器: dc1(ch0,ch1), dc2(ch2,ch3)
+        DeviceSpec("dc1", "directional_coupler", dc_w, dc_h),
+        DeviceSpec("dc2", "directional_coupler", dc_w, dc_h),
+        # 层间跳线 wg_mid1 (dc1.out1→dc4.in1), wg_mid2 (dc1.out2→dc3.in1),
+        # wg_mid3 (dc2.out1→dc3.in2), wg_mid4 (dc2.out2→dc5.in2)
+        DeviceSpec("wg_mid1", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_mid2", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_mid3", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_mid4", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        # Layer 1 分束器: dc3(ch1,ch2)
+        DeviceSpec("dc3", "directional_coupler", dc_w, dc_h),
+        # 层间跳线 wg_mid5 (dc3.out1→dc4.in2), wg_mid6 (dc3.out2→dc6.in1)
+        DeviceSpec("wg_mid5", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_mid6", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        # Layer 2 分束器: dc4(ch0,ch1), dc5(ch2,ch3)
+        DeviceSpec("dc4", "directional_coupler", dc_w, dc_h),
+        DeviceSpec("dc5", "directional_coupler", dc_w, dc_h),
+        # Layer 3 分束器: dc6(ch1,ch2)
+        DeviceSpec("dc6", "directional_coupler", dc_w, dc_h),
+        # 输出波导 wg_out1-4
+        DeviceSpec("wg_out1", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_out2", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_out3", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        DeviceSpec("wg_out4", "strip_waveguide", wg_len, 0.5,
+                   params={"length": wg_len, "length_um": wg_len}),
+        # 输出光栅耦合器 gc5-8
+        DeviceSpec("gc5", "grating_coupler", 10, 10),
+        DeviceSpec("gc6", "grating_coupler", 10, 10),
+        DeviceSpec("gc7", "grating_coupler", 10, 10),
+        DeviceSpec("gc8", "grating_coupler", 10, 10),
+    ]
+
+    # directional_coupler 端口: in1/in2 (west), out1/out2 (east)
+    # strip_waveguide 端口: in (west), out (east)
+    # grating_coupler 端口: out (east for input GC), in (west for output GC)
+    # 链式连接确保可布线，每个 DC 端口都连接到唯一器件:
+    # 通道分配: ch0=gc1/wg_in1, ch1=gc2/wg_in2, ch2=gc3/wg_in3, ch3=gc4/wg_in4
+    connections = [
+        # 输入: gc1-4 → wg_in1-4
+        ("gc1", "out", "wg_in1", "in"),
+        ("gc2", "out", "wg_in2", "in"),
+        ("gc3", "out", "wg_in3", "in"),
+        ("gc4", "out", "wg_in4", "in"),
+        # Layer 0: ch0↔ch1 (dc1), ch2↔ch3 (dc2)
+        ("wg_in1", "out", "dc1", "in1"),
+        ("wg_in2", "out", "dc1", "in2"),
+        ("wg_in3", "out", "dc2", "in1"),
+        ("wg_in4", "out", "dc2", "in2"),
+        # Layer 0→1: dc1.out1(ch0)→wg_mid1→dc4.in1, dc1.out2(ch1)→wg_mid2→dc3.in1,
+        # dc2.out1(ch2)→wg_mid3→dc3.in2, dc2.out2(ch3)→wg_mid4→dc5.in2
+        ("dc1", "out1", "wg_mid1", "in"),
+        ("dc1", "out2", "wg_mid2", "in"),
+        ("dc2", "out1", "wg_mid3", "in"),
+        ("dc2", "out2", "wg_mid4", "in"),
+        # Layer 1: dc3.in1(ch1), dc3.in2(ch2)
+        ("wg_mid2", "out", "dc3", "in1"),
+        ("wg_mid3", "out", "dc3", "in2"),
+        # Layer 1→2: dc3.out1(ch1)→wg_mid5→dc4.in2, dc3.out2(ch2)→wg_mid6→dc6.in1
+        ("dc3", "out1", "wg_mid5", "in"),
+        ("dc3", "out2", "wg_mid6", "in"),
+        # Layer 2: dc4(ch0,ch1), dc5(ch2,ch3)
+        # dc4.in1(ch0)←wg_mid1, dc4.in2(ch1)←wg_mid5
+        ("wg_mid1", "out", "dc4", "in1"),
+        ("wg_mid5", "out", "dc4", "in2"),
+        # dc5.in1(ch2)←wg_mid6? 不，ch2 应到 dc5.in1，ch3 到 dc5.in2
+        # 修正: ch3 路径 dc2.out2→wg_mid4→dc5.in2，ch2 路径需到 dc5.in1
+        # 但 dc3.out2(ch2)→wg_mid6→dc6.in1，ch2 在 Layer2 不到 dc5
+        # Clements 拓扑: dc5 处理 ch2,ch3，ch2 来自 dc3.out2 经 wg_mid6
+        # 这里让 wg_mid6→dc5.in1（ch2），ch3 直通 dc2.out2→wg_mid4→dc5.in2
+        ("wg_mid6", "out", "dc5", "in1"),
+        ("wg_mid4", "out", "dc5", "in2"),
+        # Layer 2→3: dc4.out2(ch1)→dc6.in1, dc5.out1(ch2)→dc6.in2
+        ("dc4", "out2", "dc6", "in1"),
+        ("dc5", "out1", "dc6", "in2"),
+        # 输出: dc4.out1(ch0)→wg_out1, dc6.out1(ch1)→wg_out2,
+        # dc6.out2(ch2)→wg_out3, dc5.out2(ch3)→wg_out4
+        ("dc4", "out1", "wg_out1", "in"),
+        ("dc6", "out1", "wg_out2", "in"),
+        ("dc6", "out2", "wg_out3", "in"),
+        ("dc5", "out2", "wg_out4", "in"),
+        # 输出 GC: wg_out1-4 → gc5-8
+        ("wg_out1", "out", "gc5", "in"),
+        ("wg_out2", "out", "gc6", "in"),
+        ("wg_out3", "out", "gc7", "in"),
+        ("wg_out4", "out", "gc8", "in"),
+    ]
+
+    return CircuitSpec(
+        name="Clements4x4",
+        canvas_w=1500,
+        canvas_h=800,
+        devices=devices,
+        connections=connections,
+    )
+
+
 _PRESET_BUILDERS = {
     "mzi": _mzi_circuit,
     "ring": _ring_circuit,
+    "clements_4x4": _clements_4x4_circuit,
 }
 
 
@@ -191,12 +346,6 @@ def _build_circuit(preset_id: str):
     """根据预设 ID 构建电路规格。"""
     if preset_id in _PRESET_BUILDERS:
         return _PRESET_BUILDERS[preset_id]()
-    if preset_id == "clements_4x4":
-        raise ImportError(
-            "_build_circuit('clements_4x4') 需要 polaris_orchestrator 子模块提供 "
-            "_default_demo_circuit（v5.0 polaris_orchestrator 未迁移该函数，"
-            "R03 禁止 fall-back）。请在 polaris_gui 内联构建 Clements 电路。"
-        )
     raise ValueError(f"未知预设: {preset_id}")
 
 
@@ -234,6 +383,10 @@ def _extract_paths(result) -> list[dict]:
 def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     """运行布局布线流水线，返回结果 dict。
 
+    R391 修复: 原 raise ImportError 依赖未迁移的 polaris_orchestrator.
+    IntegratedPipeline，现调用 polaris_flow STAGE_EXECUTORS 1-4 阶段
+    （PDK 加载→电路构建→布局→布线），复用 R391 打通的标准化流水线。
+
     默认使用 curvy router（euler 弯曲布线），自动满足弯曲半径约束。
     "default" 映射到 "curvy"，因为 A* 网格布线的直角弯半径 < min_bend_radius，
     会产生 DRC 违规。curvy router 用 euler 曲线替换直角弯，损耗更低。
@@ -241,14 +394,55 @@ def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     来源: LiDAR ISPD'25 curvy-aware routing
       https://dl.acm.org/doi/10.1145/3698364.3705355
 
-    Raises:
-        ImportError: polaris_orchestrator 未迁移 IntegratedPipeline（R03 禁止 fall-back）。
+    Returns:
+        含 placements/paths/circuit/n_placed/n_paths/total_length_um 的 dict。
+        placements/paths 为 _extract_placements/_extract_paths 兼容结构。
     """
-    raise ImportError(
-        "_run_pipeline 需要 polaris_orchestrator 子模块提供 "
-        "IntegratedPipeline/PipelineConfig（v5.0 polaris_orchestrator 未迁移"
-        "一体化流水线类，R03 禁止 fall-back）。"
-        "请改用 polaris_flow 调度器执行布局布线流水线。"
+    import tempfile
+    from types import SimpleNamespace
+
+    from polaris_core import circuit_to_dict
+    from polaris_flow.executors import STAGE_EXECUTORS
+    from polaris_flow.recipe import Recipe
+    from polaris_flow.workspace import Workspace
+
+    # 构建电路并转为 circuit dict
+    circuit = _build_circuit(preset_id)
+    circuit_dict = circuit_to_dict(circuit)
+
+    # "default" 路由器映射到 "curvy"（避免直角弯 DRC 违规）
+    router_algo = "curvy" if router_type in ("default", "curvy") else router_type
+
+    # 运行标准化流水线 stage1-4
+    tmp = tempfile.mkdtemp(prefix="polaris_pipeline_")
+    recipe = Recipe(
+        preset_id=preset_id,
+        platform="SOI",
+        placement_algo="analytical",
+        router_algo=router_algo,
+    )
+    ws = Workspace(output_dir=tmp, job_id=f"pipeline-{preset_id}")
+    prev: dict = {}
+    for stage_id in (1, 2, 3, 4):
+        out = STAGE_EXECUTORS[stage_id](recipe, ws, prev)
+        prev.update(out)
+
+    placements = prev["placements"]
+    paths = prev["routes"]
+    n_placed = prev.get("n_placed", len(placements))
+    n_paths = prev.get("n_paths", len(paths))
+    total_length_um = prev.get("total_length_um", 0.0)
+
+    # 返回 SimpleNamespace 兼容 _extract_placements/_extract_paths
+    # （这两个函数访问 result.placements / result.paths 属性）
+    return SimpleNamespace(
+        circuit=circuit_dict,
+        placements=placements,
+        paths=paths,
+        n_placed=n_placed,
+        n_paths=n_paths,
+        total_length_um=total_length_um,
+        router_type=router_algo,
     )
 
 

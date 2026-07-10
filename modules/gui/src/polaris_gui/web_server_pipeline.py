@@ -63,6 +63,10 @@ def _extract_paths(result) -> list[dict]:
 def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     """运行布局布线流水线，返回结果 dict。
 
+    R391 修复: 原 raise ImportError 依赖未迁移的 polaris_orchestrator.
+    IntegratedPipeline，现调用 polaris_flow STAGE_EXECUTORS 1-4 阶段
+    （PDK 加载→电路构建→布局→布线），复用 R391 打通的标准化流水线。
+
     默认使用 curvy router（euler 弯曲布线），自动满足弯曲半径约束。
     "default" 映射到 "curvy"，因为 A* 网格布线的直角弯半径 < min_bend_radius，
     会产生 DRC 违规。curvy router 用 euler 曲线替换直角弯，损耗更低。
@@ -70,14 +74,43 @@ def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     来源: LiDAR ISPD'25 curvy-aware routing
       https://dl.acm.org/doi/10.1145/3698364.3705355
 
-    Raises:
-        ImportError: polaris_orchestrator 未迁移 IntegratedPipeline（R03 禁止 fall-back）。
+    Returns:
+        含 placements/paths/circuit/n_placed/n_paths/total_length_um 的 SimpleNamespace。
     """
-    raise ImportError(
-        "_run_pipeline 需要 polaris_orchestrator 子模块提供 "
-        "IntegratedPipeline/PipelineConfig（v5.0 polaris_orchestrator 未迁移"
-        "一体化流水线类，R03 禁止 fall-back）。"
-        "请改用 polaris_flow 调度器执行布局布线流水线。"
+    import tempfile
+    from types import SimpleNamespace
+
+    from polaris_core import circuit_to_dict
+    from polaris_flow.executors import STAGE_EXECUTORS
+    from polaris_flow.recipe import Recipe
+    from polaris_flow.workspace import Workspace
+
+    circuit = _build_circuit(preset_id)
+    circuit_dict = circuit_to_dict(circuit)
+
+    router_algo = "curvy" if router_type in ("default", "curvy") else router_type
+
+    tmp = tempfile.mkdtemp(prefix="polaris_pipeline_")
+    recipe = Recipe(
+        preset_id=preset_id,
+        platform="SOI",
+        placement_algo="analytical",
+        router_algo=router_algo,
+    )
+    ws = Workspace(output_dir=tmp, job_id=f"pipeline-{preset_id}")
+    prev: dict = {}
+    for stage_id in (1, 2, 3, 4):
+        out = STAGE_EXECUTORS[stage_id](recipe, ws, prev)
+        prev.update(out)
+
+    return SimpleNamespace(
+        circuit=circuit_dict,
+        placements=prev["placements"],
+        paths=prev["routes"],
+        n_placed=prev.get("n_placed", len(prev["placements"])),
+        n_paths=prev.get("n_paths", len(prev["routes"])),
+        total_length_um=prev.get("total_length_um", 0.0),
+        router_type=router_algo,
     )
 
 
