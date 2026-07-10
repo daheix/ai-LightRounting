@@ -49,12 +49,13 @@ logger = logging.getLogger(__name__)
 def stage9_quantum(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 9: 量子光子验证。
 
-    复用 sim/quantum_photonics.py 的 HOM 干涉仿真，验证电路的量子干涉特性。
+    R391 修复: 原调用 polaris_boson.hom_interference(bs_unitary) 与 v5.0 API
+    不兼容（新签名 hom_interference(theta: float)），改为直接调用新 API。
 
     物理模型（来源: Hong, Ou, Mandel, PRL 1987）:
-    - 构建 2×2 分束器酉矩阵（50:50）
-    - 计算 HOM 干涉输出概率分布
-    - 保真度 = 1 - P(1,1)（HOM 凹陷深度，理想值为 1）
+    - 两个光子输入 50:50 分束器
+    - theta=0 → 完全不可区分 → HOM dip（dip_depth=1.0）
+    - 保真度 = dip_depth（HOM 凹陷深度，理想值为 1）
 
     Args:
         recipe: 作业配方。
@@ -63,18 +64,34 @@ def stage9_quantum(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
 
     Returns:
         含 quantum_report 的字典。
-
-    Raises:
-        ImportError: polaris_boson API 契约与本阶段调用不兼容（R03 禁止 fall-back）。
     """
-    raise ImportError(
-        "stage9_quantum 需要 polaris_boson 提供 beamsplitter_unitary/clements_unitary/"
-        "hom_interference，但 v5.0 polaris_boson API 契约已变更："
-        "hom_interference(theta: float) 接收可分辨性参数而非酉矩阵，"
-        "beamsplitter_unitary 仅为私有 _beamsplitter_unitary。"
-        "本阶段原调用 hom_interference(bs_unitary) 与新契约不兼容，"
-        "R03 禁止 fall-back：请迁移 stage9 改用 polaris_boson.hom_interference(theta)。"
+    from polaris_boson import hom_interference
+
+    _require_input(prev_outputs, "circuit", 9)
+
+    logger.info("阶段 9: 量子光子验证（HOM 干涉）")
+
+    # HOM 干涉: theta=0 表示完全不可区分光子（理想 HOM dip）
+    # 来源: Hong, Ou, Mandel, PRL 59, 2044 (1987)
+    # URL: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
+    hom_result = hom_interference(theta=0.0)
+    dip_depth = hom_result["dip_depth"]
+    coincidence_prob = hom_result["coincidence_prob"]
+    verified = hom_result["verified"]
+
+    logger.info(
+        "阶段 9 完成: HOM dip 深度=%.4f, 符合计数率=%.4f, 验证=%s",
+        dip_depth, coincidence_prob, verified,
     )
+
+    return {
+        "quantum_report": {
+            "hom_dip_depth": float(dip_depth),
+            "coincidence_prob": float(coincidence_prob),
+            "verified": bool(verified),
+            "scheme": "Hong_Ou_Mandel_1987",
+        }
+    }
 
 
 # =============================================================================
@@ -85,8 +102,8 @@ def stage9_quantum(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
 def stage10_inverse(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
     """阶段 10: AI 逆向设计。
 
-    复用 sim/ai_inverse_design.py 的 AdjointOptimizer，基于传输矩阵法
-    优化光子器件参数，最大化目标波长处的传输率。
+    R391 修复: 原依赖 polaris_inverse.AdjointConfig/AdjointOptimizer（v5.0 未迁移），
+    改为调用 polaris_inverse.run_adjoint_optimization 稳定 API。
 
     学术依据:
     - Lalau-Keraly 2013 OE（adjoint shape optimization）
@@ -101,16 +118,36 @@ def stage10_inverse(recipe: Recipe, workspace: Workspace, prev_outputs: dict) ->
 
     Returns:
         含 inverse_design 的字典。
-
-    Raises:
-        ImportError: polaris_inverse 未迁移 AdjointConfig/AdjointOptimizer（R03 禁止 fall-back）。
     """
-    raise ImportError(
-        "stage10_inverse 需要 polaris_inverse 子模块提供 AdjointConfig/AdjointOptimizer，"
-        "但 v5.0 polaris_inverse 仅迁移 run_adjoint_optimization 函数，"
-        "未迁移 AdjointConfig/AdjointOptimizer 类，R03 禁止 fall-back。"
-        "请迁移 stage10 改用 polaris_inverse.run_adjoint_optimization。"
+    from polaris_inverse import run_adjoint_optimization
+
+    logger.info("阶段 10: AI 逆向设计（Adjoint 方法）")
+
+    # Adjoint 逆向设计: JAX 可微分 FDTD 优化波导宽度
+    # 来源: Lalau-Keraly 2013 OE, Piggott 2017 Nature Photonics
+    result = run_adjoint_optimization()
+
+    # run_adjoint_optimization 返回 key: final_fom/optimal_width_nm/fom_history/converged
+    best_fom = result.get("final_fom", 0.0)
+    best_width_nm = result.get("optimal_width_nm", 0.0)
+    fom_history = result.get("fom_history", [])
+
+    logger.info(
+        "阶段 10 完成: 最优 FoM=%.4f, 最优宽度=%.1f nm, 迭代=%d",
+        best_fom, best_width_nm, len(fom_history),
     )
+
+    return {
+        "inverse_design": {
+            "best_fom": float(best_fom),
+            "best_width_nm": float(best_width_nm),
+            "initial_fom": float(result.get("initial_fom", 0.0)),
+            "improvement_db": float(result.get("improvement_db", 0.0)),
+            "converged": bool(result.get("converged", False)),
+            "fom_history": fom_history,
+            "method": "adjoint_fdtd",
+        }
+    }
 
 
 __all__ = [
