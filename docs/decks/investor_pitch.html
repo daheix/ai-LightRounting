@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PoLaRIS 光弈 · 投资人汇报 2026-07</title>
+<!--
+  PoLaRIS 投资人汇报 Deck（单文件，纯 HTML+CSS+JS，无外部依赖）
+  数据溯源（R02 学术诚信，全部可查）：
+    - 综合得分 8.08/10、15 维度表：docs/architecture_overview.md §5
+    - 33 子模块 / 99,017 行 / 1,614 测试 / 3,031 文献 URL：docs/设计文档.md
+    - 三波路线图 8.08→8.22→8.48→8.86：docs/final_defect_audit_report_2026_07.md L230-232
+    - 竞品综合 KLayout~6.5 / gdsfactory~7.0 / 商业 8.5+：docs/roundmap/R24.md L165
+    - 硅光市场 Yole 2024 / EDA 市场 SEMI 2024（公开来源，URL 见 Slide 6）
+  视觉：浅色主题（白底深字），与技术 PPT（深色）区分。
+-->
+<style>
+  :root{
+    --bg:#ffffff;
+    --bg-alt:#f8f9fa;
+    --bg-soft:#f1f3f5;
+    --ink:#1a1a2e;
+    --ink-soft:#4a4a68;
+    --ink-mute:#8688a0;
+    --accent:#2c5282;
+    --accent-soft:#3a6ea5;
+    --accent-bg:#eaf1fb;
+    --danger:#c53030;
+    --danger-bg:#fdeaea;
+    --ok:#2f855a;
+    --ok-bg:#e8f5ee;
+    --line:#e2e5ec;
+    --placeholder-bg:#f1f3f5;
+    --placeholder-border:#d0d3dc;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#0b0d12;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;color:var(--ink)}
+  body{display:flex;align-items:center;justify-content:center}
+
+  /* 16:9 舞台，按视口缩放 */
+  .stage{
+    position:relative;
+    width:1280px;height:720px;
+    overflow:hidden;
+    background:var(--bg);
+    box-shadow:0 30px 80px rgba(0,0,0,.5);
+  }
+  @media (max-aspect-ratio:16/9){.stage{width:100vw;height:56.25vw}}
+  @media (min-aspect-ratio:16/9){.stage{height:100vh;width:177.78vh}}
+
+  .track{
+    position:absolute;inset:0;
+    display:flex;
+    width:1300%; /* 13 slides */
+    transition:transform .55s cubic-bezier(.65,.05,.36,1);
+    will-change:transform;
+  }
+  .slide{
+    width:1280px;height:720px;flex:0 0 1280px;
+    position:relative;
+    padding:54px 72px 64px;
+    display:flex;flex-direction:column;
+    background:var(--bg);
+  }
+
+  /* 顶部进度条 */
+  .progress{position:absolute;top:0;left:0;height:3px;background:var(--accent);transition:width .45s ease;z-index:50}
+
+  /* 页眉小标 */
+  .eyebrow{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:8px}
+  .h1{font-size:46px;line-height:1.15;font-weight:800;letter-spacing:-.01em;color:var(--ink)}
+  .h2{font-size:34px;line-height:1.2;font-weight:800;color:var(--ink);margin-bottom:24px}
+  .h2 .accent{color:var(--accent)}
+  .sub{font-size:19px;line-height:1.55;color:var(--ink-soft);font-weight:400}
+  .rule{width:56px;height:4px;background:var(--accent);border-radius:2px;margin:18px 0}
+
+  /* 页码 */
+  .pageno{position:absolute;right:34px;bottom:24px;font-size:13px;color:var(--ink-mute);font-weight:600;letter-spacing:.05em}
+  .pageno b{color:var(--ink-soft)}
+
+  /* 品牌角标 */
+  .brand{position:absolute;left:34px;bottom:22px;font-size:12px;color:var(--ink-mute);letter-spacing:.12em;font-weight:600}
+
+  /* 导航按钮 */
+  .nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;
+    background:rgba(255,255,255,.9);border:1px solid var(--line);color:var(--ink-soft);
+    font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:60;
+    transition:all .2s;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  .nav:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .nav.prev{left:14px}.nav.next{right:14px}
+  .nav.hidden{opacity:0;pointer-events:none}
+
+  /* ===== 封面 ===== */
+  .cover{justify-content:center;background:
+    radial-gradient(1200px 600px at 80% 20%, #eaf1fb 0%, transparent 60%),
+    radial-gradient(900px 500px at 15% 85%, #f3f0ff 0%, transparent 55%),
+    var(--bg)}
+  .cover .logo{font-size:84px;font-weight:900;letter-spacing:-.02em;color:var(--ink)}
+  .cover .logo .a{color:var(--accent)}
+  .cover .slogan{font-size:27px;color:var(--accent);font-weight:700;margin-top:18px}
+  .cover .sub2{font-size:21px;color:var(--ink-soft);margin-top:10px;font-weight:400}
+  .cover .meta{margin-top:48px;font-size:15px;color:var(--ink-mute);letter-spacing:.1em}
+  .cover .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:999px;background:var(--accent-bg);color:var(--accent);font-size:13px;font-weight:700;margin-bottom:22px}
+
+  /* ===== 两栏 问题/机遇 ===== */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:8px;flex:1}
+  .panel{border-radius:14px;padding:26px 28px;border:1px solid var(--line)}
+  .panel.problem{background:var(--danger-bg);border-color:#f3c9c9}
+  .panel.opp{background:var(--ok-bg);border-color:#c3e6d2}
+  .panel h3{font-size:21px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .panel.problem h3{color:var(--danger)}
+  .panel.opp h3{color:var(--ok)}
+  .panel ul{list-style:none}
+  .panel li{font-size:16px;line-height:1.6;color:var(--ink-soft);padding:8px 0 8px 22px;position:relative;border-bottom:1px dashed var(--line)}
+  .panel li:last-child{border-bottom:none}
+  .panel li:before{content:"";position:absolute;left:0;top:15px;width:8px;height:8px;border-radius:50%}
+  .panel.problem li:before{background:var(--danger)}
+  .panel.opp li:before{background:var(--ok)}
+  .panel li b{color:var(--ink);font-weight:700}
+
+  /* ===== 方案特性卡 ===== */
+  .feat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:6px;flex:1}
+  .feat{background:var(--bg-alt);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:20px 22px;display:flex;gap:16px;align-items:flex-start}
+  .feat .num{font-size:30px;font-weight:900;color:var(--accent);line-height:1;flex-shrink:0;width:42px}
+  .feat .ft{font-size:17px;font-weight:800;color:var(--ink);margin-bottom:4px}
+  .feat .fd{font-size:14px;line-height:1.5;color:var(--ink-soft)}
+
+  /* ===== 流程图 ===== */
+  .flow{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;align-items:stretch}
+  .flow-step{flex:1 1 0;min-width:0;background:var(--accent-bg);border:1px solid #cdddf3;border-radius:10px;padding:14px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:78px}
+  .flow-step .si{font-size:22px;font-weight:900;color:var(--accent);line-height:1}
+  .flow-step .st{font-size:12px;color:var(--ink);font-weight:700;margin-top:6px;line-height:1.25}
+  .flow-arrow{display:flex;align-items:center;color:var(--accent);font-size:18px;font-weight:700;flex:0 0 auto}
+  .flow-note{margin-top:22px;display:flex;gap:14px;flex-wrap:wrap}
+  .flow-note .n{background:var(--ok-bg);color:var(--ok);font-size:14px;font-weight:700;padding:8px 16px;border-radius:999px}
+
+  /* ===== 大数字 ===== */
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px;flex:1;align-content:center}
+  .stat{background:var(--bg-alt);border:1px solid var(--line);border-radius:14px;padding:24px 22px;text-align:center}
+  .stat .big{font-size:42px;font-weight:900;color:var(--accent);line-height:1;letter-spacing:-.02em}
+  .stat .lab{font-size:14px;color:var(--ink-soft);margin-top:10px;font-weight:600}
+  .stat .src{font-size:11px;color:var(--ink-mute);margin-top:4px}
+  .algo-row{margin-top:20px;background:var(--accent-bg);border-radius:12px;padding:16px 22px;border:1px solid #cdddf3}
+  .algo-row .at{font-size:14px;font-weight:800;color:var(--accent);margin-bottom:8px}
+  .algo-row .al{font-size:15px;color:var(--ink-soft);line-height:1.6}
+  .algo-row .al b{color:var(--ink)}
+
+  /* ===== 市场规模 ===== */
+  .mkt-card{background:var(--bg-alt);border:1px solid var(--line);border-radius:14px;padding:22px 24px;display:flex;align-items:center;gap:24px;margin-bottom:14px}
+  .mkt-card .left{flex-shrink:0;width:200px}
+  .mkt-card .big{font-size:36px;font-weight:900;color:var(--accent);line-height:1}
+  .mkt-card .growth{font-size:14px;color:var(--ok);font-weight:700;margin-top:6px}
+  .mkt-card .right{flex:1}
+  .mkt-card .mt{font-size:17px;font-weight:800;color:var(--ink);margin-bottom:4px}
+  .mkt-card .md{font-size:14px;color:var(--ink-soft);line-height:1.5}
+  .mkt-card .msrc{font-size:11px;color:var(--ink-mute);margin-top:6px}
+  .mkt-card .msrc a{color:var(--accent);text-decoration:none}
+
+  /* ===== 竞争表 ===== */
+  .comp-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column}
+  table.comp{width:100%;border-collapse:separate;border-spacing:0;font-size:14px;margin-top:6px}
+  table.comp th,table.comp td{padding:9px 8px;text-align:center;border-bottom:1px solid var(--line)}
+  table.comp th{background:var(--bg-soft);color:var(--ink-soft);font-weight:700;font-size:13px}
+  table.comp th:first-child,table.comp td:first-child{text-align:left;font-weight:700;color:var(--ink);padding-left:16px}
+  table.comp tr:hover td{background:#fafbfd}
+  table.comp .self{background:var(--accent-bg);color:var(--accent);font-weight:800}
+  table.comp .best{color:var(--ok);font-weight:800}
+  table.comp .weak{color:var(--danger);font-weight:700}
+  table.comp tfoot td{font-weight:800;background:var(--bg-soft);border-top:2px solid var(--accent);border-bottom:none}
+  table.comp tfoot td.self{background:var(--accent);color:#fff}
+  .comp-note{font-size:13px;color:var(--ink-soft);margin-top:12px;line-height:1.5}
+  .comp-note b{color:var(--accent)}
+
+  /* ===== 四象限 ===== */
+  .quad{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:16px;flex:1;margin-top:6px}
+  .qcard{border-radius:14px;padding:22px 24px;border:1px solid var(--line);display:flex;flex-direction:column}
+  .qcard .icon{font-size:26px;margin-bottom:8px}
+  .qcard .qt{font-size:18px;font-weight:800;margin-bottom:6px}
+  .qcard .qd{font-size:14px;color:var(--ink-soft);line-height:1.55;flex:1}
+  .qcard .tag{align-self:flex-start;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;margin-top:10px}
+  .q1{background:var(--accent-bg);border-color:#cdddf3}.q1 .qt{color:var(--accent)}.q1 .tag{background:var(--accent);color:#fff}
+  .q2{background:#fff8e8;border-color:#f0dfa3}.q2 .qt{color:#976a00}.q2 .tag{background:#976a00;color:#fff}
+  .q3{background:var(--ok-bg);border-color:#c3e6d2}.q3 .qt{color:var(--ok)}.q3 .tag{background:var(--ok);color:#fff}
+  .q4{background:#f3f0ff;border-color:#d8d0f5}.q4 .qt{color:#6b46c1}.q4 .tag{background:#6b46c1;color:#fff}
+
+  /* ===== 路线图时间线 ===== */
+  .waves{display:flex;flex-direction:column;gap:16px;flex:1;margin-top:6px}
+  .wave{display:flex;gap:20px;background:var(--bg-alt);border:1px solid var(--line);border-radius:14px;padding:18px 22px;align-items:center}
+  .wave .wtag{flex-shrink:0;width:130px;text-align:center}
+  .wave .wtag .wn{font-size:15px;font-weight:800;color:var(--accent)}
+  .wave .wtag .wt{font-size:12px;color:var(--ink-mute);margin-top:2px}
+  .wave .wbody{flex:1;font-size:14px;color:var(--ink-soft);line-height:1.55}
+  .wave .wbody b{color:var(--ink)}
+  .wave .wscore{flex-shrink:0;text-align:right}
+  .wave .wscore .from{font-size:14px;color:var(--ink-mute);font-weight:700}
+  .wave .wscore .arrow{font-size:18px;color:var(--accent);margin:0 4px}
+  .wave .wscore .to{font-size:22px;font-weight:900;color:var(--accent)}
+  .wave.w1{border-left:5px solid #976a00}
+  .wave.w2{border-left:5px solid var(--accent)}
+  .wave.w3{border-left:5px solid var(--ok)}
+
+  /* ===== 占位页 ===== */
+  .placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--placeholder-bg);border:2px dashed var(--placeholder-border);border-radius:16px;margin-top:10px;padding:40px}
+  .placeholder .ph-icon{font-size:40px;margin-bottom:14px;opacity:.6}
+  .placeholder .ph-title{font-size:20px;font-weight:800;color:var(--ink-mute);margin-bottom:8px}
+  .placeholder .ph-desc{font-size:15px;color:var(--ink-mute);text-align:center;line-height:1.6}
+  .placeholder .ph-list{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px 28px;font-size:14px;color:var(--ink-mute)}
+  .placeholder .ph-list span:before{content:"○ ";color:var(--ink-mute)}
+
+  /* ===== 诚实声明 ===== */
+  .honest{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;flex:1;margin-top:6px}
+  .honest-left{display:flex;flex-direction:column;gap:12px}
+  .honest-card{border-radius:12px;padding:16px 20px;border:1px solid var(--line)}
+  .honest-card .ht{font-size:15px;font-weight:800;margin-bottom:6px}
+  .honest-card .hd{font-size:14px;color:var(--ink-soft);line-height:1.5}
+  .honest-card.score{background:var(--accent-bg);border-color:#cdddf3}
+  .honest-card.score .ht{color:var(--accent)}
+  .honest-card.gap{background:var(--danger-bg);border-color:#f3c9c9}
+  .honest-card.gap .ht{color:var(--danger)}
+  .honest-card.zero{background:var(--ok-bg);border-color:#c3e6d2}
+  .honest-card.zero .ht{color:var(--ok)}
+  .honest-right{background:var(--bg-alt);border:1px solid var(--line);border-radius:12px;padding:22px 24px;display:flex;flex-direction:column;justify-content:center}
+  .honest-right .quote{font-size:22px;font-weight:800;color:var(--ink);line-height:1.5}
+  .honest-right .quote .a{color:var(--accent)}
+  .honest-right .sig{margin-top:18px;font-size:14px;color:var(--ink-mute)}
+
+  /* ===== 封底 ===== */
+  .back{justify-content:center;align-items:center;text-align:center;background:
+    radial-gradient(1000px 500px at 50% 30%, #eaf1fb 0%, transparent 60%),var(--bg)}
+  .back .logo{font-size:72px;font-weight:900;letter-spacing:-.02em}
+  .back .logo .a{color:var(--accent)}
+  .back .slogan{font-size:24px;color:var(--accent);font-weight:700;margin-top:14px}
+  .back .links{margin-top:34px;display:flex;flex-direction:column;gap:8px;font-size:16px;color:var(--ink-soft)}
+  .back .links a{color:var(--accent);text-decoration:none;font-weight:700}
+  .back .lic{margin-top:40px;font-size:14px;color:var(--ink-mute);letter-spacing:.08em}
+
+  /* 列表通用 */
+  .bullets{list-style:none;margin-top:6px}
+  .bullets li{font-size:17px;line-height:1.7;color:var(--ink-soft);padding:7px 0 7px 26px;position:relative}
+  .bullets li:before{content:"▸";position:absolute;left:0;color:var(--accent);font-weight:800}
+  .bullets li b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="progress" id="progress"></div>
+  <div class="track" id="track">
+
+    <!-- ========== Slide 1: 封面 ========== -->
+    <section class="slide cover">
+      <span class="badge">● 开源光电子 EDA · v6.0</span>
+      <div class="logo">PoLaRIS <span class="a">光弈</span></div>
+      <div class="slogan">AI 驱动的开源光电子 EDA 引擎</div>
+      <div class="sub2">从网表到流片，端到端自动化</div>
+      <div class="meta">投资人汇报 · 2026-07</div>
+      <div class="pageno"><b>01</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 2: 问题与机遇 ========== -->
+    <section class="slide">
+      <div class="eyebrow">02 · 市场背景</div>
+      <h2 class="h2">问题与<span class="accent">机遇</span></h2>
+      <div class="two-col">
+        <div class="panel problem">
+          <h3>⚠ 问题</h3>
+          <ul>
+            <li>光子芯片设计 <b>EDA 工具被海外垄断</b>：Lumerical / Ansys（美国）、IPKISS（比利时）、KLayout（德国开源）</li>
+            <li>传统 EDA <b>缺乏 AI 能力</b>，设计周期长（数周→数月），人工布局布线效率低</li>
+            <li>中美科技竞争下，<b>自主可控光子 EDA 战略价值高</b>，国产替代迫切</li>
+          </ul>
+        </div>
+        <div class="panel opp">
+          <h3>✦ 机遇</h3>
+          <ul>
+            <li>硅光子市场快速增长，<b>CAGR 30%+</b>，AI 算力互连驱动需求爆发</li>
+            <li><b>AI/RL 驱动新一代 EDA</b>：AlphaChip 已部署 Google TPU 三代芯片，范式变革已发生</li>
+            <li><b>开源模式</b>降低采用门槛，构建生态，加速学术与工业采用</li>
+          </ul>
+        </div>
+      </div>
+      <div class="pageno"><b>02</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 3: 解决方案 ========== -->
+    <section class="slide">
+      <div class="eyebrow">03 · 产品方案</div>
+      <h2 class="h2">PoLaRIS 开源 <span class="accent">AI 光电子 EDA</span> 引擎</h2>
+      <div class="feat-grid">
+        <div class="feat"><div class="num">10</div><div><div class="ft">端到端 10 阶段自动化流水线</div><div class="fd">网表 → GDS 全流程，一键运行</div></div></div>
+        <div class="feat"><div class="num">4</div><div><div class="ft">工艺平台支持</div><div class="fd">SOI / SiN / InP / LNOI 四大平台</div></div></div>
+        <div class="feat"><div class="num">AI</div><div><div class="ft">强化学习布局布线</div><div class="fd">PPO + AlphaChip 风格 GNN 策略</div></div></div>
+        <div class="feat"><div class="num">∇</div><div><div class="ft">JAX 可微逆向设计</div><div class="fd">adjoint method 自动微分优化</div></div></div>
+        <div class="feat"><div class="num">⌗</div><div><div class="ft">交互式版图编辑器</div><div class="fd">LayoutEditor + Web 预览双模式</div></div></div>
+        <div class="feat"><div class="num">⚛</div><div><div class="ft">量子光子 & 光电协同</div><div class="fd">量子线路仿真 + Ngspice 联合仿真</div></div></div>
+      </div>
+      <div class="pageno"><b>03</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 4: 产品演示 ========== -->
+    <section class="slide">
+      <div class="eyebrow">04 · 产品演示</div>
+      <h2 class="h2">Showcase <span class="accent">11 阶段</span> 全流程</h2>
+      <div class="flow">
+        <div class="flow-step"><div class="si">1</div><div class="st">PDK 目录</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">2</div><div class="st">电路规格</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">3</div><div class="st">AI 布局</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">4</div><div class="st">智能布线</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">5</div><div class="st">仿真</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">6</div><div class="st">DRC/LVS</div></div>
+      </div>
+      <div class="flow" style="margin-top:10px">
+        <div class="flow-step"><div class="si">7</div><div class="st">GDS 导出</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">8</div><div class="st">光电协同</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">9</div><div class="st">量子光子</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">10</div><div class="st">逆向设计</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step"><div class="si">11</div><div class="st">交互式编辑</div></div>
+      </div>
+      <div class="flow-note">
+        <span class="n">⚡ 一键运行</span>
+        <span class="n">🔄 全流程自动化</span>
+        <span class="n">🌐 浏览器可访问</span>
+      </div>
+      <div class="pageno"><b>04</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 5: 技术壁垒 ========== -->
+    <section class="slide">
+      <div class="eyebrow">05 · 技术壁垒</div>
+      <h2 class="h2">工程体量与<span class="accent">核心算法</span></h2>
+      <div class="stat-grid">
+        <div class="stat"><div class="big">33</div><div class="lab">子模块 monorepo</div><div class="src">源码统计 2026-07</div></div>
+        <div class="stat"><div class="big">99,017</div><div class="lab">行代码</div><div class="src">find … | wc -l</div></div>
+        <div class="stat"><div class="big">3,031</div><div class="lab">文献 URL（学术诚信）</div><div class="src">全仓 grep 统计</div></div>
+        <div class="stat"><div class="big">1,614</div><div class="lab">测试 passed / 0 failed</div><div class="src">pytest 全量 2026-07</div></div>
+        <div class="stat"><div class="big">36</div><div class="lab">月研发路标（R1–R36 完成）</div><div class="src">roadmap.md</div></div>
+        <div class="stat"><div class="big">8.08</div><div class="lab">综合得分 / 10</div><div class="src">15 维度加权</div></div>
+      </div>
+      <div class="algo-row">
+        <div class="at">核心算法栈（均有文献溯源）</div>
+        <div class="al"><b>DREAMPlace</b> 梯度布局 · <b>AlphaChip</b> GNN 边策略（Google TPU） · <b>LiDAR</b> Curvy A* 布线 · <b>JAX adjoint</b> 逆向设计 · <b>PPO</b> 强化学习（Schulman 2017）</div>
+      </div>
+      <div class="pageno"><b>05</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 6: 市场规模 ========== -->
+    <section class="slide">
+      <div class="eyebrow">06 · 市场规模</div>
+      <h2 class="h2">硅光 + EDA <span class="accent">双赛道增长</span></h2>
+      <div class="mkt-card">
+        <div class="left">
+          <div class="big">$80亿 → $300亿+</div>
+          <div class="growth">CAGR 30%+ · 2025→2030</div>
+        </div>
+        <div class="right">
+          <div class="mt">全球硅光子市场规模</div>
+          <div class="md">2025 年约 80 亿美元，2030 年预计 300+ 亿美元。AI 算力互连、共封装光学（CPO）驱动增长。</div>
+          <div class="msrc">来源：Yole Group, Silicon Photonics Report 2024 · <a href="https://www.yolegroup.com/product/silicon-photonics-market-and-technology/" target="_blank">yolegroup.com</a></div>
+        </div>
+      </div>
+      <div class="mkt-card">
+        <div class="left">
+          <div class="big">$150亿</div>
+          <div class="growth">CAGR 8–10%</div>
+        </div>
+        <div class="right">
+          <div class="mt">全球 EDA 市场规模</div>
+          <div class="md">2025 年约 150 亿美元，稳健增长。电子 EDA 已成熟，光子 EDA 是新兴细分。</div>
+          <div class="msrc">来源：SEMI EDA Market Data 2024 · <a href="https://www.semi.org/en/products-services/market-data" target="_blank">semi.org</a></div>
+        </div>
+      </div>
+      <div class="mkt-card">
+        <div class="left">
+          <div class="big">$5–10亿</div>
+          <div class="growth">占 EDA 3–7%（估算）</div>
+        </div>
+        <div class="right">
+          <div class="mt">光子 EDA 细分市场（估算）</div>
+          <div class="md">按 EDA 总量 3–7% 估算，随硅光产业化加速，细分占比将持续提升。标注：此为估算值，非精确统计。</div>
+          <div class="msrc">估算依据：EDA 总量 × 光子占比，参考 Yole + SEMI 交叉推算</div>
+        </div>
+      </div>
+      <div class="pageno"><b>06</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 7: 竞争格局 ========== -->
+    <section class="slide">
+      <div class="eyebrow">07 · 竞争格局</div>
+      <h2 class="h2">15 维度对比 · <span class="accent">AI / 开源 / 布局布线领先</span></h2>
+      <div class="comp-wrap">
+        <table class="comp">
+          <thead>
+            <tr><th>维度</th><th>PoLaRIS v6.0</th><th>Lumerical</th><th>KLayout</th><th>gdsfactory</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>布局算法</td><td class="self best">9</td><td>7</td><td>5</td><td>6</td></tr>
+            <tr><td>布线算法</td><td class="self best">9</td><td>6</td><td>5</td><td>7</td></tr>
+            <tr><td>仿真精度</td><td>9</td><td class="best">10</td><td>3</td><td>4</td></tr>
+            <tr><td>AI/ML</td><td class="self best">8</td><td>5</td><td>3</td><td>4</td></tr>
+            <tr><td>开源许可</td><td class="self best">10</td><td class="weak">2</td><td>9</td><td class="best">10</td></tr>
+            <tr><td>用户规模</td><td class="weak">2</td><td class="best">10</td><td>9</td><td>8</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td>综合</td><td class="self">8.08</td><td>8.5</td><td>6.5</td><td>7.0</td></tr>
+          </tfoot>
+        </table>
+        <div class="comp-note"><b>PoLaRIS</b> 在 AI/ML、开源许可、布局布线算法维度领先；仿真精度接近 Lumerical；<b>用户规模（-6）为最大短板</b>，是下一阶段攻坚重点。<br><span style="color:var(--ink-mute);font-size:12px">竞品得分来源：docs/roundmap/R24.md（开源 6.5–7.0 / 商业 8.5+），PoLaRIS 得分：docs/architecture_overview.md §5</span></div>
+      </div>
+      <div class="pageno"><b>07</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 8: 商业模式 ========== -->
+    <section class="slide">
+      <div class="eyebrow">08 · 商业模式</div>
+      <h2 class="h2">四象限<span class="accent">商业闭环</span></h2>
+      <div class="quad">
+        <div class="qcard q1">
+          <div class="icon">🌱</div>
+          <div class="qt">开源社区版（MIT · 免费）</div>
+          <div class="qd">构建生态、学术采用、降低门槛。GitHub 开源，社区贡献驱动迭代。</div>
+          <span class="tag">生态基石</span>
+        </div>
+        <div class="qcard q2">
+          <div class="icon">🏢</div>
+          <div class="qt">商业企业版（订阅制）</div>
+          <div class="qd">增强 DRC 认证、流片级支持、SLA 保障、企业培训。按席位年订阅收费。</div>
+          <span class="tag">主营收入</span>
+        </div>
+        <div class="qcard q3">
+          <div class="icon">🔬</div>
+          <div class="qt">MPW 流片服务</div>
+          <div class="qd">代理多项目晶圆（MPW）流片，按面积收费。连接设计与制造，闭环交付。</div>
+          <span class="tag">增值服务</span>
+        </div>
+        <div class="qcard q4">
+          <div class="icon">🎓</div>
+          <div class="qt">学术合作</div>
+          <div class="qd">联合论文、人才培养、技术转化。与高校共建光子 EDA 课程与实验室。</div>
+          <span class="tag">长期生态</span>
+        </div>
+      </div>
+      <div class="pageno"><b>08</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 9: 路线图 ========== -->
+    <section class="slide">
+      <div class="eyebrow">09 · 路线图</div>
+      <h2 class="h2">三波修复 · <span class="accent">8.08 → 8.86</span></h2>
+      <div class="waves">
+        <div class="wave w1">
+          <div class="wtag"><div class="wn">第 1 波</div><div class="wt">1–3 个月</div></div>
+          <div class="wbody">D10 GUI（showcase 启用 R19）+ D12 逆向（演示 R28 + level-set）+ D07 AI（<b>完整 PPO 训练</b>）+ D11 光电（Ngspice 集成）+ D15（<b>arXiv 论文</b>）</div>
+          <div class="wscore"><span class="from">8.08</span><span class="arrow">→</span><span class="to">8.22</span></div>
+        </div>
+        <div class="wave w2">
+          <div class="wtag"><div class="wn">第 2 波</div><div class="wt">6 个月</div></div>
+          <div class="wbody">D10 GUI（<b>Tauri 桌面化</b>）+ D12 逆向（<b>3D</b>）+ D07 AI（<b>TILOS benchmark</b>）+ D15（<b>NOEIC MPW 流片</b>）</div>
+          <div class="wscore"><span class="from">8.22</span><span class="arrow">→</span><span class="to">8.48</span></div>
+        </div>
+        <div class="wave w3">
+          <div class="wtag"><div class="wn">第 3 波</div><div class="wt">12–24 个月</div></div>
+          <div class="wbody">D07 AI（<b>100+ PIC 预训练</b>）+ D13 量子（<b>硬件验证</b>）+ D15（<b>学术合作 + 商业版</b>）</div>
+          <div class="wscore"><span class="from">8.48</span><span class="arrow">→</span><span class="to">8.86</span></div>
+        </div>
+      </div>
+      <div class="comp-note" style="margin-top:14px">数据来源：docs/final_defect_audit_report_2026_07.md L230-232。第三波后综合 8.86 接近行业最高 9.0。</div>
+      <div class="pageno"><b>09</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 10: 团队（占位） ========== -->
+    <section class="slide">
+      <div class="eyebrow">10 · 团队</div>
+      <h2 class="h2">核心<span class="accent">团队</span></h2>
+      <div class="placeholder">
+        <div class="ph-icon">👥</div>
+        <div class="ph-title">团队信息待补充</div>
+        <div class="ph-desc">此页为占位，待团队信息确定后填充。<br>以下角色待定：</div>
+        <div class="ph-list">
+          <span>创始人 / CEO</span>
+          <span>CTO</span>
+          <span>核心工程师</span>
+          <span>顾问</span>
+        </div>
+      </div>
+      <div class="pageno"><b>10</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 11: 融资计划（占位） ========== -->
+    <section class="slide">
+      <div class="eyebrow">11 · 融资计划</div>
+      <h2 class="h2">融资<span class="accent">计划</span></h2>
+      <div class="placeholder">
+        <div class="ph-icon">💼</div>
+        <div class="ph-title">融资信息待补充</div>
+        <div class="ph-desc">此页为占位，待融资信息确定后填充。<br>以下事项待定：</div>
+        <div class="ph-list">
+          <span>融资轮次</span>
+          <span>融资金额</span>
+          <span>资金用途</span>
+          <span>估值</span>
+        </div>
+      </div>
+      <div class="pageno"><b>11</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 12: 诚实声明 ========== -->
+    <section class="slide">
+      <div class="eyebrow">12 · 诚实声明</div>
+      <h2 class="h2">我们诚实地呈现<span class="accent">现状与差距</span></h2>
+      <div class="honest">
+        <div class="honest-left">
+          <div class="honest-card score">
+            <div class="ht">综合得分 8.08 / 10</div>
+            <div class="hd">15 维度加权，3,031 文献溯源，诚实自评（architecture_overview.md §5）</div>
+          </div>
+          <div class="honest-card gap">
+            <div class="ht">未达成 R36 目标 9.20 · 未超越行业最高 9.0</div>
+            <div class="hd">差距 -1.12。我们不掩饰差距，差距即 roadmap。</div>
+          </div>
+          <div class="honest-card gap">
+            <div class="ht">5 维度未达标</div>
+            <div class="hd">D10 GUI(-4) · D15 用户规模(-6) · D12 逆向(-2) · D07 AI(-2) · D11 光电(-2)</div>
+          </div>
+          <div class="honest-card zero">
+            <div class="ht">0 假数据 · 0 fall-back · 0 TODO 残留</div>
+            <div class="hd">全仓无静默兜底，无假数据"让程序跑通"。失败即 raise。</div>
+          </div>
+        </div>
+        <div class="honest-right">
+          <div class="quote">诚实地呈现现状与差距，<br>是<span class="a">技术自信</span>的体现。</div>
+          <div class="sig">— PoLaRIS 团队 · 2026-07</div>
+        </div>
+      </div>
+      <div class="pageno"><b>12</b> / 13</div>
+    </section>
+
+    <!-- ========== Slide 13: 封底 ========== -->
+    <section class="slide back">
+      <div class="logo">PoLaRIS <span class="a">光弈</span></div>
+      <div class="slogan">AI 驱动的开源光电子 EDA</div>
+      <div class="links">
+        <div>GitHub: <a href="https://github.com/daheix/ai-LightRounting" target="_blank">github.com/daheix/ai-LightRounting</a></div>
+        <div>联系方式：【待补充】</div>
+      </div>
+      <div class="lic">开源许可: MIT · 2026</div>
+      <div class="pageno"><b>13</b> / 13</div>
+    </section>
+
+  </div>
+
+  <button class="nav prev hidden" id="prev" aria-label="上一页">‹</button>
+  <button class="nav next" id="next" aria-label="下一页">›</button>
+</div>
+
+<script>
+(function(){
+  var total = 13;
+  var idx = 0;
+  var track = document.getElementById('track');
+  var prev = document.getElementById('prev');
+  var next = document.getElementById('next');
+  var progress = document.getElementById('progress');
+  var stage = document.getElementById('stage');
+
+  function render(){
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    progress.style.width = ((idx + 1) / total * 100) + '%';
+    prev.classList.toggle('hidden', idx === 0);
+    next.classList.toggle('hidden', idx === total - 1);
+  }
+
+  function go(n){
+    idx = Math.max(0, Math.min(total - 1, n));
+    render();
+  }
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown'){ e.preventDefault(); go(idx + 1); }
+    else if(e.key === 'ArrowLeft' || e.key === 'PageUp'){ e.preventDefault(); go(idx - 1); }
+    else if(e.key === 'Home'){ go(0); }
+    else if(e.key === 'End'){ go(total - 1); }
+  });
+
+  prev.addEventListener('click', function(){ go(idx - 1); });
+  next.addEventListener('click', function(){ go(idx + 1); });
+
+  // 点击舞台左右半区翻页（避开按钮）
+  stage.addEventListener('click', function(e){
+    if(e.target.closest('.nav')) return;
+    var rect = stage.getBoundingClientRect();
+    var x = e.clientX - rect.left;
+    if(x < rect.width * 0.32) go(idx - 1);
+    else if(x > rect.width * 0.68) go(idx + 1);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
