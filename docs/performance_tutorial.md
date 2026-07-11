@@ -324,7 +324,48 @@ print(f"metric: {case.metric}")
     └─ 累加/前缀和？→ accumulate_inplace（ufunc.accumulate）
 ```
 
-## 10. R03 禁止 fall-back / R04 不参与 GPU
+## 10. 端到端性能基准（2026-07-10 同步）
+
+### 10.1 5 项核心性能指标（规则 15.1，5/5 达标）
+
+| # | 操作 | 目标耗时 | 实测平均 | 标准差 | 判定 |
+|---|------|----------|----------|--------|------|
+| 1 | 网表解析（100 器件） | < 100ms | 3.793ms | 11.391ms | 达标 |
+| 2 | A* 布线（单连接） | < 50ms | 1.532ms | 1.694ms | 达标 |
+| 3 | GNN 前向推理 | < 10ms | 1.020ms | 1.284ms | 达标 |
+| 4 | PPO 训练单步 | < 100ms | 13.099ms | 9.004ms | 达标 |
+| 5 | GDS 导出（100 器件） | < 500ms | 14.279ms | 10.196ms | 达标 |
+
+来源：`docs/performance_benchmark.md`（Python 3.14.4 / Xeon 8582C 3 核 / 5.8GB）
+
+### 10.2 端到端流水线基准
+
+| 电路 | 器件数 | 端到端耗时 | 来源 |
+|------|--------|-----------|------|
+| MZI（showcase 全 11 阶段） | 5 | 21.17s | `examples/e2e_showcase/out/reports/report.md` |
+| MZI（生产级 50 步逆向） | 5 | 184.57s | 同上 |
+
+### 10.3 算法 benchmark
+
+| 指标 | 数值 | 来源 |
+|------|------|------|
+| 布局 HPWL（4 benchmark 平均） | 7052.38 μm | `docs/benchmark_report_analytical.md` |
+| 逆向 FoM（生产级 50 步） | +14.72 dB | `docs/mvp_100iter_report.md` |
+| 逆向 FoM（showcase 5 步） | +0.18 dB | `examples/e2e_showcase/out/` |
+| 量子酉性误差 | 4.44e-16 | `examples/e2e_showcase/out/` |
+| 电路 S 参数级联误差 | < 1e-15 | R3 验收 |
+
+### 10.4 性能瓶颈分析
+
+最接近目标上限的指标：**PPO 训练单步**，实测 13.099ms 占目标 100ms 的 13.1%。
+
+```bash
+# 复现性能基准
+cd /workspace
+python scripts/performance_benchmark.py
+```
+
+## 11. R03 禁止 fall-back / R04 不参与 GPU
 
 - 所有调优原语失败时 `raise`（如 `vectorized_stencil` 入参非 ndarray 抛 `TypeError`），
   无 `except: pass` / `return None` / `return []`。
