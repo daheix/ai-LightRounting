@@ -81,9 +81,11 @@ Output（输出）:
 ================================================================
 - R02 学术诚信: 所有参数/公式可溯源，本 docstring 含 10 篇文献 URL
 - R03 禁止 fall-back: 失败即 raise，无 except 块静默空语句 / return None
-- R04 不参与 GPU: 纯 NumPy/SciPy，无 CuPy/CUDA/JAX 后端
+- R04 不参与 GPU: 纯 NumPy/SciPy + JAX CPU 后端（jax.devices("cpu")），
+  禁 CuPy/CUDA/ROCm/GPU/TPU；JAX 不可用时 raise RuntimeError，不回退 numpy
 - R05 无 TODO/FIXME/HACK 残留
-- R13 不保留 v4 兼容: 去除 sax 必装依赖、jax 后端，简化为纯 numpy 单后端
+- R13 v5.1: 去除 sax 必装依赖；JAX 为可选 CPU 加速后端
+  (is_jax_available 自动检测)，核心仿真保持纯 numpy 单后端可运行
 - 函数 ≤80 行 / 文件 ≤800 行 / 圈复杂度 ≤15
 """
 
@@ -92,7 +94,13 @@ from __future__ import annotations
 from polaris_circuit.backend_selector import (
     COND_NUM_FG_THRESHOLD,
     COND_NUM_KLU_THRESHOLD,
+    cascade_two_port_jax,
     compute_condition_number,
+    get_jax_devices,
+    is_jax_available,
+    jit_compile,
+    simulate_waveguide_chain_jax,
+    waveguide_s_jax,
 )
 from polaris_circuit.cascade import cascade_circuit
 from polaris_circuit.mna_spice import (
@@ -121,6 +129,15 @@ from polaris_circuit.simulator import (
     WavelengthRange,
     default_models,
     group_delay,
+)
+from polaris_circuit.link_budget import (
+    LinkBudgetReport,
+    LinkBudgetStage,
+    analyze_link,
+    compute_link_budget,
+    compute_link_margin,
+    compute_ook_ber,
+    render_eye_diagram,
 )
 from polaris_circuit.subcircuit import Connector, Subcircuit, Term
 from polaris_circuit.system_level import (
@@ -177,6 +194,13 @@ __all__ = [
     "compute_condition_number",
     "COND_NUM_FG_THRESHOLD",
     "COND_NUM_KLU_THRESHOLD",
+    # JAX CPU 后端（v5.1，R04 合规：仅 jax.devices("cpu")）
+    "is_jax_available",
+    "get_jax_devices",
+    "jit_compile",
+    "waveguide_s_jax",
+    "cascade_two_port_jax",
+    "simulate_waveguide_chain_jax",
     # 频域仿真器
     "CircuitSimulator",
     "WavelengthRange",
@@ -201,6 +225,14 @@ __all__ = [
     "BerEvaluator",
     "to_time_domain",
     "simulate_system_level",
+    # 链路预算与眼图分析（系统级链路预算 / OSNR / OOK BER / 眼图渲染）
+    "LinkBudgetStage",
+    "LinkBudgetReport",
+    "compute_link_budget",
+    "compute_link_margin",
+    "compute_ook_ber",
+    "render_eye_diagram",
+    "analyze_link",
     # 时域电路仿真
     "YeeGrid",
     "PMLBoundary",
