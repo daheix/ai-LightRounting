@@ -6,26 +6,26 @@ architecture_overview.md — PoLaRIS（光弈）架构讲解文档
 - 测试结果（1,614 passed, 0 failed, 1 skipped）：pytest 全量运行，截至 2026-07
 - 文献 URL 数（3,031）：全仓 grep 统计
 - 综合得分（8.08/10，v6.0）：15 维度加权计算，权重与单项得分见 §5
-- 10 阶段流水线数据：modules/flow/src/polaris_flow/stage_*.py 实际实现
+- 12 阶段流水线数据：modules/flow/src/polaris_flow/stage_*.py 实际实现
 - 模块分层：modules/<子模块>/src/polaris_* 实际目录结构
 - 文献来源：见 §6，均标注作者/标题/年份/URL 或 DOI
 - 战略决策（不参与 GPU）：R04-不参与GPU.md（2026-06-25 项目所有者指示）
 本文档所有数字均与上述来源一致，未编造任何数据。
 ================================================================================
-更新时间：2026-07-10 14:30 CST
-版本：v6.1（2026-07）
+更新时间：2026-07-17 03:50 CST
+版本：v6.2（2026-07，R392 12 阶段工业流程重构）
 -->
 
 # PoLaRIS（光弈）架构讲解文档
 
 > PoLaRIS = Photonic Layout & Routing Intelligent System（光电子布局布线智能系统）。
-> 本文为单文件架构总览，共 18 章节：§1-§6 覆盖项目定位、模块分层、10 阶段流水线、6 大业务流程、15 维度评分与核心文献来源；§7-§18 为深度技术章节，覆盖物理求解器数学公式、AI 训练基础设施、输出 IO 格式、Web GUI 架构、性能基准、质量保障、33 子模块矩阵、算法 benchmark 量化、优化器矩阵、PDK 工艺平台、光电协同与量子光子深度。所有公式/参数/数据均标注文献溯源或真实报告来源（R02 学术诚信 / R03 禁止 fall-back）。
+> 本文为单文件架构总览，共 18 章节：§1-§6 覆盖项目定位、模块分层、12 阶段流水线、6 大业务流程、15 维度评分与核心文献来源；§7-§18 为深度技术章节，覆盖物理求解器数学公式、AI 训练基础设施、输出 IO 格式、Web GUI 架构、性能基准、质量保障、33 子模块矩阵、算法 benchmark 量化、优化器矩阵、PDK 工艺平台、光电协同与量子光子深度。所有公式/参数/数据均标注文献溯源或真实报告来源（R02 学术诚信 / R03 禁止 fall-back）。
 
 ---
 
 ## 1. 项目定位与体量
 
-**一句话定位**：PoLaRIS（光弈）是开源光电子 AI 智能布局布线引擎，支持 SOI/SiN/InP/LNOI 四大工艺平台，提供从网表到 GDS 的端到端 10 阶段自动化流水线。
+**一句话定位**：PoLaRIS（光弈）是开源光电子 AI 智能布局布线引擎，支持 SOI/SiN/InP/LNOI 四大工艺平台，提供从网表到 GDS 的端到端 12 阶段自动化流水线（对齐 Luceda IPKISS / Synopsys OptoCompiler 工业流程：先仿真后版图，验证全过后才导出 GDS）。
 
 **体量数据**：
 
@@ -136,22 +136,24 @@ graph TD
 
 ---
 
-## 3. 10 阶段标准化流水线表
+## 3. 12 阶段标准化流水线表（工业光电子设计流程）
 
-PoLaRIS 流水线由 `polaris-flow` 编排，10 个 Stage 顺序执行，每个 Stage 产出固定 key 注入上下文，供下游 Stage 消费。
+PoLaRIS 流水线由 `polaris-flow` 编排，12 个 Stage 顺序执行，每个 Stage 产出固定 key 注入上下文，供下游 Stage 消费。R392 重构对齐 Luceda IPKISS / Synopsys OptoCompiler 工业流程：**先仿真后版图**（原理图级仿真在布局布线之前），**验证全过后才导出 GDS**（GDS 导出为流片交付最后一步）。
 
 | Stage | 名称 | 实现文件 | 输入依赖 | 输出 key | 调用子模块 | 学术来源 |
 |-------|------|----------|----------|----------|------------|----------|
 | Stage 1 | PDK 器件目录加载 | stage_input.py | 无 | device_catalog / platform / n_devices | polaris_pdk.filters.list_devices | SiEPIC EBeam PDK |
 | Stage 2 | 电路规格构建 | stage_input.py | recipe.preset_id | circuit / n_devices / n_connections | polaris_gui._build_circuit | IPKISS SDL / gdsfactory |
-| Stage 3 | 器件布局 | stage_physical.py | circuit | placements / n_placed | polaris_place.place_circuit(analytical \| ppo_gnn) | DREAMPlace DAC'19 / AlphaChip Nature'21 |
-| Stage 4 | 波导布线 | stage_physical.py | circuit / placements | routes / n_paths / total_length_um | polaris_flow.curvy_router._CurvyRouter(Euler) | LiDAR ISPD'25 |
-| Stage 5 | S 参数仿真 | stage_verification.py | circuit / placements / routes | sparams / total_loss_db / n_crossings | _DefaultSimulator(查表) | SiEPIC strip waveguide |
-| Stage 6 | DRC/LVS | stage_verification.py | circuit / placements | drc_report / lvs_passed | polaris_drc.run_drc + polaris_lvs.run_lvs | SiEPIC DRC / KLayout |
-| Stage 7 | GDS 导出 | stage_output.py | circuit / placements / routes | gds_path / gds_size_bytes | polaris_gdsio.export_gds(klayout) | gdsfactory GDSII |
-| Stage 8 | 光电协同 | stage_output.py | circuit / placements / total_length_um | opto_electrical | 内置寄生计算(1.0pF/mm, 50Ω) | Chrostowski 2015 |
-| Stage 9 | 量子光子 | stage_advanced.py | circuit | quantum_report(hom_dip_depth / coincidence_prob) | polaris_boson.hom_interference | Hong-Ou-Mandel PRL 1987 |
-| Stage 10 | AI 逆向 | stage_advanced.py | 无强制 | inverse_design(final_fom / optimal_width_nm) | polaris_inverse.run_adjoint_optimization | Lalau-Keraly 2013 / Piggott 2017 |
+| Stage 3 | 原理图级仿真 | stage_verification.py | circuit | schematic_sim / schematic_loss_db | _DefaultSimulator.simulate_schematic（查表紧凑模型） | SiEPIC strip waveguide |
+| Stage 4 | AI 逆向设计 | stage_advanced.py | 无强制 | inverse_design(final_fom / optimal_width_nm) | polaris_inverse.run_adjoint_optimization | Lalau-Keraly 2013 / Piggott 2017 |
+| Stage 5 | 器件布局 | stage_physical.py | circuit | placements / n_placed | polaris_place.place_circuit(analytical \| ppo_gnn) | DREAMPlace DAC'19 / AlphaChip Nature'21 |
+| Stage 6 | 波导布线 | stage_physical.py | circuit / placements | routes / n_paths / total_length_um | polaris_flow.curvy_router._CurvyRouter(Euler) | LiDAR ISPD'25 |
+| Stage 7 | 版图后仿真 | stage_verification.py | circuit / placements / routes | sparams / total_loss_db / n_crossings | _DefaultSimulator(查表+布线几何交叉统计) | SiEPIC strip waveguide |
+| Stage 8 | DRC/LVS | stage_verification.py | circuit / placements | drc_report / lvs_passed | polaris_drc.run_drc + polaris_lvs.run_lvs | SiEPIC DRC / KLayout |
+| Stage 9 | 良率分析 | stage_yield.py | circuit | yield_report(yield_estimate / p95_loss_db) | polaris_yield.monte_carlo_simulate | Bogaerts OFC 2018 / Metropolis 1949 |
+| Stage 10 | 光电协同 | stage_output.py | circuit / placements / total_length_um | opto_electrical | 内置寄生计算(1.0pF/mm, 50Ω) | Chrostowski 2015 |
+| Stage 11 | 量子光子 | stage_advanced.py | circuit | quantum_report(hom_dip_depth / coincidence_prob) | polaris_boson.hom_interference | Hong-Ou-Mandel PRL 1987 |
+| Stage 12 | GDS 导出 | stage_output.py | circuit / placements / routes | gds_path / gds_size_bytes | polaris_gdsio.export_gds(klayout) | gdsfactory GDSII |
 
 ---
 
@@ -159,17 +161,19 @@ PoLaRIS 流水线由 `polaris-flow` 编排，10 个 Stage 顺序执行，每个 
 
 ### 流程 A：网表 → GDS 主流水线
 
-主流水线将 CircuitSpec 顺序经过布局、布线、仿真、验证、导出，最终产出 GDSII 文件。
+主流水线将 CircuitSpec 顺序经过原理图仿真、布局、布线、版图后仿真、验证、良率分析，最终产出 GDSII 文件（工业流程：先仿真后版图，GDS 导出为最后一步）。
 
 ```mermaid
 flowchart LR
     A[CircuitSpec<br/>polaris_core.specs] --> B[circuit_to_dict<br/>序列化为dict]
-    B --> C[stage3 布局<br/>place_circuit analytical]
-    C --> D[stage4 布线<br/>CurvyRouter Euler]
-    D --> E[stage5 仿真<br/>S参数查表]
-    E --> F[stage6 DRC/LVS<br/>12条规则+网表比对]
-    F --> G[stage7 GDS导出<br/>export_gds klayout]
-    G --> H[GDSII 文件]
+    B --> C[stage3 原理图仿真<br/>simulate_schematic 紧凑模型]
+    C --> D[stage5 布局<br/>place_circuit analytical]
+    D --> E[stage6 布线<br/>CurvyRouter Euler]
+    E --> F[stage7 版图后仿真<br/>含布线寄生/交叉损耗]
+    F --> G[stage8 DRC/LVS<br/>12条规则+网表比对]
+    G --> H[stage9 良率分析<br/>蒙特卡洛流片签核]
+    H --> I[stage12 GDS导出<br/>export_gds klayout]
+    I --> J[GDSII 文件]
 ```
 
 ### 流程 B：AI 布局布线（PPO 训练 → 推理）

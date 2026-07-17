@@ -1,4 +1,4 @@
-"""阶段 5: 仿真验证。
+"""阶段 3: 仿真验证。
 
 对 MZI 电路执行 1500-1600nm 频域 S 参数扫描，计算谐振波长与消光比；
 对 Clements 4x4 计算酉矩阵传输并验证酉性；对 MZI 调制器生成 PAM4 眼图，
@@ -712,7 +712,7 @@ def _run_fdtd_simulation(reports_dir: Path) -> dict:
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 5: 仿真验证。
+    """执行阶段 3: 仿真验证。
 
     对 MZI 电路执行频域 S 参数扫描，对 Clements 4x4 计算酉矩阵传输，
     对 MZI 调制器生成 PAM4 眼图，并执行 FDTD 全波仿真与解析模型交叉验证。
@@ -723,7 +723,7 @@ def run(output_dir: Path) -> dict:
     Returns:
         含 mzi_s_param / clements_unitary / pam4 / fdtd 四个子 dict 的结果。
     """
-    _logger.info("阶段 5 开始: 仿真验证")
+    _logger.info("阶段 3 开始: 仿真验证")
 
     reports_dir = output_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -740,7 +740,7 @@ def run(output_dir: Path) -> dict:
     # 4. FDTD 全波仿真（与解析模型交叉验证）
     fdtd_result = _run_fdtd_simulation(reports_dir)
 
-    _logger.info("阶段 5 完成: 仿真验证")
+    _logger.info("阶段 3 完成: 仿真验证")
 
     return {
         "mzi_s_param": mzi_result,

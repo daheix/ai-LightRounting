@@ -1,4 +1,4 @@
-"""阶段 3: AI 布局。
+"""阶段 5: AI 布局。
 
 使用 PoLaRIS v5.0 polaris-place 子模块对电路执行布局，
 输出布局坐标与 HPWL（半周长线长）指标。
@@ -211,7 +211,7 @@ def _place_one_circuit(circuit: CircuitSpec) -> dict:
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 3: AI 布局。
+    """执行阶段 5: AI 布局。
 
     流程:
     1. 构造 3 个演示电路（MZI、Clements 4x4、量子占位）
@@ -245,7 +245,7 @@ def run(output_dir: Path) -> dict:
         - ai_layout_executed: 是否真正执行了布局（始终为 True）
         - baseline_type: 基线类型
     """
-    _logger.info("阶段 3 开始: AI 布局（polaris-place 解析法布局）")
+    _logger.info("阶段 5 开始: AI 布局（polaris-place 解析法布局）")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     circuits = _build_circuits()
@@ -253,7 +253,7 @@ def run(output_dir: Path) -> dict:
 
     placement_mode = "analytical"
     _logger.info(
-        "阶段 3 完成: %d 电路布局完成, 模式=%s",
+        "阶段 5 完成: %d 电路布局完成, 模式=%s",
         len(results),
         placement_mode,
     )

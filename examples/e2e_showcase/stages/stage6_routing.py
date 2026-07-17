@@ -1,4 +1,4 @@
-"""阶段 4: 智能布线。
+"""阶段 6: 智能布线。
 
 对布局结果执行智能布线，使用 PoLaRIS v5.0 polaris-route 子模块的曲线波导
 （curvy router），输出波导路径、总插入损耗、交叉数与弯曲数。
@@ -130,7 +130,7 @@ def _clements_4x4_circuit() -> CircuitSpec:
 def _quantum_placeholder_circuit() -> CircuitSpec:
     """构造量子玻色采样占位电路规格（含端口，供布线使用）。
 
-    4 器件占位（实际量子电路在 stage9 处理）：
+    4 器件占位（实际量子电路在 stage11 处理）：
     2 光栅耦合器（光源）+ 1 分束器 + 1 探测器。
 
     Returns:
@@ -290,7 +290,7 @@ def _route_one_circuit(circuit: CircuitSpec) -> dict:
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 4: 智能布线。
+    """执行阶段 6: 智能布线。
 
     流程:
     1. 构造 3 个演示电路（MZI、Clements 4x4、量子占位）
@@ -307,14 +307,14 @@ def run(output_dir: Path) -> dict:
         - circuits: 3 电路布线结果列表
         - router_type: 布线器类型（"curvy"）
     """
-    _logger.info("阶段 4 开始: 智能布线（polaris-place + polaris-route）")
+    _logger.info("阶段 6 开始: 智能布线（polaris-place + polaris-route）")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     circuits = _build_circuits()
     results = [_route_one_circuit(circuit) for circuit in circuits]
 
     _logger.info(
-        "阶段 4 完成: %d 电路布线完成, router_type=curvy",
+        "阶段 6 完成: %d 电路布线完成, router_type=curvy",
         len(results),
     )
 

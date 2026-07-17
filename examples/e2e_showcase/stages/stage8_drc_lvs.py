@@ -1,4 +1,4 @@
-"""阶段 6: DRC/LVS 验证。
+"""阶段 8: DRC/LVS 验证。
 
 对 MZI 电路执行 DRC（设计规则检查）与 LVS（版图与原理图一致性比对），
 输出违规清单、DRC 通过率、一致性布尔结果与差异清单。
@@ -95,7 +95,7 @@ def _mzi_circuit() -> CircuitSpec:
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 6: DRC/LVS 验证。
+    """执行阶段 8: DRC/LVS 验证。
 
     流程:
     1. 构建 MZI 电路规格（含端口定义）
@@ -114,7 +114,7 @@ def run(output_dir: Path) -> dict:
     Raises:
         RuntimeError: 布局 / DRC / LVS 任一步失败（R03 禁止 fall-back）。
     """
-    _logger.info("阶段 6 开始: DRC/LVS 验证（polaris-drc + polaris-lvs）")
+    _logger.info("阶段 8 开始: DRC/LVS 验证（polaris-drc + polaris-lvs）")
 
     reports_dir = output_dir / "reports"
     reports_dir.mkdir(parents=True, exist_ok=True)
@@ -171,7 +171,7 @@ def run(output_dir: Path) -> dict:
         json.dump(report_data, f, indent=2, ensure_ascii=False)
 
     _logger.info("DRC/LVS 报告已保存: %s", report_path)
-    _logger.info("阶段 6 完成: DRC/LVS 验证")
+    _logger.info("阶段 8 完成: DRC/LVS 验证")
 
     return {
         "drc": drc_result,

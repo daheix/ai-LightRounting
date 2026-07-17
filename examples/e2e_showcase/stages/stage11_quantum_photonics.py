@@ -1,4 +1,4 @@
-"""阶段 9: 量子光子验证。
+"""阶段 11: 量子光子验证。
 
 执行玻色采样、HOM 干涉与 KLM 量子门仿真，输出量子光子验证结果。
 
@@ -384,7 +384,7 @@ def _verify_klm(output_dir: Path) -> dict:
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 9: 量子光子验证。
+    """执行阶段 11: 量子光子验证。
 
     执行三项量子光子验证（v5.0 简化版）:
     1. 4 光子 4 模玻色采样概率分布与守恒（Clements 分解酉矩阵）
@@ -403,7 +403,7 @@ def run(output_dir: Path) -> dict:
         - hom: theta/coincidence_prob/dip_depth/hom_verified
         - klm: success_prob/expected_success_prob/cnot_verified
     """
-    _logger.info("阶段 9 开始: 量子光子验证（polaris-boson + polaris-klm）")
+    _logger.info("阶段 11 开始: 量子光子验证（polaris-boson + polaris-klm）")
 
     # 1. 构建 Clements 酉矩阵（4×4，seed=42 可复现）
     unitary = _build_clements_unitary()
@@ -418,7 +418,7 @@ def run(output_dir: Path) -> dict:
     klm_result = _verify_klm(output_dir)
 
     _logger.info(
-        "阶段 9 完成: 量子光子验证全部通过 "
+        "阶段 11 完成: 量子光子验证全部通过 "
         "(玻色采样=%s, HOM=%s, KLM=%s)",
         boson_result["prob_sum_ok"],
         hom_result["hom_verified"],

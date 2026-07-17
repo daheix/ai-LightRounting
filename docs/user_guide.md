@@ -1,7 +1,7 @@
 # PoLaRIS 用户指南
 
 > PoLaRIS（光弈）光电子 AI 智能布局布线引擎。本指南按功能场景系统组织，
-> 覆盖 4 平台 36 器件 PDK、10 阶段 EDA 流水线的完整使用方法。
+> 覆盖 4 平台 36 器件 PDK、12 阶段 EDA 流水线的完整使用方法。
 >
 > - 入门教程见 [getting_started.md](getting_started.md)（15 分钟快速上手）
 > - 进阶教程见 [advanced_tutorial.md](advanced_tutorial.md)（DRC/LVS/寄生/良率/量子）
@@ -278,7 +278,7 @@ for name, pl in result["placements"].items():
           f"w={pl['w']:6.1f} h={pl['h']:6.1f}")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage3_ai_placement.py`、
+> 来源：`examples/e2e_showcase/stages/stage5_ai_placement.py`、
 > `examples/full_pipeline_18modules/main.py`
 
 ### 3.2 ASCII 布局可视化
@@ -351,7 +351,7 @@ for i, p in enumerate(routing["paths"]):
           f"损耗={p['loss_db']:.4f} dB")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage4_routing.py`、
+> 来源：`examples/e2e_showcase/stages/stage6_routing.py`、
 > `examples/curvy_routing.py`
 
 ### 4.2 损耗模型
@@ -416,12 +416,12 @@ print(f"自交叉数: {crossings}")
 ### 4.5 ASCII 布线可视化
 
 ```python
-# stage4_routing.py 中的布线可视化函数
+# stage6_routing.py 中的布线可视化函数
 def render_ascii_routing(routing, grid_w=50, grid_h=15):
     """将布线结果渲染为 ASCII 图。
     # = 路径, O = 起止端口, . = 空白
     """
-    # 实现详见 examples/e2e_showcase/stages/stage4_routing.py
+    # 实现详见 examples/e2e_showcase/stages/stage6_routing.py
     pass
 ```
 
@@ -457,7 +457,7 @@ T_bar = R² + T² + 2·R·T·cos(Δφ)
 
 其中 R=0.48（SiEPIC 实测分束比），T=0.52，ER ≈ 28 dB。
 
-> 来源：`examples/e2e_showcase/stages/stage5_simulation.py`
+> 来源：`examples/e2e_showcase/stages/stage3_simulation.py`
 > Saleh & Teich, "Fundamentals of Photonics", Wiley 2019
 
 ### 5.2 PAM4 信号仿真（polaris-pam4）
@@ -473,7 +473,7 @@ print(f"SNR = {pam4['snr_db']:.2f} dB")
 ```
 
 > 来源：`examples/full_pipeline_18modules/main.py`、
-> `examples/e2e_showcase/stages/stage8_opto_electrical.py`
+> `examples/e2e_showcase/stages/stage10_opto_electrical.py`
 
 ### 5.3 FDTD 时域全波仿真（polaris-fdtd）
 
@@ -499,7 +499,7 @@ FDTD 核心参数：
 | SOI_EPS_R_SIO2 | 2.085 | SiO2 相对介电常数 | n² |
 | CFL_SAFETY | 0.95 | CFL 安全系数 | Taflove 2005 |
 
-> 来源：`docs/algorithm_handbook.md`、`examples/e2e_showcase/stages/stage5_simulation.py`
+> 来源：`docs/algorithm_handbook.md`、`examples/e2e_showcase/stages/stage3_simulation.py`
 > Yee 1966 IEEE TAP: https://doi.org/10.1109/TAP.1966.1138693
 > Taflove 2005 Computational Electrodynamics: https://doi.org/10.1002/0471758467
 
@@ -616,7 +616,7 @@ for v in drc["violations"]:
     print(f"  [{v['rule']}] {v['message']}")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage6_drc_lvs.py`、
+> 来源：`examples/e2e_showcase/stages/stage8_drc_lvs.py`、
 > `examples/full_pipeline_18modules/main.py`
 
 ### 6.2 DRC 规则清单
@@ -666,7 +666,7 @@ print(f"器件数: {lvs['n_devices']}")
 print(f"连接数: {lvs['n_connections']}")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage6_drc_lvs.py`、
+> 来源：`examples/e2e_showcase/stages/stage8_drc_lvs.py`、
 > `examples/full_pipeline_18modules/main.py`
 > KLayout LVS 文档: https://www.klayout.org/doc-qt5/manual/lvs.html
 
@@ -688,7 +688,7 @@ print(f"LVS: 一致={lvs['is_consistent']} "
       f"(器件={lvs['n_devices']}, 连接={lvs['n_connections']})")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage6_drc_lvs.py`
+> 来源：`examples/e2e_showcase/stages/stage8_drc_lvs.py`
 
 ---
 
@@ -716,7 +716,7 @@ print(f"层数: {gds['n_layers']}")
 print(f"可加载: {gds['loadable']}")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage7_gds_export.py`、
+> 来源：`examples/e2e_showcase/stages/stage12_gds_export.py`、
 > `examples/full_pipeline_18modules/main.py`
 
 ### 8.2 GDS 层映射
@@ -754,7 +754,7 @@ for circuit in circuits:
           f"{gds['n_structures']} 结构, loadable={gds['loadable']}")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage7_gds_export.py`
+> 来源：`examples/e2e_showcase/stages/stage12_gds_export.py`
 
 ---
 
@@ -786,7 +786,7 @@ print(f"迭代: {result['iterations']}")
 print(f"FoM 历史: {result['fom_history'][:5]}...（共 {len(result['fom_history'])} 步）")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage10_adjoint_inverse_design.py`、
+> 来源：`examples/e2e_showcase/stages/stage4_inverse_design.py`、
 > `examples/full_pipeline_18modules/main.py`
 
 ### 9.2 *创新*：JAX 自动微分替代手动伴随方程
@@ -853,7 +853,7 @@ print(f"概率总和: {bs['prob_sum']:.6f}（应≈1.0，概率守恒）")
 print(f"输出模式数: {bs['n_outputs']}")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage9_quantum_photonics.py`、
+> 来源：`examples/e2e_showcase/stages/stage11_quantum_photonics.py`、
 > `examples/full_pipeline_18modules/main.py`
 > Aaronson & Arkhipov 2011: https://doi.org/10.1145/1993636.1993682
 > Clements et al., Optica 2016: https://doi.org/10.1364/OPTICA.3.001460
@@ -874,7 +874,7 @@ print(f"验证通过: {hom['verified']}")
 HOM 干涉：两个全同光子输入 50:50 分束器，输出 `|2,0⟩` 和 `|0,2⟩` 各占 50%，
 `|1,1⟩` 概率为 0（HOM 凹陷）。
 
-> 来源：`examples/e2e_showcase/stages/stage9_quantum_photonics.py`
+> 来源：`examples/e2e_showcase/stages/stage11_quantum_photonics.py`
 > Hong, Ou, Mandel, PRL 1987: https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.59.2044
 
 ### 10.3 KLM CNOT 量子门
@@ -892,7 +892,7 @@ print(f"验证通过: {klm['verified']}")
 KLM 方案使用线性光学元件（分束器+相移器）实现量子门，
 Ralph 2002 简化方案用 4 个分束器实现 CNOT，成功率 1/9。
 
-> 来源：`examples/e2e_showcase/stages/stage9_quantum_photonics.py`、
+> 来源：`examples/e2e_showcase/stages/stage11_quantum_photonics.py`、
 > `modules/orchestrator/src/polaris_orchestrator/flow.py`
 > Ralph et al. 2002: https://doi.org/10.1103/PhysRevA.65.012324
 > KLM 原始论文: Knill, Laflamme, Milburn, Nature 2001,
@@ -920,7 +920,7 @@ assert abs(klm["success_prob"] - 1/9) < 1e-10, "成功率不为 1/9"
 print("三项量子验证全部通过 ✓")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage9_quantum_photonics.py`
+> 来源：`examples/e2e_showcase/stages/stage11_quantum_photonics.py`
 
 ---
 
@@ -947,7 +947,7 @@ print(f"BER = {pam4['ber']:.2e}")
 print(f"SNR = {pam4['snr_db']:.2f} dB")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage8_opto_electrical.py`
+> 来源：`examples/e2e_showcase/stages/stage10_opto_electrical.py`
 
 ### 11.2 探测器噪声建模
 
@@ -981,7 +981,7 @@ print(f"光路损耗: {OPTICAL_LOSS_DB} dB")
 print(f"链路预算目标: 20 dB")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage8_opto_electrical.py`
+> 来源：`examples/e2e_showcase/stages/stage10_opto_electrical.py`
 > 散粒噪声/热噪声公式: Saleh & Teich 2019
 
 ### 11.3 寄生参数提取
@@ -1130,7 +1130,7 @@ scene = editor.render()  # 输出 scene.json
 editor.export_klayout_script("mzi_edit.py")
 ```
 
-> 来源：`examples/e2e_showcase/stages/stage11_interactive_layout_edit.py`
+> 来源：`examples/e2e_showcase/stages/stage13_interactive_layout_edit.py`
 > LayoutEditor 对标 Tanner L-Edit Photonics: https://www.tanner.com/products/l-edit-photonic
 > KLayout Python API: https://www.klayout.de/doc/about/macro_editor.html
 > Command Pattern（撤销/重做栈）: Gamma et al., "Design Patterns", Addison-Wesley 1994
@@ -1307,7 +1307,7 @@ circuit = make_circuit(
 4 输入耦合器 + 6 MZI + 4 相移器 + 4 输出耦合器 = 18 器件
 ```
 
-> 详见 `examples/e2e_showcase/stages/stage7_gds_export.py`
+> 详见 `examples/e2e_showcase/stages/stage12_gds_export.py`
 
 ---
 

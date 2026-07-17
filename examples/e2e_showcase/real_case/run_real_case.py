@@ -1,21 +1,23 @@
 """真实 PIC 设计 Case 端到端运行脚本。
 
 选取 100Gbps MZI 调制器（对标 Intel 100G CWDM4）+ Clements 4x4 光矩阵，
-以 SiEPIC EBeam PDK 实测参数为输入，复用已修复的 10 阶段 stage 代码跑完整流程。
+以 SiEPIC EBeam PDK 实测参数为输入，复用 12 阶段工业流程 stage 代码跑完整流程。
 
 R03 合规：失败即 raise，禁止任何 fall-back。
 
 复用的 stage 模块（不重新实现 stage 逻辑，仅编排调用）:
 - stage1_pdk_catalog: PDK 器件目录展示（SOI/SiN/InP/LNOI 四平台）
 - stage2_circuit_spec: 电路规格定义（MZI / Clements 4x4 / 玻色采样）
-- stage3_ai_placement: AI 布局
-- stage4_routing: 智能布线
-- stage5_simulation: 仿真验证（S 参数 / 酉矩阵 / PAM4 / FDTD）
-- stage6_drc_lvs: DRC/LVS 验证
-- stage7_gds_export: GDS 导出
-- stage8_opto_electrical: 光电协同（Verilog-A / SPICE / PAM4 眼图）
-- stage9_quantum_photonics: 量子光子验证
-- stage10_adjoint_inverse_design: Adjoint 逆向设计
+- stage3_simulation: 仿真验证（S 参数 / 酉矩阵 / PAM4 / FDTD，原理图级）
+- stage4_inverse_design: Adjoint 逆向设计（器件优化，版图前）
+- stage5_ai_placement: AI 布局
+- stage6_routing: 智能布线
+- stage7_postlayout_sim: 版图后仿真（含布线寄生）
+- stage8_drc_lvs: DRC/LVS 验证
+- stage9_yield_analysis: 良率分析（蒙特卡洛，流片前签核）
+- stage10_opto_electrical: 光电协同（Verilog-A / SPICE / PAM4 眼图）
+- stage11_quantum_photonics: 量子光子验证
+- stage12_gds_export: GDS 导出
 
 来源:
 - SiEPIC EBeam PDK: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
@@ -23,6 +25,8 @@ R03 合规：失败即 raise，禁止任何 fall-back。
   https://www.intel.com/content/www/us/en/products/network-io/ethernet/100-gbe/100g-cwdm4-qsfp28-optical-module.html
 - IEEE 802.3bs 100GBASE-LR4: https://standards.ieee.org/ieee/802.3bs/10869/
 - Clements et al., Optica 2016: https://doi.org/10.1364/OPTICA.3.001460
+- Luceda IPKISS 设计流程: https://docs.lucedaphotonics.com/
+- Synopsys OptoCompiler: https://www.synopsys.com/photonic-solutions.html
 """
 
 from __future__ import annotations
@@ -41,11 +45,13 @@ if str(_SHOWCASE_DIR) not in sys.path:
 
 # R390 修复：注入 18 个子模块源码路径（与 run_showcase.py 一致）
 # 缺失此注入会导致 `ModuleNotFoundError: No module named 'polaris_inverse'`
-# 等 18 个子模块无法导入（stage10_adjoint_inverse_design 依赖 polaris_inverse）
+# 等子模块无法导入（stage4_inverse_design 依赖 polaris_inverse，
+# stage7/9 依赖 polaris_flow/polaris_yield）
 _PROJECT_ROOT = _SCRIPT_DIR.parent.parent.parent  # /workspace
 _SUBMODULES_V5 = [
     "core", "sparam", "place", "route", "pdk", "drc", "lvs", "gdsio", "fdtd",
     "inverse", "boson", "klm", "pam4", "fde", "eme", "bpm", "fdfd", "orchestrator",
+    "flow", "yield",
 ]
 for _sub in _SUBMODULES_V5:
     _src_dir = _PROJECT_ROOT / "modules" / _sub / "src"
@@ -54,16 +60,18 @@ for _sub in _SUBMODULES_V5:
 
 # 复用现有 stage 代码（sys.path 已含 e2e_showcase 目录）
 from stages import (  # noqa: E402
-    stage10_adjoint_inverse_design,
     stage1_pdk_catalog,
     stage2_circuit_spec,
-    stage3_ai_placement,
-    stage4_routing,
-    stage5_simulation,
-    stage6_drc_lvs,
-    stage7_gds_export,
-    stage8_opto_electrical,
-    stage9_quantum_photonics,
+    stage3_simulation,
+    stage4_inverse_design,
+    stage5_ai_placement,
+    stage6_routing,
+    stage7_postlayout_sim,
+    stage8_drc_lvs,
+    stage9_yield_analysis,
+    stage10_opto_electrical,
+    stage11_quantum_photonics,
+    stage12_gds_export,
 )
 from real_case.real_inputs import get_all_params, validate_no_mock  # noqa: E402
 
@@ -71,27 +79,30 @@ _logger = logging.getLogger("e2e_showcase")
 
 
 # =============================================================================
-# 10 阶段编排表（stage_id, 中文名, stage 模块）
+# 12 阶段编排表（stage_id, 中文名, stage 模块）
+# 工业流程对齐 Luceda/Synopsys：先仿真后版图、良率签核后 GDS 导出
 # =============================================================================
 STAGES = [
     (1, "PDK 器件目录展示", stage1_pdk_catalog),
     (2, "电路规格定义", stage2_circuit_spec),
-    (3, "AI 布局", stage3_ai_placement),
-    (4, "智能布线", stage4_routing),
-    (5, "仿真验证", stage5_simulation),
-    (6, "DRC/LVS 验证", stage6_drc_lvs),
-    (7, "GDS 导出", stage7_gds_export),
-    (8, "光电协同", stage8_opto_electrical),
-    (9, "量子光子验证", stage9_quantum_photonics),
-    (10, "Adjoint 逆向设计", stage10_adjoint_inverse_design),
+    (3, "仿真验证", stage3_simulation),
+    (4, "Adjoint 逆向设计", stage4_inverse_design),
+    (5, "AI 布局", stage5_ai_placement),
+    (6, "智能布线", stage6_routing),
+    (7, "版图后仿真", stage7_postlayout_sim),
+    (8, "DRC/LVS 验证", stage8_drc_lvs),
+    (9, "良率分析", stage9_yield_analysis),
+    (10, "光电协同", stage10_opto_electrical),
+    (11, "量子光子验证", stage11_quantum_photonics),
+    (12, "GDS 导出", stage12_gds_export),
 ]
 
 
 def run(output_dir: Path) -> dict:
-    """运行真实 case 端到端 10 阶段。
+    """运行真实 case 端到端 12 阶段。
 
     以 100Gbps MZI 调制器（对标 Intel 100G CWDM4）+ Clements 4x4 光矩阵
-    为演示电路，以 SiEPIC EBeam PDK 实测参数为输入，复用已修复的 10 阶段
+    为演示电路，以 SiEPIC EBeam PDK 实测参数为输入，复用 12 阶段工业流程
     stage 代码跑完整流程，收集每阶段结果与耗时。
 
     Args:
@@ -103,7 +114,7 @@ def run(output_dir: Path) -> dict:
         - case_name: 真实 case 名称
         - benchmark: 商业对标产品
         - real_inputs: 真实输入参数注册表（6 分组）
-        - stages: 10 阶段结果列表，每项含
+        - stages: 12 阶段结果列表，每项含
           {stage_id, name, status, duration, result, error}
         - summary: {n_success, n_failed, total_duration}
 
@@ -127,7 +138,7 @@ def run(output_dir: Path) -> dict:
     for subdir in ["logs", "gds", "verilog_a", "spice", "reports"]:
         (output_dir / subdir).mkdir(exist_ok=True)
 
-    # 3. 顺序跑 10 阶段（R03: 任何阶段失败即 raise，禁止跳过）
+    # 3. 顺序跑 12 阶段（R03: 任何阶段失败即 raise，禁止跳过）
     stage_results: list[dict] = []
     n_success = 0
     n_failed = 0

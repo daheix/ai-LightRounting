@@ -1,4 +1,4 @@
-"""阶段 7: GDS 导出。
+"""阶段 12: GDS 导出。
 
 将电路导出为 GDSII 文件，并验证文件完整性（文件大小、结构数、层次数、
 可重新加载）。
@@ -206,7 +206,7 @@ def _quantum_placeholder_circuit() -> CircuitSpec:
 # 主流程
 # =============================================================================
 def run(output_dir: Path) -> dict:
-    """执行阶段 7: GDS 导出。
+    """执行阶段 12: GDS 导出。
 
     对 3 个电路（MZI、Clements 4x4、量子占位）转为 circuit dict 后直接
     调用 polaris-gdsio ``export_gds`` 导出为 GDSII 文件，并验证文件完整性
@@ -227,7 +227,7 @@ def run(output_dir: Path) -> dict:
     Raises:
         RuntimeError: GDS 导出或验证失败（R03 禁止 fall-back）。
     """
-    _logger.info("阶段 7 开始: GDS 导出（polaris-gdsio）")
+    _logger.info("阶段 12 开始: GDS 导出（polaris-gdsio）")
     output_dir = Path(output_dir)
     gds_dir = output_dir / "gds"
     gds_dir.mkdir(parents=True, exist_ok=True)
@@ -275,5 +275,5 @@ def run(output_dir: Path) -> dict:
             }
         )
 
-    _logger.info("阶段 7 完成: 成功导出 %d 个 GDS 文件", len(results))
+    _logger.info("阶段 12 完成: 成功导出 %d 个 GDS 文件", len(results))
     return {"circuits": results}

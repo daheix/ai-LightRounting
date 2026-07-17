@@ -1,4 +1,4 @@
-"""阶段 11: 交互式版图编辑（D10 GUI 增强）。
+"""阶段 13: 交互式版图编辑（D10 GUI 增强）。
 
 在 showcase 中启用 R19 已实现的 LayoutEditor，演示商业级版图编辑器能力
 （对标 Tanner L-Edit Photonics + KLayout），填补 D10 GUI 维度差距（v6.0=4 → 目标=8）。
@@ -169,7 +169,7 @@ def _drc_to_highlights(drc_result: dict) -> list[dict]:
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 11: 交互式版图编辑（D10 GUI 增强）。
+    """执行阶段 13: 交互式版图编辑（D10 GUI 增强）。
 
     在 showcase 中端到端演示 R19 LayoutEditor 全部能力:
     - 器件添加（add_device）: 把布局结果灌入编辑器
@@ -195,7 +195,7 @@ def run(output_dir: Path) -> dict:
     Raises:
         RuntimeError: 布局/布线/DRC/编辑器任一步失败（R03 禁止 fall-back）。
     """
-    _logger.info("阶段 11 开始: 交互式版图编辑（R19 LayoutEditor, D10 增强）")
+    _logger.info("阶段 13 开始: 交互式版图编辑（R19 LayoutEditor, D10 增强）")
 
     editor_dir = output_dir / "editor"
     editor_dir.mkdir(parents=True, exist_ok=True)
@@ -272,7 +272,7 @@ def run(output_dir: Path) -> dict:
     _logger.info("KLayout 脚本: %s (%d 行)",
                  klayout_script_path, len(klayout_script.splitlines()))
 
-    _logger.info("阶段 11 完成: D10 GUI 交互式版图编辑演示成功")
+    _logger.info("阶段 13 完成: D10 GUI 交互式版图编辑演示成功")
     return {
         "n_devices": len(scene["devices"]),
         "n_routes": len(scene["routes"]),

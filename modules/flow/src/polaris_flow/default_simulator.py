@@ -76,6 +76,7 @@ class _DefaultSimulator:
         "thermo_optic_phase_shifter": 0.5,  # PoLaRIS PDK 标准移相器名，同 phase_shifter
         "heater": 0.5,  # 加热器（同 phase_shifter）
         "ge_photodetector": 0.5,  # Ge 光电探测器耦合损耗 0.5 dB
+        "detector": 0.5,  # 通用探测器命名（量子电路占位），同 ge_photodetector
         "avalanche_photodetector": 0.5,  # 雪崩光电探测器耦合损耗 0.5 dB
         "mzm_modulator": 4.0,  # MZM 调制器插损 4.0 dB（含分束+合束）
         "mrm_modulator": 0.5,  # MRM 调制器环耦合损耗 0.5 dB

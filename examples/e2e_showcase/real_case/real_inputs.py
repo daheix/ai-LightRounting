@@ -17,14 +17,14 @@
 
 参数值与现有 stage 代码一致（已交叉核对）:
 - 波导 neff/loss/width/height: stage1_pdk_catalog._SOI_REPRESENTATIVE /
-  stage5_simulation._MZI_NEFF/_MZI_WG_LOSS_DB_CM
-- MMI split_ratio/crosstalk/insertion_loss: stage5_simulation._MMI_SPLIT_RATIO /
+  stage3_simulation._MZI_NEFF/_MZI_WG_LOSS_DB_CM
+- MMI split_ratio/crosstalk/insertion_loss: stage3_simulation._MMI_SPLIT_RATIO /
   _MMI_CROSSTALK_DB / mmi_1x2_s/mmi_2x2_s insertion_loss_db
-- GC peak_wl/bandwidth/insertion_loss: stage5_simulation.grating_coupler_s 参数
+- GC peak_wl/bandwidth/insertion_loss: stage3_simulation.grating_coupler_s 参数
 - MZI wg1/wg2 长度: stage2_circuit_spec._build_mzi_circuit /
-  stage5_simulation._MZI_WG1_LENGTH_UM/_MZI_WG2_LENGTH_UM
-- PAM4 bit_rate/samples/n_symbols: stage5_simulation._simulate_pam4
-- 商业对标: stage8_opto_electrical 链路预算 / Intel CWDM4 datasheet
+  stage3_simulation._MZI_WG1_LENGTH_UM/_MZI_WG2_LENGTH_UM
+- PAM4 bit_rate/samples/n_symbols: stage3_simulation._simulate_pam4
+- 商业对标: stage10_opto_electrical 链路预算 / Intel CWDM4 datasheet
 """
 
 from __future__ import annotations
@@ -59,14 +59,14 @@ class RealParam:
 # =============================================================================
 # 波导参数（SiEPIC EBeam PDK 220nm SOI strip waveguide）
 # 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-# 与 stage1_pdk_catalog._SOI_REPRESENTATIVE / stage5_simulation._MZI_NEFF 一致
+# 与 stage1_pdk_catalog._SOI_REPRESENTATIVE / stage3_simulation._MZI_NEFF 一致
 # =============================================================================
 WAVEGUIDE_PARAMS: list[RealParam] = [
     RealParam(
         "neff", 2.4, "-",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "220nm SOI strip waveguide 实测有效折射率（stage5_simulation._MZI_NEFF）",
+        "220nm SOI strip waveguide 实测有效折射率（stage3_simulation._MZI_NEFF）",
     ),
     RealParam(
         "ng", 4.27, "-",
@@ -79,7 +79,7 @@ WAVEGUIDE_PARAMS: list[RealParam] = [
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
         "strip waveguide 传播损耗（stage1_pdk_catalog._SOI_REPRESENTATIVE / "
-        "stage5_simulation._MZI_WG_LOSS_DB_CM）",
+        "stage3_simulation._MZI_WG_LOSS_DB_CM）",
     ),
     RealParam(
         "width_nm", 500, "nm",
@@ -98,7 +98,7 @@ WAVEGUIDE_PARAMS: list[RealParam] = [
 # =============================================================================
 # MMI 参数（SiEPIC EBeam PDK mmi1x2/mmi2x2 实测）
 # 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-# 与 stage5_simulation._MMI_SPLIT_RATIO / _MMI_CROSSTALK_DB /
+# 与 stage3_simulation._MMI_SPLIT_RATIO / _MMI_CROSSTALK_DB /
 #      mmi_1x2_s(insertion_loss_db=0.4) / mmi_2x2_s(insertion_loss_db=0.5) 一致
 # =============================================================================
 MMI_PARAMS: list[RealParam] = [
@@ -106,32 +106,32 @@ MMI_PARAMS: list[RealParam] = [
         "split_ratio", 0.48, "-",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "MMI 功率分束比 R（理想 0.5，实测 0.48:0.52，stage5_simulation._MMI_SPLIT_RATIO）",
+        "MMI 功率分束比 R（理想 0.5，实测 0.48:0.52，stage3_simulation._MMI_SPLIT_RATIO）",
     ),
     RealParam(
         "crosstalk_db", -30.0, "dB",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "MMI 串扰（stage5_simulation._MMI_CROSSTALK_DB，限制 MZI 消光比下限）",
+        "MMI 串扰（stage3_simulation._MMI_CROSSTALK_DB，限制 MZI 消光比下限）",
     ),
     RealParam(
         "insertion_loss_1x2_db", 0.4, "dB",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "1x2 MMI 插损（stage2_circuit_spec.mmi1 / stage5_simulation.mmi_1x2_s）",
+        "1x2 MMI 插损（stage2_circuit_spec.mmi1 / stage3_simulation.mmi_1x2_s）",
     ),
     RealParam(
         "insertion_loss_2x2_db", 0.5, "dB",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "2x2 MMI 插损（stage2_circuit_spec.mmi2 / stage5_simulation.mmi_2x2_s）",
+        "2x2 MMI 插损（stage2_circuit_spec.mmi2 / stage3_simulation.mmi_2x2_s）",
     ),
 ]
 
 # =============================================================================
 # 光栅耦合器参数（SiEPIC EBeam PDK GC 实测）
 # 来源: https://github.com/SiEPIC/SiEPIC_EBeam_PDK
-# 与 stage5_simulation.grating_coupler_s(peak_wl=1.55, bandwidth_3db=0.04,
+# 与 stage3_simulation.grating_coupler_s(peak_wl=1.55, bandwidth_3db=0.04,
 #      insertion_loss_db=1.9) 一致
 # =============================================================================
 GRATING_COUPLER_PARAMS: list[RealParam] = [
@@ -139,20 +139,20 @@ GRATING_COUPLER_PARAMS: list[RealParam] = [
         "peak_wavelength_nm", 1550.0, "nm",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "GC 峰值耦合波长（C 波段中心，stage5_simulation.grating_coupler_s peak_wl=1.55μm）",
+        "GC 峰值耦合波长（C 波段中心，stage3_simulation.grating_coupler_s peak_wl=1.55μm）",
     ),
     RealParam(
         "bandwidth_3db_nm", 40.0, "nm",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "GC 3dB 带宽（stage5_simulation.grating_coupler_s bandwidth_3db=0.04μm）",
+        "GC 3dB 带宽（stage3_simulation.grating_coupler_s bandwidth_3db=0.04μm）",
     ),
     RealParam(
         "insertion_loss_db", 1.9, "dB",
         "SiEPIC EBeam PDK",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
         "GC 插损（stage1_pdk_catalog.grating_coupler / "
-        "stage5_simulation.grating_coupler_s insertion_loss_db=1.9）",
+        "stage3_simulation.grating_coupler_s insertion_loss_db=1.9）",
     ),
 ]
 
@@ -163,7 +163,7 @@ GRATING_COUPLER_PARAMS: list[RealParam] = [
 #   - Chrostowski & Hochberg, "Silicon Photonics Design", CUP 2015
 #     https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731
 # 与 stage2_circuit_spec._build_mzi_circuit(wg1=100μm, wg2=120μm) /
-#      stage5_simulation._MZI_WG1_LENGTH_UM/_MZI_WG2_LENGTH_UM 一致
+#      stage3_simulation._MZI_WG1_LENGTH_UM/_MZI_WG2_LENGTH_UM 一致
 # ΔL=20μm 对标 Intel CWDM4 MZM 臂长差量级（硅光 MZM 典型 ΔL 10-100μm）
 # =============================================================================
 MZI_PARAMS: list[RealParam] = [
@@ -171,20 +171,20 @@ MZI_PARAMS: list[RealParam] = [
         "wg1_length_um", 100.0, "μm",
         "SiEPIC EBeam PDK / Chrostowski 2015",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "MZI 臂 1 长度（stage2_circuit_spec.wg1 / stage5_simulation._MZI_WG1_LENGTH_UM）",
+        "MZI 臂 1 长度（stage2_circuit_spec.wg1 / stage3_simulation._MZI_WG1_LENGTH_UM）",
     ),
     RealParam(
         "wg2_length_um", 120.0, "μm",
         "SiEPIC EBeam PDK / Chrostowski 2015",
         "https://github.com/SiEPIC/SiEPIC_EBeam_PDK",
-        "MZI 臂 2 长度（stage2_circuit_spec.wg2 / stage5_simulation._MZI_WG2_LENGTH_UM）",
+        "MZI 臂 2 长度（stage2_circuit_spec.wg2 / stage3_simulation._MZI_WG2_LENGTH_UM）",
     ),
     RealParam(
         "delta_L_um", 20.0, "μm",
         "Intel 100G CWDM4 MZM / Chrostowski 2015",
         "https://www.cambridge.org/core/search?searchField=isbn&searchTerms=1107007731",
         "MZI 臂长差（wg2-wg1=20μm，对标 Intel CWDM4 MZM 臂长差量级；"
-        "stage5_simulation.delta_L 计算）",
+        "stage3_simulation.delta_L 计算）",
     ),
 ]
 
@@ -195,7 +195,7 @@ MZI_PARAMS: list[RealParam] = [
 #   - OIF CEI-112G: https://www.oiforum.com/
 #   - Shafik et al., IEEE CommSurveys 2016
 #     https://ieeexplore.ieee.org/document/7545186
-# 与 stage5_simulation._simulate_pam4(bit_rate=100e9, samples_per_symbol=16,
+# 与 stage3_simulation._simulate_pam4(bit_rate=100e9, samples_per_symbol=16,
 #      n_symbols=1000) 一致
 # =============================================================================
 PAM4_PARAMS: list[RealParam] = [
@@ -203,19 +203,19 @@ PAM4_PARAMS: list[RealParam] = [
         "bit_rate_gbps", 100.0, "Gbps",
         "IEEE 802.3bs 100GBASE-LR4",
         "https://standards.ieee.org/ieee/802.3bs/10869/",
-        "PAM4 比特率（stage5_simulation._simulate_pam4 bit_rate=100e9）",
+        "PAM4 比特率（stage3_simulation._simulate_pam4 bit_rate=100e9）",
     ),
     RealParam(
         "samples_per_symbol", 16, "-",
         "OIF CEI-112G / Shafik 2016",
         "https://ieeexplore.ieee.org/document/7545186",
-        "每符号采样点数（stage5_simulation._simulate_pam4 samples_per_symbol=16）",
+        "每符号采样点数（stage3_simulation._simulate_pam4 samples_per_symbol=16）",
     ),
     RealParam(
         "n_symbols", 1000, "-",
         "IEEE 802.3bs / Shafik 2016",
         "https://ieeexplore.ieee.org/document/7545186",
-        "仿真符号数（stage5_simulation._simulate_pam4 n_symbols=1000）",
+        "仿真符号数（stage3_simulation._simulate_pam4 n_symbols=1000）",
     ),
 ]
 
@@ -226,7 +226,7 @@ PAM4_PARAMS: list[RealParam] = [
 #     https://www.intel.com/content/www/us/en/products/network-io/ethernet/100-gbe/100g-cwdm4-qsfp28-optical-module.html
 #   - IEEE 802.3bs 100GBASE-LR4 BER 要求
 #     https://standards.ieee.org/ieee/802.3bs/10869/
-# 与 stage8_opto_electrical 链路预算 / 商业对标要求一致
+# 与 stage10_opto_electrical 链路预算 / 商业对标要求一致
 # =============================================================================
 COMMERCIAL_BENCHMARK: list[RealParam] = [
     RealParam(

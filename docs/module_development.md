@@ -676,20 +676,22 @@ class ManhattanRouter:
 
 ### 6.1 STAGE_EXECUTORS 真实结构
 
-`polaris-flow` 提供 **10 个标准化阶段**，来源 `modules/flow/src/polaris_flow/executors.py`（真实代码）：
+`polaris-flow` 提供 **12 个标准化阶段**（R392 工业光电子设计流程：先仿真后版图，GDS 导出为最后一步），来源 `modules/flow/src/polaris_flow/executors.py`（真实代码）：
 
 ```python
 STAGE_EXECUTORS: dict[int, callable] = {
     1: stage1_pdk,            # PDK 器件目录加载
     2: stage2_circuit,        # 电路规格构建
-    3: stage3_placement,      # 器件布局
-    4: stage4_routing,        # 波导布线
-    5: stage5_simulation,     # S 参数仿真
-    6: stage6_drc_lvs,        # DRC/LVS 约束检查
-    7: stage7_gds,            # GDS 版图导出
-    8: stage8_opto_electrical, # 光电协同仿真
-    9: stage9_quantum,        # 量子光子验证
-    10: stage10_inverse,      # AI 逆向设计
+    3: stage3_simulation,     # 原理图级电路仿真（版图前）
+    4: stage4_inverse,        # AI 逆向设计（版图前）
+    5: stage5_placement,      # 器件布局
+    6: stage6_routing,        # 波导布线
+    7: stage7_postlayout_sim, # 版图后仿真（含布线寄生）
+    8: stage8_drc_lvs,        # DRC/LVS 约束检查
+    9: stage9_yield,          # 蒙特卡洛良率分析（流片前签核）
+    10: stage10_opto_electrical, # 光电协同仿真
+    11: stage11_quantum,      # 量子光子验证
+    12: stage12_gds,          # GDS 版图导出（流片交付最后一步）
 }
 ```
 
@@ -704,16 +706,17 @@ STAGE_EXECUTORS: dict[int, callable] = {
 
 ### 6.2 阶段实现拆分结构
 
-来源 `executors.py` docstring「拆分结构」，10 阶段按职责分布到 6 个子模块：
+来源 `executors.py` docstring「拆分结构」，12 阶段按职责分布到 7 个子模块：
 
 | 子模块 | 阶段 | 职责 |
 |--------|------|------|
 | `stage_serializers` | — | CircuitSpec/DeviceSpec 序列化与依赖输入校验 |
 | `stage_input` | 1-2 | PDK 器件目录加载 + 电路规格构建 |
-| `stage_physical` | 3-4 | 器件布局 + 波导布线 |
-| `stage_verification` | 5-6 | S 参数仿真 + DRC/LVS 约束检查 |
-| `stage_output` | 7-8 | GDS 版图导出 + 光电协同仿真 |
-| `stage_advanced` | 9-10 | 量子光子验证 + AI 逆向设计 |
+| `stage_verification` | 3, 7-8 | 原理图仿真 + 版图后仿真 + DRC/LVS |
+| `stage_advanced` | 4, 11 | AI 逆向设计 + 量子光子验证 |
+| `stage_physical` | 5-6 | 器件布局 + 波导布线 |
+| `stage_yield` | 9 | 蒙特卡洛良率分析 |
+| `stage_output` | 10, 12 | 光电协同仿真 + GDS 版图导出 |
 
 `executors.py` 本身是 **facade**，仅 re-export 实际实现，保持 `from polaris_flow.executors import X` 路径不变。
 
@@ -722,14 +725,14 @@ STAGE_EXECUTORS: dict[int, callable] = {
 **步骤 1**：在对应职责子模块（如 `stage_output.py`）实现新阶段函数：
 
 ```python
-# 示例：新增 stage11_thermal（热仿真阶段）
-def stage11_thermal(recipe, workspace, prev_outputs: dict) -> dict:
-    """阶段 11：热仿真。
+# 示例：新增 stage13_thermal（热仿真阶段，位于 GDS 导出之后）
+def stage13_thermal(recipe, workspace, prev_outputs: dict) -> dict:
+    """阶段 13：热仿真。
 
     Args:
         recipe: 作业配方（Recipe dataclass）。
         workspace: 工作区路径。
-        prev_outputs: 上游阶段输出（含 stage7_gds 的版图数据）。
+        prev_outputs: 上游阶段输出（含 stage12_gds 的版图数据）。
 
     Returns:
         dict: {thermal_map, max_temp_c, hotspots}
@@ -737,7 +740,7 @@ def stage11_thermal(recipe, workspace, prev_outputs: dict) -> dict:
     Raises:
         ValueError: 依赖输入缺失（R03 禁止 fall-back）。
     """
-    gds_output = _require_input(prev_outputs, "stage7_gds")  # 真实依赖校验函数
+    gds_output = _require_input(prev_outputs, "stage12_gds")  # 真实依赖校验函数
     ...
     return {
         "thermal_map": [...],
@@ -749,17 +752,17 @@ def stage11_thermal(recipe, workspace, prev_outputs: dict) -> dict:
 **步骤 2**：在 `executors.py` 注册（真实 `dict[int, callable]` 模式）：
 
 ```python
-from polaris_flow.stage_output import stage11_thermal  # 追加导入
+from polaris_flow.stage_output import stage13_thermal  # 追加导入
 
 STAGE_EXECUTORS: dict[int, callable] = {
     1: stage1_pdk,
     ...
-    10: stage10_inverse,
-    11: stage11_thermal,  # 新增
+    12: stage12_gds,
+    13: stage13_thermal,  # 新增
 }
 ```
 
-**步骤 3**：在 `__all__` 中导出 `stage11_thermal`。
+**步骤 3**：在 `__all__` 中导出 `stage13_thermal`。
 
 **步骤 4**：在 `Recipe.enabled_stages` 中启用（来源 `modules/flow/src/polaris_flow/recipe.py`）：
 
@@ -767,7 +770,7 @@ STAGE_EXECUTORS: dict[int, callable] = {
 @dataclass
 class Recipe:
     enabled_stages: list[int] = field(
-        default_factory=lambda: list(range(1, 11))  # 默认 1-10
+        default_factory=lambda: list(range(1, 13))  # 默认 1-12
     )
 ```
 
@@ -776,7 +779,7 @@ class Recipe:
 ```python
 recipe = Recipe(
     preset_id="mzi",
-    enabled_stages=[1, 2, 3, 4, 7, 11],  # 跳过部分阶段，启用新阶段
+    enabled_stages=[1, 2, 3, 5, 6, 12, 13],  # 跳过部分阶段，启用新阶段
 )
 ```
 
@@ -819,7 +822,7 @@ class PolarisHTTPRequestHandler(D10RoutesMixin, BaseHTTPRequestHandler):
 - `routes_d10.py`：D10 增强 API（`D10RoutesMixin`）
 - `handlers.py`：业务逻辑（流水线运行、showcase、作业管理）
 - `editor_handlers.py`：编辑器交互逻辑
-- `web_server.py` / `web_server_helpers.py` / `web_server_pipeline.py` / `web_server_presets.py`：服务器主体与辅助
+- `web_server.py` / `web_server_helpers.py` / `web_server_presets.py`：服务器主体与辅助（`web_server_pipeline.py` 已于 R392 删除，功能归并 `handlers.py`）
 
 ### 7.2 现有 API 端点（真实清单）
 
@@ -1034,12 +1037,12 @@ def test_new_api_full_simulation():
 
 ```python
 def test_new_stage_integration():
-    from polaris_flow.executors import stage11_thermal
+    from polaris_flow.executors import stage13_thermal
     from polaris_flow.recipe import Recipe
 
-    recipe = Recipe(preset_id="mzi", enabled_stages=[1, 2, 3, 7, 11])
-    prev_outputs = {"stage7_gds": {...}}  # 模拟上游输出
-    result = stage11_thermal(recipe, "out/test", prev_outputs)
+    recipe = Recipe(preset_id="mzi", enabled_stages=[1, 2, 3, 12, 13])
+    prev_outputs = {"stage12_gds": {...}}  # 模拟上游输出
+    result = stage13_thermal(recipe, "out/test", prev_outputs)
     assert result["max_temp_c"] > 0
     assert "thermal_map" in result
 
@@ -1229,6 +1232,6 @@ routing = route_circuit(circuit, placement['placements'])
 - 模块清单从 `modules/README.md` 真实提取（33 模块 / 289 文件 / 99,017 行 / 1,613 测试）
 - 优化器清单从 Grep `class.*Optimizer` 真实提取（11 个 Optimizer 类 + HJSolver + FeedbackAdapter = 12 种）
 - 布线器清单从 Grep `class.*Router` 真实提取
-- STAGE_EXECUTORS 从 `executors.py` 真实提取（`dict[int, callable]`，10 阶段）
+- STAGE_EXECUTORS 从 `executors.py` 真实提取（`dict[int, callable]`，12 阶段）
 - 标注「示例」的代码片段为演示用途，未与真实代码 1:1 对应
 - 禁止编造扩展点 API；扩展示例均基于真实模式改写

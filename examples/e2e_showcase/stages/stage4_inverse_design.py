@@ -1,4 +1,4 @@
-"""阶段 10: Adjoint 逆向设计。
+"""阶段 4: Adjoint 逆向设计。
 
 使用 polaris-inverse 子模块的 JAX 可微分 FDTD + jax.grad 自动微分优化波导宽度，
 演示光子逆向设计能力（对标 lumopt / Lumerical 逆向设计）。
@@ -66,7 +66,7 @@ _LEARNING_RATE = 0.5
 
 
 def run(output_dir: Path) -> dict:
-    """执行阶段 10: Adjoint 逆向设计。
+    """执行阶段 4: Adjoint 逆向设计。
 
     使用 polaris-inverse ``optimize_waveguide_width`` 执行 JAX 可微分 FDTD +
     jax.grad 自动微分优化波导宽度，演示光子逆向设计能力（对标 lumopt）。
@@ -104,7 +104,7 @@ def run(output_dir: Path) -> dict:
         RuntimeError: JAX 不可用或优化过程出现 NaN（R03 禁止 fall-back）。
     """
     _logger.info(
-        "阶段 10 开始: Adjoint 逆向设计（polaris-inverse, JAX 可微分 FDTD）"
+        "阶段 4 开始: Adjoint 逆向设计（polaris-inverse, JAX 可微分 FDTD）"
     )
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -161,7 +161,7 @@ def run(output_dir: Path) -> dict:
     _logger.info("优化历史保存: %s", history_path.name)
 
     _logger.info(
-        "阶段 10 完成: Adjoint 逆向设计, FoM 改善 %.2f dB, 收敛=%s",
+        "阶段 4 完成: Adjoint 逆向设计, FoM 改善 %.2f dB, 收敛=%s",
         result["improvement_db"],
         result["converged"],
     )

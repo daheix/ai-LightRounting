@@ -1,4 +1,4 @@
-"""阶段 8: 光电协同 PAM4 链路分析。
+"""阶段 10: 光电协同 PAM4 链路分析。
 
 光电协同 PAM4 眼图与 BER/SNR 分析（含光路损耗 + 探测器散粒噪声 + TIA 热噪声）。
 
@@ -306,7 +306,7 @@ def _generate_pam4_analysis(reports_dir: Path) -> dict:
 # 主流程
 # =============================================================================
 def run(output_dir: Path) -> dict:
-    """执行阶段 8: 光电协同 PAM4 链路分析。
+    """执行阶段 10: 光电协同 PAM4 链路分析。
 
     v5.0 简化版（无 Verilog-A / Ngspice 联合仿真），保留光电协同的核心
     物理环节——探测器噪声建模（散粒噪声 + 热噪声）+ PAM4 眼图与 BER 分析。
@@ -334,7 +334,7 @@ def run(output_dir: Path) -> dict:
     Raises:
         RuntimeError: PAM4 分析失败（R03 禁止 fall-back）。
     """
-    _logger.info("阶段 8 开始: 光电协同 PAM4 链路分析（polaris-pam4）")
+    _logger.info("阶段 10 开始: 光电协同 PAM4 链路分析（polaris-pam4）")
     output_dir = Path(output_dir)
 
     reports_dir = output_dir / "reports"
@@ -347,7 +347,7 @@ def run(output_dir: Path) -> dict:
     pam4 = _generate_pam4_analysis(reports_dir)
 
     _logger.info(
-        "阶段 8 完成: BER=%.2e, SNR=%.2f dB, 链路余量=%.2f dB",
+        "阶段 10 完成: BER=%.2e, SNR=%.2f dB, 链路余量=%.2f dB",
         pam4["ber"],
         pam4["snr_db"],
         pam4["link_budget_margin_db"],

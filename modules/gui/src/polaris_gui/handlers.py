@@ -58,7 +58,7 @@ _SHOWCASE_SUBDIRS = ["logs", "gds", "verilog_a", "spice", "reports"]
 def _get_scheduler() -> JobScheduler:
     """获取全局作业调度器（懒初始化，线程安全）。
 
-    首次调用时创建 JobScheduler 实例，注入标准 10 阶段执行函数，
+    首次调用时创建 JobScheduler 实例，注入标准 12 阶段执行函数，
     后续调用复用同一实例。对齐 Cadence ADE-XL 的全局作业队列模型。
 
     R05 Bug 修复 v4.0-WEB-LOCK: 加 _global_lock 双重检查锁定，
@@ -383,9 +383,10 @@ def _extract_paths(result) -> list[dict]:
 def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     """运行布局布线流水线，返回结果 dict。
 
-    R391 修复: 原 raise ImportError 依赖未迁移的 polaris_orchestrator.
-    IntegratedPipeline，现调用 polaris_flow STAGE_EXECUTORS 1-4 阶段
-    （PDK 加载→电路构建→布局→布线），复用 R391 打通的标准化流水线。
+    R392 更新: 12 阶段工业流程下，布局=stage5、布线=stage6，
+    本函数执行 stage 1(PDK)→2(电路)→5(布局)→6(布线) 四阶段，
+    跳过 stage3 原理图仿真与 stage4 逆向设计（一键布局布线场景
+    不需要仿真与逆向设计，与 GUI /api/run 端点语义一致）。
 
     默认使用 curvy router（euler 弯曲布线），自动满足弯曲半径约束。
     "default" 映射到 "curvy"，因为 A* 网格布线的直角弯半径 < min_bend_radius，
@@ -413,7 +414,7 @@ def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     # "default" 路由器映射到 "curvy"（避免直角弯 DRC 违规）
     router_algo = "curvy" if router_type in ("default", "curvy") else router_type
 
-    # 运行标准化流水线 stage1-4
+    # 运行标准化流水线 stage 1/2/5/6（PDK→电路→布局→布线）
     tmp = tempfile.mkdtemp(prefix="polaris_pipeline_")
     recipe = Recipe(
         preset_id=preset_id,
@@ -423,7 +424,7 @@ def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
     )
     ws = Workspace(output_dir=tmp, job_id=f"pipeline-{preset_id}")
     prev: dict = {}
-    for stage_id in (1, 2, 3, 4):
+    for stage_id in (1, 2, 5, 6):
         out = STAGE_EXECUTORS[stage_id](recipe, ws, prev)
         prev.update(out)
 
@@ -449,7 +450,8 @@ def _run_pipeline(preset_id: str, router_type: str = "curvy") -> dict:
 def _run_showcase_background(run_id: str, output_dir: str) -> None:
     """在后台线程中运行端到端 Demo Showcase 全流程。
 
-    顺序执行 9 个阶段，每阶段用 StageLogger 包裹，结构化日志写入
+    顺序执行 13 个阶段（R392: 12 阶段工业光电子设计流程 + 交互式版图编辑），
+    每阶段用 StageLogger 包裹，结构化日志写入
     output_dir/logs/showcase.jsonl。运行前清空 JSONL 文件，避免历史记录污染。
 
     Args:
@@ -466,15 +468,17 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
         from stages import (  # noqa: E402
             stage1_pdk_catalog,
             stage2_circuit_spec,
-            stage3_ai_placement,
-            stage4_routing,
-            stage5_simulation,
-            stage6_drc_lvs,
-            stage7_gds_export,
-            stage8_opto_electrical,
-            stage9_quantum_photonics,
-            stage10_adjoint_inverse_design,
-            stage11_interactive_layout_edit,
+            stage3_simulation,
+            stage4_inverse_design,
+            stage5_ai_placement,
+            stage6_routing,
+            stage7_postlayout_sim,
+            stage8_drc_lvs,
+            stage9_yield_analysis,
+            stage10_opto_electrical,
+            stage11_quantum_photonics,
+            stage12_gds_export,
+            stage13_interactive_layout_edit,
         )
 
         out_dir = Path(output_dir)
@@ -491,15 +495,17 @@ def _run_showcase_background(run_id: str, output_dir: str) -> None:
         stages = [
             (1, "PDK 器件目录展示", stage1_pdk_catalog),
             (2, "电路规格定义", stage2_circuit_spec),
-            (3, "AI 布局", stage3_ai_placement),
-            (4, "智能布线", stage4_routing),
-            (5, "仿真验证", stage5_simulation),
-            (6, "DRC/LVS 验证", stage6_drc_lvs),
-            (7, "GDS 导出", stage7_gds_export),
-            (8, "光电协同", stage8_opto_electrical),
-            (9, "量子光子验证", stage9_quantum_photonics),
-            (10, "Adjoint 逆向设计", stage10_adjoint_inverse_design),
-            (11, "交互式版图编辑", stage11_interactive_layout_edit),
+            (3, "仿真验证", stage3_simulation),
+            (4, "Adjoint 逆向设计", stage4_inverse_design),
+            (5, "AI 布局", stage5_ai_placement),
+            (6, "智能布线", stage6_routing),
+            (7, "版图后仿真", stage7_postlayout_sim),
+            (8, "DRC/LVS 验证", stage8_drc_lvs),
+            (9, "良率分析", stage9_yield_analysis),
+            (10, "光电协同", stage10_opto_electrical),
+            (11, "量子光子验证", stage11_quantum_photonics),
+            (12, "GDS 导出", stage12_gds_export),
+            (13, "交互式版图编辑", stage13_interactive_layout_edit),
         ]
 
         for stage_id, stage_name, stage_module in stages:

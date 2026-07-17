@@ -1,18 +1,23 @@
 """PoLaRIS 端到端 Demo Showcase 主入口。
 
-按 9 个阶段顺序执行全流程，每阶段输出结构化日志（控制台彩色 + JSONL 文件），
-全流程结束后生成 Markdown 汇总报告。
+按 13 个阶段顺序执行全流程（12 阶段工业光电子设计流程 + 1 阶段 GUI 交互
+演示），每阶段输出结构化日志（控制台彩色 + JSONL 文件），全流程结束后
+生成 Markdown 汇总报告。
 
-9 阶段流程:
+13 阶段流程（对齐 Luceda/Synopsys 商业工具链，先仿真后版图、良率签核后 GDS）:
     1. PDK 器件目录展示
     2. 电路规格定义
-    3. AI 布局
-    4. 智能布线
-    5. 仿真验证
-    6. DRC/LVS 验证
-    7. GDS 导出
-    8. 光电协同
-    9. 量子光子验证
+    3. 仿真验证（原理图级，版图前）
+    4. Adjoint 逆向设计（器件优化，版图前）
+    5. AI 布局
+    6. 智能布线
+    7. 版图后仿真（含布线寄生）
+    8. DRC/LVS 验证
+    9. 良率分析（蒙特卡洛，流片前签核）
+    10. 光电协同
+    11. 量子光子验证
+    12. GDS 导出（流片交付最后一步）
+    13. 交互式版图编辑（GUI 增强演示，非工业流程环节）
 
 运行方式:
     # 全流程运行
@@ -29,6 +34,8 @@
 
 来源:
 - PoLaRIS 项目: https://github.com/daheix/ai-LightRounting
+- Luceda IPKISS 设计流程: https://docs.lucedaphotonics.com/
+- Synopsys OptoCompiler: https://www.synopsys.com/photonic-solutions.html
 """
 
 from __future__ import annotations
@@ -51,6 +58,7 @@ _PROJECT_ROOT = _SCRIPT_DIR.parent.parent  # /workspace
 _SUBMODULES_V5 = [
     "core", "sparam", "place", "route", "pdk", "drc", "lvs", "gdsio", "fdtd",
     "inverse", "boson", "klm", "pam4", "fde", "eme", "bpm", "fdfd", "orchestrator",
+    "flow", "yield",
 ]
 for _sub in _SUBMODULES_V5:
     _src_dir = _PROJECT_ROOT / "modules" / _sub / "src"
@@ -62,31 +70,38 @@ from report_generator import generate_report  # noqa: E402
 from stages import (  # noqa: E402
     stage1_pdk_catalog,
     stage2_circuit_spec,
-    stage3_ai_placement,
-    stage4_routing,
-    stage5_simulation,
-    stage6_drc_lvs,
-    stage7_gds_export,
-    stage8_opto_electrical,
-    stage9_quantum_photonics,
-    stage10_adjoint_inverse_design,
+    stage3_simulation,
+    stage4_inverse_design,
+    stage5_ai_placement,
+    stage6_routing,
+    stage7_postlayout_sim,
+    stage8_drc_lvs,
+    stage9_yield_analysis,
+    stage10_opto_electrical,
+    stage11_quantum_photonics,
+    stage12_gds_export,
+    stage13_interactive_layout_edit,
 )
 
 # 输出子目录列表
 _OUTPUT_SUBDIRS = ["logs", "gds", "verilog_a", "spice", "reports"]
 
-# 10 阶段定义: (阶段 ID, 阶段名称, 阶段模块)
+# 13 阶段定义: (阶段 ID, 阶段名称, 阶段模块)
+# 工业流程对齐 Luceda/Synopsys：先仿真后版图、良率签核后 GDS 导出
 STAGES: list[tuple[int, str, Any]] = [
     (1, "PDK 器件目录展示", stage1_pdk_catalog),
     (2, "电路规格定义", stage2_circuit_spec),
-    (3, "AI 布局", stage3_ai_placement),
-    (4, "智能布线", stage4_routing),
-    (5, "仿真验证", stage5_simulation),
-    (6, "DRC/LVS 验证", stage6_drc_lvs),
-    (7, "GDS 导出", stage7_gds_export),
-    (8, "光电协同", stage8_opto_electrical),
-    (9, "量子光子验证", stage9_quantum_photonics),
-    (10, "Adjoint 逆向设计", stage10_adjoint_inverse_design),
+    (3, "仿真验证", stage3_simulation),
+    (4, "Adjoint 逆向设计", stage4_inverse_design),
+    (5, "AI 布局", stage5_ai_placement),
+    (6, "智能布线", stage6_routing),
+    (7, "版图后仿真", stage7_postlayout_sim),
+    (8, "DRC/LVS 验证", stage8_drc_lvs),
+    (9, "良率分析", stage9_yield_analysis),
+    (10, "光电协同", stage10_opto_electrical),
+    (11, "量子光子验证", stage11_quantum_photonics),
+    (12, "GDS 导出", stage12_gds_export),
+    (13, "交互式版图编辑", stage13_interactive_layout_edit),
 ]
 
 
@@ -146,7 +161,7 @@ def run_all_stages(output_dir: Path, stage_filter: int | None = None) -> list[di
 
     Args:
         output_dir: 输出目录。
-        stage_filter: 若指定，仅运行该阶段编号（1-9）。
+        stage_filter: 若指定，仅运行该阶段编号（1-13）。
 
     Returns:
         各阶段结果摘要列表。
@@ -191,14 +206,14 @@ def parse_args() -> argparse.Namespace:
         解析后的参数命名空间。
     """
     parser = argparse.ArgumentParser(
-        description="PoLaRIS 端到端 Demo Showcase — 9 阶段全流程演示",
+        description="PoLaRIS 端到端 Demo Showcase — 13 阶段全流程演示",
     )
     parser.add_argument(
         "--stage",
         type=int,
-        choices=range(1, 11),
+        choices=range(1, 14),
         default=None,
-        help="仅运行指定阶段（1-10），不指定则运行全部 10 阶段",
+        help="仅运行指定阶段（1-13），不指定则运行全部 13 阶段",
     )
     parser.add_argument(
         "--output-dir",
@@ -215,7 +230,7 @@ def parse_args() -> argparse.Namespace:
         "--real-case",
         action="store_true",
         help="运行真实 PIC 设计 Case（100Gbps MZI + Clements 4x4，对标 Intel CWDM4），"
-        "复用已修复的 10 阶段 stage 代码，生成真实完整结果展示报告",
+        "复用 12 阶段工业流程 stage 代码，生成真实完整结果展示报告",
     )
     return parser.parse_args()
 

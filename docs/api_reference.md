@@ -134,7 +134,7 @@ assert polaris_core.validate_circuit(circuit) is True
 
 #### `Job` 数据类
 
-作业数据结构，表示一次完整的 10 阶段流水线执行。
+作业数据结构，表示一次完整的 12 阶段流水线执行。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -147,7 +147,7 @@ assert polaris_core.validate_circuit(circuit) is True
 | `start_time` | `datetime \| None` | 开始时间 |
 | `end_time` | `datetime \| None` | 结束时间 |
 | `error` | `str \| None` | 错误信息 |
-| `current_stage` | `int` | 当前阶段（0=未开始，1-10=阶段N） |
+| `current_stage` | `int` | 当前阶段（0=未开始，1-12=阶段N） |
 
 方法：`mark_running()` / `mark_completed()` / `mark_failed(error)` / `mark_cancelled()` / `to_dict()` / `progress` 属性。
 
@@ -165,20 +165,22 @@ assert polaris_core.validate_circuit(circuit) is True
 
 阶段定义（字段：`stage_id`/`name`/`slug`/`description`/`ipkiss_step`/`inputs_spec`/`outputs_spec`/`depends_on`/`execute_fn`）。
 
-#### `STANDARD_STAGES` — 10 个标准化阶段
+#### `STANDARD_STAGES` — 12 个标准化阶段（工业光电子设计流程）
 
 | ID | 名称 | slug | IPKISS 步骤 | 依赖 |
 |----|------|------|------------|------|
 | 1 | PDK 器件目录 | `stage1_pdk` | 器件设计 | — |
 | 2 | 电路规格定义 | `stage2_circuit` | 线路设计 | [1] |
-| 3 | AI 布局 | `stage3_placement` | 线路设计 | [2] |
-| 4 | 智能布线 | `stage4_routing` | 线路设计 | [3] |
-| 5 | S 参数仿真 | `stage5_simulation` | 设计验证 | [4] |
-| 6 | DRC/LVS 验证 | `stage6_drc_lvs` | 设计验证 | [4] |
-| 7 | GDS 导出 | `stage7_gds` | 流片准备 | [4] |
-| 8 | 光电协同 | `stage8_opto_electrical` | 设计验证 | [3] |
-| 9 | 量子光子验证 | `stage9_quantum` | 设计验证 | [2] |
-| 10 | 逆向设计 | `stage10_inverse` | 器件设计 | — |
+| 3 | 原理图级仿真 | `stage3_simulation` | 设计验证（版图前） | [2] |
+| 4 | AI 逆向设计 | `stage4_inverse` | 器件设计（版图前） | [3] |
+| 5 | 器件布局 | `stage5_placement` | 线路设计 | [4] |
+| 6 | 波导布线 | `stage6_routing` | 线路设计 | [5] |
+| 7 | 版图后仿真 | `stage7_postlayout_sim` | 设计验证（版图后） | [6] |
+| 8 | DRC/LVS 验证 | `stage8_drc_lvs` | 设计验证 | [6] |
+| 9 | 良率分析 | `stage9_yield` | 流片前签核 | [7] |
+| 10 | 光电协同 | `stage10_opto_electrical` | 设计验证 | [7] |
+| 11 | 量子光子验证 | `stage11_quantum` | 应用层验证 | [2] |
+| 12 | GDS 导出 | `stage12_gds` | 流片准备（最后一步） | [8] |
 
 #### `get_stage(stage_id) -> Stage`
 
@@ -196,7 +198,7 @@ assert polaris_core.validate_circuit(circuit) is True
 | `router_algo` | `str` | `"curvy"` | 布线算法（curvy/diagonal/hybrid） |
 | `sim_config` | `SimConfig` | — | 仿真配置 |
 | `output_dir` | `str` | `"out/jobs"` | 输出目录 |
-| `enabled_stages` | `list[int]` | `[1..10]` | 启用的阶段 ID |
+| `enabled_stages` | `list[int]` | `[1..12]` | 启用的阶段 ID |
 | `canvas_w` | `float` | `1000.0` | 画布宽度 |
 | `canvas_h` | `float` | `600.0` | 画布高度 |
 | `custom_circuit` | `dict \| None` | `None` | 自定义电路规格 |
@@ -210,10 +212,12 @@ assert polaris_core.validate_circuit(circuit) is True
 | `max_iterations` | `int` | `3` | 最大迭代次数 |
 | `loss_target_db` | `float` | `5.0` | 目标插损（dB） |
 | `use_real_simulator` | `bool` | `False` | 是否使用真实仿真器 |
+| `yield_n_samples` | `int` | `1000` | 良率分析蒙特卡洛采样数 |
+| `yield_sigma_rel` | `float` | `0.05` | 良率分析器件损耗相对涨落 σ |
 
 #### `STAGE_EXECUTORS`（lazy 导出，依赖 polaris-core）
 
-10 阶段执行器映射。每个阶段函数签名：`stageN_xxx(recipe, workspace, prev_outputs) -> dict`。由 `JobScheduler` 按 `recipe.enabled_stages` 顺序调用。
+12 阶段执行器映射。每个阶段函数签名：`stageN_xxx(recipe, workspace, prev_outputs) -> dict`。由 `JobScheduler` 按 `recipe.enabled_stages` 顺序调用。
 
 #### 其他 API
 

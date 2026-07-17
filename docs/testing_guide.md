@@ -675,7 +675,7 @@ class TestComputeHpwl:
 
 ### 9.3 端到端测试
 
-- **范围**：showcase 11 阶段全流程（PDK → 电路 → 布局 → 布线 → 仿真 → DRC/LVS → GDS → 光电协同 → 量子 → 逆向设计 → 交互编辑）
+- **范围**：showcase 13 阶段全流程（PDK → 电路 → 仿真 → 逆向设计 → 布局 → 布线 → 版图后仿真 → DRC/LVS → 良率分析 → 光电协同 → 量子 → GDS → 交互编辑）
 - **位置**：`examples/e2e_showcase/stages/`
 - **文件列表**：
 
@@ -683,15 +683,17 @@ class TestComputeHpwl:
 |------|------|------|
 | Stage 1 | stage1_pdk_catalog.py | PDK 器件目录 |
 | Stage 2 | stage2_circuit_spec.py | 电路规格定义 |
-| Stage 3 | stage3_ai_placement.py | AI 布局 |
-| Stage 4 | stage4_routing.py | 布线 |
-| Stage 5 | stage5_simulation.py | 仿真 |
-| Stage 6 | stage6_drc_lvs.py | DRC/LVS 验证 |
-| Stage 7 | stage7_gds_export.py | GDS 导出 |
-| Stage 8 | stage8_opto_electrical.py | 光电协同 |
-| Stage 9 | stage9_quantum_photonics.py | 量子光子 |
-| Stage 10 | stage10_adjoint_inverse_design.py | 逆向设计 |
-| Stage 11 | stage11_interactive_layout_edit.py | 交互编辑 |
+| Stage 3 | stage3_simulation.py | 仿真验证（版图前） |
+| Stage 4 | stage4_inverse_design.py | Adjoint 逆向设计 |
+| Stage 5 | stage5_ai_placement.py | AI 布局 |
+| Stage 6 | stage6_routing.py | 布线 |
+| Stage 7 | stage7_postlayout_sim.py | 版图后仿真 |
+| Stage 8 | stage8_drc_lvs.py | DRC/LVS 验证 |
+| Stage 9 | stage9_yield_analysis.py | 良率分析 |
+| Stage 10 | stage10_opto_electrical.py | 光电协同 |
+| Stage 11 | stage11_quantum_photonics.py | 量子光子 |
+| Stage 12 | stage12_gds_export.py | GDS 导出 |
+| Stage 13 | stage13_interactive_layout_edit.py | 交互编辑 |
 
 - **运行方式**：
 
