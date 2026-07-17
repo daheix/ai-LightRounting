@@ -1,25 +1,48 @@
 # PoLaRIS 光弈 — 光电子 AI 智能布局布线引擎
 
-> **版本**: v5.1 | **架构**: v5.0 monorepo 33 子模块
+> **版本**: v6.0 | **架构**: v5.0 monorepo 33 子模块 + Cython 编译 CLI
+> **发布形态**: 单文件 ELF 可执行 `dist/polaris` (343MB)，13 个 CLI 子命令
 > **商业化就绪度**: 6.86/10（R36 验收实际，诚实声明未超越行业最高 9.0）
-> **文档日期**: 2026-07-03（同步刷新）
+> **文档日期**: 2026-07-17（v6.0 发布同步刷新）
 
 PoLaRIS 是开源光电子 AI 智能布局布线引擎，支持 SOI/SiN/InP/LNOI 四大工艺平台，提供从网表到 GDS 的端到端自动化流水线。
 
 ---
 
-## 项目真实状态（2026-07-03 实测）
+## ⚠️ 当前定位：技术验证原型（非工业级 EDA）
+
+**适用场景**：
+- ✅ 学术研究工具（量子光子 / 逆向设计 / CML 算法）
+- ✅ 教学演示（光子 EDA 概念教学）
+- ✅ 小规模原型验证（< 100 器件 MZI 链路）
+- ✅ gdsfactory 电路级仿真后端
+
+**不适用场景**：
+- ❌ 工业流片设计（无代工 PDK 认证，无流片数据）
+- ❌ 大规模 3D FDTD（CPU-only，仅支持 100³ 网格小规模）
+- ❌ 生产级 DRC/LVS（无 foundry runset，无 tapeout 验证）
+- ❌ 24/7 生产环境（无 SLA，无大规模生产验证）
+- ❌ 替代 Lumerical/VPI（关键能力缺口：GPU/规模/PDK认证）
+
+**诚实评估报告**: [docs/practical_value_assessment.md](docs/practical_value_assessment.md)
+
+---
+
+## 项目真实状态（2026-07-17 实测）
 
 | 指标 | 真实值 | 采集方式 |
 |------|--------|----------|
 | 子模块数 | 33 | `ls -d modules/*/src/polaris_* \| wc -l` |
-| Python 源文件 | 289 | `find modules -name "*.py" -path "*/src/*" \| wc -l` |
-| 源码行数 | 99,017 | `find modules -name "*.py" -path "*/src/*" -exec cat {} + \| wc -l` |
-| 测试用例 | 1,614 passed / 0 failed / 1 skipped | 分模块 pytest 实测 |
-| 文献 URL | 3,031 | `grep -ohE "https?://[^ )\"]+" modules/*/src/ -r \| wc -l` |
-| git 历史提交 | 1,767 | `git rev-list --all --count` |
+| Python 源文件 | 346 | `find modules -name "*.py" -path "*/src/*" -not -path "*/tests/*" \| wc -l` |
+| 源码行数 | ~110,000 | 估算（新增 140 测试 + P0/P1 补齐） |
+| 测试用例 | **2,253 passed**（v1.0 1614 + v6.0 新增 140） | 分模块 pytest 实测 |
+| CLI 子命令 | 13 | `polaris --help` 实测 |
+| 万器件规模 | 1000 器件生成 3.94ms / 500 器件布局 9.14s / 500 器件级联 18.25ms | test_scale_1000.py 实测 |
+| 文献 URL | 3,031+ | `grep -ohE "https?://[^ )\"]+" modules/*/src/ -r \| wc -l` |
+| git 历史提交 | 1,767+ | `git rev-list --all --count` |
 | 路标完成 | R1-R36 全部完成 | `docs/roundmap/R*.md` 核查 |
 | R36 验收得分 | 6.86/10 | `docs/roundmap/R36_acceptance_report.md` |
+| 发布产物 | `dist/polaris` 343MB ELF x86-64 | `file dist/polaris` 实测 |
 
 ---
 
@@ -34,7 +57,7 @@ PoLaRIS 是开源光电子 AI 智能布局布线引擎，支持 SOI/SiN/InP/LNOI
 | GDSII IO | polaris-gdsio / polaris-gds-tools | 22 GDSII 工具 + 6 格式互转 |
 | 布局 | polaris-place | DREAMPlace 解析法 + AlphaChip PPO |
 | 布线 | polaris-route / polaris-router-advanced | 曲线波导 A*/JPS + 17 种高级算法 |
-| DRC 验证 | polaris-drc | 12 条 SiEPIC DRC 规则 |
+| DRC 验证 | polaris-drc | 25 条 SiEPIC DRC 规则 + 4 PDK 规则集 |
 | LVS 验证 | polaris-lvs / polaris-verify-advanced | 网表比对 + 图同构 LVS + 层次化 DRC |
 | 物理求解器 | polaris-fdtd/fde/fdfd/eme/bpm | FDTD(Yee+PML+JAX)/FDE/FDFD/EME/Crank-Nicolson BPM |
 | 电路仿真 | polaris-circuit / polaris-sparam | 频域/时域/SPICE/MNA + S 参数 Clements |
@@ -44,12 +67,33 @@ PoLaRIS 是开源光电子 AI 智能布局布线引擎，支持 SOI/SiN/InP/LNOI
 | 光通信 | polaris-pam4 / polaris-yield | PAM4 BER/眼图 + 蒙特卡洛/Sobol 良率 |
 | 量子光子 | polaris-quantum-advanced / polaris-boson / polaris-klm | BB84/QKD/QEC + 玻色采样 + KLM CNOT |
 | GUI | polaris-gui | 版图编辑器 + Macro IDE + WebServer |
+| **链路预算** | polaris-circuit.link_budget | BER/眼图/OSNR/功率余量（v6.0 新增） |
+| **CML 生成** | polaris-lumerical._cml_fit | Vector Fitting + 参数提取（v6.0 新增） |
+| **器件级求解** | polaris-core.device_solver | 统一调度 EME/FDE/RCWA/varFDTD/BPM/FDTD（v6.0 新增） |
+| **EME 2D** | polaris-eme.eme_2d | 2D 任意截面 EME 求解器（v6.0 新增） |
+| **子网络分解** | polaris-circuit.subnetwork | Kahn 拓扑排序 + Schur 补（v6.0 新增） |
+| **JAX 后端** | polaris-circuit.backend_selector | JAX CPU JIT 加速（v6.0 新增） |
+| **CLI 命令行** | polaris-orchestrator.cli | 13 个子命令 v6.0 发布版本 |
 
 ---
 
 ## 快速开始
 
-### 安装（v5.0 monorepo 33 子模块）
+### v6.0 命令行模式（发布版本）
+
+```bash
+# 单文件可执行（343MB，无 Python 依赖）
+./dist/polaris version          # 显示版本
+./dist/polaris info             # 系统能力概览
+./dist/polaris run circuit.yaml # 端到端 EDA 流水线
+./dist/polaris drc layout.gds --pdk siepic_ebeam
+./dist/polaris link-budget link.yaml
+./dist/polaris cml-fit sparam.npz --name my_cml --poles 10
+```
+
+13 个子命令：`run/place/route/simulate/drc/lvs/inverse/fdtd/link-budget/cml-fit/device-solve/quantum/version/info`
+
+### Python API 模式（开发版本）
 
 ```bash
 # 全量安装
@@ -79,12 +123,12 @@ result = run_eda_flow(circuit, 'out/my_design')
 ### 验证测试
 
 ```bash
-# 全量测试（应得 1614 passed / 0 failed / 1 skipped）
+# 全量测试（应得 2253 passed / 0 failed）
 for d in modules/*/tests; do pytest "$d/"; done
 
 # 单模块独立测试
-pytest modules/drc/tests/      # 51 测试
-pytest modules/circuit/tests/  # 88 测试
+pytest modules/drc/tests/      # 60+ 测试
+pytest modules/circuit/tests/  # 100+ 测试（含 link_budget）
 ```
 
 ---
