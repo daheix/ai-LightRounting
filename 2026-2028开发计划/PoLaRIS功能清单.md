@@ -92,25 +92,25 @@
 ## engine/ 模块（布局引擎）
 
 ### alphachip_gnn — AlphaChip Edge-GNN
-- **PHOTONIC_EDGE_DIM=15**: 15 维光子边特征（AlphaChip 创新扩展）。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 实验性
-- **build_photonic_edge_features**: 构建多关系（光/电/控制）边特征。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 实验性
-- **GATLayer**: 图注意力层（_segment_softmax）。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 实验性
-- **MultiRelationalEdgeGraphEncoder**: 多关系边图编码器。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 实验性
-- **AlphaChipEdgeGNN**: R33 AlphaChip Edge-GNN 完整对齐。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 实验性
+- **PHOTONIC_EDGE_DIM=15**: 15 维光子边特征（AlphaChip 创新扩展）。实现: v5.0 未迁移（ppo_gnn.py 中无 PHOTONIC_EDGE_DIM 常量，仅有 _build_edge_features 私有函数）。成熟度: v5.0 未迁移
+- **build_photonic_edge_features**: 构建多关系（光/电/控制）边特征。实现: v5.0 未迁移（ppo_gnn.py 中实际为 _build_edge_features 私有函数，行 440，非公开 build_photonic_edge_features）。成熟度: v5.0 未迁移
+- **GATLayer**: 图注意力层（_segment_softmax）。实现: v5.0 未迁移（ppo_gnn.py 中无 GATLayer 类，仅有 EdgeGNN）。成熟度: v5.0 未迁移
+- **MultiRelationalEdgeGraphEncoder**: 多关系边图编码器。实现: v5.0 未迁移（ppo_gnn.py 中无此类，仅有 EdgeGNN）。成熟度: v5.0 未迁移
+- **EdgeGNN**（原误标 AlphaChipEdgeGNN）: R33 AlphaChip Edge-GNN 完整对齐。实现: `modules/place/src/polaris_place/ppo_gnn.py`（ppo_gnn.py 中实际类名为 EdgeGNN，行 191）。成熟度: 实验性
 
 ### analytical_placer — DREAMPlace 解析法布局器
-- **AnalyticalPlacerConfig**: 解析法布局配置。实现: `modules/place/src/polaris_place/analytical.py`。成熟度: 生产可用
-- **AnalyticalPlacer**: DREAMPlace 解析法布局器（Adam 优化器 + log-sum-exp 平滑 HPWL + 密度惩罚）。实现: `modules/place/src/polaris_place/analytical.py`。成熟度: 生产可用
-- **warm_start_placement**: 预训练布局热启动。实现: `modules/place/src/polaris_place/analytical.py`。成熟度: 实验性
+- **AnalyticalConfig**（原误标 AnalyticalPlacerConfig）: 解析法布局配置。实现: `modules/place/src/polaris_place/analytical.py`（analytical.py 行 90 实际类名为 AnalyticalConfig）。成熟度: 生产可用
+- **place_analytical**（原误标 AnalyticalPlacer 类）: DREAMPlace 解析法布局器（Adam 优化器 + log-sum-exp 平滑 HPWL + 密度惩罚）。实现: `modules/place/src/polaris_place/analytical.py`（analytical.py 行 288 实际为 place_analytical 函数，非类）。成熟度: 生产可用
+- **warm_start_placement**: 预训练布局热启动。实现: v5.0 未迁移（analytical.py 中不存在）。成熟度: v5.0 未迁移
 
 ### hierarchical_placer — 层次化布局器
 - **HierarchicalPlacer**: 谱聚类分块布局器，O(n·sqrt(n)) 复杂度。实现: v5.0 移除（层次化布局并入解析法布局器）。成熟度: 已移除
 - **hierarchical_placement**: 层次化布局入口。实现: v5.0 移除（层次化布局并入解析法布局器）。成熟度: 已移除
 
 ### gnn — 图神经网络
-- **GraphEncoder**: R-GCN 风格消息传递编码器。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 生产可用
-- **StateEncoder**: 状态编码器（节点+边特征）。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 生产可用
-- **EdgeGraphEncoder**: 边图编码器。实现: `modules/place/src/polaris_place/ppo_gnn.py`。成熟度: 生产可用
+- **GraphEncoder**: R-GCN 风格消息传递编码器。实现: v5.0 未迁移（ppo_gnn.py 中无 GraphEncoder 类）。成熟度: v5.0 未迁移
+- **StateEncoder**: 状态编码器（节点+边特征）。实现: v5.0 未迁移（ppo_gnn.py 中无 StateEncoder 类）。成熟度: v5.0 未迁移
+- **EdgeGraphEncoder**: 边图编码器。实现: v5.0 未迁移（ppo_gnn.py 中无 EdgeGraphEncoder 类）。成熟度: v5.0 未迁移
 
 ### floorplan_env — 布局环境
 - **FloorplanEnv**: Gymnasium 接口布局环境。实现: v5.0 模块化时移除（RL 环境并入训练流水线）。成熟度: 已移除
@@ -119,16 +119,16 @@
 - **legalize_placement**: FFDH 合法化 + 拥塞感知合法化。实现: `modules/place/src/polaris_place/legalize.py`。成熟度: 生产可用
 
 ### congestion — 拥塞预测
-- **CongestionCNN**: CNN 拥塞预测器。实现: `modules/router_advanced/src/polaris_router_advanced/global_router.py`。成熟度: 生产可用
-- **rudy_congestion**: RUDY 拥塞估算。实现: `modules/router_advanced/src/polaris_router_advanced/global_router.py`。成熟度: 生产可用
-- **generate_congestion_dataset**: 拥塞数据集生成。实现: `modules/router_advanced/src/polaris_router_advanced/global_router.py`。成熟度: 生产可用
+- **CongestionCNN**: CNN 拥塞预测器。实现: v5.0 未迁移（global_router.py 中无 CongestionCNN 类）。成熟度: v5.0 未迁移
+- **rudy_congestion**: RUDY 拥塞估算。实现: v5.0 未迁移（global_router.py 中实际为 GlobalRouter._estimate_rudy_congestion 私有方法，行 243，非独立函数）。成熟度: v5.0 未迁移
+- **generate_congestion_dataset**: 拥塞数据集生成。实现: v5.0 未迁移（global_router.py 中不存在）。成熟度: v5.0 未迁移
 
 ### density_field — 密度场
-- **DensityField**: DREAMPlace 网格化密度场。实现: `modules/place/src/polaris_place/metrics.py`。成熟度: 生产可用
+- **DensityField**: DREAMPlace 网格化密度场。实现: v5.0 未迁移（metrics.py 中无 DensityField 类，仅有 _density_gradient 等内部函数）。成熟度: v5.0 未迁移
 
 ### fft_density_field — FFT 密度场
-- **FFTConvolver**: FFT 卷积加速器。实现: `modules/place/src/polaris_place/metrics.py`。成熟度: 生产可用
-- **DensityFieldFFT**: FFT 加速密度场平滑。实现: `modules/place/src/polaris_place/metrics.py`。成熟度: 生产可用
+- **FFTConvolver**: FFT 卷积加速器。实现: v5.0 未迁移（metrics.py 中不存在）。成熟度: v5.0 未迁移
+- **DensityFieldFFT**: FFT 加速密度场平滑。实现: v5.0 未迁移（metrics.py 中不存在）。成熟度: v5.0 未迁移
 
 ### gpu_backend — GPU 后端（🚫不参与：PoLaRIS 决定不参与 GPU 计算）
 - **GPUBackend**: CuPy GPU 后端（自动回退 NumPy）。实现: v5.0 移除（R04 战略：不参与 GPU 计算）。成熟度: 已移除。**状态: 不参与 — PoLaRIS 战略决策不参与 GPU 计算，GPU 后端代码保留但不作为发展方向，相关功能点不计入商业对标覆盖率**
@@ -142,8 +142,8 @@
 ## pipeline/ 模块（集成流水线）
 
 ### integrated — 一体化流水线
-- **IntegratedPipeline**: 一体化流水线（网表→GNN→RL布局→布线→仿真回馈）。实现: `modules/orchestrator/src/polaris_orchestrator/flow.py`。成熟度: 生产可用
-- **PipelineConfig / PipelineResult**: 流水线配置与结果。实现: `modules/orchestrator/src/polaris_orchestrator/flow.py`。成熟度: 生产可用
+- **IntegratedPipeline**: 一体化流水线（网表→GNN→RL布局→布线→仿真回馈）。实现: v5.0 未迁移（training.py 注释确认：TrainingPipeline.__init__ 始终 raise ImportError，依赖 IntegratedPipeline/PipelineConfig，flow.py 中实际为 run_eda_flow 函数）。成熟度: v5.0 未迁移
+- **PipelineConfig / PipelineResult**: 流水线配置与结果。实现: v5.0 未迁移（training.py 行 61/96 注释确认：PipelineConfig/CalibrationResult v5.0 未迁移）。成熟度: v5.0 未迁移
 
 ### curvy_router — 弯曲感知布线器
 - **_CurvyRouter**: 弯曲感知布线器 + rip-up and reroute。实现: `modules/flow/src/polaris_flow/curvy_router.py`。成熟度: 生产可用
@@ -163,28 +163,28 @@
 
 ### simulator — 频率域仿真器
 - **CircuitSimulator**: 频率域电路仿真器。实现: `modules/circuit/src/polaris_circuit/simulator.py`。成熟度: 生产可用
-- **default_models / simphony_models**: 默认/Simphony 器件模型注册表。实现: `modules/circuit/src/polaris_circuit/simulator.py`。成熟度: 生产可用
-- **analyze_dispersion**: 色散分析（FSR/Q 因子）。实现: `modules/circuit/src/polaris_circuit/simulator.py`。成熟度: 生产可用
+- **default_models**: 默认器件模型注册表（simphony_models v5.0 未迁移）。实现: `modules/circuit/src/polaris_circuit/simulator.py`（simulator.py 行 136 仅有 default_models）。成熟度: 生产可用
+- **analyze_dispersion**: 色散分析（FSR/Q 因子）。实现: v5.0 未迁移（simulator.py 中无 analyze_dispersion，仅有 group_delay）。成熟度: v5.0 未迁移
 
 ### models — 基础器件 S 参数模型
-- **RingParams / WaveguideParams / CouplerParams**: 器件参数数据类。实现: `modules/circuit/src/polaris_circuit/models.py`。成熟度: 生产可用
+- **RingParams**: 器件参数数据类（WaveguideParams/CouplerParams v5.0 未迁移，models.py 仅有 RingParams，行 28）。实现: `modules/circuit/src/polaris_circuit/models.py`。成熟度: 生产可用
 - **waveguide_s / y_branch_s / directional_coupler_s / ring_resonator_s / mmi_1x2_s / mmi_2x2_s / grating_coupler_s / crossing_s / terminator_s / phase_shifter_s**: 10 种基础器件 S 参数模型。实现: `modules/circuit/src/polaris_circuit/models.py`。成熟度: 生产可用
 
 ### cascade — SAX 子网络增长算法
 - **cascade_circuit**: SAX 子网络增长算法复刻。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
-- **_cascade_with_sax**: SAX 后端级联。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
+- **_cascade_with_sax**: SAX 后端级联。实现: v5.0 未迁移（cascade.py 中无 _cascade_with_sax，仅有 cascade_circuit，__all__ = ["cascade_circuit"]）。成熟度: v5.0 未迁移
 
 ### quantum_photonics — 量子光子仿真
-- **permanent_ryser**: Ryser 算法积和式。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 生产可用
-- **permanent_brute_force**: 暴力积和式（验证用）。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 生产可用
+- **permanent_ryser**: Ryser 算法积和式。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/permanent.py`（原误标 boson/hom.py；boson 模块下为 permanent_glynn_gray，在 boson/permanent.py；hom.py 仅有 hom_interference）。成熟度: 生产可用
+- **permanent_brute_force**: 暴力积和式（验证用）。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/permanent.py`（原误标 boson/hom.py；与 permanent_ryser 同文件，__all__ = ["permanent_ryser", "permanent_brute_force"]）。成熟度: 生产可用
 - **hom_interference**: HOM 干涉仿真。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 生产可用
-- **boson_sampling_prob / boson_sampling_distribution**: 玻色采样概率与分布。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 生产可用
-- **lossy_boson_sampling**: 损耗玻色采样。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 实验性
-- **hafnian**: Hafnian 函数（高斯玻色采样）。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 实验性
-- **gbs_probability**: 高斯玻色采样概率。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 实验性
-- **clements_unitary**: Clements 分解。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 生产可用
-- **klm_cnot_circuit / klm_cnot_simulate**: KLM CNOT 门仿真。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 实验性
-- **boson_sampling_chi_square_test**: 玻色采样卡方检验。实现: `modules/boson/src/polaris_boson/hom.py`。成熟度: 生产可用
+- **boson_sampling_prob / boson_sampling_distribution**: 玻色采样概率与分布。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/boson_sampling.py`。成熟度: 生产可用
+- **lossy_boson_sampling**: 损耗玻色采样。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/lossy.py`。成熟度: 实验性
+- **hafnian**: Hafnian 函数（高斯玻色采样）。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/gbs.py`。成熟度: 实验性
+- **gbs_probability**: 高斯玻色采样概率。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/gbs.py`。成熟度: 实验性
+- **clements_unitary**: Clements 分解。实现: `modules/boson/src/polaris_boson/clements.py`。成熟度: 生产可用
+- **klm_cnot_circuit / klm_cnot_simulate**: KLM CNOT 门仿真。实现: `modules/klm/src/polaris_klm/gates.py`。成熟度: 实验性
+- **boson_sampling_chi_square_test**: 玻色采样卡方检验。实现: `modules/quantum_advanced/src/polaris_quantum_advanced/numerical.py`。成熟度: 生产可用
 
 ### monte_carlo — 蒙特卡洛仿真
 - **monte_carlo_simulate**: JAX vmap 并行蒙特卡洛。实现: `modules/yield/src/polaris_yield/monte_carlo.py`。成熟度: 生产可用
@@ -192,8 +192,8 @@
 - **yield_analysis**: 良率分析。实现: `modules/yield/src/polaris_yield/monte_carlo.py`。成熟度: 生产可用
 
 ### adjoint_optimizer — Adjoint 逆向设计
-- **AdjointOptimizer**: P2-1 Adjoint 逆向设计（JAX 自动微分）。实现: `modules/inverse/src/polaris_inverse/adjoint.py`。成熟度: 生产可用
-- **AnalyticalWaveguideCoupler**: 解析波导耦合器。实现: `modules/inverse/src/polaris_inverse/adjoint.py`。成熟度: 生产可用
+- **AdjointOptimizer**（原误标，v5.0 未迁移）: P2-1 Adjoint 逆向设计（JAX 自动微分）。实现: v5.0 未迁移（adjoint.py 中无 AdjointOptimizer 类定义，实际为 run_adjoint_optimization 函数，见下行）。成熟度: v5.0 未迁移
+- **AnalyticalWaveguideCoupler**: 解析波导耦合器。实现: `modules/optimizer/src/polaris_optimizer/shape_adjoint.py`。成熟度: 生产可用
 - **run_adjoint_optimization**: Adjoint 优化入口。实现: `modules/inverse/src/polaris_inverse/adjoint.py`。成熟度: 生产可用
 
 ### topology_optimizer — 拓扑优化
@@ -212,9 +212,9 @@
 - **fast_marching_sdf**: Fast Marching SDF 重新初始化（Sethian 1996）。实现: `modules/inverse/src/polaris_inverse/level_set.py`。成熟度: 生产可用
 
 ### fdtd_simulator — FDTD 仿真
-- **FDTDBackend 枚举**: MEEP/Tidy3D/ANALYTICAL 三后端。实现: `modules/fdtd/src/polaris_fdtd/solver.py`。成熟度: 生产可用
-- **run_fdtd_simulation**: FDTD 仿真统一入口。实现: `modules/fdtd/src/polaris_fdtd/solver.py`。成熟度: 生产可用
-- **get_available_backends**: 可用后端探测。实现: `modules/fdtd/src/polaris_fdtd/solver.py`。成熟度: 生产可用
+- **FDTDBackend 枚举**: MEEP/Tidy3D/ANALYTICAL 三后端。实现: v5.0 未迁移（solver.py 仅有 YeeGrid3D/GedneyPML/DifferentiableFDTD 三个类，无枚举）。成熟度: v5.0 未迁移
+- **simulate_waveguide_fdtd**（原误标 run_fdtd_simulation）: FDTD 仿真统一入口。实现: `modules/fdtd/src/polaris_fdtd/waveguide.py`（waveguide.py 行 175 实际为 simulate_waveguide_fdtd 函数，非 solver.py）。成熟度: 生产可用
+- **get_available_backends**: 可用后端探测。实现: v5.0 未迁移（solver.py 中不存在，仅有 YeeGrid3D/GedneyPML/DifferentiableFDTD 类）。成熟度: v5.0 未迁移
 
 ### klayout_drc — KLayout DRC
 - **KLayoutDRCRunner**: KLayout DRC runset 适配层。实现: `modules/verify_advanced/src/polaris_verify_advanced/klayout_drc.py`。成熟度: 生产可用
@@ -284,9 +284,9 @@
 - **verify_gradient**: 梯度验证。实现: `modules/inverse/src/polaris_inverse/adjoint.py`。成熟度: 生产可用
 
 ### jax_backend — JAX 后端
-- **is_jax_available / get_jax_devices**: JAX 可用性探测。实现: `modules/circuit/src/polaris_circuit/backend_selector.py`。成熟度: 生产可用
-- **jit_compile**: JIT 编译。实现: `modules/circuit/src/polaris_circuit/backend_selector.py`。成熟度: 生产可用
-- **waveguide_s_jax / cascade_two_port_jax / simulate_waveguide_chain_jax**: JAX 波导 S 参数/级联/链路仿真。实现: `modules/circuit/src/polaris_circuit/backend_selector.py`。成熟度: 生产可用
+- **is_jax_available / get_jax_devices**: JAX 可用性探测。实现: v5.0 未迁移（backend_selector.py 中不存在，仅有 _sdict_to_matrix 和 compute_condition_number）。成熟度: v5.0 未迁移
+- **jit_compile**: JIT 编译。实现: v5.0 未迁移（backend_selector.py 中不存在）。成熟度: v5.0 未迁移
+- **waveguide_s_jax / cascade_two_port_jax / simulate_waveguide_chain_jax**: JAX 波导 S 参数/级联/链路仿真。实现: v5.0 未迁移（backend_selector.py 中不存在）。成熟度: v5.0 未迁移
 
 ### caphe_backend — CAPHE 后端
 - **CAPHENetwork**: R26 CAPHE 网络模型。实现: v5.0 移除（Caphe 后端未迁移）。成熟度: 已移除
@@ -294,12 +294,12 @@
 - **CAPHEBackend**: CAPHE 后端统一接口。实现: v5.0 移除（Caphe 后端未迁移）。成熟度: 已移除
 
 ### subnetwork_decomp — 子网络分解
-- **BlockTridiagonalMatrix / schur_complement / block_thomas_solve**: 块三对角/Schur 补/块 Thomas 求解。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
-- **SubnetworkDecomposition**: R04 子网络分解。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
-- **decompose_circuit / solve_subnetwork / merge_subnetworks_via_schur**: 分解/求解/合并。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
+- **BlockTridiagonalMatrix / schur_complement / block_thomas_solve**: 块三对角/Schur 补/块 Thomas 求解。实现: v5.0 未迁移（cascade.py 中不存在，仅有 cascade_circuit）。成熟度: v5.0 未迁移
+- **SubnetworkDecomposition**: R04 子网络分解。实现: v5.0 未迁移（cascade.py 中不存在）。成熟度: v5.0 未迁移
+- **decompose_circuit / solve_subnetwork / merge_subnetworks_via_schur**: 分解/求解/合并。实现: v5.0 未迁移（cascade.py 仅有基础 cascade_circuit，无子网络分解算法）。成熟度: v5.0 未迁移
 
 ### dag_scheduler — DAG 调度器
-- **CircuitDAG**: R04 电路 DAG。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
+- **CircuitDAG**: R04 电路 DAG。实现: v5.0 未迁移（cascade.py 中不存在）。成熟度: v5.0 未迁移
 - **detect_parallel_groups / cascade_parallel**: 并行组检测与并行级联。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
 - **schedule_circuit**: 电路调度。实现: `modules/circuit/src/polaris_circuit/cascade.py`。成熟度: 生产可用
 
@@ -313,14 +313,14 @@
 - **ConstraintChecker**: 16 项约束检查。实现: `modules/flow/src/polaris_flow/stage_verification.py`。成熟度: 生产可用
 
 ### calibration — 校准
-- **calibrate**: 校准入口。实现: `modules/flow/src/polaris_flow/training.py`。成熟度: 生产可用
-- **CalibrationResult**: 校准结果。实现: `modules/flow/src/polaris_flow/training.py`。成熟度: 生产可用
+- **calibrate**: 校准入口。实现: v5.0 未迁移（training.py 注释确认：TrainingPipeline.__init__ 始终 raise ImportError，校准流水线未迁移）。成熟度: v5.0 未迁移
+- **CalibrationResult**: 校准结果。实现: v5.0 未迁移（training.py 行 96 注释确认：CalibrationResult v5.0 未迁移）。成熟度: v5.0 未迁移
 
 ### feedback_adapter — 反馈适配器
 - **FeedbackAdapter**: 反馈适配器（布局/布线反馈）。实现: `modules/optimizer/src/polaris_optimizer/feedback.py`。成熟度: 生产可用
 
 ### sim_loop — 仿真回馈闭环
-- **SimLoop**: 仿真回馈闭环。实现: `modules/flow/src/polaris_flow/training.py`。成熟度: 生产可用
+- **SimLoop**: 仿真回馈闭环。实现: v5.0 未迁移（training.py 注释确认：TrainingPipeline.__init__ 始终 raise ImportError，仿真回馈闭环未迁移）。成熟度: v5.0 未迁移
 
 ### fabrication_constraints — 制造约束
 - **FabricationConstraints**: 制造可行性约束（密度惩罚/投影/过滤/连通性）。实现: `modules/optimizer/src/polaris_optimizer/topology.py`。成熟度: 生产可用
@@ -397,7 +397,7 @@
 - **PPOAgent**: PyTorch PPO 实现。实现: `modules/trainer/src/polaris_trainer/ppo.py`。成熟度: 生产可用
 
 ### bc — 行为克隆
-- **BehaviorCloning**: 连续动作行为克隆。实现: `modules/trainer/src/polaris_trainer/pretrain.py`。成熟度: 生产可用
+- **BehaviorCloningModel**（原误标 BehaviorCloning）: 连续动作行为克隆。实现: `modules/trainer/src/polaris_trainer/pretrain.py`（pretrain.py 行 259 实际类名为 BehaviorCloningModel）。成熟度: 生产可用
 - **BehaviorCloningDiscrete**: 离散动作行为克隆。实现: `modules/trainer/src/polaris_trainer/pretrain.py`。成熟度: 生产可用
 
 ### gnn_ppo — GNN 端到端 PPO
@@ -411,20 +411,20 @@
 - **MaskedNodePredictionTask / EdgeTypePredictionTask**: 掩码节点预测/边类型预测任务。实现: `modules/trainer/src/polaris_trainer/pretrain.py`。成熟度: 实验性
 
 ### transfer_learning — 迁移学习
-- **EWCRegularizer**: R34 EWC 正则化。实现: `modules/trainer/src/polaris_trainer/transfer_learning.py`。成熟度: 实验性
-- **CurriculumScheduler**: 课程学习调度器。实现: `modules/trainer/src/polaris_trainer/transfer_learning.py`。成熟度: 生产可用
-- **PlatformTransferLearner**: 平台迁移学习。实现: `modules/trainer/src/polaris_trainer/transfer_learning.py`。成熟度: 实验性
-- **SelfSupervisedPretrainer**: 自监督预训练。实现: `modules/trainer/src/polaris_trainer/transfer_learning.py`。成熟度: 实验性
-- **FineTuner**: 微调器。实现: `modules/trainer/src/polaris_trainer/transfer_learning.py`。成熟度: 生产可用
+- **EWCRegularizer**: R34 EWC 正则化。实现: v5.0 未迁移（transfer_learning.py 中无 EWCRegularizer）。成熟度: v5.0 未迁移
+- **CurriculumScheduler**: 课程学习调度器。实现: v5.0 未迁移（transfer_learning.py 中无 CurriculumScheduler）。成熟度: v5.0 未迁移
+- **PlatformTransferLearner**: 平台迁移学习。实现: v5.0 未迁移（transfer_learning.py 中无此类）。成熟度: v5.0 未迁移
+- **SelfSupervisedPretrainer**: 自监督预训练。实现: v5.0 未迁移（transfer_learning.py 中无此类）。成熟度: v5.0 未迁移
+- **FineTuner**: 微调器。实现: v5.0 未迁移（transfer_learning.py 中无 FineTuner 类，实际为 transfer_learn 函数 + RoutingPolicyModel）。成熟度: v5.0 未迁移
 
 ### vtrace — V-trace off-policy
 - **compute_vtrace**: V-trace off-policy 修正（IMPALA）。实现: v5.0 移除（V-trace 未迁移）。成熟度: 已移除
 - **ImpalaLearner**: IMPALA 学习器。实现: v5.0 移除（V-trace 未迁移）。成熟度: 已移除
 
 ### distributed_learner — CTDE 分布式训练
-- **RolloutWorker**: rollout worker。实现: `modules/trainer/src/polaris_trainer/distributed_rollout.py`。成熟度: 实验性
-- **DistributedLearner**: CTDE 中心化 learner。实现: `modules/trainer/src/polaris_trainer/distributed_rollout.py`。成熟度: 实验性
-- **aggregate_worker_results**: worker 结果聚合。实现: `modules/trainer/src/polaris_trainer/distributed_rollout.py`。成熟度: 实验性
+- **RolloutWorker**: rollout worker。实现: v5.0 已移除（distributed_rollout.py 中无 RolloutWorker 类，仅有 _rollout_worker 私有函数和 ParallelRolloutCollector 类）。成熟度: v5.0 已移除
+- **DistributedLearner**: CTDE 中心化 learner。实现: v5.0 已移除（distributed_rollout.py 中无 DistributedLearner 类）。成熟度: v5.0 已移除
+- **aggregate_worker_results**: worker 结果聚合。实现: v5.0 未迁移（ParallelRolloutCollector 内部逻辑，无独立函数）。成熟度: v5.0 未迁移
 
 ### parallel_rollout — 并行 rollout
 - **collect_floorplan_rollout_parallel**: 并行布局 rollout 采集。实现: `modules/trainer/src/polaris_trainer/distributed_rollout.py`。成熟度: 生产可用
@@ -442,12 +442,12 @@
 - **Device**: 器件核心数据类。实现: `modules/pdk/src/polaris_pdk/devices.py`。成熟度: 生产可用
 
 ### catalog — 器件注册表
-- **DeviceCatalog**: 器件注册表（序列化/反序列化）。实现: `modules/pdk/src/polaris_pdk/catalog.py`。成熟度: 生产可用
-- **default_catalog / build_default_catalog**: 默认目录构建。实现: `modules/pdk/src/polaris_pdk/catalog.py`。成熟度: 生产可用
+- **DeviceCatalog**: 器件注册表（序列化/反序列化）。实现: v5.0 未迁移（stage_input.py 行 54 注释确认：原依赖 polaris_pdk.DeviceCatalog 已移除；catalog.py 仅有 list_platforms 函数）。成熟度: v5.0 未迁移
+- **default_catalog / build_default_catalog**: 默认目录构建。实现: v5.0 未迁移（stage_input.py 注释确认；catalog.py 中不存在）。成熟度: v5.0 未迁移
 
 ### foundry_platforms — foundry 平台
-- **FoundryPlatform**: foundry 平台元数据。实现: `modules/pdk/src/polaris_pdk/catalog.py`。成熟度: 生产可用
-- **FOUNDRY_PLATFORMS**: 11 个公开 foundry 平台注册表（GF Fotonix/Tower/AMF/IHP/SiEPIC 等）。实现: `modules/pdk/src/polaris_pdk/catalog.py`。成熟度: 生产可用
+- **FoundryPlatform**: foundry 平台元数据。实现: v5.0 未迁移（catalog.py 仅有 list_platforms 函数，无 FoundryPlatform 类）。成熟度: v5.0 未迁移
+- **FOUNDRY_PLATFORMS**: 11 个公开 foundry 平台注册表（GF Fotonix/Tower/AMF/IHP/SiEPIC 等）。实现: v5.0 未迁移（catalog.py 中不存在）。成熟度: v5.0 未迁移
 
 ### foundry_devices — foundry 器件库
 - **get_foundry_device / get_foundry_devices**: foundry 器件获取。实现: `modules/pdk/src/polaris_pdk/devices.py`。成熟度: 生产可用
@@ -487,9 +487,9 @@
 - **build_ligentec_pdk / build_lionix_pdk / build_hhi_pdk**: Ligentec/Lionix/HHI PDK 构建。实现: v5.0 移除（VPI PDK 桥接未迁移）。成熟度: 已移除
 
 ### process_nodes — CMOS 工艺节点
-- **ProcessNode**: 工艺节点数据类。实现: `modules/core/src/polaris_core/specs.py`。成熟度: 生产可用
-- **CMOS_PROCESS_NODES**: CMOS photonics 工艺节点注册表。实现: `modules/core/src/polaris_core/specs.py`。成熟度: 生产可用
-- **suggest_process_node_for_circuit**: 电路工艺节点推荐。实现: `modules/core/src/polaris_core/specs.py`。成熟度: 生产可用
+- **ProcessNode**: 工艺节点数据类。实现: v5.0 未迁移（specs.py 仅有 BenchmarkSource/TargetMetric/DeviceSpec/CircuitSpec，无 ProcessNode）。成熟度: v5.0 未迁移
+- **CMOS_PROCESS_NODES**: CMOS photonics 工艺节点注册表。实现: v5.0 未迁移（specs.py 中不存在）。成熟度: v5.0 未迁移
+- **suggest_process_node_for_circuit**: 电路工艺节点推荐。实现: v5.0 未迁移（specs.py 中不存在）。成熟度: v5.0 未迁移
 
 ### siepic_mapping — SiEPIC 映射
 - **SIEPIC_TO_POLARIS / POLARIS_TO_SIEPIC**: SiEPIC 器件名双向映射。实现: `modules/flow/src/polaris_flow/pdk_device_sampler.py`。成熟度: 生产可用
@@ -618,33 +618,112 @@
 
 | 成熟度 | 数量 | 占比 |
 |--------|------|------|
-| 生产可用 | 247 | 80.2% |
-| 实验性 | 60 | 19.5% |
+| 生产可用 | 200 | 64.9% |
+| 实验性 | 42 | 13.6% |
 | 原型 | 1 | 0.3% |
+| 已移除 | 23 | 7.5% |
+| v5.0 未迁移 | 40 | 13.0% |
+| v5.0 已移除 | 2 | 0.6% |
 | **合计** | **308** | **100%** |
+
+> 修正说明（2026-07-17 学术诚信核验）：原统计"生产可用 247 / 实验性 60 / 原型 1"将 v5.0 已移除与未迁移条目误计入生产可用/实验性，属虚假统计。核验后分离出已移除 23 项、v5.0 未迁移 40 项、v5.0 已移除 2 项，生产可用由 247 修正为 200。
 
 ### 按模块分类统计
 
-| 模块 | 功能点数 | 生产可用 | 实验性 | 原型 |
-|------|----------|----------|--------|------|
-| data/ | 37 | 37 | 0 | 0 |
-| engine/ | 24 | 16 | 8 | 0 |
-| pipeline/ | 8 | 8 | 0 | 0 |
-| sim/ | 123 | 97 | 26 | 0 |
-| nn/ | 5 | 5 | 0 | 0 |
-| trainer/ | 26 | 16 | 10 | 0 |
-| pdk/ | 32 | 24 | 8 | 0 |
-| router/ | 32 | 30 | 2 | 0 |
-| flow/ | 9 | 6 | 3 | 0 |
-| eval/ | 5 | 5 | 0 | 0 |
-| web/ | 3 | 3 | 0 | 0 |
-| ai/ | 4 | 0 | 3 | 1 |
-| **合计** | **308** | **247** | **60** | **1** |
+| 模块 | 功能点数 | 生产可用 | 实验性 | 原型 | 已移除 | v5.0未迁移 | v5.0已移除 |
+|------|----------|----------|--------|------|--------|------------|------------|
+| data/ | 37 | 37 | 0 | 0 | 0 | 0 | 0 |
+| engine/ | 24 | 3 | 2 | 0 | 6 | 13 | 0 |
+| pipeline/ | 8 | 6 | 0 | 0 | 0 | 2 | 0 |
+| sim/ | 123 | 80 | 22 | 0 | 8 | 13 | 0 |
+| nn/ | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
+| trainer/ | 26 | 11 | 5 | 0 | 3 | 5 | 2 |
+| pdk/ | 32 | 14 | 5 | 0 | 6 | 7 | 0 |
+| router/ | 32 | 30 | 2 | 0 | 0 | 0 | 0 |
+| flow/ | 9 | 6 | 3 | 0 | 0 | 0 | 0 |
+| eval/ | 5 | 5 | 0 | 0 | 0 | 0 | 0 |
+| web/ | 3 | 3 | 0 | 0 | 0 | 0 | 0 |
+| ai/ | 4 | 0 | 3 | 1 | 0 | 0 | 0 |
+| **合计** | **308** | **200** | **42** | **1** | **23** | **40** | **2** |
 
 ### 关键发现
 
-1. **生产可用占比 80.2%**：核心布局/布线/仿真/DRC/LVS/PDK 流程已达到生产级，有完整测试覆盖。
-2. **实验性占比 19.5%**：主要集中在 AlphaChip GNN、Lumerical/Tidy3D/INTERCONNECT 集成、CTDE 分布式训练、GAN/Diffusion 逆向设计等前沿能力，规模/精度未达商业级。
-3. **原型占比 0.3%**：仅 Diffusion 逆向设计为原型。
-4. **sim/ 模块最大**：123 个功能点，涵盖 S 参数/量子/FDTD/Adjoint/拓扑/多目标优化/DRC/LVS/系统级等全栈仿真能力。
-5. **学术诚信**：所有功能点均引用实际代码 `文件:行号`，实验性功能诚实标注，无夸大。
+1. **生产可用占比 64.9%**（200 项）：核心布局/布线/仿真/DRC/LVS/PDK 流程已达到生产级，有完整测试覆盖。原统计 80.2%（247 项）含误计的已移除/未迁移条目，2026-07-17 学术诚信核验后修正。
+2. **实验性占比 13.6%**（42 项）：主要集中在 AlphaChip GNN（EdgeGNN）、Lumerical/INTERCONNECT 集成、CTDE 分布式训练、GAN/Diffusion 逆向设计等前沿能力，规模/精度未达商业级。
+3. **v5.0 未迁移占比 13.0%**（40 项）：代码注释或审计确认 v5.0 模块化时未迁移的符号，诚实标注。涵盖 IntegratedPipeline/PipelineConfig/DeviceCatalog/FoundryPlatform/ProcessNode/CalibrationResult/SimLoop/GATLayer/GraphEncoder/DensityField/CongestionCNN/_cascade_with_sax/CircuitDAG/jax_backend 系列函数/EWCRegularizer 等。
+4. **已移除占比 7.5%**（23 项）：v5.0 模块化时无对应实现，诚实标注（R03 禁止假数据）。
+5. **原型占比 0.3%**：仅 Diffusion 逆向设计为原型。
+6. **sim/ 模块最大**：123 个功能点，涵盖 S 参数/量子/FDTD/Adjoint/拓扑/多目标优化/DRC/LVS/系统级等全栈仿真能力。
+7. **学术诚信**：2026-07-17 全量核验后，所有功能点均引用实际代码路径，未迁移/已移除功能诚实标注，无夸大。原统计 247 生产可用含误计（已移除/未迁移条目计入生产可用/实验性），已修正为 200。
+
+---
+
+## 学术诚信核验记录（2026-07-17）
+
+### 核验元信息
+
+| 项目 | 内容 |
+|------|------|
+| 核验日期 | 2026-07-17 |
+| 核验范围 | 功能清单中 24 项标注"生产可用/实验性"但代码审计确认实际为 v5.0 未迁移/已移除/名称漂移的符号 |
+| 核验方法 | Grep + Read 对 `modules/` 下源文件逐项验证（class/def 定义、`raise ImportError`、`# v5.0 未迁移` 注释） |
+| 规则依据 | R02 学术诚信、R03 禁止 fall-back、R05 Bug 必须修复 |
+| 核验人 | PoLaRIS 文档诚信修正工程师 |
+
+### 修正项明细
+
+#### 第一组：代码注释明确标注"未迁移"但功能清单标注"生产可用"（6 项 → 12 行）
+
+| 符号 | 原标注 | 修正后 | 代码依据 |
+|------|--------|--------|----------|
+| IntegratedPipeline | 生产可用 (flow.py) | v5.0 未迁移 | training.py 行 3-4/106：`TrainingPipeline.__init__ 始终 raise ImportError，依赖 IntegratedPipeline/PipelineConfig，v5.0 未迁移`；flow.py 实际为 run_eda_flow |
+| PipelineConfig/PipelineResult | 生产可用 (flow.py) | v5.0 未迁移 | training.py 行 61/96 注释确认 |
+| DeviceCatalog/default_catalog/build_default_catalog | 生产可用 (catalog.py) | v5.0 未迁移 | stage_input.py 行 54 注释：`原依赖 polaris_pdk.DeviceCatalog（v5.0 未迁移）`；catalog.py 仅有 list_platforms |
+| FoundryPlatform/FOUNDRY_PLATFORMS | 生产可用 (catalog.py) | v5.0 未迁移 | catalog.py 中不存在 |
+| ProcessNode/CMOS_PROCESS_NODES/suggest_process_node_for_circuit | 生产可用 (specs.py) | v5.0 未迁移 | specs.py 仅有 BenchmarkSource/TargetMetric/DeviceSpec/CircuitSpec |
+| calibrate/CalibrationResult/SimLoop | 生产可用 (training.py) | v5.0 未迁移 | training.py 行 96/106/116 注释确认 |
+
+#### 第二组：名称漂移修正（7 项）
+
+| 原符号 | 实际符号 | 实际路径 | 代码依据 |
+|--------|----------|----------|----------|
+| AnalyticalPlacer (类) | place_analytical (函数) | analytical.py 行 288 | analytical.py 无 AnalyticalPlacer 类 |
+| AnalyticalPlacerConfig | AnalyticalConfig | analytical.py 行 90 | 类名漂移 |
+| AlphaChipEdgeGNN | EdgeGNN | ppo_gnn.py 行 191 | ppo_gnn.py 中类名为 EdgeGNN |
+| AdjointOptimizer (类) | run_adjoint_optimization (函数) | adjoint.py 行 359 | adjoint.py 无类定义，原行 197 已有 run_adjoint_optimization，故 AdjointOptimizer 标为 v5.0 未迁移 |
+| run_fdtd_simulation | simulate_waveguide_fdtd | waveguide.py 行 175 | solver.py 中无 run_fdtd_simulation，实际在 waveguide.py |
+| get_available_backends | v5.0 未迁移 | — | solver.py 中不存在 |
+| permanent_ryser (boson/hom.py) | permanent_ryser (quantum_advanced/permanent.py) | quantum_advanced/permanent.py 行 45 | boson 模块下为 permanent_glynn_gray（boson/permanent.py），hom.py 仅有 hom_interference |
+
+#### 第三组：完全不存在符号改为"v5.0 未迁移/已移除"（11 项 → 多行）
+
+| 符号 | 原标注 | 修正后 | 代码依据 |
+|------|--------|--------|----------|
+| PHOTONIC_EDGE_DIM/build_photonic_edge_features/GATLayer/MultiRelationalEdgeGraphEncoder | 实验性 (ppo_gnn.py) | v5.0 未迁移 | ppo_gnn.py 仅有 EdgeGNN 和 _build_edge_features 私有函数 |
+| GraphEncoder/StateEncoder/EdgeGraphEncoder | 生产可用 (ppo_gnn.py) | v5.0 未迁移 | ppo_gnn.py 中不存在 |
+| DensityField/FFTConvolver/DensityFieldFFT | 生产可用 (metrics.py) | v5.0 未迁移 | metrics.py 仅有 _density_gradient 等内部函数 |
+| CongestionCNN/rudy_congestion/generate_congestion_dataset | 生产可用 (global_router.py) | v5.0 未迁移 | global_router.py 仅有 GlobalRouter 类和 _estimate_rudy_congestion 私有方法 |
+| _cascade_with_sax/BlockTridiagonalMatrix/schur_complement/SubnetworkDecomposition/CircuitDAG | 生产可用 (cascade.py) | v5.0 未迁移 | cascade.py 仅有 cascade_circuit，__all__ = ["cascade_circuit"] |
+| is_jax_available/get_jax_devices/jit_compile/waveguide_s_jax 系列 | 生产可用 (backend_selector.py) | v5.0 未迁移 | backend_selector.py 仅有 _sdict_to_matrix 和 compute_condition_number |
+| simphony_models/analyze_dispersion | 生产可用 (simulator.py) | v5.0 未迁移 | simulator.py 仅有 default_models 和 group_delay |
+| WaveguideParams/CouplerParams | 生产可用 (models.py) | v5.0 未迁移 | models.py 仅有 RingParams |
+| EWCRegularizer/CurriculumScheduler/PlatformTransferLearner/SelfSupervisedPretrainer/FineTuner | 生产可用/实验性 (transfer_learning.py) | v5.0 未迁移 | transfer_learning.py 仅有 TransferConfig/RoutingPolicyModel/transfer_learn |
+| RolloutWorker/DistributedLearner | 实验性 (distributed_rollout.py) | v5.0 已移除 | distributed_rollout.py 仅有 ParallelRolloutCollector 和 _rollout_worker 私有函数 |
+| BehaviorCloning | 生产可用 (pretrain.py) | BehaviorCloningModel（名称修正） | pretrain.py 行 259 实际类名为 BehaviorCloningModel |
+
+### 修正前后统计对比
+
+| 成熟度 | 修正前 | 修正后 | 变化 |
+|--------|--------|--------|------|
+| 生产可用 | 247 | 200 | -47（含 33 项改未迁移 + 14 项原误计已移除分离） |
+| 实验性 | 60 | 42 | -18（含 7 项改未迁移 + 2 项改已移除 + 9 项原误计已移除分离） |
+| 原型 | 1 | 1 | 0 |
+| 已移除 | （隐含误计） | 23 | +23（从生产可用/实验性中分离） |
+| v5.0 未迁移 | 0 | 40 | +40（新增类别） |
+| v5.0 已移除 | 0 | 2 | +2（新增类别） |
+| **合计** | **308** | **308** | **0** |
+
+### 无 fall-back 声明
+
+本次修正严格遵循 R03：所有"v5.0 未迁移/已移除"标注均有代码审计依据（class/def 不存在、raise ImportError、注释确认），无任何静默兜底或假数据。未迁移符号均明确标注原因，未用假路径"让清单看起来完整"。
+
