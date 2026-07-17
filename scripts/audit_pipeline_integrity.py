@@ -3,7 +3,7 @@
 """
 PoLaRIS 流程诚信审查扫描脚本
 
-扫描 src/polaris/ 中的 fall-back / mock / fake / dummy / hardcode 模式，
+扫描 modules/*/src/ 中的 fall-back / mock / fake / dummy / hardcode 模式，
 输出结构化报告到 stdout 和 /workspace/out/audit/pipeline_integrity_report.md。
 
 规则参考：
@@ -21,7 +21,8 @@ from typing import List
 
 # 项目根目录（脚本位于 /workspace/scripts/，根目录为 /workspace）
 ROOT = Path(__file__).resolve().parent.parent
-SCAN_DIR = ROOT / "src" / "polaris"
+# v5.0 模块化: 扫描所有 modules/*/src/ 目录（原 src/polaris 已拆分）
+SCAN_DIR = ROOT / "modules"
 OUT_DIR = ROOT / "out" / "audit"
 REPORT_PATH = OUT_DIR / "pipeline_integrity_report.md"
 

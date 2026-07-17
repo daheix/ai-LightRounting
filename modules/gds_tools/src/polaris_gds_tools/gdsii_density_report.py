@@ -12,6 +12,12 @@
 
 - CommonMark 规范: https://spec.commonmark.org/
 - GitHub Flavored Markdown: https://github.github.com/gfm/
+- KLayout Database API（密度分析数据源 ``DensityReport`` 的上游）:
+  https://www.klayout.de/doc.html
+- gdsfactory GDSII 生态（层密度/dummy fill 设计流程参考）:
+  https://gdsfactory.github.io/gdsfactory/
+- SiEPIC EBeam PDK（晶圆厂密度规则参考）:
+  https://github.com/SiEPIC/SiEPIC_EBeam_PDK
 
 合规: R01 / R02 / R03 / R04 / R05 / R11。
 """

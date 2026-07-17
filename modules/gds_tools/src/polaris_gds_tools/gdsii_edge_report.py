@@ -14,6 +14,10 @@
 - CommonMark 规范: https://spec.commonmark.org/
 - GitHub Flavored Markdown: https://github.github.com/gfm/
 - JSON 标准 (ECMA-404): https://www.json.org/
+- KLayout Database API（边缘提取数据源 ``EdgeExtractionReport`` 的上游）:
+  https://www.klayout.de/doc.html
+- gdsfactory GDSII 生态（边缘/轮廓提取流程参考）:
+  https://gdsfactory.github.io/gdsfactory/
 
 合规: R01 / R02 / R03 / R04 / R05 / R11。
 """
