@@ -18,6 +18,8 @@
   https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html
 - Gustavsen 2006 IEEE TPWRD "Relaxed Vector Fitting",
   https://doi.org/10.1109/TPWRD.2006.874615
+- Gustavsen 2010 IEEE TPWRD "Relaxed Vector Fitting with Delay Extraction"
+  (延迟提取技术), https://doi.org/10.1109/TPWRD.2010.2096850
 - Chrostowski & Hochberg 2015 Silicon Photonics Design Cambridge §6,
   https://www.cambridge.org/core/books/silicon-photonics-design/
 
@@ -699,9 +701,16 @@ def generate_cml_from_sparams(name: str,
                               ) -> CMLComponent:
     """从 S 参数自动生成 CML 元件（编排 VF + CMLCompiler）。
 
-    流程: 对每个 S_ij 做 Vector Fitting → 重建 S 参数 → CMLCompiler.compile
-    → 无源性/互易性诊断。来源: Lumerical CML Compiler,
+    流程: 对每个 S_ij 做延迟提取（线性相位）→ Vector Fitting 残差 →
+    重建 S 参数 → CMLCompiler.compile → 无源性/互易性诊断。
+    来源: Lumerical CML Compiler,
     https://optics.ansys.com/hc/en-us/articles/360034902353
+
+    延迟提取: 波导传输项 S21=|S21|·exp(-j·2π·τ·f) 含纯延迟（非有理函数），
+    VF 需指数多极点。先提取线性相位（group delay），VF 只拟合缓慢变化残差。
+    |exp(j·phase)|=1 保证无源性等价。参考: Gustavsen 2010 IEEE TPWRD
+    "Relaxed Vector Fitting with Delay Extraction",
+    https://doi.org/10.1109/TPWRD.2010.2096850
 
     Args:
         name: 元件名
@@ -734,13 +743,21 @@ def generate_cml_from_sparams(name: str,
     S_sorted = S[sort_idx]
     n_ports = S.shape[1]
     # 对每个 S_ij 做 VF，重建 S 参数（保证紧凑模型一致）
+    # 延迟提取（Lumerical CML Compiler 标准做法）：波导传输项相位线性变化
+    # （pure delay exp(-j2π·τ·f) 是非有理函数，VF 需指数多极点）。
+    # 先提取线性相位，VF 只拟合缓慢变化的残差。|exp(j·phase)|=1 保证无源性等价。
     S_fit_sorted = np.empty_like(S_sorted)
     for i in range(n_ports):
         for j in range(n_ports):
             s_ij = S_sorted[:, i, j]
-            model = vector_fitting(freqs_sorted, s_ij, n_poles=n_poles,
+            phase_ij = np.unwrap(np.angle(s_ij))
+            slope, intercept = np.polyfit(freqs_sorted, phase_ij, 1)
+            delay_phase = slope * freqs_sorted + intercept
+            s_residual = s_ij * np.exp(-1j * delay_phase)
+            model = vector_fitting(freqs_sorted, s_residual, n_poles=n_poles,
                                    max_iter=20, enforce_passivity=True)
-            S_fit_sorted[:, i, j] = model.evaluate(freqs_sorted)
+            S_fit_sorted[:, i, j] = (model.evaluate(freqs_sorted)
+                                     * np.exp(1j * delay_phase))
     # 恢复原始波长顺序（按 sort_idx 逆排列）
     S_fit = np.empty_like(S)
     S_fit[sort_idx] = S_fit_sorted
