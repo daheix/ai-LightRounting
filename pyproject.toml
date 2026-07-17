@@ -60,10 +60,11 @@ polaris = "polaris.pipeline:main"
 [project.urls]
 Repository = "https://github.com/daheix/ai-LightRounting"
 
-[tool.setuptools.packages.find]
-where = ["src", "3dtool"]
-include = ["polaris*", "pycopy*"]
-exclude = ["tests*"]
+# v5.0 模块化: 根 pyproject 仅作依赖聚合与工具配置（ruff/mypy/pytest），
+# 不打包任何代码（各模块由 modules/*/pyproject.toml 独立打包安装，
+# 原 where=["src","3dtool"] 为 v4 残留死配置，目录已不存在）。
+[tool.setuptools]
+py-modules = []
 
 [tool.ruff]
 line-length = 100
@@ -90,9 +91,13 @@ module = "pytest.*"
 follow_imports = "skip"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src", "3dtool"]
-addopts = "-ra"
+# v5.0 模块化: 测试位于 modules/*/tests/（原 testpaths=["tests"] /
+# pythonpath=["src","3dtool"] 为 v4 残留死配置，目录已不存在）。
+# --import-mode=importlib: pytest 官方推荐的现代导入模式，允许不同目录
+# 存在同名测试文件（根治 route/router_advanced test_curvy.py、
+# verify_advanced/route test_drc.py 等收集冲突，R05 Bug 修复）。
+testpaths = ["modules"]
+addopts = "-ra --import-mode=importlib"
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
