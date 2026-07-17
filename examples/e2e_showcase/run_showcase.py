@@ -244,7 +244,7 @@ def main() -> None:
     setup_logging(output_dir)
 
     if args.real_case:
-        # 真实 PIC 设计 Case 模式：复用 10 阶段 stage 代码，生成真实结果分析报告
+        # 真实 PIC 设计 Case 模式：复用 12 阶段工业流程 stage 代码，生成真实结果分析报告
         from real_case.run_real_case import run as run_real_case
         from real_case.analyze_results import get_analysis, get_statistics
 
