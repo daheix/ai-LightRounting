@@ -103,6 +103,14 @@ from polaris_circuit.backend_selector import (
     waveguide_s_jax,
 )
 from polaris_circuit.cascade import cascade_circuit
+from polaris_circuit.subnetwork import (
+    BlockTridiagonalMatrix,
+    CircuitDAG,
+    Subnetwork,
+    SubnetworkDecomposition,
+    cascade_parallel,
+    cascade_with_subnetwork_decomposition,
+)
 from polaris_circuit.mna_spice import (
     MNACircuit,
     MNADCResult,
@@ -194,6 +202,13 @@ __all__ = [
     "compute_condition_number",
     "COND_NUM_FG_THRESHOLD",
     "COND_NUM_KLU_THRESHOLD",
+    # 子网络分解 + Schur 补 + DAG 调度（cascade 高级算法）
+    "CircuitDAG",
+    "Subnetwork",
+    "SubnetworkDecomposition",
+    "BlockTridiagonalMatrix",
+    "cascade_with_subnetwork_decomposition",
+    "cascade_parallel",
     # JAX CPU 后端（v5.1，R04 合规：仅 jax.devices("cpu")）
     "is_jax_available",
     "get_jax_devices",
