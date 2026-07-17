@@ -55,7 +55,9 @@ dev = [
 ]
 
 [project.scripts]
-polaris = "polaris.pipeline:main"
+# v6.0 正式发布版本 CLI 入口（13 个子命令）
+# 详见 modules/orchestrator/src/polaris_orchestrator/cli.py
+polaris = "polaris_orchestrator.cli:main"
 
 [project.urls]
 Repository = "https://github.com/daheix/ai-LightRounting"
