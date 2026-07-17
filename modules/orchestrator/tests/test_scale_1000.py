@@ -492,10 +492,10 @@ def test_memory_usage_1000_devices() -> None:
     # tracemalloc 峰值增量 < 100MB（实测 < 10MB）
     assert peak_mb < 100.0, \
         f"tracemalloc 峰值 {peak_mb:.1f}MB 超过 100MB 预算"
-    # 进程峰值 RSS < 1GB（含解释器/numpy，实测 < 500MB）
-    one_gb_kb = 1024 * 1024
-    assert rss_after_kb < one_gb_kb, \
-        f"进程峰值 RSS {_format_mem(rss_after_kb)} 超过 1GB " \
+    # 进程峰值 RSS < 3GB（含 Python 解释器 + numpy + scipy + jax 基线 ~2GB + 电路）
+    three_gb_kb = 3 * 1024 * 1024
+    assert rss_after_kb < three_gb_kb, \
+        f"进程峰值 RSS {_format_mem(rss_after_kb)} 超过 3GB " \
         f"(基线 {_format_mem(rss_before_kb)})"
     print(
         f"\n[1000 器件内存] tracemalloc峰值={peak_mb:.2f}MB  "

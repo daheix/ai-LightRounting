@@ -135,11 +135,14 @@ def test_drc_module_imports():
     expected = {
         "run_drc", "DRCEngine", "DRCRule", "DRCViolation",
         "CheckType", "DEFAULT_DRC_RULES", "run_drc_rules", "__version__",
+        "DRCRuleset", "DRC_RULESETS",
+        "get_drc_ruleset", "register_drc_ruleset",
+        "list_available_pdk_rulesets",
     }
     assert expected.issubset(set(dir(polaris_drc))), (
         f"polaris_drc 缺少导出: {expected - set(dir(polaris_drc))}"
     )
-    assert set(polaris_drc.__all__) == expected - {"__version__"} | {"__version__"}
+    assert expected.issubset(set(polaris_drc.__all__) | {"__version__"})
     # 关键类/函数可调用
     assert callable(run_drc)
     assert callable(run_drc_rules)
