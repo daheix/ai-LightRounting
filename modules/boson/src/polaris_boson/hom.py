@@ -21,9 +21,9 @@ Input-Process-Output 三段式文档
 - ``{coincidence_prob: float, dip_depth: float, verified: bool}``
   - coincidence_prob: 符合计数率 P_coinc(θ) ∈ [0, 0.5]。
   - dip_depth: HOM dip 深度 ∈ [0, 1]，θ=0 时为 1.0。
-  - verified: dip_depth 是否满足 dip_depth = 1 - P_coinc/0.5。
+  - verified: 输出物理合法域校验（有限性 + 值域，非恒真，R390 标准）。
 
-R03 合规: dip_depth 由模型实算，verified 校验物理一致性。
+R03 合规: dip_depth 由模型实算，verified 校验输出物理合法域（非恒真）。
 🚫不参与 GPU（R04）：纯 math 实现。
 
 学术诚信（R02，≥5 文献 URL 溯源）:
@@ -74,14 +74,24 @@ def hom_interference(theta: float = 0.0) -> dict:
         {coincidence_prob: float, dip_depth: float, verified: bool}
         - coincidence_prob: 符合计数率 P_coinc(θ) ∈ [0, 0.5]。
         - dip_depth: HOM dip 深度（可见度）∈ [0, 1]，θ=0 时为 1.0。
-        - verified: dip_depth 是否满足 dip_depth = 1 - P_coinc/0.5。
+        - verified: 输出物理合法域校验（非恒真，见下方实现注释）。
     """
     overlap_sq = math.exp(-(theta * theta) / (2.0 * _WAVEPACKET_SIGMA_SQ))
     coincidence_prob = _CLASSICAL_COINCIDENCE * (1.0 - overlap_sq)
     dip_depth = overlap_sq  # = 1 - coincidence_prob / classical
-    # R03: 校验 dip_depth 与 coincidence_prob 物理一致性
-    expected_dip = 1.0 - coincidence_prob / _CLASSICAL_COINCIDENCE
-    verified = abs(dip_depth - expected_dip) < 1e-12
+    # R390 标准（与 klm/gates.py 对齐）: verified 必须是非恒真校验。
+    # 原实现 abs(dip_depth - (1 - P/0.5)) < 1e-12 是代数恒等式（恒真，假验证），
+    # 已删除。改为校验输出物理合法域：有限性 + 值域。θ=NaN 等非法输入
+    # 会导致 exp 产生 NaN，值域比较对 NaN 恒 False → verified=False，
+    # 真实反映模型输出合法性（R02 学术诚信 / R03 无假验证）。
+    # 注: θ=±Inf 是合法极限（exp(-Inf)=0 → 经典极限 P=0.5, dip=0），
+    # 输出仍在合法域内，verified=True。
+    verified = (
+        math.isfinite(coincidence_prob)
+        and math.isfinite(dip_depth)
+        and 0.0 <= coincidence_prob <= _CLASSICAL_COINCIDENCE
+        and 0.0 <= dip_depth <= 1.0
+    )
     return {
         "coincidence_prob": float(coincidence_prob),
         "dip_depth": float(dip_depth),

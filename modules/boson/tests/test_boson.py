@@ -300,12 +300,34 @@ def test_hom_dip_monotonic_decrease():
 
 
 def test_hom_verified_always_true():
-    """verified 在多个 θ 下均为 True（dip = 1 - P_coinc/0.5 恒成立）。"""
+    """verified 在合法 θ 下均为 True（输出在物理合法域内）。"""
     for theta in (0.0, 0.5, 1.0, 2.0, 10.0):
         result = hom_interference(theta)
         assert result["verified"] is True, (
             f"θ={theta} verified 应为 True，实际 {result['verified']}"
         )
+
+
+def test_hom_verified_false_on_nan():
+    """R392 回归: θ=NaN 时 verified=False（非恒真校验，防假验证复发）。
+
+    R390 标准（klm/gates.py 同）: verified 必须是能失败的真实校验。
+    NaN 输入 → exp(NaN)=NaN → 值域比较恒 False → verified=False。
+    θ=±Inf 是合法极限（exp(-Inf)=0 → 经典极限），verified 仍为 True。
+    """
+    result = hom_interference(float("nan"))
+    assert result["verified"] is False, (
+        f"θ=NaN verified 应为 False，实际 {result['verified']}"
+    )
+    # ±Inf 合法极限: 经典极限输出 (P=0.5, dip=0)，verified=True
+    for inf_theta in (float("inf"), float("-inf")):
+        result = hom_interference(inf_theta)
+        assert result["verified"] is True, (
+            f"θ={inf_theta}（合法经典极限）verified 应为 True，"
+            f"实际 {result['verified']}"
+        )
+        assert result["dip_depth"] == 0.0
+        assert result["coincidence_prob"] == 0.5
 
 
 def test_hom_coincidence_range():
