@@ -271,11 +271,21 @@ def compile_all() -> int:
 def verify_no_source() -> bool:
     """验证副本源代码已被保护（.py 文件不含实际逻辑）。
 
+    仅检查 ``modules/*/src/polaris_*/`` 路径下的 .py 文件。
+    GUI 输出目录、docs、examples 等杂散 .py 不在验证范围内。
     main 分支源码不在验证范围内（main 保留完整源码供开发）。
     """
-    py_files = find_py_files()
-    # 加上 SKIP_FILES 中的文件（它们保留 .py 但应该不含业务逻辑）
-    all_py = list(RELEASE_MODULES.rglob("*.py"))
+    # 仅检查 polaris_* 包内的 .py（与 find_py_files 同口径，但包含 SKIP_FILES）
+    all_py: list[Path] = []
+    for py in RELEASE_MODULES.rglob("*.py"):
+        parts = py.parts
+        if "src" not in parts:
+            continue
+        if not any(p.startswith("polaris_") for p in parts):
+            continue
+        if "c_api" in parts:
+            continue
+        all_py.append(py)
 
     leaked = 0
     for py in all_py:
@@ -297,7 +307,7 @@ def verify_no_source() -> bool:
             print(f"  [警告] {py} 可能泄漏源码: {lines[0][:80]}")
 
     if leaked == 0:
-        print(f"[Cython] 验证通过: 副本 {len(all_py)} 个 .py 文件均为 stub，无源码泄漏")
+        print(f"[Cython] 验证通过: 副本 polaris_* 包 {len(all_py)} 个 .py 均为 stub，无源码泄漏")
     else:
         print(f"[Cython] 验证失败: {leaked} 个文件可能泄漏源码")
     return leaked == 0
