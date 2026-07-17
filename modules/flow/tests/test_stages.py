@@ -267,13 +267,13 @@ def test_stage_status_enum() -> None:
 
 
 def test_standard_stages_count_and_fields() -> None:
-    """STANDARD_STAGES 共 10 个 stage，每个含必需字段。"""
-    assert len(STANDARD_STAGES) == 10
+    """STANDARD_STAGES 共 12 个 stage，每个含必需字段。"""
+    assert len(STANDARD_STAGES) == 12
     stage_ids = [s.stage_id for s in STANDARD_STAGES]
-    assert stage_ids == list(range(1, 11))
+    assert stage_ids == list(range(1, 13))
     for s in STANDARD_STAGES:
         assert isinstance(s, Stage)
-        assert s.stage_id in range(1, 11)
+        assert s.stage_id in range(1, 13)
         assert s.name  # 非空
         assert s.slug.startswith("stage")
         assert s.ipkiss_step in ("器件设计", "线路设计", "设计验证", "流片准备")
@@ -290,15 +290,15 @@ def test_get_stage_valid_and_invalid() -> None:
     """get_stage 合法/非法 ID。"""
     s = get_stage(5)
     assert s.stage_id == 5
-    assert s.name == "S 参数仿真"
+    assert s.name == "AI 布局"
     # 边界
     assert get_stage(1).stage_id == 1
-    assert get_stage(10).stage_id == 10
+    assert get_stage(12).stage_id == 12
     # 非法 ID raise（R03）
     with pytest.raises(ValueError, match="未知阶段 ID"):
         get_stage(0)
     with pytest.raises(ValueError):
-        get_stage(11)
+        get_stage(13)
     with pytest.raises(ValueError):
         get_stage(-1)
 
@@ -328,7 +328,7 @@ def test_recipe_defaults_and_sim_config() -> None:
     assert r.platform == "SOI"
     assert r.placement_algo == "analytical"
     assert r.router_algo == "curvy"
-    assert r.enabled_stages == list(range(1, 11))
+    assert r.enabled_stages == list(range(1, 13))
     assert r.canvas_w == 1000.0
     assert r.canvas_h == 600.0
     assert r.custom_circuit is None
@@ -380,3 +380,110 @@ def test_recipe_yaml_roundtrip() -> None:
 # =============================================================================
 # 5. Workspace 目录与原子写入
 # =============================================================================
+
+
+# =============================================================================
+# 6. 12 阶段工业流程执行器（STAGE_EXECUTORS 回归）
+# =============================================================================
+
+
+def test_stage_executors_12_stage_mapping() -> None:
+    """STAGE_EXECUTORS 共 12 个阶段，函数名与工业流程顺序一致。
+
+    工业流程（先仿真后版图、良率签核后 GDS 导出）:
+    1 PDK → 2 电路 → 3 原理图仿真 → 4 逆向设计 → 5 布局 → 6 布线 →
+    7 版图后仿真 → 8 DRC/LVS → 9 良率 → 10 光电协同 → 11 量子验证 → 12 GDS
+    """
+    from polaris_flow.executors import STAGE_EXECUTORS
+
+    assert sorted(STAGE_EXECUTORS.keys()) == list(range(1, 13))
+    expected_names = {
+        1: "stage1_pdk",
+        2: "stage2_circuit",
+        3: "stage3_simulation",
+        4: "stage4_inverse",
+        5: "stage5_placement",
+        6: "stage6_routing",
+        7: "stage7_postlayout_sim",
+        8: "stage8_drc_lvs",
+        9: "stage9_yield",
+        10: "stage10_opto_electrical",
+        11: "stage11_quantum",
+        12: "stage12_gds",
+    }
+    for stage_id, fn_name in expected_names.items():
+        assert STAGE_EXECUTORS[stage_id].__name__ == fn_name
+
+
+def test_stage3_schematic_simulation_before_layout() -> None:
+    """阶段 3 原理图仿真仅依赖电路（版图前），输出逐器件损耗分解。"""
+    from polaris_flow.executors import STAGE_EXECUTORS
+
+    ws = _make_workspace()
+    recipe = Recipe(preset_id="mzi")
+    prev: dict = {}
+    for sid in (1, 2, 3):
+        prev.update(STAGE_EXECUTORS[sid](recipe, ws, prev))
+    assert prev["sparams"]["level"] == "schematic"
+    assert prev["total_loss_db"] > 0.0
+    assert len(prev["device_losses"]) == prev["sparams"]["n_devices"]
+    # 版图前无布线几何：输出不得包含 routes/placements
+    assert "routes" not in prev
+    assert "placements" not in prev
+
+
+def test_stage8_drc_lvs_uses_is_consistent_key() -> None:
+    """R05 回归: stage8 LVS 必须读取 run_lvs 的 is_consistent 键。
+
+    Bug 背景: 原代码 lvs_result.get("passed", False) 读错键名
+    （run_lvs 契约返回 is_consistent），导致 lvs_passed 永远 False。
+    """
+    from polaris_flow.executors import STAGE_EXECUTORS
+
+    ws = _make_workspace()
+    recipe = Recipe(preset_id="mzi")
+    prev: dict = {}
+    for sid in (1, 2, 5, 6, 8):
+        prev.update(STAGE_EXECUTORS[sid](recipe, ws, prev))
+    # MZI 预设版图与原理图拓扑一致 → LVS 必须通过
+    assert prev["lvs_passed"] is True
+    assert prev["drc_report"]["n_violations"] == 0
+
+
+def test_stage9_yield_report_structure() -> None:
+    """阶段 9 蒙特卡洛良率分析输出完整统计报告（流片前签核）。"""
+    from polaris_flow.executors import STAGE_EXECUTORS
+
+    ws = _make_workspace()
+    recipe = Recipe(preset_id="mzi")
+    prev: dict = {}
+    for sid in (1, 2, 3, 9):
+        prev.update(STAGE_EXECUTORS[sid](recipe, ws, prev))
+    report = prev["yield_report"]
+    assert report["n_samples"] == recipe.sim_config.yield_n_samples
+    assert 0.0 <= report["yield_estimate"] <= 1.0
+    assert report["n_pass"] + (report["n_samples"] - report["n_pass"]) == report["n_samples"]
+    assert report["p05_loss_db"] <= report["mean_loss_db"] <= report["p95_loss_db"]
+    assert report["sigma_rel"] == recipe.sim_config.yield_sigma_rel
+    assert report["method"] == "monte_carlo_per_device_loss"
+
+
+def test_stage7_postlayout_loss_breakdown() -> None:
+    """阶段 7 版图后仿真: 总损耗 = 器件 + 互连 + 交叉（损耗预算分解）。"""
+    from polaris_flow.executors import STAGE_EXECUTORS
+
+    ws = _make_workspace()
+    recipe = Recipe(preset_id="mzi")
+    prev: dict = {}
+    for sid in (1, 2, 3, 5, 6, 7):
+        prev.update(STAGE_EXECUTORS[sid](recipe, ws, prev))
+    budget = prev["loss_budget"]
+    assert budget["postlayout_loss_db"] == (
+        budget["device_loss_db"]
+        + budget["interconnect_loss_db"]
+        + budget["crossing_loss_db"]
+    )
+    # 版图附加损耗非负（布线互连只会增加损耗）
+    assert budget["layout_penalty_db"] >= 0.0
+    assert prev["postlayout_loss_db"] >= prev["total_loss_db"]
+

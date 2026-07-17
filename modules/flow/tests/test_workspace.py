@@ -105,7 +105,7 @@ def _make_workspace() -> Workspace:
 
 
 def test_workspace_dir_structure() -> None:
-    """Workspace 构造时创建标准目录结构（含 10 个 stage 子目录）。"""
+    """Workspace 构造时创建标准目录结构（含 12 个 stage 子目录）。"""
     with tempfile.TemporaryDirectory() as tmpdir:
         ws = Workspace(output_dir=tmpdir, job_id="ws-test")
         base = Path(tmpdir) / "ws-test"
@@ -115,11 +115,12 @@ def test_workspace_dir_structure() -> None:
         assert (base / "stages").is_dir()
         assert (base / "reports").is_dir()
         assert (base / "gds").is_dir()
-        # 10 个 stage 子目录
+        # 12 个 stage 子目录（工业光电子设计流程）
         for slug in [
-            "stage1_pdk", "stage2_circuit", "stage3_placement", "stage4_routing",
-            "stage5_simulation", "stage6_drc_lvs", "stage7_gds",
-            "stage8_opto_electrical", "stage9_quantum", "stage10_inverse",
+            "stage1_pdk", "stage2_circuit", "stage3_simulation",
+            "stage4_inverse", "stage5_placement", "stage6_routing",
+            "stage7_postlayout_sim", "stage8_drc_lvs", "stage9_yield",
+            "stage10_opto_electrical", "stage11_quantum", "stage12_gds",
         ]:
             assert (base / "stages" / slug).is_dir()
         # stage_dir 返回正确路径

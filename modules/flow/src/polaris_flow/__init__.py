@@ -35,7 +35,7 @@
 ### 作业流程系统
 - ``Job`` / ``JobStatus`` / ``JobState``：作业与状态机
 - ``Stage`` / ``StageInput`` / ``StageOutput`` / ``StageResult`` / ``StageStatus``
-- ``STANDARD_STAGES`` / ``get_stage``：9 个标准 stage
+- ``STANDARD_STAGES`` / ``get_stage``：12 个标准 stage（工业光电子设计流程）
 - ``Recipe`` / ``SimConfig``：作业配方
 - ``Workspace`` / ``JobTracker`` / ``JobScheduler``：工作区与调度
 

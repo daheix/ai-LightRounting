@@ -35,18 +35,20 @@ class JobTracker:
     静默吞没——数据损坏属业务 Bug，必须上抛告警。
     """
 
-    # 阶段 ID → slug 映射（与 STANDARD_STAGES 保持一致）
+    # 阶段 ID → slug 映射（12 阶段工业光电子设计流程）
     STAGE_SLUGS: dict[int, str] = {
         1: "stage1_pdk",
         2: "stage2_circuit",
-        3: "stage3_placement",
-        4: "stage4_routing",
-        5: "stage5_simulation",
-        6: "stage6_drc_lvs",
-        7: "stage7_gds",
-        8: "stage8_opto_electrical",
-        9: "stage9_quantum",
-        10: "stage10_inverse",
+        3: "stage3_simulation",
+        4: "stage4_inverse",
+        5: "stage5_placement",
+        6: "stage6_routing",
+        7: "stage7_postlayout_sim",
+        8: "stage8_drc_lvs",
+        9: "stage9_yield",
+        10: "stage10_opto_electrical",
+        11: "stage11_quantum",
+        12: "stage12_gds",
     }
 
     def __init__(self, base_output_dir: str = "out/jobs"):
@@ -92,7 +94,7 @@ class JobTracker:
     def get_history(self, job_id: str) -> list[dict]:
         """查询作业历史（所有阶段结果）"""
         history: list[dict] = []
-        for stage_id in range(1, 11):
+        for stage_id in range(1, 13):
             result = self.get_stage_result(job_id, stage_id)
             if result is not None:
                 history.append({"stage_id": stage_id, "output": result})

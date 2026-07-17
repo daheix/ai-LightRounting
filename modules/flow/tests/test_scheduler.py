@@ -212,7 +212,7 @@ def test_job_scheduler_cancel_queued_job() -> None:
     """JobScheduler.cancel 取消队列中的作业（QUEUED → CANCELLED）。"""
     with tempfile.TemporaryDirectory() as tmpdir:
         ws = Workspace(output_dir=tmpdir, job_id="sched-cancel")
-        recipe = Recipe(enabled_stages=list(range(1, 11)))  # 多 stage 留时间取消
+        recipe = Recipe(enabled_stages=list(range(1, 13)))  # 多 stage 留时间取消
         job = Job(job_id="sched-cancel", recipe=recipe, workspace=ws)
         # 用阻塞 executor 阻止 stage 完成太快
         def _block(recipe, ws, prev):
@@ -220,7 +220,7 @@ def test_job_scheduler_cancel_queued_job() -> None:
             return {"done": True}
         scheduler = JobScheduler(
             max_workers=1,
-            stage_executors={i: _block for i in range(1, 11)},
+            stage_executors={i: _block for i in range(1, 13)},
         )
         try:
             scheduler.submit(job)

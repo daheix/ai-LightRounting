@@ -1,7 +1,9 @@
-"""PoLaRIS 流水线物理设计阶段（阶段 3-4）。
+"""PoLaRIS 流水线物理设计阶段（阶段 5-6）。
 
-包含器件布局（stage3）与波导布线（stage4）。这两个阶段负责将电路
+包含器件布局（stage5）与波导布线（stage6）。这两个阶段负责将电路
 规格转化为物理版图坐标：先布局器件位置，再为连接布设波导路径。
+在工业流程中，物理实现位于原理图电路仿真（stage3）与逆向设计
+（stage4）之后（先仿真验证原理图，再进入版图实现）。
 
 ## 来源
 
@@ -44,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# 阶段 3: 器件布局
+# 阶段 5: 器件布局
 # =============================================================================
 
 
@@ -98,8 +100,8 @@ def _run_default_placer(
     return result["placements"]
 
 
-def stage3_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
-    """阶段 3: 器件布局。
+def stage5_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
+    """阶段 5: 器件布局。
 
     根据 recipe.placement_algo 选择布局算法：
     - "analytical": DREAMPlace 解析法布局（place_circuit mode="analytical"）
@@ -114,17 +116,17 @@ def stage3_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -
     Returns:
         含 placements/n_placed 的字典。
     """
-    circuit_dict = _require_input(prev_outputs, "circuit", 3)
+    circuit_dict = _require_input(prev_outputs, "circuit", 5)
 
     algo = recipe.placement_algo
-    logger.info("阶段 3: 器件布局（算法=%s）", algo)
+    logger.info("阶段 5: 器件布局（算法=%s）", algo)
 
     if algo == "analytical":
         placements = _run_analytical_placer(circuit_dict)
     else:
         placements = _run_default_placer(circuit_dict, algo, recipe)
 
-    logger.info("阶段 3 完成: 布局 %d 个器件", len(placements))
+    logger.info("阶段 5 完成: 布局 %d 个器件", len(placements))
 
     return {
         "placements": placements,
@@ -133,7 +135,7 @@ def stage3_placement(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -
 
 
 # =============================================================================
-# 阶段 4: 波导布线
+# 阶段 6: 波导布线
 # =============================================================================
 
 
@@ -241,8 +243,8 @@ def _collect_routes_metrics(
     return routes_serializable, total_length_um
 
 
-def stage4_routing(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
-    """阶段 4: 波导布线。
+def stage6_routing(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
+    """阶段 6: 波导布线。
 
     根据 recipe.router_algo 选择布线算法：
     - "curvy": 弯曲感知布线（_CurvyRouter，LiDAR ISPD'25）
@@ -261,12 +263,12 @@ def stage4_routing(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
     Raises:
         ValueError: router_algo 未知时告警退出（禁止 fall-back）。
     """
-    circuit_dict = _require_input(prev_outputs, "circuit", 4)
-    placements = _require_input(prev_outputs, "placements", 4)
+    circuit_dict = _require_input(prev_outputs, "circuit", 6)
+    placements = _require_input(prev_outputs, "placements", 6)
     circuit = _circuit_from_dict(circuit_dict)
 
     algo = recipe.router_algo
-    logger.info("阶段 4: 波导布线（算法=%s）", algo)
+    logger.info("阶段 6: 波导布线（算法=%s）", algo)
 
     if algo == "diagonal":
         routes = _run_diagonal_router(circuit, placements)
@@ -281,7 +283,7 @@ def stage4_routing(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
     routes_serializable, total_length_um = _collect_routes_metrics(routes)
 
     logger.info(
-        "阶段 4 完成: 布线 %d 条路径，总长度 %.2f μm",
+        "阶段 6 完成: 布线 %d 条路径，总长度 %.2f μm",
         len(routes_serializable), total_length_um,
     )
 
@@ -293,6 +295,6 @@ def stage4_routing(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> 
 
 
 __all__ = [
-    "stage3_placement",
-    "stage4_routing",
+    "stage5_placement",
+    "stage6_routing",
 ]

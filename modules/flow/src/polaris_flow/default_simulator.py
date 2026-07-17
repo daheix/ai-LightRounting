@@ -1,8 +1,18 @@
 """默认仿真器（从 integrated.py 拆分，规则 7.1 控制文件行数 ≤600）。
 
-支持两种独立模式（非 fallback，按需选择）：
-1. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator
-2. 查表估算：基于器件类型损耗查表的快速估算（独立接口，用于快速可行性筛查）
+支持三个独立接口（非 fallback，按设计流程阶段选择）：
+1. 原理图级电路仿真 ``simulate_schematic``：版图前电路仿真，仅依赖
+   电路规格与紧凑模型查表（对应工业流程"先仿真后版图"的原理图验证）
+2. 版图后仿真 ``simulate``：含布线几何的版图后验证（交叉数实际统计）
+3. 真实 S 参数仿真：调用 polaris.sim.simulator.CircuitSimulator（mode="real"）
+
+工业流程依据（先仿真后版图）:
+- Luceda IPKISS: schematic → circuit simulation → layout → post-layout verification
+  https://docs.lucedaphotonics.com/
+- Synopsys OptoCompiler: schematic-driven 流程，原理图仿真先于物理实现
+  https://www.synopsys.com/photonic-solutions.html
+- Cadence EPDA: pre-layout simulation vs post-layout verification 分离
+  https://www.cadence.com/
 
 仿真来源（R02 学术诚信，≥5 个文献 URL）:
 - simphony: https://simphonyphotonics.readthedocs.io/
@@ -160,18 +170,51 @@ class _DefaultSimulator:
             "n_crossings": n_crossings,
         }
 
-    def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
-        """查表估算损耗（独立接口，用于快速可行性筛查）。
+    def simulate_schematic(self, circuit: CircuitSpec) -> dict:
+        """原理图级电路仿真（版图前，独立接口非 fall-back）。
 
-        修复（违规 6/7/8）：
-        - 违规 6：未知器件类型不再默认返回 0.0，改为 raise KeyError。
-        - 违规 7：波导长度参数缺失不再用宽度代替，改为 raise ValueError。
-        - 违规 8：n_crossings 不再固定返回 0，改为基于 paths 几何实际
-          计算交叉数（线段相交检测）。
+        工业流程位置：原理图捕获之后的电路验证（先于布局布线）。
+        仅基于器件紧凑模型（查表 S 参数/损耗），不消费任何版图几何信息，
+        因此输出中不含交叉数（原理图阶段无布线几何，交叉数未定义，
+        R03 禁止用 0 冒充真实统计）。
 
-        来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
+        Args:
+            circuit: 电路规格（波导器件须已含 length 参数，
+                可先调用 supplement_waveguide_lengths 补充）。
+
+        Returns:
+            {"total_loss_db": float, "device_losses": list[dict]}。
+
+        Raises:
+            KeyError: 器件类型不在损耗表（R03 告警，不静默取 0）。
+            ValueError: 波导器件缺 length 参数（R03 告警）。
         """
-        total_loss = 0.0
+        losses = self.device_loss_breakdown(circuit)
+        total_loss = sum(item["loss_db"] for item in losses)
+        return {"total_loss_db": total_loss, "device_losses": losses}
+
+    def device_loss_breakdown(self, circuit: CircuitSpec) -> list[dict]:
+        """逐器件损耗分解（原理图级，供仿真与良率分析共用）。
+
+        对电路中每个器件按 _LOSS_TABLE 紧凑模型计算插入损耗：
+        波导类按 损耗系数(dB/cm) × length(μm) / 1e4 计算，
+        其余器件为固定插损。
+
+        来源: SiEPIC EBeam PDK 器件损耗典型值
+        https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+        Args:
+            circuit: 电路规格。
+
+        Returns:
+            [{"name": str, "device_type": str, "loss_db": float}, ...]，
+            顺序与 circuit.devices 一致。
+
+        Raises:
+            KeyError: 器件类型不在损耗表。
+            ValueError: 波导器件缺 length 参数。
+        """
+        breakdown: list[dict] = []
         for dev in circuit.devices:
             if dev.device_type not in self._LOSS_TABLE:
                 raise KeyError(
@@ -192,11 +235,57 @@ class _DefaultSimulator:
                         f"缺少 length 参数，无法计算波导损耗。"
                         f"请在器件 params 中提供 length/length_um（μm）。"
                     )
-                total_loss += loss * length / 1e4
+                loss_db = loss * float(length) / 1e4
             else:
-                total_loss += loss
+                loss_db = loss
+            breakdown.append(
+                {"name": dev.name, "device_type": dev.device_type, "loss_db": loss_db}
+            )
+        return breakdown
+
+    def _simulate_table(self, circuit: CircuitSpec, placements: dict, paths: dict) -> dict:
+        """版图后查表仿真（独立接口，含布线几何交叉统计）。
+
+        修复（违规 6/7/8）：
+        - 违规 6：未知器件类型不再默认返回 0.0，改为 raise KeyError。
+        - 违规 7：波导长度参数缺失不再用宽度代替，改为 raise ValueError。
+        - 违规 8：n_crossings 不再固定返回 0，改为基于 paths 几何实际
+          计算交叉数（线段相交检测）。
+
+        来源: SiEPIC EBeam PDK (https://github.com/SiEPIC/SiEPIC_EBeam_PDK)
+        """
+        losses = self.device_loss_breakdown(circuit)
+        total_loss = sum(item["loss_db"] for item in losses)
         n_crossings = _count_path_crossings(paths)
         return {"total_loss_db": total_loss, "n_crossings": n_crossings}
+
+
+def supplement_waveguide_lengths(circuit: CircuitSpec) -> int:
+    """为缺少 length 参数的波导器件补充物理长度（原地修改）。
+
+    波导长度推导：MZI/Ring 等预设电路的波导器件（strip_waveguide）在
+    CircuitSpec 中未显式设置 ``length`` 参数。波导的物理长度由器件几何
+    尺寸决定——光传播方向为器件较长维度（``max(width_um, height_um)``）。
+
+    来源: SiEPIC EBeam PDK strip waveguide 几何约定
+      https://github.com/SiEPIC/SiEPIC_EBeam_PDK
+
+    Args:
+        circuit: 电路规格（原地修改器件 params）。
+
+    Returns:
+        补充了 length 参数的器件数量。
+    """
+    n_supplemented = 0
+    for dev in circuit.devices:
+        if dev.device_type in _DefaultSimulator._WAVEGUIDE_TYPES:
+            has_length = any(
+                k in dev.params for k in ("length", "wg_length", "length_um")
+            )
+            if not has_length:
+                dev.params["length"] = float(max(dev.width_um, dev.height_um))
+                n_supplemented += 1
+    return n_supplemented
 
 
 def _cross_2d(
@@ -292,4 +381,4 @@ def _count_path_crossings(paths: dict) -> int:
     return crossings
 
 
-__all__ = ["_DefaultSimulator"]
+__all__ = ["_DefaultSimulator", "supplement_waveguide_lengths", "_count_path_crossings"]

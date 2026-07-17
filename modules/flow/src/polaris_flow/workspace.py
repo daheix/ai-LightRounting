@@ -31,7 +31,7 @@ JSONDecodeError）。原子的 ``os.replace`` 在 POSIX 下是 ``rename(2)``
         stages/
             stage1_pdk/output.json
             stage2_circuit/output.json
-            ... (共 10 个阶段子目录)
+            ... (共 12 个阶段子目录)
 """
 
 from __future__ import annotations
@@ -67,11 +67,12 @@ class Workspace:
         (self.base_path / "stages").mkdir(parents=True, exist_ok=True)
         (self.base_path / "reports").mkdir(parents=True, exist_ok=True)
         (self.base_path / "gds").mkdir(parents=True, exist_ok=True)
-        # 10 个阶段子目录
+        # 12 个阶段子目录（工业光电子设计流程）
         stage_slugs = [
-            "stage1_pdk", "stage2_circuit", "stage3_placement", "stage4_routing",
-            "stage5_simulation", "stage6_drc_lvs", "stage7_gds",
-            "stage8_opto_electrical", "stage9_quantum", "stage10_inverse",
+            "stage1_pdk", "stage2_circuit", "stage3_simulation",
+            "stage4_inverse", "stage5_placement", "stage6_routing",
+            "stage7_postlayout_sim", "stage8_drc_lvs", "stage9_yield",
+            "stage10_opto_electrical", "stage11_quantum", "stage12_gds",
         ]
         for slug in stage_slugs:
             (self.base_path / "stages" / slug).mkdir(parents=True, exist_ok=True)

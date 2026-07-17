@@ -1,8 +1,8 @@
-"""PoLaRIS 流水线输出阶段（阶段 7-8）。
+"""PoLaRIS 流水线输出阶段（阶段 10、12）。
 
-包含 GDS 版图导出（stage7）与光电协同仿真（stage8）。这两个阶段
-负责生成最终交付物：将布局布线结果导出为 GDS 文件，并评估光电协同
-耦合可行性。
+包含光电协同仿真（stage10）与 GDS 版图导出（stage12，流片交付
+最后一步）。在工业流程中，GDS 导出是全部验证（仿真/DRC/LVS/良率）
+通过后的最终交付动作——流片数据一旦导出即冻结设计。
 
 ## 来源
 
@@ -50,12 +50,16 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# 阶段 7: GDS 版图导出
+# 阶段 12: GDS 版图导出（流片交付最后一步）
 # =============================================================================
 
 
-def stage7_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
-    """阶段 7: GDS 版图导出。
+def stage12_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict:
+    """阶段 12: GDS 版图导出（流片交付最后一步）。
+
+    工业流程位置：GDS 导出是全部验证（原理图仿真 stage3 → 版图后仿真
+    stage7 → DRC/LVS stage8 → 良率签核 stage9）通过后的最终交付动作——
+    流片数据一旦导出即冻结设计。
 
     复用 IntegratedPipeline._export_layout 逻辑，将布局布线结果导出为 GDS 文件。
 
@@ -69,14 +73,14 @@ def stage7_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict
     """
     from polaris_gdsio.exporter import export_gds
 
-    circuit_dict = _require_input(prev_outputs, "circuit", 7)
-    # placements/routes 为 stage7 逻辑前置条件（布局布线须已完成），
+    circuit_dict = _require_input(prev_outputs, "circuit", 12)
+    # placements/routes 为 stage12 逻辑前置条件（布局布线须已完成），
     # export_gds v5.0 接收 circuit dict 自行排列器件，不再消费坐标对象。
-    _require_input(prev_outputs, "placements", 7)
-    _require_input(prev_outputs, "routes", 7)
+    _require_input(prev_outputs, "placements", 12)
+    _require_input(prev_outputs, "routes", 12)
     circuit = _circuit_from_dict(circuit_dict)
 
-    logger.info("阶段 7: GDS 版图导出")
+    logger.info("阶段 12: GDS 版图导出（流片交付最后一步）")
 
     # 输出到 workspace 的 gds 目录
     gds_path = str(workspace.gds_path(f"{circuit.name}.gds"))
@@ -92,7 +96,7 @@ def stage7_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict
         )
     gds_size_bytes = os.path.getsize(gds_path)
     logger.info(
-        "阶段 7 完成: GDS 导出 %s（%d 字节）",
+        "阶段 12 完成: GDS 导出 %s（%d 字节）",
         gds_path, gds_size_bytes,
     )
 
@@ -103,14 +107,14 @@ def stage7_gds(recipe: Recipe, workspace: Workspace, prev_outputs: dict) -> dict
 
 
 # =============================================================================
-# 阶段 8: 光电协同仿真
+# 阶段 10: 光电协同仿真
 # =============================================================================
 
 
-def stage8_opto_electrical(
+def stage10_opto_electrical(
     recipe: Recipe, workspace: Workspace, prev_outputs: dict
 ) -> dict:
-    """阶段 8: 光电协同仿真。
+    """阶段 10: 光电协同仿真。
 
     计算电学寄生参数（电容/电阻），评估光电协同耦合可行性。
 
@@ -122,15 +126,16 @@ def stage8_opto_electrical(
     Args:
         recipe: 作业配方。
         workspace: 工作空间。
-        prev_outputs: 之前所有阶段的输出字典（依赖 "circuit", "placements"）。
+        prev_outputs: 之前所有阶段的输出字典（依赖 "circuit", "placements",
+            "total_length_um"）。
 
     Returns:
         含 opto_electrical 的字典。
     """
-    circuit_dict = _require_input(prev_outputs, "circuit", 8)
-    _require_input(prev_outputs, "placements", 8)
+    circuit_dict = _require_input(prev_outputs, "circuit", 10)
+    _require_input(prev_outputs, "placements", 10)
 
-    logger.info("阶段 8: 光电协同仿真")
+    logger.info("阶段 10: 光电协同仿真")
 
     # 识别光电耦合器件（heater/phase_shifter/modulator）
     opto_electrical_types = {
@@ -146,9 +151,9 @@ def stage8_opto_electrical(
     # 电容: 基于波导总长度（SOI 波导单位电容 1.0 pF/mm）
     # 来源: Chrostowski 2015 §8.4, SOI strip waveguide 单位电容
     # R390 修复: 原 get("total_length_um", 0.0) 用 0 当真值（R03 违规）。
-    # total_length_um 由 stage4 (routing) 产出，缺失说明 stage4 未执行，
+    # total_length_um 由 stage6 (routing) 产出，缺失说明 stage6 未执行，
     # 无法计算电容 → raise ValueError。
-    total_length_um = float(_require_input(prev_outputs, "total_length_um", 8))
+    total_length_um = float(_require_input(prev_outputs, "total_length_um", 10))
     # 1.0 pF/mm = 0.001 pF/μm
     capacitance_pf = total_length_um * 0.001
 
@@ -165,7 +170,7 @@ def stage8_opto_electrical(
     n_coupled = len(coupled_devices)
 
     logger.info(
-        "阶段 8 完成: 电容 %.4f pF, 电阻 %.1f Ω, 光电耦合=%s (耦合器件 %d, 加热器 %d)",
+        "阶段 10 完成: 电容 %.4f pF, 电阻 %.1f Ω, 光电耦合=%s (耦合器件 %d, 加热器 %d)",
         capacitance_pf, resistance_ohm, coupled, n_coupled, n_heaters,
     )
 
@@ -181,6 +186,6 @@ def stage8_opto_electrical(
 
 
 __all__ = [
-    "stage7_gds",
-    "stage8_opto_electrical",
+    "stage10_opto_electrical",
+    "stage12_gds",
 ]

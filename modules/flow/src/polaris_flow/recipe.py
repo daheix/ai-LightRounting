@@ -31,12 +31,14 @@ from dataclasses import dataclass, field
 class SimConfig:
     """仿真配置
 
-    封装 S 参数仿真与迭代优化的参数。
+    封装 S 参数仿真、迭代优化与良率分析的参数。
     """
 
     max_iterations: int = 3            # 最大迭代次数
     loss_target_db: float = 5.0        # 目标插损（dB）
     use_real_simulator: bool = False   # 是否使用真实仿真器（而非快速近似）
+    yield_n_samples: int = 1000        # 良率分析蒙特卡洛采样数
+    yield_sigma_rel: float = 0.05      # 良率分析器件损耗相对涨落 σ（1σ=5%）
 
 
 @dataclass
@@ -48,7 +50,7 @@ class Recipe:
     - platform: 工艺平台（SOI/SiN/InP/LNOI）
     - placement_algo / router_algo: 布局与布线算法选择
     - sim_config: 仿真参数
-    - enabled_stages: 启用的阶段 ID 列表（默认全部 1-10）
+    - enabled_stages: 启用的阶段 ID 列表（默认全部 1-12）
     - custom_circuit: 自定义电路规格（None 则使用 preset_id）
     """
 
@@ -59,8 +61,8 @@ class Recipe:
     sim_config: SimConfig = field(default_factory=SimConfig)
     output_dir: str = "out/jobs"
     enabled_stages: list[int] = field(
-        default_factory=lambda: list(range(1, 11))
-    )  # 默认启用全部 10 阶段
+        default_factory=lambda: list(range(1, 13))
+    )  # 默认启用全部 12 阶段
     canvas_w: float = 1000.0
     canvas_h: float = 600.0
     custom_circuit: dict | None = None  # 自定义电路规格（None 则用 preset_id）
@@ -76,6 +78,8 @@ class Recipe:
                 "max_iterations": self.sim_config.max_iterations,
                 "loss_target_db": self.sim_config.loss_target_db,
                 "use_real_simulator": self.sim_config.use_real_simulator,
+                "yield_n_samples": self.sim_config.yield_n_samples,
+                "yield_sigma_rel": self.sim_config.yield_sigma_rel,
             },
             "output_dir": self.output_dir,
             "enabled_stages": self.enabled_stages,
@@ -101,9 +105,11 @@ class Recipe:
                 max_iterations=sim_cfg.get("max_iterations", 3),
                 loss_target_db=sim_cfg.get("loss_target_db", 5.0),
                 use_real_simulator=sim_cfg.get("use_real_simulator", False),
+                yield_n_samples=sim_cfg.get("yield_n_samples", 1000),
+                yield_sigma_rel=sim_cfg.get("yield_sigma_rel", 0.05),
             ),
             output_dir=d.get("output_dir", "out/jobs"),
-            enabled_stages=d.get("enabled_stages", list(range(1, 11))),
+            enabled_stages=d.get("enabled_stages", list(range(1, 13))),
             canvas_w=d.get("canvas_w", 1000.0),
             canvas_h=d.get("canvas_h", 600.0),
             custom_circuit=d.get("custom_circuit"),
