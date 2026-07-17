@@ -337,13 +337,32 @@ def _enforce_passivity_scalar(model: FittedModel,
     """标量无源性强制：max|f(jω)| ≤ 1 则整体缩放。
     来源: Grivet-Talocia 2007 §IV（谱范数法标量简化）,
     https://doi.org/10.1109/TEMC.2006.888590
+
+    对尖锐共振峰（极点 p=a+jb 在 ω=b 处峰值 |r|/|a|），均匀采样易漏掉真实峰值
+    导致缩放后在外部采样点仍 >1。本函数在每个复极点谐振频率 f=|Im(p)|/(2π)
+    附近 ±10|Re(p)|/(2π) 范围内加密 512 点，确保捕获真实峰值。
     """
-    dense = np.linspace(float(freqs_hz[0]), float(freqs_hz[-1]), _PASSIVITY_DENSE)
+    f_min = float(freqs_hz[0])
+    f_max = float(freqs_hz[-1])
+    dense = np.linspace(f_min, f_max, _PASSIVITY_DENSE)
+    # 在每个复极点谐振频率附近加密采样（共振峰位于 ω=Im(p)）
+    extra_pts = []
+    for p in model.poles:
+        if abs(p.imag) > 0.0:
+            f_p = abs(p.imag) / (2.0 * np.pi)
+            if f_min <= f_p <= f_max:
+                width = max(abs(p.real) / (2.0 * np.pi),
+                            (f_max - f_min) * 1e-6)
+                extra_pts.append(np.linspace(max(f_min, f_p - 10.0 * width),
+                                             min(f_max, f_p + 10.0 * width), 512))
+    if extra_pts:
+        dense = np.unique(np.concatenate([dense] + extra_pts))
     resp = model.evaluate(dense)
     peak = float(np.max(np.abs(resp)))
-    if peak <= 1.0 + 1e-9:
+    if peak <= 1.0 + 1e-12:
         return model
-    scale = 1.0 / peak
+    # 缩放 + 微小安全余量（防止极点附近采样点间仍有更高峰）
+    scale = (1.0 - 1e-9) / peak
     model.residues = model.residues * scale
     model.d = model.d * scale
     model.h = model.h * scale
@@ -469,11 +488,22 @@ def fit_waveguide_params(wavelengths_um: NDArray[np.float64],
         raise ValueError("wavelengths_um 须严格递增")
 
     # 相位解卷绕后提取 neff（Chrostowski 2015 Eq.3.8）
+    # 注意: unwrap 输出 phase+2πk（k 为整数常数），代入 neff=-phase·wl/(2π·L)
+    # 得 n_eff_raw = n_eff_true - k·wl/L（线性 wl 偏移项）
     phase = np.unwrap(np.angle(s))
-    n_eff = -phase * wl / (2.0 * np.pi * length_um)
-    # 群折射率 n_g = n_eff - λ·dn_eff/dλ（中心差分）
-    dn_dwl = np.gradient(n_eff, wl)
-    n_g = n_eff - wl * dn_dwl
+    n_eff_raw = -phase * wl / (2.0 * np.pi * length_um)
+    # 群折射率 n_g = n_eff - λ·dn_eff/dλ 对常数 2πk 求导消去（unwrap 不变量）
+    dn_dwl = np.gradient(n_eff_raw, wl)
+    n_g = n_eff_raw - wl * dn_dwl  # 真实群折射率，不受 2πk 偏移影响
+    # 弱色散近似 n_eff≈n_g，最小二乘求 k 使 n_eff_raw + k·wl/L ≈ n_g
+    # 推导: min ||(n_eff_raw - n_g) + k·wl/L||² → k = -L·sum((n_eff_raw-n_g)·wl)/sum(wl²)
+    denom = float(np.sum(wl * wl))
+    if denom > 0.0:
+        k_real = -length_um * float(np.sum((n_eff_raw - n_g) * wl)) / denom
+        k = int(np.round(k_real))
+    else:
+        k = 0
+    n_eff = n_eff_raw + k * wl / length_um
     n_mid = len(wl) // 2
     n_g_center = float(n_g[n_mid])
     # 传播损耗 dB/um → dB/cm（×1e4）
@@ -696,19 +726,24 @@ def generate_cml_from_sparams(name: str,
     if S.shape[0] != len(wl):
         raise ValueError("s_matrix 频率数与 wavelengths_um 不一致")
 
-    # 频率 Hz：S 参数频率与波长互逆
+    # 频率 Hz：S 参数频率与波长互逆，波长递增时频率递减
     freqs_hz = _C0 / (wl * 1e-6)  # λ(um)→λ(m)→f=c/λ
+    # VF 要求 freqs 严格递增，按频率升序重排 S（波长降序）
+    sort_idx = np.argsort(freqs_hz)
+    freqs_sorted = freqs_hz[sort_idx]
+    S_sorted = S[sort_idx]
     n_ports = S.shape[1]
     # 对每个 S_ij 做 VF，重建 S 参数（保证紧凑模型一致）
-    S_fit = np.empty_like(S)
+    S_fit_sorted = np.empty_like(S_sorted)
     for i in range(n_ports):
         for j in range(n_ports):
-            s_ij = S[:, i, j]
-            # 反射项(i==j)强制无源性；传输项不强制（可能>1 由增益，但无源器件≤1）
-            enforce = True
-            model = vector_fitting(freqs_hz, s_ij, n_poles=n_poles,
-                                   max_iter=20, enforce_passivity=enforce)
-            S_fit[:, i, j] = model.evaluate(freqs_hz)
+            s_ij = S_sorted[:, i, j]
+            model = vector_fitting(freqs_sorted, s_ij, n_poles=n_poles,
+                                   max_iter=20, enforce_passivity=True)
+            S_fit_sorted[:, i, j] = model.evaluate(freqs_sorted)
+    # 恢复原始波长顺序（按 sort_idx 逆排列）
+    S_fit = np.empty_like(S)
+    S_fit[sort_idx] = S_fit_sorted
 
     compiler = CMLCompiler()
     component = compiler.compile(name, port_names, wl, S_fit)
