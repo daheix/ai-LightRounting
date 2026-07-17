@@ -105,7 +105,7 @@ def mode_overlap_2d(
         raise ValueError(f"dx_um 须 > 0，得到 {dx_um}")
     if dy_um <= 0:
         raise ValueError(f"dy_um 须 > 0，得到 {dy_um}")
-    overlap = float(np.sum(fa * np.conj(fb)) * dx_um * dy_um)
+    overlap = np.sum(fa * np.conj(fb)) * dx_um * dy_um
     return complex(overlap)
 
 
