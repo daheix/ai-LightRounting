@@ -19,13 +19,13 @@ v5.0 将 v4 单包架构重构为 34 个 pip 独立子模块。以下量化指�
 | 指标 | v3.0（v4 实测） | **v3.1（v5.0 实测，2026-07-17）** | 实测方法 |
 |------|----------------|-----------------------------------|----------|
 | 测试用例数 | 5434 collected | **2113 collected** | `pytest --collect-only -q`（testpaths=["modules"]，--import-mode=importlib） |
-| 测试文件数 | 139 | **85** | `modules/*/tests/*.py` 实际统计 |
+| 测试文件数 | 139 | **85** | `modules/*/tests/test_*.py` 实际统计 |
 | 原生 PDK 平台 | 11 foundry 平台 | **4 材料平台**（SOI/SiEPIC、SiN/Ligentec、InP/Pattern Project、LNOI/HyperLight） | `polaris_pdk.list_platforms()` 实测 |
 | 原生 PDK 器件 | 99 个 | **36 个**（4 平台 × 9 器件） | 同上返回 device_count |
 | foundry PDK 桥接 | 11 foundry | **48 个 PDKInfo**（aim/amf/ihp/vtt/tower_ph18da/gf_fotonix/tsmc_sipho/samsung_sipho/imec×3/ligentec/siepic/cornerstone/compoundtek 等） | `pdk_advanced/gdsfactory_bridge.py` 实际统计 |
-| DRC 规则 | 90 条（9 runset） | **25 条**（`polaris_drc/rules.py` DRCRule 实例，DEFAULT_DRC_RULES 18 条） | 源码实际统计 |
+| DRC 规则 | 90 条（9 runset） | **25 条**（`polaris_drc/rules.py` DRCRule 实例，全部位于 DEFAULT_DRC_RULES 列表中） | 源码实际统计 |
 | DRC runset | 9 个 | **v5.0 已移除**（`foundry_runsets.py` 未迁移） | 文件系统核验 |
-| 子模块数 | 13 子包 | **34 独立子模块** | `modules/` 目录实测 |
+| 子模块数 | 13 子包 | **33 独立子模块**（`modules/` 下 34 个目录，其中 `_c_abi` 为共享 C 头文件无 pyproject.toml，不计为 pip 子模块） | `modules/` 目录实测 |
 
 ### 0.6.2 v3.0 声称功能的 v5.0 落点核对
 
