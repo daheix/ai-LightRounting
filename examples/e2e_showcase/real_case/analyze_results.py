@@ -284,34 +284,54 @@ def analyze_stage3(result: dict) -> StageAnalysis:
 def analyze_stage4(result: dict) -> StageAnalysis:
     """Stage 4: Adjoint 逆向设计。
 
-    JAX jax.grad 自动微分真实运行，FoM +5.58dB 改善，但 200nm 网格精度不足
-    + converged=False → LIMITED_BY_COMPUTE。
+    基于真实运行结果动态判定（R02 学术诚信，不硬编码 converged 值）：
+    - 网格 dx=200nm（λ/7.75）远粗于商业级 λ/50=30nm（Taflove §4.1
+      FDTD 精度准则），无论是否收敛，精度都受 demo 算力限制
+    → status 恒为 LIMITED_BY_COMPUTE；converged 实际值用于 limitation_reason
+      动态生成（收敛则只指出网格精度问题；未收敛则额外指出迭代不足）。
     """
     ko = _require_key(result, "key_outputs", "Stage4")
     method = _require_key(ko, "method", "Stage4")
     converged = _require_key(ko, "converged", "Stage4")
-    if converged is not False:
-        raise RuntimeError(
-            f"Stage4 converged={converged} 与真实运行结果（false）不一致"
+    iterations = _require_key(ko, "iterations", "Stage4")
+    improvement_db = _require_key(ko, "improvement_db", "Stage4")
+    initial_fom = _require_key(ko, "initial_fom", "Stage4")
+    final_fom = _require_key(ko, "final_fom", "Stage4")
+    initial_width_nm = _require_key(ko, "initial_width_nm", "Stage4")
+    optimal_width_nm = _require_key(ko, "optimal_width_nm", "Stage4")
+
+    # 动态生成 gap / limitation_reason（不硬编码具体数字）
+    if converged:
+        converged_str = "收敛"
+        gap_tail = (
+            f"converged=True（{iterations} 步收敛，FoM 改善 {improvement_db:+.2f} dB），"
+            "但 demo 网格 dx=200nm（λ/7.75）远粗于商业级"
         )
+        limitation_tail = "网格精度不足（dx=200nm 即 λ/7.75，商业级推荐 dx≤λ/50）"
+    else:
+        converged_str = "未收敛"
+        gap_tail = (
+            f"converged=False（{iterations} 步未收敛，FoM 改善 {improvement_db:+.2f} dB），"
+            "网格 dx=200nm（λ/7.75）远粗于商业级"
+        )
+        limitation_tail = (
+            "JAX AD 计算开销大，demo 网格 24×12×8 / dx=200nm 无法用大网格；"
+            f"{iterations} 步未收敛（converged=False），方向正确但精度不足"
+        )
+
     return StageAnalysis(
         stage_id=4,
         name="Adjoint 逆向设计",
         status=LIMITED_BY_COMPUTE,
         key_outputs={
             "method": method,
-            "initial_width_nm": ko["initial_width_nm"],
-            "optimal_width_nm": ko["optimal_width_nm"],
-            "initial_fom": ko["initial_fom"],
-            "final_fom": ko["final_fom"],
-            "improvement_db": ko["improvement_db"],
-            "iterations": ko["iterations"],
+            "initial_width_nm": initial_width_nm,
+            "optimal_width_nm": optimal_width_nm,
+            "initial_fom": initial_fom,
+            "final_fom": final_fom,
+            "improvement_db": improvement_db,
+            "iterations": iterations,
             "converged": converged,
-            "grid_size": ko["grid_size"],
-            "grid_dx_nm": ko["grid_dx_nm"],
-            "n_fdtd_steps": ko["n_fdtd_steps"],
-            "target_wavelength_um": ko["target_wavelength_um"],
-            "learning_rate": ko["learning_rate"],
         },
         benchmark="Ansys Lumerical lumopt / Tidy3D adjoint",
         benchmark_value=(
@@ -320,21 +340,27 @@ def analyze_stage4(result: dict) -> StageAnalysis:
         ),
         gap=(
             "PoLaRIS *创新* JAX jax.grad 自动微分（替代 lumopt 手动伴随方程），"
-            "FoM 改善 +5.58dB，但 converged=False 且网格 dx=200nm（λ/7.75）"
-            "远粗于商业级"
+            f"FoM 改善 {improvement_db:+.2f} dB，但 {gap_tail}"
         ),
         limitation_reason=(
             "JAX AD 计算开销大，demo 网格 24×12×8 / dx=200nm 无法用大网格；"
-            "50 次迭代未收敛（converged=False），方向正确但精度不足"
+            f"{converged_str}（converged={converged}），方向正确但精度不足。"
+            f"具体限制：{limitation_tail}"
         ),
         notes=(
             "*创新* JAX jax.grad 自动微分替代 lumopt 手动伴随方程；"
-            "FoM: 7.99e+16 → 2.89e+17 (+5.58dB)；"
-            "宽度优化: 400nm (2.0 像素) → 152.3nm (0.76 像素)；"
+            f"FoM: {initial_fom:.4e} → {final_fom:.4e} "
+            f"({improvement_db:+.2f} dB)；"
+            f"波导半宽度优化: {initial_width_nm:.2f} nm → "
+            f"{optimal_width_nm:.2f} nm（{iterations} 步，{converged_str}）；"
+            "网格参数 dx=200nm / 24×12×8 来自 polaris_inverse 子模块内部常量"
+            "（stage4 返回不含此字段，工程估算值，非运行结果字段）；"
             "文献: Yee 1966 (https://doi.org/10.1109/TAP.1966.1138693)、"
             "Mahau 2024 arXiv:2412.12360 (https://arxiv.org/abs/2412.12360)、"
             "lumopt (https://github.com/chriskeraly/lumopt)、"
-            "Jensen & Sigmund 2011 (https://doi.org/10.1002/lpor.201000014)"
+            "Jensen & Sigmund 2011 (https://doi.org/10.1002/lpor.201000014)、"
+            "Hughes 2018 ACS Photonics (https://arxiv.org/abs/1811.01255)、"
+            "Giles & Pierce 2000 SIAM Review (adjoint approach)"
         ),
     )
 
@@ -342,18 +368,71 @@ def analyze_stage4(result: dict) -> StageAnalysis:
 def analyze_stage5(result: dict) -> StageAnalysis:
     """Stage 5: AI 布局。
 
-    无预训练 checkpoint（checkpoint_loaded=false），HPWL 为未训练网络前向推理，
-    不能对标 AlphaChip（Mirhoseini Nature 2021）→ LIMITED_BY_DATA。
+    基于真实运行结果动态判定（R02 学术诚信，不硬编码 checkpoint_loaded 值）：
+    - placement_mode="analytical" + checkpoint_loaded=False（当前 demo 状态）:
+      DREAMPlace 风格解析法布局，HPWL 为解析优化结果，未使用 GNN，
+      不能对标 AlphaChip → LIMITED_BY_DATA
+    - placement_mode="ppo_gnn" + checkpoint_loaded=True（未来加载预训练权重）:
+      仍需大量训练数据才能对标 AlphaChip，保持 LIMITED_BY_DATA
+      （demo 规模不足以验证商用级）
+
+    字段来源（polaris_place.place_circuit 返回）:
+    - placement_mode: "analytical" 或 "ppo_gnn"
+    - checkpoint_loaded: 是否加载了预训练 checkpoint
+    - hpwl: 半周长线长（μm）
+    注: gnn_enabled/gnn_out_dim 不在 stage5 返回中（历史遗留字段），
+    基于 placement_mode 推断 GNN 是否启用。
     """
     ko = _require_key(result, "key_outputs", "Stage5")
-    checkpoint_loaded = _require_key(ko, "checkpoint_loaded", "Stage5")
     placement_mode = _require_key(ko, "placement_mode", "Stage5")
     circuits = _require_key(ko, "circuits", "Stage5")
-    if checkpoint_loaded is not False:
-        raise RuntimeError(
-            f"Stage5 checkpoint_loaded={checkpoint_loaded} 与真实运行结果（false）不一致"
-        )
+
+    # checkpoint_loaded 在每个 circuit 子 dict 中（polaris_place 返回结构），
+    # 所有 circuit 由同一 place_circuit 调用产生，取第一个即可代表
+    if not circuits:
+        raise RuntimeError("Stage5: circuits 列表为空（真实运行结果损坏，R03）")
+    first_circuit = circuits[0]
+    checkpoint_loaded = _require_key(first_circuit, "checkpoint_loaded", "Stage5.circuits[0]")
+
     hpwl = {c["name"]: c["hpwl"] for c in circuits}
+
+    # 基于 placement_mode 推断 GNN 是否启用（polaris_place 返回不含 gnn_enabled）
+    gnn_enabled = (placement_mode == "ppo_gnn")
+
+    # 动态生成 gap / limitation_reason（不硬编码 checkpoint_loaded 值）
+    if placement_mode == "ppo_gnn" and checkpoint_loaded:
+        gap_desc = (
+            "PoLaRIS 启用 ppo_gnn 模式并加载了预训练 checkpoint，HPWL 为 "
+            "Edge-GNN + PPO 已训练网络前向推理结果；"
+            "但 demo 训练数据规模仍不足以对标 AlphaChip 预训练规模"
+        )
+        limitation_desc = (
+            "训练数据规模不足（AlphaChip 预训练于大量 TPU 块布局，"
+            "PoLaRIS demo 训练数据规模有限）；R04 不参与 GPU 战略限制训练算力"
+        )
+        gnn_desc = "Edge-GNN 已启用（ppo_gnn 模式）"
+    elif placement_mode == "analytical":
+        gap_desc = (
+            f"PoLaRIS 使用 {placement_mode} 解析法布局（DREAMPlace 风格），"
+            "HPWL 为解析优化结果；未启用 ppo_gnn（AlphaChip Edge-GNN + PPO）"
+            "→ 不能直接对标 AlphaChip 预训练模型"
+        )
+        limitation_desc = (
+            "解析法布局为 DREAMPlace 风格（无 GNN），未加载预训练 checkpoint；"
+            "ppo_gnn 模式需预训练 checkpoint（R04 不参与 GPU 战略限制训练算力）"
+        )
+        gnn_desc = "Edge-GNN 未启用（analytical 解析法模式）"
+    else:
+        gap_desc = (
+            f"PoLaRIS 使用 {placement_mode} 模式，HPWL 为该模式布局结果；"
+            f"checkpoint_loaded={checkpoint_loaded}"
+        )
+        limitation_desc = (
+            f"placement_mode={placement_mode}（非 analytical/ppo_gnn 标准模式），"
+            "需进一步评估与 AlphaChip 的对标差距"
+        )
+        gnn_desc = f"placement_mode={placement_mode}"
+
     return StageAnalysis(
         stage_id=5,
         name="AI 布局",
@@ -362,27 +441,26 @@ def analyze_stage5(result: dict) -> StageAnalysis:
             "checkpoint_loaded": checkpoint_loaded,
             "placement_mode": placement_mode,
             "hpwl_um": hpwl,
-            "gnn_enabled": _require_key(ko, "gnn_enabled", "Stage5"),
-            "gnn_out_dim": _require_key(ko, "gnn_out_dim", "Stage5"),
+            "gnn_enabled": gnn_enabled,
+            "gnn_out_dim": "N/A（polaris_place 返回不含此字段）",
         },
         benchmark="Google AlphaChip (Mirhoseini et al., Nature 2021)",
         benchmark_value=(
             "AlphaChip 预训练于 TPU 块布局，可对标人类专家；"
             "商业芯片布局工具: Cadence Innovus, Synopsys ICC2"
         ),
-        gap=(
-            "PoLaRIS 无预训练 checkpoint，HPWL 为 Orthogonal 初始化 PPO + "
-            "随机初始化 Edge-GNN 前向推理结果，不能与 AlphaChip 预训练模型对标"
-        ),
-        limitation_reason=(
-            "缺乏预训练 checkpoint（需大量 TPU/GPU 训练资源，R04 不参与 GPU 战略），"
-            "Edge-GNN 与 PPO 策略网络均为随机初始化前向推理"
-        ),
+        gap=gap_desc,
+        limitation_reason=limitation_desc,
         notes=(
-            "warning 原文: HPWL 来自 Orthogonal 初始化 PPO + 随机初始化 Edge-GNN "
-            "前向推理（非预训练），但确为 Edge-GNN + PPO 策略前向推理结果；"
-            "MZI HPWL=672.18μm, Clements HPWL=3433.85μm；"
-            "AlphaChip 文献: https://doi.org/10.1038/s41586-021-03544-w"
+            f"placement_mode={placement_mode}, checkpoint_loaded={checkpoint_loaded}；"
+            f"{gnn_desc}；"
+            f"实际 HPWL: " + ", ".join(
+                f"{name}={val:.2f}μm" for name, val in hpwl.items()
+            ) + "；"
+            "gnn_enabled/gnn_out_dim 不在 stage5 返回中（polaris_place 返回结构），"
+            "基于 placement_mode 推断；"
+            "AlphaChip 文献: https://doi.org/10.1038/s41586-021-03544-w；"
+            "DREAMPlace 文献: https://arxiv.org/abs/2004.10746"
         ),
     )
 
@@ -488,39 +566,78 @@ def analyze_stage7(result: dict) -> StageAnalysis:
 def analyze_stage8(result: dict) -> StageAnalysis:
     """Stage 8: DRC/LVS 验证。
 
-    DRC 90.9% 通过率、LVS 一致性 True，规则基于 Calibre/Mentor 标准
-    → REAL_USABLE。
+    基于真实运行结果动态判定（R02 学术诚信，不硬编码 pass_rate 值）：
+    - DRC pass_rate ≥ 0.9 + LVS is_consistent=True → REAL_USABLE
+      （核心规则覆盖足够，版图可流片）
+    - DRC pass_rate < 0.9 但 > 0 → LIMITED_BY_COMPUTE
+      （DRC 规则集覆盖不足或版图存在轻微违规，需人工修正）
+    - DRC pass_rate == 0 或 LVS 不一致 → raise（电路/版图有严重问题，R03）
+
+    规则基于 Calibre/Mentor 标准（SiEPIC EBeam PDK 规则集）。
     """
     ko = _require_key(result, "key_outputs", "Stage8")
     drc = _require_key(ko, "drc", "Stage8")
     lvs = _require_key(ko, "lvs", "Stage8")
-    pass_rate = drc["pass_rate"]
-    if abs(pass_rate - 10 / 11) > 1e-6:
+    pass_rate = float(drc["pass_rate"])
+    n_rules = int(drc["n_rules"])
+    n_violations = int(drc["n_violations"])
+    n_passed = int(drc["n_passed"])
+    is_consistent = bool(lvs["is_consistent"])
+    n_mismatches = int(lvs["n_mismatches"])
+    n_devices = int(lvs["n_devices"])
+    n_connections = int(lvs["n_connections"])
+
+    # R03 合规门禁：DRC/LVS 严重失败即 raise（禁止 fall-back）
+    if pass_rate == 0.0:
         raise RuntimeError(
-            f"Stage8 DRC pass_rate={pass_rate} 与真实运行结果（10/11=0.909）不一致"
+            f"Stage8 DRC pass_rate=0.0（{n_violations}/{n_rules} 全违规），"
+            "电路版图存在严重问题，R03 禁止 fall-back"
         )
+    if not is_consistent:
+        raise RuntimeError(
+            f"Stage8 LVS is_consistent=False（{n_mismatches} mismatches），"
+            "原理图与版图不一致，R03 禁止 fall-back"
+        )
+
+    # 动态判定 status（不硬编码 pass_rate 具体值）
+    if pass_rate >= 0.9:
+        status = REAL_USABLE
+        limitation_reason = "无"
+    else:
+        status = LIMITED_BY_COMPUTE
+        limitation_reason = (
+            f"DRC pass_rate={pass_rate:.1%}（{n_passed}/{n_rules}），"
+            "存在违规需人工修正；DRC 规则集覆盖不足（vs Calibre 100+ 规则）"
+        )
+
     return StageAnalysis(
         stage_id=8,
         name="DRC/LVS 验证",
-        status=REAL_USABLE,
+        status=status,
         key_outputs={
-            "drc_n_rules": drc["n_rules"],
-            "drc_n_violations": drc["n_violations"],
-            "drc_n_passed": drc["n_passed"],
+            "drc_n_rules": n_rules,
+            "drc_n_violations": n_violations,
+            "drc_n_passed": n_passed,
             "drc_pass_rate": pass_rate,
-            "lvs_is_consistent": lvs["is_consistent"],
-            "lvs_n_mismatches": lvs["n_mismatches"],
-            "lvs_n_devices": lvs["n_devices"],
-            "lvs_n_connections": lvs["n_connections"],
+            "lvs_is_consistent": is_consistent,
+            "lvs_n_mismatches": n_mismatches,
+            "lvs_n_devices": n_devices,
+            "lvs_n_connections": n_connections,
         },
         benchmark="Mentor Calibre / KLayout DRC",
         benchmark_value="Calibre 商业 DRC 规则集通常 100+ 条，LVS 支持 full-chip",
-        gap="PoLaRIS DRC 11 条规则 vs Calibre 100+，但核心规则（width/space/area）已覆盖",
-        limitation_reason="无",
+        gap=(
+            f"PoLaRIS DRC {n_rules} 条规则 vs Calibre 100+，"
+            "但核心规则（width/space/area）已覆盖"
+        ),
+        limitation_reason=limitation_reason,
         notes=(
-            "DRC 11 规则 10 通过 1 违规（pass_rate=90.9%）；"
-            "LVS is_consistent=True, 0 mismatches, 5 devices, 5 connections；"
-            "规则基于 Calibre/Mentor 标准"
+            f"DRC {n_rules} 规则 {n_passed} 通过 {n_violations} 违规"
+            f"（pass_rate={pass_rate:.1%}）；"
+            f"LVS is_consistent={is_consistent}, "
+            f"{n_mismatches} mismatches, {n_devices} devices, "
+            f"{n_connections} connections；"
+            "规则基于 Calibre/Mentor 标准（SiEPIC EBeam PDK 规则集）"
         ),
     )
 
@@ -577,44 +694,64 @@ def analyze_stage9(result: dict) -> StageAnalysis:
 def analyze_stage10(result: dict) -> StageAnalysis:
     """Stage 10: 光电协同。
 
-    SPICE 协同仿真 1002 点，PAM4 BER=0.0186（含光电噪声），
-    链路余量 14.3dB → REAL_USABLE。
+    v5.0 简化版（无 Verilog-A / Ngspice 联合仿真，polaris-spice 子模块待建），
+    保留光电协同核心物理环节: 探测器散粒噪声 + 热噪声 + PAM4 眼图/BER。
+    基于真实运行结果动态判定（R02 学术诚信，不硬编码 BER/SNR 值）：
+    - PAM4 BER/SNR/链路余量来自真实 polaris-pam4 运算结果
+    - 仍然标记为 REAL_USABLE（光电协同链路预算方法学可对标商业量级）
+    - notes 标注 v5.0 简化（无 SPICE 联合仿真）
     """
     ko = _require_key(result, "key_outputs", "Stage10")
-    netlist = _require_key(ko, "spice_netlist", "Stage10")
-    cosim = _require_key(ko, "spice_cosimulation", "Stage10")
     pam4 = _require_key(ko, "pam4", "Stage10")
+    ber = float(pam4["ber"])
+    snr_db = float(pam4["snr_db"])
+    n_symbols = int(pam4["n_symbols"])
+    optical_loss_db = float(pam4["optical_loss_db"])
+    link_budget_margin_db = float(pam4["link_budget_margin_db"])
+    shot_noise_a = float(pam4["shot_noise_a"])
+    thermal_noise_a = float(pam4["thermal_noise_a"])
+
     return StageAnalysis(
         stage_id=10,
         name="光电协同",
         status=REAL_USABLE,
         key_outputs={
-            "spice_netlist_lines": netlist["lines"],
-            "spice_n_points": cosim["n_points"],
-            "spice_solver": cosim["solver_used"],
-            "pam4_ber": pam4["ber"],
-            "pam4_snr_db": pam4["snr_db"],
-            "pam4_n_symbols": pam4["n_symbols"],
-            "optical_loss_db": pam4["optical_loss_db"],
-            "link_budget_margin_db": pam4["link_budget_margin_db"],
-            "shot_noise_a": pam4["shot_noise_a"],
-            "thermal_noise_a": pam4["thermal_noise_a"],
+            "pam4_ber": ber,
+            "pam4_snr_db": snr_db,
+            "pam4_n_symbols": n_symbols,
+            "optical_loss_db": optical_loss_db,
+            "link_budget_margin_db": link_budget_margin_db,
+            "shot_noise_a": shot_noise_a,
+            "thermal_noise_a": thermal_noise_a,
+            "spice_cosimulation": "N/A（v5.0 简化版未提供 polaris-spice 子模块）",
+            "spice_netlist": "N/A（v5.0 简化版未提供 polaris-spice 子模块）",
         },
         benchmark="Cadence Virtuoso + Photonics Verilog-A / VPIphotonics",
         benchmark_value=(
             "商业光电协同仿真支持完整 foundry Verilog-A 模型与 SPICE 精度<1e-9"
         ),
         gap=(
-            "PoLaRIS 5 个 Verilog-A 器件模型 + 1002 点 SPICE 协同仿真，"
-            "PAM4 BER=0.0186（含光电噪声），链路预算余量 14.3dB，可对标商业量级"
+            f"PoLaRIS v5.0 简化版: 探测器噪声建模（散粒+热噪声）+ "
+            f"{n_symbols} 符号 PAM4 眼图分析，BER={ber:.4e}（含光电噪声），"
+            f"链路预算余量 {link_budget_margin_db:.2f}dB，可对标商业量级方法学；"
+            "但缺少 Verilog-A/Ngspice 联合仿真（polaris-spice 待建）"
         ),
-        limitation_reason="无",
+        limitation_reason=(
+            "v5.0 简化为 polaris-pam4 调用，Verilog-A/Ngspice 联合仿真待 "
+            "polaris-spice 子模块建立后恢复（不影响光电协同核心物理环节）"
+        ),
         notes=(
-            "探测器散粒噪声 2.08e-6 A，热噪声 4.07e-6 A；"
-            "光学损耗 5.7dB，链路预算余量 14.3dB（Intel CWDM4 上限 8dB）；"
-            "PAM4 BER=0.0186 vs IEEE 802.3bs 要求 <1e-12，"
+            f"探测器散粒噪声 {shot_noise_a:.4e} A，"
+            f"热噪声 {thermal_noise_a:.4e} A；"
+            f"光学损耗 {optical_loss_db}dB，"
+            f"链路预算余量 {link_budget_margin_db:.2f}dB"
+            f"（Intel CWDM4 上限 8dB）；"
+            f"PAM4 BER={ber:.4e} vs IEEE 802.3bs 要求 <1e-12，"
             "BER 差距由 demo 调制噪声参数（std=0.08）造成，"
-            "若降低噪声至 std=0.01 BER 可达 1e-12 量级"
+            "若降低噪声至 std=0.01 BER 可达 1e-12 量级；"
+            "BER 公式: BER ≈ 0.5 * erfc(√(SNR/2))，"
+            "Shafik et al. IEEE CommSurveys 2016 "
+            "(https://ieeexplore.ieee.org/document/7410082)"
         ),
     )
 
@@ -622,57 +759,91 @@ def analyze_stage10(result: dict) -> StageAnalysis:
 def analyze_stage11(result: dict) -> StageAnalysis:
     """Stage 11: 量子光子验证。
 
-    HOM/KLM/玻色采样全部验证通过，数学严格 → REAL_USABLE。
+    v5.0 简化版: 仅 boson_sampling/hom/klm 三项核心验证（polaris-boson +
+    polaris-klm 子模块）。蒙特卡洛稳定性、HOM dip 时间分辨、卡方检验、
+    KLM 电路完整蒙特卡洛仿真等数值深化验证待未来子模块扩展后恢复。
+
+    基于真实运行结果动态判定（R02 学术诚信，不硬编码 prob_sum 等值）：
+    - 所有验证 API verified=True → REAL_USABLE
+    - 任何验证 API verified=False → raise（R03 禁止 fall-back）
     """
     ko = _require_key(result, "key_outputs", "Stage11")
     boson = _require_key(ko, "boson_sampling", "Stage11")
     hom = _require_key(ko, "hom", "Stage11")
     klm = _require_key(ko, "klm", "Stage11")
-    mc = _require_key(ko, "monte_carlo", "Stage11")
-    hom_dip = _require_key(ko, "hom_dip", "Stage11")
-    sampler = _require_key(ko, "sampler", "Stage11")
-    klm_circ = _require_key(ko, "klm_circuit", "Stage11")
+
+    # 字段提取（v5.0 实际返回结构）
+    n_outputs = int(boson["n_outputs"])
+    prob_sum = float(boson["prob_sum"])
+    prob_sum_ok = bool(boson["prob_sum_ok"])
+    hom_coincidence_prob = float(hom["coincidence_prob"])
+    hom_dip_depth = float(hom["dip_depth"])
+    hom_verified = bool(hom["hom_verified"])
+    klm_success_prob = float(klm["success_prob"])
+    klm_expected_success_prob = float(klm["expected_success_prob"])
+    klm_cnot_verified = bool(klm["cnot_verified"])
+
+    # R03 合规门禁：任何验证失败即 raise
+    if not prob_sum_ok:
+        raise RuntimeError(
+            f"Stage11 玻色采样 prob_sum={prob_sum} 概率不守恒，R03 禁止 fall-back"
+        )
+    if not hom_verified:
+        raise RuntimeError(
+            f"Stage11 HOM 干涉未通过验证 (hom_verified=False, "
+            f"dip_depth={hom_dip_depth})，R03 禁止 fall-back"
+        )
+    if not klm_cnot_verified:
+        raise RuntimeError(
+            f"Stage11 KLM CNOT 未通过验证 (cnot_verified=False, "
+            f"success_prob={klm_success_prob})，R03 禁止 fall-back"
+        )
+
     return StageAnalysis(
         stage_id=11,
         name="量子光子验证",
         status=REAL_USABLE,
         key_outputs={
-            "boson_n_outputs": boson["n_outputs"],
-            "boson_prob_sum": boson["prob_sum"],
-            "boson_prob_sum_ok": boson["prob_sum_ok"],
-            "hom_coincidence_prob": hom["coincidence_prob"],
-            "hom_verified": hom["hom_verified"],
-            "klm_cnot_success_prob": klm["cnot_success_prob"],
-            "klm_cnot_verified": klm["cnot_verified"],
-            "klm_hadamard_unitary_error": klm["hadamard_unitary_error"],
-            "monte_carlo_n_samples": mc["n_samples"],
-            "monte_carlo_prob_sum_mean": mc["prob_sum_mean"],
-            "monte_carlo_prob_sum_std": mc["prob_sum_std"],
-            "hom_dip_dip_depth": hom_dip["dip_depth"],
-            "hom_dip_dip_verified": hom_dip["dip_verified"],
-            "sampler_n_samples": sampler["n_samples"],
-            "sampler_chi2": sampler["chi2_statistic"],
-            "sampler_p_value": sampler["p_value"],
-            "sampler_verified": sampler["sampler_verified"],
-            "klm_circuit_n_shots": klm_circ["n_shots"],
-            "klm_circuit_success_verified": klm_circ["success_verified"],
+            "boson_n_outputs": n_outputs,
+            "boson_prob_sum": prob_sum,
+            "boson_prob_sum_ok": prob_sum_ok,
+            "hom_coincidence_prob": hom_coincidence_prob,
+            "hom_dip_depth": hom_dip_depth,
+            "hom_verified": hom_verified,
+            "klm_cnot_success_prob": klm_success_prob,
+            "klm_cnot_expected_success_prob": klm_expected_success_prob,
+            "klm_cnot_verified": klm_cnot_verified,
+            "monte_carlo": "N/A（v5.0 简化版未提供蒙特卡洛深化验证）",
+            "hom_dip": "N/A（v5.0 简化版未提供 HOM dip 时间分辨）",
+            "sampler": "N/A（v5.0 简化版未提供卡方检验采样器）",
+            "klm_circuit": "N/A（v5.0 简化版未提供 KLM 电路蒙特卡洛仿真）",
         },
         benchmark="Strawberry Fields (Xanadu) / Perceval (Quandela)",
         benchmark_value="商业量子光子仿真库支持完整 Fock/back-end 与硬件对标",
         gap=(
-            "PoLaRIS 量子验证全通过: 玻色采样 35 输出态 prob_sum=1.0、"
-            "HOM coincidence_prob=2.47e-32、KLM CNOT 成功率=1/9、"
-            "HOM dip depth=1.0、采样器 chi2=20.95 p_value=0.961、"
-            "KLM 电路 10000 shots 成功率 0.1999；数学严格性达商业库水平"
+            f"PoLaRIS v5.0 简化版量子验证全通过: "
+            f"玻色采样 {n_outputs} 输出态 prob_sum={prob_sum:.10f}、"
+            f"HOM coincidence_prob={hom_coincidence_prob:.4e} "
+            f"(dip_depth={hom_dip_depth:.6f})、"
+            f"KLM CNOT 成功率={klm_success_prob:.6f}"
+            f"（理论值 {klm_expected_success_prob:.6f}）；"
+            "核心数学严格性达商业库水平；"
+            "但缺少蒙特卡洛/HOM dip 时间分辨/卡方检验等深化验证"
         ),
-        limitation_reason="无",
+        limitation_reason=(
+            "v5.0 简化为 3 项核心 API 验证（polaris-boson + polaris-klm），"
+            "蒙特卡洛稳定性、HOM dip 时间分辨、卡方检验、KLM 电路完整蒙特卡洛"
+            "仿真等数值深化验证待未来子模块扩展后恢复"
+        ),
         notes=(
             "KLM 文献: Knill, Laflamme, Milburn 2001 Nature "
             "(https://doi.org/10.1038/35051009)；"
             "HOM 文献: Hong, Ou, Mandel 1987 PRL "
             "(https://doi.org/10.1103/PhysRevLett.59.2044)；"
             "玻色采样: Aaronson & Arkhipov 2011 "
-            "(https://doi.org/10.1145/1993636.1993682)"
+            "(https://doi.org/10.1145/1993636.1993682)；"
+            "Clements 分解: Clements et al. Optica 2016 "
+            "(https://doi.org/10.1364/OPTICA.3.001460)"
         ),
     )
 
@@ -702,6 +873,16 @@ def analyze_stage12(result: dict) -> StageAnalysis:
             raise RuntimeError(
                 f"Stage12 GDS {c['name']} loadable=False，R03 违规"
             )
+
+    # 动态生成 notes（R02 不硬编码具体字节数）
+    gds_desc = ", ".join(
+        f"{c['name']}.gds={c['file_size_bytes']}B "
+        f"({c['n_structures']} structures, {c['n_layers']} layers, "
+        f"loadable={c['loadable']})"
+        for c in circuits
+    )
+    n_circuits = len(circuits)
+
     return StageAnalysis(
         stage_id=12,
         name="GDS 导出",
@@ -712,9 +893,9 @@ def analyze_stage12(result: dict) -> StageAnalysis:
         gap="GDS 导出流程真实可用，但器件几何为简化矩形 pcell",
         limitation_reason="无",
         notes=(
-            "MZI.gds=3306B / Clements_4x4.gds=15750B / "
-            "Quantum_BosonSampling.gds=8818B，全部 1 structure 3 layers loadable=True；"
-            "器件几何为简化矩形 pcell，完整 pcell 需 gdsfactory PDK 集成"
+            f"共导出 {n_circuits} 个 GDS 文件: {gds_desc}；"
+            "器件几何为简化矩形 pcell，完整 pcell 需 gdsfactory PDK 集成；"
+            "GDS 格式标准: SEMI P022 GDSII Level 7"
         ),
     )
 
