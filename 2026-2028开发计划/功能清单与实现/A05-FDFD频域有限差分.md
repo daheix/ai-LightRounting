@@ -5,7 +5,7 @@
 > 聚类 ID：A05（求解器类，P0 优先级）
 > 涉及工具：T01 Ansys Lumerical、T16 SimWorks（共 14 功能点，状态分布 ✅3 / ⚠️6 / ❌5）
 > 规则依据：project_rules.md 规则 18（学术诚信）/规则 14（禁止 fall-back）/规则 26（不参与 GPU）
-> 关联文档：`3dtool/ALGORITHMS.md` 第 7 节、`docs/feature_gap_full_analysis.md` T16 第 3 章、`00-算法聚类清单.md`
+> 关联文档：`A05-FDFD频域有限差分.md`、`docs/feature_gap_full_analysis.md` T16 第 3 章、`00-算法聚类清单.md`
 
 ---
 
@@ -13,7 +13,7 @@
 
 FDFD（Finite Difference Frequency Domain，频域有限差分）在频域直接求解 Maxwell 方程，给定单频源求全场分布。与时域 FDTD 相比，FDFD 无需时间步进，天然适合单频/窄带问题、色散材料（无需递推卷积）与强谐振结构（无需长时间演化等待稳态）。其代价是需存储整个稀疏矩阵 $\mathbf{A}$ 并求解大型线性系统 $\mathbf{A}\mathbf{x}=\mathbf{b}$，对内存与稀疏求解器性能要求高。
 
-**PoLaRIS 定位**：FDFD 是 PoLaRIS 求解器栈中"频域全波"路径的核心，与 FDE 共享 Yee 网格与 SC-PML 算子构造（ALGORITHMS.md 附录 C），由 ALGORITHMS.md 附录 B 列为 R37-Q2 优先级实现。纯 CPU + `scipy.sparse` 实现（规则 26），不参与 GPU 加速路径。
+**PoLaRIS 定位**：FDFD 是 PoLaRIS 求解器栈中"频域全波"路径的核心，与 FDE 共享 Yee 网格与 SC-PML 算子构造（`A09-FDTD时域有限差分.md` §2），列为 R37-Q2 优先级实现。纯 CPU + `scipy.sparse` 实现（规则 26），不参与 GPU 加速路径。
 
 **对标状态**：T01 Lumerical 与 T16 SimWorks 均提供 FDFD 求解器（`https://www.simworks.net/solver/FDFD`），PoLaRIS 当前完全缺失自研 FDFD（仅通过 FDTD 后端间接覆盖 Yee 离散），是商业差距最大处之一。
 
@@ -180,7 +180,7 @@ function FDFD_Solve(ε_r grid, ω, J_src, pml_params, grid_shape):
 ```
 
 **说明**：
-- 步骤 1 复用 FDE 的 Yee 网格与 $\varepsilon_r$，避免重复构造（ALGORITHMS.md 附录 C 共享组件）。
+- 步骤 1 复用 FDE 的 Yee 网格与 $\varepsilon_r$，避免重复构造（`A09-FDTD时域有限差分.md` §2 Yee 网格共享组件）。
 - 步骤 6 的 $\mathbf{A}$ 为复对称，可用 `scipy.sparse.linalg.cg`（复数）实现 COCG。
 - 步骤 8 失败时 `raise`（规则 14），禁止返回假数据兜底。
 
@@ -264,7 +264,7 @@ Lumerical 主推 FDTD/EME/FDE/varFDTD，未单独销售 FDFD 模块，但其 FDT
 ### 11.4 共享组件验证
 
 - FDFD 与 FDE 使用同一 Yee 网格对象，`id(ε_r_array)` 一致，无内存复制。
-- SC-PML 算子构造代码与 FDE 横向 PML 路径共享同一函数（ALGORITHMS.md 附录 C）。
+- SC-PML 算子构造代码与 FDE 横向 PML 路径共享同一函数（`A09-FDTD时域有限差分.md` §2）。
 
 ### 11.5 质量门禁
 

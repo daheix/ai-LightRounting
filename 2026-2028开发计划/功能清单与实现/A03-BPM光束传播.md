@@ -6,7 +6,7 @@
 > 覆盖功能点：12（T05 VPIphotonics 5.1-5.4 / T07 Photon Design 8.x / T15 曼光 MaxOptics 8.1-8.4）
 > 状态分布：✅0 / ⚠️2 / ❌10（PoLaRIS 当前完全缺失 BPM 内核）
 > 规则依据：project_rules.md 规则 18（学术诚信）/ 规则 14（禁止 fall-back）/ 规则 26（GPU 不参与，纯 CPU）
-> 关联文档：`3dtool/ALGORITHMS.md` 第 3 节 / `docs/feature_gap_full_analysis.md` / `00-算法聚类清单.md`
+> 关联文档：`A03-BPM光束传播.md` / `docs/feature_gap_full_analysis.md` / `00-算法聚类清单.md`
 
 ---
 
@@ -319,4 +319,4 @@ PoLaRIS 根据器件特征自动选择 BPM/EME/FDTD：
 
 ## 11. 修订日志
 
-- **2026-06-25 v1.0**：首版生成。依据 `3dtool/ALGORITHMS.md` 第 3 节公式手册 + `docs/feature_gap_full_analysis.md` T05/T07/T15 共 12 功能点 + 网络调研（Hadley 1992 TBC 原始文献、Optiwave 商业实现、beampy 开源实现、Lumerical/Photon Design 商业对标）。所有公式经文献核实（规则 18），无 fall-back 编造（规则 14），纯 CPU 算法（规则 26）。PoLaRIS 自研差异化（纯 scipy.sparse + 自适应步长 + AI 目标函数直连）标注【创新】并记录底层逻辑与支持理论。后续实现按本文件第 7 节伪代码与第 8.2 节模块结构执行。
+- **2026-06-25 v1.0**：首版生成。依据 `A03-BPM光束传播.md`公式手册 + `docs/feature_gap_full_analysis.md` T05/T07/T15 共 12 功能点 + 网络调研（Hadley 1992 TBC 原始文献、Optiwave 商业实现、beampy 开源实现、Lumerical/Photon Design 商业对标）。所有公式经文献核实（规则 18），无 fall-back 编造（规则 14），纯 CPU 算法（规则 26）。PoLaRIS 自研差异化（纯 scipy.sparse + 自适应步长 + AI 目标函数直连）标注【创新】并记录底层逻辑与支持理论。后续实现按本文件第 7 节伪代码与第 8.2 节模块结构执行。

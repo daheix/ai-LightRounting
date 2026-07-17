@@ -5,7 +5,7 @@
 > 聚类ID：A02（P0 优先级，求解器类）
 > 覆盖功能点：38（T01 Lumerical / T03 OptoDesigner / T07 Photon Design FIMMPROP / T15 曼光 MaxOptics / T16 SimWorks）
 > 规则依据：project_rules.md 规则 18（学术诚信）/规则 14（禁止 fall-back）/规则 26（GPU 不参与）
-> 关联文档：`3dtool/ALGORITHMS.md` 第 2 节、`docs/feature_gap_full_analysis.md` EME 章节、`00-算法聚类清单.md`
+> 关联文档：`A02-EME本征模展开.md`、`docs/feature_gap_full_analysis.md` EME 章节、`00-算法聚类清单.md`
 
 ---
 

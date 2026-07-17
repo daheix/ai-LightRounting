@@ -4,7 +4,7 @@
 > 类别: 数据 I/O 与工具链类
 > 优先级: P6
 > 生成时间: 2026-06-25
-> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T06/T07/T08/T09/T14）、`00-算法聚类清单.md`、`3dtool/ALGORITHMS.md`、`B01-GDS读写与版图生成.md`、`modules/gds_tools/src/polaris_gds_tools/layout_render.py`、`modules/nn/src/polaris_nn/data/gds_loader.py`
+> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T06/T07/T08/T09/T14）、`00-算法聚类清单.md`、`00-算法聚类清单.md`、`B01-GDS读写与版图生成.md`、`modules/gds_tools/src/polaris_gds_tools/layout_render.py`、`modules/nn/src/polaris_nn/data/gds_loader.py`
 > 学术诚信：GDSII 二进制格式溯源至 Calma GDSII Stream Format（Rubin 1987 附录 C）与维也纳工业大学 Minixhofer 博士论文附录 B.2，OASIS 格式溯源至 SEMI P39-0416 标准；多边形布尔运算溯源至 Sutherland-Hodgman 1974 与 Greiner-Hormann 1998；所有 layer 编号来自 SiEPIC EBeam PDK / ubcpdk / gdsfactory generic_pdk 开源仓库实际源码（规则 18），无 fall-back 编造（规则 14）。
 
 ## 1. 功能点清单（14 功能点）

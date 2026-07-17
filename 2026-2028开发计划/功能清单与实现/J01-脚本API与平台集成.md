@@ -4,7 +4,7 @@
 > 覆盖功能点：32（状态分布 ✅16 / ⚠️10 / ❌6）
 > 涉及工具：T01 Lumerical、T03 OptoDesigner、T04 Tidy3D、T08 gdsfactory、T11 simphony、T14 逍遥 PIC Studio、T15 曼光 MaxOptics、T16 SimWorks、T17 法动 UltraEM、PoLaRIS
 > 规则依据：project_rules.md 规则 14（禁止 fall-back）/规则 18（学术诚信）/规则 26（CPU 纯 Python）
-> 关联文档：`3dtool/ALGORITHMS.md`、`docs/feature_gap_full_analysis.md`、`2026-2028开发计划/功能清单与实现/00-算法聚类清单.md`
+> 关联文档：`00-算法聚类清单.md`、`docs/feature_gap_full_analysis.md`、`2026-2028开发计划/功能清单与实现/00-算法聚类清单.md`
 
 ## 1. 功能点清单（32 功能点）
 

@@ -4,7 +4,7 @@
 > 类别: 求解器类
 > 优先级: P1
 > 生成时间: 2026-06-25
-> 关联文档: `3dtool/ALGORITHMS.md` §4、`docs/feature_gap_full_analysis.md` §6（T15-6.x）、`00-算法聚类清单.md` A07
+> 关联文档: `A07-HEAT热传导求解.md`、`docs/feature_gap_full_analysis.md` §6（T15-6.x）、`00-算法聚类清单.md` A07
 > 学术诚信：所有公式经 Fourier 导热定律、COMSOL Heat Transfer Module 文档、Ansys Lumerical HEAT 文档与 SfePy/Pyrit 开源 FEM 实现交叉验证（规则 18），无 fall-back 编造（规则 14），纯 CPU 算法（规则 26）。
 
 ## 覆盖功能点清单

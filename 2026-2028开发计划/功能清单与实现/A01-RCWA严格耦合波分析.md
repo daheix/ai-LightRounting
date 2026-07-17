@@ -4,7 +4,7 @@
 > 类别: 求解器类
 > 优先级: P0
 > 生成时间: 2026-06-25
-> 关联文档: `3dtool/ALGORITHMS.md` §1、`docs/feature_gap_full_analysis.md`、`00-算法聚类清单.md`
+> 关联文档: `A01-RCWA严格耦合波分析.md`、`docs/feature_gap_full_analysis.md`、`00-算法聚类清单.md`
 > 学术诚信：所有公式经 Moharam 1981/1995、Li 1996、Lalanne 1996 原始文献与 NIST/S4/grcwa 开源实现交叉验证（规则 18），无 fall-back 编造（规则 14），纯 CPU 算法（规则 26）。
 
 ## 覆盖功能点清单
@@ -211,19 +211,19 @@ $$R_m = |r_m|^2 \frac{\mathrm{Re}(k_{zm}^{(r)})}{\mathrm{Re}(k_{z0}^{(inc)})}, \
 **实现计划**（对应 year_plan R37-Q3，2026 年 8-10 月）：
 
 1. **Phase 1（基础版，2 周）**：1D 光栅 RCWA
-   - `src/polaris/sim/rcwa/solver_1d.py`
+   - `modules/multiphysics/src/polaris_multiphysics/rcwa/solver_1d.py`
    - TE/TM 分离实现 + Li 1996 因子化
    - ETM 增强透射矩阵法 + Redheffer 星积
    - 验证：金属光栅衍射效率与 S4/grcwa 对照误差 < 1%
 
 2. **Phase 2（矢量版，3 周）**：2D 光栅 + 锥形入射
-   - `src/polaris/sim/rcwa/solver_2d.py`
+   - `modules/multiphysics/src/polaris_multiphysics/rcwa/solver_2d.py`
    - 2D 傅里叶展开 + 矢量场本征值问题（4N×4N）
    - 各向异性材料张量支持
    - 验证：超透镜单元 cell 透射相位 vs Lumerical RCWA 对照
 
 3. **Phase 3（工程化，2 周）**：API + 后处理
-   - `src/polaris/sim/rcwa/api.py`：高阶 API `rcwa_solve(structure, source, options)`
+   - `modules/multiphysics/src/polaris_multiphysics/rcwa/__init__.py`：高阶 API `rcwa_solve(structure, source, options)`
    - 衍射效率、场分布、能带计算接口
    - 与 PDK 单元库直连，支持自动周期扫描
 
@@ -231,7 +231,7 @@ $$R_m = |r_m|^2 \frac{\mathrm{Re}(k_{zm}^{(r)})}{\mathrm{Re}(k_{z0}^{(inc)})}, \
 
 **文件路径建议**：
 ```
-src/polaris/sim/rcwa/
+modules/multiphysics/src/polaris_multiphysics/rcwa/
 ├── __init__.py
 ├── solver_1d.py         # 1D 光栅 RCWA
 ├── solver_2d.py         # 2D 光栅矢量 RCWA

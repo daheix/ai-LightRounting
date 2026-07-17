@@ -4,7 +4,7 @@
 > 类别: 求解器类
 > 优先级: P1
 > 生成时间: 2026-06-25
-> 关联文档: `3dtool/ALGORITHMS.md` §5、`docs/feature_gap_full_analysis.md`、`00-算法聚类清单.md`
+> 关联文档: `A08-DDM漂移扩散求解.md`、`docs/feature_gap_full_analysis.md`、`00-算法聚类清单.md`
 > 学术诚信：所有公式经 Scharfetter & Gummel 1969、Selberherr 1984 原始文献与 sesame/Vienna UT 开源实现交叉验证（规则 18），无 fall-back 编造（规则 14），纯 CPU 算法（规则 26）。
 
 ## 覆盖功能点清单

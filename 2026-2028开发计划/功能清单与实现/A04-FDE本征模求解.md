@@ -5,7 +5,7 @@
 > 聚类ID：A04（P0 优先级，求解器类）
 > 覆盖功能点：32（T01 Lumerical / T04 Tidy3D / T15 曼光 MaxOptics / T16 SimWorks）
 > 规则依据：project_rules.md 规则 18（学术诚信）/规则 14（禁止 fall-back）/规则 26（GPU 不参与）
-> 关联文档：`3dtool/ALGORITHMS.md` 第 6 节、`docs/feature_gap_full_analysis.md` FDE 章节、`00-算法聚类清单.md`
+> 关联文档：`A04-FDE本征模求解.md`、`docs/feature_gap_full_analysis.md` FDE 章节、`00-算法聚类清单.md`
 
 ---
 
@@ -352,4 +352,4 @@ $$n_g = n_{\mathrm{eff}} - \lambda \frac{dn_{\mathrm{eff}}}{d\lambda}$$
 
 ## 修订日志
 
-- **2026-06-25 v1.0**：首版生成，覆盖 A04 聚类 32 功能点（T01/T04/T15/T16）。物理模型、Yee 网格离散、SC-PML 边界、完整算法伪代码、核心公式、10 篇文献 URL、商业对照表、PoLaRIS 创新点（纯 CPU + scipy.sparse + 共享网格）均依据 `3dtool/ALGORITHMS.md` 第 6 节与网络调研（Yee 1966 / Simsek 2025 / Yu & Chang 2004 / Shin & Fan 2012 / SimWorks / Lumerical / Tidy3D 官方文档）核实（规则 18），无 fall-back 编造（规则 14），全部 CPU 算法（规则 26）。
+- **2026-06-25 v1.0**：首版生成，覆盖 A04 聚类 32 功能点（T01/T04/T15/T16）。物理模型、Yee 网格离散、SC-PML 边界、完整算法伪代码、核心公式、10 篇文献 URL、商业对照表、PoLaRIS 创新点（纯 CPU + scipy.sparse + 共享网格）均依据 `A04-FDE本征模求解.md`与网络调研（Yee 1966 / Simsek 2025 / Yu & Chang 2004 / Shin & Fan 2012 / SimWorks / Lumerical / Tidy3D 官方文档）核实（规则 18），无 fall-back 编造（规则 14），全部 CPU 算法（规则 26）。

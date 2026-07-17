@@ -4,7 +4,7 @@
 > 类别：仿真级联类
 > 优先级：P2
 > 生成时间：2026-06-25
-> 关联文档：`3dtool/ALGORITHMS.md` §1.5/§2.5、`docs/feature_gap_full_analysis.md` T01/T04/T10/T11、`00-算法聚类清单.md`、`A01-RCWA严格耦合波分析.md`、`A02-EME本征模展开.md`
+> 关联文档：`C03-Redheffer星积S矩阵级联.md`、`docs/feature_gap_full_analysis.md` T01/T04/T10/T11、`00-算法聚类清单.md`、`A01-RCWA严格耦合波分析.md`、`A02-EME本征模展开.md`
 > 学术诚信：所有公式经 Redheffer 1959 原始文献、Victor Liu 2013 推导、Pham 2022 (Nanomaterials) RCWA 实现、Andersson 2023 (PIER-B) 稳定性分析交叉验证（规则 18），无 fall-back 编造（规则 14），纯 CPU 算法（规则 26）。
 
 ---

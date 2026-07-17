@@ -5,7 +5,7 @@
 > 聚类 ID：A09（求解器类，P0 优先级）
 > 涉及工具：T01 Ansys Lumerical、T03 OptoDesigner、T04 Tidy3D、T07 Photon Design、T14 逍遥 PIC Studio、T15 曼光 MaxOptics、T16 SimWorks、T17 法动 UltraEM（共 48 功能点，状态分布 ✅8 / ⚠️26 / ❌14，A 类最大聚类）
 > 规则依据：project_rules.md 规则 18（学术诚信）/规则 14（禁止 fall-back）/规则 26（不参与 GPU）
-> 关联文档：`3dtool/ALGORITHMS.md` §8（2.5D-FDTD 共享 Yee 网格）、`docs/feature_gap_full_analysis.md`（T01/T04/T07/T14/T15/T16/T17 FDTD 章节）、`00-算法聚类清单.md`
+> 关联文档：`A06-2.5D-FDTD变分FDTD.md`（Yee 网格共享见 `A09-FDTD时域有限差分.md`）、`docs/feature_gap_full_analysis.md`（T01/T04/T07/T14/T15/T16/T17 FDTD 章节）、`00-算法聚类清单.md`
 
 ---
 
@@ -13,7 +13,7 @@
 
 FDTD（Finite-Difference Time-Domain，时域有限差分）是 Yee 1966 提出的显式时域 Maxwell 方程求解方法：将连续电磁场在 Yee 交错网格上离散，对旋度方程做半步错位中心差分，形成 E/H 场 leapfrog（蛙跳）时间推进。其优势为：(1) 单次仿真即可得到宽频带响应（DFT 后处理）；(2) 完全显式，无矩阵求解；(3) 严格满足离散 Gauss 定律；(4) 适应任意非均匀、各向异性、色散、非线性材料。FDTD 是光电子器件级全波仿真的"金标准"，被 Lumerical FDTD、Tidy3D、曼光 MaxOptics、SimWorks、法动 UltraEM、逍遥 pMaxwell 全部采用。
 
-**PoLaRIS 定位**：FDTD 是 PoLaRIS 求解器栈"时域全波"路径的核心，与 2.5D-FDTD/A06 共享 Yee 网格生成与 E/H leapfrog 内核（ALGORITHMS.md 附录 C），由 ALGORITHMS.md 附录 B 列为 R39 优先级实现。**当前状态：⚠️ 部分**——`modules/fdtd/src/polaris_fdtd/solver.py` 仅封装 MEEP/Tidy3D/ANALYTICAL 三后端，非自研 FDTD 内核，依赖外部依赖项。**实现目标**：纯 NumPy + SciPy 自研 FDTD 内核，禁用 GPU（规则 26），与 A04-FDE/A06-2.5D-FDTD 共享 Yee 网格组件。
+**PoLaRIS 定位**：FDTD 是 PoLaRIS 求解器栈"时域全波"路径的核心，与 2.5D-FDTD/A06 共享 Yee 网格生成与 E/H leapfrog 内核（`A09-FDTD时域有限差分.md` §2），列为 R39 优先级实现。**当前状态：⚠️ 部分**——`modules/fdtd/src/polaris_fdtd/solver.py` 仅封装 MEEP/Tidy3D/ANALYTICAL 三后端，非自研 FDTD 内核，依赖外部依赖项。**实现目标**：纯 NumPy + SciPy 自研 FDTD 内核，禁用 GPU（规则 26），与 A04-FDE/A06-2.5D-FDTD 共享 Yee 网格组件。
 
 **对标状态**：8 工具共用 FDTD（A 类最大聚类，48 功能点），PoLaRIS 通过 MEEP/Tidy3D 后端间接覆盖 8 项 ✅，但 26 项 ⚠️ 依赖后端能力（光源/边界/材料/网格均不自研），14 项 ❌ 完全缺失（亚像素平滑、StablePML、Bloch 边界、自动非均匀网格、偶极子发射研究等）。最大差距为"非自研内核"，导致光源/边界/材料 API 无法在 PoLaRIS 层统一管理。
 
@@ -49,7 +49,7 @@ $$\frac{\partial^2 \mathbf{P}}{\partial t^2} + \gamma \frac{\partial \mathbf{P}}
 
 ### 3.1 Yee 1966 网格布局
 
-3D Yee 单元中：电场分量 $E_x,E_y,E_z$ 位于棱中点，磁场分量 $H_x,H_y,H_z$ 位于面中心，空间半步错位。该布局使每个旋度运算的中心差分天然落在被求场位置，二阶精度 $O(\Delta h^2)$，且离散 Gauss 定律 $\nabla_h\cdot(\nabla_h\times\cdot)\equiv 0$ 自动满足（避免非物理电荷积累）。Yee 网格是 FDE/FDFD/FDTD/2.5D-FDTD 共同基础（ALGORITHMS.md 附录 C）。
+3D Yee 单元中：电场分量 $E_x,E_y,E_z$ 位于棱中点，磁场分量 $H_x,H_y,H_z$ 位于面中心，空间半步错位。该布局使每个旋度运算的中心差分天然落在被求场位置，二阶精度 $O(\Delta h^2)$，且离散 Gauss 定律 $\nabla_h\cdot(\nabla_h\times\cdot)\equiv 0$ 自动满足（避免非物理电荷积累）。Yee 网格是 FDE/FDFD/FDTD/2.5D-FDTD 共同基础（`A09-FDTD时域有限差分.md` §2）。
 
 ### 3.2 E/H leapfrog 时间推进
 
@@ -313,7 +313,7 @@ modules/multiphysics/src/polaris_multiphysics/varfdtd/
 *创新*：纯 CPU + NumPy/SciPy 自研 FDTD 内核，禁用 GPU（规则 26），与 A04-FDE / A06-2.5D-FDTD 共享 Yee 网格与 leapfrog 内核。
 
 - **底层逻辑**：
-  1. Yee 网格生成与材料映射复用 A04-FDE 的 `yee_grid.py`（ALGORITHMS.md 附录 C 共享组件），避免重复构造；
+  1. Yee 网格生成与材料映射复用 A04-FDE 的 `yee_grid.py`（`A09-FDTD时域有限差分.md` §2 Yee 网格共享组件），避免重复构造；
   2. E/H leapfrog 更新采用 NumPy 切片向量化（`E[1:-1, :, :] += Cb[1:-1,:,:] * (H[2:, :, :] - H[:-2, :, :]) / dx`），单核性能接近 MEEP C++ 内核的 30%~50%（典型 SOI 器件 100³ 网格 1000 步 <60s，i7-12700K 实测预估）；
   3. CPML 按 Roden & Gedney 2000 递归卷积实现，辅助变量 $\psi_e,\psi_h$ 与主循环同步更新，无需分裂场；
   4. TFSF 通过 1D 辅助网格预跑入射波避免相位误差（Taflove 2005 §5.5 标准方案）；
@@ -404,7 +404,7 @@ modules/multiphysics/src/polaris_multiphysics/varfdtd/
 
 ### 13.5 共享组件验证
 
-- FDTD 与 A04-FDE / A06-2.5D-FDTD 使用同一 Yee 网格对象，`id(eps_r_array)` 一致，无内存复制（ALGORITHMS.md 附录 C）。
+- FDTD 与 A04-FDE / A06-2.5D-FDTD 使用同一 Yee 网格对象，`id(eps_r_array)` 一致，无内存复制（`A09-FDTD时域有限差分.md` §2）。
 - 模式源注入调用 A04-FDE `mode_solve`，模式归一化与重叠积分共享 `mode_overlap.py`。
 - S 参数输出格式与 C01-S 参数级联接口兼容（Touchstone 1.0/2.0）。
 
