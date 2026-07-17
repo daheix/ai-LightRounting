@@ -97,20 +97,23 @@ class FittedModel:
 # =============================================================================
 def _init_poles(s_norm: NDArray[np.complex128],
                 n_poles: int) -> NDArray[np.complex128]:
-    """生成起始极点：对数分布在归一化频带内，共轭对，弱阻尼。
+    """生成起始极点：虚部线性分布在频带内，共轭对，弱阻尼。
     输入为归一化复频率 ŝ=jω/ω_scale（O(1) 量级），保证良好条件数。
-    来源: Gustavsen 1999 §II-A, https://doi.org/10.1109/61.772350
+    来源: Gustavsen 1999 §II-A "imaginary parts linearly spaced over the
+    frequency range", https://doi.org/10.1109/61.772350
     """
     if n_poles < 2 or n_poles % 2 != 0:
         raise ValueError(f"n_poles 须为 ≥2 偶数，得到 {n_poles}")
-    w = s_norm.imag  # 归一化角频率 ŷ=ω/ω_scale
+    w = s_norm.imag  # 归一化角频率 ω/ω_scale
     w_min = float(np.min(w))
     w_max = float(np.max(w))
     if w_max <= w_min:
         raise ValueError("归一化角频率须为递增非平凡序列")
     n_pairs = n_poles // 2
-    # 虚部对数分布于 [w_min, w_max]（Gustavsen 1999 推荐）
-    w_imag = np.geomspace(w_min, w_max, n_pairs)
+    # 虚部线性分布于 [w_min, w_max]（Gustavsen 1999 §II-A 原文要求线性）
+    w_imag = np.linspace(w_min, w_max, n_pairs + 2)[1:-1]  # 去端点避免退化
+    if n_pairs == 1:
+        w_imag = np.array([0.5 * (w_min + w_max)])
     # 实部 = -虚部/100，弱阻尼保证起始极点接近虚轴（Gustavsen 1999 §II-A）
     w_real = -w_imag / 100.0
     poles = np.empty(n_poles, dtype=np.complex128)
@@ -152,65 +155,161 @@ def _relocate_poles(poles: NDArray[np.complex128],
     new_poles = np.linalg.eigvals(A_sigma)
     # 强制稳定：Re(p) > 0 翻转为 Re(p) < 0（Gustavsen 1999 §II-C）
     if _VF_UNSTABLE_FLIP:
-        mask = new_poles.real > 0.0
-        new_poles[mask] = -new_poles[mask].real + 1j * new_poles[mask].imag
+        flipped = new_poles.copy()
+        unstable = flipped.real > 0.0
+        flipped[unstable] = -flipped[unstable].real + 1j * flipped[unstable].imag
+        new_poles = flipped
     return new_poles
 
 
-def _symmetrize_poles(poles: NDArray[np.complex128]
-                      ) -> NDArray[np.complex128]:
-    """强制极点共轭对称（实数冲激响应约束）。
-    将极点配对，每对取 (p + conj(p_neighbor))/2 的共轭对。
+def _pair_conjugate_residues(poles: NDArray[np.complex128],
+                             d_tilde: NDArray[np.complex128]
+                             ) -> NDArray[np.complex128]:
+    """对共轭极点对的 d̃ 强制共轭对称（实数响应约束）。
+    起始极点共轭对称排列（poles[2k], poles[2k+1]=conj），对应 d̃[2k], d̃[2k+1]
+    应共轭。仅采样正频率时数值误差破坏对称性，此处取共轭平均恢复。
     来源: Gustavsen 2006 §III, https://doi.org/10.1109/TPWRD.2006.874615
     """
+    d_sym = d_tilde.copy()
     n = len(poles)
-    result = poles.copy()
-    used = np.zeros(n, dtype=bool)
-    out = np.empty(n, dtype=np.complex128)
-    idx = 0
-    for i in range(n):
-        if used[i]:
-            continue
-        p = result[i]
-        if abs(p.imag) < 1e-14:
-            out[idx] = p.real + 0j
-            idx += 1
-            used[i] = True
-            continue
-        # 寻找最近的共轭伙伴
-        dist = np.abs(result - np.conj(p))
-        dist[used] = np.inf
-        dist[i] = np.inf
-        j = int(np.argmin(dist))
-        p_avg = 0.5 * (p + np.conj(result[j]))
-        out[idx] = p_avg
-        out[idx + 1] = np.conj(p_avg)
-        idx += 2
-        used[i] = True
-        used[j] = True
-    return out[:idx] if idx == n else result
+    k = 0
+    while k + 1 < n:
+        # 共轭对: poles[k] 与 poles[k+1] 共轭
+        if abs(poles[k] - np.conj(poles[k + 1])) < 1e-9 * (abs(poles[k]) + 1e-30):
+            avg = 0.5 * (d_sym[k] + np.conj(d_sym[k + 1]))
+            d_sym[k] = avg
+            d_sym[k + 1] = np.conj(avg)
+            k += 2
+        else:
+            k += 1
+    return d_sym
+
+
+def _reorder_conjugate_pairs(poles: NDArray[np.complex128]
+                             ) -> NDArray[np.complex128]:
+    """重定位后重新排列极点为共轭对顺序并强制共轭对称。
+    eig 返回顺序随机，此处按虚部正负配对，取共轭平均保证严格对称。
+    来源: Gustavsen 1999 §II-C（极点对称化）,
+    https://doi.org/10.1109/61.772350
+    """
+    n = len(poles)
+    # 分离实数极点（虚部≈0）与复数极点
+    real_mask = np.abs(poles.imag) < 1e-12 * (np.abs(poles) + 1e-30)
+    real_poles = poles[real_mask].real
+    cplx_poles = poles[~real_mask]
+    out = []
+    # 复数极点按虚部正负配对
+    pos_mask = cplx_poles.imag > 0
+    pos = cplx_poles[pos_mask]
+    neg = cplx_poles[~pos_mask]
+    # 按实部+虚部大小排序后配对
+    pos_sorted = pos[np.argsort(pos.real + 1j * pos.imag)]
+    neg_sorted = neg[np.argsort(neg.real - 1j * neg.imag)]
+    for p_pos in pos_sorted:
+        # 在 neg 中找最接近 conj(p_pos) 的
+        if len(neg_sorted) > 0:
+            dist = np.abs(neg_sorted - np.conj(p_pos))
+            j = int(np.argmin(dist))
+            p_avg = 0.5 * (p_pos + np.conj(neg_sorted[j]))
+            out.append(p_avg)
+            out.append(np.conj(p_avg))
+            neg_sorted = np.delete(neg_sorted, j)
+        else:
+            out.append(p_pos)
+            out.append(np.conj(p_pos))
+    # 实数极点成对添加（VF 要求偶数极点）
+    real_list = list(real_poles)
+    # 重根实数极点加小虚部扰动，避免留数拟合奇异（Gustavsen 1999 §II-C）
+    for i in range(len(real_list)):
+        for j in range(i + 1, len(real_list)):
+            if abs(real_list[i] - real_list[j]) < 1e-6 * (abs(real_list[i]) + 1e-30):
+                # 把重根对转为弱阻尼共轭对
+                p_real = real_list[i]
+                out.append(complex(p_real) + 1j * 1e-3 * (abs(p_real) + 1.0))
+                out.append(complex(p_real) - 1j * 1e-3 * (abs(p_real) + 1.0))
+                real_list[i] = None
+                real_list[j] = None
+                break
+    for rp in real_list:
+        if rp is not None:
+            out.append(complex(rp))
+    result = np.array(out, dtype=np.complex128)
+    # 若因配对丢失导致数量不足，用原极点补齐
+    if len(result) < n:
+        result = np.concatenate([result, poles[:n - len(result)]])
+    return result[:n]
 
 
 def _final_residue_fit(s: NDArray[np.complex128],
                        poles: NDArray[np.complex128],
                        f_data: NDArray[np.complex128]
                        ) -> tuple[NDArray[np.complex128], complex, complex]:
-    """最终留数拟合: f(s) ≈ Σ r_k/(s-p_k) + d + s·h。
-    列缩放改善条件数。来源: Gustavsen 1999 Eq.(12),
+    """最终留数拟合 real-form: 强制共轭对留数共轭，避免重根奇异。
+    对共轭对 (p,conj(p)) 用实数变量 (a,b) 表示 r=a+jb，基函数:
+      g_a = 1/(s-p)+1/(s-conj(p)),  g_b = j·[1/(s-p)-1/(s-conj(p))]
+    来源: Gustavsen 1999 Eq.(12) + 2006 §III real-form,
     https://doi.org/10.1109/61.772350
     """
-    n = len(poles)
     nf = len(s)
-    A = np.empty((nf, n + 2), dtype=np.complex128)
-    diff = s.reshape(-1, 1) - poles.reshape(1, -1)
-    A[:, :n] = 1.0 / diff
-    A[:, n] = 1.0
-    A[:, n + 1] = s
-    x = _scaled_lstsq(A, f_data)
-    residues = x[:n].astype(np.complex128)
-    d = complex(x[n])
-    h = complex(x[n + 1])
-    return residues, d, h
+    n = len(poles)
+    cols = []  # 实化后的实数列
+    pair_info = []  # (type, idx) 记录每个未知数对应极点
+    i = 0
+    while i < n:
+        p = poles[i]
+        is_pair = (i + 1 < n) and abs(p - np.conj(poles[i + 1])) < 1e-7 * (abs(p) + 1e-30)
+        if is_pair and abs(p.imag) > 1e-12:
+            pc = poles[i + 1]
+            g_a = 1.0 / (s - p) + 1.0 / (s - pc)        # 复数列
+            g_b = 1j * (1.0 / (s - p) - 1.0 / (s - pc))  # 复数列
+            cols.append(g_a); pair_info.append(("pair_re", i))
+            cols.append(g_b); pair_info.append(("pair_im", i))
+            i += 2
+        else:
+            # 实数极点或孤立极点：留数复数（实部+虚部两列）
+            g_re = 1.0 / (s - p)
+            cols.append(g_re); pair_info.append(("real_re", i))
+            cols.append(1j * g_re); pair_info.append(("real_im", i))
+            i += 1
+    # 常数项 d 与比例项 h
+    cols.append(np.ones(nf, dtype=complex)); pair_info.append(("d", -1))
+    cols.append(s.copy()); pair_info.append(("h", -1))
+    # 实化: [Re(A); Im(A)] x = [Re(b); Im(b)]
+    A_complex = np.array(cols, dtype=complex).T  # (nf, n_cols)
+    A_real = np.vstack([A_complex.real, A_complex.imag])
+    b_real = np.concatenate([f_data.real, f_data.imag])
+    # 列缩放
+    col_scale = np.ones(A_real.shape[1])
+    for k in range(A_real.shape[1]):
+        cn = np.linalg.norm(A_real[:, k])
+        if cn > 1e-30:
+            col_scale[k] = cn
+    x_scaled, *_ = np.linalg.lstsq(A_real / col_scale, b_real, rcond=None)
+    x = x_scaled / col_scale
+
+    # 重建留数
+    residues = np.zeros(n, dtype=complex)
+    d_val = 0.0 + 0j
+    h_val = 0.0 + 0j
+    xk = 0
+    for kind, idx in pair_info:
+        if kind == "pair_re":
+            a = x[xk]; b = x[xk + 1]
+            residues[idx] = complex(a, b)
+            residues[idx + 1] = complex(a, -b)
+            xk += 2
+        elif kind == "pair_im":
+            pass  # 已在 pair_re 处理
+        elif kind == "real_re":
+            residues[idx] = complex(x[xk], x[xk + 1])
+            xk += 2
+        elif kind == "real_im":
+            pass
+        elif kind == "d":
+            d_val = complex(x[xk]); xk += 1
+        elif kind == "h":
+            h_val = complex(x[xk]); xk += 1
+    return residues, d_val, h_val
 
 
 def _scaled_lstsq(A: NDArray[np.complex128],
@@ -301,8 +400,11 @@ def vector_fitting(freqs_hz: NDArray[np.float64],
         A, b = _build_sigma_system(s, poles, f_norm)
         x = _scaled_lstsq(A, b)
         d_tilde = x[len(poles) + 2:].astype(np.complex128)
+        # 强制 d̃ 共轭对称（起始极点共轭对称排列），保证极点重定位稳定
+        d_tilde = _pair_conjugate_residues(poles, d_tilde)
         new_poles = _relocate_poles(poles, d_tilde)
-        new_poles = _symmetrize_poles(new_poles)
+        # 重新排列为共轭对顺序并强制共轭对称（eig 返回顺序随机）
+        new_poles = _reorder_conjugate_pairs(new_poles)
         # 收敛判定：极点相对位移
         rel_shift = float(np.max(np.abs(new_poles - prev_poles))
                           / (np.max(np.abs(new_poles)) + 1e-30))
@@ -398,6 +500,45 @@ def _lorentzian_notch(wl: NDArray[np.float64],
     return baseline - depth * gamma * gamma / ((wl - wl_r) ** 2 + gamma * gamma)
 
 
+def _estimate_notch_p0(wl: NDArray[np.float64],
+                       T: NDArray[np.float64]) -> tuple[list, float, float]:
+    """估计 Lorentzian 下陷拟合初值 [wl_r, gamma, depth, baseline] 与窗口。
+    从最低透射点与半高点宽度估计 HWHM。来源: Bogaerts 2012 §III。
+    """
+    idx_min = int(np.argmin(T))
+    wl_r0 = float(wl[idx_min])
+    T_min = float(T[idx_min])
+    T_bg = float(np.max(T))
+    half_level = T_bg - 0.5 * (T_bg - T_min)
+    above_half = T > half_level
+    left = np.where(above_half[:idx_min])[0]
+    right = np.where(above_half[idx_min:])[0]
+    if len(left) == 0 or len(right) == 0:
+        gamma0 = float(np.mean(np.diff(wl))) * 5.0
+    else:
+        gamma0 = 0.5 * float(wl[idx_min + right[0]] - wl[left[-1]])
+    if gamma0 <= 0:
+        gamma0 = float(np.mean(np.diff(wl))) * 5.0
+    depth0 = T_bg - T_min
+    p0 = [wl_r0, gamma0, depth0, T_bg]
+    return p0, float(10.0 * gamma0), wl_r0
+
+
+def _find_secondary_fsr(wl: NDArray[np.float64], T: NDArray[np.float64],
+                        wl_r: float, gamma: float,
+                        depth: float, baseline: float) -> float:
+    """在远离主谐振区找次级下陷估算 FSR(nm)。来源: Bogaerts 2012 §III。"""
+    far_mask = (wl < wl_r - 5 * gamma) | (wl > wl_r + 5 * gamma)
+    if far_mask.sum() <= 2:
+        return float("nan")
+    T_far = T[far_mask]
+    idx_sub = int(np.argmin(T_far))
+    if T_far[idx_sub] < baseline - 0.05 * depth:
+        wl_next = float(wl[far_mask][idx_sub])
+        return abs(wl_next - wl_r) * 1e3
+    return float("nan")
+
+
 def fit_ring_resonator(wavelengths_um: NDArray[np.float64],
                        transmission: NDArray[np.float64]) -> dict:
     """从环谐振透射谱提取 Q、FSR、耦合系数 κ、传播损耗。
@@ -422,27 +563,7 @@ def fit_ring_resonator(wavelengths_um: NDArray[np.float64],
     if np.any(T < 0) or np.any(T > 1.0 + 1e-6):
         raise ValueError("transmission 须在 [0,1] 区间")
 
-    # 找最低透射点（主谐振下陷）作为拟合初值
-    idx_min = int(np.argmin(T))
-    wl_r0 = float(wl[idx_min])
-    # 估计 HWHM：找下陷半高点
-    T_min = float(T[idx_min])
-    T_bg = float(np.max(T))
-    half_level = T_bg - 0.5 * (T_bg - T_min)
-    above_half = T > half_level
-    # 找下陷两侧半宽点
-    left = np.where(above_half[:idx_min])[0]
-    right = np.where(above_half[idx_min:])[0]
-    if len(left) == 0 or len(right) == 0:
-        gamma0 = float(np.mean(np.diff(wl))) * 5.0
-    else:
-        gamma0 = 0.5 * float(wl[idx_min + right[0]] - wl[left[-1]])
-    if gamma0 <= 0:
-        gamma0 = float(np.mean(np.diff(wl))) * 5.0
-    depth0 = T_bg - T_min
-    p0 = [wl_r0, gamma0, depth0, T_bg]
-    # 局部窗口拟合（±10×gamma 提升鲁棒性）
-    win = float(10.0 * gamma0)
+    p0, win, wl_r0 = _estimate_notch_p0(wl, T)
     mask = (wl >= wl_r0 - win) & (wl <= wl_r0 + win)
     if mask.sum() < 4:
         mask = np.ones_like(wl, dtype=bool)
@@ -457,24 +578,11 @@ def fit_ring_resonator(wavelengths_um: NDArray[np.float64],
     wl_r, gamma, depth, baseline = popt
     fwhm_nm = 2.0 * gamma * 1e3  # FWHM = 2γ（Lorentzian HWHM=γ）
     Q = float(wl_r / (2.0 * gamma)) if gamma > 0 else float("inf")
-    # FSR：在远离主谐振区找次级下陷（Bogaerts 2012 §III）
-    far_mask = (wl < wl_r - 5 * gamma) | (wl > wl_r + 5 * gamma)
-    if far_mask.sum() > 2:
-        T_far = T[far_mask]
-        idx_sub_min = int(np.argmin(T_far))
-        if T_far[idx_sub_min] < baseline - 0.05 * depth:
-            wl_next = float(wl[far_mask][idx_sub_min])
-            fsr_nm = abs(wl_next - wl_r) * 1e3
-        else:
-            fsr_nm = float("nan")
-    else:
-        fsr_nm = float("nan")
-
-    # 耦合系数 κ² 估计（临界耦合近似）: depth ≈ κ² at critical coupling
-    # Bogaerts 2012 Eq.(12): T_min = (1-κ²-a)²/((1-κ²a)²) 简化
+    fsr_nm = _find_secondary_fsr(wl, T, wl_r, gamma, depth, baseline)
+    # 耦合系数 κ² 估计（临界耦合近似）: depth ≈ κ²
+    # Bogaerts 2012 Eq.(12): T_min=(1-κ²-a)²/((1-κ²a)²) 简化
     coupling_kappa = float(np.sqrt(max(depth, 0.0)))
-    # 传播损耗从 Q 与 κ 估计（Bogaerts 2012 §IV）:
-    # Q = (π·n_g·L_round) / (λ² · (loss+coupling))，需 n_g 与 L_round，
+    # 传播损耗从 Q 与 κ 估计需 n_g 与 L_round（Bogaerts 2012 §IV），
     # 无几何信息时给出 NaN（R03 不造假数据）
     return {
         "lambda_r_um": float(wl_r),
