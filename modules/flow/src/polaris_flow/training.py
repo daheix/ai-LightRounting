@@ -14,6 +14,10 @@ _load_benchmarks 及 13 个 _parse_* 辅助函数均为死代码（~480 行）�
   https://scalable-ai.eecs.berkeley.edu/assets/lecture_slides/lecture_15.pdf
 - CleanRL ppo.py 单文件训练循环
   https://github.com/vwxyzjn/cleanrl
+- DREAMPlace (解析法布局基准，训练评估对标), Lin et al., TCAD 2020
+  https://arxiv.org/abs/2004.10746
+- OpenROAD 开源 EDA 训练基准流水线
+  https://theopenroadproject.org/
 """
 
 from __future__ import annotations
