@@ -1,11 +1,55 @@
-# PoLaRIS 与商业光电子 EDA 工具差距分析报告 v3.0
+# PoLaRIS 与商业光电子 EDA 工具差距分析报告 v3.1
 
-**文档版本**: v3.0
-**生成日期**: 2026-06-28（v3.0）/ 2026-06-24（v2.0 原版）
+**文档版本**: v3.1
+**生成日期**: 2026-06-28（v3.0）/ 2026-07-17（v3.1 模块化核对）
 **作者**: PoLaRIS 项目组
 **目标**: 系统对比 PoLaRIS 与最强商业光电子 EDA 工具的能力差距，给出分级解决办法与版本路线图，支撑商业化决策。
+**与 v3.0 关系**: v3.1 为 v5.0 模块化架构核对修订版。v5.0 将 v4 单包 `src/polaris/` 拆分为 34 个独立子模块（`modules/<模块>/src/polaris_<模块>/`），v3.0 中的量化指标与代码路径以 v4 为基准，v3.1 在 §0.6 给出 v5.0 实测修正值；§0-§0.5 与 §1-§7 保留 v4 历史记录以维持可追溯性，其中量化指标已被 §0.6 取代。
 **与 v2.0 关系**: 本文为 v2.0 的迭代刷新版（单文件版本升级，R09 规则），保留 v2.0 修订摘要（§0.1-§0.4）以维持可追溯性，在 §0.5 追加 v3.0 修订摘要。综合得分从 v2.0 的 6.1 提升至 v3.0 的 8.9（v3.1 质量门禁全面达标，2026-06-28），原 v2.0 中多个 P0/P1 项已完整实现。
 **与 v1.0 关系（v2.0 历史）**: v2.0 为 v1.0（`docs/commercial_gap_analysis.md`）的迭代刷新版，对齐 36-RoundMap R0 基线（6.1/10），修正 v1.0 中 4 处数据不一致，并补充第 80-95 轮关键改进与 2026-06-24 流程诚信审查结果。
+
+---
+
+## 0.6 v5.0 模块化核对修订（2026-07-17，v3.1）
+
+v5.0 将 v4 单包架构重构为 34 个 pip 独立子模块。以下量化指标经 2026-07-17 全量实测核对，**取代 v3.0 对应数值**（v3.0 数值为 v4 架构实测，保留于 §0.5/§1 作历史追溯）。
+
+### 0.6.1 量化指标实测修正（v5.0）
+
+| 指标 | v3.0（v4 实测） | **v3.1（v5.0 实测，2026-07-17）** | 实测方法 |
+|------|----------------|-----------------------------------|----------|
+| 测试用例数 | 5434 collected | **2113 collected** | `pytest --collect-only -q`（testpaths=["modules"]，--import-mode=importlib） |
+| 测试文件数 | 139 | **85** | `modules/*/tests/*.py` 实际统计 |
+| 原生 PDK 平台 | 11 foundry 平台 | **4 材料平台**（SOI/SiEPIC、SiN/Ligentec、InP/Pattern Project、LNOI/HyperLight） | `polaris_pdk.list_platforms()` 实测 |
+| 原生 PDK 器件 | 99 个 | **36 个**（4 平台 × 9 器件） | 同上返回 device_count |
+| foundry PDK 桥接 | 11 foundry | **48 个 PDKInfo**（aim/amf/ihp/vtt/tower_ph18da/gf_fotonix/tsmc_sipho/samsung_sipho/imec×3/ligentec/siepic/cornerstone/compoundtek 等） | `pdk_advanced/gdsfactory_bridge.py` 实际统计 |
+| DRC 规则 | 90 条（9 runset） | **25 条**（`polaris_drc/rules.py` DRCRule 实例，DEFAULT_DRC_RULES 18 条） | 源码实际统计 |
+| DRC runset | 9 个 | **v5.0 已移除**（`foundry_runsets.py` 未迁移） | 文件系统核验 |
+| 子模块数 | 13 子包 | **34 独立子模块** | `modules/` 目录实测 |
+
+### 0.6.2 v3.0 声称功能的 v5.0 落点核对
+
+| v3.0 声称（v4 路径） | v5.0 实际落点 | 状态 |
+|----------------------|---------------|------|
+| FDTD（lumerical_fdtd.py + tidy3d_backend.py） | `modules/fdtd/src/polaris_fdtd/solver.py`（YeeGrid3D/GedneyPML/DifferentiableFDTD） | ✅ 保留（Drude ADE/TFSF 未迁移） |
+| Edge-GNN（rl/edge_gnn.py + rl/pretraining.py） | `modules/place/src/polaris_place/ppo_gnn.py` + `modules/trainer/src/polaris_trainer/transfer_learning.py` | ✅ 保留（文件重组） |
+| Global-Detail 布线（router/global_router.py） | `modules/router_advanced/src/polaris_router_advanced/global_router.py` | ✅ 保留 |
+| CurvilinearLVS（sim/eqdrc.py） | `modules/verify_advanced/src/polaris_verify_advanced/eqdrc.py` | ✅ 保留 |
+| CAPHE 电路仿真（sim/caphe_backend.py） | — | ❌ v5.0 已移除（未迁移） |
+| PSO/CMA-ES（sim/pso_optimizer.py + global_optimizer.py） | `modules/optimizer/src/polaris_optimizer/global_opt.py` | ✅ 保留（合并） |
+| 光电协同（sim/photoelectric_cosim.py + verilog_a.py） | `modules/lumerical/src/polaris_lumerical/_cosim.py` + `modules/parasitic/src/polaris_parasitic/verilog_a_spice.py` | ✅ 保留（文件重组） |
+| GUI（gui/layout_editor.py） | `modules/gui/src/polaris_gui/layout_editor.py` | ✅ 保留 |
+| 逆向设计（inverse/adjoint_optimizer.py） | `modules/inverse/src/polaris_inverse/adjoint.py` + `modules/optimizer/src/polaris_optimizer/topology.py` | ✅ 保留 |
+| 11 foundry 平台（pdk/process_nodes.py） | 4 原生平台 + 48 gdsfactory 桥接 | ⚠️ 口径变更（§0.6.1） |
+| 90 DRC 规则（sim/foundry_runsets.py） | 25 条 rules.py | ⚠️ 口径变更（§0.6.1） |
+| AI 逆向设计 RL/GAN/Diffusion | `modules/flow/src/polaris_flow/inverse_design.py` | ✅ v5.0 新增（v3.0 未列） |
+
+### 0.6.3 v3.1 学术诚信声明
+
+- 本修订所有数值均为 2026-07-17 在 v5.0 代码库实测：pytest 收集、`list_platforms()` 调用、源码统计、文件系统核验，无估计值。
+- v3.0 的 5434 测试/99 器件/90 规则/11 foundry 为 v4 架构实测值，当时真实；v5.0 模块化重组后口径变化，v3.1 以实测修正，不构成对 v3.0 的造假指控。
+- 综合得分 8.9/10 为 v3.0 时代基于 v4 代码的评估，v5.0 模块化后需重新基线评估（待开展）。
+- 全文保留 v4 路径引用仅存在于历史修订记录（§0-§0.5），现行功能路径以 `2026-2028开发计划/PoLaRIS功能清单.md`（2026-07-17 全量核对版）为准。
 
 ---
 
