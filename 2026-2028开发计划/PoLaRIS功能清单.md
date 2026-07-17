@@ -6,8 +6,8 @@
 | 调研日期 | 2026-06-25（v5.0 路径核对：2026-07-17） |
 | 版本 | v5.0（模块化架构） |
 | 代码路径 | `/workspace/modules/<模块>/src/polaris_<模块>/` |
-| 子模块数 | 34（_c_abi/boson/bpm/circuit/core/drc/eme/fde/fdfd/fdtd/flow/gds_tools/gdsio/gui/inverse/klm/lumerical/lvs/multiphysics/nn/optimizer/orchestrator/pam4/parasitic/pdk/pdk_advanced/place/quantum_advanced/route/router_advanced/sparam/trainer/verify_advanced/yield） |
-| 测试文件数 | 85（`/workspace/modules/*/tests/*.py`） |
+| 子模块数 | 33 pip 子模块（modules/ 下 34 个目录，`_c_abi` 为共享 C 头文件无 pyproject.toml 不计；33 个为：boson/bpm/circuit/core/drc/eme/fde/fdfd/fdtd/flow/gds_tools/gdsio/gui/inverse/klm/lumerical/lvs/multiphysics/nn/optimizer/orchestrator/pam4/parasitic/pdk/pdk_advanced/place/quantum_advanced/route/router_advanced/sparam/trainer/verify_advanced/yield） |
+| 测试文件数 | 85（`/workspace/modules/*/tests/test_*.py`） |
 | 测试函数数 | 2092（`def test_*`） |
 
 ## 学术诚信声明
@@ -259,7 +259,7 @@
 
 ### tidy3d_integration — Tidy3D 集成
 - **Tidy3DAdapter**: Tidy3D 适配器。实现: v5.0 移除（Tidy3D 集成未迁移，使用原生 FDTD）。成熟度: 已移除
-- **GPUFDTDEngine**: GPU FDTD 引擎。实现: v5.0 移除（Tidy3D 集成未迁移，使用原生 FDTD）。成熟度: 已移除。**状态: 不参与 — PoLaRIS 战略决策不参与 GPU 计算，代码保留但不作为发展方向**
+- **GPUFDTDEngine**: FDTD 引擎（类名保留 'GPU' 历史前缀以维持 API 兼容，实际为纯 NumPy CPU 实现）。实现: `modules/lumerical/src/polaris_lumerical/_backends.py`。成熟度: 实验性。**状态: 不参与 — PoLaRIS 战略决策不参与 GPU 计算，该类为 CPU 兜底实现，API 历史命名保留，不计入 GPU 发展方向**
 - **FDTDCrossValidator**: FDTD 交叉验证。实现: v5.0 移除（Tidy3D 集成未迁移，使用原生 FDTD）。成熟度: 已移除
 
 ### interconnect — INTERCONNECT 对齐
