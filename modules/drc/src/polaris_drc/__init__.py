@@ -94,6 +94,13 @@ from polaris_drc.engine import (
     DRCViolation,
     run_drc_rules,
 )
+from polaris_drc.pdk_rulesets import (
+    DRC_RULESETS,
+    DRCRuleset,
+    get_drc_ruleset,
+    list_available_pdk_rulesets,
+    register_drc_ruleset,
+)
 
 __version__ = "5.0.0"
 
@@ -173,5 +180,11 @@ __all__ = [
     "CheckType",
     "DEFAULT_DRC_RULES",
     "run_drc_rules",
+    # pdk_rulesets（PDK 深度桥接 R384，2026-07-17）
+    "DRC_RULESETS",
+    "DRCRuleset",
+    "get_drc_ruleset",
+    "list_available_pdk_rulesets",
+    "register_drc_ruleset",
     "__version__",
 ]

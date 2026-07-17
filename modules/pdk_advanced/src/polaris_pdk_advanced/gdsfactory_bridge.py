@@ -87,6 +87,17 @@ class PDKInfo:
         layer_stack_name: LayerStack 名。
         description: 描述。
         source_url: 溯源 URL。
+        foundry_id: 代工厂 ID（如 "UBC"/"IMEC"/"AMF"/"Ligentec"）。空字符串
+            表示未指定（向后兼容，GDSFACTORY_PDK_REGISTRY 中现有 48 PDK 不传）。
+            来源: PDK 深度桥接 R384，2026-07-17。
+        kit_version: PDK 套件版本（SemVer，默认 "1.0.0"）。
+            来源: https://semver.org
+        drc_ruleset_key: DRC 规则集键名（指向 polaris_drc.pdk_rulesets.DRC_RULESETS
+            的键，默认 "siepic_ebeam"）。
+        layer_map: 层映射 {layer_name: (GDS_layer, GDS_datatype)}（默认空 dict）。
+        model_parameters_key: 光学模型参数键名（指向
+            polaris_pdk_advanced.pdk_model_params.PDK_MODEL_PARAMS_REGISTRY 的键，
+            默认 "siepic_ebeam"）。
     """
 
     name: str
@@ -96,6 +107,11 @@ class PDKInfo:
     layer_stack_name: str
     description: str
     source_url: str
+    foundry_id: str = ""
+    kit_version: str = "1.0.0"
+    drc_ruleset_key: str = "siepic_ebeam"
+    layer_map: dict = field(default_factory=dict)
+    model_parameters_key: str = "siepic_ebeam"
 
 
 # gdsfactory PDK 注册表（48 PDK，每个含 source_url 溯源，R02）。

@@ -41,6 +41,7 @@
 
 from __future__ import annotations
 
+from polaris_eme.eme_2d import mode_overlap_2d, solve_eme_2d
 from polaris_eme.solver import (
     compute_overlap_1d,
     propagate_phase,
@@ -53,8 +54,10 @@ __version__ = "5.0.0"
 
 __all__ = [
     "solve_eme",
+    "solve_eme_2d",
     "solve_slab_modes",
     "compute_overlap_1d",
+    "mode_overlap_2d",
     "propagate_phase",
     "redheffer_star",
     "__version__",

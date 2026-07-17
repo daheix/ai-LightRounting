@@ -116,6 +116,12 @@ from polaris_pdk_advanced.pcell import (
     clear_pcell_cache,
     polaris_cell,
 )
+from polaris_pdk_advanced.pdk_model_params import (
+    PDK_MODEL_PARAMS_REGISTRY,
+    PDKModelParameters,
+    get_pdk_model_params,
+    list_available_pdk_model_params,
+)
 from polaris_pdk_advanced.yaml_config import (
     PDKYamlConfig,
     YamlCellSpec,
@@ -182,6 +188,11 @@ __all__ = [
     "ai_generate_pcell",
     "clear_pcell_cache",
     "polaris_cell",
+    # pdk_model_params
+    "PDK_MODEL_PARAMS_REGISTRY",
+    "PDKModelParameters",
+    "get_pdk_model_params",
+    "list_available_pdk_model_params",
     # yaml_config
     "PDKYamlConfig",
     "YamlCellSpec",

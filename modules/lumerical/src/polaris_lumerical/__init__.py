@@ -29,6 +29,7 @@ R13 不保留 v4 兼容 / 函数≤80行 / 文件≤800行。
 - _backends.py: Tidy3D/GPUFDTD/MEEP/FDTD Simulator + SOI 解析模型
 - _cosim.py: Photoelectric CoSim (MZM + PD + Laser)
 - _cml.py: CML Compiler (S 参数 + 无源性/互易性诊断)
+- _cml_fit.py: CML 自动生成 (Vector Fitting + 波导/环/MMI 参数提取)
 """
 
 from __future__ import annotations
@@ -78,6 +79,12 @@ from ._cml import (
     CMLMetadata, CMLComponent, CMLDiagnostics, CMLCompiler,
 )
 
+# 章节12: CML 自动生成（Vector Fitting + 参数提取）
+from ._cml_fit import (
+    FittedModel, vector_fitting, fit_waveguide_params,
+    fit_ring_resonator, fit_mmi_splitting, generate_cml_from_sparams,
+)
+
 
 __version__ = "5.0.0"
 
@@ -113,4 +120,7 @@ __all__ = [
     "PhotoelectricCoSim",
     # CML Compiler
     "CMLMetadata", "CMLComponent", "CMLDiagnostics", "CMLCompiler",
+    # CML 自动生成（章节12: Vector Fitting + 参数提取）
+    "FittedModel", "vector_fitting", "fit_waveguide_params",
+    "fit_ring_resonator", "fit_mmi_splitting", "generate_cml_from_sparams",
 ]

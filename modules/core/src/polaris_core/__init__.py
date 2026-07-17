@@ -21,6 +21,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from polaris_core.device_solver import (
+    DeviceLevelSolver,
+    DeviceSolverConfig,
+    DeviceSolverResult,
+    solve_device,
+)
 from polaris_core.specs import (
     BenchmarkSource,
     CircuitSpec,
@@ -309,5 +315,9 @@ __all__ = [
     "CircuitSpec",
     "BenchmarkSource",
     "TargetMetric",
+    "DeviceSolverConfig",
+    "DeviceSolverResult",
+    "DeviceLevelSolver",
+    "solve_device",
     "__version__",
 ]

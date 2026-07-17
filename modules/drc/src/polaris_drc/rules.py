@@ -140,6 +140,9 @@ class DRCRule:
             需要 layer + layer_pair 两层）。None 表示同层规则。
         limit_max: 双限规则的上限（如 ANGLE_LIMIT [threshold, limit_max] = [45°, 135°]）。
             None 表示单限规则（仅 threshold）。
+        pdk_name: 规则所属 PDK 名（None 表示通用规则，向后兼容 DEFAULT_DRC_RULES）。
+            用于 PDK 切换时按 PDK 过滤规则集（pdk_rulesets.DRC_RULESETS）。
+            来源: PDK 深度桥接 R384，2026-07-17。
     """
 
     name: str
@@ -149,6 +152,7 @@ class DRCRule:
     description: str = ""
     layer_pair: str | None = None
     limit_max: float | None = None
+    pdk_name: str | None = None
 
 
 # SiEPIC EBeam PDK 默认 DRC 规则集（18 条 = 12 基础 + 6 P0 波导级）
