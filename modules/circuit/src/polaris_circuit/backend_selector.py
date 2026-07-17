@@ -1,9 +1,17 @@
-"""S 矩阵条件数计算（数值稳定性诊断，纯 numpy）。
+"""S 矩阵条件数计算 + JAX CPU 后端选择器（v5.1，R04 合规：仅 CPU 后端）。
 
 条件数定义: κ(S) = ||S||_2 · ||S⁻¹||_2 = σ_max / σ_min
 - κ(S) < 1e6: 良态（well-conditioned）
 - 1e6 ≤ κ(S) < 1e12: 病态（ill-conditioned）
 - κ(S) ≥ 1e12: 接近奇异，结果不可信
+
+JAX CPU 后端（v5.1 新增）:
+- is_jax_available() 自动检测 jax 可导入且 jax.devices("cpu") 非空，结果缓存。
+- 提供 waveguide_s_jax / cascade_two_port_jax / simulate_waveguide_chain_jax
+  三个 jnp 向量化 S 参数计算函数，与 models.waveguide_s 物理一致。
+- R04 战略决策: 仅使用 jax.devices("cpu")，禁止 GPU/TPU 后端。
+- R03 禁止 fall-back: JAX 不可用时一律 raise RuntimeError，不静默回退 numpy。
+- 启用 jax_enable_x64=True 保证与 numpy float64 数值一致（测试可复现）。
 
 来源（R02 学术诚信，≥5 篇文献 URL）:
 1. Golub & Van Loan 2013, "Matrix Computations", 4th ed.,
@@ -15,16 +23,26 @@
 4. Filipsson 1978, "A new general computer algorithm for S-matrix calculation
    of interconnected multiports", Proc. Eur. Microw. Conf.,
    https://doi.org/10.1109/EUMA.1978.332681
-5. Taflove & Hagness 2005, "Computational Electrodynamics: The FDTD Method",
-   3rd ed., Artech House §3,
-   https://us.artechhouse.com/Computational-Electrodynamics-The-FDTD-Method-Third-Edition-P1367.aspx
+5. Bradbury et al. 2018, "JAX: composable transformations of Python+NumPy
+   programs", JOSS 3(31):10219, https://doi.org/10.21105/joss.02021
+6. JAX JIT 编译文档: https://jax.readthedocs.io/en/latest/jax-101/02-jitting.html
+7. JAX lax.scan 文档:
+   https://jax.readthedocs.io/en/latest/_autosummary/jax.lax.scan.html
+8. SAX JAX 后端: https://flaport.github.io/sax/
+9. NumPy 广播规则:
+   https://numpy.org/doc/stable/user/basics.broadcasting.html
+10. Pozar, "Microwave Engineering" 4th ed. §4.3 (两网络级联 Redheffer star),
+    https://www.wiley.com/en-us/Microwave+Engineering%2C+4th+Edition-p-9781118213636
 
-合规: R02 学术诚信 / R03 禁止 fall-back / R04 纯 NumPy / R05 无 TODO。
+合规: R02 学术诚信 / R03 禁止 fall-back（JAX 不可用即 raise）/
+R04 仅 JAX CPU 后端（jax.devices("cpu")，禁 GPU/TPU）/ R05 无 TODO。
 """
 
 from __future__ import annotations
 
+import importlib.util
 import logging
+from typing import Any, Callable
 
 import numpy as np
 
