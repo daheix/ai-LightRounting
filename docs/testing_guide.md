@@ -205,7 +205,7 @@ pytest modules/ --cov=polaris --cov-report=term --cov-report=html
 open htmlcov/index.html
 ```
 
-> `--cov=polaris` 追踪 `src/polaris/` 下所有包的覆盖率。HTML 报告生成在 `htmlcov/` 目录。
+> `--cov=polaris` 追踪 `modules/<模块>/src/polaris_<模块>/` 下所有包的覆盖率。HTML 报告生成在 `htmlcov/` 目录。
 
 ### 3.5 快速收集（不执行）
 
@@ -517,9 +517,9 @@ open htmlcov/index.html
 ```
 Name                              Stmts   Miss  Cover
 -----------------------------------------------------
-src/polaris/place/__init__.py        12      0   100%
-src/polaris/place/analytical.py      85      3    96%
-src/polaris/place/ppo_gnn.py        120     12    90%
+modules/place/src/polaris_place/__init__.py        12      0   100%
+modules/place/src/polaris_place/analytical.py      85      3    96%
+modules/place/src/polaris_place/ppo_gnn.py        120     12    90%
 -----------------------------------------------------
 TOTAL                              1614     15    99%
 ```
@@ -563,10 +563,10 @@ TOTAL                              1614     15    99%
 pytest modules/
 
 # 2. Lint 检查
-ruff check src/ modules/
+ruff check modules/
 
 # 3. 类型检查
-mypy src/polaris/
+mypy modules/
 
 # 4. 质量门禁
 python scripts/code_quality_gate.py
@@ -587,7 +587,7 @@ python scripts/code_quality_gate.py
 | 嵌套深度 | 5 | 4 |
 
 ```bash
-# 检查 src/polaris/
+# 检查 modules/
 python scripts/code_quality_gate.py
 
 # 检查指定目录

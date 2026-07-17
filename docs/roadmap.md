@@ -17,7 +17,7 @@
 
 | 里程碑 | 轮次 | 交付目标 | 交付文件 | 测试结果 | 综合得分 |
 |--------|------|----------|----------|----------|----------|
-| M4 | R22 | 18 类曲线感知 DRC 规则 | `src/polaris/verification/drc_curvilinear_18rules.py` | 24/24 通过 100% | 8.4/10 |
+| M4 | R22 | 18 类曲线感知 DRC 规则 | `modules/verify_advanced/src/polaris_verify_advanced/drc_curvilinear_18rules.py` | 24/24 通过 100% | 8.4/10 |
 | M5 | R26 | 15 foundry PDK + 223 器件 | `src/polaris/pdk/foundry_pdk_expanded.py` | 21/21 通过 100% | 8.8/10 |
 | M6 | R33 | 量子电路 + BB84 QKD | `src/polaris/quantum/quantum_circuit_distributed.py` | Bell态 OK, HOM V=1.000, BB84 QBER 0.0%/29.4% | — |
 | M6 | R35 | 分布式 PPO 5000 器件 | 同上 | 4 workers, 917600 器件已处理 | — |

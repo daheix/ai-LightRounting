@@ -19,7 +19,7 @@ cd ai-LightRounting
 pip install -e .
 ```
 
-开发模式（`-e`）使你修改 `src/polaris/` 后立即生效，无需重装。
+开发模式（`-e`）使你修改 `modules/<模块>/src/polaris_<模块>/` 后立即生效，无需重装。
 
 ### 1.3 可选依赖
 
@@ -191,7 +191,7 @@ print(f"基模有效折射率 neff = {modes[0].neff:.4f}")
 ### 6.1 单元测试
 
 ```bash
-PYTHONPATH=src python -m pytest tests/ -q
+python -m pytest modules/ -q
 ```
 
 ### 6.2 性能基准套件
@@ -199,7 +199,7 @@ PYTHONPATH=src python -m pytest tests/ -q
 R871-R885 提供了 12 个基准测试（FDTD/FDE/寄生/布线/LVS/FFT 等）：
 
 ```bash
-PYTHONPATH=src python -m pytest tests/test_r871_r885_benchmarks.py -v
+python -m pytest modules/ -v
 ```
 
 关键基准指标（纯 NumPy/SciPy CPU，R04）：
@@ -210,21 +210,20 @@ PYTHONPATH=src python -m pytest tests/test_r871_r885_benchmarks.py -v
 ## 7. 项目结构（R928-R930）
 
 ```
-src/polaris/
-├── sim/                 仿真核心（电路/FDTD/FDE/EME/BPM/RCWA/热/DDM/量子）
+modules/                 v5.0 模块化结构（34 个独立模块，各含 src/ + tests/ + pyproject.toml）
+├── circuit/src/polaris_circuit/     电路仿真核心
 │   ├── simulator.py     电路级频率域仿真器（CircuitSimulator）
+│   ├── cascade.py       子网络增长 S 参数级联（复刻 SAX）
 │   ├── models.py        基础器件 S 参数模型库
-│   ├── fde/             有限差分本征模求解器
-│   ├── fdtd.py          时域有限差分
-│   ├── perf_tuning_r851.py      性能调优原语（向量化/缓冲池/LRU/稀疏）
-│   ├── memory_optimization_r886.py  内存优化（generator/memmap/streaming）
-│   └── api_doc_audit_r901.py    API 文档覆盖率审计
-├── router/              布线引擎（A*/JPS/曲线感知/Bundle/欧拉弯曲）
-├── verification/        验证（DRC/LVS/寄生提取）
-└── ...
+│   └── mna_spice.py     MNA SPICE 光电协同求解器
+├── fde/src/polaris_fde/             有限差分本征模求解器（solver.py）
+├── fdtd/src/polaris_fdtd/           时域有限差分（solver.py）
+├── router_advanced/src/polaris_router_advanced/  布线引擎（A*/JPS/曲线感知/Bundle/欧拉弯曲）
+├── drc/src/polaris_drc/             DRC 规则与引擎
+├── verify_advanced/src/polaris_verify_advanced/  高级验证（KLayout DRC/层次化 DRC/图同构 LVS）
+└── ...（其余模块见 modules/README.md）
 docs/                    文档（本教程、进阶教程、商业对标、路标）
-tests/benchmarks/        性能基准套件（R871-R885）
-examples/                示例库（R946-R950）
+examples/                示例库
 ```
 
 ## 下一步
