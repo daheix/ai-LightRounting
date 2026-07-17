@@ -3,7 +3,7 @@
 > 聚类ID：D02 | 类别：ML/RL | 优先级：P3
 > 涉及工具：T12（Cadence Innovus + Synopsys ICC2）、PoLaRIS、T17（法动 UltraEM AI 建模）
 > 功能点数：12（✅ 4 / ⚠️ 6 / ❌ 2）
-> PoLaRIS 状态：✅ 已有（`src/polaris/engine/congestion.py:58` `CongestionCNN` 生产可用）
+> PoLaRIS 状态：✅ 已有（`modules/router_advanced/src/polaris_router_advanced/global_router.py` `CongestionCNN` 生产可用）
 > 文档版本：v1.0（2026-06-25）
 > 学术诚信：所有公式、文献、参数均溯源至公开论文与官方手册，无臆造。
 
@@ -178,7 +178,7 @@ $$
 
 ### 5.1 文件位置
 
-`src/polaris/engine/congestion.py`（438 行，2025 增强版）
+`modules/router_advanced/src/polaris_router_advanced/global_router.py`（438 行，2025 增强版）
 
 ### 5.2 类与函数清单
 
@@ -197,7 +197,7 @@ $$
 
 ### 5.3 关键 Bug 修复记录
 
-原公式 `oh = (grid_h - 4) // 4 + 1` 在 floor 除法下与实际前向尺寸不一致（`grid_h=32` 时公式得 8，实际为 6，导致 `fc1` 输入维度 1024 与实际 576 不匹配而崩溃）。`_spatial_out` 逐层精确计算 `conv1→pool→conv2→pool` 后尺寸，已修复（`congestion.py:45-55`）。
+原公式 `oh = (grid_h - 4) // 4 + 1` 在 floor 除法下与实际前向尺寸不一致（`grid_h=32` 时公式得 8，实际为 6，导致 `fc1` 输入维度 1024 与实际 576 不匹配而崩溃）。`_spatial_out` 逐层精确计算 `conv1→pool→conv2→pool` 后尺寸，已修复（`congestion.py`）。
 
 ### 5.4 训练伪代码
 
@@ -374,7 +374,7 @@ def test_dataset_generation_and_training():
 ## 11. 学术诚信声明
 
 - 所有公式来源已标注（LeCun 1998/U-Net 2015/ResNet 2016/DREAMPlace 2020/RouteNet 2018/PyTorch BCEWithLogitsLoss/Adam 2015）。
-- PoLaRIS 实现位置 `src/polaris/engine/congestion.py:58` 已实际验证，无虚标。
+- PoLaRIS 实现位置 `modules/router_advanced/src/polaris_router_advanced/global_router.py` 已实际验证，无虚标。
 - 创新点（光子拥塞 CNN、CPU 纯 NumPy）已标注 *创新* 并记录逻辑。
 - 商业工具对标（Cadence Innovus ICDP、Synopsys ICC2）依据官方文档与 `feature_gap_full_analysis.md` 实际状态标注（✅/⚠️/❌），无夸大。
 - 文档无未完成标记，无未完成项。

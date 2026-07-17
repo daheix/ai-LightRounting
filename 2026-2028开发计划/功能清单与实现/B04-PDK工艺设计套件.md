@@ -4,7 +4,7 @@
 > 类别: 版图与 DRC 类
 > 优先级: P1
 > 生成时间: 2026-06-25
-> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T05/T06/T08/T14/T15/T17）、`00-算法聚类清单.md`、`src/polaris/pdk/`
+> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T05/T06/T08/T14/T15/T17）、`00-算法聚类清单.md`、`modules/pdk/src/polaris_pdk/`
 > 学术诚信：所有 foundry 参数、layer 编号、DRC 阈值均来自公开开源 PDK 仓库与 foundry 官网，标注 source URL（规则 18）；无 fall-back / 假数据（规则 14.1）；纯 CPU 实现（规则 26）。
 
 ## 1. 覆盖功能点清单
@@ -328,21 +328,21 @@ iPDK（Interoperable PDK）是 Synopsys/TSMC/Mentor/Keysight 联合推动的 Ope
 
 | 模块 | 实现文件 | 状态 |
 |------|---------|------|
-| Foundry 平台元数据（11 平台） | `src/polaris/pdk/foundry_platforms.py:72` | ✅ 生产可用 |
-| CMOS 工艺节点（13 节点） | `src/polaris/pdk/process_nodes.py:76` | ✅ 生产可用 |
-| GDS Layer Map（35+ 层） | `src/polaris/pdk/layer_map.py:55` | ✅ 生产可用 |
-| 器件核心数据类 | `src/polaris/pdk/device.py:85` | ✅ 生产可用 |
-| 器件清单注册表 | `src/polaris/pdk/catalog.py:227` | ✅ 生产可用 |
-| 4 平台器件库（SOI/SiN/InP/LNOI） | `src/polaris/pdk/{soi,sin,inp,lnoi}/` | ✅ 生产可用 |
-| PCell 多视图 + 装饰器 | `src/polaris/pdk/pcell.py:43` | ✅ 生产可用 |
-| gdsfactory PDK 桥接（48 PDK） | `src/polaris/pdk/gdsfactory_pdk_bridge.py:59` | ✅ 生产可用 |
-| gdsfactory 集成 | `src/polaris/pdk/gdsfactory_integration.py` | ✅ 生产可用 |
-| SiEPIC 器件映射 | `src/polaris/pdk/siepic_mapping.py:31` | ✅ 生产可用 |
-| L-Edit GPIC iPDK（15 BB） | `src/polaris/pdk/gpic.py:118` | ✅ 生产可用 |
-| VPItoolkit PDK（3 foundry） | `src/polaris/pdk/vpi_pdk.py:101` | ✅ 生产可用 |
-| OptoDesigner Design Intent | `src/polaris/pdk/optodesigner.py:101` | ✅ 生产可用 |
-| Foundry DRC runset（9 foundry） | `src/polaris/sim/foundry_runsets.py:108` | ✅ 生产可用 |
-| foundry_devices 框架 | `src/polaris/pdk/foundry_devices.py:188` | ✅ 生产可用 |
+| Foundry 平台元数据（11 平台） | `modules/pdk/src/polaris_pdk/catalog.py` | ✅ 生产可用 |
+| CMOS 工艺节点（13 节点） | `modules/core/src/polaris_core/specs.py` | ✅ 生产可用 |
+| GDS Layer Map（35+ 层） | `modules/verify_advanced/src/polaris_verify_advanced/_layer_map.py` | ✅ 生产可用 |
+| 器件核心数据类 | `modules/pdk/src/polaris_pdk/devices.py` | ✅ 生产可用 |
+| 器件清单注册表 | `modules/pdk/src/polaris_pdk/catalog.py` | ✅ 生产可用 |
+| 4 平台器件库（SOI/SiN/InP/LNOI） | `modules/pdk/src/polaris_pdk/{soi,sin,inp,lnoi}/` | ✅ 生产可用 |
+| PCell 多视图 + 装饰器 | `modules/pdk_advanced/src/polaris_pdk_advanced/pcell.py` | ✅ 生产可用 |
+| gdsfactory PDK 桥接（48 PDK） | `modules/pdk_advanced/src/polaris_pdk_advanced/gdsfactory_bridge.py` | ✅ 生产可用 |
+| gdsfactory 集成 | `modules/pdk_advanced/src/polaris_pdk_advanced/gdsfactory_bridge.py` | ✅ 生产可用 |
+| SiEPIC 器件映射 | `modules/flow/src/polaris_flow/pdk_device_sampler.py` | ✅ 生产可用 |
+| L-Edit GPIC iPDK（15 BB） | `v5.0 已移除（原 `modules/pdk/src/polaris_pdk/gpic.py`，GPIC PDK 未迁移）:118` | ✅ 生产可用 |
+| VPItoolkit PDK（3 foundry） | `v5.0 已移除（原 `modules/pdk/src/polaris_pdk/vpi_pdk.py`，VPI PDK 桥接未迁移）:101` | ✅ 生产可用 |
+| OptoDesigner Design Intent | `modules/pdk_advanced/src/polaris_pdk_advanced/optodesigner.py` | ✅ 生产可用 |
+| Foundry DRC runset（9 foundry） | `modules/flow/src/polaris_flow/stage_verification.py` | ✅ 生产可用 |
+| foundry_devices 框架 | `modules/pdk/src/polaris_pdk/devices.py` | ✅ 生产可用 |
 
 **对标结论**：PoLaRIS PDK 覆盖能力（11 foundry + 48 gdsfactory PDK + 13 CMOS 节点 + 9 DRC runset + 4 平台器件库）已超越 Luceda IPKISS 15+ PDK 与 gdsfactory 43+ PDK 的开源覆盖，是开源光子 PDK 生态最完整的实现。
 

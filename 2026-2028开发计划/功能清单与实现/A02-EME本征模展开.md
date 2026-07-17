@@ -19,7 +19,7 @@
 | 开源参考 | EMEpy（BYUCamachoLab）、MEEP EigenModeSource（模式分解模块） |
 | PoLaRIS 状态 | ❌ 完全缺失（38 功能点：✅4 / ⚠️6 / ❌28） |
 | 实现优先级 | P0（R37-Q4，依赖 FDE 本征模内核） |
-| 实现路径 | `src/polaris/sim/eme_solver.py`（待新建） |
+| 实现路径 | `modules/eme/src/polaris_eme/solver.py`（待新建） |
 | CPU 约束 | 纯 NumPy/SciPy 实现（规则 26，禁用 GPU） |
 
 ---

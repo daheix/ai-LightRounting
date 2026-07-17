@@ -186,7 +186,7 @@ function RIP_UP_REROUTE(nets, router, max_iter=3):
 
 ### 7.2 拥塞感知网排序（LiDAR ISPD 2025 [7]）
 
-难度评分函数（已实现于 PoLaRIS `curvy_router.py:620-625`）：
+难度评分函数（已实现于 PoLaRIS `curvy_router.py`）：
 
 $$
 \text{difficulty}(i) = \alpha \cdot \text{Manhattan}(s_i, t_i) + \beta \cdot \rho_i + \gamma \cdot \bar{c}_i
@@ -200,7 +200,7 @@ $$
 
 ### 7.4 收敛性
 
-Pathak-Hu 2014 证明：若每次拔除集满足"拔除后失败连接存在可行重布"且重布成功率单调不减，则 RRR 在有限步内收敛到稳定解或密度失败状态。PoLaRIS 实现 `MAX_RIP_ITER = 2`（pipeline/curvy_router.py:46，注释说明 3 次在链式电路上反而更差）即基于此收敛性 + 经验权衡。
+Pathak-Hu 2014 证明：若每次拔除集满足"拔除后失败连接存在可行重布"且重布成功率单调不减，则 RRR 在有限步内收敛到稳定解或密度失败状态。PoLaRIS 实现 `MAX_RIP_ITER = 2`（pipeline/curvy_router.py，注释说明 3 次在链式电路上反而更差）即基于此收敛性 + 经验权衡。
 
 ### 7.5 RL 增强拔除决策（创新对标，未来方向）
 
@@ -214,17 +214,17 @@ Wang & Zheng 2020 [6] 用 PPO agent 学习"拔哪条 net"决策，在 ICCAD'19 �
 
 | 模块 | 文件 | 关键函数 | 文献依据 |
 |------|------|---------|---------|
-| 曲线 RRR | `src/polaris/router/curvy_router.py:627` | `CurvyBundleRouter.rip_up_reroute` | LiDAR ISPD'25 §3.4 |
-| Pipeline RRR | `src/polaris/pipeline/curvy_router.py:141` | `_ripup_reroute_loop`、`_ripup_reroute_one` | Lillis-Dutt DAC 1999 |
-| 通用 RRR | `src/polaris/router/rip_reroute.py:197` | `route_with_rip_reroute`、`_try_rip_and_reroute` | Pathak-Hu TCAD 2014 |
-| 全局布线 RRR | `src/polaris/router/global_router.py:350` | `max_rip_reroute_rounds` 主循环 | Cadence NanoRoute 流程 |
-| 拥塞排序 | `src/polaris/router/curvy_router.py:611-625` | `CongestionAwareOrdering` | LiDAR ISPD'25 |
-| Bundle 布线 | `src/polaris/router/bundle_router.py` | `route_bundle`、`route_bundle_path_length_match` | gdsfactory T08-4.x |
+| 曲线 RRR | `modules/flow/src/polaris_flow/curvy_router.py` | `CurvyBundleRouter.rip_up_reroute` | LiDAR ISPD'25 §3.4 |
+| Pipeline RRR | `modules/flow/src/polaris_flow/curvy_router.py` | `_ripup_reroute_loop`、`_ripup_reroute_one` | Lillis-Dutt DAC 1999 |
+| 通用 RRR | `modules/router_advanced/src/polaris_router_advanced/rip_reroute.py` | `route_with_rip_reroute`、`_try_rip_and_reroute` | Pathak-Hu TCAD 2014 |
+| 全局布线 RRR | `modules/router_advanced/src/polaris_router_advanced/global_router.py` | `max_rip_reroute_rounds` 主循环 | Cadence NanoRoute 流程 |
+| 拥塞排序 | `modules/flow/src/polaris_flow/curvy_router.py` | `CongestionAwareOrdering` | LiDAR ISPD'25 |
+| Bundle 布线 | `modules/router_advanced/src/polaris_router_advanced/bundle_router.py` | `route_bundle`、`route_bundle_path_length_match` | gdsfactory T08-4.x |
 
 ### 8.2 关键设计决策
 
-1. **密度阈值保护**（pipeline/curvy_router.py:162）：失败连接 > 总连接 60% 时跳过 RRR，因密度过高无解，避免无效迭代——这是基于 Pathak-Hu 收敛性的工程保护，非 fall-back。
-2. **重布失败恢复**（curvy_router.py:672-674）：重布失败时恢复原路径并记录失败，不静默 fall-back，符合规则"禁止任何 fall-back 导致后续业务结果错误"。
+1. **密度阈值保护**（pipeline/curvy_router.py）：失败连接 > 总连接 60% 时跳过 RRR，因密度过高无解，避免无效迭代——这是基于 Pathak-Hu 收敛性的工程保护，非 fall-back。
+2. **重布失败恢复**（curvy_router.py）：重布失败时恢复原路径并记录失败，不静默 fall-back，符合规则"禁止任何 fall-back 导致后续业务结果错误"。
 3. **MAX_RIP_ITER=2**：经链式电路实验，3 次迭代反而更差（rip-up 拆掉已布路径后无法重布），保留 2 次为最优经验值。
 
 ### 8.3 待补齐（⚠️/❌）

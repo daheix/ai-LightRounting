@@ -246,7 +246,7 @@ $$S_x = \kappa_x + \frac{\sigma_x}{i\omega\varepsilon_0}$$
 ### 8.2 模块结构
 
 ```
-src/polaris/sim/bpm/
+modules/bpm/src/polaris_bpm/
 ├── __init__.py
 ├── bpm_solver.py          # BPMSolver 主类
 ├── operators.py           # 三对角算子 Ax/Ay 构造（稀疏）

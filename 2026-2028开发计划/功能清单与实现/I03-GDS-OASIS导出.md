@@ -4,7 +4,7 @@
 > 类别: 数据 I/O 与工具链类
 > 优先级: P6
 > 生成时间: 2026-06-25
-> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T06/T07/T08/T09/T14）、`00-算法聚类清单.md`、`3dtool/ALGORITHMS.md`、`B01-GDS读写与版图生成.md`、`src/polaris/eval/layout_render.py`、`src/polaris/data/gds_loader.py`
+> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T06/T07/T08/T09/T14）、`00-算法聚类清单.md`、`3dtool/ALGORITHMS.md`、`B01-GDS读写与版图生成.md`、`modules/gds_tools/src/polaris_gds_tools/layout_render.py`、`modules/nn/src/polaris_nn/data/gds_loader.py`
 > 学术诚信：GDSII 二进制格式溯源至 Calma GDSII Stream Format（Rubin 1987 附录 C）与维也纳工业大学 Minixhofer 博士论文附录 B.2，OASIS 格式溯源至 SEMI P39-0416 标准；多边形布尔运算溯源至 Sutherland-Hodgman 1974 与 Greiner-Hormann 1998；所有 layer 编号来自 SiEPIC EBeam PDK / ubcpdk / gdsfactory generic_pdk 开源仓库实际源码（规则 18），无 fall-back 编造（规则 14）。
 
 ## 1. 功能点清单（14 功能点）
@@ -13,20 +13,20 @@
 
 | 编号 | 工具 | 功能点 | PoLaRIS 状态 | 实现位置 |
 |------|------|--------|------------|---------|
-| I03-01 | T02 IPKISS | 完整 GDS 导出（Full GDS Export） | ✅ 已有 | `eval/layout_render.py:331` |
-| I03-02 | T03 OptoDesigner | GDSII/CIF 导入导出 | ⚠️ 部分 | `eval/layout_render.py:331` + `data/gds_loader.py:468`（无 CIF） |
-| I03-03 | T03 OptoDesigner | 离散化引擎（Discretization Engine） | ✅ 已有 | `sim/klayout_drc.py:238` + `eval/layout_render.py:331` |
-| I03-04 | T06 L-Edit | OASIS 导出支持 | ✅ 已有 | `eval/layout_render.py:361` |
+| I03-01 | T02 IPKISS | 完整 GDS 导出（Full GDS Export） | ✅ 已有 | `eval/layout_render.py` |
+| I03-02 | T03 OptoDesigner | GDSII/CIF 导入导出 | ⚠️ 部分 | `eval/layout_render.py` + `data/gds_loader.py`（无 CIF） |
+| I03-03 | T03 OptoDesigner | 离散化引擎（Discretization Engine） | ✅ 已有 | `sim/klayout_drc.py` + `eval/layout_render.py` |
+| I03-04 | T06 L-Edit | OASIS 导出支持 | ✅ 已有 | `eval/layout_render.py` |
 | I03-05 | T06 L-Edit | 与第三方 IP 互操作 | ⚠️ 部分 | `pdk/gdsfactory_integration.py`（无完整 IP 互操作框架） |
-| I03-06 | T07 FIMMPROP | GDSII 导出（EME 器件版图） | ✅ 已有 | `eval/layout_render.py:331` |
-| I03-07 | T07 OmniSim | GDSII 导出（FDTD 器件版图） | ✅ 已有 | `eval/layout_render.py:331` |
-| I03-08 | T08 gdsfactory | GDSII 导出 `write_gds()` | ✅ 已有 | `eval/layout_render.py:331`（`export_gds`） |
-| I03-09 | T08 gdsfactory | OASIS 导出 | ✅ 已有 | `eval/layout_render.py:361`（`export_oasis`） |
+| I03-06 | T07 FIMMPROP | GDSII 导出（EME 器件版图） | ✅ 已有 | `eval/layout_render.py` |
+| I03-07 | T07 OmniSim | GDSII 导出（FDTD 器件版图） | ✅ 已有 | `eval/layout_render.py` |
+| I03-08 | T08 gdsfactory | GDSII 导出 `write_gds()` | ✅ 已有 | `eval/layout_render.py`（`export_gds`） |
+| I03-09 | T08 gdsfactory | OASIS 导出 | ✅ 已有 | `eval/layout_render.py`（`export_oasis`） |
 | I03-10 | T08 gdsfactory | flatten_offgrid_references | ❌ 缺失 | - |
-| I03-11 | T09 KLayout | GDSII 读写 | ✅ 已有 | `eval/layout_render.py:331` + `data/gds_loader.py:468` |
-| I03-12 | T09 KLayout | OASIS 读写 | ⚠️ 部分 | `eval/layout_render.py:361`（仅导出，无 OASIS 读取） |
+| I03-11 | T09 KLayout | GDSII 读写 | ✅ 已有 | `eval/layout_render.py` + `data/gds_loader.py` |
+| I03-12 | T09 KLayout | OASIS 读写 | ⚠️ 部分 | `eval/layout_render.py`（仅导出，无 OASIS 读取） |
 | I03-13 | T09 KLayout | GDS2 文本版本 + gzip/zlib 压缩 | ✅ 已有 | 通过 `klayout.db` 间接支持 gzip OASIS |
-| I03-14 | T14 PIC Studio | GDS 导出（PhotoCAD 生成 GDS） | ✅ 已有 | `eval/layout_render.py:331` |
+| I03-14 | T14 PIC Studio | GDS 导出（PhotoCAD 生成 GDS） | ✅ 已有 | `eval/layout_render.py` |
 
 **统计**：✅10 / ⚠️3 / ❌1（与 `00-算法聚类清单.md` 第 71 行 I03 行的状态分布一致）。
 
@@ -270,11 +270,11 @@ $$A_{\text{trap}} = \frac{1}{2}(b_1 + b_2) \cdot h$$
 **当前状态**：✅ 生产可用（14 功能点 10/3/1 覆盖）。
 
 **已有实现位置**：
-- `src/polaris/eval/layout_render.py:331-360` — `export_gds` 通过 `klayout.db.Layout.write` 输出 GDSII，dbu=1nm，layer map 来自 `pdk/layer_map.py`
-- `src/polaris/eval/layout_render.py:361-384` — `export_oasis` 切换 `ly.write(path, "OASIS")`，自动启用 VarCode + CBLOCK gzip
-- `src/polaris/eval/layout_render.py:123-328` — `_create_klayout_layout` / `_place_device_boxes` / `_place_port_markers` / `_place_waveguide_paths` 渲染管线（DEVREC + PIN SiEPIC 标准格式）
-- `src/polaris/data/gds_loader.py:1-468` — `load_gds_to_circuit` SiEPIC GDS 反向解析（8 步算法：实例收集→DEVREC 参数匹配→PIN 提取→端口匹配→器件匹配→连接构建→DeviceSpec→画布尺寸）
-- `src/polaris/pdk/layer_map.py` — `POLARIS_GDS_LAYER_MAP` 36 层真实 foundry 编号（WG=1,0 / DEVREC=68,0 / PIN=69,0 / FLOORPLAN=99,0 等）
+- `modules/gds_tools/src/polaris_gds_tools/layout_render.py` — `export_gds` 通过 `klayout.db.Layout.write` 输出 GDSII，dbu=1nm，layer map 来自 `pdk/layer_map.py`
+- `modules/gds_tools/src/polaris_gds_tools/layout_render.py` — `export_oasis` 切换 `ly.write(path, "OASIS")`，自动启用 VarCode + CBLOCK gzip
+- `modules/gds_tools/src/polaris_gds_tools/layout_render.py` — `_create_klayout_layout` / `_place_device_boxes` / `_place_port_markers` / `_place_waveguide_paths` 渲染管线（DEVREC + PIN SiEPIC 标准格式）
+- `modules/nn/src/polaris_nn/data/gds_loader.py` — `load_gds_to_circuit` SiEPIC GDS 反向解析（8 步算法：实例收集→DEVREC 参数匹配→PIN 提取→端口匹配→器件匹配→连接构建→DeviceSpec→画布尺寸）
+- `modules/verify_advanced/src/polaris_verify_advanced/_layer_map.py` — `POLARIS_GDS_LAYER_MAP` 36 层真实 foundry 编号（WG=1,0 / DEVREC=68,0 / PIN=69,0 / FLOORPLAN=99,0 等）
 
 **依赖库**：`klayout.db` 0.30.9（已装，规则 5.3 直接 import，无兜底）、`numpy`（坐标数组）。禁用 shapely（规则 3.2 用 klayout.db.Region 纯 C++ 几何）。
 

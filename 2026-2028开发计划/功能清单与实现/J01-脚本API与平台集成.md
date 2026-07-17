@@ -12,29 +12,29 @@
 
 | # | 来源工具 | 功能点 | PoLaRIS 状态 | 实现位置 / 差距 |
 |---|---------|--------|-------------|----------------|
-| 1 | T01 Lumerical | lumapi Python 模块导入 | ✅已有 | `src/polaris/sim/lumerical_integration.py` |
+| 1 | T01 Lumerical | lumapi Python 模块导入 | ✅已有 | `modules/lumerical/src/polaris_lumerical/_lumerical.py` |
 | 2 | T01 Lumerical | Session 会话管理 | ✅已有 | lumapi 上下文管理封装 |
-| 3 | T01 Lumerical | Lumopt 伴随逆向设计 | ✅已有 | `src/polaris/sim/adjoint_optimizer.py:204` |
-| 4 | T03 OptoDesigner | 强大脚本语言（Python） | ✅已有 | `src/polaris/pipeline/__init__.py:291` CLI |
-| 5 | T04 Tidy3D | 开源 Python API | ✅已有 | `pipeline/__init__.py:291` main/cmd_run |
-| 6 | T04 Tidy3D | RESTful 云端 API | ✅已有 | `src/polaris/web/server.py:669` |
-| 7 | T08 gdsfactory | gmeep 插件 | ✅已有 | `sim/fdtd_simulator.py:57` MEEP 后端 |
-| 8 | T08 gdsfactory | 自动 S 参数提取 | ✅已有 | `sim/fdtd_simulator.py:279` |
-| 9 | T08 gdsfactory | 插件兼容（48 PDK 桥接） | ✅已有 | `pdk/gdsfactory_pdk_bridge.py:349` |
-| 10 | T08 gdsfactory | 端到端设计流程 | ✅已有 | `pipeline/integrated.py:446` IntegratedPipeline |
+| 3 | T01 Lumerical | Lumopt 伴随逆向设计 | ✅已有 | `modules/inverse/src/polaris_inverse/adjoint.py` |
+| 4 | T03 OptoDesigner | 强大脚本语言（Python） | ✅已有 | `modules/orchestrator/src/polaris_orchestrator/__init__.py` CLI |
+| 5 | T04 Tidy3D | 开源 Python API | ✅已有 | `pipeline/__init__.py` main/cmd_run |
+| 6 | T04 Tidy3D | RESTful 云端 API | ✅已有 | `modules/gui/src/polaris_gui/web_server.py` |
+| 7 | T08 gdsfactory | gmeep 插件 | ✅已有 | `sim/fdtd_simulator.py` MEEP 后端 |
+| 8 | T08 gdsfactory | 自动 S 参数提取 | ✅已有 | `sim/fdtd_simulator.py` |
+| 9 | T08 gdsfactory | 插件兼容（48 PDK 桥接） | ✅已有 | `pdk/gdsfactory_pdk_bridge.py` |
+| 10 | T08 gdsfactory | 端到端设计流程 | ✅已有 | `pipeline/integrated.py` IntegratedPipeline |
 | 11 | T11 simphony | pip 一键安装 | ✅已有 | `pyproject.toml` 标准打包 |
 | 12 | T11 simphony | SAX 集成 | ✅已有 | `sim/simulator.py` SAX 级联 |
-| 13 | T11 simphony | SiEPIC 兼容 | ✅已有 | `sim/siepic_netlist.py:133` |
-| 14 | T11 simphony | JAX 后端 | ✅已有 | `sim/jax_backend.py:65` |
-| 15 | T15 曼光 MaxOptics | Python 脚本引擎 | ✅已有 | `pipeline/__init__.py:156` |
+| 13 | T11 simphony | SiEPIC 兼容 | ✅已有 | `sim/siepic_netlist.py` |
+| 14 | T11 simphony | JAX 后端 | ✅已有 | `sim/jax_backend.py` |
+| 15 | T15 曼光 MaxOptics | Python 脚本引擎 | ✅已有 | `pipeline/__init__.py` |
 | 16 | T16 SimWorks | 脚本 API（11.1-11.7） | ✅已有 | CLI + Python API 双入口 |
 | 17 | T01 Lumerical | Script commands as methods | ⚠️部分 | 仅封装常用命令，非全量映射 |
 | 18 | T04 Tidy3D | Web GUI | ⚠️部分 | `web/server.py` + HTML 静态页 |
 | 19 | T04 Tidy3D | Tidy3D + AI 平台 | ⚠️部分 | `ai/inverse_design.py` RL/GAN/Diffusion |
 | 20 | T04 Tidy3D | Pydantic 数据模型校验 | ⚠️部分 | dataclass 校验，非 Pydantic |
-| 21 | T08 gdsfactory | 交互式开发与可视化 | ⚠️部分 | `web/server.py:329`，非 Jupyter |
+| 21 | T08 gdsfactory | 交互式开发与可视化 | ⚠️部分 | `web/server.py`，非 Jupyter |
 | 22 | T14 逍遥 PIC Studio | PhotoCAD 脚本接口 | ⚠️部分 | Python CLI，无完整 SDK |
-| 23 | T14 逍遥 PIC Studio | pSim Python API | ⚠️部分 | `sim/simulator.py:57` 间接覆盖 |
+| 23 | T14 逍遥 PIC Studio | pSim Python API | ⚠️部分 | `sim/simulator.py` 间接覆盖 |
 | 24 | T15 曼光 MaxOptics | 部署方式（云/本地） | ⚠️部分 | 本地为主，云端实验性 |
 | 25 | T16 SimWorks | 部署模式 | ⚠️部分 | 单机部署，无分布式集群 |
 | 26 | T17 法动 UltraEM | UltraEM XC 脚本扩展 | ⚠️部分 | Python API，无 XC 专属扩展 |
@@ -77,7 +77,7 @@ $$\forall s_k \in S:\quad \text{resolve}(s_k) = \text{instantiate}\big(s_k,\ \{\
 
 **参数校验（Pydantic/dataclass）**：将每个参数建模为类型 $T$ 加约束集 $\mathcal{K} = \{r_1, r_2, \dots\}$，校验即判定 $x \in \bigcap_{r \in \mathcal{K}} r(T)$。例：`width: confloat(gt=0, lt=5.0)` 等价于 $w \in (0, 5.0)\mu m$。约束不满足时抛 `ValidationError`，不静默截断（规则 14）。
 
-**JSON 序列化（网表往返）**：领域对象 $\to$ JSON 树 $\to$ 领域对象 的双射。设对象 $O$ 经序列化函数 $\text{enc}: \mathcal{O} \to \mathcal{J}$ 编码为 JSON 节点，反序列化 $\text{dec}: \mathcal{J} \to \mathcal{O}$ 解码。往返一致性要求 $\text{dec} \circ \text{enc} = \text{id}$。PoLaRIS `sim/siepic_netlist.py:133` 的 `parse_siepic_json` 即该算子的实现，对齐 SiEPIC JSON 网表标准。数值数组（如 S 参数）按 row-major 顺序展平为 JSON 数组，复数 $(a+bi)$ 编码为 `[a, b]` 二元组以兼容标准 JSON。
+**JSON 序列化（网表往返）**：领域对象 $\to$ JSON 树 $\to$ 领域对象 的双射。设对象 $O$ 经序列化函数 $\text{enc}: \mathcal{O} \to \mathcal{J}$ 编码为 JSON 节点，反序列化 $\text{dec}: \mathcal{J} \to \mathcal{O}$ 解码。往返一致性要求 $\text{dec} \circ \text{enc} = \text{id}$。PoLaRIS `sim/siepic_netlist.py` 的 `parse_siepic_json` 即该算子的实现，对齐 SiEPIC JSON 网表标准。数值数组（如 S 参数）按 row-major 顺序展平为 JSON 数组，复数 $(a+bi)$ 编码为 `[a, b]` 二元组以兼容标准 JSON。
 
 ## 5. 边界条件（权限、配额、错误处理）
 
@@ -201,14 +201,14 @@ $$H_{LRU} = \sum_{i=1}^{K} \frac{i^{-s}}{H_{N,s}},\quad H_{N,s} = \sum_{j=1}^{N}
 
 PoLaRIS J01 聚类由下列模块协同实现，路径依据 `docs/feature_gap_full_analysis.md` 标注：
 
-- **CLI 入口**：`src/polaris/pipeline/__init__.py:291` — `main()` argparse 调度 `cmd_run/cmd_train/cmd_catalog`，对齐 gdsfactory `gf.cli` 与 Lumerical 脚本命令。
-- **集成流水线**：`pipeline/integrated.py:446` — `IntegratedPipeline` 串联 PDK 加载 → 版图生成 → 仿真 → 优化 → 导出，对齐 gdsfactory 端到端流程与 IPKISS 设计流。
-- **电路仿真**：`sim/simulator.py:57` `CircuitSimulator` + `sim/siepic_netlist.py:133` `parse_siepic_json`，对齐 simphony/SAX S 参数级联。
-- **JAX 后端**：`sim/jax_backend.py:65` `is_jax_available` + `get_jax_devices`，对齐 simphony JAX 双精度后端。
-- **Lumerical 集成**：`sim/lumerical_integration.py` lumapi 封装 + `sim/adjoint_optimizer.py:204` `AdjointOptimizer`（Lumopt 对齐）。
-- **gdsfactory 桥接**：`pdk/gdsfactory_pdk_bridge.py:349` `PolarisPDKRegistry` 注册 48 个 gdsfactory PDK。
-- **Web/REST**：`web/server.py:669` `WebServer` + `web/static/index.html`，提供 RESTful 端点与静态可视化页。
-- **AI 逆向设计**：`ai/inverse_design.py:146/315/536` `RLInverseDesigner`/`GANInverseDesigner`/`DiffusionInverseDesigner`。
+- **CLI 入口**：`modules/orchestrator/src/polaris_orchestrator/__init__.py` — `main()` argparse 调度 `cmd_run/cmd_train/cmd_catalog`，对齐 gdsfactory `gf.cli` 与 Lumerical 脚本命令。
+- **集成流水线**：`pipeline/integrated.py` — `IntegratedPipeline` 串联 PDK 加载 → 版图生成 → 仿真 → 优化 → 导出，对齐 gdsfactory 端到端流程与 IPKISS 设计流。
+- **电路仿真**：`sim/simulator.py` `CircuitSimulator` + `sim/siepic_netlist.py` `parse_siepic_json`，对齐 simphony/SAX S 参数级联。
+- **JAX 后端**：`sim/jax_backend.py` `is_jax_available` + `get_jax_devices`，对齐 simphony JAX 双精度后端。
+- **Lumerical 集成**：`sim/lumerical_integration.py` lumapi 封装 + `sim/adjoint_optimizer.py` `AdjointOptimizer`（Lumopt 对齐）。
+- **gdsfactory 桥接**：`pdk/gdsfactory_pdk_bridge.py` `PolarisPDKRegistry` 注册 48 个 gdsfactory PDK。
+- **Web/REST**：`web/server.py` `WebServer` + `web/static/index.html`，提供 RESTful 端点与静态可视化页。
+- **AI 逆向设计**：`ai/inverse_design.py/315/536` `RLInverseDesigner`/`GANInverseDesigner`/`DiffusionInverseDesigner`。
 
 CPU 纯 Python（规则 26），JAX 仅 CPU 后端；所有失败路径 fail-fast，无 fall-back（规则 14）。
 

@@ -214,18 +214,18 @@ $$f_p^i = \frac{2}{\Delta x^i + \Delta x^{i-1}}(J_p^i - J_p^{i-1}) + G_i - R_i$$
 **实现计划**（对应 year_plan R42，P1 优先级）：
 
 1. **Phase 1（1D 稳态，2 周）**：1D PN 结 DDM
-   - `src/polaris/sim/ddm/solver_1d.py`
+   - `modules/multiphysics/src/polaris_multiphysics/ddm/solver.py`
    - Poisson FVM + Scharfetter-Gummel + Gummel 迭代
    - 验证：PN 结 I-V 与 SILVACO ATLAS / sesame 对照误差 < 2%
 
 2. **Phase 2（2D 稳态，3 周）**：2D 耗尽型 MZM
-   - `src/polaris/sim/ddm/solver_2d.py`
+   - `modules/multiphysics/src/polaris_multiphysics/ddm/solver.py`
    - 2D Voronoi 网格 + Newton-Raphson 全耦合（Gummel 不收敛回退）
    - SRH/Auger/辐射复合 + 场相关迁移率
    - 验证：SOI PN 结耗尽区 $\Delta n_e$ vs Lumerical CHARGE 对照
 
 3. **Phase 3（瞬态+耦合，2 周）**：瞬态 + HEAT 双向耦合
-   - `src/polaris/sim/ddm/transient.py`：隐式 Euler 时间步进
+   - `modules/multiphysics/src/polaris_multiphysics/ddm/solver.py`：隐式 Euler 时间步进
    - 与 A07-HEAT 双向耦合：焦耳热 $Q = \mathbf{J}\cdot\mathbf{E}$ 反馈 HEAT，温度反馈迁移率 $\mu(T)$
    - 载流子浓度反馈 FDE：$\Delta n_e(\Delta n, \Delta p)$ 等效折射率变化
 
@@ -233,7 +233,7 @@ $$f_p^i = \frac{2}{\Delta x^i + \Delta x^{i-1}}(J_p^i - J_p^{i-1}) + G_i - R_i$$
 
 **文件路径建议**：
 ```
-src/polaris/sim/ddm/
+modules/multiphysics/src/polaris_multiphysics/ddm/
 ├── __init__.py
 ├── solver_1d.py         # 1D DDM（PN 结基础）
 ├── solver_2d.py         # 2D DDM（MZM/探测器）

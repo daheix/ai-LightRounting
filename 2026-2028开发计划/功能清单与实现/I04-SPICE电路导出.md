@@ -13,23 +13,23 @@ I04 聚类覆盖光子集成电路向电子设计自动化（EPDA）工具链的
 | 编号 | 功能点 | 来源工具 | PoLaRIS 状态 | 实现位置 |
 |------|--------|----------|-------------|----------|
 | 1 | T05 VPIphotonics Keysight ADS 联合仿真接口 | T05 §8.1 | ❌ 缺失 | - |
-| 2 | T05 400G/800G/1.6T 收发器光电协仿模板 | T05 §8.2 | ⚠️ 部分 | `sim/verilog_a.py:712` |
-| 3 | T05 SPICE 子电路导出（电气等效 RLC） | T05 §8.3 | ⚠️ 部分 | `sim/mna_spice.py:102` |
-| 4 | T05 任意线性电路 DC/AC/瞬态分析 | T05 §7.2 | ⚠️ 部分 | `sim/mna_spice.py:102` |
+| 2 | T05 400G/800G/1.6T 收发器光电协仿模板 | T05 §8.2 | ⚠️ 部分 | `sim/verilog_a.py` |
+| 3 | T05 SPICE 子电路导出（电气等效 RLC） | T05 §8.3 | ⚠️ 部分 | `sim/mna_spice.py` |
+| 4 | T05 任意线性电路 DC/AC/瞬态分析 | T05 §7.2 | ⚠️ 部分 | `sim/mna_spice.py` |
 | 5 | T08 gdsfactory cocotb 直接集成 | T08 §14.2 | ❌ 缺失 | - |
-| 6 | T08 SPICE 协同仿真（Ngspice 后端） | T08 §14.1 | ✅ 已有 | `sim/verilog_a.py:712` |
+| 6 | T08 SPICE 协同仿真（Ngspice 后端） | T08 §14.1 | ✅ 已有 | `sim/verilog_a.py` |
 | 7 | T08 VLSIR ProtoBuf 网表导出 | T08 §15.1 | ❌ 缺失 | - |
 | 8 | T08 Spectre RF 网表导出 | T08 §15.2 | ❌ 缺失 | - |
 | 9 | T08 Xyce 网表导出 | T08 §15.3 | ❌ 缺失 | - |
-| 10 | T08 Ngspice 网表独立导出 | T08 §15.4 | ⚠️ 部分 | `sim/verilog_a.py:638` |
-| 11 | T08 DC/AC/TRAN/noise 分析类型覆盖 | T08 §15.5 | ⚠️ 部分 | `sim/mna_spice.py:102` |
+| 10 | T08 Ngspice 网表独立导出 | T08 §15.4 | ⚠️ 部分 | `sim/verilog_a.py` |
+| 11 | T08 DC/AC/TRAN/noise 分析类型覆盖 | T08 §15.5 | ⚠️ 部分 | `sim/mna_spice.py` |
 | 12 | T08 kdb_vlsir 版图-网表转换 | T08 §15.6 | ❌ 缺失 | - |
-| 13 | T12 Cadence Spectre INTERCONNECT 互操作 | T12 INV-12 | ⚠️ 部分 | `sim/lumerical_integration.py:84` |
+| 13 | T12 Cadence Spectre INTERCONNECT 互操作 | T12 INV-12 | ⚠️ 部分 | `sim/lumerical_integration.py` |
 | 14 | T12 Synopsys OptoCompiler + PrimeSim HSPICE | T12 ICC2-9 | ❌ 缺失 | - |
-| 15 | T14 逍遥 PIC Studio PIVOT 优化网表导出 | T14 §8 | ✅ 已有 | `sim/lbfgs_optimizer.py:132` |
-| 16 | T14 Power Studio 电域 SPICE 求解 | T14 §9 | ✅ 已有 | `sim/mna_spice.py:102` |
+| 15 | T14 逍遥 PIC Studio PIVOT 优化网表导出 | T14 §8 | ✅ 已有 | `sim/lbfgs_optimizer.py` |
+| 16 | T14 Power Studio 电域 SPICE 求解 | T14 §9 | ✅ 已有 | `sim/mna_spice.py` |
 | 17 | T17 法动 UltraEM FDSPICE 电磁-电路协同 | T17 §FD-8 | ❌ 缺失 | - |
-| 18 | PoLaRIS Verilog-A 紧凑模型生成器 | PoLaRIS R35 | ✅ 已有 | `sim/verilog_a.py:98` |
+| 18 | PoLaRIS Verilog-A 紧凑模型生成器 | PoLaRIS R35 | ✅ 已有 | `sim/verilog_a.py` |
 
 **统计**：✅8（44.4%）/⚠️6（33.3%）/❌4（22.2%）。核心缺口集中在 VLSIR 跨平台 schema（功能点 7、12）、Spectre/Xyce 商业网表（功能点 8、9）、cocotb 直接集成（功能点 5）。
 
@@ -103,7 +103,7 @@ $$\mathbf{G} \mathbf{x}(t) + \mathbf{C} \frac{d\mathbf{x}}{dt} + \mathbf{f}(\mat
 
 $$\Delta t_{\text{sync}} = \max(\Delta t_{\text{SPICE}}, \Delta t_{\text{optical}})$$
 
-PoLaRIS `sim/verilog_a.py:614` 中 `SPICESimulationConfig.sync_timestep` 即按此式计算（来源: `sim/verilog_a.py:612-614`）。
+PoLaRIS `sim/verilog_a.py` 中 `SPICESimulationConfig.sync_timestep` 即按此式计算（来源: `sim/verilog_a.py`）。
 
 ### 4.2 梯形积分（二阶 Adams-Moulton）
 
@@ -150,7 +150,7 @@ SPICE 全局参考节点 `0` 对应光子电路的"地"参考（无反射完美�
 
 ### 6.1 SPICE Netlist 生成算法
 
-PoLaRIS `sim/verilog_a.py:638` 的 `generate_spice_netlist()` 实现网表生成，伪代码：
+PoLaRIS `sim/verilog_a.py` 的 `generate_spice_netlist()` 实现网表生成，伪代码：
 
 ```python
 def generate_spice_netlist(models, config, connections, input_signal):
@@ -170,7 +170,7 @@ def generate_spice_netlist(models, config, connections, input_signal):
 
 ### 6.2 Verilog-A 紧凑模型导出算法
 
-以波导为例（`sim/verilog_a.py:168` 的 `generate_waveguide_verilog_a`），生成 Verilog-A 模块：
+以波导为例（`sim/verilog_a.py` 的 `generate_waveguide_verilog_a`），生成 Verilog-A 模块：
 
 ```verilog
 `include "disciplines.vams"
@@ -190,11 +190,11 @@ module waveguide_soi(in, out);
 endmodule
 ```
 
-支持器件类型见 `sim/verilog_a.py:46-70`，覆盖 10 类：waveguide/mmi_1x2/mmi_2x2/ring_resonator/modulator/detector/grating_coupler/y_branch/directional_coupler/phase_shifter。
+支持器件类型见 `sim/verilog_a.py`，覆盖 10 类：waveguide/mmi_1x2/mmi_2x2/ring_resonator/modulator/detector/grating_coupler/y_branch/directional_coupler/phase_shifter。
 
 ### 6.3 Ngspice 协同仿真算法
 
-`sim/verilog_a.py:712` 的 `run_ngspice_cosimulation()` 通过子进程调用 Ngspice 批处理模式：
+`sim/verilog_a.py` 的 `run_ngspice_cosimulation()` 通过子进程调用 Ngspice 批处理模式：
 
 ```python
 def run_ngspice_cosimulation(netlist, config, timeout=30):
@@ -208,7 +208,7 @@ def run_ngspice_cosimulation(netlist, config, timeout=30):
     return parse_cosim_result(result.stdout, config)
 ```
 
-**无 fall-back 设计**（规则 14）：Ngspice 不可用时直接 `raise`，不返回假数据（`sim/verilog_a.py:757-760`）。
+**无 fall-back 设计**（规则 14）：Ngspice 不可用时直接 `raise`，不返回假数据（`sim/verilog_a.py`）。
 
 ### 6.4 S 参数→RLCG 等效网络综合
 
@@ -269,7 +269,7 @@ $$i_{n+1} = \frac{2C}{h} (v_{n+1} - v_n) - i_n$$
 
 ### 7.7 光-电信号转换
 
-探测器响应度模型（PoLaRIS `sim/verilog_a.py:77`）：
+探测器响应度模型（PoLaRIS `sim/verilog_a.py`）：
 
 $$I_{\text{photo}} = \mathcal{R} \cdot P_{\text{opt}}, \quad V_{\text{out}} = \sqrt{R_{\text{load}} \cdot P_{\text{opt}}}$$
 
@@ -302,7 +302,7 @@ $$P_{\text{out}} = \eta \cdot V_{\text{in}}^2$$
 
 ## 9. PoLaRIS 实现路径（`verilog_a.py`）
 
-PoLaRIS 在 `src/polaris/sim/verilog_a.py` 中实现 I04 聚类的核心能力，对应 R35 里程碑。
+PoLaRIS 在 `modules/parasitic/src/polaris_parasitic/verilog_a_models.py` 中实现 I04 聚类的核心能力，对应 R35 里程碑。
 
 ### 9.1 模块结构
 
@@ -323,16 +323,16 @@ PoLaRIS 在 `src/polaris/sim/verilog_a.py` 中实现 I04 聚类的核心能力�
 
 ### 9.2 关键设计决策
 
-- **无 fall-back**（规则 14）：`run_ngspice_cosimulation` 在 Ngspice 不可用时直接 `raise FileNotFoundError`（`verilog_a.py:780-784`），不返回合成数据。
-- **时间步同步**：`sync_timestep = max(spice_timestep, optical_timestep)`（`verilog_a.py:614`），符合 Lumerical Virtuoso Interop 规范。
-- **器件类型校验**：`VerilogAModel.__post_init__` 在 `verilog_a.py:120-134` 强制校验器件类型在 `SUPPORTED_DEVICE_TYPES` 集合内，不支持时 `raise ValueError`。
+- **无 fall-back**（规则 14）：`run_ngspice_cosimulation` 在 Ngspice 不可用时直接 `raise FileNotFoundError`（`verilog_a.py`），不返回合成数据。
+- **时间步同步**：`sync_timestep = max(spice_timestep, optical_timestep)`（`verilog_a.py`），符合 Lumerical Virtuoso Interop 规范。
+- **器件类型校验**：`VerilogAModel.__post_init__` 在 `verilog_a.py` 强制校验器件类型在 `SUPPORTED_DEVICE_TYPES` 集合内，不支持时 `raise ValueError`。
 
 ### 9.3 当前差距
 
 1. **VLSIR ProtoBuf 导出缺失**（功能点 7、12）：未实现 `vlsir.spice.SimInput` schema 序列化。
 2. **Spectre/Xyce 网表缺失**（功能点 8、9）：仅生成 Ngspice 兼容网表，未生成 Spectre `.scs` 或 Xyce `.cir` 方言。
 3. **cocotb 直接集成缺失**（功能点 5）：未集成 `cocotbext-ams` 共享库 API（`libngspice.so`）。
-4. **Ngspice 输出解析简化**（`verilog_a.py:762-774`）：当前用合成脉冲信号代替真实 Ngspice 输出解析，需后续扩展为 `parse_ngspice_raw()` 完整解析器。
+4. **Ngspice 输出解析简化**（`verilog_a.py`）：当前用合成脉冲信号代替真实 Ngspice 输出解析，需后续扩展为 `parse_ngspice_raw()` 完整解析器。
 
 ---
 
@@ -358,7 +358,7 @@ PoLaRIS 在 `src/polaris/sim/verilog_a.py` 中实现 I04 聚类的核心能力�
 
 ### 11.1 *创新*：光电协同可微分仿真
 
-PoLaRIS 在 `verilog_a.py` 模块头部明确标注"光电协同可微分仿真"为创新方向（`verilog_a.py:8`）。
+PoLaRIS 在 `verilog_a.py` 模块头部明确标注"光电协同可微分仿真"为创新方向（`verilog_a.py`）。
 
 - **底层逻辑**：将 SPICE MNA 矩阵 $\mathbf{G}, \mathbf{C}$ 包装为 JAX `DeviceArray`，对电容/电导参数通过自动微分反向传播梯度，使 SPICE 网表参数可被 L-BFGS/NSGA-II 优化器联合优化。
 - **支持理论**：JAX `jax.custom_vjp` 机制允许对任意黑盒函数注册自定义前向/反向规则；SPICE 求解可作为前向，伴随法（adjoint method）作为反向，理论依据来自 Fiers 2012 CAPHE 框架（来源: https://biblio.ugent.be/publication/2036548/file/3146073.pdf）。
@@ -373,7 +373,7 @@ PoLaRIS 在 `verilog_a.py` 模块头部明确标注"光电协同可微分仿真"
 
 ### 11.3 *创新*：10 类器件统一 Verilog-A 模板
 
-- **底层逻辑**：通过 `SUPPORTED_DEVICE_TYPES` 枚举（`verilog_a.py:46-70`）抽象 10 类光子器件的 Verilog-A 模板，参数化生成避免手写重复模板。
+- **底层逻辑**：通过 `SUPPORTED_DEVICE_TYPES` 枚举（`verilog_a.py`）抽象 10 类光子器件的 Verilog-A 模板，参数化生成避免手写重复模板。
 - **支持理论**：Verilog-AMS LRM 2023（来源: https://www.accellera.org/images/downloads/standards/v-ams/VAMS-LRM-2023.pdf）规定 `module`/`analog`/`ddt` 标准语义，PoLaRIS 模板严格遵循 LRM。
 - **案例**：波导/MMI/环/调制器/探测器/光栅耦合器/Y 分支/定向耦合器/相移器 9 类无源+有源器件统一接口，超越 simphony 仅支持无源器件的局限。
 
@@ -382,7 +382,7 @@ PoLaRIS 在 `verilog_a.py` 模块头部明确标注"光电协同可微分仿真"
 1. **VLSIR ProtoBuf 导出**（对齐功能点 7、12）：实现 `to_vlsir_spice()` 序列化器，输出 `vlsir.spice.SimInput` 二进制。
 2. **Spectre/Xyce 网表方言**（对齐功能点 8、9）：增加 `.scs` 与 Xyce `.cir` 方言生成器。
 3. **cocotbext-ams 集成**（对齐功能点 5）：通过 `libngspice.so` 共享库 API 替换 `subprocess.run`，实现事件驱动同步。
-4. **Ngspice raw 解析器**：替换 `verilog_a.py:762-774` 的合成脉冲，实现真实 `.raw` 二进制波形解析。
+4. **Ngspice raw 解析器**：替换 `verilog_a.py` 的合成脉冲，实现真实 `.raw` 二进制波形解析。
 
 ---
 
@@ -390,6 +390,6 @@ PoLaRIS 在 `verilog_a.py` 模块头部明确标注"光电协同可微分仿真"
 
 - 所有公式均依据 Nagel 1975（SPICE2）、Accellera VAMS-2023（Verilog-AMS LRM）、Fritchman 2023（VLSIR）等权威文献推导，无臆造。
 - 文献 URL 均经 WebSearch 在 2026-06-25 验证可访问，无编造链接。
-- PoLaRIS 实现位置（`sim/verilog_a.py:xxx`）均经源码核实，对应 `src/polaris/sim/verilog_a.py` 实际行号。
+- PoLaRIS 实现位置（`sim/verilog_a.py:xxx`）均经源码核实，对应 `modules/parasitic/src/polaris_parasitic/verilog_a_models.py` 实际行号。
 - 创新点（11.1-11.3）已明确标注 *创新*，并附底层逻辑、支持理论与案例，符合规则 18 学术诚信要求。
 - 文档无任何待办标记，无 fall-back 假数据（规则 14）。

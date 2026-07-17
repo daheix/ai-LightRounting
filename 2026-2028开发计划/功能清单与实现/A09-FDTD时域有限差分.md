@@ -13,7 +13,7 @@
 
 FDTD（Finite-Difference Time-Domain，时域有限差分）是 Yee 1966 提出的显式时域 Maxwell 方程求解方法：将连续电磁场在 Yee 交错网格上离散，对旋度方程做半步错位中心差分，形成 E/H 场 leapfrog（蛙跳）时间推进。其优势为：(1) 单次仿真即可得到宽频带响应（DFT 后处理）；(2) 完全显式，无矩阵求解；(3) 严格满足离散 Gauss 定律；(4) 适应任意非均匀、各向异性、色散、非线性材料。FDTD 是光电子器件级全波仿真的"金标准"，被 Lumerical FDTD、Tidy3D、曼光 MaxOptics、SimWorks、法动 UltraEM、逍遥 pMaxwell 全部采用。
 
-**PoLaRIS 定位**：FDTD 是 PoLaRIS 求解器栈"时域全波"路径的核心，与 2.5D-FDTD/A06 共享 Yee 网格生成与 E/H leapfrog 内核（ALGORITHMS.md 附录 C），由 ALGORITHMS.md 附录 B 列为 R39 优先级实现。**当前状态：⚠️ 部分**——`src/polaris/sim/fdtd_simulator.py:279` 仅封装 MEEP/Tidy3D/ANALYTICAL 三后端，非自研 FDTD 内核，依赖外部依赖项。**实现目标**：纯 NumPy + SciPy 自研 FDTD 内核，禁用 GPU（规则 26），与 A04-FDE/A06-2.5D-FDTD 共享 Yee 网格组件。
+**PoLaRIS 定位**：FDTD 是 PoLaRIS 求解器栈"时域全波"路径的核心，与 2.5D-FDTD/A06 共享 Yee 网格生成与 E/H leapfrog 内核（ALGORITHMS.md 附录 C），由 ALGORITHMS.md 附录 B 列为 R39 优先级实现。**当前状态：⚠️ 部分**——`modules/fdtd/src/polaris_fdtd/solver.py` 仅封装 MEEP/Tidy3D/ANALYTICAL 三后端，非自研 FDTD 内核，依赖外部依赖项。**实现目标**：纯 NumPy + SciPy 自研 FDTD 内核，禁用 GPU（规则 26），与 A04-FDE/A06-2.5D-FDTD 共享 Yee 网格组件。
 
 **对标状态**：8 工具共用 FDTD（A 类最大聚类，48 功能点），PoLaRIS 通过 MEEP/Tidy3D 后端间接覆盖 8 项 ✅，但 26 项 ⚠️ 依赖后端能力（光源/边界/材料/网格均不自研），14 项 ❌ 完全缺失（亚像素平滑、StablePML、Bloch 边界、自动非均匀网格、偶极子发射研究等）。最大差距为"非自研内核"，导致光源/边界/材料 API 无法在 PoLaRIS 层统一管理。
 
@@ -263,36 +263,36 @@ PoLaRIS S 参数提取与 A04-FDE 模式归一化共享 `mode_overlap.py` 模块
 
 ### 9.1 当前状态：⚠️ 部分（封装 MEEP/Tidy3D，非自研）
 
-PoLaRIS 现有 FDTD 能力集中在 `src/polaris/sim/fdtd_simulator.py:57`（FDTDBackend 类）和 `:279`（`run_fdtd_simulation` 统一入口），支持 MEEP / Tidy3D / ANALYTICAL 三后端。已覆盖：Yee 网格（`time_domain_circuit.py:33` `YeeGrid`+`YeeGrid3D`）、PML（`PMLBoundary` Berenger + `GedneyPML` UPML）、模式源、Touchstone S 参数导出。未覆盖：自研 leapfrog 内核、CPML、TFSF、亚像素平滑、自动非均匀网格、Bloch 边界、色散材料 ADE、StablePML、远场投影、点云监视器。
+PoLaRIS 现有 FDTD 能力集中在 `modules/fdtd/src/polaris_fdtd/solver.py`（FDTDBackend 类）和 `:279`（`run_fdtd_simulation` 统一入口），支持 MEEP / Tidy3D / ANALYTICAL 三后端。已覆盖：Yee 网格（`time_domain_circuit.py` `YeeGrid`+`YeeGrid3D`）、PML（`PMLBoundary` Berenger + `GedneyPML` UPML）、模式源、Touchstone S 参数导出。未覆盖：自研 leapfrog 内核、CPML、TFSF、亚像素平滑、自动非均匀网格、Bloch 边界、色散材料 ADE、StablePML、远场投影、点云监视器。
 
 ### 9.2 实现计划（对应 year_plan R39，2026 年 11 月-2027 年 1 月）
 
 1. **Phase 1（基础版，3 周）**：2D/3D Yee leapfrog 自研内核
-   - `src/polaris/sim/fdtd/yee_grid.py`（与 A04/A06 共享）
-   - `src/polaris/sim/fdtd/leapfrog.py`（E/H 更新 NumPy 切片向量化）
-   - `src/polaris/sim/fdtd/cpml.py`（Roden & Gedney 2000 CPML）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/yee_grid.py`（与 A04/A06 共享）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/yee_2d.py`（E/H 更新 NumPy 切片向量化）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/cpml.py`（Roden & Gedney 2000 CPML）
    - 验证：自由空间高斯脉冲传播、PML 反射 ≤ −60 dB vs MEEP
 
 2. **Phase 2（源与边界，2 周）**：TFSF + 模式源 + Bloch
-   - `src/polaris/sim/fdtd/sources.py`（TFSF / 模式源 / 偶极子 / 高斯光束）
-   - `src/polaris/sim/fdtd/boundary.py`（PML/PEC/PMC/Periodic/Bloch 统一接口）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/sources.py`（TFSF / 模式源 / 偶极子 / 高斯光束）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/cpml.py`（PML/PEC/PMC/Periodic/Bloch 统一接口）
    - 验证：平面波 TFSF 散射场正确性 vs Mie 解析解
 
 3. **Phase 3（材料与共形，2 周）**：色散材料 ADE + 亚像素平滑
-   - `src/polaris/sim/fdtd/materials.py`（Drude/Lorentz/MCM/Sellmeier ADE）
-   - `src/polaris/sim/fdtd/conformal.py`（Volume-Average + Yu-Mittra 1/2）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/solver.py`（Drude/Lorentz/MCM/Sellmeier ADE）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/solver.py`（Volume-Average + Yu-Mittra 1/2）
    - 验证：金 Drude 色散反射谱 vs Palik 实测数据
 
 4. **Phase 4（监视器与 S 参数，2 周）**：DFT + 远场 + Q 因子
-   - `src/polaris/sim/fdtd/monitors.py`（FieldMonitor / FluxMonitor / ModeMonitor）
-   - `src/polaris/sim/fdtd/postprocess.py`（DFT、远场投影、Q 因子、S 参数）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/monitor.py`（FieldMonitor / FluxMonitor / ModeMonitor）
+   - `modules/multiphysics/src/polaris_multiphysics/varfdtd/monitor.py`（DFT、远场投影、Q 因子、S 参数）
    - 验证：SOI 环谐振器 S 参数 vs Lumerical FDTD 对照（arXiv:2506.16665）
 
 **依赖库**：`numpy`（BLAS 后端，切片向量化）、`scipy.fft`（DFT）、`scipy.signal`（脉冲生成）。禁用 CuPy/CUDA/JAX-GPU/MPI 多卡（规则 26）；单机多核并行可选 `numexpr` 或 `Dask`（CPU 路径）。
 
 **文件路径建议**：
 ```
-src/polaris/sim/fdtd/
+modules/multiphysics/src/polaris_multiphysics/varfdtd/
 ├── __init__.py
 ├── yee_grid.py          # Yee 网格（与 A04/A06 共享）
 ├── leapfrog.py          # E/H leapfrog 主循环（NumPy 向量化）
@@ -333,7 +333,7 @@ src/polaris/sim/fdtd/
   - SOI 环谐振器（半径 5μm，Q>10000）S 参数扫描
   - MMI 1×2 功分器（与 arXiv:2506.16665 基准对照）
   - SOI 光栅耦合器（亚像素平滑 + TFSF 平面波注入）
-  - LNOI MZM 行波电极（与 `pdk/lnoi.py:50` 既有器件库直连）
+  - LNOI MZM 行波电极（与 `pdk/lnoi.py` 既有器件库直连）
   - 超透镜单元 cell（周期边界 + TFSF + 远场投影）
   - SiN 微环克尔非线性（ADE 法 + Kerr 极化）
 
@@ -410,7 +410,7 @@ src/polaris/sim/fdtd/
 
 ### 13.6 质量门禁
 
-- 实现文件位于 `src/polaris/sim/fdtd/`，遵循规则 7（圈复杂度 ≤15、函数 ≤80 行、文件 ≤800 行）。
+- 实现文件位于 `modules/multiphysics/src/polaris_multiphysics/varfdtd/`，遵循规则 7（圈复杂度 ≤15、函数 ≤80 行、文件 ≤800 行）。
 - 测试位于 `tests/test_fdtd_solver.py`，覆盖率 ≥ 90%（规则 10）。
 - 文档字符串标注所有公式来源 URL（规则 18），代码无待办标记与修复标记，无 fall-back（规则 14）。
 - 48 功能点覆盖率目标：Phase 1-4 完成后 ✅+⚠️ ≥ 80%（即 ≥39 项），剩余 ❌ 项目（GPU 加速、Active FDTD、子网格加密、实时场可视化）按规则 26 / Phase 5+ 排期。

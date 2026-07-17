@@ -16,7 +16,7 @@
 | 算法名称 | Redheffer 星积（Redheffer Star Product）S 矩阵级联 |
 | 算法类别 | 多端口散射矩阵二元运算（binary operation on scattering matrices） |
 | 商业对标 | Ansys Lumerical（RCWA/EME 内核）、Tidy3D（RCWA via grcwa）、sax（T10 Backends 8.1-8.15）、simphony（T11 S 参数级联） |
-| PoLaRIS 状态 | ✅ 已有（RCWA/EME 共享 `smatrix.py`；电路级 FG 后端见 `src/polaris/sim/cascade.py:397`） |
+| PoLaRIS 状态 | ✅ 已有（RCWA/EME 共享 `smatrix.py`；电路级 FG 后端见 `modules/circuit/src/polaris_circuit/cascade.py`） |
 | 覆盖功能点 | 14（T01/T04/T10/T11，状态分布 ✅6 / ⚠️4 / ❌4） |
 | 实现优先级 | P2（R37-Q3/Q4，与 A01-RCWA / A02-EME 同期交付） |
 | CPU 约束 | 纯 NumPy/SciPy 实现（规则 26，禁用 GPU） |
@@ -252,23 +252,23 @@ def build_propagation_S(beta, L):
 ### 9.1 当前实现状态
 
 **✅ 已有**：
-- **电路级 S 参数级联**（`src/polaris/sim/cascade.py:397`）：`_cascade_with_sax` 使用 SAX Filipsson-Gunnar 后端（T10 功能点 8.6 ✅）做字典级端口连接级联，对应电路级 S 矩阵体系。
-- **电路分析/评估**（`cascade.py:315` `cascade_circuit`、`dag_scheduler.py:44` `CircuitDAG`）：T10 功能点 8.13/8.14 ✅。
-- **Redheffer 星积共享模块**（`src/polaris/sim/rcwa/smatrix.py`）：RCWA（A01）/ EME（A02）共享，提供 `redheffer_star_product` 与 `cascade_redheffer` 接口。
+- **电路级 S 参数级联**（`modules/circuit/src/polaris_circuit/cascade.py`）：`_cascade_with_sax` 使用 SAX Filipsson-Gunnar 后端（T10 功能点 8.6 ✅）做字典级端口连接级联，对应电路级 S 矩阵体系。
+- **电路分析/评估**（`cascade.py` `cascade_circuit`、`dag_scheduler.py` `CircuitDAG`）：T10 功能点 8.13/8.14 ✅。
+- **Redheffer 星积共享模块**（`modules/multiphysics/src/polaris_multiphysics/rcwa/smatrix.py`）：RCWA（A01）/ EME（A02）共享，提供 `redheffer_star_product` 与 `cascade_redheffer` 接口。
 
 **⚠️ 部分**：
-- 稀疏辅助函数（`subnetwork_decomp.py:51` BlockTridiagonalMatrix，T10-8.3）
-- 后端可互换（`cascade.py:315` 有 SAX 后端，缺多后端互换机制，T10-8.11）
-- analyze_instances（`dag_scheduler.py:44` CircuitDAG，非端口组合分析，T10-8.12）
+- 稀疏辅助函数（`subnetwork_decomp.py` BlockTridiagonalMatrix，T10-8.3）
+- 后端可互换（`cascade.py` 有 SAX 后端，缺多后端互换机制，T10-8.11）
+- analyze_instances（`dag_scheduler.py` CircuitDAG，非端口组合分析，T10-8.12）
 
 **❌ 缺失**（未对齐）：KLU 后端（8.1/8.2/8.4/8.5/8.15）、Additive 后端（8.7）、Forward-only 后端（8.8/8.9）、Sparse COO 后端（8.10）。这些为 sax 专属加速后端，PoLaRIS 采用 `scipy.sparse.linalg` 替代，对齐优先级低。
 
 ### 9.2 文件路径
 
 ```
-src/polaris/sim/rcwa/smatrix.py    # Redheffer 星积核心（RCWA/EME 共享）
-src/polaris/sim/eme_solver.py      # EME 调用 smatrix.py（A02）
-src/polaris/sim/cascade.py         # 电路级 SAX FG 后端（C01）
+modules/multiphysics/src/polaris_multiphysics/rcwa/smatrix.py    # Redheffer 星积核心（RCWA/EME 共享）
+modules/eme/src/polaris_eme/solver.py      # EME 调用 smatrix.py（A02）
+modules/circuit/src/polaris_circuit/cascade.py         # 电路级 SAX FG 后端（C01）
 ```
 
 ### 9.3 依赖库

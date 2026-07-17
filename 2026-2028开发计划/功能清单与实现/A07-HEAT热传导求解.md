@@ -17,7 +17,7 @@
 | T15-6.2 | 曼光 MaxOptics | 瞬态与稳态热传输仿真 | ❌ 缺失 |
 | T15-6.3 | 曼光 MaxOptics | 傅里叶导热方程求解（ρc_p∂T/∂t-∇·(k∇T)=q） | ❌ 缺失 |
 | T15-6.4 | 曼光 MaxOptics | 多种热边界条件（5 类：温度/热流/对流/辐射/热阻） | ❌ 缺失 |
-| T15-6.5 | 曼光 MaxOptics | 灵活的参数扫描工具 | ⚠️ 部分（`src/polaris/data/variant_generator.py:478` 通用扫描，非热专用） |
+| T15-6.5 | 曼光 MaxOptics | 灵活的参数扫描工具 | ⚠️ 部分（`modules/nn/src/polaris_nn/data/variant_generator.py` 通用扫描，非热专用） |
 | T15-6.6 | 曼光 MaxOptics | 独立求解器运行 | ❌ 缺失 |
 | T15-6.7 | 曼光 MaxOptics | 光-热耦合（光吸收生热+热光效应） | ❌ 缺失 |
 | T15-6.8 | 曼光 MaxOptics | 电-热耦合（焦耳热+热电效应） | ❌ 缺失 |
@@ -235,30 +235,30 @@ $$n(T) = n_0 + \frac{dn}{dT}(T - T_0), \quad \left.\frac{dn}{dT}\right|_{Si, 155
 **实现计划**（对应 year_plan R41，2027 年 Q1，P1 优先级）：
 
 1. **Phase 1（稳态基础版，2 周）**：2D FVM 稳态热传导
-   - `src/polaris/sim/heat/mesh.py`：结构化/非结构化网格 + 控制体积
-   - `src/polaris/sim/heat/assembly.py`：刚度矩阵 K + 载荷 Q 组装
-   - `src/polaris/sim/heat/boundary.py`：5 类边界条件
+   - `modules/multiphysics/src/polaris_multiphysics/heat/solver.py`：结构化/非结构化网格 + 控制体积
+   - `modules/multiphysics/src/polaris_multiphysics/heat/solver.py`：刚度矩阵 K + 载荷 Q 组装
+   - `modules/multiphysics/src/polaris_multiphysics/heat/boundary.py`：5 类边界条件
    - 验证：SOI 加热臂稳态温度 vs Lumerical HEAT 误差 < 2%
 
 2. **Phase 2（瞬态 + 非线性，2 周）**：
-   - `src/polaris/sim/heat/transient.py`：隐式 Euler + Crank-Nicolson
-   - `src/polaris/sim/heat/radiation.py`：辐射 Newton 线性化
+   - `modules/multiphysics/src/polaris_multiphysics/heat/transient.py`：隐式 Euler + Crank-Nicolson
+   - `modules/multiphysics/src/polaris_multiphysics/heat/solver.py`：辐射 Newton 线性化
    - 验证：瞬态响应时间常数 vs Lumerical HEAT transient < 5%
 
 3. **Phase 3（多物理场耦合，3 周）**：
-   - `src/polaris/sim/heat/coupling.py`：焦耳热耦合 DDM、光吸收热耦合 FDE/FDTD
-   - `src/polaris/sim/heat/thermo_optic.py`：$n(T) = n_0 + (dn/dT)(T-T_0)$ 反馈 FEEM
+   - `modules/multiphysics/src/polaris_multiphysics/heat/coupling.py`：焦耳热耦合 DDM、光吸收热耦合 FDE/FDTD
+   - `modules/multiphysics/src/polaris_multiphysics/coupling/thermo_optic.py`：$n(T) = n_0 + (dn/dT)(T-T_0)$ 反馈 FEEM
    - 验证：SOI MZM $\pi$ 相移功率 $P_\pi$ vs 文献 < 5%
 
 4. **Phase 4（API + 参数扫描，1 周）**：
-   - `src/polaris/sim/heat/api.py`：`heat_solve(mesh, materials, sources, bcs, options)`
+   - `modules/multiphysics/src/polaris_multiphysics/heat/solver.py`：`heat_solve(mesh, materials, sources, bcs, options)`
    - 与 `data/variant_generator.py` 集成，支持热功率/边界参数扫描
 
 **依赖库**：`numpy`（BLAS）、`scipy.sparse`（稀疏矩阵）、`scipy.sparse.linalg.spsolve`（直接求解）、`scipy.sparse.linalg.gmres`（大规模迭代）。禁用 CuPy/CUDA/JAX-GPU（规则 26）。
 
 **文件路径建议**：
 ```
-src/polaris/sim/heat/
+modules/multiphysics/src/polaris_multiphysics/heat/
 ├── __init__.py
 ├── mesh.py             # 网格与控制体积
 ├── assembly.py         # K/M/Q 组装

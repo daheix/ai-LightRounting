@@ -8,20 +8,20 @@
 
 ## 1. 功能点清单（10 功能点）
 
-G02 聚类聚焦任意 N×N 酉矩阵分解为 2×2 旋转（MZI/分束器 + 相移器）级联的算法族。功能点源自 T11 simphony 第 2.11 节量子仿真模块（功能编号 11.1-11.8）与 PoLaRIS `src/polaris/sim/quantum_photonics.py` 的实现能力，状态分布与聚类清单一致（6/2/2）。
+G02 聚类聚焦任意 N×N 酉矩阵分解为 2×2 旋转（MZI/分束器 + 相移器）级联的算法族。功能点源自 T11 simphony 第 2.11 节量子仿真模块（功能编号 11.1-11.8）与 PoLaRIS `modules/boson/src/polaris_boson/hom.py` 的实现能力，状态分布与聚类清单一致（6/2/2）。
 
 | # | 功能点 | PoLaRIS状态 | 实现位置 | 文献依据 |
 |---|--------|------------|---------|---------|
-| 1 | Clements 矩形通用酉矩阵分解 | ✅ | quantum_photonics.py:557 | Clements 2016 Optica |
+| 1 | Clements 矩形通用酉矩阵分解 | ✅ | quantum_photonics.py | Clements 2016 Optica |
 | 2 | Reck 三角酉矩阵分解 | ❌ | - | Reck 1994 PRL |
-| 3 | MZI 参数化（分束器+相位编码） | ✅ | quantum_photonics.py:135 | Miller 2015 Optica |
-| 4 | T_mn 二模变换算子级联 | ✅ | quantum_photonics.py:40 | Clements 2016 |
-| 5 | 任意 N×N 酉矩阵合成（含对角相移 D） | ✅ | quantum_photonics.py:557 | de Guise 2018 |
-| 6 | 损耗补偿（均匀损耗假设） | ✅ | quantum_photonics.py:329 | García-Patrón 2024 |
-| 7 | 相位漂移 QR 酉性修正 | ⚠️ | quantum_photonics.py:557 | Clements 2016 |
+| 3 | MZI 参数化（分束器+相位编码） | ✅ | quantum_photonics.py | Miller 2015 Optica |
+| 4 | T_mn 二模变换算子级联 | ✅ | quantum_photonics.py | Clements 2016 |
+| 5 | 任意 N×N 酉矩阵合成（含对角相移 D） | ✅ | quantum_photonics.py | de Guise 2018 |
+| 6 | 损耗补偿（均匀损耗假设） | ✅ | quantum_photonics.py | García-Patrón 2024 |
+| 7 | 相位漂移 QR 酉性修正 | ⚠️ | quantum_photonics.py | Clements 2016 |
 | 8 | 机器学习全局校准 | ❌ | - | Zheng 2024 arXiv:2407.02207 |
-| 9 | 经典-量子酉矩阵转换 | ✅ | quantum_photonics.py:557 | Carolan 2015 Science |
-| 10 | 多端口深度优化（Clements vs Reck） | ⚠️ | quantum_photonics.py:557 | Clements 2016 |
+| 9 | 经典-量子酉矩阵转换 | ✅ | quantum_photonics.py | Carolan 2015 Science |
+| 10 | 多端口深度优化（Clements vs Reck） | ⚠️ | quantum_photonics.py | Clements 2016 |
 
 **说明**：⚠️ 项为简化或实验性实现；❌ 项（Reck 三角分解、ML 全局校准）当前缺失，已列入开发路线。无任何 fall-back 假数据，酉性修正阈值与简化实现均明确标注。
 
@@ -222,7 +222,7 @@ $$p(\theta) = \sin(2\theta), \quad \theta \in [0, \pi/2]; \qquad p(\phi) = \frac
 
 ### 9.1 模块架构
 
-`src/polaris/sim/quantum_photonics.py` 中 G02 相关函数分布于三层：
+`modules/boson/src/polaris_boson/hom.py` 中 G02 相关函数分布于三层：
 
 1. **MZI 单元层**：`beamsplitter_unitary(theta, phi)`（line 135）构造 2×2 酉矩阵，作为 T_mn 算子的基本构件。
 2. **分解主算法层**：`clements_unitary(N, thetas, phis, alphas)`（line 557）实现 Clements 矩形分解的合成方向（参数→矩阵），按交错层序级联 $N(N-1)/2$ 个 T_mn 算子，末端附加对角相移 $D(\boldsymbol{\alpha})$。酉性漂移由 QR 重投影保证（阈值 $10^{-6}$）。
@@ -248,7 +248,7 @@ $$p(\theta) = \sin(2\theta), \quad \theta \in [0, \pi/2]; \qquad p(\phi) = \frac
 
 | 能力 | PoLaRIS | T11 simphony | 差距 |
 |------|---------|--------------|------|
-| Clements 矩形分解 | ✅ quantum_photonics.py:557 | ✅（量子仿真模块 11.1-11.3） | 已对齐 |
+| Clements 矩形分解 | ✅ quantum_photonics.py | ✅（量子仿真模块 11.1-11.3） | 已对齐 |
 | Reck 三角分解 | ❌ | ✅（标准实现） | 中 |
 | MZI 参数化 | ✅ line 135 | ✅ | 已对齐 |
 | 任意 N×N 酉合成 | ✅ | ✅ | 已对齐 |
@@ -290,7 +290,7 @@ $$p(\theta) = \sin(2\theta), \quad \theta \in [0, \pi/2]; \qquad p(\phi) = \frac
 ## 学术诚信声明
 
 - 全部公式源自 Reck 1994 / Clements 2016 / de Guise 2018 / Carolan 2015 / Pai 2019 / García-Patrón 2024 等公开文献，URL 经 WebSearch 验证可访问。
-- PoLaRIS 实现位置已溯源至 `src/polaris/sim/quantum_photonics.py` 具体行号（与 G01 文档及 `docs/feature_gap_full_analysis.md` 一致），无臆造。
+- PoLaRIS 实现位置已溯源至 `modules/boson/src/polaris_boson/hom.py` 具体行号（与 G01 文档及 `docs/feature_gap_full_analysis.md` 一致），无臆造。
 - 简化实现（QR 阈值修正、独立损耗模型）均明确标注为简化版，与完整理论值对照，无 fall-back 假数据。
 - 创新点（损耗联合评估、QR 自动重投影、经典-量子转换桥梁）均标注"创新"并记录底层逻辑与支持理论。
 - ❌ 项（Reck 三角分解、ML 全局校准）明确标注缺失并给出实现时间表，不冒充已有能力。

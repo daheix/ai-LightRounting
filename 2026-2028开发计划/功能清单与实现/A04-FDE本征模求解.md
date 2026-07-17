@@ -265,7 +265,7 @@ $$n_g = n_{\mathrm{eff}} - \lambda \frac{dn_{\mathrm{eff}}}{d\lambda}$$
 
 ### 9.1 当前状态
 
-**❌ 完全缺失自研 FDE 内核**。PoLaRIS 现有 `ModeSolver`（`src/polaris/sim/lumerical_integration.py:84`）仅通过 Lumerical MODE 集成实验性覆盖（R31-R33），依赖外部 Lumerical 进程，未达商业级。核心缺口：稀疏本征值求解、自研 $n_{\mathrm{eff}}$/TE-TM 分数/损耗计算、共形网格、自管 PML/PEC/PMC、反向传输模式修正、波长切换免重跑。
+**❌ 完全缺失自研 FDE 内核**。PoLaRIS 现有 `ModeSolver`（`modules/lumerical/src/polaris_lumerical/_lumerical.py`）仅通过 Lumerical MODE 集成实验性覆盖（R31-R33），依赖外部 Lumerical 进程，未达商业级。核心缺口：稀疏本征值求解、自研 $n_{\mathrm{eff}}$/TE-TM 分数/损耗计算、共形网格、自管 PML/PEC/PMC、反向传输模式修正、波长切换免重跑。
 
 ### 9.2 实现排期
 
@@ -280,9 +280,9 @@ $$n_g = n_{\mathrm{eff}} - \lambda \frac{dn_{\mathrm{eff}}}{d\lambda}$$
 
 ### 9.3 实现文件
 
-- `src/polaris/sim/fde_solver.py`（待新建，R37-Q1）
-- `src/polaris/sim/fde_grid.py`（Yee 网格生成器，与 FDFD/2.5D-FDTD 共享，待新建）
-- `src/polaris/sim/fde_pml.py`（SC-PML 拉伸坐标，与 FDFD/2.5D-FDTD 共享，待新建）
+- `modules/fde/src/polaris_fde/solver.py`（待新建，R37-Q1）
+- `modules/fde/src/polaris_fde/solver.py`（Yee 网格生成器，与 FDFD/2.5D-FDTD 共享，待新建）
+- `modules/fde/src/polaris_fde/solver.py`（SC-PML 拉伸坐标，与 FDFD/2.5D-FDTD 共享，待新建）
 - 测试基准：SOI 220nm 条形波导（$n_{\mathrm{eff}}$ 与 Lumerical 对齐至 1e-4 相对误差）
 
 ---

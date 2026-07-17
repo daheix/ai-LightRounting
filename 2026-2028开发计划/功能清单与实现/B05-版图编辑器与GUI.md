@@ -340,9 +340,9 @@ PoLaRIS 当前 GUI 由两模块组成：
 
 | 模块 | 文件 | 能力 | 局限 |
 |------|------|------|------|
-| matplotlib 渲染 | `src/polaris/eval/layout_render.py:123` | `render_layout` 静态渲染器件矩形+波导折线+端口+拥塞热力图，支持 GDSII/OASIS 导出 | 非交互式，无 pan/zoom，无选择编辑，无撤销重做，无图层管理 |
-| Web 服务器 | `src/polaris/web/server.py:329` | `PolarisHTTPRequestHandler` 提供 REST API（/api/health、/api/jobs、/api/showcase/*）+ HTML 静态页 | 仅数据 API，无图形编辑画布，无 DRC 高亮 |
-| PCell 编程创建 | `src/polaris/pdk/pcell.py:576` | `polaris_cell` 装饰器 + 4 内置 PCell（ring/mmi/straight/y_branch） | 代码驱动，非拖拽式 GUI |
+| matplotlib 渲染 | `modules/gds_tools/src/polaris_gds_tools/layout_render.py` | `render_layout` 静态渲染器件矩形+波导折线+端口+拥塞热力图，支持 GDSII/OASIS 导出 | 非交互式，无 pan/zoom，无选择编辑，无撤销重做，无图层管理 |
+| Web 服务器 | `modules/gui/src/polaris_gui/web_server.py` | `PolarisHTTPRequestHandler` 提供 REST API（/api/health、/api/jobs、/api/showcase/*）+ HTML 静态页 | 仅数据 API，无图形编辑画布，无 DRC 高亮 |
+| PCell 编程创建 | `modules/pdk_advanced/src/polaris_pdk_advanced/pcell.py` | `polaris_cell` 装饰器 + 4 内置 PCell（ring/mmi/straight/y_branch） | 代码驱动，非拖拽式 GUI |
 
 ### 10.2 覆盖率统计（32 功能点）
 
@@ -359,7 +359,7 @@ PoLaRIS 当前 GUI 由两模块组成：
 2. **无撤销重做栈**：编辑操作不可逆，违反 KLayout/L-Edit/Magic 三大金标准
 3. **无 BSP/四叉树索引**：大规模版图（>10万形状）查询 O(n)，无法实时
 4. **无图层管理 GUI**：仅有 GDS 层号映射（`pdk/layer_map.py`），无可视化层控制面板
-5. **无 DRC 实时高亮**：DRC 结果仅 `DRCResult` 数据类（`sim/klayout_drc.py:193`），无画布叠加
+5. **无 DRC 实时高亮**：DRC 结果仅 `DRCResult` 数据类（`sim/klayout_drc.py`），无画布叠加
 6. **无 2.5D 视图**：仅 2D matplotlib，对齐 KLayout 2.5D OpenGL 视图完全缺失
 7. **无对象抓取（gravity/snapping）**：T06 1.4、T06 3.5、T06 6.4 三处明确缺失
 

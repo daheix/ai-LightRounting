@@ -6,7 +6,7 @@
 > 覆盖功能点：24（PoLaRIS / T03 OptoDesigner §4-5 / T08 gdsfactory 2.5 / T12 Innovus INV-3）
 > 状态分布：✅14 / ⚠️6 / ❌4（PoLaRIS 已完整覆盖 JPS-Bend 弯曲感知布线，性能优化 161s→19s）
 > 规则依据：project_rules.md 规则 18（学术诚信）/ 规则 14（禁止 fall-back）/ 规则 26（纯 CPU）
-> 关联文档：`src/polaris/router/waveguide_router.py` / `src/polaris/router/path_geometry.py` / `docs/feature_gap_full_analysis.md` §5.2 / `00-算法聚类清单.md` E01 行
+> 关联文档：`modules/router_advanced/src/polaris_router_advanced/waveguide_router.py` / `modules/router_advanced/src/polaris_router_advanced/path_geometry.py` / `docs/feature_gap_full_analysis.md` §5.2 / `00-算法聚类清单.md` E01 行
 
 ---
 
@@ -188,7 +188,7 @@ function jump(x, y, d, straight):
 
 ### 7.1 平台约束参数
 
-PoLaRIS `PLATFORM_CONSTRAINTS`（`waveguide_router.py:504`）固化 4 平台约束，全部标注 foundry 来源：
+PoLaRIS `PLATFORM_CONSTRAINTS`（`waveguide_router.py`）固化 4 平台约束，全部标注 foundry 来源：
 
 | 平台 | min_bend_radius_um | min_spacing_um | 来源 |
 |------|-------------------|---------------|------|
@@ -227,9 +227,9 @@ A* 返回网格坐标列表 `[(gx, gy), ...]`，转换为画布坐标 `[(gx * gr
 
 ### 9.1 实现位置
 
-- `src/polaris/router/waveguide_router.py` — `GridRouter` 类（A* + JPS-Bend 主逻辑）、`route_connection` 入口函数、`PLATFORM_CONSTRAINTS`、`WaveguidePath` 数据结构。
-- `src/polaris/router/obstacle_grid.py` — `ObstacleGrid` 自适应障碍栅格、`auto_grid_size` 自适应分辨率。
-- `src/polaris/router/path_geometry.py` — `euler_bend` / `arc_bend` / `s_bend` / `path_length` / `path_loss` / `equalize_length` / `check_min_spacing` / `count_crossings`。
+- `modules/router_advanced/src/polaris_router_advanced/waveguide_router.py` — `GridRouter` 类（A* + JPS-Bend 主逻辑）、`route_connection` 入口函数、`PLATFORM_CONSTRAINTS`、`WaveguidePath` 数据结构。
+- `modules/router_advanced/src/polaris_router_advanced/obstacle_grid.py` — `ObstacleGrid` 自适应障碍栅格、`auto_grid_size` 自适应分辨率。
+- `modules/router_advanced/src/polaris_router_advanced/path_geometry.py` — `euler_bend` / `arc_bend` / `s_bend` / `path_length` / `path_loss` / `equalize_length` / `check_min_spacing` / `count_crossings`。
 
 ### 9.2 三步性能优化（161s → 19s）
 

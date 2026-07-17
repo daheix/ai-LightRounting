@@ -12,22 +12,22 @@
 
 | 编号 | 功能点 | 来源工具 | PoLaRIS 状态 | 实现位置 |
 |------|--------|----------|-------------|----------|
-| F04-01 | SGD 随机梯度下降（Robbins & Monro 1951） | T10/PoLaRIS | ✅已有 | `sim/adjoint_optimizer.py:204` |
+| F04-01 | SGD 随机梯度下降（Robbins & Monro 1951） | T10/PoLaRIS | ✅已有 | `sim/adjoint_optimizer.py` |
 | F04-02 | SGD-M 动量法（Polyak 1964） | T13/PoLaRIS | ⚠️部分 | PyTorch `optim.SGD(momentum>0)` 可用但 PPO 默认 Adam |
 | F04-03 | Nesterov 加速梯度 NAG（Nesterov 1983） | T13/PoLaRIS | ⚠️部分 | PyTorch `nesterov=True` 支持但未默认启用 |
-| F04-04 | Adam 优化器（Kingma & Ba 2015） | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py:86` `optim.Adam(lr=3e-4)` |
+| F04-04 | Adam 优化器（Kingma & Ba 2015） | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py` `optim.Adam(lr=3e-4)` |
 | F04-05 | AMSGrad（Reddi 2018） | T13 商业对照 | ❌缺失 | 待补齐（修正 Adam 收敛性缺陷） |
 | F04-06 | AdaMax（Kingma & Ba 2015） | T13 商业对照 | ❌缺失 | 待补齐（基于 ∞-范数的 Adam 变体） |
 | F04-07 | AdamW（Loshchilov & Hutter 2019） | T13/PoLaRIS | ⚠️部分 | PyTorch `optim.AdamW` 可用但未在 PPO 默认 |
-| F04-08 | L-BFGS 拟牛顿（Liu & Nocedal 1989） | T01/T04/PoLaRIS | ✅已有 | `sim/lbfgs_optimizer.py:132` |
-| F04-09 | 伴随自动微分（Adjoint Autodiff） | T04/T10/PoLaRIS | ✅已有 | `sim/autodiff.py:40` `compute_gradient/vjp/jvp` |
+| F04-08 | L-BFGS 拟牛顿（Liu & Nocedal 1989） | T01/T04/PoLaRIS | ✅已有 | `sim/lbfgs_optimizer.py` |
+| F04-09 | 伴随自动微分（Adjoint Autodiff） | T04/T10/PoLaRIS | ✅已有 | `sim/autodiff.py` `compute_gradient/vjp/jvp` |
 | F04-10 | JAX 优化器接口（jax.example_libraries） | T10 | ⚠️部分 | PoLaRIS 用 L-BFGS/Adam，非 jax 原生优化器 |
-| F04-11 | Mini-batch 梯度估计 | T01/T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py:140` `_process_minibatch` |
+| F04-11 | Mini-batch 梯度估计 | T01/T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py` `_process_minibatch` |
 | F04-12 | 梯度裁剪（Gradient Clipping） | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py` `clip_grad_norm_(max_grad_norm=0.5)` |
-| F04-13 | 学习率调度 cosine annealing（Loshchilov & Hutter 2017） | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py:95` `_get_lr` cosine 分支 |
-| F04-14 | 学习率调度 linear warmup | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py:105` `lr_warmup_steps` 线性升温 |
-| F04-15 | 形状优化-水平集（Level Set Shape Opt） | T04 | ⚠️部分 | `sim/level_set_solver.py:417` `LevelSet+HJSolver` 完整，非显式边界梯度 |
-| F04-16 | 逆向设计平台（Inverse Design Platform） | T04 | ⚠️部分 | `sim/ai_inverse_design.py:382` `RLInverseDesigner` 实验性 |
+| F04-13 | 学习率调度 cosine annealing（Loshchilov & Hutter 2017） | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py` `_get_lr` cosine 分支 |
+| F04-14 | 学习率调度 linear warmup | T13/PoLaRIS | ✅已有 | `trainer/ppo_torch.py` `lr_warmup_steps` 线性升温 |
+| F04-15 | 形状优化-水平集（Level Set Shape Opt） | T04 | ⚠️部分 | `sim/level_set_solver.py` `LevelSet+HJSolver` 完整，非显式边界梯度 |
+| F04-16 | 逆向设计平台（Inverse Design Platform） | T04 | ⚠️部分 | `sim/ai_inverse_design.py` `RLInverseDesigner` 实验性 |
 
 **统计**：✅8（50%）/ ⚠️6（37.5%）/ ❌2（12.5%）。一阶（SGD/Adam）+ 二阶（L-BFGS）核心优化栈已对齐 Stable-Baselines3 / lumopt 商业级，AMSGrad/AdaMax 为待补齐的 Adam 收敛性修正变体。
 
@@ -91,7 +91,7 @@ $$\mathcal{L}^{\text{CLIP}}(\theta) = \mathbb{E}_t\left[\min\left(r_t(\theta)\ha
 
 $$\nabla_{\mathbf{x}} \mathcal{J} = \text{Re}\left[\langle \mathbf{E}^{\text{adj}}, \frac{\partial \mathbf{A}}{\partial x_i}\mathbf{E}^{\text{fwd}}\rangle\right]$$
 
-其中 $\mathbf{A}\mathbf{E}^{\text{fwd}}=\mathbf{b}$ 为正向 Maxwell 方程，$\mathbf{A}^H\mathbf{E}^{\text{adj}} = \partial\mathcal{J}/\partial\mathbf{E}^*$ 为伴随方程。PoLaRIS 通过 JAX `vjp` 自动构造伴随，单次反向求解获得全参数梯度（`sim/autodiff.py:40`）。
+其中 $\mathbf{A}\mathbf{E}^{\text{fwd}}=\mathbf{b}$ 为正向 Maxwell 方程，$\mathbf{A}^H\mathbf{E}^{\text{adj}} = \partial\mathcal{J}/\partial\mathbf{E}^*$ 为伴随方程。PoLaRIS 通过 JAX `vjp` 自动构造伴随，单次反向求解获得全参数梯度（`sim/autodiff.py`）。
 
 ### 4.3 二阶曲率信息采样
 
@@ -99,7 +99,7 @@ L-BFGS 通过最近 $m$ 步迭代对 $(\mathbf{s}_k, \mathbf{y}_k)$ 保存曲率
 
 $$\mathbf{s}_k = \mathbf{w}_{k+1} - \mathbf{w}_k, \quad \mathbf{y}_k = \nabla f(\mathbf{w}_{k+1}) - \nabla f(\mathbf{w}_k)$$
 
-PoLaRIS `LBFGSOptimizer`（`sim/lbfgs_optimizer.py:132`）默认 $m=10$，超出后丢弃最旧对，内存复杂度 $O(md)$。
+PoLaRIS `LBFGSOptimizer`（`sim/lbfgs_optimizer.py`）默认 $m=10$，超出后丢弃最旧对，内存复杂度 $O(md)$。
 
 ---
 
@@ -263,7 +263,7 @@ $$\beta_i = \rho_i \mathbf{y}_i^T \mathbf{r}, \quad \mathbf{r} \leftarrow \mathb
 
 $$\eta_t = \eta_{\min} + \frac{1}{2}(\eta_{\max} - \eta_{\min})\left(1 + \cos\left(\frac{T_{\text{cur}}}{T_{\max}}\pi\right)\right)$$
 
-PoLaRIS 实现于 `ppo_torch.py:110`：`return cfg.lr * 0.5 * (1.0 + math.cos(math.pi * progress))`。
+PoLaRIS 实现于 `ppo_torch.py`：`return cfg.lr * 0.5 * (1.0 + math.cos(math.pi * progress))`。
 
 ---
 
@@ -301,15 +301,15 @@ PoLaRIS 实现于 `ppo_torch.py:110`：`return cfg.lr * 0.5 * (1.0 + math.cos(ma
 
 | 模块 | 文件 | 职责 |
 |------|------|------|
-| Adam 优化器 | `src/polaris/trainer/ppo_torch.py:86` | `optim.Adam(lr=3e-4)` PPO 训练主优化器 |
-| 学习率调度 | `src/polaris/trainer/ppo_torch.py:95-111` | `_get_lr` 支持 constant/cosine/linear + warmup |
-| 梯度裁剪 | `src/polaris/trainer/ppo_torch.py` | `clip_grad_norm_(max_grad_norm=0.5)` |
-| L-BFGS 二阶 | `src/polaris/sim/lbfgs_optimizer.py:132` | `LBFGSOptimizer` 两步递归 + Wolfe 线搜索 |
-| 伴随自动微分 | `src/polaris/sim/autodiff.py:40` | `compute_gradient/vjp/jvp` JAX 自动微分 |
-| 伴随优化器 | `src/polaris/sim/adjoint_optimizer.py:204` | `AdjointOptimizer` JAX 驱动梯度下降 |
-| 水平集优化 | `src/polaris/sim/level_set_solver.py:417` | `LevelSet + HJSolver` 形状优化 |
-| 拓扑优化 | `src/polaris/sim/topology_optimizer.py:189` | `TopologyOptimizer` 水平集方法 |
-| 多目标优化器 | `src/polaris/sim/multi_objective_optimizer.py:52` | `NSGA2/3 + PSO + CMA-ES` 全局优化 |
+| Adam 优化器 | `modules/trainer/src/polaris_trainer/ppo.py` | `optim.Adam(lr=3e-4)` PPO 训练主优化器 |
+| 学习率调度 | `modules/trainer/src/polaris_trainer/ppo.py` | `_get_lr` 支持 constant/cosine/linear + warmup |
+| 梯度裁剪 | `modules/trainer/src/polaris_trainer/ppo.py` | `clip_grad_norm_(max_grad_norm=0.5)` |
+| L-BFGS 二阶 | `modules/optimizer/src/polaris_optimizer/lbfgs.py` | `LBFGSOptimizer` 两步递归 + Wolfe 线搜索 |
+| 伴随自动微分 | `modules/inverse/src/polaris_inverse/adjoint.py` | `compute_gradient/vjp/jvp` JAX 自动微分 |
+| 伴随优化器 | `modules/inverse/src/polaris_inverse/adjoint.py` | `AdjointOptimizer` JAX 驱动梯度下降 |
+| 水平集优化 | `modules/inverse/src/polaris_inverse/level_set.py` | `LevelSet + HJSolver` 形状优化 |
+| 拓扑优化 | `modules/optimizer/src/polaris_optimizer/topology.py` | `TopologyOptimizer` 水平集方法 |
+| 多目标优化器 | `modules/optimizer/src/polaris_optimizer/nsga.py` | `NSGA2/3 + PSO + CMA-ES` 全局优化 |
 
 ### 9.2 实现选型决策
 

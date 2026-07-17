@@ -4,7 +4,7 @@
 > 类别: 版图 DRC 类
 > 优先级: P1
 > 生成时间: 2026-06-25
-> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T08/T09/T14）、`00-算法聚类清单.md`、`src/polaris/eval/layout_render.py`、`src/polaris/data/gds_loader.py`
+> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T08/T09/T14）、`00-算法聚类清单.md`、`modules/gds_tools/src/polaris_gds_tools/layout_render.py`、`modules/nn/src/polaris_nn/data/gds_loader.py`
 > 学术诚信：GDSII 二进制格式规范溯源至 Calma GDSII Stream Format（Rubin 1994 附录 C）与 gdstk C++ 实现（Heitzmann 2023），多边形布尔运算溯源至 Sutherland-Hodgman 1974 与 Greiner-Hormann 1998；所有 layer 编号来自 SiEPIC EBeam PDK / ubcpdk / gdsfactory generic_pdk 开源仓库实际源码（规则 18），无 fall-back 编造（规则 14）。
 
 ## 覆盖功能点清单
@@ -13,21 +13,21 @@
 
 | 编号 | 工具 | 功能点 | PoLaRIS 状态 |
 |------|------|--------|------------|
-| T02-1 | Luceda IPKISS | Python 参数化器件设计 | ✅ 已有（pdk/pcell.py:576） |
-| T02-2 | Luceda IPKISS | 参数化器件版图与仿真链接 | ✅ 已有（sim/layout_aware.py:361） |
+| T02-1 | Luceda IPKISS | Python 参数化器件设计 | ✅ 已有（pdk/pcell.py） |
+| T02-2 | Luceda IPKISS | 参数化器件版图与仿真链接 | ✅ 已有（sim/layout_aware.py） |
 | T02-3 | Luceda IPKISS | 第三方工具联合仿真 | ⚠️ 部分（Lumerical/Tidy3D 实验性） |
-| T02-16 | Luceda IPKISS | 完整 GDS 导出（Full GDS Export） | ✅ 已有（eval/layout_render.py:331） |
-| T03-1 | OptoDesigner | Design Intent 设计意图层 | ⚠️ 部分（pdk/optodesigner.py:101 实验性） |
-| T03-5 | OptoDesigner | 丰富元件库 | ✅ 已有（pdk/catalog.py:227） |
+| T02-16 | Luceda IPKISS | 完整 GDS 导出（Full GDS Export） | ✅ 已有（eval/layout_render.py） |
+| T03-1 | OptoDesigner | Design Intent 设计意图层 | ⚠️ 部分（pdk/optodesigner.py 实验性） |
+| T03-5 | OptoDesigner | 丰富元件库 | ✅ 已有（pdk/catalog.py） |
 | T03-7 | OptoDesigner | 无限层级层次结构 | ⚠️ 部分（HierarchicalPlacer 单层分块） |
 | T03-10 | OptoDesigner | GDSII/CIF 导入导出 | ⚠️ 部分（无 CIF 格式） |
 | T03-11 | OptoDesigner | 自定义 GDS 库 | ✅ 已有（DeviceCatalog） |
 | T03-13 | OptoDesigner | 离散化引擎 | ✅ 已有（KLayout 集成） |
 | T08-1.1 | gdsfactory | `@gf.cell` PCell 缓存装饰器 | ✅ 已有（polaris_cell 装饰器） |
-| T08-1.2 | gdsfactory | Component 类（多边形/端口元数据） | ✅ 已有（pdk/device.py:85） |
-| T08-1.3 | gdsfactory | KLayout C++ 几何引擎后端 | ✅ 已有（data/gds_loader.py:468） |
-| T08-1.4 | gdsfactory | 内置组件库 `gf.components` | ✅ 已有（pdk/catalog.py:453） |
-| T08-6.1 | gdsfactory | KLayout C++ 几何引擎 | ✅ 已有（sim/klayout_drc.py:238） |
+| T08-1.2 | gdsfactory | Component 类（多边形/端口元数据） | ✅ 已有（pdk/device.py） |
+| T08-1.3 | gdsfactory | KLayout C++ 几何引擎后端 | ✅ 已有（data/gds_loader.py） |
+| T08-1.4 | gdsfactory | 内置组件库 `gf.components` | ✅ 已有（pdk/catalog.py） |
+| T08-6.1 | gdsfactory | KLayout C++ 几何引擎 | ✅ 已有（sim/klayout_drc.py） |
 | T08-7.1 | gdsfactory | GDSII 导出 `write_gds()` | ✅ 已有（export_gds） |
 | T08-7.2 | gdsfactory | OASIS 导出 | ✅ 已有（export_oasis） |
 | T08-7.3 | gdsfactory | STL 导出（3D 打印） | ❌ 缺失 |
@@ -221,13 +221,13 @@ $$A = \frac{1}{2} \left| \sum_{i=0}^{n-1} (x_i y_{i+1} - x_{i+1} y_i) \right|, \
 **当前状态**：✅ 已有生产可用实现（22/36 功能点覆盖）。
 
 **已有实现位置**：
-- `src/polaris/eval/layout_render.py:331-384` — `export_gds` / `export_oasis`（通过 `klayout.db` 写出，dbu=1nm，layer map 来自 `polaris/pdk/layer_map.py`）
-- `src/polaris/eval/layout_render.py:123-178` — `render_layout` matplotlib 版图渲染（器件矩形 + 波导折线 + 端口标记 + 拥塞热力图）
-- `src/polaris/eval/layout_render.py:183-328` — `_create_klayout_layout` / `_place_device_boxes` / `_place_port_markers` / `_place_waveguide_paths` 渲染管线（DEVREC+PIN SiEPIC 标准格式）
-- `src/polaris/data/gds_loader.py:1-468` — `load_gds_to_circuit` SiEPIC GDS 反向解析（8 步算法：实例收集→DEVREC 参数匹配→PIN 提取→端口匹配→器件匹配→连接构建→DeviceSpec→画布尺寸）
-- `src/polaris/sim/klayout_drc.py:238` — `KLayoutDRCRunner` 封装 `Region.width_check/space_check/notch_check/enclosed_check/area_check/density_check` 6 类 DRC
-- `src/polaris/sim/lvs.py:121` — `extract_netlist_from_gds` 从 GDS 提取网表（与 B03-LVS 共享）
-- `src/polaris/pdk/layer_map.py` — `POLARIS_GDS_LAYER_MAP` 36 层真实 foundry 编号（WG=1,0 / DEVREC=68,0 / PIN=69,0 / FLOORPLAN=99,0 等，借鉴 SiEPIC+ubcpdk+gdsfactory）
+- `modules/gds_tools/src/polaris_gds_tools/layout_render.py` — `export_gds` / `export_oasis`（通过 `klayout.db` 写出，dbu=1nm，layer map 来自 `polaris/pdk/layer_map.py`）
+- `modules/gds_tools/src/polaris_gds_tools/layout_render.py` — `render_layout` matplotlib 版图渲染（器件矩形 + 波导折线 + 端口标记 + 拥塞热力图）
+- `modules/gds_tools/src/polaris_gds_tools/layout_render.py` — `_create_klayout_layout` / `_place_device_boxes` / `_place_port_markers` / `_place_waveguide_paths` 渲染管线（DEVREC+PIN SiEPIC 标准格式）
+- `modules/nn/src/polaris_nn/data/gds_loader.py` — `load_gds_to_circuit` SiEPIC GDS 反向解析（8 步算法：实例收集→DEVREC 参数匹配→PIN 提取→端口匹配→器件匹配→连接构建→DeviceSpec→画布尺寸）
+- `modules/verify_advanced/src/polaris_verify_advanced/klayout_drc.py` — `KLayoutDRCRunner` 封装 `Region.width_check/space_check/notch_check/enclosed_check/area_check/density_check` 6 类 DRC
+- `modules/lvs/src/polaris_lvs/compare.py` — `extract_netlist_from_gds` 从 GDS 提取网表（与 B03-LVS 共享）
+- `modules/verify_advanced/src/polaris_verify_advanced/_layer_map.py` — `POLARIS_GDS_LAYER_MAP` 36 层真实 foundry 编号（WG=1,0 / DEVREC=68,0 / PIN=69,0 / FLOORPLAN=99,0 等，借鉴 SiEPIC+ubcpdk+gdsfactory）
 
 **状态评估**：
 - **优势**：GDSII 读写完整、SiEPIC 标准兼容、layer 编号真实 foundry、与 AI 布局布线引擎直连（placements/paths 直接渲染）
@@ -236,9 +236,9 @@ $$A = \frac{1}{2} \left| \sum_{i=0}^{n-1} (x_i y_{i+1} - x_{i+1} y_i) \right|, \
 **补齐计划**（对应 year_plan R38-Q4，2026 年 11-12 月）：
 
 1. **Phase 1（OASIS 读取，1 周）**：扩展 `gds_loader.py` 支持 OASIS 读取，复用 klayout.db.LoadMode
-2. **Phase 2（XOR diff 工具，1 周）**：新增 `src/polaris/eval/gds_xor.py`，基于 `klayout.db.Region ^` 实现版图差异对比
+2. **Phase 2（XOR diff 工具，1 周）**：新增 `v5.0 已移除（原 `modules/gds_tools/src/polaris_gds_tools/gds_xor.py`，GDS XOR 已由 modules/gds_tools/src/polaris_gds_tools/gdsii_diff_tool.py 实现）`，基于 `klayout.db.Region ^` 实现版图差异对比
 3. **Phase 3（多格式导入，2 周）**：CIF/DXF 通过 KLayout 插件桥接；GDS2 文本格式通过 klayout 文本读写 API
-4. **Phase 4（工艺迁移，2 周）**：新增 `src/polaris/pdk/layer_remapper.py`，GDSII 导入 + 可配置层映像表 → 目标 foundry GDSII
+4. **Phase 4（工艺迁移，2 周）**：新增 `v5.0 已移除（原 `modules/pdk/src/polaris_pdk/layer_remapper.py`，工艺迁移层映像未迁移）`，GDSII 导入 + 可配置层映像表 → 目标 foundry GDSII
 
 **依赖库**：`klayout.db` 0.30.9（已装，规则 5.3 直接 import，无兜底）、`numpy`（坐标数组）、`matplotlib`（渲染）。禁用 shapely（规则 3.2 用纯 Python 几何）。
 

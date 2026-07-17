@@ -8,25 +8,25 @@
 
 ## 1. 功能点清单（16 功能点）
 
-G01 聚类覆盖 HOM 双光子干涉、线性光学量子门（KLM/Ralph CNOT）、玻色采样与高斯玻色采样（GBS）、通用干涉仪分解（Clements/Reck）。功能点源自 T01 Lumerical qINTERCONNECT（#39）与 PoLaRIS `src/polaris/sim/quantum_photonics.py` 实现能力。
+G01 聚类覆盖 HOM 双光子干涉、线性光学量子门（KLM/Ralph CNOT）、玻色采样与高斯玻色采样（GBS）、通用干涉仪分解（Clements/Reck）。功能点源自 T01 Lumerical qINTERCONNECT（#39）与 PoLaRIS `modules/boson/src/polaris_boson/hom.py` 实现能力。
 
 | # | 功能点 | PoLaRIS状态 | 实现位置 | 文献依据 |
 |---|--------|------------|---------|---------|
-| 1 | Ryser 矩阵积和式计算 | ✅ | quantum_photonics.py:40 | Ryser 1963 / Aaronson-Arkhipov 2011 |
-| 2 | 分束器酉矩阵生成 | ✅ | quantum_photonics.py:135 | Reck 1994 |
-| 3 | HOM 干涉符合率仿真 | ✅ | quantum_photonics.py:162 | Hong-Ou-Mandel 1987 |
-| 4 | HOM dip 时间分辨数值仿真 | ✅ | quantum_photonics.py:614 | Hong-Ou-Mandel 1987 |
-| 5 | 玻色采样单输出概率 | ✅ | quantum_photonics.py:211 | Aaronson-Arkhipov 2011 |
-| 6 | 玻色采样完整输出分布 | ✅ | quantum_photonics.py:270 | Aaronson-Arkhipov 2011 |
-| 7 | 玻色采样随机采样器 | ✅ | quantum_photonics.py:655 | Seron 2024 |
-| 8 | 卡方检验统计验证 | ✅ | quantum_photonics.py:694 | Pearson 1900 |
-| 9 | 高斯玻色采样（GBS）概率 | ✅ | quantum_photonics.py:490 | Hamilton 2017 |
-| 10 | Clements 通用酉矩阵分解 | ✅ | quantum_photonics.py:557 | Clements 2016 |
-| 11 | KLM CNOT 电路构建（Ralph 简化版） | ✅ | quantum_photonics.py:742 | Ralph 2002 |
-| 12 | KLM CNOT 蒙特卡洛仿真 | ✅ | quantum_photonics.py:807 | Knill-Laflamme-Milburn 2001 |
-| 13 | 含光子损失的玻色采样 | ⚠️ | quantum_photonics.py:329 | García-Patrón 2024 |
-| 14 | 量子优越性损失阈值评估 | ⚠️ | quantum_photonics.py:406 | García-Patrón 2024 |
-| 15 | Hafnian 函数（GBS 核心） | ⚠️ | quantum_photonics.py:438 | Björklund 2012 |
+| 1 | Ryser 矩阵积和式计算 | ✅ | quantum_photonics.py | Ryser 1963 / Aaronson-Arkhipov 2011 |
+| 2 | 分束器酉矩阵生成 | ✅ | quantum_photonics.py | Reck 1994 |
+| 3 | HOM 干涉符合率仿真 | ✅ | quantum_photonics.py | Hong-Ou-Mandel 1987 |
+| 4 | HOM dip 时间分辨数值仿真 | ✅ | quantum_photonics.py | Hong-Ou-Mandel 1987 |
+| 5 | 玻色采样单输出概率 | ✅ | quantum_photonics.py | Aaronson-Arkhipov 2011 |
+| 6 | 玻色采样完整输出分布 | ✅ | quantum_photonics.py | Aaronson-Arkhipov 2011 |
+| 7 | 玻色采样随机采样器 | ✅ | quantum_photonics.py | Seron 2024 |
+| 8 | 卡方检验统计验证 | ✅ | quantum_photonics.py | Pearson 1900 |
+| 9 | 高斯玻色采样（GBS）概率 | ✅ | quantum_photonics.py | Hamilton 2017 |
+| 10 | Clements 通用酉矩阵分解 | ✅ | quantum_photonics.py | Clements 2016 |
+| 11 | KLM CNOT 电路构建（Ralph 简化版） | ✅ | quantum_photonics.py | Ralph 2002 |
+| 12 | KLM CNOT 蒙特卡洛仿真 | ✅ | quantum_photonics.py | Knill-Laflamme-Milburn 2001 |
+| 13 | 含光子损失的玻色采样 | ⚠️ | quantum_photonics.py | García-Patrón 2024 |
+| 14 | 量子优越性损失阈值评估 | ⚠️ | quantum_photonics.py | García-Patrón 2024 |
+| 15 | Hafnian 函数（GBS 核心） | ⚠️ | quantum_photonics.py | Björklund 2012 |
 | 16 | 完整 KLM NS-gate CNOT（8 模式） | ❌ | - | Knill 2001（待实现） |
 
 **说明**：⚠️ 项为简化实现或经验阈值；❌ 项为完整 KLM NS-gate 版本未实现，当前仅 Ralph 2002 四模式简化版可用。无任何 fall-back 假数据，简化版均明确标注并给出理论值对照。
@@ -245,7 +245,7 @@ $$U = \prod_{l=1}^{M} \prod_{i=l\bmod 2}^{M-2} T_{i,i+1}(\theta_{i,l}, \varphi_{
 
 ### 9.1 模块架构
 
-`src/polaris/sim/quantum_photonics.py`（941 行，19 个公开函数）按功能分四层：
+`modules/boson/src/polaris_boson/hom.py`（941 行，19 个公开函数）按功能分四层：
 
 1. **核心数学层**：`permanent_ryser`（Ryser 积和式，$O(n \cdot 2^n)$）、`permanent_brute_force`（暴力验证）、`hafnian`（GBS 核心，当前暴力法）、`beamsplitter_unitary`（分束器酉矩阵）。
 2. **玻色采样层**：`boson_sampling_prob`（单输出概率）、`boson_sampling_distribution`（完整分布枚举）、`boson_sampling_sampler`（随机采样器）、`boson_sampling_chi_square_test`（卡方检验）、`lossy_boson_sampling`（含损耗）、`quantum_advantage_threshold`（优越性阈值）。
@@ -319,6 +319,6 @@ $$U = \prod_{l=1}^{M} \prod_{i=l\bmod 2}^{M-2} T_{i,i+1}(\theta_{i,l}, \varphi_{
 ## 学术诚信声明
 
 - 全部公式源自 Hong-Ou-Mandel 1987 / Knill-Laflamme-Milburn 2001 / Aaronson-Arkhipov 2011 / Ralph 2002 / Clements 2016 / Hamilton 2017 / García-Patrón 2024 等公开文献，URL 经 WebSearch 验证可访问。
-- PoLaRIS 实现位置已溯源至 `src/polaris/sim/quantum_photonics.py` 具体行号，无臆造。
+- PoLaRIS 实现位置已溯源至 `modules/boson/src/polaris_boson/hom.py` 具体行号，无臆造。
 - 简化实现（Ralph 简化版 CNOT、暴力 Hafnian、独立损耗模型）均明确标注为简化版，与完整理论值（KLM 1/4、Ralph 1/9）对照，无 fall-back 假数据。
 - 创新点（损失阈值评估、KLM 蒙特卡洛仿真、卡方检验闭环）均标注"创新"并记录底层逻辑与支持理论。

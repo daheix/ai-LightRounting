@@ -14,7 +14,7 @@ PPO（Proximal Policy Optimization）是 OpenAI 于 2017 年提出的 on-policy 
 
 D03 聚类对应 T13 AlphaChip 第 2 章节（AC-2.1 PPO / AC-2.2 MDP 建模 / AC-2.3 策略梯度优化 / AC-2.4 TF-Agents 实现 / AC-2.5 AlphaGo 类比），共 5 个核心功能点；扩展覆盖 PoLaRIS 自有的 17 项 PPO 布局布线增强点（22 项去重后总数见 `00-算法聚类清单.md` §2.12）。
 
-PoLaRIS 现状：**✅ 已有完整实现**，`src/polaris/trainer/ppo_torch.py` 提供 `PPOAgent`（actor-critic + GAE + clip），`src/polaris/engine/floorplan_env.py` 提供 `FloorplanEnv` Gymnasium MDP 接口；离散动作版 `PPOAgentDiscrete` 同步就绪。
+PoLaRIS 现状：**✅ 已有完整实现**，`modules/trainer/src/polaris_trainer/ppo.py` 提供 `PPOAgent`（actor-critic + GAE + clip），`v5.0 已移除（原 `modules/place/src/polaris_place/floorplan_env.py`，RL 环境并入训练流水线）` 提供 `FloorplanEnv` Gymnasium MDP 接口；离散动作版 `PPOAgentDiscrete` 同步就绪。
 
 ---
 
@@ -159,7 +159,7 @@ PoLaRIS 默认 `vf_coef=0.5, ent_coef=0.0`（连续动作）/ `0.01`（离散动
 
 ### 7.3 学习率调度
 
-PoLaRIS 实现 `_get_lr()`（`ppo_torch.py:95`）支持：
+PoLaRIS 实现 `_get_lr()`（`ppo_torch.py`）支持：
 
 - `constant`：恒定学习率
 - `cosine`：余弦退火（Loshchilov & Hutter, 2017, arXiv:1608.03983）
@@ -227,13 +227,13 @@ Output: trained policy π_θ
 
 | 模块 | 文件 | 职责 |
 |------|------|------|
-| PPOAgent（连续） | `src/polaris/trainer/ppo_torch.py` | actor-critic + GAE + clip 主循环 |
-| PPOAgent（离散） | `src/polaris/trainer/ppo_agent_discrete.py` | Categorical 动作空间版本 |
-| Buffer & GAE | `src/polaris/trainer/ppo_buffers.py` | `PPOConfig` / `RolloutBuffer` / `compute_gae` |
-| 网络架构 | `src/polaris/trainer/ppo_networks.py` | `ActorCritic` / `ActorCriticDiscrete` |
-| BC 预训练 | `src/polaris/trainer/bc.py` | 专家示范监督学习初始化策略 |
-| 布局环境 | `src/polaris/engine/floorplan_env.py` | `FloorplanEnv` Gymnasium MDP |
-| 路由环境 | `src/polaris/engine/waveguide_router.py` | `WaveguideRouter` 布线 RL 环境 |
+| PPOAgent（连续） | `modules/trainer/src/polaris_trainer/ppo.py` | actor-critic + GAE + clip 主循环 |
+| PPOAgent（离散） | `modules/trainer/src/polaris_trainer/ppo.py` | Categorical 动作空间版本 |
+| Buffer & GAE | `modules/trainer/src/polaris_trainer/ppo.py` | `PPOConfig` / `RolloutBuffer` / `compute_gae` |
+| 网络架构 | `modules/trainer/src/polaris_trainer/ppo.py` | `ActorCritic` / `ActorCriticDiscrete` |
+| BC 预训练 | `modules/trainer/src/polaris_trainer/pretrain.py` | 专家示范监督学习初始化策略 |
+| 布局环境 | `v5.0 已移除（原 `modules/place/src/polaris_place/floorplan_env.py`，RL 环境并入训练流水线）` | `FloorplanEnv` Gymnasium MDP |
+| 路由环境 | `modules/router_advanced/src/polaris_router_advanced/waveguide_router.py` | `WaveguideRouter` 布线 RL 环境 |
 
 ### 9.2 与 SB3/AlphaChip 对齐度
 

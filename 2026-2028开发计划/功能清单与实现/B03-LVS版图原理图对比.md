@@ -4,7 +4,7 @@
 > 类别: 版图 DRC 类
 > 优先级: P1
 > 生成时间: 2026-06-25
-> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T08/T09/T12/T14）、`2026-2028开发计划/功能清单与实现/00-算法聚类清单.md`、`src/polaris/sim/lvs.py`、`src/polaris/sim/graph_lvs.py`、`src/polaris/sim/eqdrc.py`
+> 关联文档: `docs/feature_gap_full_analysis.md`（T02/T03/T08/T09/T12/T14）、`2026-2028开发计划/功能清单与实现/00-算法聚类清单.md`、`modules/lvs/src/polaris_lvs/compare.py`、`modules/verify_advanced/src/polaris_verify_advanced/graph_lvs.py`、`modules/verify_advanced/src/polaris_verify_advanced/eqdrc.py`
 > 学术诚信：图同构 VF2 算法溯源至 Cordella et al. 2004（IEEE TPAMI 26(10):1367-1372），Weisfeiler-Lehman 颜色细化溯源至 Weisfeiler-Leman 1968 与 Morgan 1965；KLayout LVS Netter/NetlistComparer API 与 SiEPIC DEVREC 层标准（layer 68）来自 KLayout 官方文档与 SiEPIC_EBeam_PDK 开源仓库实际源码；Calibre nmLVS 算法描述来自 Siemens 官方文档；所有 layer 编号与器件识别规则均来自开源 PDK 源码（规则 18），无 fall-back 编造（规则 14）。
 
 ---
@@ -26,23 +26,23 @@ LVS（Layout Versus Schematic，版图与原理图一致性验证）是 IC/PIC �
 
 | # | 功能点 | PoLaRIS状态 | PoLaRIS实现位置 | 差距说明 |
 |---|--------|------------|----------------|----------|
-| 1 | LVS 比较（核心入口） | ✅已有 | sim/graph_lvs.py:160、sim/lvs.py:494 | GraphIsomorphismLVSComparer + run_lvs |
-| 2 | 网表提取（GDS→Netlist） | ✅已有 | sim/lvs.py:121 | extract_netlist_from_gds（DEVREC+WG） |
-| 3 | 原理图转网表 | ✅已有 | sim/lvs.py:379 | circuit_spec_to_netlist |
-| 4 | 器件集比对 | ✅已有 | sim/lvs.py:393 | _compare_devices 集合差 |
-| 5 | 连接集比对 | ✅已有 | sim/lvs.py:429 | _compare_connections 集合差 |
-| 6 | 图同构匹配 | ✅已有 | sim/graph_lvs.py:219 | networkx GraphMatcher（VF2） |
-| 7 | 器件类型一致性 | ✅已有 | sim/graph_lvs.py:259 | _verify_device_types |
-| 8 | 器件参数容忍度 | ✅已有 | sim/graph_lvs.py:275 | abs_tol+rel_tol*|ref| 公式 |
-| 9 | 波导长度验证 | ✅已有 | sim/graph_lvs.py:331 | |L_ref-L_ext|<=tol_um |
-| 10 | 端口朝向验证 | ✅已有 | sim/graph_lvs.py:378 | SiEPIC 标准 |
-| 11 | 网表层次结构 | ✅已有 | sim/graph_lvs.py:89 | PhotonicsNetlist 层次 |
-| 12 | 曲线感知 LVS | ⚠️部分 | sim/eqdrc.py:390 | CurvilinearLVS 实验性 |
-| 13 | 网表等价提示（same_nets） | ✅已有 | sim/graph_lvs.py:430 | EquivalenceHints.same_nets |
-| 14 | 电路等价提示（same_circuits） | ✅已有 | sim/graph_lvs.py:436 | EquivalenceHints.same_circuits |
-| 15 | 引脚等价（equivalent_pins） | ✅已有 | sim/graph_lvs.py:442 | EquivalenceHints.equivalent_pins |
-| 16 | 容差配置（tolerance） | ✅已有 | sim/graph_lvs.py:450 | EquivalenceHints.tolerance |
-| 17 | 引脚标签检查 | ⚠️部分 | sim/graph_lvs.py:89 | 含引脚信息，无专门标签检查 |
+| 1 | LVS 比较（核心入口） | ✅已有 | sim/graph_lvs.py、sim/lvs.py | GraphIsomorphismLVSComparer + run_lvs |
+| 2 | 网表提取（GDS→Netlist） | ✅已有 | sim/lvs.py | extract_netlist_from_gds（DEVREC+WG） |
+| 3 | 原理图转网表 | ✅已有 | sim/lvs.py | circuit_spec_to_netlist |
+| 4 | 器件集比对 | ✅已有 | sim/lvs.py | _compare_devices 集合差 |
+| 5 | 连接集比对 | ✅已有 | sim/lvs.py | _compare_connections 集合差 |
+| 6 | 图同构匹配 | ✅已有 | sim/graph_lvs.py | networkx GraphMatcher（VF2） |
+| 7 | 器件类型一致性 | ✅已有 | sim/graph_lvs.py | _verify_device_types |
+| 8 | 器件参数容忍度 | ✅已有 | sim/graph_lvs.py | abs_tol+rel_tol*|ref| 公式 |
+| 9 | 波导长度验证 | ✅已有 | sim/graph_lvs.py | |L_ref-L_ext|<=tol_um |
+| 10 | 端口朝向验证 | ✅已有 | sim/graph_lvs.py | SiEPIC 标准 |
+| 11 | 网表层次结构 | ✅已有 | sim/graph_lvs.py | PhotonicsNetlist 层次 |
+| 12 | 曲线感知 LVS | ⚠️部分 | sim/eqdrc.py | CurvilinearLVS 实验性 |
+| 13 | 网表等价提示（same_nets） | ✅已有 | sim/graph_lvs.py | EquivalenceHints.same_nets |
+| 14 | 电路等价提示（same_circuits） | ✅已有 | sim/graph_lvs.py | EquivalenceHints.same_circuits |
+| 15 | 引脚等价（equivalent_pins） | ✅已有 | sim/graph_lvs.py | EquivalenceHints.equivalent_pins |
+| 16 | 容差配置（tolerance） | ✅已有 | sim/graph_lvs.py | EquivalenceHints.tolerance |
+| 17 | 引脚标签检查 | ⚠️部分 | sim/graph_lvs.py | 含引脚信息，无专门标签检查 |
 | 18 | LVS 浏览器/交叉探测 | ❌缺失 | - | 无 GUI（仅 HTTP API） |
 
 **统计**：✅15 / ⚠️2 / ❌1，覆盖率 94.4%（按功能点数计）。
@@ -326,6 +326,6 @@ PoLaRIS LVS 测试覆盖（`tests/test_graph_lvs.py`）：
 - 所有公式来源已标注：VF2（Cordella 2004）、容忍度（KLayout Netter API）、波导长度（Chrostowski 2015）、WL（Weisfeiler-Leman 1968）
 - 所有 layer 编号（DEVREC=68, TEXT=10, WG=1）来自 SiEPIC_EBeam_PDK 开源仓库实际源码（规则 18），非臆造
 - PoLaRIS 实现状态（✅15/⚠️2/❌1）基于 `docs/feature_gap_full_analysis.md` 实际标注，无夸大
-- 所有伪代码与公式可直接溯源到 `src/polaris/sim/lvs.py`、`sim/graph_lvs.py`、`sim/eqdrc.py` 实际实现
+- 所有伪代码与公式可直接溯源到 `modules/lvs/src/polaris_lvs/compare.py`、`sim/graph_lvs.py`、`sim/eqdrc.py` 实际实现
 - 严格遵守规则 14.1：无任何 fall-back 假数据，DEVREC 缺失返回空列表并警告，波导追踪失败抛异常
 - 严格遵守规则 18：所有文献 URL 已列出，可直接访问验证

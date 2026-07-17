@@ -6,7 +6,7 @@
 > 覆盖功能点：18（T13 AlphaChip AC-1.1-1.4 + PoLaRIS 自有功能点 14 个）
 > 状态分布：✅10 / ⚠️5 / ❌3（PoLaRIS 已完整复刻 AlphaChip Edge-GNN 并扩展光电子创新）
 > 规则依据：project_rules.md 规则 18（学术诚信）/ 规则 14（禁止 fall-back）/ 规则 26（纯 CPU）
-> 关联文档：`src/polaris/engine/gnn.py` / `src/polaris/engine/alphachip_gnn.py` / `src/polaris/engine/floorplan_env.py` / `docs/feature_gap_full_analysis.md` §2.12 / `00-算法聚类清单.md` D01 行
+> 关联文档：`modules/place/src/polaris_place/ppo_gnn.py` / `modules/place/src/polaris_place/ppo_gnn.py` / `v5.0 已移除（原 `modules/place/src/polaris_place/floorplan_env.py`，RL 环境并入训练流水线）` / `docs/feature_gap_full_analysis.md` §2.12 / `00-算法聚类清单.md` D01 行
 
 ---
 
@@ -88,7 +88,7 @@ PoLaRIS 将光子网表映射为无向图 `G = (V, E)`：
 - **节点 V**：每个器件实例为一个节点，`|V| = N`（器件数）。
 - **边 E**：每条 net 连接在两实例间添加双向边，`|E| ≤ 2N`（典型 PIC 每器件 2-4 端口）。
 
-构建伪代码（对应 `floorplan_env.py:305 _build_edge_index`）：
+构建伪代码（对应 `floorplan_env.py _build_edge_index`）：
 
 ```
 function build_edge_index(netlist, instance_ids):
@@ -105,7 +105,7 @@ function build_edge_index(netlist, instance_ids):
 
 ### 3.2 多关系边类型
 
-PoLaRIS 为每条边推断 net 关系类型（`alphachip_gnn.py:66 _infer_net_relation`）：
+PoLaRIS 为每条边推断 net 关系类型（`alphachip_gnn.py _infer_net_relation`）：
 
 - `NET_RELATION_OPTICAL = 0`：光波导（默认）
 - `NET_RELATION_ELECTRICAL = 1`：电信号（两端均为 active 器件）
@@ -117,7 +117,7 @@ PoLaRIS 为每条边推断 net 关系类型（`alphachip_gnn.py:66 _infer_net_re
 
 ## 4. 节点特征编码
 
-节点特征矩阵 `X ∈ R^{N×6}` 编码器件物理属性（对应 `gnn.py:233 build_node_features`）：
+节点特征矩阵 `X ∈ R^{N×6}` 编码器件物理属性（对应 `gnn.py build_node_features`）：
 
 | 维度 | 特征 | 来源 |
 |------|------|------|
@@ -151,7 +151,7 @@ function build_node_features(devices, placements, instance_ids):
 
 ### 5.1 R-GCN 基线编码器（GraphEncoder）
 
-`GraphEncoder`（`gnn.py:43`）实现 R-GCN 风格的度归一化消息传递 + 残差 + LayerNorm：
+`GraphEncoder`（`gnn.py`）实现 R-GCN 风格的度归一化消息传递 + 残差 + LayerNorm：
 
 ```
 function GraphEncoder.forward(node_feats, edge_index):
@@ -172,7 +172,7 @@ function GraphEncoder.forward(node_feats, edge_index):
 
 ### 5.2 Edge-GNN 编码器（EdgeGraphEncoder）
 
-`EdgeGraphEncoder`（`gnn.py:284`）在消息函数中显式融合边特征：
+`EdgeGraphEncoder`（`gnn.py`）在消息函数中显式融合边特征：
 
 ```
 function EdgeGraphEncoder.forward(node_feats, edge_index, edge_feats):
@@ -190,7 +190,7 @@ function EdgeGraphEncoder.forward(node_feats, edge_index, edge_feats):
 
 ### 5.3 多关系 Edge-GNN（MultiRelationalEdgeGraphEncoder）
 
-`MultiRelationalEdgeGraphEncoder`（`alphachip_gnn.py:330`）为每种关系学习独立 `W_edge[r]`：
+`MultiRelationalEdgeGraphEncoder`（`alphachip_gnn.py`）为每种关系学习独立 `W_edge[r]`：
 
 ```
 function MultiRelational.forward(node_feats, edge_index, edge_feats, edge_relations):
@@ -212,7 +212,7 @@ function MultiRelational.forward(node_feats, edge_index, edge_feats, edge_relati
 
 ### 5.4 GAT 注意力层（GATLayer）
 
-`GATLayer`（`alphachip_gnn.py:247`）按 dst 分组 softmax 计算注意力权重：
+`GATLayer`（`alphachip_gnn.py`）按 dst 分组 softmax 计算注意力权重：
 
 ```
 function GATLayer.forward(node_feats, edge_index, edge_feats):
@@ -228,7 +228,7 @@ function GATLayer.forward(node_feats, edge_index, edge_feats):
     return out
 ```
 
-`_segment_softmax`（`alphachip_gnn.py:221`）使用 max-shift 数值稳定技巧，避免大图 softmax 溢出。
+`_segment_softmax`（`alphachip_gnn.py`）使用 max-shift 数值稳定技巧，避免大图 softmax 溢出。
 
 ---
 
@@ -236,7 +236,7 @@ function GATLayer.forward(node_feats, edge_index, edge_feats):
 
 ### 6.1 AlphaChip 7 维基线边特征
 
-`build_edge_features`（`gnn.py:380`）实现 AlphaChip 原版 7 维边特征：
+`build_edge_features`（`gnn.py`）实现 AlphaChip 原版 7 维边特征：
 
 | 维度 | 特征 | 物理含义 |
 |------|------|---------|
@@ -247,7 +247,7 @@ function GATLayer.forward(node_feats, edge_index, edge_feats):
 
 ### 6.2 PoLaRIS 15 维光电子边特征（*创新* R33）
 
-`build_photonic_edge_features`（`alphachip_gnn.py:129`）扩展至 15 维：
+`build_photonic_edge_features`（`alphachip_gnn.py`）扩展至 15 维：
 
 | 维度 | 特征 | 来源 |
 |------|------|------|
@@ -267,13 +267,13 @@ function GATLayer.forward(node_feats, edge_index, edge_feats):
 
 ### 7.1 图级读出
 
-`StateEncoder`（`gnn.py:141`）采用均值池化作为图级读出：
+`StateEncoder`（`gnn.py`）采用均值池化作为图级读出：
 
 ```
 graph_emb ← mean(node_emb, axis=0)  # [N, hidden] → [hidden]
 ```
 
-`AlphaChipEdgeGNN`（`alphachip_gnn.py:457`）升级为 GlobalAttention 读出（*创新*，优于 AlphaChip 原版 mean pooling）：
+`AlphaChipEdgeGNN`（`alphachip_gnn.py`）升级为 GlobalAttention 读出（*创新*，优于 AlphaChip 原版 mean pooling）：
 
 ```
 gate_scores ← W_gate @ node_emb                       # [N, 1]
@@ -286,7 +286,7 @@ GlobalAttention 让 GNN 学习节点重要性，对布局质量预测更敏感�
 
 ### 7.2 图-栅格特征融合
 
-`StateEncoder.forward`（`gnn.py:194`）融合图嵌入与栅格空间特征：
+`StateEncoder.forward`（`gnn.py`）融合图嵌入与栅格空间特征：
 
 ```
 function StateEncoder.forward(node_feats, edge_index, grid_feat, edge_feats):
@@ -301,7 +301,7 @@ function StateEncoder.forward(node_feats, edge_index, grid_feat, edge_feats):
     return fused                                          # 全局状态向量
 ```
 
-栅格特征 `grid_feat` 来自 `FloorplanState.occupancy_grid`（`floorplan_env.py:96`），编码已放置器件的空间占用分布。图嵌入捕捉拓扑结构，栅格嵌入捕捉空间分布，两者互补。
+栅格特征 `grid_feat` 来自 `FloorplanState.occupancy_grid`（`floorplan_env.py`），编码已放置器件的空间占用分布。图嵌入捕捉拓扑结构，栅格嵌入捕捉空间分布，两者互补。
 
 ---
 
@@ -311,9 +311,9 @@ GNN 输出的全局状态向量供下游任务使用：
 
 1. **PPO 策略输入**：状态向量送入 `PPOAgent` 策略网络（D03-PPO 强化学习），输出器件放置动作的概率分布。
 2. **奖励预测**：可选的布局质量回归头预测 HPWL（半周长线长）、拥塞度、面积利用率。
-3. **迁移学习**：状态向量作为 EWC（Elastic Weight Consolidation）正则化的参数载体，支持跨芯片迁移（`trainer/transfer_learning.py:175`）。
+3. **迁移学习**：状态向量作为 EWC（Elastic Weight Consolidation）正则化的参数载体，支持跨芯片迁移（`trainer/transfer_learning.py`）。
 
-端到端训练流程（`floorplan_env.py:408 _compute_gnn_embedding`）保留计算图，PPO `update` 时重建可微路径，梯度从策略损失流回 GNN 参数。
+端到端训练流程（`floorplan_env.py _compute_gnn_embedding`）保留计算图，PPO `update` 时重建可微路径，梯度从策略损失流回 GNN 参数。
 
 ---
 
@@ -323,16 +323,16 @@ GNN 输出的全局状态向量供下游任务使用：
 
 | 模块 | 文件 | 行号 | 状态 |
 |------|------|------|------|
-| R-GCN 基线编码器 | `src/polaris/engine/gnn.py` | 43 | ✅ |
-| Edge-GNN 编码器 | `src/polaris/engine/gnn.py` | 284 | ✅ |
-| 状态编码器（图+栅格融合） | `src/polaris/engine/gnn.py` | 141 | ✅ |
-| 节点特征构建 | `src/polaris/engine/gnn.py` | 233 | ✅ |
-| 7 维边特征构建 | `src/polaris/engine/gnn.py` | 380 | ✅ |
-| 15 维光电子边特征 | `src/polaris/engine/alphachip_gnn.py` | 129 | ✅ *创新* |
-| GAT 注意力层 | `src/polaris/engine/alphachip_gnn.py` | 247 | ✅ *创新* |
-| 多关系 Edge-GNN | `src/polaris/engine/alphachip_gnn.py` | 330 | ✅ *创新* |
-| AlphaChip 完整 Edge-GNN | `src/polaris/engine/alphachip_gnn.py` | 457 | ✅ |
-| 布局环境 GNN 集成 | `src/polaris/engine/floorplan_env.py` | 305-432 | ✅ |
+| R-GCN 基线编码器 | `modules/place/src/polaris_place/ppo_gnn.py` | 43 | ✅ |
+| Edge-GNN 编码器 | `modules/place/src/polaris_place/ppo_gnn.py` | 284 | ✅ |
+| 状态编码器（图+栅格融合） | `modules/place/src/polaris_place/ppo_gnn.py` | 141 | ✅ |
+| 节点特征构建 | `modules/place/src/polaris_place/ppo_gnn.py` | 233 | ✅ |
+| 7 维边特征构建 | `modules/place/src/polaris_place/ppo_gnn.py` | 380 | ✅ |
+| 15 维光电子边特征 | `modules/place/src/polaris_place/ppo_gnn.py` | 129 | ✅ *创新* |
+| GAT 注意力层 | `modules/place/src/polaris_place/ppo_gnn.py` | 247 | ✅ *创新* |
+| 多关系 Edge-GNN | `modules/place/src/polaris_place/ppo_gnn.py` | 330 | ✅ *创新* |
+| AlphaChip 完整 Edge-GNN | `modules/place/src/polaris_place/ppo_gnn.py` | 457 | ✅ |
+| 布局环境 GNN 集成 | `v5.0 已移除（原 `modules/place/src/polaris_place/floorplan_env.py`，RL 环境并入训练流水线）` | 305-432 | ✅ |
 
 ### 9.2 商业工具对标
 

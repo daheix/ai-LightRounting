@@ -202,11 +202,11 @@ $$T_{\text{query}} = O(\log n + k), \quad T_{\text{build}} = O(n \log n)$$
 **当前状态**：✅ 已有（生产可用），双引擎架构。
 
 **实现位置**：
-- `src/polaris/sim/klayout_drc.py:238` — `KLayoutDRCRunner`（foundry-grade，封装 KLayout Region API）
-- `src/polaris/sim/hierarchical_drc.py:165` — `HierarchicalDRC`（自研 BVH + 行分块，OpenDRC 算法）
-- `src/polaris/sim/foundry_runsets.py:108` — `FOUNDRY_RUNSETS` 注册表（9 foundry）
-- `src/polaris/sim/constraint_checker.py:53` — `ConstraintChecker`（16 项 ViolationType 检查）
-- `src/polaris/sim/constraint_types.py:20` — `ViolationType` 枚举（17 类违规）
+- `modules/verify_advanced/src/polaris_verify_advanced/klayout_drc.py` — `KLayoutDRCRunner`（foundry-grade，封装 KLayout Region API）
+- `modules/verify_advanced/src/polaris_verify_advanced/hierarchical_drc.py` — `HierarchicalDRC`（自研 BVH + 行分块，OpenDRC 算法）
+- `modules/flow/src/polaris_flow/stage_verification.py` — `FOUNDRY_RUNSETS` 注册表（9 foundry）
+- `modules/flow/src/polaris_flow/stage_verification.py` — `ConstraintChecker`（16 项 ViolationType 检查）
+- `modules/flow/src/polaris_flow/stage_verification.py` — `ViolationType` 枚举（17 类违规）
 
 **16 项 ViolationType 检查**（涵盖几何 + 性能 DRC）：BEND_RADIUS、SPACING、INSERTION_LOSS、CROSSTALK、CROSSING、OVERLAP、THERMAL、MIN_WIDTH、COUPLING_GAP、MIN_LENGTH、MAX_LENGTH、MIN_AREA、ENCLOSURE、NOTCH、PORT_CONNECTIVITY、PIN_MATCH、LAYER_DENSITY。
 

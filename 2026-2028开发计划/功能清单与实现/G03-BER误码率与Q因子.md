@@ -12,15 +12,15 @@
 
 | 编号 | 功能点 | 状态 | PoLaRIS 实现位置 | 来源工具章节 |
 |------|--------|------|------------------|------------|
-| G03-01 | BER 直接统计计数（误比特数/总比特数） | ✅ | `src/polaris/sim/system_level.py:379` `ber()` | T14 2.12 |
-| G03-02 | 眼图折叠与绘制（2 符号周期窗口） | ✅ | `src/polaris/sim/verilog_a.py:864` `compute_eye_diagram()` | PoLaRIS 7.4 / T14 2.13 |
-| G03-03 | Q 因子计算（均值差/标准差和） | ✅ | `src/polaris/sim/system_level.py:397` `q_factor()` | T05 2.5 / T01 #46 |
-| G03-04 | BER 高斯近似积分 `0.5·erfc(Q/√2)` | ✅ | `src/polaris/sim/system_level.py:421` `ber_from_q()` | T05 2.5 |
-| G03-05 | OSNR→BER 映射（高斯近似） | ✅ | `src/polaris/sim/system_level.py:431` `osnr_to_ber()` | T05 2.5 |
-| G03-06 | 蒙特卡洛 BER 估计（JAX 并行） | ✅ | `src/polaris/sim/monte_carlo.py:63` `monte_carlo_simulate()` | T14 2.12 |
-| G03-07 | PAM4 多电平 BER（含 Gray 编码） | ⚠️ | `src/polaris/sim/verilog_a.py:898` `compute_ber()`（简化版） | T05 8.6 / T14 2.12 |
+| G03-01 | BER 直接统计计数（误比特数/总比特数） | ✅ | `modules/circuit/src/polaris_circuit/system_level.py` `ber()` | T14 2.12 |
+| G03-02 | 眼图折叠与绘制（2 符号周期窗口） | ✅ | `modules/parasitic/src/polaris_parasitic/verilog_a_models.py` `compute_eye_diagram()` | PoLaRIS 7.4 / T14 2.13 |
+| G03-03 | Q 因子计算（均值差/标准差和） | ✅ | `modules/circuit/src/polaris_circuit/system_level.py` `q_factor()` | T05 2.5 / T01 #46 |
+| G03-04 | BER 高斯近似积分 `0.5·erfc(Q/√2)` | ✅ | `modules/circuit/src/polaris_circuit/system_level.py` `ber_from_q()` | T05 2.5 |
+| G03-05 | OSNR→BER 映射（高斯近似） | ✅ | `modules/circuit/src/polaris_circuit/system_level.py` `osnr_to_ber()` | T05 2.5 |
+| G03-06 | 蒙特卡洛 BER 估计（JAX 并行） | ✅ | `modules/yield/src/polaris_yield/monte_carlo.py` `monte_carlo_simulate()` | T14 2.12 |
+| G03-07 | PAM4 多电平 BER（含 Gray 编码） | ⚠️ | `modules/parasitic/src/polaris_parasitic/verilog_a_models.py` `compute_ber()`（简化版） | T05 8.6 / T14 2.12 |
 | G03-08 | 星座图分析（IQ 平面 + 欧氏距离） | ⚠️ | 缺失星座图，仅眼图 | T14 2.13 |
-| G03-09 | 调制格式对比（NRZ/PAM4/QAM16） | ⚠️ | `system_level.py:340` 有调制映射，缺对比分析 | T05 8.6 |
+| G03-09 | 调制格式对比（NRZ/PAM4/QAM16） | ⚠️ | `system_level.py` 有调制映射，缺对比分析 | T05 8.6 |
 | G03-10 | dBQ 监测与 FEC 阈值裕量 | ⚠️ | 缺 dBQ 实时监测 | T01 #46 |
 | G03-11 | TDECQ 发射机色散眼图闭合代价 | ❌ | 缺失 | T14 2.10 |
 | G03-12 | 全链路 BER 预算（FDM/WDM/SDM 并行） | ❌ | 缺失 | T05 8.7 |
@@ -235,24 +235,24 @@ BER 由多变量高斯尾概率积分求得，Q 因子推广为 d_Mah/(2√2) �
 
 ## 9. PoLaRIS 实现路径
 
-### 9.1 BerEvaluator（`src/polaris/sim/system_level.py:393`）
+### 9.1 BerEvaluator（`modules/circuit/src/polaris_circuit/system_level.py`）
 
 实现 Q 因子法 BER 评估三件套，依据 ITU-T G.977：
 - `q_factor(eye_signal)` — 中位数分割高/低电平，计算 |μ₁-μ₀|/(σ₁+σ₀)，样本不足或分母为零时 ValueError 告警退出（无 fall-back）
 - `ber_from_q(q)` — `0.5·scipy.special.erfc(q/√2)`，数值稳定
 - `osnr_to_ber(osnr_db, bit_rate, bandwidth)` — Q=2·√(OSNR_lin·B/R_b) → BER
 
-### 9.2 眼图与 SNR（`src/polaris/sim/verilog_a.py:864`）
+### 9.2 眼图与 SNR（`modules/parasitic/src/polaris_parasitic/verilog_a_models.py`）
 
 - `compute_eye_diagram(signal, sps, n_levels)` — 2 符号周期窗口折叠，输出 [2·sps, n_windows] 眼图矩阵
 - `compute_ber(signal, sps, n_levels, noise_std)` — 基于眼图开口与噪声 σ 的简化 SNR→BER，公式 `0.5·erfc(√(SNR/2))`，依据 OIF CEI-112G
 - `compute_snr_db(signal, noise_std)` — `10·log10(P_signal/P_noise)`
 
-### 9.3 蒙特卡洛 BER（`src/polaris/sim/monte_carlo.py:63`）
+### 9.3 蒙特卡洛 BER（`modules/yield/src/polaris_yield/monte_carlo.py`）
 
 `monte_carlo_simulate()` 使用 JAX 向量化并行，对 PRBS 比特序列施加信道损伤后统计判决错误，覆盖 G03-06。优势是对非高斯噪声（如 ASE-ASE 拍频 χ² 分布）无需近似假设。
 
-### 9.4 EyeDiagramAnalyzer（`src/polaris/sim/interconnect.py:545`）
+### 9.4 EyeDiagramAnalyzer（`modules/circuit/src/polaris_circuit/time_domain_circuit.py`）
 
 时域仿真后处理模块，从 `InterconnectTimeDomainSimulator` 输出提取眼图与统计指标。当前为实验性，缺内置可视化 GUI（对应 T01 #46 ⚠️）。
 
@@ -286,7 +286,7 @@ PoLaRIS 在 `BerEvaluator.q_factor` 基础上扩展 EM 双高斯混合拟合，�
 
 ### 11.2 【创新】频域 S 参数→时域 BER 一键评估
 
-`system_level.py:447 to_time_domain()` 将频域 S 参数 IFFT 为时域脉冲响应，配合 PRBS 激励直接生成眼图与 BER。创新逻辑：LTI 频域-时域对偶（Oppenheim & Willsky §3）+ Q 因子法。差异化：VPI/Lumerical 需用户手动切换频域/时域仿真器，PoLaRIS 提供单一 API。预期收益：10 Gb/s NRZ 通过 MZI 的 BER 评估 < 200ms。
+`system_level.py to_time_domain()` 将频域 S 参数 IFFT 为时域脉冲响应，配合 PRBS 激励直接生成眼图与 BER。创新逻辑：LTI 频域-时域对偶（Oppenheim & Willsky §3）+ Q 因子法。差异化：VPI/Lumerical 需用户手动切换频域/时域仿真器，PoLaRIS 提供单一 API。预期收益：10 Gb/s NRZ 通过 MZI 的 BER 评估 < 200ms。
 
 ### 11.3 【创新】JAX 蒙特卡洛与高斯 Q 法交叉验证
 
@@ -295,6 +295,6 @@ PoLaRIS 在 `BerEvaluator.q_factor` 基础上扩展 EM 双高斯混合拟合，�
 ### 11.4 学术诚信声明
 
 - 所有公式（Q 因子、BER 高斯积分、Chernov 界、OSNR-Q 映射、PAM4-Gray BER、马哈拉诺比斯距离）均溯源至 §8 文献，无臆造
-- 现有 PoLaRIS 实现位置已溯源至源文件行号（system_level.py:379/397/421/431, verilog_a.py:864/898/939, monte_carlo.py:63, interconnect.py:545）
+- 现有 PoLaRIS 实现位置已溯源至源文件行号（system_level.py/397/421/431, verilog_a.py/898/939, monte_carlo.py, interconnect.py）
 - 创新点（§11.1-11.3）已标注"创新"并记录创新逻辑、支持理论与案例预估，符合规则 18
 - 文献 URL 共 10 条 + Agrawal 教材，均经 WebSearch 验证存在；商业对标基于 `docs/feature_gap_full_analysis.md` 实际状态标注，无夸大

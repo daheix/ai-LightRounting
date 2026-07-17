@@ -7,7 +7,7 @@
 | 覆盖功能点数 | 38（T13 AlphaChip 12 章节 + T12 Cadence/Synopsys 对标项） |
 | 涉及工具 | T13 Google AlphaChip / Circuit Training、PoLaRIS、T12 Cadence Innovus + Synopsys ICC2（部分） |
 | 状态分布 | ✅14 / ⚠️8 / ❌16（含 TPU/MediaTek 10 项 🚫不适用） |
-| PoLaRIS 实现位置 | `src/polaris/engine/alphachip_gnn.py`、`src/polaris/trainer/ppo.py`、`src/polaris/engine/floorplan_env.py`、`src/polaris/engine/analytical_placer.py`、`src/polaris/data/benchmark_evaluator.py` |
+| PoLaRIS 实现位置 | `modules/place/src/polaris_place/ppo_gnn.py`、`modules/trainer/src/polaris_trainer/ppo.py`、`v5.0 已移除（原 `modules/place/src/polaris_place/floorplan_env.py`，RL 环境并入训练流水线）`、`modules/place/src/polaris_place/analytical.py`、`modules/nn/src/polaris_nn/data/benchmark_evaluator.py` |
 | 文档版本 | v1.0（2026-06-25） |
 | 文档作者 | PoLaRIS 算法文档工程组 |
 | 学术诚信声明 | 全部公式、文献来源、固定参数均明确标注；*创新* 点已显式标记并附底层逻辑与理论支持。 |
@@ -79,7 +79,7 @@ AlphaChip 将芯片 netlist（hypergraph，节点 = macro/standard cell cluster�
 
 ### 3.3 边特征（PoLaRIS 15 维 *创新* R33）
 
-来源：`src/polaris/engine/alphachip_gnn.py:37` `PHOTONIC_EDGE_DIM = 15`
+来源：`modules/place/src/polaris_place/ppo_gnn.py` `PHOTONIC_EDGE_DIM = 15`
 
 | 索引 | 含义 | 来源 / 默认值 |
 |------|------|---------------|
@@ -98,7 +98,7 @@ AlphaChip 将芯片 netlist（hypergraph，节点 = macro/standard cell cluster�
 
 ### 3.4 多关系边推断
 
-`_infer_net_relation`（`alphachip_gnn.py:66`）规则：
+`_infer_net_relation`（`alphachip_gnn.py`）规则：
 - 任一端含 `heater`/`tuner`/`thermal` 关键字 → 控制信号（关系 2）；
 - 两端均 `active` 类 → 电信号（关系 1）；
 - 其他 → 光波导（关系 0，默认）。
@@ -118,7 +118,7 @@ h_i^{(l+1)} = LayerNorm( W_self · h_i + (1/|N(i)|) · Σ_{j∈N(i)} msg_{j→i}
 
 ### 4.2 PoLaRIS 多关系扩展公式（*创新* R33）
 
-来源：`MultiRelationalEdgeGraphEncoder`（`alphachip_gnn.py:330`），依据 Schlichtkrull et al. ESWC 2018 R-GCN。
+来源：`MultiRelationalEdgeGraphEncoder`（`alphachip_gnn.py`），依据 Schlichtkrull et al. ESWC 2018 R-GCN。
 
 为不同 net 关系（光/电/控制）学习独立的边变换矩阵 `W_edge[r]`：
 
@@ -133,7 +133,7 @@ h_i^{(l+1)} = LayerNorm( W_self · h_i
 
 ### 4.3 GAT 注意力增强（*创新* R33）
 
-来源：`GATLayer`（`alphachip_gnn.py:247`），依据 Veličković et al. ICLR 2018。
+来源：`GATLayer`（`alphachip_gnn.py`），依据 Veličković et al. ICLR 2018。
 
 注意力计算公式：
 
@@ -146,7 +146,7 @@ PoLaRIS 在 Edge-GNN 层后交替堆叠 GAT 层（默认 num_layers=2），让�
 
 ### 4.4 图级读出：GlobalAttention
 
-AlphaChip 原文使用 mean pooling；PoLaRIS 改用 GlobalAttention（*创新* R33，`alphachip_gnn.py:562`）：
+AlphaChip 原文使用 mean pooling；PoLaRIS 改用 GlobalAttention（*创新* R33，`alphachip_gnn.py`）：
 
 ```
 gate_i  = softmax_i( v_gate^T · h_i )           # 节点重要性门控
@@ -160,19 +160,19 @@ h_out   = W_proj · h_graph                       # 输出投影
 
 ### 5.1 MDP 建模
 
-来源：`FloorplanEnv`（`src/polaris/engine/floorplan_env.py:157`），Gymnasium 接口。
+来源：`FloorplanEnv`（`v5.0 已移除（原 `modules/place/src/polaris_place/floorplan_env.py`，RL 环境并入训练流水线）:157`），Gymnasium 接口。
 
 | 要素 | 定义 |
 |------|------|
 | 状态 s_t | 当前画布占用栅格 + 已放置器件图嵌入（Edge-GNN 输出）+ 当前待放置器件 ID 嵌入 |
 | 动作 a_t | (grid_row, grid_col, rotation) 三元组，rotation ∈ {0, 90, 180, 270} |
 | 转移 T | 将当前器件放置到指定网格 + 旋转，更新画布占用 |
-| 奖励 r_t | 0（中间步），终止步 r_T = −(w_wl·HPWL + w_cg·拥塞 + w_dn·密度 + w_ov·重叠 + w_sp·间距违规)（来源：`reward_shaping.py:289`） |
+| 奖励 r_t | 0（中间步），终止步 r_T = −(w_wl·HPWL + w_cg·拥塞 + w_dn·密度 + w_ov·重叠 + w_sp·间距违规)（来源：`reward_shaping.py`） |
 | 终止 | 所有器件放置完毕或非法动作 |
 
 ### 5.2 Actor-Critic 网络
 
-来源：`ActorCritic`（`src/polaris/trainer/ppo.py:68`）。
+来源：`ActorCritic`（`modules/trainer/src/polaris_trainer/ppo.py`）。
 
 ```
 共享编码器：obs → Linear → ReLU → Linear → ReLU → feats
@@ -184,7 +184,7 @@ h_out   = W_proj · h_graph                       # 输出投影
 
 ### 5.3 PPO 更新核心公式
 
-来源：Schulman et al. 2017（https://arxiv.org/abs/1707.06347），`ppo.py:242` 实现。
+来源：Schulman et al. 2017（https://arxiv.org/abs/1707.06347），`ppo.py` 实现。
 
 **GAE 优势估计**（Schulman et al. 2015, https://arxiv.org/abs/1506.02438）：
 
@@ -207,7 +207,7 @@ L_CLIP = − mean( min( r_t · A_t,  clip(r_t, 1−ε, 1+ε) · A_t ) )
 L = L_CLIP + c_vf · (V(s_t) − R_t)² − c_ent · H(π_θ)
 ```
 
-PoLaRIS 默认超参（与 Stable-Baselines3 对齐）：γ=0.99, λ=0.95, ε=0.2, ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, n_epochs=4, batch_size=64, lr=3e-4。来源：`PPOConfig`（`ppo.py:39`）。
+PoLaRIS 默认超参（与 Stable-Baselines3 对齐）：γ=0.99, λ=0.95, ε=0.2, ent_coef=0.01, vf_coef=0.5, max_grad_norm=0.5, n_epochs=4, batch_size=64, lr=3e-4。来源：`PPOConfig`（`ppo.py`）。
 
 ### 5.4 与 AlphaChip TF-Agents 实现的差异
 
@@ -219,7 +219,7 @@ PoLaRIS 使用纯 NumPy + 自研 `polaris.nn` 模块复刻 PPO，非 TF-Agents�
 
 ### 6.1 HPWL（半周长线长）
 
-来源：`evaluate_hpwl`（`src/polaris/data/benchmark_evaluator.py:57`），EDA 教材标准。
+来源：`evaluate_hpwl`（`modules/nn/src/polaris_nn/data/benchmark_evaluator.py`），EDA 教材标准。
 
 ```
 HPWL = Σ_{net} ( max(x_pins) − min(x_pins) + max(y_pins) − min(y_pins) )
@@ -229,7 +229,7 @@ PoLaRIS 简化为二元连接的曼哈顿距离之和（光子电路连接以二
 
 ### 6.2 拥塞评估
 
-来源：`evaluate_congestion`（`benchmark_evaluator.py:233`），LRT（Logistic Routing Trend）模型。
+来源：`evaluate_congestion`（`benchmark_evaluator.py`），LRT（Logistic Routing Trend）模型。
 
 ```
 Congestion_b = Σ_n (usage_n(b) / capacity_b)
@@ -239,7 +239,7 @@ Congestion_b = Σ_n (usage_n(b) / capacity_b)
 
 ### 6.3 密度场
 
-来源：`DensityField`（`src/polaris/engine/density_field.py:74`），DREAMPlace 网格化密度场。
+来源：`DensityField`（`modules/place/src/polaris_place/metrics.py`），DREAMPlace 网格化密度场。
 
 ```
 ρ(x,y) = Σ_i area_i · K_σ(x − x_i, y − y_i)       # 高斯核卷积
@@ -256,7 +256,7 @@ K_σ 为带宽 σ 的高斯核，模拟 ePlace 电势场。
 
 ### 6.5 终止步奖励（负加权和）
 
-来源：`ExpertRewardShaper`（`src/polaris/trainer/reward_shaping.py:289`），与 AlphaChip AC-10.1 一致：
+来源：`ExpertRewardShaper`（`v5.0 已移除（原 `modules/trainer/src/polaris_trainer/reward_shaping.py`，奖励整形未迁移）:289`），与 AlphaChip AC-10.1 一致：
 
 ```
 r_T = −( w_wl · HPWL_norm + w_cg · Congestion_norm
@@ -270,7 +270,7 @@ PoLaRIS 额外加入 `w_th`（热热点惩罚，*创新*，对激光器/调制�
 
 ## 7. 标准单元放置与 DREAMPlace 集成
 
-来源：`AnalyticalPlacer`（`src/polaris/engine/analytical_placer.py:103`），DREAMPlace DAC 2019 / TCAD 2020。
+来源：`AnalyticalPlacer`（`modules/place/src/polaris_place/analytical.py`），DREAMPlace DAC 2019 / TCAD 2020。
 
 **平滑 HPWL（log-sum-exp 近似）**（γ→0 时趋近真实 HPWL，DREAMPlace 默认 γ=4.0）：
 
@@ -311,7 +311,7 @@ PoLaRIS 默认 lr=0.01, max_iter=200, density_weight=1e-3, gamma=4.0（`Analytic
 | AC-5.1-5.7 TPU 部署 | 开源光子项目无 TPU |
 | AC-6.1-6.3 MediaTek 商业采用 | 无商业芯片部署 |
 
-CPU 端保留 `DistributedLearner`（CTDE 中心化训练分布式执行，`distributed_learner.py:265`），覆盖 AC-4.2 / AC-4.5。
+CPU 端保留 `DistributedLearner`（CTDE 中心化训练分布式执行，`distributed_learner.py`），覆盖 AC-4.2 / AC-4.5。
 
 ---
 
@@ -414,7 +414,7 @@ CheckpointManager.save(gnn, actor_critic, path="ckpt/alphachip_final.ckpt")
 
 ### 10.1 TILOS MacroPlacement 基准（AC-12.1 ✅）
 
-来源：`load_ariane_benchmark`（`src/polaris/data/tilos_benchmark.py:243`）。PoLaRIS 加载 TILOS Ariane RISC-V 基准（17 模块），与 Circuit Training 公开结果对齐验证。
+来源：`load_ariane_benchmark`（`modules/nn/src/polaris_nn/data/tilos_benchmark.py`）。PoLaRIS 加载 TILOS Ariane RISC-V 基准（17 模块），与 Circuit Training 公开结果对齐验证。
 
 ### 10.2 缺失项（待补齐）
 

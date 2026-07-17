@@ -214,13 +214,13 @@ function FDFD_Solve(ε_r grid, ω, J_src, pml_params, grid_shape):
 |---|--------|-------------|---------|
 | 3.1 | 频域 Maxwell 方程求解（Ax=b 矩阵化） | ❌ → 待实现 | 本文档 §5-§7 |
 | 3.2 | Yee cell 网格离散 | ⚠️ → ✅ | 共享 FDE Yee 网格 |
-| 3.3 | 3D CAD 与 GDS 导入 | ✅ | `src/polaris/data/gds_loader.py` |
+| 3.3 | 3D CAD 与 GDS 导入 | ✅ | `modules/nn/src/polaris_nn/data/gds_loader.py` |
 | 3.4 | 共形网格技术 | ⚠️ | 待自研 Volume-average/Yu-Mittra 1/2 |
 | 3.5 | 多种边界条件（PML/周期/Bloch/PEC/PMC） | ⚠️ → ✅ | SC-PML + PEC/PMC/Bloch |
 | 3.6 | 多种光源（偶极子/平面/高斯/模式/TFSF） | ⚠️ → ✅ | 模式源由 FDE 生成，其余待补 |
 | 3.7 | 各向异性材料与散点材料 | ⚠️ | $\tilde\varepsilon$ 张量支持 |
-| 3.8 | 后处理分析库 | ✅ | `src/polaris/data/benchmark_evaluator.py` |
-| 3.9 | 扫描优化 | ✅ | `src/polaris/sim/multi_objective_optimizer.py` |
+| 3.8 | 后处理分析库 | ✅ | `modules/nn/src/polaris_nn/data/benchmark_evaluator.py` |
+| 3.9 | 扫描优化 | ✅ | `modules/optimizer/src/polaris_optimizer/nsga.py` |
 | 3.10 | 多并行加速与云端计算 | 🚫不参与 | 规则 26，OpenMP/CUDA/MPI 不参与 |
 
 ### 9.2 T01 Ansys Lumerical（隐式 FDFD 能力）
@@ -268,7 +268,7 @@ Lumerical 主推 FDTD/EME/FDE/varFDTD，未单独销售 FDFD 模块，但其 FDT
 
 ### 11.5 质量门禁
 
-- 实现文件位于 `src/polaris/sim/fdfd_solver.py`，遵循规则 7（圈复杂度 ≤15、函数 ≤80 行、文件 ≤800 行）。
+- 实现文件位于 `modules/fdfd/src/polaris_fdfd/solver.py`，遵循规则 7（圈复杂度 ≤15、函数 ≤80 行、文件 ≤800 行）。
 - 测试位于 `tests/test_fdfd_solver.py`，覆盖率 ≥ 90%（规则 10）。
 - 文档字符串标注所有公式来源 URL（规则 18），代码无待办标记，无 fall-back。
 
